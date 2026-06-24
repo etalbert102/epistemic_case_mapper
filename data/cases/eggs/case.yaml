@@ -1,0 +1,33 @@
+case_id: eggs
+title: "Eggs and Health"
+question: "What should an investigator believe about the health effects of eating eggs?"
+case_type: "messy everyday evidence case"
+status: draft
+notes:
+  - "Use as the second worked example because the case has heterogeneous populations, endpoints, and study designs."
+  - "Replace seed notes with source-local excerpts from reviews, guidelines, and representative primary studies."
+sources:
+  - source_id: nutrition_guideline_seed
+    title: "Nutrition guideline seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for dietary guideline material."
+    text: >
+      Dietary guidance often treats eggs differently across populations because baseline cardiovascular risk and dietary pattern matter.
+      The recommendation depends on whether eggs displace healthier foods or less healthy foods in a person's diet.
+      The evidence suggests that a single global rule can be misleading because effects may vary by diabetes status, cholesterol response, and total diet quality.
+  - source_id: observational_review_seed
+    title: "Observational evidence review seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for meta-analysis or review evidence."
+    text: >
+      Observational studies provide evidence about associations between egg intake and outcomes such as cardiovascular disease or mortality.
+      However, residual confounding is a central concern because egg consumption correlates with broader lifestyle and dietary patterns.
+      The interpretation depends on whether the review separates populations, endpoints, and adjustment strategies.
+  - source_id: mechanism_seed
+    title: "Mechanism and biomarker seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for mechanistic evidence."
+    text: >
+      Mechanistic evidence focuses on cholesterol, lipoproteins, nutrients, satiety, and substitution effects.
+      The health implication is uncertain because a biomarker change does not always translate directly into clinical outcomes.
+      A crux is whether adverse lipid effects dominate possible nutritional benefits in the relevant population.

@@ -1,0 +1,25 @@
+case_id: covid_origins_slice
+title: "COVID Origins Debate Slice"
+question: "How should a narrow slice of COVID origins evidence be represented without flattening the dispute?"
+case_type: "adversarial live case slice"
+status: draft
+notes:
+  - "Use only as a stretch example until the workflow is strong enough for adversarial material."
+  - "Scope must remain narrow; do not attempt a full COVID origins assessment in the initial prototype."
+sources:
+  - source_id: debate_writeup_seed
+    title: "Debate writeup seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for a source-local slice from a public debate writeup."
+    text: >
+      The debate evidence includes competing interpretations of epidemiological patterns, institutional behavior, and viral genetics.
+      The assessment depends on which evidence is treated as independent and which evidence is correlated through shared assumptions.
+      A structured map should preserve disagreements because different analysts can update in opposite directions from the same broad evidence base.
+  - source_id: judge_decision_seed
+    title: "Judge decision seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for judge reasoning."
+    text: >
+      Judge reasoning may identify which claims carried evidential weight and which claims were less decisive.
+      The decision challenges a flat summary because it matters which subclaims were treated as cruxes.
+      The map should distinguish what the debate settled from what it merely performed settling.

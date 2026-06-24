@@ -1,0 +1,35 @@
+case_id: lhc_black_holes
+title: "LHC Black Hole Risk"
+question: "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?"
+case_type: "closed technical risk case"
+status: draft
+notes:
+  - "Use as the first worked example because the case is mostly closed and dependency structure matters."
+  - "Replace seed notes with source-local excerpts during real ingestion."
+sources:
+  - source_id: cern_faq_seed
+    title: "CERN public FAQ seed notes"
+    source_type: seed_notes
+    notes: "Seed notes based on public descriptions of LHC safety arguments."
+    text: >
+      The public safety argument suggests that LHC collisions are not uniquely dangerous because higher energy cosmic-ray collisions occur naturally.
+      The risk assessment depends on whether naturally occurring collisions are an adequate analogue for collider conditions.
+      The argument is evidence-based because astronomical bodies have persisted despite long exposure to cosmic rays.
+      However, an auditor should preserve caveats about whether all relevant collider-specific conditions are covered by the natural analogue.
+  - source_id: safety_review_seed
+    title: "Independent safety review seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for formal safety review material."
+    text: >
+      Safety reviews argue that hypothetical microscopic black holes would evaporate quickly under standard physical assumptions.
+      The conclusion depends on assumptions about Hawking radiation and about whether speculative models change the expected behavior.
+      The review evidence supports low catastrophic risk, but the case still benefits from mapping which assumptions are necessary.
+      A crux for the investigation is whether any plausible alternative model would make produced objects stable and accreting.
+  - source_id: public_concern_seed
+    title: "Public concern and critique seed notes"
+    source_type: seed_notes
+    notes: "Placeholder for public objections and legal/public-risk discussion."
+    text: >
+      Public concern focused on the risk that unprecedented experimental conditions could create hazards not captured by ordinary review.
+      The concern challenges simple reassurance because low-probability catastrophic risk can require unusually transparent reasoning.
+      Although the final assessment may remain reassuring, the knowledge base should preserve why the concern seemed live to critics.
