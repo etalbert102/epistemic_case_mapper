@@ -2,34 +2,109 @@ case_id: lhc_black_holes
 title: "LHC Black Hole Risk"
 question: "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?"
 case_type: "closed technical risk case"
-status: draft
+evidence_mode: source_grounded
+review_status: draft
+status: in_progress
 notes:
   - "Use as the first worked example because the case is mostly closed and dependency structure matters."
-  - "Replace seed notes with source-local excerpts during real ingestion."
+  - "Source-grounded acquisition was added on 2026-06-26; claims and relations still need human/agent audit before review status can be upgraded."
+  - "Raw downloaded documents are stored under data/cases/lhc_black_holes/sources/raw/."
 sources:
-  - source_id: cern_faq_seed
-    title: "CERN public FAQ seed notes"
-    source_type: seed_notes
-    notes: "Seed notes based on public descriptions of LHC safety arguments."
-    text: >
-      The public safety argument suggests that LHC collisions are not uniquely dangerous because higher energy cosmic-ray collisions occur naturally.
-      The risk assessment depends on whether naturally occurring collisions are an adequate analogue for collider conditions.
-      The argument is evidence-based because astronomical bodies have persisted despite long exposure to cosmic rays.
-      However, an auditor should preserve caveats about whether all relevant collider-specific conditions are covered by the natural analogue.
-  - source_id: safety_review_seed
-    title: "Independent safety review seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for formal safety review material."
-    text: >
-      Safety reviews argue that hypothetical microscopic black holes would evaporate quickly under standard physical assumptions.
-      The conclusion depends on assumptions about Hawking radiation and about whether speculative models change the expected behavior.
-      The review evidence supports low catastrophic risk, but the case still benefits from mapping which assumptions are necessary.
-      A crux for the investigation is whether any plausible alternative model would make produced objects stable and accreting.
-  - source_id: public_concern_seed
-    title: "Public concern and critique seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for public objections and legal/public-risk discussion."
-    text: >
-      Public concern focused on the risk that unprecedented experimental conditions could create hazards not captured by ordinary review.
-      The concern challenges simple reassurance because low-probability catastrophic risk can require unusually transparent reasoning.
-      Although the final assessment may remain reassuring, the knowledge base should preserve why the concern seemed live to critics.
+  - source_id: lsag_2008_safety_review
+    title: "Review of the Safety of LHC Collisions"
+    url: "https://cds.cern.ch/record/1111112"
+    author: "LHC Safety Assessment Group"
+    publication_date: "2008-06-23"
+    retrieval_date: "2026-06-26"
+    source_type: formal_safety_review
+    path: "data/cases/lhc_black_holes/sources/text/lsag_2008_safety_review.txt"
+    excerpt: "Formal LSAG review of LHC collision safety, including cosmic-ray comparisons, microscopic black holes, Hawking radiation, stable-black-hole scenarios, astronomical body stability, strangelets, vacuum bubbles, and magnetic monopoles."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/lsag_2008_safety_review.pdf"
+  - source_id: spc_2008_lsag_review
+    title: "SPC Report on LSAG Documents"
+    url: "https://indico.cern.ch/event/35065/contributions/1757729/attachments/693082/951703/SPC_on_LSAG_report.pdf"
+    author: "CERN Scientific Policy Committee"
+    publication_date: "2008"
+    retrieval_date: "2026-06-26"
+    source_type: independent_review
+    path: "data/cases/lhc_black_holes/sources/text/spc_2008_lsag_review.txt"
+    excerpt: "Independent review by a CERN Scientific Policy Committee panel of the LSAG report and Giddings-Mangano paper, including discussion of cosmic-ray comparisons, stable microscopic black holes, and remaining caveats."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/spc_2008_lsag_review.pdf"
+  - source_id: giddings_mangano_2008_stable_black_holes
+    title: "Astrophysical implications of hypothetical stable TeV-scale black holes"
+    url: "https://arxiv.org/abs/0806.3381"
+    author: "Steven B. Giddings and Michelangelo L. Mangano"
+    publication_date: "2008-06-20"
+    retrieval_date: "2026-06-26"
+    source_type: technical_safety_analysis
+    path: "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_stable_black_holes.txt"
+    excerpt: "Technical analysis of hypothetical stable TeV-scale black holes, accretion scenarios, and astrophysical constraints from white dwarfs and neutron stars."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/giddings_mangano_2008_stable_black_holes.pdf"
+  - source_id: cern_lhc_current_page
+    title: "Large Hadron Collider"
+    url: "https://home.cern/science/accelerators/large-hadron-collider/"
+    author: "CERN"
+    retrieval_date: "2026-06-26"
+    source_type: public_explanation_current
+    path: "data/cases/lhc_black_holes/sources/text/cern_lhc_current_page.txt"
+    excerpt: "Current CERN public LHC page with a public-facing answer to whether the LHC can create black holes."
+    notes: "Raw HTML: data/cases/lhc_black_holes/sources/raw/cern_lhc_current_page.html"
+  - source_id: cern_tiny_black_holes_page
+    title: "Extra dimensions, gravitons, and tiny black holes"
+    url: "https://home.cern/science/physics/extra-dimensions-gravitons-and-tiny-black-holes/"
+    author: "CERN"
+    retrieval_date: "2026-06-26"
+    source_type: public_explanation_current
+    path: "data/cases/lhc_black_holes/sources/text/cern_tiny_black_holes_page.txt"
+    excerpt: "CERN public explanation of extra dimensions, gravitons, microscopic black holes, and expected rapid disintegration if such objects appeared in LHC collisions."
+    notes: "Raw HTML: data/cases/lhc_black_holes/sources/raw/cern_tiny_black_holes_page.html"
+  - source_id: cms_2011_black_hole_search
+    title: "Search for microscopic black hole signatures at the Large Hadron Collider"
+    url: "https://cms.cern/news/search-microscopic-black-hole-signatures-large-hadron-collider"
+    author: "CMS Collaboration / CERN"
+    publication_date: "2011"
+    retrieval_date: "2026-06-26"
+    source_type: experimental_result_public_summary
+    path: "data/cases/lhc_black_holes/sources/text/cms_2011_black_hole_search.txt"
+    excerpt: "CMS public summary of a search for microscopic black holes in 2010 LHC proton-proton collision data, reporting no experimental evidence in the searched model range."
+    notes: "Raw HTML: data/cases/lhc_black_holes/sources/raw/cms_2011_black_hole_search.html"
+  - source_id: cms_2010_black_hole_search_paper
+    title: "Search for Microscopic Black Hole Signatures at the Large Hadron Collider"
+    url: "https://arxiv.org/abs/1012.3375"
+    author: "CMS Collaboration"
+    publication_date: "2010-12-15"
+    retrieval_date: "2026-06-26"
+    source_type: experimental_result_paper
+    path: "data/cases/lhc_black_holes/sources/text/cms_black_hole_search_paper.txt"
+    excerpt: "CMS technical paper on a microscopic black-hole search using 7 TeV proton-proton collision data."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/cms_black_hole_search_paper.pdf"
+  - source_id: plaga_2008_metastable_black_holes
+    title: "On the potential catastrophic risk from metastable quantum-black holes produced at particle colliders"
+    url: "https://arxiv.org/abs/0808.1415"
+    author: "Rainer Plaga"
+    publication_date: "2008-08-10"
+    retrieval_date: "2026-06-26"
+    source_type: technical_critique
+    path: "data/cases/lhc_black_holes/sources/text/plaga_2008_metastable_black_holes.txt"
+    excerpt: "Technical critique arguing that some risk analyses may not completely exclude certain metastable microscopic black-hole scenarios and proposing operational measures."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/plaga_2008_metastable_black_holes.pdf"
+  - source_id: giddings_mangano_2008_comments_plaga
+    title: "Comments on claimed risk from metastable black holes"
+    url: "https://arxiv.org/abs/0808.4087"
+    author: "Steven B. Giddings and Michelangelo L. Mangano"
+    publication_date: "2008-08-29"
+    retrieval_date: "2026-06-26"
+    source_type: technical_response
+    path: "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_comments_plaga.txt"
+    excerpt: "Technical response to Plaga's claimed metastable black-hole risk, arguing that the risk claim rests on inconsistent assumptions."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/giddings_mangano_2008_comments_plaga.pdf"
+  - source_id: johnson_2009_black_hole_case
+    title: "The Black Hole Case: The Injunction Against the End of the World"
+    url: "https://arxiv.org/abs/0912.5480"
+    author: "Eric E. Johnson"
+    publication_date: "2009-12-30"
+    retrieval_date: "2026-06-26"
+    source_type: legal_public_risk_framing
+    path: "data/cases/lhc_black_holes/sources/text/johnson_2009_black_hole_case.txt"
+    excerpt: "Legal analysis of injunction requests and decision-making challenges around claimed LHC black-hole catastrophe risks."
+    notes: "Raw PDF: data/cases/lhc_black_holes/sources/raw/johnson_2009_black_hole_case.pdf"

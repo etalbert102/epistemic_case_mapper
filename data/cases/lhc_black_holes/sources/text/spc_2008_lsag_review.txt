@@ -1,0 +1,184 @@
+                                                                                           1
+
+
+SPC REPORT ON LSAG DOCUMENTS
+
+The CERN Scientific Policy Committee (SPC) was asked by the President of the CERN Council to
+examine the documents produced by the LHC Safety Assessment Group (LSAG) and to provide
+Council with an independent opinion on the conclusions stated in those documents. A dedicated
+SPC panel was set up, composed of Peter Braun-Munzinger, Matteo Cavalli-Sforza, Gerard ‘t
+Hooft, Bryan Webber and Fabio Zwirner. The documents made available to the panel were:
+"Review of the Safety of LHC Collisions", by the LHC Safety Assessment Group (LSAG report);
+"Astronomical Implications of Hypothetical Stable TeV-Scale Black Holes", by S.B.Giddings and
+M.L.Mangano (GM paper). After thorough review, discussion and ensuing endorsement by the
+full SPC, the requested opinion is summarized in the present document.
+
+Introduction
+
+When new accelerators such as the LHC are built, exploring higher energies than their
+predecessors, it is legitimate to ask whether there is any danger related to the production
+of new particles or states of matter not previously created artificially. Such a question
+was already addressed in the past: by an ad hoc Committee for the Relativistic Heavy Ion
+Collider at the Brookhaven National Laboratory (RHIC) in 1999, and by the LHC Safety
+Study Group at CERN (LSSG) in 2003. Both reports concluded that there was no danger.
+The following objects of concern were considered, with emphasis on the last two,
+discussed in both reports: magnetic monopoles, vacuum bubbles, strangelets, black holes.
+
+Concerns have recently been expressed on the possibility that microscopic, stable, neutral
+black holes may be produced at the LHC and then accrete matter sufficiently fast to pose
+a risk to Earth. This highly hypothetical possibility had already been excluded on the
+basis of very strong arguments, and most experts of the field consider this scenario as
+impossible. However, the LSAG report now provides, on the basis of the GM paper, a
+much stronger safety proof, relying only on solid experimental facts and firmly
+established theory, which should remove any residual concern. More generally, the
+LSAG report reviews the previous safety studies in the light of additional experimental
+results and theoretical understanding, and is able to confirm, update and extend the LSSG
+conclusions as described below.
+
+No other exotic particles whose existence has been discussed in the scientific literature
+would pose any potential danger at the LHC. The methodology used by LSAG would be
+applicable to the evaluation of possible risks associated with other exotic particles or new
+states of matter that might be suggested in the future.
+
+The LHC compared with cosmic-ray collisions
+
+Section 2 of the LSAG report shows quantitatively that collisions of cosmic rays of the
+highest energies with the Earth, the Sun and other astronomical bodies occur naturally at
+energies equivalent to or larger than those of LHC collisions, and in numbers that exceed
+them by extremely large factors. The results and the considerations given in this section
+are the basis for the safety proofs given later in the paper.
+                                                                                           2
+
+
+
+The starting point of the proof is the observed and well-known flux (per square cm per
+second) of cosmic rays at center-of-mass energies that exceed those at the LHC by one to
+a few factors of 10. Considering the surfaces of the target planets and stars and their
+observed age, it is easily shown that such energetic LHC-like cosmic rays have already
+hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion)
+times the total number of collisions expected over the duration of LHC experiments.
+Analogously, in the whole Universe, the equivalent of 3·1013 complete LHC experiments
+are performed every second. As shown in the LSAG report, and reviewed below, the
+hypothesis that the LHC operation would threaten the existence of the Earth is
+irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have
+persisted for billions of years in spite of their continuous exposure to energetic cosmic
+rays.
+
+The comparison between cosmic ray collisions with target planets or stars and LHC
+collisions makes use of special relativity. Special relativity has been tested accurately in
+the laboratory for particles with velocities similar to and higher than the relative velocity
+of the two relevant reference frames; moreover, the experimental data on cosmic rays at
+energies up to more than an order of magnitude above the equivalent LHC energy are in
+agreement with special relativity.
+
+Vacuum bubbles and magnetic monopoles
+
+We fully endorse the conclusions of the LSAG report concerning the possible production
+of bubbles of new vacuum or magnetic monopoles, discussed in Section 3. The
+continuous bombardment of the Earth and other astronomical bodies by cosmic rays at
+centre-of-mass energies at and above that of the LHC means that such processes, if they
+exist, have occurred and are still occurring at a high rate throughout the Universe.
+
+In the case of vacuum bubbles, the velocity of the object, once formed, is not relevant as
+it would have expanded and caused visible large-scale effects, whatever its state of
+motion and wherever it appeared, even in distant galaxies. Therefore no such objects are
+ever created within the energy range of cosmic ray collisions.
+
+It is worth remarking in this context that head-on collisions between cosmic rays, at
+centre-of-mass energies enormously greater than those that will ever be accessible in
+Earth-based experiments, occur sufficiently frequently on cosmic scales that we can be
+completely confident that catastrophic disruption of the vacuum will never be a
+possibility at the LHC or any future accelerator.
+
+In the case of magnetic monopoles, such objects could have been produced in cosmic ray
+collisions, but they are by definition highly ionizing and would therefore have been
+stopped inside the Earth or any other target body. The continuing existence of
+astronomical bodies shows that, if produced, magnetic monopoles must be harmless.
+                                                                                          3
+
+
+
+Microscopic black holes
+
+Section 4 of the LSAG report addresses potential dangers associated with the production
+of microscopic black holes at the LHC. For the cases that were already considered in
+previous reports, it confirms their conclusions that there is absolutely no danger. In
+addition, Section 4 reviews the highly hypothetical production of neutral stable black
+holes, and the possibility that these black holes could be trapped inside the Earth. While
+such a possibility is dismissed by most of the experts, it is conceivable, and it could have
+potentially dangerous consequences if these highly hypothetical, neutral, stable
+microscopic black holes could accrete matter on Earth on time scales shorter than the
+natural lifetime of the solar system. For this to occur, a number of increasingly unlikely
+conditions should be satisfied: 1) the fundamental scale of gravity should be within the
+LHC energy range, possible only if extra spatial dimensions with very peculiar
+properties do exist; 2) Hawking radiation, and more general arguments for the decay of
+any black holes produced at the LHC, should fail; 3) the Schwinger mechanism, by which
+a charged black hole becomes electrically neutral via particle-antiparticle creation near
+the horizon, should still work, even though it is based on physical principles very close to
+those underlying Hawking radiation.
+
+Going beyond the RHIC and LSSG reports, the above-mentioned possibility is now
+directly addressed by the LSAG report, on the basis of the GM paper, which is the most
+detailed and specialized presentation of all the scientific evidence we have on this issue.
+The GM paper admits from the start the possibility that compelling but not
+experimentally tested mechanisms, such as Hawking radiation, could be suppressed or
+absent. It chooses instead a conservative or "worst-case" scenario at every instance where
+an experimental or theoretical uncertainty is encountered. It then uses observational data
+on cosmic rays and on astronomical objects such as the Sun or compact stars to exclude
+any danger at the LHC.
+
+In particular, at the LHC energy, any danger for the Earth on time scales lower than or
+comparable to the natural lifetime of the solar system can be ruled out on the basis of its
+contradiction with the observation of white dwarf stars of known mass, age and other
+properties. This conclusion, while entirely valid for the LHC, would need further work to
+be extended to conceivable future colliders of much higher energies. A powerful
+argument applicable also to higher energies is formulated making reference to observed
+neutron stars, but this argument relies on properties of cosmic rays and neutrinos that,
+while highly plausible, do require confirmation, as can be expected in the coming years.
+
+On the basis of all these findings, we can conclude that there is no danger of whatever
+kind from the hypothetical production of black holes at the LHC.
+
+Strangelets
+
+Section 5 of the LSAG report deals with the possibility that particles containing strange
+quark matter, so-called 'strangelets', could be created in Pb-Pb collisions at the LHC and,
+                                                                                        4
+
+if stable and negatively charged, could coalesce with normal matter to possibly catalyze
+conversion of the world into strange matter. This case was already discussed in detail in
+the RHIC and LSSG reports. There it was argued, as recalled in the LSAG report, that: a)
+strangelet production at RHIC energies would be less likely than strangelet production in
+nucleus-nucleus collisions at lower energies such as at the Brookhaven AGS and CERN
+SPS accelerators; indeed, no trace of strangelet production was found in nearly a decade
+of Pb-Pb or Au-Au collision experiments performed at high luminosity; b) high energy
+cosmic rays bombarding the Moon for billions of years have yielded no evidence for
+events connected with strangelet production.
+
+The results from seven years of running the RHIC program have in fact provided
+evidence that strangelet production is even less likely at the higher energy of the LHC.
+They have yielded strong experimental support for the hypothesis that particles are
+produced from a heat bath at a limiting temperature. The LSAG report shows that, on that
+basis, strangelet production at the LHC energy, since it involves particles with baryon
+number, will be less likely than at the lower RHIC energy. Hence, the data from the
+RHIC program strongly reinforce the arguments collected at the start of the RHIC
+program: there is no conceivable danger from strangelet production at LHC energy.
+
+Conclusions
+
+The LSAG report considered four specific objects of concern: magnetic monopoles,
+vacuum bubbles, strangelets, black holes. For vacuum instability and magnetic
+monopoles, the conclusions of previous reports are confirmed and, in the latter case,
+reinforced. For strangelets, the conclusions of previous reports are confirmed and
+reinforced by the analysis of RHIC data. For black holes, the LSAG report goes much
+beyond previous reports, on the basis of the GM paper. Replacing some highly plausible
+theoretical concepts of the previous reports with irrefutable observational data on cosmic
+rays and on astronomical bodies such as the Sun or compact stars, interpreted using
+firmly established theory, further layers of safety are added to the previously existing
+ones, excluding any possibility that the highly hypothetical production of black holes at
+the LHC could create a danger of whatever kind.
+
+To summarize, we fully endorse the conclusions of the LSAG report: there is no basis for
+any concerns about the consequences of new particles or forms of matter that could
+possibly be produced at the LHC.
+

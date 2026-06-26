@@ -1,0 +1,164 @@
+Large Hadron Collider – Home | CERN
+CERN | Accelerating science
+Sign In Directory
+About
+About CERN →
+Who we are
+Our Mission
+Our Governance
+Our Member States
+Our History
+Our People
+What we do
+Fundamental research
+Contribute to society
+Environmentally responsible research
+Bring nations together
+Inspire and educate
+Key achievements
+The Higgs boson
+W boson: Sunshine and stardust
+The Z boson
+Large Hadron Collider
+The birth of the Web
+Antimatter
+News
+News →
+Press room
+Media kits
+Resources
+Events →
+Science
+Science →
+Physics
+Antimatter
+Dark matter
+The early universe
+The Higgs boson
+The Standard Model
+Accelerators
+CERN accelerator complex
+The Antiproton Decelerator
+Large Hadron Collider
+HiLumi LHC
+Future Circular Collider
+Engineering
+Accelerating: Radiofrequency cavities
+Pulling together: Superconducting electromagnets
+A vacuum as empty as interstellar space
+Cryogenics: Low temperatures, high performance
+Powering CERN
+Computing
+The CERN Data Centre
+The Worldwide LHC Computing Grid (WLCG)
+CERN openlab
+Open source for open science
+The birth of the Web
+Experiments
+ALICE
+ATLAS
+CMS
+LHCb
+Search
+English
+English
+Français
+The Large Hadron Collider
+The Large Hadron Collider (LHC) is the world’s largest and most powerful particle accelerator. It consists of a 27-kilometre ring of superconducting magnets with a number of accelerating structures to boost the energy of the particles along the way .
+About
+About
+The Large Hadron Collider (LHC) is the world’s largest and most powerful particle accelerator that pushes protons or ions to near the speed of light . It first started up on 10 September 2008, and remains the latest addition to CERN’s accelerator complex . The LHC consists of a 27-kilometre ring of superconducting magnets with a number of accelerating structures to boost the energy of the particles along the way. The accelerator sits in a tunnel 100 metres underground at CERN, the European Organization for Nuclear Research, on the Franco-Swiss border near Geneva, Switzerland.
+Inside the accelerator, two high-energy particle beams travel at close to the speed of light before they are made to collide. The beams travel in opposite directions in separate beam pipes – two tubes kept at ultrahigh vacuum . They are guided around the accelerator ring by a strong magnetic field maintained by superconducting electromagnets . The electromagnets are built from coils of special electric cable that operates in a superconducting state, efficiently conducting electricity without resistance or loss of energy. This requires chilling the magnets to ‑271.3°C – a temperature colder than outer space . For this reason, much of the accelerator is connected to a distribution system of liquid helium, which cools the magnets, as well as to other supply services.
+Thousands of magnets of different varieties and sizes are used to direct the beams around the accelerator. These include 1232 dipole magnets, 15 metres in length, which bend the beams, and 392 quadrupole magnets, each 5–7 metres long, which focus the beams. Just prior to collision, another type of magnet is used to “squeeze” the particles closer together to increase the chances of collisions. The particles are so tiny that the task of making them collide is akin to firing two needles 10 kilometres apart with such precision that they meet halfway.
+All the controls for the accelerator, its services and technical infrastructure are housed under one roof at the CERN Control Centre. From here, the beams inside the LHC are made to collide at four locations around the accelerator ring, corresponding to the positions of four particle detectors – ATLAS , CMS , ALICE and LHCb. There are nine experiments installed at the LHC: ALICE , ATLAS , CMS , LHCb , LHCf , TOTEM , MoEDAL-MAPP , FASER and SND@LHC . They use detectors to analyse the myriad of particles produced by collisions in the accelerator. These experiments are run by collaborations of scientists from institutes all over the world.
+What is happening in the LHC
+Did you know that you can follow live what goes on at the world’s most powerful particle accelerator? LHC Page 1 offers a real-time look into the operations of the Large Hadron Collider that you can follow along just like our scientists do as they explore the frontiers of physics.
+Status of the LHC in real time
+Frequently asked questions
+Why is it called the “Large Hadron Collider”? +
+“Large” refers to its size, approximately 27km in circumference
+“Hadron” because it accelerates protons or ions, which belong to the group of particles called hadrons
+“Collider” because the particles form two beams travelling in opposite directions, which are made to collide at four points around the machine
+What are the main goals of the LHC? +
+The LHC is a machine designed to advance knowledge in fundamental physics. Since the early 1970s, our knowledge is encompassed in the Standard Model of particle physics, a theory that describes the fundamental particles and their interactions. The Standard Model has been remarkably successful, but it leaves many questions open that the LHC aims to address. The announce of the discovery of the Higgs boson in July 2012 confirmed the mechanism predicted in 1964 and through which fundamental particles acquire mass. However, this particle, unique in the particle physics landscape, holds the key to many mechanisms that physicists seek to understand by analysing it. Other questions include the nature of dark matter (which makes 80% of the matter of the Universe, the matter-antimatter asymmetry, how ordinary matter formed in the first instants of the Universe.
+When was the LHC designed? +
+Scientists started thinking about the LHC in the early 1980s, when the previous accelerator, the LEP, was not yet running. The idea was to reuse the LEP tunnel to host a machine able to collide protons instead of electrons. In December 1994, the CERN Council voted to approve the construction of the LHC and in October 1995, the LHC technical design report was published.
+Contributions from Japan, the USA, India and other non-Member States accelerated the process. Between 1996 and 1998, four experiments (ALICE, ATLAS, CMS and LHCb) received official approval and construction work started on the four sites. The construction and assembly of the LHC span from 1996 to 2008. It started on 10 September 2008. It was a global and complex adventure, involving several thousand people and companies all around the world.
+What are the LHC main technologies? +
+Superconducting magnets
+The LHC occupies the same tunnel originally built for its predecessor, the Large Electron-Positron Collider (LEP). Unlike the LEP, which collided electrons, the LHC accelerates protons, roughly 2 000 times more massive. For steering them along the 27-kilometer circular path, the LHC required magnets far more powerful than conventional electromagnets. It is composed of 9 000 superconducting magnets , capable of generating much higher magnetic fields. These magnets represent one of the most formidable technological challenges of the project.
+Cryogenics
+The superconducting magnets are cooled down to 1.9 K (-271°C), colder than outer space, using the world’s largest cryogenic systems, which chills 23 km of the accelerator’s 27-km. This system relies on superfluid helium, a refrigerant with a very efficient heat-transfer property.
+Vacuum
+In the LHC, particles circulate in pipes that have been emptied of air. Within the vacuum chambers, the pressure is ten million million times lower than outside at sea level:
+10 -13 bar. This is almost as low as the pressure on the moon.
+Accelerating cavities
+The LHC uses eight superconducting cavities per beam, each delivering 2 megavolts at 400 MHz to accelerate the beams.
+How does the LHC operate? +
+Hadrons (protons or heavy ions) are accelerated in a chain of four accelerators before being injected into the LHC. They are then accelerated in the LHC for about 20 minutes before reaching their nominal energy and being brought into collisions at the centre of four large experiments. The beams circulate for between 10 and 15 hours before being dumped when they do not contain enough particles.
+Each beam is structured in around 2500 bunches, each bunch containing 100 billion protons. The bunches are usually spaced 25 nanoseconds apart (or about 7 metres), but for practical reasons, there are several bigger gaps.
+What are the key figures of the LHC? +
+Quantity Number Circumference 26 659 m Dipole operating temperature 1.9 K (-271.3°C) Number of magnets 9593 Number of main dipoles 1232 Number of main quadrupoles 392 Number of RF cavities 8 per beam Nominal energy, protons 6.8 TeV Nominal energy, ions 2.56 TeV/u (energy per nucleon) Nominal energy, protons collisions 13.6 TeV No. of bunches per proton beam ~2500 No. of protons per bunch (at start) 1.6 x 10 11 Number of turns per second 11245 Number of collisions/second in ATLAS and CMS 1.5 billion
+What is the energy of the LHC? +
+The energy of the proton collision is 13.6 TeV, which is the highest energy ever reached in a Lab. However, it’s a very small amount of energy on the human scale, equivalent to that of a needle falling to the ground from a height of a few centimetres! But, on the tiny scale of particles, an accelerator concentrates this energy into a space that’s ten trillion times smaller than a needle, making it possible to obtain very high energy densities and to create particles.
+The energy of the lead-ion collision is 5.36 TeV per nucleon pair; it corresponds to the energy of two nucleons (proton or neutron) colliding.
+Are LHC collisions safe? +
+The LHC can only reproduce phenomena that already happen naturally all around us, on Earth and in outer space. The Universe as a whole produces more than 10 million million LHC-like experiments per second. If such phenomena were dangerous or destructive, it would contradict what we see: stars, galaxies and the Earth still exist.
+A commission of experts has assessed the risks of running LHC and concluded it presents no danger: you can read the full report here . The report was independently reviewed and endorsed by three other societies of physicists – the American Physical Society, the UK Institute of Physics, and the German Physical Society – that also concluded that LHC collisions are perfectly safe.
+Can the LHC create a black hole? +
+According to Einstein’s theory of relativity, it is impossible for LHC to produce black holes. However, some speculative theories predict the production of microscopic black holes. All these theories predict that these particles would disintegrate immediately. Black holes, therefore, would have no time to start accreting matter and to cause macroscopic effects.
+How much did the LHC cost? +
+Construction costs (MCHF)
+Materials Construction costs (MCHF) LHC machine and areas* 3756 CERN share to detectors and detectors areas** 493 LHC computing (CERN share) 83 Total 4332
+*This includes: Machine R&D and injectors, tests and pre-operation.
+** Contains infrastructure costs (such as caverns and facilities). The total cost of all LHC detectors is about 1500 MCHF
+The experimental collaborations are individual entities, funded independently from CERN. CERN is a member of each experiment and contributes to the maintenance and operation budget of the LHC experiments.
+What is the LHC power consumption? +
+The total power consumption of the LHC, its experiments and its general services is around to 600 GWh per year, with a maximum of 695 GWh in 2024.
+The total CERN energy consumption is around 1.3 TWh per year while the total electrical energy production in the European Union 3000 TWh, in France around 450 TWh, and in Geneva canton is around 3 TWh.
+For more information, see CERN environment report 2023-2024 .
+How has the LHC performed so far? +
+The LHC circulated its first protons on 10 September 2008. Nine days later, a faulty electrical connection between two magnets damaged a sector of the accelerator, requiring several months of repairs. By the end of 2009, the accelerator restarted, producing its first collisions on 23 November 2009, and its first high-energy collisions (7 TeV) on 30 March 2010. On 8 November 2010, the accelerator collided lead ions for the first time. Since then, the LHC has completed three operational runs, increasing both energy and luminosity. It reached 13 TeV in 2015, at the start of its second run, and 13,6 TeV in 2022, at the start of its third run. The LHC has produced a lot of physics results, including the discovery of the long-sought Higgs boson in 2012.
+More details on the LHC Milestones page
+What is luminosity? +
+Luminosity is a measure of the rate of collisions. Instantaneous luminosity describe the number of collisions happening in a unit of time (for example, every second). Integrated luminosity measeg the total number of collisions produced over a period of time. Integrated luminosity is usually expressed in units of “inverse femtobarns” (fb-1). A femtobarn is a unit of cross-section, a measure of the probability for a process to occur in a particle interaction. One inverse femtobarn corresponds to around 100 million million collisions.
+How long will the LHC run? +
+The LHC will operate until the Long Shut Down 3, starting in July 2026. During the LS3, the LHC will undergo a major upgrade in order to increase its luminosity, i.e. the number of collisions. The upgraded machine, the High-Luminosity LHC (HL-LHC), which is due to restart mid-30 will run at least another decade.
+See the High-Luminosity LHC page
+How long will the LHC run? +
+The LHC will operate until the Long Shut Down 3, starting in July 2026. During the LS3, the LHC will undergo a major upgrade in order to increase its luminosity, i.e. the number of collisions. The upgraded machine, the High-Luminosity LHC (HL-LHC), which is due to restart mid-30 will run at least another decade.
+See the HiLumi LHC page
+Latest news about LHC
+No posts were found. Try to change the category or the date filters.
+At CERN, scientists from around the world explore the fundamental structure of the Universe. They use large and complex instruments to push the boundaries of human knowledge.
+CERN's 25 Member States
+and 11 Associated Member States
+Links
+About
+News
+Science
+Visit
+Contact
+CERN and You
+Careers
+Business with CERN
+Knowledge Transfer
+CERN's neighbours
+CERN & Society Foundation
+Partnerships
+CERN Alumni
+Press room
+CERN Courier
+Arts at CERN
+Follow us
+Instagram
+LinkedIn
+YouTube
+Facebook
+More Social Accounts
+CERN Esplanade des Particules 1
+P.O. Box
+1211 Geneva 23
+Switzerland
+© 1954-2026 CERN
+Copyright Privacy Policy Cookie Management

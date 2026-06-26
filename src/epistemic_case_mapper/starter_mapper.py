@@ -33,6 +33,8 @@ def build_starter_case_map(manifest: CaseManifest, *, repo_root: Path) -> CaseMa
         case_id=manifest.case_id,
         title=manifest.title,
         question=manifest.question,
+        evidence_mode=manifest.evidence_mode,
+        review_status=manifest.review_status,
         sources=manifest.sources,
         claims=claims,
         relations=relations,
@@ -127,7 +129,7 @@ def _starter_relations(claims: list[Claim]) -> list[Relation]:
                     source_claim_id=left.claim_id,
                     target_claim_id=right.claim_id,
                     relation_type="similar_to",
-                    rationale="Seed relation from shared tags: " + ", ".join(sorted(shared_tags)),
+                    rationale="Tentative seed relation from shared tags: " + ", ".join(sorted(shared_tags)),
                 )
             )
             if len(relations) >= 25:
@@ -136,6 +138,33 @@ def _starter_relations(claims: list[Claim]) -> list[Relation]:
 
 
 def _starter_open_questions(manifest: CaseManifest, claims: list[Claim]) -> list[OpenQuestion]:
+    if manifest.case_id == "lhc_black_holes":
+        return [
+            OpenQuestion(
+                question_id="oq_0001",
+                text="Which assumptions make the natural cosmic-ray analogue valid or invalid for LHC conditions?",
+                why_it_matters="The safety case depends on whether naturally occurring collisions cover the relevant collider-specific conditions.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "cosmic-ray" in claim.text.lower() or "naturally" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources],
+                gap_type="crux",
+            ),
+            OpenQuestion(
+                question_id="oq_0002",
+                text="Which source-grounded evidence directly supports the claim that hypothetical microscopic black holes would evaporate quickly?",
+                why_it_matters="The Hawking-radiation premise is a major dependency and should not be treated as settled by seed notes alone.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "evaporate" in claim.text.lower() or "hawking" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources if "safety" in source.source_id],
+                gap_type="missing source needed",
+            ),
+            OpenQuestion(
+                question_id="oq_0003",
+                text="Which independent reviews, critiques, or public-risk arguments should be added before treating this as source-grounded?",
+                why_it_matters="A useful FLF artifact should preserve why the concern seemed live to critics as well as why the final safety conclusion was reassuring.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "concern" in claim.text.lower() or "critic" in claim.text.lower() or "transparent" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources if "concern" in source.source_id],
+                gap_type="missing source needed",
+            ),
+        ]
     return [
         OpenQuestion(
             question_id="oq_0001",

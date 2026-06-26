@@ -1,0 +1,48 @@
+Search for microscopic black hole signatures at the Large Hadron Collider | CMS Experiment
+Loading...
+Skip to main content
+CERN Accelerating science
+Sign in
+Directory
+Main navigation
+Toggle navigation
+Collaboration
+Detector
+Physics
+Interact with CMS
+News
+Blog
+SEARCH
+Enter the terms you wish to search for.
+Search for microscopic black hole signatures at the Large Hadron Collider
+https://cms.cern/news/search-microscopic-black-hole-signatures-large-hadron-collider
+The CMS experiment at CERN's Large Hadron Collider (LHC) has completed a search for microscopic black holes produced in high-energy proton-proton collisions. No evidence for their production was found and their production has been excluded up to a black hole mass of 3.5-4.5 TeV (10 12 electron volts) in a variety of theoretical models.
+Microscopic black holes are predicted to exist in some theoretical models that attempt to unify General Relativity and Quantum Mechanics by postulating the existence of extra "curled-up" dimensions, in addition to the three familiar spatial dimensions. At the high energies of the Large Hadron Collider, such theories predict that particles may collide "closely enough" to be sensitive to these postulated extra dimensions. In such a case, the colliding particles could interact gravitationally with strengths similar to those of the other three fundamental forces – the Electromagnetic, Weak and Strong interactions. The two colliding particles might then form a microscopic black hole.
+If it were so produced, a microscopic black hole would evaporate immediately, producing a distinctive spray of sub-atomic particles of normal matter. These would then be observed in the high-precision CMS detector that surrounds the LHC collision point. CMS has searched for such events amongst all the proton-proton collisions recorded during the 2010 LHC running at 7 TeV centre-of-mass energy (3.5 TeV per proton beam).
+No experimental evidence for microscopic black holes has been found. This non-observation rules out the existence of microscopic black holes up to a mass of 3.5–4.5 TeV for a range of theoretical models that postulate extra dimensions.
+The CMS results have been submitted for publication in the Physics Letters journal. CMS will take much more data next year when the LHC resumes running in early 2011 after a brief technical stop.
+Download the statement (PDF)
+More resources:
+CMS "Scientific summary"
+Full paper: PDF | arXiv
+LHC safety
+Tags / keywords
+black hole
+microscopic black hole
+particle jet
+jet
+exotica
+extra dimensions
+proton collisions
+physical letters
+unification
+statement
+Log in to post comments
+News
+All
+Collaboration
+Detector
+Physics
+Engage with CMS
+Apply
+The CMS Experiment at CERN

@@ -1,0 +1,106 @@
+Extra dimensions, gravitons, and tiny black holes – Home | CERN
+CERN | Accelerating science
+Sign In Directory
+About
+About CERN →
+Who we are
+Our Mission
+Our Governance
+Our Member States
+Our History
+Our People
+What we do
+Fundamental research
+Contribute to society
+Environmentally responsible research
+Bring nations together
+Inspire and educate
+Key achievements
+The Higgs boson
+W boson: Sunshine and stardust
+The Z boson
+Large Hadron Collider
+The birth of the Web
+Antimatter
+News
+News →
+Press room
+Media kits
+Resources
+Events →
+Science
+Science →
+Physics
+Antimatter
+Dark matter
+The early universe
+The Higgs boson
+The Standard Model
+Accelerators
+CERN accelerator complex
+The Antiproton Decelerator
+Large Hadron Collider
+HiLumi LHC
+Future Circular Collider
+Engineering
+Accelerating: Radiofrequency cavities
+Pulling together: Superconducting electromagnets
+A vacuum as empty as interstellar space
+Cryogenics: Low temperatures, high performance
+Powering CERN
+Computing
+The CERN Data Centre
+The Worldwide LHC Computing Grid (WLCG)
+CERN openlab
+Open source for open science
+The birth of the Web
+Experiments
+ALICE
+ATLAS
+CMS
+LHCb
+Search
+English
+English
+Français
+Extra dimensions, gravitons, and tiny black holes
+Why is gravity so much weaker than the other fundamental forces? A small fridge magnet is enough to create an electromagnetic force greater than the gravitational pull exerted by planet Earth. One possibility is that we don’t feel the full effect of gravity because part of it spreads to extra dimensions. Though it may sound like science fiction, if extra dimensions exist, they could explain why the universe is expanding faster than expected, and why gravity is weaker than the other forces of nature.
+A question of scale
+In our everyday lives, we experience three spatial dimensions, and a fourth dimension of time. How could there be more? Einstein’s general theory of relativity tells us that space can expand, contract, and bend. Now if one dimension were to contract to a size smaller than an atom, it would be hidden from our view. But if we could look on a small enough scale, that hidden dimension might become visible again. Imagine a person walking on a tightrope. She can only move backward and forward; but not left and right, nor up and down, so she only sees one dimension. Ants living on a much smaller scale could move around the cable, in what would appear like an extra dimension to the tightrope-walker.
+How could we test for extra dimensions? One option would be to find evidence of particles that can exist only if extra dimensions are real. Theories that suggest extra dimensions predict that, in the same way as atoms have a low-energy ground state and excited high-energy states, there would be heavier versions of standard particles in other dimensions. These heavier versions of particles – called Kaluza-Klein states – would have exactly the same properties as standard particles (and so be visible to our detectors) but with a greater mass. If CMS or ATLAS were to find a Z- or W-like particle (the Z and W bosons being carriers of the electroweak force) with a mass 100 times larger for instance, this might suggest the presence of extra dimensions. Such heavy particles can only be revealed at the high energies reached by the Large Hadron Collider (LHC).
+A little piece of gravity?
+Some theorists suggest that a particle called the “graviton” is associated with gravity in the same way as the photon is associated with the electromagnetic force. If gravitons exist, it should be possible to create them at the LHC, but they would rapidly disappear into extra dimensions. Collisions in particle accelerators always create balanced events – just like fireworks – with particles flying out in all directions. A graviton might escape our detectors, leaving an empty zone that we notice as an imbalance in momentum and energy in the event. We would need to carefully study the properties of the missing object to work out whether it is a graviton escaping to another dimension or something else. This method of searching for missing energy in events is also used to look for dark matter or supersymmetric particles.
+Microscopic black holes
+Another way of revealing extra dimensions would be through the production of “ microscopic black holes ”. What exactly we would detect would depend on the number of extra dimensions, the mass of the black hole, the size of the dimensions and the energy at which the black hole occurs. If micro black holes do appear in the collisions created by the LHC, they would disintegrate rapidly, in around 10 -27 seconds. They would decay into Standard Model or supersymmetric particles, creating events containing an exceptional number of tracks in our detectors, which we would easily spot. Finding more on any of these subjects would open the door to yet unknown possibilities.
+At CERN, scientists from around the world explore the fundamental structure of the Universe. They use large and complex instruments to push the boundaries of human knowledge.
+CERN's 25 Member States
+and 11 Associated Member States
+Links
+About
+News
+Science
+Visit
+Contact
+CERN and You
+Careers
+Business with CERN
+Knowledge Transfer
+CERN's neighbours
+CERN & Society Foundation
+Partnerships
+CERN Alumni
+Press room
+CERN Courier
+Arts at CERN
+Follow us
+Instagram
+LinkedIn
+YouTube
+Facebook
+More Social Accounts
+CERN Esplanade des Particules 1
+P.O. Box
+1211 Geneva 23
+Switzerland
+© 1954-2026 CERN
+Copyright Privacy Policy Cookie Management

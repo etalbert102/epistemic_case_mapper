@@ -1,0 +1,133 @@
+                                                                                                               CERN-PH-TH/2008-184
+
+
+
+
+arXiv:0808.4087v1 [hep-ph] 29 Aug 2008
+                                                              Comments on claimed risk
+                                                             from metastable black holes
+
+
+
+
+                                                         Steven B. Giddingsa,b,1 and Michelangelo L. Manganob,2
+
+                                               a
+                                                   Department of Physics, University of California, Santa Barbara, CA 93106
+                                               b
+                                                   PH-TH, CERN, Geneva, Switzerland
+
+
+
+
+                                                                                       Abstract
+
+                                                      In a recent note, arXiv:0808.1415, it was argued that a hypothetical metastable
+                                                   black hole scenario could pose collider risk not excluded by our previous study. We
+                                                   comment on inconsistency of this proposed scenario.
+
+                                         CERN-PH-TH/2008-184
+                                         May 28, 2018
+
+
+
+
+                                           1
+                                               giddings@physics.ucsb.edu
+                                           2
+                                               michelangelo.mangano@cern.ch
+    The recent paper [1] claims to produce a scenario for LHC risk that is not excluded by
+our previous work[2], or by the paper [3] supporting the same conclusions. This proposal is
+based on an idea, extrapolating claims in [4], that Hawking radiation is suppressed until a
+certain mass threshold, which [1] proposes occurs for black hole radii comparable to the scale
+where higher-dimensional gravity matches onto four-dimensional gravity. Ref. [1] claims that
+once the Hawking radiation turns on, the power output would be at dangerous levels like
+1016 W, and that moreover such a scenario is not excluded by astrophysical constraints such
+as those derived in [2] from white dwarfs and neutron stars.
+   To assess this scenario, let us begin by observing that a universal relation for the energy
+output of Hawking radiation is of the form
+
+                        dE    (D − 3)4 1                    1
+                           =ξ             ∼ (D − 3)4 × 10−4 2 ,                            (1)
+                        dt     3840π R  2                  R
+where D is the spacetime dimension, R is the Schwarzschild radius, and ξ is an O(1) gray-
+body factor parameterizing the deviations from a precise blackbody spectrum. This general
+formula follows from two facts: the Stefan-Boltzmann law, and the formula for the Hawking
+temperature of the black hole,
+                                             D−3
+                                       T =         .                                  (2)
+                                              4π R
+Moreover, this formula agrees with eq. (2) of [1].
+    The proposal of [1] is that Hawking radiation is suppressed compared to this usual Hawk-
+ing result (hence the black hole is “metastable”) until the black hole reaches the radius scale
+R ∼ L, where L is comparable to the scale of transition to four-dimensional behavior. (This
+could be anywhere in the range between the parameters RD and RC introduced in [2].) When
+it reaches this scale, the usual Hawking radiation is then claimed to switch on. Ref. [1] con-
+siders in particular scales near L ∼ 10−5 cm, where one is claimed to find the large power
+output stated above.
+    However, using these parameters one readily finds from the formula (1) a negligible power
+output of size
+                                         dE
+                                             ∼ .1µW ,                                     (3)
+                                          dt
+differing by a factor of 1023 from the claim of [1].
+    Where did [1] go wrong? The answer is in the inconsistent application of formula (2) of
+that paper. In the type of warped scenario that [1] considers, the black hole would evolve up
+to a radius R ∼ RD via higher-dimensional evolution, and then would experience a large mass
+gain in transitioning to a slightly higher radius R ∼ RC , as [1] acknowledges. Throughout
+this region, in the usual Hawking scenario, the temperature formula (2) should hold. Thus if
+the black hole radiance is suppressed compared to this, as the author of [1] proposes, it can’t
+exceed a value of size (3). However, [1] then applies the formula (1) written in terms of the
+mass using the four-dimensional relationship between radius and mass, but does this in a
+region where the four-dimensional relation between radius and mass is clearly wrong. Indeed,
+
+
+                                              1
+the four-dimensional Schwarzschild radius corresponding to the mass range considered by
+[1], 1 . M(kg) . 105 , lies in the range 10−25 − 10−20 cm, far below the claimed ∼ 10−5 cm! It
+is this inconsistency that produces the claimed large power output, which, if correct, would
+represent an enormous enhancement of the black hole radiance, in contradiction to the stated
+assumptions of the scenario.
+    In addition to this basic inconsistency, there are other arguments against such a proposal;
+we note these here, and defer further explanation for future comment. First, in such a
+“suppressed Hawking radiation” scenario, the arguments of [2] tell us that one can in fact
+not establish Eddington-limited accretion in a white dwarf (see in particular eq.(B.13) in [2]);
+so, even ignoring the inconsistency we reported above, the bounds of that paper would apply
+even to the suggested scenario of [1]. Second, the underlying basis, namely a serious difference
+between the microcanonical picture and the usual Hawking calculation, appears implausible
+in the large black hole regime [1] considers.
+   Finally, we note that [1] has both misquoted our paper [2], and selectively quoted from
+the available literature. The correct statement, misquoted in footnote 3 of [1], states: “...at
+each point where we have encountered an uncertainty, we have replaced it by a conservative
+or “worst case” assumption.” Moreover, [1] cites Unruh and Schützhold’s work[5] raising
+questions about Hawking radiation, without providing the more recent citation to Unruh’s
+work, [6], that was given in [2] and reflects more up-to-date comments by Unruh on the
+support of his work for Hawking radiation.
+    We conclude that the conclusions of [2] on this subject, as stated there and as referred
+to in the LHC safety assessment report [7], remain robust.
+
+
+References
+[1] R. Plaga, “On the potential catastrophic risk from metastable quantum-black holes pro-
+    duced at particle colliders,” arXiv:0808.1415 [hep-ph].
+[2] S. B. Giddings and M. L. Mangano, “Astrophysical implications of hypothetical stable
+    TeV-scale black holes,” Phys. Rev. D 78, 035009 (2008), arXiv:0806.3381 [hep-ph].
+[3] B. Koch, M. Bleicher and H. Stocker, “Exclusion of black hole disaster scenarios at the
+    LHC,” arXiv:0807.3349 [hep-ph].
+[4] R. Casadio and B. Harms, “Can black holes and naked singularities be detected in
+    accelerators?,” Int. J. Mod. Phys. A 17, 4635 (2002) [arXiv:hep-th/0110255].
+[5] W. G. Unruh and R. Schutzhold, “On the universality of the Hawking effect,” Phys. Rev.
+    D 71 (2005) 024028 [arXiv:gr-qc/0408009].
+[6] W. Unruh, “Where do the particles come from?” talk at the workshop Effective
+    models of quantum gravity, Perimeter Institute, November 2007; abstract available at
+    http://www.perimeterinstitute.ca/Events/Effective Models of Quantum Gravity/Abstracts/
+
+                                               2
+[7] J. Ellis, G. Giudice, M. L. Mangano, I. Tkachev and U. Wiedemann, “Review of the
+    Safety of LHC Collisions,” arXiv:0806.3414 [hep-ph], to appear in J. of Phys. G.
+
+
+
+
+                                         3
+

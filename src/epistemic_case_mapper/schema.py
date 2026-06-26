@@ -11,10 +11,12 @@ class Source(BaseModel):
     url: str | None = None
     author: str | None = None
     publication_date: str | None = None
+    retrieval_date: str | None = None
     source_type: str = "document"
     notes: str | None = None
     text: str | None = None
     path: str | None = None
+    excerpt: str | None = None
 
 
 class CaseManifest(BaseModel):
@@ -22,6 +24,8 @@ class CaseManifest(BaseModel):
     title: str
     question: str
     case_type: str
+    evidence_mode: Literal["seed", "source_grounded"] = "seed"
+    review_status: Literal["draft", "agent-reviewed", "human-review-needed", "human-reviewed"] = "draft"
     status: Literal["draft", "in_progress", "reviewed"] = "draft"
     sources: list[Source] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
@@ -58,6 +62,8 @@ class OpenQuestion(BaseModel):
     text: str
     why_it_matters: str
     linked_claim_ids: list[str] = Field(default_factory=list)
+    linked_source_ids: list[str] = Field(default_factory=list)
+    gap_type: str | None = None
 
 
 class CaseMap(BaseModel):
@@ -65,6 +71,8 @@ class CaseMap(BaseModel):
     case_id: str
     title: str
     question: str
+    evidence_mode: Literal["seed", "source_grounded"] = "seed"
+    review_status: Literal["draft", "agent-reviewed", "human-review-needed", "human-reviewed"] = "draft"
     sources: list[Source]
     claims: list[Claim] = Field(default_factory=list)
     relations: list[Relation] = Field(default_factory=list)

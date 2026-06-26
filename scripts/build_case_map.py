@@ -8,11 +8,132 @@ from epistemic_case_mapper.schema import CaseManifest, CaseMap
 from epistemic_case_mapper.starter_mapper import build_starter_case_map
 
 
+def render_audit(case_map: CaseMap) -> str:
+    seed_sources = [source for source in case_map.sources if source.source_type == "seed_notes"]
+    source_grounded = case_map.evidence_mode == "source_grounded"
+    open_question_count = len(case_map.open_questions)
+    relation_rationales = [relation for relation in case_map.relations if relation.rationale]
+    ingestion_evidence = (
+        "Claims preserve source IDs and source-grounded sources include local paths/excerpts."
+        if source_grounded
+        else "Claims preserve source IDs; seed limitations remain visible."
+    )
+    judge_usability_evidence = (
+        "Report is navigable, but claims and relations remain draft until audited."
+        if source_grounded
+        else "Report is navigable but still seed-mode unless upgraded to source-grounded evidence."
+    )
+    score_rows = [
+        ("Ingestion", _score_ingestion(case_map), ingestion_evidence),
+        ("Structure", _score_structure(case_map), "Relations are candidate links and rationales are explicit."),
+        ("Assessment", _score_assessment(case_map), "Open questions surface cruxes and missing sources."),
+        ("Compounding", _score_compounding(case_map), "JSON schema, stable IDs, and Markdown outputs support reuse."),
+        ("Judge usability", 1, judge_usability_evidence),
+        ("Verification", 1, "Build command generated artifacts; full validator should be run separately."),
+        ("Plan discipline", 1, "Goal-plan discipline is documented in docs/plans/lhc_demo_goal_plan.md."),
+    ]
+    lines = [
+        f"# {case_map.title} Audit",
+        "",
+        f"Case ID: `{case_map.case_id}`",
+        f"Evidence mode: `{case_map.evidence_mode}`",
+        f"Review status: `{case_map.review_status}`",
+        "",
+        "## Status",
+        "",
+    ]
+    if seed_sources:
+        lines.append(
+            "This artifact is seed-derived workflow scaffolding. It must not be treated as a final source-grounded FLF demo."
+        )
+    elif source_grounded:
+        lines.append("This artifact is source-grounded according to the case manifest.")
+    else:
+        lines.append("Evidence status requires review.")
+    lines.extend(
+        [
+            "",
+            "## Completeness Signals",
+            "",
+            f"- Sources: {len(case_map.sources)}",
+            f"- Claims: {len(case_map.claims)}",
+            f"- Relations: {len(case_map.relations)}",
+            f"- Relations with rationales: {len(relation_rationales)}",
+            f"- Open questions: {open_question_count}",
+            f"- Seed sources: {len(seed_sources)}",
+            "",
+            "## FLF Criteria Score",
+            "",
+            "| Area | Score | Evidence |",
+            "| --- | ---: | --- |",
+        ]
+    )
+    for area, score, evidence in score_rows:
+        lines.append(f"| {area} | {score} | {evidence} |")
+    lines.extend(
+        [
+            "",
+            "## Missing Evidence",
+            "",
+        ]
+    )
+    if seed_sources:
+        lines.extend(
+            [
+                "- Replace seed notes with source-local excerpts from the CERN FAQ or public safety pages.",
+                "- Add the LSAG safety report or equivalent formal safety review.",
+                "- Add independent review material such as the CERN Scientific Policy Committee assessment.",
+                "- Add representative public concern or critique material.",
+            ]
+        )
+    else:
+        lines.append("- No seed-mode evidence gap was detected, but source coverage still needs human audit.")
+    lines.extend(["", "## Open Questions", ""])
+    for question in case_map.open_questions:
+        linked = ", ".join(question.linked_claim_ids or question.linked_source_ids or ["unlinked"])
+        lines.append(f"- `{question.question_id}` ({question.gap_type or 'open'}; {linked}): {question.text}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _score_ingestion(case_map: CaseMap) -> int:
+    if not case_map.claims or any(not claim.source_id for claim in case_map.claims):
+        return 0
+    if any(source.source_type == "seed_notes" for source in case_map.sources):
+        return 1
+    return 2
+
+
+def _score_structure(case_map: CaseMap) -> int:
+    if not case_map.relations:
+        return 0
+    if any(not relation.rationale for relation in case_map.relations):
+        return 1
+    return 2 if case_map.evidence_mode == "source_grounded" else 1
+
+
+def _score_assessment(case_map: CaseMap) -> int:
+    if len(case_map.open_questions) < 3:
+        return 0
+    if any(not (question.linked_claim_ids or question.linked_source_ids or question.gap_type == "missing source needed") for question in case_map.open_questions):
+        return 1
+    return 2
+
+
+def _score_compounding(case_map: CaseMap) -> int:
+    if not case_map.claims or not case_map.sources:
+        return 0
+    return 2
+
+
 def render_report(case_map: CaseMap) -> str:
     lines = [
         f"# {case_map.title}",
         "",
         f"Question: {case_map.question}",
+        "",
+        f"Evidence mode: `{case_map.evidence_mode}`",
+        f"Review status: `{case_map.review_status}`",
         "",
         "## Summary",
         "",
@@ -35,10 +156,12 @@ def render_report(case_map: CaseMap) -> str:
     for relation in case_map.relations[:30]:
         lines.append(
             f"- `{relation.relation_id}`: `{relation.source_claim_id}` {relation.relation_type} `{relation.target_claim_id}`"
+            + (f" — {relation.rationale}" if relation.rationale else "")
         )
     lines.extend(["", "## Open Questions", ""])
     for question in case_map.open_questions:
-        lines.append(f"- `{question.question_id}`: {question.text}")
+        linked = ", ".join(question.linked_claim_ids or question.linked_source_ids or ["unlinked"])
+        lines.append(f"- `{question.question_id}` ({question.gap_type or 'open'}; {linked}): {question.text}")
     lines.extend(["", "## Audit Notes", ""])
     for note in case_map.audit_notes:
         lines.append(f"- {note}")
@@ -61,8 +184,10 @@ def main() -> int:
     output_dir = repo_root / args.output_root / manifest.case_id
     write_json(output_dir / "case_map.json", case_map.model_dump(mode="json"))
     write_markdown(output_dir / "report.md", render_report(case_map))
+    write_markdown(output_dir / "audit.md", render_audit(case_map))
     print(f"Wrote {output_dir / 'case_map.json'}")
     print(f"Wrote {output_dir / 'report.md'}")
+    print(f"Wrote {output_dir / 'audit.md'}")
     return 0
 
 
