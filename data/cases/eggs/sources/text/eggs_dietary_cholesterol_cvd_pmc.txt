@@ -1,0 +1,107 @@
+Skip to main content
+
+An official website of the United States government
+Here's how you know
+
+
+
+Search
+
+Log in
+Primary site navigation
+
+Search PMC Full-Text Archive
+
+Search in PMC
+	•	Journal List
+	•	User Guide
+As a library, NLM provides access to scientific literature. Inclusion in an NLM database does not imply endorsement of, or agreement with, the contents by NLM or the National Institutes of Health.
+Learn more: PMC Disclaimer | PMC Copyright Notice
+
+LETTER J Thorac Dis. 2019 Sep;11(9):E148–E150. doi: 10.21037/jtd.2019.09.40
+Eggs, dietary cholesterol, and cardiovascular disease: the debate continues
+Victor W Zhong 1,✉
+	•	Author information
+	•	Article notes
+	•	Copyright and License information
+
+PMCID: PMC6790443  PMID: 31656685
+See the article "Egg consumption: to eat or not to eat?" on page 2185.
+
+Our group recently published a study in the Journal of the American Medical Association, reporting that higher consumption of eggs or dietary cholesterol was associated with higher risk of cardiovascular disease and mortality in US adults (1). The publication of this result has triggered a new round of discussion and debate regarding the health concerns of egg and dietary cholesterol consumption. As discussed in the article (1) as well as related editorials (2,3), this is an observational study with limitations, although we pooled together a large diverse sample and implemented rigorous methodologies to analyze the data. In this editorial, I plan to cover several issues that are not discussed in the published article due to space constraints (1).
+Mechanistic explanations are critical to support an association identified from observational studies. The most widely studied mechanism is the effect of egg or dietary cholesterol consumption on serum cholesterol concentrations from randomized clinical trials (RCTs) (4,5). These RCTs were conducted in small selective samples (n≤201) with short intervention duration (≤1 year) and the intervention doses of dietary cholesterol (~500–1,400 mg/day) were much higher than the mean intake in US adults (~290 mg/day) (6). These are important points to consider when interpreting findings from these RCTs. People often directly use the reported effect of egg or dietary cholesterol consumption on serum cholesterol concentrations from RCTs (short-term effect) to interpret the association between egg or dietary cholesterol consumption and cardiovascular disease from observational studies (long-term outcome). The connection between the two is not that straightforward for a complex disease. Nonetheless, meta-analyses of RCTs show that dietary cholesterol or egg consumption increased concentrations of total cholesterol, low-density lipoprotein cholesterol (LDL-C), and high-density lipoprotein cholesterol (HDL-C) (4,5). The effect of egg or dietary cholesterol consumption on LDL-C/HDL-C ratio remains controversial, due to the small number of available RCTs. We found that the significant associations of dietary cholesterol or egg consumption with cardiovascular disease and mortality remained after adjusting for baseline serum cholesterol concentrations (1). The identified positive associations may be driven by other mechanisms. Eggs are a rich source of dietary choline that can be converted to trimethylamine by gut bacteria which is further oxidized to trimethylamine-N-oxide (TMAO). TMAO has been associated with type 2 diabetes, atherosclerosis, and major cardiovascular events in a dose-dependent manner (7-9). Other mechanisms related to egg or dietary cholesterol consumption have also been reported, such as LDL oxidation, impaired endothelial function, inflammation, and carotid atherosclerosis (10).
+Usually, an observational study presents averaged association estimates for all participants and possibly subgroups. These sample/subgroup-level estimates may not be applicable to each participant in the study. For example, individual variation exits in serum cholesterol concentrations in response to dietary cholesterol consumption and individuals can be classified as hypo- and hyper-responders (11). The presence of consistent hypo- and hyper-responsiveness of serum cholesterol concentrations to dietary cholesterol consumption can be partly explained by genetic predisposition (12). In a subgroup analysis of our study, egg or dietary cholesterol consumption was significantly associated with cardiovascular disease, only among those who did not have low serum cholesterol concentrations (1). No association was identified among those who had low serum cholesterol concentrations. Low serum cholesterol concentrations were defined as LDL-C <70 mg/dL or non-HDL-C <100 mg/dL, among those who did not take lipid-lowering medications. It might be possible that hypo-responders, whose serum cholesterol concentrations are less sensitive to dietary cholesterol consumption compared with hyper-responders, were more common in the low than high serum cholesterol group. However, genetic predisposition of the study participants was not investigated in our study. Further, only ~9% of the study participants were in the low serum cholesterol group. This subgroup finding requires replication. Future prospective cohort studies are encouraged to study the association of egg or dietary cholesterol consumption with cardiovascular disease in hypo- and hyper-responders, respectively.
+We focused on eggs in our study (1), because eggs, specifically egg yolks, have the highest dietary cholesterol content among commonly consumed foods. However, meats (~42%) are the largest contributor of dietary cholesterol in US diet, followed by eggs (~25%), grain products (~17%), and dairy products (~11%) (6). The association between substituting eggs with other cholesterol-containing foods or non-cholesterol containing foods and cardiovascular disease remains to be determined. This information is important for informing dietary choices and dietary guidelines, if a positive association between egg consumption and cardiovascular disease does exist.
+The effect size for the association between egg consumption and cardiovascular disease in our study was small [hazard ratio, 1.06; 95% confidence interval (CI), 1.03–1.10] (1), but it is a reasonable effect size for a single food. The population-level impact of egg consumption on cardiovascular disease incidence may not be negligible. The reported small effect size is due to the use of half an egg consumed per day as the interpretation unit. This is based on the mean egg consumption among US adults (13). For individuals who consumed 1 egg or 2 eggs per day compared with non-consumers, the hazard ratio was 1.12 (95% CI, 1.05–1.20) and 1.27 (95% CI, 1.10–1.45), respectively, but only ~10% of the study participants consumed 1 egg/day or more.
+Conducting an RCT to study the effect of egg consumption on long-term health endpoints such as cardiovascular events is financially prohibitive, if not practically and ethically impossible. High-quality prospective cohort studies remain highly valuable. Future studies will need to better illustrate the underlying mechanisms, take into account individual variation in serum cholesterol response to dietary cholesterol consumption, and determine the association between substituting eggs with other foods in relation to cardiovascular disease risk. Before all these, the debate about the safety of egg or dietary cholesterol consumption in adults will continue.
+Acknowledgments
+None.
+Ethical Statement: The author is accountable for all aspects of the work in ensuring that questions related to the accuracy or integrity of any part of the work are appropriately investigated and resolved.
+Provenance: This is an invited article commissioned by the Section Editor Xiaoyan Wang (Department of Cardiology, Zhongshan Hospital, Fudan University, Shanghai, China).
+Conflicts of Interest: The author has no conflicts of interest to declare.
+References
+	•	1.Zhong VW, Van Horn L, Cornelis MC, et al. Associations of dietary cholesterol or egg consumption with incident cardiovascular disease and mortality. JAMA 2019;321:1081-95. 10.1001/jama.2019.1572 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	2.Kalogeropoulos AP, Papanastasiou CA. Egg consumption: to eat or not to eat? J Thorac Dis 2019;11:2185-7. 10.21037/jtd.2019.06.21 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	3.Eckel RH. Reconsidering the importance of the association of egg consumption and dietary cholesterol with cardiovascular disease risk. JAMA 2019;321:1055-6. 10.1001/jama.2019.1850 [DOI] [PubMed] [Google Scholar]
+	•	4.Rouhani MH, Rashidi-Pourfard N, Salehi-Abargouei A, et al. Effects of egg consumption on blood lipids: a systematic review and meta-analysis of randomized clinical trials. J Am Coll Nutr 2018;37:99-110. 10.1080/07315724.2017.1366878 [DOI] [PubMed] [Google Scholar]
+	•	5.Berger S, Raman G, Vishwanathan R, et al. Dietary cholesterol and cardiovascular disease: a systematic review and meta-analysis. Am J Clin Nutr 2015;102:276-94. 10.3945/ajcn.114.100305 [DOI] [PubMed] [Google Scholar]
+	•	6.Xu Z, McClure ST, Appel LJ. Dietary cholesterol intake and sources among U.S adults: results from national health and nutrition examination surveys (NHANES), 2001-2014. Nutrients 2018. doi: . 10.3390/nu10060771 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	7.Tang WH, Hazen SL. The contributory role of gut microbiota in cardiovascular disease. J Clin Invest 2014;124:4204-11. 10.1172/JCI72331 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	8.Shan Z, Sun T, Huang H, et al. Association between microbiota-dependent metabolite trimethylamine-N-oxide and type 2 diabetes. Am J Clin Nutr 2017;106:888-94. [DOI] [PubMed] [Google Scholar]
+	•	9.Heianza Y, Ma W, Manson JE, et al. Gut microbiota metabolites and risk of major adverse cardiovascular disease events and death: a systematic review and meta-analysis of prospective studies. J Am Heart Assoc 2017. doi: . 10.1161/JAHA.116.004947 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	10.David Spence J. Dietary cholesterol and egg yolk should be avoided by patients at risk of vascular disease. J Transl Int Med 2016;4:20-4. 10.1515/jtim-2016-0005 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	11.Katan MB, Beynen AC, de Vries JH, et al. Existence of consistent hypo- and hyperresponders to dietary cholesterol in man. Am J Epidemiol 1986;123:221-34. 10.1093/oxfordjournals.aje.a114231 [DOI] [PubMed] [Google Scholar]
+	•	12.Ordovas JM, Schaefer EJ. Genetic determinants of plasma lipid response to dietary intervention: the role of the APOA1/C3/A4 gene cluster and the APOE gene. Br J Nutr 2000;83 Suppl 1:S127-36. 10.1017/S0007114500001069 [DOI] [PubMed] [Google Scholar]
+	•	13.Conrad Z, Johnson LK, Roemmich JN, et al. Time trends and patterns of reported egg consumption in the U.S. by sociodemographic characteristics. Nutrients 2017. doi: . 10.3390/nu9040333 [DOI] [PMC free article] [PubMed] [Google Scholar]
+
+Articles from Journal of Thoracic Disease are provided here courtesy of AME Publications
+ACTIONS
+	•	
+	•	View on publisher site
+	•	
+	•	PDF (108.7 KB)
+	•	
+	•	Cite
+	•	
+	•	Collections
+	•	
+	•	Permalink
+RESOURCES
+Similar articles
+
+Cited by other articles
+
+Links to NCBI Databases
+
+
+FOLLOW NCBI
+
+NCBI on X (formerly known as Twitter)
+
+NCBI on Facebook
+
+NCBI on LinkedIn
+
+NCBI on GitHub
+
+NCBI RSS feed
+Connect with NLM
+
+NLM on X (formerly known as Twitter)
+
+NLM on Facebook
+
+NLM on YouTube
+National Library of Medicine  8600 Rockville Pike Bethesda, MD 20894
+	•	Web Policies
+	•	FOIA
+	•	HHS Vulnerability Disclosure
+	•	Help
+	•	Accessibility
+	•	Careers
+	•	NLM
+	•	NIH
+	•	HHS
+	•	USA.gov
+Back to Top
+

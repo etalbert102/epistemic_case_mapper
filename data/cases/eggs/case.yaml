@@ -2,32 +2,119 @@ case_id: eggs
 title: "Eggs and Health"
 question: "What should an investigator believe about the health effects of eating eggs?"
 case_type: "messy everyday evidence case"
-status: draft
+evidence_mode: source_grounded
+review_status: draft
+status: in_progress
 notes:
   - "Use as the second worked example because the case has heterogeneous populations, endpoints, and study designs."
-  - "Replace seed notes with source-local excerpts from reviews, guidelines, and representative primary studies."
+  - "Source-grounded acquisition was added on 2026-06-26; claims and relations still need human/agent audit before review status can be upgraded."
+  - "Raw downloaded documents are stored under data/cases/eggs/sources/raw/."
 sources:
-  - source_id: nutrition_guideline_seed
-    title: "Nutrition guideline seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for dietary guideline material."
-    text: >
-      Dietary guidance often treats eggs differently across populations because baseline cardiovascular risk and dietary pattern matter.
-      The recommendation depends on whether eggs displace healthier foods or less healthy foods in a person's diet.
-      The evidence suggests that a single global rule can be misleading because effects may vary by diabetes status, cholesterol response, and total diet quality.
-  - source_id: observational_review_seed
-    title: "Observational evidence review seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for meta-analysis or review evidence."
-    text: >
-      Observational studies provide evidence about associations between egg intake and outcomes such as cardiovascular disease or mortality.
-      However, residual confounding is a central concern because egg consumption correlates with broader lifestyle and dietary patterns.
-      The interpretation depends on whether the review separates populations, endpoints, and adjustment strategies.
-  - source_id: mechanism_seed
-    title: "Mechanism and biomarker seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for mechanistic evidence."
-    text: >
-      Mechanistic evidence focuses on cholesterol, lipoproteins, nutrients, satiety, and substitution effects.
-      The health implication is uncertain because a biomarker change does not always translate directly into clinical outcomes.
-      A crux is whether adverse lipid effects dominate possible nutritional benefits in the relevant population.
+  - source_id: aha_2019_dietary_cholesterol_pubmed
+    title: "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"
+    url: "https://pubmed.ncbi.nlm.nih.gov/31838890/"
+    author: "Carson et al.; American Heart Association"
+    publication_date: "2019-12-16"
+    retrieval_date: "2026-06-26"
+    source_type: guideline_abstract
+    path: "data/cases/eggs/sources/text/aha_2019_dietary_cholesterol_pubmed.txt"
+    excerpt: "PubMed record for the AHA science advisory on dietary cholesterol, blood lipids, lipoproteins, cardiovascular disease risk, and egg guidance."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/aha_2019_dietary_cholesterol_pubmed.html. Direct AHA full text blocked automated download."
+  - source_id: aha_2023_dietary_cholesterol_news
+    title: "Here's the latest on dietary cholesterol and how it fits in with a healthy diet"
+    url: "https://www.heart.org/en/news/2023/08/25/heres-the-latest-on-dietary-cholesterol-and-how-it-fits-in-with-a-healthy-diet"
+    author: "American Heart Association News"
+    publication_date: "2023-08-25"
+    retrieval_date: "2026-06-26"
+    source_type: guideline_public_explanation
+    path: "data/cases/eggs/sources/text/aha_2023_dietary_cholesterol_news.txt"
+    excerpt: "AHA public explanation summarizing current dietary cholesterol guidance, including how eggs can fit into a healthy diet for many adults."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/aha_2023_dietary_cholesterol_news.html"
+  - source_id: bmj_2020_egg_consumption_cvd
+    title: "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7190072/"
+    author: "Drouin-Chartier et al."
+    publication_date: "2020-03-04"
+    retrieval_date: "2026-06-26"
+    source_type: cohort_studies_systematic_review_meta_analysis
+    path: "data/cases/eggs/sources/text/bmj_2020_egg_consumption_cvd_pmc.txt"
+    excerpt: "Large prospective cohort analysis and updated meta-analysis evaluating egg consumption and cardiovascular disease risk."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/bmj_2020_egg_consumption_cvd_pmc.html"
+  - source_id: bmj_2013_egg_consumption_chd_stroke
+    title: "Egg consumption and risk of coronary heart disease and stroke: dose-response meta-analysis of prospective cohort studies"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3538567/"
+    author: "Rong et al."
+    publication_date: "2013-01-07"
+    retrieval_date: "2026-06-26"
+    source_type: dose_response_meta_analysis
+    path: "data/cases/eggs/sources/text/bmj_2013_egg_consumption_chd_stroke_pmc.txt"
+    excerpt: "Dose-response meta-analysis of prospective cohort studies on egg consumption, coronary heart disease, and stroke."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/bmj_2013_egg_consumption_chd_stroke_pmc.html"
+  - source_id: jama_2019_dietary_cholesterol_eggs
+    title: "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6439941/"
+    author: "Zhong et al."
+    publication_date: "2019-03-19"
+    retrieval_date: "2026-06-26"
+    source_type: pooled_cohort_study
+    path: "data/cases/eggs/sources/text/jama_2019_dietary_cholesterol_eggs_pmc.txt"
+    excerpt: "Pooled cohort study reporting associations between dietary cholesterol or egg consumption and incident cardiovascular disease and mortality."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/jama_2019_dietary_cholesterol_eggs_pmc.html"
+  - source_id: li_2020_egg_cholesterol_rct_meta
+    title: "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7400894/"
+    author: "Li et al."
+    publication_date: "2020-07-03"
+    retrieval_date: "2026-06-26"
+    source_type: randomized_trial_meta_analysis
+    path: "data/cases/eggs/sources/text/li_2020_egg_cholesterol_rct_meta_pmc.txt"
+    excerpt: "Meta-analysis of randomized controlled trials on egg consumption and lipid profiles, including LDL-C, HDL-C, and LDL-C/HDL-C ratio."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/li_2020_egg_cholesterol_rct_meta_pmc.html"
+  - source_id: ma_2021_egg_cvd_dose_response
+    title: "Egg consumption and cardiovascular risk: a dose-response meta-analysis of prospective cohort studies"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC8137614/"
+    author: "Ma et al."
+    publication_date: "2021"
+    retrieval_date: "2026-06-26"
+    source_type: dose_response_meta_analysis
+    path: "data/cases/eggs/sources/text/ma_2021_egg_cvd_dose_response_pmc.txt"
+    excerpt: "Dose-response meta-analysis evaluating egg consumption and cardiovascular disease risk or mortality, including CHD, stroke, and heart failure."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/ma_2021_egg_cvd_dose_response_pmc.html"
+  - source_id: huang_2020_egg_health_outcomes_evidence_mapping
+    title: "Egg consumption and health outcomes: a global evidence mapping based on an overview of systematic reviews"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7723562/"
+    author: "Huang et al."
+    publication_date: "2020"
+    retrieval_date: "2026-06-26"
+    source_type: evidence_mapping_overview
+    path: "data/cases/eggs/sources/text/huang_2020_egg_health_outcomes_evidence_mapping_pmc.txt"
+    excerpt: "Evidence mapping overview of systematic reviews on egg consumption and multiple health outcomes."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/huang_2020_egg_health_outcomes_evidence_mapping_pmc.html"
+  - source_id: nnr_2023_eggs_scoping_review
+    title: "Eggs - a scoping review for Nordic Nutrition Recommendations 2023"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC10870976/"
+    author: "Nordic Nutrition Recommendations evidence review authors"
+    publication_date: "2023"
+    retrieval_date: "2026-06-26"
+    source_type: nutrition_guideline_scoping_review
+    path: "data/cases/eggs/sources/text/nnr_2023_eggs_scoping_review_pmc.txt"
+    excerpt: "Scoping review for Nordic Nutrition Recommendations 2023 summarizing egg evidence and guideline-relevant considerations."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/nnr_2023_eggs_scoping_review_pmc.html"
+  - source_id: eggs_dietary_cholesterol_cvd_review
+    title: "Eggs, dietary cholesterol, and cardiovascular disease"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6790443/"
+    publication_date: "2019"
+    retrieval_date: "2026-06-26"
+    source_type: narrative_review
+    path: "data/cases/eggs/sources/text/eggs_dietary_cholesterol_cvd_pmc.txt"
+    excerpt: "Narrative review discussing eggs, dietary cholesterol, and cardiovascular disease, including subgroup concerns."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/eggs_dietary_cholesterol_cvd_pmc.html"
+  - source_id: dietary_cholesterol_lack_evidence_cvd_review
+    title: "Dietary Cholesterol and the Lack of Evidence in Cardiovascular Disease"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6024687/"
+    publication_date: "2018"
+    retrieval_date: "2026-06-26"
+    source_type: narrative_review
+    path: "data/cases/eggs/sources/text/dietary_cholesterol_lack_evidence_cvd_pmc.txt"
+    excerpt: "Narrative review arguing that evidence for dietary cholesterol as a cardiovascular disease driver is limited or inconsistent."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/dietary_cholesterol_lack_evidence_cvd_pmc.html"

@@ -1,0 +1,184 @@
+Skip to main page content
+
+An official website of the United States government Here's how you know
+
+The .gov means it’s official.  Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you’re on a federal government site.
+
+The site is secure.  The https:// ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely.
+
+
+
+Close
+ACCOUNT
+Logged in as:
+username
+	•	Dashboard
+	•	Publications
+	•	Account settings
+	•	Log out
+Access keys
+NCBI Homepage
+MyNCBI Homepage
+Main Content
+Main Navigation
+
+
+
+
+Search:
+
+Search
+Advanced
+User Guide
+
+Save Email Send to
+Display options
+
+
+Full text links
+    
+  
+
+  
+
+  
+    
+      Title & authors
+    
+  
+
+  
+
+  
+    
+      Abstract
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+      Publication types
+    
+  
+
+  
+    
+      MeSH terms
+    
+  
+
+  
+    
+      Substances
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+      LinkOut - more resources
+    
+  
+
+  
+
+  
+Meta-Analysis
+Circulation
+. 2020 Jan 21;141(3):e39-e53. doi: 10.1161/CIR.0000000000000743. Epub 2019 Dec 16.
+Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association
+Jo Ann S Carson, Alice H Lichtenstein, Cheryl A M Anderson, Lawrence J Appel, Penny M Kris-Etherton, Katie A Meyer, Kristina Petersen, Tamar Polonsky, Linda Van Horn; American Heart Association Nutrition Committee of the Council on Lifestyle and Cardiometabolic Health; Council on Arteriosclerosis, Thrombosis and Vascular Biology; Council on Cardiovascular and Stroke Nursing; Council on Clinical Cardiology; Council on Peripheral Vascular Disease; and Stroke Council
+
+	•	PMID: 31838890 DOI: 10.1161/CIR.0000000000000743
+Free article
+Full text links Cite
+Abstract
+The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+Keywords: AHA Scientific Statements; cholesterol; diet; eggs; risk factors.
+PubMed Disclaimer
+
+Publication types
+	•	Meta-Analysis 
+	•	Systematic Review 
+MeSH terms
+	•	Cardiovascular Diseases* / blood 
+	•	Cardiovascular Diseases* / etiology 
+	•	Cardiovascular Diseases* / prevention & control 
+	•	Cholesterol, Dietary* / administration & dosage 
+	•	Cholesterol, Dietary* / adverse effects 
+	•	Diet, Western* 
+	•	Humans 
+	•	Nutrition Policy* 
+	•	Recommended Dietary Allowances* 
+Substances
+	•	Cholesterol, Dietary 
+
+LinkOut - more resources
+	•	Full Text Sources
+	•	Atypon
+	•	Ingenta plc
+	•	Ovid Technologies, Inc.
+FULL TEXT LINKS
+[x]
+
+[x]
+cite
+
+Copy
+
+Download .nbib
+Format:
+    
+       AMA
+    
+       APA
+    
+       MLA
+    
+       NLM
+    
+  
+
+NCBI Literature Resources MeSH PMC Bookshelf Disclaimer The PubMed wordmark and PubMed logo are registered trademarks of the U.S. Department of Health and Human Services (HHS). Unauthorized use of these marks is strictly prohibited.
+FOLLOW NCBI
+
+
+
+.cls-11, .cls-12 { fill: #737373; } .cls-11 { fill-rule: evenodd; }
+.cls-1{fill:#737373;}
+Connect with NLM
+	•	.st10 { fill: #FFFFFF; } .st110 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st4 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st5 { fill: #FFFFFF; }
+National Library of Medicine 8600 Rockville Pike Bethesda, MD 20894
+Web Policies FOIA HHS Vulnerability Disclosure
+Help Accessibility Careers
+	•	NLM
+	•	NIH
+	•	HHS
+	•	USA.gov

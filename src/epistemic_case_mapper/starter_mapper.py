@@ -165,6 +165,33 @@ def _starter_open_questions(manifest: CaseManifest, claims: list[Claim]) -> list
                 gap_type="missing source needed",
             ),
         ]
+    if manifest.case_id == "eggs":
+        return [
+            OpenQuestion(
+                question_id="oq_0001",
+                text="Which findings depend on substitution context: what foods eggs replace or accompany?",
+                why_it_matters="Egg guidance can change if eggs replace refined carbohydrates, processed meat, fish, legumes, or other protein sources.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "diet" in claim.text.lower() or "pattern" in claim.text.lower() or "replace" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources if "aha" in source.source_id or "nnr" in source.source_id],
+                gap_type="crux",
+            ),
+            OpenQuestion(
+                question_id="oq_0002",
+                text="How should observational cardiovascular findings be weighted against randomized lipid-marker findings?",
+                why_it_matters="The eggs case turns on whether clinical outcomes, residual confounding, or biomarker changes should carry more weight.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "cardiovascular" in claim.text.lower() or "ldl" in claim.text.lower() or "cholesterol" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources if "jama" in source.source_id or "bmj" in source.source_id or "li_2020" in source.source_id],
+                gap_type="crux",
+            ),
+            OpenQuestion(
+                question_id="oq_0003",
+                text="Which populations need separate guidance, especially people with diabetes, high LDL cholesterol, or different baseline dietary patterns?",
+                why_it_matters="A single global egg recommendation may erase heterogeneity across baseline risk, cholesterol response, and dietary context.",
+                linked_claim_ids=[claim.claim_id for claim in claims if "diabetes" in claim.text.lower() or "population" in claim.text.lower() or "subgroup" in claim.text.lower()][:5],
+                linked_source_ids=[source.source_id for source in manifest.sources],
+                gap_type="population heterogeneity",
+            ),
+        ]
     return [
         OpenQuestion(
             question_id="oq_0001",

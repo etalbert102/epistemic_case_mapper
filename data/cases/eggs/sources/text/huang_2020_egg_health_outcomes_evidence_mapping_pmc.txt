@@ -1,0 +1,926 @@
+Skip to main content
+
+An official website of the United States government
+Here's how you know
+
+
+
+Search
+
+Log in
+Primary site navigation
+
+Search PMC Full-Text Archive
+
+Search in PMC
+	•	Journal List
+	•	User Guide
+As a library, NLM provides access to scientific literature. Inclusion in an NLM database does not imply endorsement of, or agreement with, the contents by NLM or the National Institutes of Health.
+Learn more: PMC Disclaimer | PMC Copyright Notice
+
+Ann Transl Med. 2020 Nov;8(21):1343. doi: 10.21037/atm-20-4243
+Egg consumption and health outcomes: a global evidence mapping based on an overview of systematic reviews
+Xianzhuo Zhang 1,#, Meng Lv 2,#, Xufei Luo 2,#, Janne Estill 3,4, Ling Wang 2, Mengjuan Ren 2, Yunlan Liu 2, Ziyun Feng 1, Jianjian Wang 2, Xiaohui Wang 2,✉, Yaolong Chen 2,5,6,7,^,✉
+	•	Author information
+	•	Article notes
+	•	Copyright and License information
+
+PMCID: PMC7723562  PMID: 33313088
+Abstract
+Background
+Several systematic reviews and meta-analyses have assessed the association between egg consumption and human health, but the evidence is often conflicting.
+Methods
+We conducted a systematic literature search to find all systematic reviews and meta-analyses that assess the association between egg consumption and any type of health outcome. We used AMSTAR to evaluate the methodological quality of the reviews, and GRADE to determine the quality of evidence. We visualized the results using a human anatomy diagram and evidence mapping.
+Results
+Our search revealed 29 systematic reviews and meta-analyses. Eight studies were of high methodological quality, 16 studies of medium quality, and five studies of low quality. We identified 34 primary outcomes from the included 29 reviews, which were combined into a total of 22 different health outcomes. Two of the primary outcomes were based on high-quality evidence, 18 on moderate-quality evidence, and 14 on low-quality evidence. Egg consumption was associated with an increased risk of two diseases and decreased risk of six outcomes. For ten outcomes, no significant association was found, and for four outcomes, different reviews came to conflicting conclusions.
+Conclusions
+The association between egg consumption and the risk of cancer, diabetes, cardiovascular diseases and other related diseases has been studied in several meta-analyses. The evidence from different studies on the same topic was often conflicting, which can complicate the making of dietary recommendations.
+Keywords: Egg consumption, human health, systematic review, evidence mapping, umbrella review
+Introduction
+A healthy and balanced diet can bring us many benefits. Our diet should contain a variety of fresh and nutritious food to keep our body in the best condition. Therefore, the World Health Organization (WHO) recommends that our daily diet should consist of a mix of staple foods including legumes, plenty of fresh fruit and vegetables, and foods of animal origin (e.g., meat, fish, eggs and milk) (1). Eggs are considered to have a high nutritional value, and are thus widely consumed worldwide (2). Eggs are a low-energy, nutrient-dense source of food, being particularly rich of selenium and vitamin D (3). Along with certain kinds of shellfish, eggs are also the main source of dietary cholesterol: a medium-sized egg of 58 g contains 200 mg cholesterol (4). However, egg consumption may also be associated with some health problems, such as brain cancer (5) and hypertension (6).
+Many systematic reviews and meta-analyses have assessed the impact of egg consumption on health outcomes. These reviews have identified several diseases that may be potentially associated with egg consumption. For example, one systematic review found a positive dose-response association between the consumption of eggs and the development of gastrointestinal (GI) neoplasms (7). Several systematic reviews addressed the association between egg consumption and cardiovascular disease (8-10). According to Xu’s meta-analysis, the risk of cardiovascular disease was not higher among people consuming one egg per day than among those not consuming any eggs (8). Studies by Shin and Tran have shown that egg consumption may increase the incidence of cardiovascular disease in diabetics (9,10). Despite the large number of systematic reviews and meta-analyses, no comprehensive systematic summary or visual presentation of the overall impact of egg consumption has yet been done.
+We aimed therefore to assess the existing systematic reviews and meta-analyses and summarize the results visually to fully understand the relationship between egg consumption and human health. We produced a Global Evidence Mapping (GEM) (11) to visualize the association between egg consumption and health outcomes related to different parts of the body. The study protocol was registered at the International Prospective Register of Systematic Reviews (PROSPERO): CRD42019135737 (12). We present the following article in accordance with the PRISMA reporting checklist (13,14) (available at http://dx.doi.org/10.21037/atm-20-4243).
+Methods
+Data sources and search strategy
+We searched PubMed, Embase, Web of Science and Cochrane Library to find the systematic reviews and meta-analyses on the relationship between egg consumption and any disease published up to December 2019. We used the search term (“Egg” AND (“Systematic Review” OR “Meta-analysis”)). We also searched databases of grey literature and Google Scholar. Two investigators conducted the search independently. We also checked the references of the identified articles to find additional studies.
+Inclusion and exclusion criteria
+We included all systematic reviews and meta-analyses related to the relationship between egg consumption and the risk of any disease published in English. We excluded conference abstracts, articles for which we could not retrieve the original data despite contacting the author, and articles for which we failed to access the full text. We also excluded systematic review proposals and umbrella reviews.
+Study selection and data extraction
+Two researchers screened the literature and extracted the data independently, and cross-checked the findings. In case of disagreement, a third reviewer participated in the discussion. We used Endnote X9 for document management. After deduplication, we read the titles and abstracts to exclude irrelevant articles. We then read the full texts of the remaining articles to decide about the inclusion of the study. We extracted the following data: (I) baseline data (study ID, first author, publication year, country, patients’ age, study design, disease or problem, sample size, details of intervention and control, whether quantitative synthesis was conducted, and the main findings); and (II) outcome indicators and related statistical indicators (effect size, 95% CI, I2, P). If essential information was missing, we contacted the author, or used data conversion to the largest possible extent. Data that could not be obtained were discarded.
+Quality assessment
+Two researchers independently evaluated the quality of the included studies and cross-checked the results. If necessary, a third reviewer participated in the discussion. Methodological quality assessment of included literature was performed using the AMSTAR tool (15). The AMSTAR score has a maximum of 11 points, with studies scoring between 9 and 11 being considered to be of high quality, studies scoring between 6 and 8 of medium quality, and studies scoring between 0 and 5 of low quality. We evaluated the quality of evidence for the primary outcome of each included systematic review using the GRADE system method (16).
+Statistical analysis
+We performed descriptive analyses of the general characteristics, quality and findings of the included systematic reviews. We present the outcomes visually using a human anatomy diagram and a bubble chart.
+Results
+Search results
+A total of 318 articles were identified. After removing duplicates and screening the titles and abstracts, we finally included 29 systematic reviews (Figure 1).
+Figure 1.
+
+Open in a new tab
+Flow chart of the literature search and screening process.
+Characteristics of the included studies
+Thirteen (44.8%) of the 29 included reviews were conducted in China (5,6,8,17-26), 6 in the USA (10,27-31), three in Iran (32-34), and 1 each in France (35), the Netherlands (36), Japan (9), Australia (7), Sweden (37), Canada (38) and Singapore (39). Twenty-six reviews were quantitative analyses and the remaining three (10,35,38) were qualitative studies.
+Fourteen reviews (48.3%) (7,10,17-21,23-25,27,35-37) did not report the participants’ age (Table 1). Only four reviews (32,34,38,39) included randomized controlled trials; other reviews were limited to cohort and case-control studies. Nine reviews (5,6,8,21,24,31,34,35,39) included less than ten original studies. Most (n=21) reviews (6-10,17,19-31,33,37) had a total sample of more than 10,000 participants.
+Table 1. Baseline characteristics of the included studies.
+First author, publication year, country
+Disease/problem
+Design of primary studies
+Number of primary studies
+No. of participants
+Age of participants
+Exposure
+Reference category
+Quantitative synthesis
+Main findings
+AMSTAR score
+Yoon 2000, France (35)
+colorectal adenomas
+Case-control studies
+5
+NA
+NA
+Egg consumption
+NA
+No
+No consistent association with egg consumption was found in the five available studies
+Low
+Weggemans 2001, Netherlands (36)
+ratio of total cholesterol to high-density lipoprotein cholesterol in humans
+Studies were included if they had a crossover or parallel design with a control group
+17
+556
+NA
+Egg consumption
+NA
+Yes
+Dietary cholesterol raises the ratio of total to HDL cholesterol and, therefore, adversely affects the cholesterol profile
+Low
+Fang 2012, China (17)
+bladder cancer
+4 cohort and 9 case-control studies
+13
+133,690
+NA
+Highest egg intake
+Lowest egg intake
+Yes
+No strong evidence of a significant association of egg consumption with bladder cancer incidence, but a protective effect shown in Japanese population
+Low
+Xie 2012, China (18)
+prostate cancer
+9 cohort studies and 11 case-control studies
+20
+5,791
+NA
+High intake of eggs
+NA
+Yes
+No evidence of a significant influence of egg consumption on prostate cancer incidence or mortality
+Low
+Li 2013, China (19)
+bladder cancer
+4 cohort studies and 9 case-control studies
+13
+184,727
+NA
+Highest egg intake
+Lowest egg intake
+Yes
+No significant association between bladder cancer risk and egg consumption, except a possible positive relationship with the intake of fried eggs based on the limited number of studies
+Medium
+Li 2013, China (20)
+cardiovascular diseases and diabetes
+11 cohort, 1 case-control or 2 cross-sectional design
+14
+320,778
+NA
+Highest egg intake; each 4/week increment in egg intake
+Lowest egg intake
+Yes
+Dose response positive association found between egg consumption and the risk of CVD and diabetes
+Medium
+Rong 2013, China (21)
+coronary heart disease and stroke
+Prospective cohort studies
+8
+474,342
+NA
+1 egg/day; Highest
+NA; lowest
+Yes
+Higher consumption of eggs (up to one egg per day) is not associated with an increased risk of coronary heart disease or stroke
+Medium
+Shin 2013, Japan (9)
+cardiovascular disease and diabetes
+Prospective cohort studies
+16
+579,970
+>17
+The highest category (>1 egg/d) of egg consumption
+The lowest egg consumption (1 egg/week or less)
+Yes
+Egg consumption is not associated with the risk of CVD and cardiac mortality in the general population. Egg consumption may be associated with an increased incidence of type 2 diabetes among the general population and CVD comorbidity among diabetic patients
+High
+Tse 2014, Australia (7)
+gastrointestinal (GI) neoplasms
+37 case-control studies; 7 cohort studies
+44
+424,867
+NA
+The number of eggs consumed or the frequency of consumption
+NA
+Yes
+Egg consumption is associated with a positive dose-response association with the development of GI neoplasms
+Medium
+Si 2014, China (22)
+breast cancer
+8 case control studies and 5 cohort studies
+13
+825,504
+>20
+1–2, 2–5, >5 eggs/week
+NA
+Yes
+Egg consumption was associated with increased breast cancer risk among the European, Asian and postmenopausal populations and those who consumed 2 to 5 eggs per week
+Medium
+Tran 2014, USA (10)
+cardiovascular disease among diabetic individuals
+6 prospective cohort studies; 4 case-control studies
+10
+83,099
+NA
+NA
+NA
+No
+Four of the six studies that examined CVD and mortality and egg consumption among diabetics found a statistically significant association
+Low
+Zeng 2015, China (23)
+ovarian cancer
+6 case-control studies and 6 cohort studies
+12
+629,453
+NA
+Highest egg intake
+Lowest egg intake
+Yes
+Egg consumption may increase the risk of ovarian cancer
+Medium
+Keum 2015, USA (27)
+cancers of the breast, ovary and prostate
+NA
+18
+16,023
+NA
+2, 5, 9 eggs/week
+NA
+Yes
+No evidence was found for an association with the risk of total prostate cancer
+Medium
+Wu 2016, China (24)
+breast cancer
+Cohort studies
+9
+639,720
+NA
+Highest egg intake
+Lowest egg intake
+Yes
+No association between egg and breast cancer risk was found
+High
+Tamez 2016, USA (28)
+type 2 diabetes
+Prospective cohort studies
+10
+251,213
+>30
+Highest egg intake
+lowest egg intake
+Yes
+The association of egg intake with increased risk of incident type 2 diabetes found only in US cohort studies
+Medium
+Djoussé 2016, USA (29)
+type 2 diabetes
+12 prospective cohorts from 8 unique cohorts after full-text review
+12
+219,979
+20–98
+Highest egg intake
+Lowest egg intake
+Yes
+No relation between infrequent egg consumption and DM risk but suggests a modest elevated risk of DM with ≥3 eggs/week that is restricted to US studies
+Medium
+Wallin 2016, Sweden (37)
+type 2 diabetes
+Cohort studies and case-control studies
+11
+39,610
+NA
+1–2, 3, 3–4, ≥5 times/week
+<1 time/week
+Yes
+No support found for an association between egg consumption and risk of type 2 diabetes
+Medium
+Alexander 2016, USA (30)
+coronary heart disease and stroke
+Cohort studies
+14
+548,000
+≥15
+0–1, 1–3.5, 3.5–7, 
+>7 eggs/week
+NA
+Yes
+Consumption of up to one egg daily may contribute to a decreased risk of stroke, and daily egg intake does not appear to be associated with risk of CHD
+Medium
+Khawaja 2017, USA (31)
+heart failure
+Prospective Cohort Studies
+4
+105,999
+53–63
+The highest category (≥1/day) of egg consumption
+The lowest egg consumption 
+(<1 egg/week)
+Yes
+An elevated risk of incident heart failure with frequent egg consumption was found
+Medium
+Richard 2017, Canada (38)
+individuals with type 2 diabetes and at risk for developing diabetes
+Original RCTs
+10
+768
+≥18
+NA
+NA
+No
+Egg consumption is not associated with adverse effect on major CVD risk factors in individuals at risk for developing diabetes or with type 2 diabetes
+Medium
+Dong 2017, China (25)
+non-Hodgkin lymphoma
+9 case control studies or 
+3 cohort studies
+12
+11,271
+NA
+Highest egg intake
+Lowest egg intake
+Yes
+Consumption of poultry and eggs is unlikely related to the risk of NHL
+High
+Rouhani 2018, Iran (32)
+blood lipids
+RCTs (cross-over & parallel)
+27
+1,734
+10–75
+NA
+NA
+Yes
+Consumption of eggs increases total cholesterol, LDL-C and HDL-C, but not the LDL-C:HDL-C ratio, TC: HDL-C ratio and TG compared with low egg control diets
+High
+Zhang 2018, China (6)
+hypertension
+Prospective cohort studies
+8
+291,687
+≥18
+Highest egg intake
+Lowest egg intake
+Yes
+Egg consumption was associated with a lower risk of HTN
+High
+Aminianfar 2019, Iran (33)
+upper aero-digestive tract cancers
+4 cohort, 2 nested case-control studies, 32 case control and 2 others
+40
+165,197
+All ages
+Highest egg consumption (ranging from ≥1 meal/d to 
+≥3 times/month)
+Lowest egg consumption (ranging from 0–20 g/d to never)
+Yes
+High egg consumption was associated with increased risk of UADT cancers only in HCC studies but not in PCC or prospective cohort studies
+High
+Xu 2019, China (8)
+cardiovascular disease and all-cause mortality
+Cohort
+13
+28,024
+≥50
+Highest egg intake (<1, 1–2, 3–4, 5–6, >7 egg/day)
+Lowest egg consumption (≤1 egg /week or less)
+Yes
+Eating one egg daily is not associated with increase in CVD or all-cause mortality
+Medium
+Wang 2019, Singapore (39)
+blood pressure, lipids and lipoproteins in middle-aged and older population
+RCTs
+8
+412
+≥51.9
+At least 3–4 whole eggs/week
+<3 whole eggs/week
+Yes
+Quantity of whole eggs consumed per week does not affect CVD risk factors, and consuming egg substitutes may also be beneficial compared to eggs on lowering CVD risk in the middle-aged and older population
+Medium
+Luo 2019, China (5)
+brain cancer
+Population-based case-control studies; hospital-based case-control studies; cohort
+5
+5425
+≥18
+Highest egg intake
+Lowest egg intake
+Yes
+Consumption of poultry and eggs are unlikely associated with the risk of brain cancer
+Medium
+Sajadi Hezaveh 2019, Iran (34)
+inflammatory markers
+RCTs (cross-over & parallel)
+9
+481
+≥18
+Egg consumption
+No egg consumption
+Yes
+Egg consumption had no significant effect on serum biomarkers of inflammation in adults
+High
+Mazidi 2019, China (26)
+coronary heart disease and stroke
+Prospective cohort studies
+10
+110,400
+>17
+Egg consumption
+NA
+Yes
+No association between CHD or total mortality and egg consumption, but a negative association between egg intake and stroke mortality was found
+High
+Open in a new tab
+NA, not available; DM, diabetes mellitus; CHD, coronary heart disease; CVD, cardiovascular disease; RCTs, randomized controlled trials; UADT, upper aero-digestive tract; HCC, hospital-based case-control studies; PCC, population-based case-control studies.
+We identified 34 primary outcomes from the 29 included systematic reviews. After we combined the same health outcomes from different studies, we ended up with a total of 22 different outcomes. Among the outcomes, eating eggs was found protective against two diseases and harmful for six types of health outcomes. For ten outcomes, no significant association with egg consumption was found, and on four outcomes the results were controversial.
+Quality of included studies
+According to the AMSTAR scores, eight studies (6,9,24-26,32-34) were of high quality, 16 studies (6-8,19-23,27-31,37-39) of medium quality, and five studies (10,17,18,35,36) of low quality (Table 1). According to our assessment using the GRADE approach, two of the 34 primary outcomes were based on high-quality evidence, 18 on moderate-quality evidence, and 14 on low-quality evidence (Table 2).
+Table 2. Summary of findings for the primary outcomes.
+Studies
+Factors that can reduce the quality of the evidence
+Relative effect (95% CI)
+Quality of evidence
+No. of studies
+Design
+Risk of bias
+Inconsistency
+Indirectness
+Imprecision
+Other considerations
+Weggemans 2001: the effect of dietary cholesterol on the ratio of total to HDL cholesterol (36)
+17
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.02 (0.01–0.03)
+Moderate
+Fang 2012: Risk of bladder cancer (17)
+13
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+0.94 (0.69–1.18)
+Low
+Xie 2012: Risk of prostate cancer (cohort studies) (18)
+6
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.97 (0.87–1.07)
+Moderate
+Xie 2012: Risk of prostate cancer (case-control studies) (18)
+11
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.07 (0.86–1.31)
+Low
+Li 2013: Risk of bladder cancer (19)
+13
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.11 (0.90–1.35)
+Low
+Li 2013: Risk of cardiovascular diseases (20)
+12
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.19 (1.02–1.38)
+Low
+Li 2013: Risk of diabetes (20)
+6
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.83 (1.42–2.37)
+Moderate
+Rong 2013: Risk of coronary heart disease (21)
+9
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.99 (0.85–1.16)
+Moderate
+Rong 2013: Risk of stroke (21)
+8
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.91 (0.81–1.02)
+Moderate
+Shin 2013: Risk of cardiovascular diseases (9)
+12
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.96 (0.88–1.05)
+Moderate
+Shin 2013: Risk of diabetes (9)
+5
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.42 (1.09–1.86)
+Moderate
+Tse 2014: Risk of gastrointestinal (GI) neoplasms (7)
+44
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.15 (1.09–1.22)
+Low
+Si 2014: Risk of breast cancer (22)
+13
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.04 (1.01–1.08)
+Low
+Zeng 2015: Risk of ovarian cancer (23)
+12
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.21 (1.06–1.38)
+Moderate
+Keum 2015: Risk of breast cancer (27)
+10
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.05 (0.99–1.11)
+Moderate
+Keum 2015: Risk of ovarian cancer (27)
+12
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.09 (0.96–1.24)
+Moderate
+Keum 2015: Risk of prostate cancer (27)
+10
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.00 (0.88–1.14)
+Moderate
+Wu 2016: Risk of breast cancer (24)
+9
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.04 (0.98–1.11)
+Moderate
+Tamez 2016: Risk of type 2 diabetes (28)
+10
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.13 (1.04–1.22)
+Low
+Djoussé 2016: Risk of type 2 diabetes (29)
+12
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.09 (0.99–1.20)
+Low
+Wallin 2016: Risk of type 2 diabetes (37)
+11
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.03 (0.96–1.10)
+Low
+Alexander 2016: Risk of coronary heart disease (30)
+7
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.97 (0.88–1.07)
+Moderate
+Alexander 2016: Risk of stroke (30)
+7
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.88 (0.81–0.97)
+Moderate
+Khawaja 2017: Risk of heart failure (31)
+4
+OS
+Not serious
+Not serious
+Not serious
+Not serious
+None
+1.25 (1.12–1.39)
+High
+Dong 2017: Risk of non-Hodgkin lymphoma (25)
+7
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.15 (0.87–1.51)
+Low
+Rouhani 2018: Risk of blood lipids (32)
+27
+RCT
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+7.17 (4.34–10.01)
+Low
+Zhang 2018: Risk of hypertension (6)
+3
+OS
+Not serious
+Not serious
+Not serious
+Not serious
+None
+0.79 (0.68–0.91)
+High
+Aminianfar 2019: Risk of upper aero-digestive tract cancers (33)
+40
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.42 (1.19–1.68)
+Low
+Xu 2019: Risk of cardiovascular disease (8)
+13
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.97 (0.90–1.05)
+Moderate
+Wang 2019: Risk of blood pressure (39)
+8
+RCT
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.20 (0.06–0.34)
+Moderate
+Luo 2019: Risk of brain cancer (5)
+5
+OS
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+1.00 (0.55–1.81)
+Low
+Sajadi Hezaveh 2019: Risk of inflammatory markers (34)
+8
+RCT
+Seriousa
+Seriousb
+Not serious
+Not serious
+None
+0.24 (−0.43 to 0.90)
+Low
+Mazidi 2019: Risk of coronary heart disease (26)
+6
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+1.23 (0.88–1.71)
+Moderate
+Mazidi 2019: Risk of stroke (26)
+8
+OS
+Seriousa
+Not serious
+Not serious
+Not serious
+None
+0.72 (0.54–0.96)
+Moderate
+Open in a new tab
+a, downgraded because of the risk of bias of included studies; b, downgraded because of I2 ≥50%. Quality of evidence: high: we are very confident that the true effect lies close to that of the estimate of the effect; moderate: we are moderately confident in the effect estimate: the true effect is likely to be close to the estimate of the effect, but there is a possibility that it is substantially different; low: our confidence in the effect estimate is limited: the true effect may be substantially different from the estimate of the effect; very low: we have very little confidence in the effect estimate: the true effect is likely to be substantially different from the estimate of effect. OS, observational study; RCT, randomized controlled trial.
+Risk of cancer
+Twelve studies (5,7,17-19,22-25,27,33,35) examined the association between the risk of different types of cancer and egg consumption. Three of these studies assessed the risk of breast cancer (22,24,27), two the risk of bladder cancer (17,19), two the risk of ovarian cancer (23,27), two the risk of prostate cancer (18,27), and one each the risk of colorectal adenomas (35), GI neoplasms (7), non-Hodgkin’s lymphoma (25), upper aero-digestive tract cancers (33), and brain cancer (5).
+A meta-analysis (22) of 13 observational studies showed that egg consumption was associated with a slightly increased risk of breast cancer among postmenopausal women of European and Asian origin [relative risk (RR) =1.04, 95% CI: 1.01–1.08 for those consuming 2 to 5 eggs/week, compared with <1 eggs/week]. Another meta-analysis (24) published in 2016 found similar results between egg consumption and the risk of breast cancer, although the results were not significant (RR of highest versus lowest category of egg consumption: 1.04, 95% CI: 0.98–1.11).
+The meta-analysis assessing the risk of cancers of the upper aero-digestive tract (33) found no significant association between egg consumption and the risk of cancer in population-based case-control [odds ratio (OR) =1.25; 95% CI: 0.59–2.67] or prospective cohort studies (OR =0.86; 95% CI: 0.71–1.04). However, a positive significant association was observed in hospital-based case-control studies (OR =1.50; 95% CI: 1.34–1.68). A meta-analysis (7) of 44 observational studies found a positive dose-response association between egg consumption and the development of GI neoplasms. Two systematic reviews (23,27) showed that the risk of ovarian cancer may be elevated among people who consume eggs. No significant association was found between egg consumption and colorectal adenomas, bladder cancer, prostate cancer, non-Hodgkin’s lymphoma, or brain cancer (Figure 2).
+Figure 2.
+
+Open in a new tab
+Human anatomy diagram of diseases or problems (localization). Color: green indicates that egg consumption is a beneficial factor for health outcomes; red indicates that egg consumption is a harmful factor for health outcomes; blue indicates that there is no significant association between egg consumption and health outcomes; yellow indicates that the stake in egg consumption and health outcomes is controversial.
+Diseases of circulatory system
+Ten studies (6,8-10,20,21,26,30,31,39) examined the association between circulatory system diseases and egg consumption. Among these, four meta-analyses focused on cardiovascular diseases (8-10,20), three on coronary heart disease and stroke (21,26,30), two on blood pressure (6,39), and one on heart failure (31).
+The results of the four meta-analyses on cardiovascular diseases (8-10,20) were controversial. Two meta-analyses (9,11) showed that egg consumption was not associated with the risk of cardiovascular diseases in the general population. However, another meta-analysis found that egg consumption may be associated with an increased incidence of cardiovascular diseases among diabetic patients (10). One meta-analysis (11) concluded that eating one egg daily is not associated with a higher risk of cardiovascular disease or all-cause mortality, but another (10) found a positive dose-response association between egg consumption and the risk of cardiovascular diseases among diabetic patients.
+Three meta-analyses (21,26,30) suggested that a consumption of up to one egg per day is not associated with increased risk of coronary heart disease, and consumption of up to one egg daily may contribute to a decreased risk of total stroke compared to consuming no eggs.
+One meta-analysis (6) showed that people with the highest consumption of eggs had a lower risk of hypertension than those with the lowest consumption (RR =0.79, 95% CI: 0.68–0.91). Another systematic review (39) found no difference in blood pressure between the consumption of more than four whole eggs/week compared to up to four whole eggs/week.
+One meta-analysis (31) suggested that the risk of incident heart failure is associated with frequent egg consumption (RR of consuming at least one egg/day vs. the lowest egg consumption category: 1.25, 95% CI: 1.12–1.39) (Figure 2).
+Metabolic diseases
+We identified ten meta-analyses (9,20,28,29,32,35-39) of randomized controlled trials and observational studies assessing the relationship between metabolic diseases and egg consumption. Among these, six meta-analyses presented the association of egg consumption with type 2 diabetes (9,20,28,29,37,38), three with blood lipids (32,36,39) and one with cholesterol (35).
+Three of the six meta-analyses on diabetes (9,20,28) indicated that egg consumption may be associated with an increased incidence of type 2 diabetes. The remaining three systematic reviews (29,37,38) did not support an association between egg consumption and the risk of type 2 diabetes.
+A meta-analysis (36) including 17 studies involving 556 subjects found that dietary cholesterol raises the ratio of total to high-density lipoprotein cholesterol and, therefore, adversely affects the cholesterol profile. Another meta-analysis (32) showed that consumption of eggs increases total cholesterol (TC), low density lipoprotein-cholesterol (LDL-C) and high-density lipoprotein-cholesterol (HDL-C), but not the LDL-C to HDL-C ratio, TC to HDL-C ratio or triglyceride (TG).
+Finally, a meta-analysis (34) published in 2019 studied the relationship between egg consumption and inflammatory markers, and found that egg consumption had no significant effect on serum biomarkers of inflammation in adults (Figure 2).
+Evidence mapping
+Figure 3 visualizes the association between egg consumption and health outcomes. The bubble plot includes 26 meta-analyses; the reviews by Yoon et al. (35), Tran et al. (10) and Richard et al. (38) were excluded because they did not include quantitative analyses. The X-axis, Y-axis, size and color of the bubbles represent the number of studies included, AMSTAR score, sample size (participants), and main findings, respectively. Every included systematic review corresponds to one single bubble in the bubble chart.
+Figure 3.
+
+Open in a new tab
+Evidence mapping of egg consumption and health outcomes. Bubbles: the studies included in this article (first author, publication year). Bubble size: sample size. X-axis: number of studies included. Y-axis: AMSTAR score. Color: green bubbles indicate that egg consumption is a beneficial factor for health outcomes; red bubbles indicate that egg consumption is a harmful factor for health outcomes; blue bubbles indicate that there is no significant association between egg consumption and yellow bubbles indicate that the stake in egg consumption and health outcomes is controversial.
+We used four colors to distinguish the main findings of the 26 studies. Green bubbles indicate that egg consumption is a beneficial factor for health outcomes; red bubbles indicate that egg consumption is a harmful factor for health outcomes; blue bubbles indicate that there is no significant association between egg consumption and health outcomes; and yellow bubbles indicate that the stake in egg consumption and health outcomes is controversial, meaning that studies have found both positive and negative associations.
+The X-axis shows the number of studies included in each systematic review or meta-analysis, and the Y-axis the AMSTAR score.
+Discussion
+Our study identified 29 systematic reviews of randomized controlled trials and observational studies on egg consumption. We found no evidence for neither beneficial nor harmful association between egg consumption and range of health outcomes, including colorectal adenomas, bladder cancer, prostate cancer, non-Hodgkin’s lymphoma and brain cancer. For some health outcomes, such as heart failure, GI neoplasms, and ovarian cancer, egg consumption was found to be harmful, and for some health outcomes, including hypertension and stroke, protective. For diabetes, breast cancer, cardiovascular diseases and upper aero-digestive tract cancers, different systematic reviews came to controversial conclusions. The quality of evidence was high only for 2 of the 34 included primary outcomes. For 14 outcomes the quality of evidence was low, and for 18 outcomes moderate.
+Three meta-analyses (22,24,27) assessed the relationship between breast cancer and egg consumption. Two out of the three found a non-significantly increased risk of breast cancer among people consuming eggs moderately. Consuming more than five eggs per week was however associated with a significantly higher risk of breast cancer than no egg consumption (27). One potential reason for the increased risk of breast cancer is that the nutritional ingredients of eggs may promote the accumulation of cholesterol and may alter the signaling pathways such as steroid hormone receptors to promote cancer progression (40). Another possible reason is that some cooking methods may affect the composition of the eggs in a way that increases the risk of cancer (41).
+Our study found controversies regarding egg consumption and the risk of cardiovascular diseases. A meta-analysis (20) involving 320,000 participants found a positive dose-response association between egg consumption and the risk of cardiovascular diseases. However, three other systematic reviews on the same topic found no association. A recent review (42) of egg consumption and heart disease showed that the risk of cardiovascular diseases differs across risk groups. A cohort study (43) involving 29,615 US adults suggested that high consumption of dietary cholesterol or eggs has a significant positive dose-response association both with the risk of incident cardiovascular diseases and with all-cause mortality.
+Eggs are a major source of dietary cholesterol (44). However, the consumption of eggs should be kept within reasonable limits to prevent cardiovascular or other diseases. Most national dietary recommendations have removed the restrictions on dietary cholesterol and egg consumption (45). High quality and indigenized practice guidelines on dietary cholesterol are needed.
+We found inconsistent results on the association between high egg consumption and the incidence of diabetes. Results from Shin et al., Li et al. and Tamez et al. (9,20,28) indicated that egg intake was associated with an increased incidence of type 2 diabetes. However, evidence from the Djoussé et al., Wallin et al. and Richard et al. (29,37,38) did not support an association between egg consumption and the risk of type 2 diabetes. There may be several reasons for these inconsistent findings. First, meta-analyses may have been affected by the inherent limitations of primary studies. Second, different systematic reviews had different inclusion and exclusion criteria. Third, the variety in the methods of preparation (boiled, fried, or raw) and ways of consumption (separately, or as a part of dishes such as pasta, cake, omelets, or mixed dishes) may also contribute to heterogeneity in the results (29).
+Eggs are one of the major sources of protein (46). Diets high in cholesterol, saturated fat, and trans-fatty acid can raise blood cholesterol levels, which may induce abnormal blood lipids and blood glucose metabolism. A recent review (47) showed that the effect of increased consumption of eggs on risk markers for type 2 diabetes in healthy subjects was not significant. Another review (48) indicated that consuming more eggs than recommended (by some countries) as part of an otherwise healthy diet is safe, also for people with high risk of type 2 diabetes. A meta-analysis published in 2017 suggested that egg intake was not associated with a risk of type 2 diabetes (49). Some dietary clinical practice guidelines on diabetes have not suggested to limit egg intake (50), whereas some recommend to restrict egg consumption to a low level (51,52). These conflicting findings may be caused by differences in dietary patterns and socioeconomic factors. Another explanation could be that eggs may also offer some protective effect against diabetes: egg white hydrolysate, lutein, zeaxanthin, and angiotensin I-converting enzyme inhibitory tripeptides from eggs have been shown to protect against glucose and insulin resistance, oxidative stress, and inflammation in the context of type 2 diabetes (53).
+Two previous articles have addressed a topic similar with this study (54,55). One studied the association of egg consumption and human health, covering 21 systematic reviews on different types of cancer, type 2 diabetes and cardiovascular disease. The results showed no strong evidence of detrimental effects of egg consumption on human health. This finding is consistent with our study. Another study examined the effect of egg consumption on cardiometabolic health outcomes using the results of 23 systematic reviews, and found no associated between egg consumption and the risk of cardiovascular disease in the general population. However, these two studies did not appraise the quality of the evidence. The quality of the evidence, preferably using established methods such as the GRADE approach, is an essential factor when interpreting the findings of systematic reviews (56).
+Strengths and limitations of this study
+To our knowledge, this is the first study using evidence mapping and visual diagrams to present the association between egg consumption and health outcomes. Moreover, this overview, unlike the previous ones, systematically summarizes the current evidence for all types of health outcomes without restrictions. We also evaluated the methodological quality and certainty of the evidence by the AMSTAR tool and GRADE approach. However, this umbrella review also has several limitations. First, most of the included reviews were based on observational studies, which may cause confounding and bias. Second, we did not conduct any sensitivity analyses excluding the studies at high risk of bias. Finally, we did not estimate the effect size of primary outcomes because of the heterogeneity between the studies.
+Conclusions
+The associations between egg consumption and the incidence of cancer, diabetes, cardiovascular diseases and other possibly related diseases have been assessed in numerous meta-analyses. However, in many cases several systematic reviews on the same subject, often only of low or moderate quality, have produced controversial results that can confuse people when making choices related to their daily diet. To achieve high quality and unambiguous evidence for these associations, future studies should focus on solving the inconsistencies between studies. Large sample, multicentre, and multinational randomized controlled trials are needed.
+Supplementary
+The article’s supplementary files as
+atm-08-21-1343-rc.pdf (79.9KB, pdf)
+DOI: 10.21037/atm-20-4243
+atm-08-21-1343-coif.pdf (189.7KB, pdf)
+DOI: 10.21037/atm-20-4243
+Acknowledgments
+We would like to thank the Lanzhou University Library for providing various database resources, as well as the open access resources of various databases and magazines, which allow us to access the original researches. We would also like to thank the journal editors and review experts for their valuable comments, which made our research more valuable.
+Funding: This work was supported by the 2020 Key R & D project of Gansu Province. Only used to support Open Access publication charges.
+Ethical Statement: The authors are accountable for all aspects of the work in ensuring that questions related to the accuracy or integrity of any part of the work are appropriately investigated and resolved.
+Footnotes
+Reporting Checklist: The authors have completed the PRISMA reporting checklist. Available at http://dx.doi.org/10.21037/atm-20-4243
+Conflicts of Interest: All authors have completed the ICMJE uniform disclosure form (available at http://dx.doi.org/10.21037/atm-20-4243). The authors have no conflicts of interest to declare.
+References
+	•	1.World Health Organization. 5 tips for a healthy diet this New Year. Available online: https://www.who.int/news-room/feature-stories/detail/5-tips-for-a-healthy-diet-this-new-year. Accessed 20 Dec 2018.
+	•	2.Réhault-Godbert S, Guyot N, Nys Y. The Golden Egg: Nutritional Value, Bioactivities, and Emerging Benefits for Human Health. Nutrients 2019;11:684. 10.3390/nu11030684 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	3.Ruxton CHS, Derbyshire E, Gibson S. The nutritional properties and health benefits of eggs. Nutrition & Food Science 2010;40:263-79. 10.1108/00346651011043961 [DOI] [Google Scholar]
+	•	4.Isherwood C, Wong M, Jones WS, et al. Lack of effect of cold water prawns on plasma cholesterol and lipoproteins in normo-lipidaemic men. Cell Mol Biol (Noisy-le-grand) 2010;56:52-8. [PubMed] [Google Scholar]
+	•	5.Luo H, Sun P, He S, et al. A meta-analysis of the association between poultry and egg consumption and the risk of brain cancer. Cell Mol Biol (Noisy-le-grand) 2019;65:14-8. 10.14715/cmb/2019.65.1.3 [DOI] [PubMed] [Google Scholar]
+	•	6.Zhang Y, Zhang DZ. Red meat, poultry, and egg consumption with the risk of hypertension: a meta-analysis of prospective cohort studies. J Hum Hypertens 2018;32:507-17. 10.1038/s41371-018-0068-8 [DOI] [PubMed] [Google Scholar]
+	•	7.Tse G, Eslick GD. Egg consumption and risk of GI neoplasms: dose-response meta-analysis and systematic review. Eur J Nutr 2014;53:1581-90. 10.1007/s00394-014-0664-5 [DOI] [PubMed] [Google Scholar]
+	•	8.Xu L, Lam TH, Jiang CQ, et al. Egg consumption and the risk of cardiovascular disease and all-cause mortality: Guangzhou Biobank Cohort Study and meta-analyses. Eur J Nutr 2019;58:785-96. 10.1007/s00394-018-1692-3 [DOI] [PubMed] [Google Scholar]
+	•	9.Shin JY, Xun P, Nakamura Y, et al. Egg consumption in relation to risk of cardiovascular disease and diabetes: a systematic review and meta-analysis. Am J Clin Nutr 2013;98:146-59. 10.3945/ajcn.112.051318 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	10.Tran NL, Barraj LM, Heilman JM, et al. Egg consumption and cardiovascular disease among diabetic individuals: a systematic review of the literature. Diabetes Metab Syndr Obes 2014;7:121-37. 10.2147/DMSO.S58668 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	11.Miake-Lye IM, Hempel S, Shanman R, et al. What is an evidence map? A systematic review of published evidence maps and their definitions, methods, and products. Syst Rev 2016;5:28. 10.1186/s13643-016-0204-x [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	12.Xufei Luo. Egg consumption and health outcomes: a global evidence mapping-based systematic review and meta-analysis. PROSPERO 2019:CRD42019135737. Available online: https://www.crd.york.ac.uk/prospero/display_record.php?RecordID=135737 [DOI] [PMC free article] [PubMed]
+	•	13.Moher D, Liberati A, Tetzlaff J, et al. Preferred reporting items for systematic reviews and meta-analyses: the PRISMA statement. Int J Surg 2010;8:336-41. 10.1016/j.ijsu.2010.02.007 [DOI] [PubMed] [Google Scholar]
+	•	14.Tian J, Zhang J, Ge L, et al. The methodological and reporting quality of systematic reviews from China and the USA are similar. J Clin Epidemiol 2017;85:50-8. 10.1016/j.jclinepi.2016.12.004 [DOI] [PubMed] [Google Scholar]
+	•	15.Shea BJ, Grimshaw JM, Wells GA, et al. Development of AMSTAR: a measurement tool to assess the methodological quality of systematic reviews. BMC Med Res Methodol 2007;7:10. 10.1186/1471-2288-7-10 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	16.Guyatt GH, Oxman AD, Vist GE, et al. GRADE: an emerging consensus on rating quality of evidence and strength of recommendations. BMJ 2008;336:924-6. 10.1136/bmj.39489.470347.AD [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	17.Fang D, Tan F, Wang C, et al. Egg intake and bladder cancer risk: A meta-analysis. Exp Ther Med 2012;4:906-12. 10.3892/etm.2012.671 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	18.Xie B, He H. No Association between Egg Intake and Prostate Cancer Risk: A Meta-analysis. Asian Pac J Cancer Prev 2012;13:4677-81. 10.7314/APJCP.2012.13.9.4677 [DOI] [PubMed] [Google Scholar]
+	•	19.Li F, Zhou Y, Hu RT, et al. Egg Consumption and Risk of Bladder Cancer: A Meta-Analysis. Nutr Cancer 2013;65:538-46. 10.1080/01635581.2013.770041 [DOI] [PubMed] [Google Scholar]
+	•	20.Li Y, Zhou C, Zhou X, et al. Egg consumption and risk of cardiovascular diseases and diabetes: a meta-analysis. Atherosclerosis 2013;229:524-30. 10.1016/j.atherosclerosis.2013.04.003 [DOI] [PubMed] [Google Scholar]
+	•	21.Rong Y, Chen L, Zhu T, et al. Egg consumption and risk of coronary heart disease and stroke: dose-response meta-analysis of prospective cohort studies. BMJ 2013;346:e8539. 10.1136/bmj.e8539 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	22.Si R, Qu K, Jiang Z, et al. Egg consumption and breast cancer risk: a meta-analysis. Breast Cancer 2014;21:251-61. 10.1007/s12282-014-0519-1 [DOI] [PubMed] [Google Scholar]
+	•	23.Zeng ST, Guo L, Liu SK, et al. Egg consumption is associated with increased risk of ovarian cancer: Evidence from a meta-analysis of observational studies. Clin Nutr 2015;34:635-41. 10.1016/j.clnu.2014.07.009 [DOI] [PubMed] [Google Scholar]
+	•	24.Wu J, Zeng R, Huang J, et al. Dietary Protein Sources and Incidence of Breast Cancer: A Dose-Response Meta-Analysis of Prospective Studies. Nutrients 2016;8:730. 10.3390/nu8110730 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	25.Dong Y, Wu G. Lack of association of poultry and eggs intake with risk of non-Hodgkin lymphoma: a meta-analysis of observational studies. Eur J Cancer Care (Engl) 2017. doi:. 10.1111/ecc.12546 [DOI] [PubMed] [Google Scholar]
+	•	26.Mazidi M, Katsiki N, Mikhailidis DP, et al. Egg Consumption and Risk of Total and Cause-Specific Mortality: An Individual-Based Cohort Study and Pooling Prospective Studies on Behalf of the Lipid and Blood Pressure Meta-analysis Collaboration (LBPMC) Group. J Am Coll Nutr 2019;38:552-63. 10.1080/07315724.2018.1534620 [DOI] [PubMed] [Google Scholar]
+	•	27.Keum N, Lee DH, Marchand N, et al. Egg intake and cancers of the breast, ovary and prostate: a dose-response meta-analysis of prospective observational studies. Br J Nutr 2015;114:1099-107. 10.1017/S0007114515002135 [DOI] [PubMed] [Google Scholar]
+	•	28.Tamez M, Virtanen JK, Lajous M. Egg consumption and risk of incident type 2 diabetes: a dose-response meta-analysis of prospective cohort studies. Brit J Nutr 2016;115:2212-8. 10.1017/S000711451600146X [DOI] [PubMed] [Google Scholar]
+	•	29.Djoussé L, Khawaja OA, Gaziano JM. Egg consumption and risk of type 2 diabetes: a meta-analysis of prospective studies. Am J Clin Nutr 2016;103:474-80. 10.3945/ajcn.115.119933 [DOI] [PubMed] [Google Scholar]
+	•	30.Alexander DD, Miller PE, Vargas AJ, et al. Meta-analysis of Egg Consumption and Risk of Coronary Heart Disease and Stroke. J Am Coll Nutr 2016;35:704-16. 10.1080/07315724.2016.1152928 [DOI] [PubMed] [Google Scholar]
+	•	31.Khawaja O, Singh H, Luni F, et al. Egg Consumption and Incidence of Heart Failure: A Meta-Analysis of Prospective Cohort Studies. Front Nutr 2017;4:10. 10.3389/fnut.2017.00010 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	32.Rouhani MH, Rashidi-Pourfard N, Salehi-Abargouei A, et al. Effects of Egg Consumption on Blood Lipids: A Systematic Review and Meta-Analysis of Randomized Clinical Trials. J Am Coll Nutr 2018;37:99-110. 10.1080/07315724.2017.1366878 [DOI] [PubMed] [Google Scholar]
+	•	33.Aminianfar A, Fallah-Moshkani R, Salari-Moghaddam A, et al. Egg Consumption and Risk of Upper Aero-Digestive Tract Cancers: A Systematic Review and Meta-Analysis of Observational Studies. Adv Nutr 2019;10:660-72. 10.1093/advances/nmz010 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	34.Sajadi Hezaveh Z, Sikaroudi MK, Vafa M, et al. Effect of egg consumption on inflammatory markers: a systematic review and meta-analysis of randomized controlled clinical trials. J Sci Food Agric 2019;99:6663-70. 10.1002/jsfa.9903 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	35.Yoon H, Benamouzig R, Little J, et al. Systematic review of epidemiological studies on meat, dairy products and egg consumption and risk of colorectal adenomas. Eur J Cancer Prev 2000;9:151-64. 10.1097/00008469-200006000-00002 [DOI] [PubMed] [Google Scholar]
+	•	36.Weggemans RM, Zock PL, Katan MB. Dietary cholesterol from eggs increases the ratio of total cholesterol to high-density lipoprotein cholesterol in humans: a meta-analysis. Am J Clin Nutr 2001;73:885-91. 10.1093/ajcn/73.5.885 [DOI] [PubMed] [Google Scholar]
+	•	37.Wallin A, Forouhi NG, Wolk A, et al. Egg consumption and risk of type 2 diabetes: a prospective study and dose-response meta-analysis. Diabetologia 2016;59:1204-13. 10.1007/s00125-016-3923-6 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	38.Richard C, Cristall L, Fleming E, et al. Impact of Egg Consumption on Cardiovascular Risk Factors in Individuals with Type 2 Diabetes and at Risk for Developing Diabetes: A Systematic Review of Randomized Nutritional Intervention Studies. Can J Diabetes 2017;41:453-63. 10.1016/j.jcjd.2016.12.002 [DOI] [PubMed] [Google Scholar]
+	•	39.Wang MX, Wong CH, Kim JE. Impact of whole egg intake on blood pressure, lipids and lipoproteins in middle-aged and older population: A systematic review and meta-analysis of randomized controlled trials. Nutr Metab Cardiovasc Dis 2019;29:653-64. 10.1016/j.numecd.2019.04.004 [DOI] [PubMed] [Google Scholar]
+	•	40.Bao PP, Shu XO, Zheng Y, et al. Fruit, vegetable, and animal food intake and breast cancer risk by hormone receptor status. Nutr Cancer 2012;64:806-19. 10.1080/01635581.2012.707277 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	41.Layton DW, Bogen KT, Knize MG, et al. Cancer risk of heterocyclic amines in cooked foods: an analysis and implications for research. Carcinogenesis 1995;16:39-52. 10.1093/carcin/16.1.39 [DOI] [PubMed] [Google Scholar]
+	•	42.Clayton ZS, Fusco E, Kern M. Egg consumption and heart health: A review. Nutrition 2017;37:79-85. [DOI] [PubMed] [Google Scholar]
+	•	43.Zhong VW, Van Horn L, Cornelis MC, et al. Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality. JAMA 2019;321:1081-95. 10.1001/jama.2019.1572 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	44.Qin C, Lv J, Guo Y, et al. Associations of egg consumption with cardiovascular disease in a cohort study of 0.5 million Chinese adults. Heart 2018;104:1756-63. 10.1136/heartjnl-2017-312651 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	45.McNamara DJ. The Fifty Year Rehabilitation of the Egg. Nutrients 2015;7:8716-22. 10.3390/nu7105429 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	46.Fernandez ML. Eggs and Health Special Issue. Nutrients 2016;8:784. 10.3390/nu8120784 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	47.Geiker NRW, Larsen ML, Dyerberg J, et al. Egg consumption, cardiovascular diseases and type 2 diabetes. Eur J Clin Nutr 2018;72:44-56. 10.1038/ejcn.2017.153 [DOI] [PubMed] [Google Scholar]
+	•	48.Fuller NR, Sainsbury A, Caterson ID, et al. Egg Consumption and Human Cardio-Metabolic Health in People with and without Diabetes. Nutrients 2015;7:7399-420. 10.3390/nu7095344 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	49.Tian S, Xu Q, Jiang R, et al. Dietary Protein Consumption and the Risk of Type 2 Diabetes: A Systematic Review and Meta-Analysis of Cohort Studies. Nutrients 2017;9:982. 10.3390/nu9090982 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	50.Gray J, Griffin B. Eggs and dietary cholesterol–dispelling the myth. Nutr Bull 2009;34:66-70. 10.1111/j.1467-3010.2008.01735.x [DOI] [Google Scholar]
+	•	51.National Heart Foundation of Australia (NHF). Position statement: Dietary fats and dietary cholesterol for cardiovascular health. 2009. Available online: https://www.heartfoundation.org.au/images/uploads/publications/Dietary-fats-position-statement.pdf
+	•	52.Evert AB, Boucher JL, Cypress M, et al. Nutrition therapy recommendations for the management of adults with diabetes. Diabetes Care 2014;37 Suppl 1:S120-43. 10.2337/dc14-S120 [DOI] [PubMed] [Google Scholar]
+	•	53.Wang X, Son M, Meram C, et al. Mechanism and Potential of Egg Consumption and Egg Bioactive Components on Type-2 Diabetes. Nutrients 2019;11:357. 10.3390/nu11020357 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	54.Marventano S, Godos J, Tieri M, et al. Egg consumption and human health: an umbrella review of observational studies. Int J Food Sci Nutr 2020;71:325-31. 10.1080/09637486.2019.1648388 [DOI] [PubMed] [Google Scholar]
+	•	55.Mah E, Chen CO, Liska DJ. The effect of egg consumption on cardiometabolic health outcomes: an umbrella review. Public Health Nutr 2020;23:935-55. 10.1017/S1368980019002441 [DOI] [PMC free article] [PubMed] [Google Scholar]
+	•	56.Norris SL, Meerpohl JJ, Akl EA, et al. The skills and experience of GRADE methodologists can be assessed with a simple tool. J Clin Epidemiol 2016;79:150-158.e1. 10.1016/j.jclinepi.2016.07.001 [DOI] [PubMed] [Google Scholar]
+Associated Data
+This section collects any data citations, data availability statements, or supplementary materials included in this article.
+Supplementary Materials
+The article’s supplementary files as
+atm-08-21-1343-rc.pdf (79.9KB, pdf)
+DOI: 10.21037/atm-20-4243
+atm-08-21-1343-coif.pdf (189.7KB, pdf)
+DOI: 10.21037/atm-20-4243
+
+Articles from Annals of Translational Medicine are provided here courtesy of AME Publications
+ACTIONS
+	•	
+	•	View on publisher site
+	•	
+	•	PDF (872.1 KB)
+	•	
+	•	Cite
+	•	
+	•	Collections
+	•	
+	•	Permalink
+RESOURCES
+Similar articles
+
+Cited by other articles
+
+Links to NCBI Databases
+
+
+FOLLOW NCBI
+
+NCBI on X (formerly known as Twitter)
+
+NCBI on Facebook
+
+NCBI on LinkedIn
+
+NCBI on GitHub
+
+NCBI RSS feed
+Connect with NLM
+
+NLM on X (formerly known as Twitter)
+
+NLM on Facebook
+
+NLM on YouTube
+National Library of Medicine  8600 Rockville Pike Bethesda, MD 20894
+	•	Web Policies
+	•	FOIA
+	•	HHS Vulnerability Disclosure
+	•	Help
+	•	Accessibility
+	•	Careers
+	•	NLM
+	•	NIH
+	•	HHS
+	•	USA.gov
+Back to Top
+
