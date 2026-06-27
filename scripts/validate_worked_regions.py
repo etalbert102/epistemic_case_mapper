@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -53,13 +54,23 @@ REQUIRED_GLOBAL_FILES = (
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate curated FLF worked-region artifacts.")
+    parser.add_argument(
+        "--region",
+        choices=[str(region["region_id"]) for region in REGIONS],
+        help="Validate one worked region instead of all regions.",
+    )
+    args = parser.parse_args()
+
     repo_root = Path(__file__).resolve().parents[1]
     failures: list[str] = []
-    for relative_path in REQUIRED_GLOBAL_FILES:
-        _require_file(repo_root / relative_path, failures)
-        _require_no_template_status(repo_root / relative_path, failures)
-        _require_no_todo(repo_root / relative_path, failures)
-    for region in REGIONS:
+    if args.region is None:
+        for relative_path in REQUIRED_GLOBAL_FILES:
+            _require_file(repo_root / relative_path, failures)
+            _require_no_template_status(repo_root / relative_path, failures)
+            _require_no_todo(repo_root / relative_path, failures)
+    selected_regions = [region for region in REGIONS if args.region in (None, region["region_id"])]
+    for region in selected_regions:
         _validate_region(repo_root, region, failures)
     if failures:
         for failure in failures:

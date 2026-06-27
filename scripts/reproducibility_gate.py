@@ -18,7 +18,12 @@ REQUIRED_DOCS = (
     "docs/HUMAN_REVIEW_CHECKLIST.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
+    "docs/VALIDATOR_FAILURE_GUIDE.md",
+    "docs/plans/GOAL_PROMPT.md",
     "docs/plans/flf_workspace_enhancement_backlog.md",
+    "docs/worked_regions/eggs_source_excerpt_packet.md",
+    "docs/worked_regions/lhc_source_excerpt_packet.md",
+    "docs/worked_regions/mini_filled_example.md",
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
     "docs/review/HUMAN_REVIEW_RUBRIC.md",
 )

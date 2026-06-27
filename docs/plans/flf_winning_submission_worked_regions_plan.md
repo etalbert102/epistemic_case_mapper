@@ -8,6 +8,8 @@ Use with:
 /goal Execute docs/plans/flf_winning_submission_worked_regions_plan.md. Keep the plan updated as the living source of truth. Stop only when the LHC and eggs worked regions each have source-grounded maps, before/after flat-synthesis comparisons, audit notes, curated judge pointers, validation passing, and explicit residual risks.
 ```
 
+For a lower-risk launch prompt and phased variants, use `docs/plans/GOAL_PROMPT.md`.
+
 ## Goal
 
 Turn the current source-grounded scaffold into a credible FLF submission prototype by creating two high-quality worked regions:
@@ -38,6 +40,11 @@ Record at least one concrete implication from each input before implementation e
 - [x] `docs/protocols/epistemic_case_map_v0.md`
 - [x] `docs/plans/lhc_demo_goal_plan.md`
 - [x] `docs/plans/flf_workspace_enhancement_backlog.md`
+- [x] `docs/plans/GOAL_PROMPT.md`
+- [x] `docs/worked_regions/lhc_source_excerpt_packet.md`
+- [x] `docs/worked_regions/eggs_source_excerpt_packet.md`
+- [x] `docs/worked_regions/mini_filled_example.md`
+- [x] `docs/VALIDATOR_FAILURE_GUIDE.md`
 - [x] `data/cases/lhc_black_holes/case.yaml`
 - [x] `data/cases/lhc_black_holes/sources/SOURCE_INVENTORY.md`
 - [x] `data/cases/eggs/case.yaml`
@@ -55,6 +62,11 @@ Record at least one concrete implication from each input before implementation e
 - `docs/protocols/epistemic_case_map_v0.md`: Stable IDs and explicit relation types are part of the reusable protocol.
 - `docs/plans/lhc_demo_goal_plan.md`: The LHC case should emphasize dependency structure and public-risk caveats, not just the conclusion that the LHC was safe.
 - `docs/plans/flf_workspace_enhancement_backlog.md`: The risk-reduction additions are implemented; the next goal should use templates and validators rather than inventing format.
+- `docs/plans/GOAL_PROMPT.md`: Use phased goal runs when needed; each phase has a concrete validation command and stop condition.
+- `docs/worked_regions/lhc_source_excerpt_packet.md`: The LHC goal should start from the cosmic-ray exposure, velocity-caveat, compact-star, Plaga critique, and GM response spans.
+- `docs/worked_regions/eggs_source_excerpt_packet.md`: The eggs goal should preserve the distinction between observational CVD outcomes, RCT lipid markers, dietary-pattern guidance, replacement foods, and population caveats.
+- `docs/worked_regions/mini_filled_example.md`: Follow the field format, but do not use the example as content or as a passing-size template.
+- `docs/VALIDATOR_FAILURE_GUIDE.md`: Treat validator failures as artifact-quality guidance; do not satisfy them with weak padding or invented evidence.
 - `data/cases/lhc_black_holes/case.yaml`: The fixed LHC worked-region source subset is available locally; no web acquisition is needed.
 - `data/cases/lhc_black_holes/sources/SOURCE_INVENTORY.md`: LHC sources include formal safety review, independent review, technical analysis, critique, response, public explanation, and later empirical context.
 - `data/cases/eggs/case.yaml`: The fixed eggs source subset is available locally; no web acquisition is needed.
@@ -78,6 +90,8 @@ Record at least one concrete implication from each input before implementation e
   - `scripts/validate_case_artifact.py` validates generated case artifacts.
   - `scripts/reproducibility_gate.py` validates scaffold reproducibility.
   - `scripts/validate_worked_regions.py` validates final worked-region artifacts and intentionally fails until templates are filled.
+  - `scripts/validate_worked_regions.py --region lhc_cosmic_ray_argument` validates only the LHC worked region.
+  - `scripts/validate_worked_regions.py --region eggs_observational_vs_rct` validates only the eggs worked region.
 - Files that will be touched:
   - `docs/worked_regions/*.md`
   - `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
@@ -96,6 +110,14 @@ Record at least one concrete implication from each input before implementation e
   - Do not modify raw source corpora unless a source-integrity bug is found.
   - Do not change schema or generated starter mapper unless the validator exposes a blocker.
   - Do not expand to COVID or regulatory tasks in this goal.
+
+## Recommended Execution Order
+
+Prefer phased execution if a goal run needs tighter control:
+
+1. Complete LHC artifacts using `docs/worked_regions/lhc_source_excerpt_packet.md`; validate with `PYTHONPATH=src python3 scripts/validate_worked_regions.py --region lhc_cosmic_ray_argument`.
+2. Complete eggs artifacts using `docs/worked_regions/eggs_source_excerpt_packet.md`; validate with `PYTHONPATH=src python3 scripts/validate_worked_regions.py --region eggs_observational_vs_rct`.
+3. Complete judge-facing docs and run `PYTHONPATH=src python3 scripts/validate_worked_regions.py` plus `PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions`.
 
 ## Hard Risk-Reduction Constraints
 

@@ -14,8 +14,13 @@ Last updated: 2026-06-26.
 - Generated case maps include workflow telemetry for extraction, relation mapping, and open-question mapping.
 - `scripts/validate_case_artifact.py` checks schema, source metadata, claim traceability, preservation metadata, workflow telemetry, determinism, and example snapshot parity.
 - `scripts/validate_worked_regions.py` exists and intentionally fails until worked-region templates are filled with final curated content.
+- `scripts/validate_worked_regions.py --region ...` supports validating one worked region at a time for phased goal runs.
 - Human-review rubric exists in `docs/review/HUMAN_REVIEW_RUBRIC.md`.
 - Workspace enhancement backlog exists in `docs/plans/flf_workspace_enhancement_backlog.md`.
+- A ready-to-use goal prompt exists in `docs/plans/GOAL_PROMPT.md`.
+- Source excerpt packets exist in `docs/worked_regions/lhc_source_excerpt_packet.md` and `docs/worked_regions/eggs_source_excerpt_packet.md`.
+- A mini filled format example exists in `docs/worked_regions/mini_filled_example.md`.
+- Validator repair guidance exists in `docs/VALIDATOR_FAILURE_GUIDE.md`.
 
 ## Partially Implemented
 
@@ -56,5 +61,7 @@ Final worked-region validation is expected to fail until templates are filled:
 
 ```bash
 PYTHONPATH=src python3 scripts/validate_worked_regions.py
+PYTHONPATH=src python3 scripts/validate_worked_regions.py --region lhc_cosmic_ray_argument
+PYTHONPATH=src python3 scripts/validate_worked_regions.py --region eggs_observational_vs_rct
 PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions
 ```
