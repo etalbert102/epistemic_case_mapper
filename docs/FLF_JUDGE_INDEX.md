@@ -19,7 +19,9 @@ Current status: source-grounded scaffold, curated worked regions, illustrative f
 5. Inspect erosion audits:
    - `examples/lhc_black_holes/decision_space_erosion_audit.md`
    - `examples/eggs/decision_space_erosion_audit.md`
-6. Inspect best-region pointers:
+6. Inspect the blinded-comparator survival audit:
+   - `docs/review/BLINDED_BASELINE_AUDIT.md`
+7. Inspect best-region pointers:
    - `examples/lhc_black_holes/BEST_REGIONS.md`
    - `examples/eggs/BEST_REGIONS.md`
 

@@ -381,12 +381,14 @@ Record exact commands, timestamps, and outcomes here.
 - 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py` passed.
 - 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions` passed.
 - 2026-06-27 / Codex: Added `scripts/run_blinded_baselines.py` and `scripts/validate_blinded_baselines.py` so local Gemma4 baselines can be generated from raw source spans without loading curated maps or erosion audits.
+- 2026-06-27 / Codex: Added `docs/review/BLINDED_BASELINE_AUDIT.md`. Against the Gemma4 blinded baseline, 5/6 LHC losses remain countable if two are narrowed; 4/7 eggs losses remain countable if one is narrowed, one is weakened, and two are rejected for this comparator.
 
 ## Residual Risks
 
 - Human review has not occurred; all new worked-region artifacts remain `human-review-needed`.
 - The original flat baselines are illustrative because the same Codex run had access to source-packet and curated-map context.
 - The Gemma4 blinded baselines improve isolation from the curated maps, but they are span-limited and still need fairness audit before being treated as decisive evidence.
+- The agent-authored blinded-baseline audit is more honest than the original illustrative comparison, but it still needs human review before quantitative claims are used externally.
 - Relation labels, crux choices, and erosion-loss fairness need domain-review pressure before public overclaiming.
 - The worked regions are high-value slices, not exhaustive maps of the full LHC or eggs corpora.
 - The deterministic starter maps remain heuristic drafts; the curated worked-region files are the judge-facing source-grounded demonstrations.

@@ -77,6 +77,8 @@ The repository also includes a reproducible local Gemma4 blinded-baseline proced
 - `examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md`
 - `examples/eggs/blinded_flat_synthesis_baseline_gemma4.md`
 
+An agent-authored audit of those blinded baselines is recorded in `docs/review/BLINDED_BASELINE_AUDIT.md`. Against the blinded comparator, the LHC case remains fairly strong: five of six losses remain countable if two are narrowed. The eggs case is more mixed: four of seven losses remain countable if one is narrowed, one is weakened, and two should not be counted against the blinded baseline because Gemma4 preserved the endpoint and study-design distinctions.
+
 These are not claims that the flat syntheses are bad. They are claims that a normal paragraph is a lossy container for reviewable epistemic structure.
 
 ## Limitations

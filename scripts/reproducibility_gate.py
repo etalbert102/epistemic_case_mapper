@@ -26,6 +26,7 @@ REQUIRED_DOCS = (
     "docs/worked_regions/mini_filled_example.md",
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
     "docs/review/HUMAN_REVIEW_RUBRIC.md",
+    "docs/review/BLINDED_BASELINE_AUDIT.md",
 )
 
 FORBIDDEN_TERMS = (

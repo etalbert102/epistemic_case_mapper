@@ -25,6 +25,7 @@ Last updated: 2026-06-27.
 - Filled controlled flat-synthesis baselines exist for both worked regions.
 - Reproducible blinded local-model baseline generation exists in `scripts/run_blinded_baselines.py`.
 - Checked-in blinded Gemma4 flat-synthesis baselines can be validated with `scripts/validate_blinded_baselines.py`.
+- Agent-authored blinded-baseline survival audit exists in `docs/review/BLINDED_BASELINE_AUDIT.md`.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
 
@@ -46,7 +47,7 @@ Last updated: 2026-06-27.
 
 ## Current Evidence Boundary
 
-The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes a reproducible local Gemma4 blinded-baseline path that prompts only from selected source spans and does not expose the curated maps or erosion audits.
+The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes a reproducible local Gemma4 blinded-baseline path that prompts only from selected source spans and does not expose the curated maps or erosion audits. The blinded-baseline audit finds that several LHC losses survive, while the eggs comparator preserves more endpoint and study-design structure than the illustrative baseline.
 
 ## Validation Commands
 
