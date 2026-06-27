@@ -68,9 +68,9 @@ source_claim: `lhc_update_c001`
 
 target_claim: `lhc_c001`
 
-relation_type: compresses
+relation_type: similar_to
 
-rationale: The public FAQ carries the same broad natural-exposure reassurance as `lhc_c001`, but it does not expose the low-velocity trapping and compact-star dependency structure preserved by `lhc_c004`, `lhc_c009`, `lhc_c010`, `lhc_c011`, and `lhc_c012`.
+rationale: The public FAQ carries a compressed public-facing counterpart to the broad natural-exposure reassurance in `lhc_c001`, but it does not expose the low-velocity trapping and compact-star dependency structure preserved by `lhc_c004`, `lhc_c009`, `lhc_c010`, `lhc_c011`, and `lhc_c012`.
 
 relation_id: lhc_update_r002
 
@@ -78,7 +78,7 @@ source_claim: `lhc_update_c002`
 
 target_claim: `lhc_c005`
 
-relation_type: reframes
+relation_type: refines
 
 rationale: The public FAQ states immediate disintegration as the public-facing bottom line, while `lhc_c005` preserves the worked-region caveat that Hawking radiation is broadly accepted but not directly experimentally detected in this context.
 
@@ -89,7 +89,7 @@ The update adds a public-communication layer rather than changing the technical 
 ## Reviewer Tasks
 
 - Check whether the public FAQ excerpts are faithfully represented.
-- Decide whether `compresses` is the right relation label for `lhc_update_r001`.
+- Decide whether `similar_to` is the right relation label for `lhc_update_r001`, or whether the schema should add an explicit compression relation later.
 - Decide whether the public FAQ should be part of the canonical LHC worked map or only the full-case public-communication cluster.
 - Compare this update with `examples/lhc_black_holes/full_case_map.md`, cluster `lhc_full_cluster_008`.
 

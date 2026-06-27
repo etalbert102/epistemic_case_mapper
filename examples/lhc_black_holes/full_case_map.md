@@ -177,7 +177,7 @@ source_cluster: `lhc_full_cluster_009`
 
 target_cluster: `lhc_full_cluster_001`
 
-relation_type: reframes
+relation_type: refines
 
 rationale: Legal/governance sources ask how institutional conclusions should be handled under low-probability catastrophic uncertainty.
 
@@ -197,5 +197,5 @@ The best current deep anchor is `examples/lhc_black_holes/worked_region_cosmic_r
 
 - Add source-excerpt-level claims for public CERN pages.
 - Add source-excerpt-level claims for CMS technical and public search evidence.
-- Add a worked region for Johnson's legal/public-risk framing.
-- Add a full-case flat baseline and compare it to this scaffold.
+- Promote the draft Johnson legal/public-risk worked region into the canonical validated worked-region set after human/source review.
+- Human-score the full-case flat baseline against this scaffold.

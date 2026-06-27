@@ -26,7 +26,7 @@ Purpose: assess whether the prototype resembles a workflow that a serious invest
 | Full-case maps are cluster scaffolds | Real investigations need source-excerpt claims across the whole case. | Scaffolds are clearly labeled and validated for source coverage. | Expand one additional full-case cluster into a worked region. |
 | Full-case baselines are not human-scored | A realistic whole-case synthesis comparison needs more than generated prose. | Full-case flat baselines now exist for both cases. | Have a reviewer score which distinctions survive and fail. |
 | No interactive navigator | Non-technical judges may prefer graph browsing. | Judge packet gives a linear path and JSON exports exist. | Optional: create a static HTML navigator. |
-| Source updates are not demonstrated | Living knowledge bases must handle new evidence. | Workflow playbook and task queues specify update procedure. | Add one new source and show the diff through the map. |
+| Fresh external-source updates are not demonstrated | Living knowledge bases must handle new evidence arriving after the initial source corpus. | `docs/NEW_SOURCE_UPDATE_DEMO.md` demonstrates a new-to-map update from an already acquired source. | Add one newly acquired external source and show the diff through the map. |
 
 ## Realism Verdict
 

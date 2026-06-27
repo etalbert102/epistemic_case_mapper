@@ -25,6 +25,50 @@ FULL_CASES = (
         "index_path": "examples/eggs/full_case_index.md",
     },
 )
+EXTENSION_ARTIFACTS = (
+    {
+        "artifact": "Full-case flat baseline",
+        "case": "LHC black holes",
+        "path": "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
+        "status": "illustrative, non-blinded",
+    },
+    {
+        "artifact": "Full-case flat baseline",
+        "case": "Eggs and health",
+        "path": "examples/eggs/full_case_flat_synthesis_baseline.md",
+        "status": "illustrative, non-blinded",
+    },
+    {
+        "artifact": "Draft public-risk worked region",
+        "case": "LHC black holes",
+        "path": "examples/lhc_black_holes/worked_region_public_risk_framing_map.md",
+        "status": "draft extension, not canonical counts",
+    },
+    {
+        "artifact": "New-to-map source update demo",
+        "case": "LHC black holes",
+        "path": "docs/NEW_SOURCE_UPDATE_DEMO.md",
+        "status": "demo from already acquired source",
+    },
+    {
+        "artifact": "Criteria self-assessment",
+        "case": "Submission",
+        "path": "docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md",
+        "status": "human-review-needed",
+    },
+    {
+        "artifact": "Worked judge example",
+        "case": "Eggs and health",
+        "path": "docs/FLF_WORKED_JUDGE_EXAMPLE.md",
+        "status": "human-review-needed",
+    },
+    {
+        "artifact": "Failure modes and counterexamples",
+        "case": "Submission",
+        "path": "docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md",
+        "status": "human-review-needed",
+    },
+)
 
 
 def main() -> int:
@@ -100,6 +144,19 @@ def render_summary(repo_root: Path) -> str:
         lines.append(
             f"| {full_case['label']} | {len(manifest.sources)} | {cluster_count} | {relation_count} | "
             f"`{full_case['index_path']}`, `{full_case['map_path']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Extension Artifacts",
+            "",
+            "| Artifact | Case | File | Status |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for artifact in EXTENSION_ARTIFACTS:
+        lines.append(
+            f"| {artifact['artifact']} | {artifact['case']} | `{artifact['path']}` | {artifact['status']} |"
         )
     lines.extend(
         [

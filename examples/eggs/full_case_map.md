@@ -181,7 +181,7 @@ source_cluster: `eggs_full_cluster_008`
 
 target_cluster: `eggs_full_cluster_002`
 
-relation_type: expands_scope
+relation_type: refines
 
 rationale: A full health judgment must eventually go beyond CVD outcomes, even though the current deep anchor is CVD-focused.
 
@@ -202,4 +202,4 @@ The best current deep anchor is `examples/eggs/worked_region_observational_vs_rc
 - Add source-excerpt-level claims for BMJ 2013, Ma 2021, Huang 2020, and the narrative reviews.
 - Add a worked region on broader health outcomes beyond CVD.
 - Add a worked region on diabetes/high-LDL subgroup treatment.
-- Add a full-case flat baseline and compare it to this scaffold.
+- Human-score the full-case flat baseline against this scaffold.

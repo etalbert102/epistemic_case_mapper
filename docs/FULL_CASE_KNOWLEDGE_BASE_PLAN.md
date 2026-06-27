@@ -39,4 +39,4 @@ The full-case scaffolds strengthen the contest submission by showing how the met
 
 ## Next Expansion Step
 
-The next high-value addition would be full-case flat baselines for LHC and eggs, followed by a broader erosion audit that asks whether a normal whole-case synthesis preserves the same cluster structure.
+Full-case flat baselines now exist for LHC and eggs as illustrative, non-blinded comparison surfaces. The next high-value addition is a broader human-scored erosion audit that asks whether a normal whole-case synthesis preserves the same cluster structure.

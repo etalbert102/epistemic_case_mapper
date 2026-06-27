@@ -12,7 +12,7 @@ This submission is strongest as a methodology plus reference prototype for prese
 
 | FLF criterion | Current evidence | Self-score | Residual risk |
 | --- | --- | ---: | --- |
-| Helps someone reason better about a case | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, erosion audits, and review packets show exactly which distinctions a reviewer can inspect rather than trust implicitly. | 4 | Human reviewers still need to score relation correctness and claim fidelity. |
+| Helps someone reason better about a case | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, erosion audits, and review packets surface candidate distinctions a reviewer can inspect rather than trust implicitly. | 4 | Human reviewers still need to score relation correctness and claim fidelity. |
 | Generalizes across cases | Demonstrated on LHC black-hole risk and eggs/health, which differ by domain, evidentiary closure, controversy profile, and decision context. | 3 | COVID-scale adversarial disputes are not yet implemented. |
 | Scales with better AI or more compute | Stable schema, source IDs, claim IDs, relation IDs, Markdown/JSON exports, validators, and task queues make additional extraction/model passes composable. | 4 | Extraction and relation labeling are still curated rather than fully automated. |
 | Compounds across people or teams | Review packets, CSV checklists, stable IDs, source inventories, and task queues let another investigator accept, reject, or extend local pieces. | 4 | Multi-reviewer merge and conflict-resolution workflow is only specified, not implemented. |

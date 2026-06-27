@@ -192,7 +192,7 @@ source_claim: `lhc_public_c005`
 
 target_claim: `lhc_public_c010`
 
-relation_type: qualifies
+relation_type: refines
 
 rationale: The technical trapping caveat qualifies the simple public-facing natural-phenomena analogy.
 
@@ -242,7 +242,7 @@ source_claim: `lhc_public_c012`
 
 target_claim: `lhc_public_c010`
 
-relation_type: updates
+relation_type: refines
 
 rationale: The CMS non-observation is later empirical context for public confidence, though it does not replace the safety argument.
 
@@ -252,7 +252,7 @@ source_claim: `lhc_public_c001`
 
 target_claim: `lhc_public_c002`
 
-relation_type: motivates
+relation_type: supports
 
 rationale: Extreme stakes and epistemic difficulty motivate Johnson's claim that ordinary legal tools strain.
 
@@ -262,7 +262,7 @@ source_claim: `lhc_public_c002`
 
 target_claim: `lhc_public_c003`
 
-relation_type: motivates
+relation_type: supports
 
 rationale: The failure mode in ordinary legal tools motivates the proposed need for special analytical methods.
 
@@ -278,11 +278,13 @@ rationale: The failure mode in ordinary legal tools motivates the proposed need 
 - Earth survival, compact-star survival, and CMS non-observation are different evidence types.
 - Legal adequacy, public reassurance, and technical sufficiency are related but separate decision contexts.
 
-## FLF Criteria Scores
+## FLF Judge Questions
+
+Scale: 0 means not demonstrated, 1 means partially demonstrated, and 2 means demonstrated enough to inspect as a draft extension.
 
 | Criterion | Score | Rationale |
 | --- | ---: | --- |
-| Helps reasoning | 4 | Separates public reassurance from technical and legal decision layers. |
-| Generalizes | 4 | Demonstrates mapping beyond technical evidence into governance framing. |
-| Scales | 3 | Draft region is manually curated and needs validation before promotion. |
-| Compounds | 4 | Adds a new layer without rewriting the cosmic-ray worked region. |
+| Helps reasoning | 2 | Separates public reassurance from technical and legal decision layers. |
+| Generalizes | 2 | Demonstrates mapping beyond technical evidence into governance framing. |
+| Scales | 1 | Draft region is manually curated and needs validation before promotion. |
+| Compounds | 2 | Adds a new layer without rewriting the cosmic-ray worked region. |

@@ -55,6 +55,11 @@ Last updated: 2026-06-27.
 - `scripts/summarize_submission_artifacts.py` generates `docs/SUBMISSION_ARTIFACT_SUMMARY.md`.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
+- Full-case flat synthesis baselines exist for LHC and eggs as illustrative, non-blinded whole-case comparison surfaces.
+- A criteria self-assessment exists in `docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md`.
+- Failure modes and counterexamples are recorded in `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md`.
+- A new-to-map source update demonstration exists in `docs/NEW_SOURCE_UPDATE_DEMO.md`.
+- A draft public-risk/governance worked region exists at `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`.
 
 ## Partially Implemented
 
@@ -65,11 +70,13 @@ Last updated: 2026-06-27.
 - Preservation metadata is incorporated, but not yet used to guide relation extraction automatically.
 - Human-review workflow is specified, but no human-reviewed decisions have been recorded.
 - Worked-region maps are source-grounded and validated, but they remain `human-review-needed`.
+- The public-risk/governance worked region is useful as a draft extension, but it is not yet promoted into the canonical validated worked-region set.
+- Full-case flat baselines are illustrative and were not generated in a clean blinded context.
 
 ## Not Yet Implemented
 
 - Full regulatory case study.
-- UI or interactive navigator.
+- Interactive reviewer/editor UI with persisted decisions.
 - Human-reviewed status for any artifact.
 
 ## Current Evidence Boundary

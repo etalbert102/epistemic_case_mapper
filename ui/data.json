@@ -39,7 +39,7 @@
         {
           "rationale": "Legal/governance sources ask how institutional conclusions should be handled under low-probability catastrophic uncertainty.",
           "relation_id": "lhc_full_rel_004",
-          "relation_type": "reframes",
+          "relation_type": "refines",
           "source_cluster": "lhc_full_cluster_009",
           "target_cluster": "lhc_full_cluster_001"
         }
@@ -649,7 +649,7 @@
         {
           "rationale": "A full health judgment must eventually go beyond CVD outcomes, even though the current deep anchor is CVD-focused.",
           "relation_id": "eggs_full_rel_005",
-          "relation_type": "expands_scope",
+          "relation_type": "refines",
           "source_cluster": "eggs_full_cluster_008",
           "target_cluster": "eggs_full_cluster_002"
         }

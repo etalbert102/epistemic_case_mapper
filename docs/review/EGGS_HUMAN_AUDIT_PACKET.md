@@ -53,11 +53,11 @@ prompt_versions:
 
 Start with these claims before auditing the rest of the map:
 
-- `eggs_c004`: BMJ moderate-intake outcome framing.
-- `eggs_c008`: JAMA dietary cholesterol and egg association framing.
-- `eggs_c012`: randomized lipid-marker evidence.
-- `eggs_c015` and `eggs_c016`: AHA guideline context and high-LDL caveat.
-- `eggs_c018`: NNR evidence-grade limitation.
+- `eggs_c004`: AHA observational-outcome versus intervention-lipid evidence split.
+- `eggs_c008`: BMJ moderate-intake outcome framing.
+- `eggs_c012`: JAMA dietary cholesterol and egg association framing.
+- `eggs_c015` and `eggs_c016`: randomized lipid-marker evidence from Li 2020.
+- `eggs_c018`: NNR synthesis of heterogeneous RCT lipid signals and observational moderate-intake evidence.
 
 For each priority claim, record:
 
@@ -73,11 +73,11 @@ Allowed decisions: `accept`, `revise`, `reject`, `needs_discussion`.
 
 Start with these relations:
 
-- `eggs_r003`: observational/RCT endpoint boundary.
-- `eggs_r005`: BMJ/JAMA tension.
-- `eggs_r006`: replacement-food interpretation.
-- `eggs_r007`: guideline-process dependency.
-- `eggs_r015`: scope distinction around moderate intake.
+- `eggs_r003`: BMJ/JAMA observational-result tension.
+- `eggs_r005`: biomarker result depends on the RCT endpoint scope.
+- `eggs_r006`: randomized lipid-marker worsening should not be collapsed into observational CVD outcome evidence.
+- `eggs_r007`: duration and dose caveats qualify the Li lipid-marker findings.
+- `eggs_r015`: observational outcomes versus intervention lipid markers as a crux for the overall recommendation.
 
 For each priority relation, record:
 

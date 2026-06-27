@@ -2,8 +2,9 @@
 
 Status: `human-review-needed`
 Prompt/procedure: `full_case_flat_baseline_prompt_v1`
-Isolation note: `baseline_writer_had_access_to_manifest_and_source_excerpts_not_curated_relations`
+Isolation note: `illustrative_full_case_baseline_not_blinded`
 Evidence mode: `source_grounded`
+Protocol limitation: this baseline was written in the same repo context as the curated maps, relation files, audits, and judge-facing docs. Use it as a realism-oriented whole-case comparison surface, not as an isolated model baseline.
 
 ## Source Set
 
