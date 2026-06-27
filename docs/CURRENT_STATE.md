@@ -13,6 +13,7 @@ Last updated: 2026-06-26.
 - Generated case maps include preservation metadata from case-specific metadata files.
 - Generated case maps include workflow telemetry for extraction, relation mapping, and open-question mapping.
 - `scripts/validate_case_artifact.py` checks schema, source metadata, claim traceability, preservation metadata, workflow telemetry, determinism, and example snapshot parity.
+- `scripts/validate_worked_regions.py` exists and intentionally fails until worked-region templates are filled with final curated content.
 - Human-review rubric exists in `docs/review/HUMAN_REVIEW_RUBRIC.md`.
 - Workspace enhancement backlog exists in `docs/plans/flf_workspace_enhancement_backlog.md`.
 
@@ -24,13 +25,14 @@ Last updated: 2026-06-26.
 - Reports are navigable but still too large because they include many heuristic claims.
 - Preservation metadata is incorporated, but not yet used to guide relation extraction automatically.
 - Human-review workflow is specified, but no human-reviewed decisions have been recorded.
+- Worked-region templates exist for LHC and eggs, but they are not yet filled.
 
 ## Not Yet Implemented
 
-- Curated LHC and eggs worked-region maps.
-- Controlled flat-synthesis baselines.
-- Decision-space erosion audits comparing baselines to frozen maps.
-- Judge walkthrough over final worked-region artifacts.
+- Filled curated LHC and eggs worked-region maps.
+- Filled controlled flat-synthesis baselines.
+- Filled decision-space erosion audits comparing baselines to frozen maps.
+- Final judge walkthrough over completed worked-region artifacts.
 - Full regulatory case study.
 - UI or interactive navigator.
 - Human-reviewed status for any artifact.
@@ -47,4 +49,12 @@ PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_hol
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yaml
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/eggs/case.yaml --examples examples/eggs
+PYTHONPATH=src python3 scripts/reproducibility_gate.py
+```
+
+Final worked-region validation is expected to fail until templates are filled:
+
+```bash
+PYTHONPATH=src python3 scripts/validate_worked_regions.py
+PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions
 ```

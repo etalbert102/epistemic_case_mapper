@@ -32,6 +32,11 @@ FORBIDDEN_TERMS = (
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the lightweight FLF reproducibility gate.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--include-worked-regions",
+        action="store_true",
+        help="Also require final worked-region artifacts to pass their validator.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -54,6 +59,8 @@ def main() -> int:
             repo_root,
             failures,
         )
+    if args.include_worked_regions:
+        _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
 
     if failures:
         for failure in failures:
