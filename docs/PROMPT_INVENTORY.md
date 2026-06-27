@@ -64,6 +64,28 @@ Baseline files must record:
 - whether the baseline writer had access to the curated map,
 - any isolation limitation.
 
+## Blinded Ollama Baseline Procedure
+
+Use when generating a flat baseline from a local model without exposing the curated map or erosion audit.
+
+Command shape:
+
+```bash
+PYTHONPATH=src python3 scripts/run_blinded_baselines.py --model gemma4:e4b --case all
+```
+
+The runner builds prompts only from raw source text line spans configured in `scripts/run_blinded_baselines.py`. The prompt excludes curated maps, erosion audits, `BEST_REGIONS.md`, judge walkthroughs, and source-packet crux/loss guidance.
+
+Blinded baseline files must record:
+
+- model name,
+- generated timestamp,
+- source subset,
+- source spans used,
+- prompt version,
+- `baseline_writer_had_access_to_curated_map: no`,
+- span-limited baseline limitation.
+
 ## Decision-Space Erosion Audit Prompt
 
 Use after the flat baseline and curated map are fixed.
@@ -112,5 +134,6 @@ Use these tags in generated or curated artifacts:
 - `source_mapping_prompt_v1`: source-grounded claim mapping prompt above.
 - `relation_extraction_prompt_v1`: relation extraction prompt above.
 - `flat_baseline_prompt_v1`: flat baseline prompt above.
+- `flat_baseline_prompt_v1_blinded_ollama`: blinded local Ollama baseline procedure above.
 - `erosion_audit_prompt_v1`: decision-space erosion audit prompt above.
 - `human_review_handoff_v1`: human review procedure above.

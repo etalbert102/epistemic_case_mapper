@@ -2,7 +2,7 @@
 
 Purpose: tell a contest judge where to look first once the worked-region plan is executed.
 
-Current status: source-grounded scaffold exists for LHC and eggs; curated worked regions are planned but not yet complete.
+Current status: source-grounded scaffold, curated worked regions, illustrative flat baselines, blinded Gemma4 baselines, erosion audits, and judge walkthroughs exist for LHC and eggs. All remain `human-review-needed`.
 
 ## Fast Inspection Path
 
@@ -13,10 +13,13 @@ Current status: source-grounded scaffold exists for LHC and eggs; curated worked
 3. Compare the flat baselines:
    - `examples/lhc_black_holes/flat_synthesis_baseline.md`
    - `examples/eggs/flat_synthesis_baseline.md`
-4. Inspect erosion audits:
+4. Compare the more isolated blinded Gemma4 baselines:
+   - `examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md`
+   - `examples/eggs/blinded_flat_synthesis_baseline_gemma4.md`
+5. Inspect erosion audits:
    - `examples/lhc_black_holes/decision_space_erosion_audit.md`
    - `examples/eggs/decision_space_erosion_audit.md`
-5. Inspect best-region pointers:
+6. Inspect best-region pointers:
    - `examples/lhc_black_holes/BEST_REGIONS.md`
    - `examples/eggs/BEST_REGIONS.md`
 

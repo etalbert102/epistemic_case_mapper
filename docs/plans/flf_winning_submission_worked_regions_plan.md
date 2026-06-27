@@ -380,11 +380,13 @@ Record exact commands, timestamps, and outcomes here.
 - 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/eggs/case.yaml --examples examples/eggs` passed.
 - 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py` passed.
 - 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions` passed.
+- 2026-06-27 / Codex: Added `scripts/run_blinded_baselines.py` and `scripts/validate_blinded_baselines.py` so local Gemma4 baselines can be generated from raw source spans without loading curated maps or erosion audits.
 
 ## Residual Risks
 
 - Human review has not occurred; all new worked-region artifacts remain `human-review-needed`.
-- The flat baselines are illustrative rather than blinded evaluations because the same Codex run had access to source-packet and curated-map context.
+- The original flat baselines are illustrative because the same Codex run had access to source-packet and curated-map context.
+- The Gemma4 blinded baselines improve isolation from the curated maps, but they are span-limited and still need fairness audit before being treated as decisive evidence.
 - Relation labels, crux choices, and erosion-loss fairness need domain-review pressure before public overclaiming.
 - The worked regions are high-value slices, not exhaustive maps of the full LHC or eggs corpora.
 - The deterministic starter maps remain heuristic drafts; the curated worked-region files are the judge-facing source-grounded demonstrations.
@@ -398,10 +400,10 @@ Use this format:
   Risk: The demo could overstate technical or nutrition-evidence certainty if shown as human-reviewed.
   Next action: Use `docs/HUMAN_REVIEW_CHECKLIST.md` on both worked-region maps and erosion audits.
 
-- Owner: Future developer
-  Reason: Baseline isolation was not possible inside this single Codex run.
-  Risk: Erosion comparisons are illustrative rather than evaluative.
-  Next action: Regenerate flat baselines in a clean context that has only the fixed source excerpts and prompt.
+- Owner: Future reviewer
+  Reason: Blinded Gemma4 baselines have not yet been audited against the existing erosion losses.
+  Risk: Some counted losses may not survive comparison against a cleaner baseline, or new losses may appear.
+  Next action: Compare each checked-in blinded baseline to the frozen case map and record which erosion losses survive, weaken, or should be revised.
 
 ## Done Checklist
 
@@ -424,6 +426,7 @@ Use this format:
 - [x] Each worked region has at least two crux candidates.
 - [x] Every curated claim includes source-local excerpt and entailment check.
 - [x] Each baseline records the fixed prompt and source subset.
+- [x] Blinded local Gemma4 baseline generation procedure exists.
 - [x] Each erosion audit names at least five concrete losses that survive adversarial checks.
 - [x] Each worked region scores itself against FLF's four judge questions.
 - [x] Mandatory worked-region validator passes.

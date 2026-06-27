@@ -72,12 +72,17 @@ The LHC erosion audit counts six surviving losses. The strongest is `lhc_loss_00
 
 The eggs erosion audit counts seven surviving losses. The strongest is `eggs_loss_001`: the flat baseline mentions biomarkers but does not preserve that randomized egg trials measure LDL-c and LDL-c/HDL-c rather than direct CVD outcomes.
 
+The repository also includes a reproducible local Gemma4 blinded-baseline procedure in `scripts/run_blinded_baselines.py`. It generates flat syntheses from raw source text line spans without loading the curated maps, erosion audits, judge walkthrough, or `BEST_REGIONS.md` files. The checked-in outputs are:
+
+- `examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md`
+- `examples/eggs/blinded_flat_synthesis_baseline_gemma4.md`
+
 These are not claims that the flat syntheses are bad. They are claims that a normal paragraph is a lossy container for reviewable epistemic structure.
 
 ## Limitations
 
 - Current worked regions are source-grounded but not human-reviewed.
-- Baseline comparisons are illustrative, not isolated blinded evaluations.
+- Original baseline comparisons are illustrative; the added Gemma4 baselines improve isolation from the map, but they are span-limited and still need human fairness audit before being treated as decisive evidence.
 - The curated maps cover strong slices, not full exhaustive case maps.
 - Relation labels and crux choices need domain-review pressure.
 - The current prototype is file-based and command-line oriented.
@@ -93,7 +98,8 @@ PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yam
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/eggs/case.yaml --examples examples/eggs
 PYTHONPATH=src python3 scripts/validate_worked_regions.py
-PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions
+PYTHONPATH=src python3 scripts/validate_blinded_baselines.py
+PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines
 ```
 
 ## Remaining Human-Review Needs

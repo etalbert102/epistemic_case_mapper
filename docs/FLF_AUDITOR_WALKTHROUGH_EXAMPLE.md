@@ -56,6 +56,8 @@ The flat baseline must use the same source subset and `flat_baseline_prompt_v1` 
 
 The baseline should be judged as a normal synthesis, not as a claim map. A concise synthesis can omit detail. Count an omission as decision-space erosion only if the omission reduces the reader's ability to recover a decision-relevant option, frame, conflict, dependency, caveat, or source provenance.
 
+If using the blinded Gemma4 comparator, inspect `examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md` and confirm that it records `baseline_writer_had_access_to_curated_map: no`. Treat it as cleaner than the illustrative baseline, but still span-limited rather than full-corpus.
+
 ## 4. Audit Erosion Findings
 
 For each proposed erosion finding, the auditor checks:

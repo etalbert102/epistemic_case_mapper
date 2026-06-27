@@ -23,6 +23,8 @@ Last updated: 2026-06-27.
 - Validator repair guidance exists in `docs/VALIDATOR_FAILURE_GUIDE.md`.
 - Filled curated LHC and eggs worked-region maps exist under `examples/`.
 - Filled controlled flat-synthesis baselines exist for both worked regions.
+- Reproducible blinded local-model baseline generation exists in `scripts/run_blinded_baselines.py`.
+- Checked-in blinded Gemma4 flat-synthesis baselines can be validated with `scripts/validate_blinded_baselines.py`.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
 
@@ -44,7 +46,7 @@ Last updated: 2026-06-27.
 
 ## Current Evidence Boundary
 
-The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. These comparisons are illustrative because the baselines were not blinded from the same Codex run's context.
+The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes a reproducible local Gemma4 blinded-baseline path that prompts only from selected source spans and does not expose the curated maps or erosion audits.
 
 ## Validation Commands
 
@@ -57,5 +59,8 @@ PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/eggs/
 PYTHONPATH=src python3 scripts/validate_worked_regions.py
 PYTHONPATH=src python3 scripts/validate_worked_regions.py --region lhc_cosmic_ray_argument
 PYTHONPATH=src python3 scripts/validate_worked_regions.py --region eggs_observational_vs_rct
+PYTHONPATH=src python3 scripts/run_blinded_baselines.py --model gemma4:e4b --case all
+PYTHONPATH=src python3 scripts/validate_blinded_baselines.py
 PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions
+PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines
 ```

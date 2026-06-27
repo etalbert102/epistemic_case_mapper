@@ -42,6 +42,11 @@ def main() -> int:
         action="store_true",
         help="Also require final worked-region artifacts to pass their validator.",
     )
+    parser.add_argument(
+        "--include-blinded-baselines",
+        action="store_true",
+        help="Also require checked-in blinded baseline artifacts to pass their validator.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -66,6 +71,8 @@ def main() -> int:
         )
     if args.include_worked_regions:
         _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
+    if args.include_blinded_baselines:
+        _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
 
     if failures:
         for failure in failures:
