@@ -1,13 +1,30 @@
 from __future__ import annotations
 
 import argparse
+import re
 from collections import Counter
 from pathlib import Path
 
 from artifact_utils import REGION_FILES, parse_erosion_audit, parse_worked_map
+from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.schema import CaseManifest
 
 
 OUTPUT_PATH = "docs/SUBMISSION_ARTIFACT_SUMMARY.md"
+FULL_CASES = (
+    {
+        "label": "LHC black holes",
+        "case_path": "data/cases/lhc_black_holes/case.yaml",
+        "map_path": "examples/lhc_black_holes/full_case_map.md",
+        "index_path": "examples/lhc_black_holes/full_case_index.md",
+    },
+    {
+        "label": "Eggs and health",
+        "case_path": "data/cases/eggs/case.yaml",
+        "map_path": "examples/eggs/full_case_map.md",
+        "index_path": "examples/eggs/full_case_index.md",
+    },
+)
 
 
 def main() -> int:
@@ -65,6 +82,24 @@ def render_summary(repo_root: Path) -> str:
             f"| {region.case_label} | {len(worked_map['sources'])} | {len(worked_map['claims'])} | "
             f"{len(worked_map['relations'])} | {relation_summary} | {len(worked_map['crux_candidates'])} | "
             f"{len(audit['losses'])} | {baseline_count} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Full-Case Coverage",
+            "",
+            "| Case | Manifest sources | Full-case clusters | Full-case relations | Full-case files |",
+            "| --- | ---: | ---: | ---: | --- |",
+        ]
+    )
+    for full_case in FULL_CASES:
+        manifest = CaseManifest.model_validate(read_yaml(repo_root / str(full_case["case_path"])))
+        map_text = (repo_root / str(full_case["map_path"])).read_text(encoding="utf-8")
+        cluster_count = len(re.findall(r"^cluster_id:\s*", map_text, flags=re.MULTILINE))
+        relation_count = len(re.findall(r"^relation_id:\s*", map_text, flags=re.MULTILINE))
+        lines.append(
+            f"| {full_case['label']} | {len(manifest.sources)} | {cluster_count} | {relation_count} | "
+            f"`{full_case['index_path']}`, `{full_case['map_path']}` |"
         )
     lines.extend(
         [

@@ -63,11 +63,17 @@ Start with:
 
 The fastest evidence check is:
 
-1. Inspect the best-region pointer for a case.
-2. Compare the worked-region map to the flat synthesis baseline.
-3. Read the erosion audit.
-4. Check the blinded and multi-model baseline audits to see which losses survive stronger comparators.
-5. Use the case-specific human audit packet before treating any artifact as reviewed.
+1. Start with the full-case index for a case.
+2. Inspect the best-region pointer and worked-region anchor.
+3. Compare the worked-region map to the flat synthesis baseline.
+4. Read the erosion audit.
+5. Check the blinded and multi-model baseline audits to see which losses survive stronger comparators.
+6. Use the case-specific human audit packet before treating any artifact as reviewed.
+
+Full-case scaffold entry points:
+
+- `examples/lhc_black_holes/full_case_index.md`
+- `examples/eggs/full_case_index.md`
 
 Reusable structured exports are checked in at:
 

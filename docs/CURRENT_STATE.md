@@ -34,6 +34,12 @@ Last updated: 2026-06-27.
 - A single judge-facing submission packet exists in `docs/SUBMISSION_PACKET.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
 - A limitations and risk register exists in `docs/SUBMISSION_LIMITATIONS.md`.
+- Broad full-case knowledge scaffolds exist for LHC and eggs:
+  - `examples/lhc_black_holes/full_case_index.md`
+  - `examples/lhc_black_holes/full_case_map.md`
+  - `examples/eggs/full_case_index.md`
+  - `examples/eggs/full_case_map.md`
+- `scripts/validate_full_case_knowledge.py` requires every manifest source to appear in the full-case index and map.
 - Structured worked-region JSON exports exist for both curated maps.
 - `scripts/validate_submission_references.py` checks judge-facing file, claim, relation, and loss references.
 - `scripts/judge_smoke_test.py` validates and prints the ten-minute judge path.
@@ -59,7 +65,7 @@ Last updated: 2026-06-27.
 
 ## Current Evidence Boundary
 
-The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes reproducible local blinded-baseline paths that prompt only from selected source spans and do not expose the curated maps or erosion audits. Multi-model baselines show that flat synthesis preservation is model-dependent: some models preserve more detail, but none make the decision-relevant structure as reviewable as the maps.
+The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes reproducible local blinded-baseline paths that prompt only from selected source spans and do not expose the curated maps or erosion audits. Multi-model baselines show that flat synthesis preservation is model-dependent: some models preserve more detail, but none make the decision-relevant structure as reviewable as the maps. Broad full-case scaffolds now cover every acquired LHC and eggs source, with the curated worked regions retained as deeper anchors.
 
 ## Validation Commands
 
@@ -69,6 +75,7 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py
 PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 PYTHONPATH=src python3 scripts/judge_smoke_test.py
 PYTHONPATH=src python3 scripts/validate_submission_references.py
+PYTHONPATH=src python3 scripts/validate_full_case_knowledge.py
 PYTHONPATH=src python3 scripts/export_worked_region_json.py --check
 PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py --check
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml

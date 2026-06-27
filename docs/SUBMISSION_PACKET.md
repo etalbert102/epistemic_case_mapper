@@ -25,19 +25,28 @@ The demo validates source-grounded artifacts, worked regions, blinded baselines,
 ## What To Inspect First
 
 1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-2. `examples/lhc_black_holes/BEST_REGIONS.md`
-3. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-4. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-5. `examples/eggs/BEST_REGIONS.md`
-6. `examples/eggs/worked_region_observational_vs_rct_map.md`
-7. `examples/eggs/decision_space_erosion_audit.md`
-8. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-9. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-10. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+2. `examples/lhc_black_holes/full_case_index.md`
+3. `examples/lhc_black_holes/full_case_map.md`
+4. `examples/lhc_black_holes/BEST_REGIONS.md`
+5. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+6. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+7. `examples/eggs/full_case_index.md`
+8. `examples/eggs/full_case_map.md`
+9. `examples/eggs/BEST_REGIONS.md`
+10. `examples/eggs/worked_region_observational_vs_rct_map.md`
+11. `examples/eggs/decision_space_erosion_audit.md`
+12. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+13. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+14. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
 
 ## Submission Shape
 
 This is a methodology plus runnable reference prototype. It is not a finished interactive product.
+
+The package now has two evidence depths:
+
+- full-case scaffolds that cover every currently acquired source for LHC and eggs,
+- worked-region anchors that provide deeper claim-level and relation-level audit surfaces for the most important slices.
 
 The contribution is the workflow:
 
@@ -87,6 +96,11 @@ The contribution is the workflow:
   - `examples/eggs/worked_region_observational_vs_rct_map.json`
 - Artifact count summary:
   - `docs/SUBMISSION_ARTIFACT_SUMMARY.md`
+- Broad full-case scaffolds:
+  - `examples/lhc_black_holes/full_case_index.md`
+  - `examples/lhc_black_holes/full_case_map.md`
+  - `examples/eggs/full_case_index.md`
+  - `examples/eggs/full_case_map.md`
 - Human review packets:
   - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
   - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`

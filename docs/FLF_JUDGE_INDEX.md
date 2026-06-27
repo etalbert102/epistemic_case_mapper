@@ -22,25 +22,30 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 2. Read `docs/FLF_JUDGE_WALKTHROUGH.md`.
 3. Read the before/after comparison:
    - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-4. Inspect the worked-region maps:
+4. Inspect the full-case scaffolds:
+   - `examples/lhc_black_holes/full_case_index.md`
+   - `examples/lhc_black_holes/full_case_map.md`
+   - `examples/eggs/full_case_index.md`
+   - `examples/eggs/full_case_map.md`
+5. Inspect the worked-region anchors:
    - `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
    - `examples/eggs/worked_region_observational_vs_rct_map.md`
-5. Compare the flat baselines:
+6. Compare the flat baselines:
    - `examples/lhc_black_holes/flat_synthesis_baseline.md`
    - `examples/eggs/flat_synthesis_baseline.md`
-6. Compare the more isolated blinded local-model baselines:
+7. Compare the more isolated blinded local-model baselines:
    - `examples/lhc_black_holes/blinded_flat_synthesis_baseline_*.md`
    - `examples/eggs/blinded_flat_synthesis_baseline_*.md`
-7. Inspect erosion audits:
+8. Inspect erosion audits:
    - `examples/lhc_black_holes/decision_space_erosion_audit.md`
    - `examples/eggs/decision_space_erosion_audit.md`
-8. Inspect the blinded-comparator survival audits:
+9. Inspect the blinded-comparator survival audits:
    - `docs/review/BLINDED_BASELINE_AUDIT.md`
    - `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-9. Inspect best-region pointers:
+10. Inspect best-region pointers:
    - `examples/lhc_black_holes/BEST_REGIONS.md`
    - `examples/eggs/BEST_REGIONS.md`
-10. Use the human audit packets before trusting the examples as reviewed:
+11. Use the human audit packets before trusting the examples as reviewed:
    - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
    - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
 

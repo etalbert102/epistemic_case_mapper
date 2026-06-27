@@ -14,6 +14,7 @@ DOCS_TO_SCAN = (
     "docs/FLF_JUDGE_WALKTHROUGH.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
+    "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/SUBMISSION_LIMITATIONS.md",
     "docs/ARCHITECTURE.md",
@@ -21,6 +22,10 @@ DOCS_TO_SCAN = (
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
+    "examples/lhc_black_holes/full_case_index.md",
+    "examples/lhc_black_holes/full_case_map.md",
+    "examples/eggs/full_case_index.md",
+    "examples/eggs/full_case_map.md",
 )
 
 

@@ -7,7 +7,7 @@ Purpose: state the prototype's limits plainly so the FLF submission does not ove
 | Risk | Why it matters | Current mitigation | Remaining work |
 | --- | --- | --- | --- |
 | No completed human review | Agent-authored maps and audits can be biased or subtly wrong. | Human audit packets and checklists are included. | A named reviewer should record claim, relation, and erosion decisions. |
-| Worked regions are curated slices | Judges may care about full-case navigation. | LHC and eggs were chosen to cover different FLF case profiles. | Expand to more regions or a small COVID slice if time allows. |
+| Full-case maps are broad scaffolds | Judges may want full source-excerpt-level maps, not just coverage scaffolds. | Every acquired LHC and eggs source is represented in a full-case index and map. | Add source-excerpt-level claims for every full-case cluster. |
 | Baselines are span-limited | A full-document or better-prompted baseline might preserve more structure. | Multi-model blinded baselines make this limitation visible. | Add full-document blinded baselines for final paper-grade evidence. |
 | File-based workflow | Less usable than an interactive knowledge-base tool. | Markdown and JSON exports are inspectable and reusable. | Build a lightweight navigator if contest time permits. |
 | Relation labels need domain review | Incorrect support/challenge/dependency labels can mislead reviewers. | Relation rationales and source excerpts are explicit. | Domain reviewers should score relation correctness. |

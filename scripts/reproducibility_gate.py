@@ -20,6 +20,7 @@ REQUIRED_DOCS = (
     "docs/FLF_JUDGE_INDEX.md",
     "docs/FLF_JUDGE_WALKTHROUGH.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
+    "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
     "docs/HUMAN_REVIEW_CHECKLIST.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
@@ -85,6 +86,7 @@ def main() -> int:
         )
     if args.include_worked_regions:
         _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_full_case_knowledge.py"], repo_root, failures)
     if args.include_blinded_baselines:
         _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)

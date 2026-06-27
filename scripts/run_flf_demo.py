@@ -19,6 +19,7 @@ JUDGE_PATHS = (
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
     "docs/ARCHITECTURE.md",
+    "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_LIMITATIONS.md",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
@@ -26,6 +27,10 @@ JUDGE_PATHS = (
     "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
+    "examples/lhc_black_holes/full_case_index.md",
+    "examples/lhc_black_holes/full_case_map.md",
+    "examples/eggs/full_case_index.md",
+    "examples/eggs/full_case_map.md",
 )
 
 
@@ -61,6 +66,7 @@ def main() -> int:
         )
 
     _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_full_case_knowledge.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)

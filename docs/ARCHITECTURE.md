@@ -10,6 +10,7 @@ flowchart TD
     B --> C[Source-grounded claims]
     C --> D[Relations and cruxes]
     D --> E[Epistemic case map]
+    E --> K[Full-case scaffold]
     A --> F[Flat synthesis baseline]
     E --> G[Decision-space erosion audit]
     F --> G
@@ -18,6 +19,7 @@ flowchart TD
     G --> J[Submission packet]
     H --> J
     I --> J
+    K --> J
 ```
 
 ## Layers
@@ -28,6 +30,7 @@ flowchart TD
 | Structure | worked-region maps in `examples/*/worked_region_*.md` | Preserve claims, caveats, relations, cruxes, and similar-but-not-identical claims. |
 | Assessment | erosion audits and blinded baseline audits | Check what flat synthesis preserved, flattened, omitted, or distorted. |
 | Compounding | JSON exports and human audit packets | Let another reviewer inspect, revise, or extend the artifact. |
+| Full-case navigation | `examples/*/full_case_index.md`, `examples/*/full_case_map.md` | Show how worked-region anchors sit inside broader case-level knowledge bases. |
 
 ## Validation Surface
 
@@ -35,6 +38,7 @@ flowchart TD
 - `scripts/validate_worked_regions.py`: checks curated Markdown worked regions.
 - `scripts/validate_blinded_baselines.py`: checks local-model flat baselines.
 - `scripts/validate_submission_references.py`: checks judge-facing file and ID references.
+- `scripts/validate_full_case_knowledge.py`: checks source coverage in full-case scaffolds.
 - `scripts/export_worked_region_json.py --check`: checks structured exports.
 - `scripts/summarize_submission_artifacts.py --check`: checks artifact count summary.
 - `scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines`: end-to-end reproducibility gate.

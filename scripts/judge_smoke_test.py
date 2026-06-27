@@ -9,9 +9,13 @@ from pathlib import Path
 REVIEW_PATH = (
     "docs/SUBMISSION_PACKET.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
+    "examples/lhc_black_holes/full_case_index.md",
+    "examples/lhc_black_holes/full_case_map.md",
     "examples/lhc_black_holes/BEST_REGIONS.md",
     "examples/lhc_black_holes/worked_region_cosmic_ray_map.md",
     "examples/lhc_black_holes/decision_space_erosion_audit.md",
+    "examples/eggs/full_case_index.md",
+    "examples/eggs/full_case_map.md",
     "examples/eggs/BEST_REGIONS.md",
     "examples/eggs/worked_region_observational_vs_rct_map.md",
     "examples/eggs/decision_space_erosion_audit.md",
