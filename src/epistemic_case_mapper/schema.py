@@ -29,6 +29,7 @@ class CaseManifest(BaseModel):
     status: Literal["draft", "in_progress", "reviewed"] = "draft"
     sources: list[Source] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    metadata_files: list[str] = Field(default_factory=list)
 
 
 class Claim(BaseModel):
@@ -36,6 +37,20 @@ class Claim(BaseModel):
     text: str
     source_id: str
     source_span: str | None = None
+    source_start: int | None = None
+    source_end: int | None = None
+    source_text_hash: str | None = None
+    excerpt_hash: str | None = None
+    extraction_method: str = "unspecified"
+    provenance_tag: str = "model_generated_proposal"
+    review_state: Literal[
+        "model_generated_proposal",
+        "source_supported",
+        "interpretation_candidate",
+        "human_review_needed",
+        "human_reviewed",
+    ] = "model_generated_proposal"
+    entailed_by_excerpt: Literal["yes", "no", "uncertain"] = "uncertain"
     claim_type: str = "unclassified"
     confidence: Literal["low", "medium", "high"] = "low"
     tags: list[str] = Field(default_factory=list)

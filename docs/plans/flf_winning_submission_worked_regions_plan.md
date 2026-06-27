@@ -37,6 +37,7 @@ Record at least one concrete implication from each input before implementation e
 - [ ] `docs/WORKFLOW_SPEC.md`
 - [ ] `docs/protocols/epistemic_case_map_v0.md`
 - [ ] `docs/plans/lhc_demo_goal_plan.md`
+- [ ] `docs/plans/flf_workspace_enhancement_backlog.md`
 - [ ] `data/cases/lhc_black_holes/case.yaml`
 - [ ] `data/cases/lhc_black_holes/sources/SOURCE_INVENTORY.md`
 - [ ] `data/cases/eggs/case.yaml`
@@ -53,6 +54,7 @@ Record at least one concrete implication from each input before implementation e
 - `docs/WORKFLOW_SPEC.md`:
 - `docs/protocols/epistemic_case_map_v0.md`:
 - `docs/plans/lhc_demo_goal_plan.md`:
+- `docs/plans/flf_workspace_enhancement_backlog.md`:
 - `data/cases/lhc_black_holes/case.yaml`:
 - `data/cases/lhc_black_holes/sources/SOURCE_INVENTORY.md`:
 - `data/cases/eggs/case.yaml`:

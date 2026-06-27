@@ -28,8 +28,10 @@ def main() -> int:
     if case_map is not None:
         _validate_manifest_alignment(manifest, case_map, failures)
         _validate_case_map(case_map, failures)
+        _validate_preservation_metadata(manifest, case_map, repo_root, failures)
+        _validate_workflow_telemetry(case_map, failures)
         _validate_determinism(manifest, repo_root, failures)
-    _validate_markdown(artifact_dir, failures)
+    _validate_markdown(artifact_dir, manifest, failures)
     if args.examples:
         _validate_snapshot_parity(artifact_dir, repo_root / args.examples, failures)
 
@@ -94,6 +96,22 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
             failures.append(f"missing_claim_text claim={claim.claim_id}")
         if not claim.source_span:
             failures.append(f"missing_claim_span claim={claim.claim_id}")
+        if claim.source_start is None or claim.source_end is None:
+            failures.append(f"missing_claim_offsets claim={claim.claim_id}")
+        elif claim.source_start < 0 or claim.source_end <= claim.source_start:
+            failures.append(
+                f"invalid_claim_offsets claim={claim.claim_id} start={claim.source_start} end={claim.source_end}"
+            )
+        if not claim.source_text_hash:
+            failures.append(f"missing_claim_source_text_hash claim={claim.claim_id}")
+        if not claim.excerpt_hash:
+            failures.append(f"missing_claim_excerpt_hash claim={claim.claim_id}")
+        if claim.extraction_method == "unspecified":
+            failures.append(f"missing_claim_extraction_method claim={claim.claim_id}")
+        if claim.provenance_tag not in {"local_source_text", "local_seed_note", "user_provided", "model_generated_proposal"}:
+            failures.append(f"invalid_claim_provenance_tag claim={claim.claim_id} tag={claim.provenance_tag}")
+        if claim.review_state == "human_reviewed" and claim.entailed_by_excerpt != "yes":
+            failures.append(f"human_reviewed_claim_not_entailed claim={claim.claim_id}")
         if not claim.confidence:
             failures.append(f"missing_claim_confidence claim={claim.claim_id}")
 
@@ -118,7 +136,59 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
                 failures.append(f"unknown_open_question_source question={question.question_id} source={source_id}")
 
 
-def _validate_markdown(artifact_dir: Path, failures: list[str]) -> None:
+def _validate_preservation_metadata(
+    manifest: CaseManifest, case_map: CaseMap, repo_root: Path, failures: list[str]
+) -> None:
+    for relative_path in manifest.metadata_files:
+        path = repo_root / relative_path
+        if not path.exists():
+            failures.append(f"missing_manifest_metadata_file path={path}")
+    if not manifest.metadata_files:
+        return
+    preservation_metadata = case_map.metadata.get("preservation_metadata")
+    if not isinstance(preservation_metadata, dict):
+        failures.append(f"missing_preservation_metadata case={case_map.case_id}")
+        return
+    files = preservation_metadata.get("files")
+    if not isinstance(files, list) or len(files) != len(manifest.metadata_files):
+        failures.append(
+            f"metadata_file_count_mismatch case={case_map.case_id} expected={len(manifest.metadata_files)} actual={len(files) if isinstance(files, list) else 'missing'}"
+        )
+        return
+    indexed = {item.get("path") for item in files if isinstance(item, dict)}
+    for relative_path in manifest.metadata_files:
+        if relative_path not in indexed:
+            failures.append(f"metadata_file_not_in_case_map case={case_map.case_id} path={relative_path}")
+    missing = [item.get("path") for item in files if isinstance(item, dict) and not item.get("exists")]
+    for relative_path in missing:
+        failures.append(f"metadata_file_marked_missing case={case_map.case_id} path={relative_path}")
+
+
+def _validate_workflow_telemetry(case_map: CaseMap, failures: list[str]) -> None:
+    telemetry = case_map.metadata.get("workflow_telemetry")
+    if not isinstance(telemetry, dict):
+        failures.append(f"missing_workflow_telemetry case={case_map.case_id}")
+        return
+    extraction = telemetry.get("extraction")
+    if not isinstance(extraction, dict):
+        failures.append(f"missing_extraction_telemetry case={case_map.case_id}")
+        return
+    if extraction.get("total_claims_created") != len(case_map.claims):
+        failures.append(
+            f"claim_telemetry_mismatch case={case_map.case_id} telemetry={extraction.get('total_claims_created')} actual={len(case_map.claims)}"
+        )
+    sources = extraction.get("sources")
+    if not isinstance(sources, list) or len(sources) != len(case_map.sources):
+        failures.append(
+            f"source_telemetry_count_mismatch case={case_map.case_id} telemetry={len(sources) if isinstance(sources, list) else 'missing'} actual={len(case_map.sources)}"
+        )
+    if "relation_mapping" not in telemetry:
+        failures.append(f"missing_relation_mapping_telemetry case={case_map.case_id}")
+    if "open_question_mapping" not in telemetry:
+        failures.append(f"missing_open_question_mapping_telemetry case={case_map.case_id}")
+
+
+def _validate_markdown(artifact_dir: Path, manifest: CaseManifest, failures: list[str]) -> None:
     for name in ("report.md", "audit.md"):
         path = artifact_dir / name
         if not path.exists():
@@ -129,6 +199,10 @@ def _validate_markdown(artifact_dir: Path, failures: list[str]) -> None:
             failures.append(f"missing_audit_score_table path={path}")
         if name == "report.md" and "Open Questions" not in text:
             failures.append(f"missing_report_open_questions path={path}")
+        if manifest.metadata_files and "Preservation Metadata" not in text:
+            failures.append(f"missing_preservation_metadata_section path={path}")
+        if "Workflow Telemetry" not in text:
+            failures.append(f"missing_workflow_telemetry_section path={path}")
 
 
 def _validate_determinism(manifest: CaseManifest, repo_root: Path, failures: list[str]) -> None:

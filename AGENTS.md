@@ -57,6 +57,17 @@ Curated judge-facing snapshots go under `examples/<case_id>/` and must be checke
 
 Snapshots must be reproducible by documented commands and validated against regenerated artifacts.
 
+## Agent Work Roles
+
+Use explicit roles during substantial prototype work:
+
+- `developer`: changes code, schemas, docs, or artifacts.
+- `verifier`: runs tests, validators, reproducibility gates, and checks generated artifacts against source manifests.
+- `reviewer`: inspects source fidelity, relation correctness, erosion findings, and human-review packet completeness.
+- `process-cleanup`: updates plans, current-state notes, and backlog status after repeated failures or completed work.
+
+One agent or session may perform multiple roles, but the final report must say which verification was actually performed. Do not let a developer pass substitute for human review.
+
 ## Commands
 
 Set up:
@@ -82,6 +93,12 @@ Validate a curated example after it exists:
 
 ```bash
 PYTHONPATH=src ./.venv/bin/python scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes
+```
+
+Run the FLF reproducibility gate:
+
+```bash
+PYTHONPATH=src ./.venv/bin/python scripts/reproducibility_gate.py
 ```
 
 ## Done Standard

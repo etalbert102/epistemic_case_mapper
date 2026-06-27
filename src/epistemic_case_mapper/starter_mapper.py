@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -23,12 +24,44 @@ CLAIM_MARKERS = (
 
 def build_starter_case_map(manifest: CaseManifest, *, repo_root: Path) -> CaseMap:
     claims: list[Claim] = []
+    extraction_telemetry = {
+        "stage": "deterministic_starter_extraction",
+        "source_count": len(manifest.sources),
+        "sources": [],
+        "total_candidate_sentences": 0,
+        "total_claims_created": 0,
+        "total_skipped_short": 0,
+        "total_skipped_no_marker": 0,
+    }
     for source in manifest.sources:
         text = _source_text(source, repo_root)
-        claims.extend(_claims_from_source(source, text, start_index=len(claims) + 1))
+        source_claims, source_telemetry = _claims_from_source(source, text, start_index=len(claims) + 1)
+        claims.extend(source_claims)
+        extraction_telemetry["sources"].append(source_telemetry)
+        extraction_telemetry["total_candidate_sentences"] += source_telemetry["candidate_sentences"]
+        extraction_telemetry["total_claims_created"] += source_telemetry["claims_created"]
+        extraction_telemetry["total_skipped_short"] += source_telemetry["skipped_short"]
+        extraction_telemetry["total_skipped_no_marker"] += source_telemetry["skipped_no_marker"]
 
     relations = _starter_relations(claims)
     open_questions = _starter_open_questions(manifest, claims)
+    preservation_metadata = _preservation_metadata(manifest, repo_root)
+    workflow_telemetry = {
+        "extraction": extraction_telemetry,
+        "relation_mapping": {
+            "stage": "shared_tag_seed_relations",
+            "relation_limit": 25,
+            "relations_created": len(relations),
+            "relation_types": sorted({relation.relation_type for relation in relations}),
+        },
+        "open_question_mapping": {
+            "stage": "case_specific_seed_open_questions",
+            "open_questions_created": len(open_questions),
+            "linked_question_count": sum(
+                1 for question in open_questions if question.linked_claim_ids or question.linked_source_ids
+            ),
+        },
+    }
     return CaseMap(
         case_id=manifest.case_id,
         title=manifest.title,
@@ -49,6 +82,8 @@ def build_starter_case_map(manifest: CaseManifest, *, repo_root: Path) -> CaseMa
             "source_count": len(manifest.sources),
             "claim_count": len(claims),
             "relation_count": len(relations),
+            "preservation_metadata": preservation_metadata,
+            "workflow_telemetry": workflow_telemetry,
         },
     )
 
@@ -63,14 +98,74 @@ def _source_text(source: Source, repo_root: Path) -> str:
     return source.notes or ""
 
 
-def _claims_from_source(source: Source, text: str, *, start_index: int) -> list[Claim]:
+def _preservation_metadata(manifest: CaseManifest, repo_root: Path) -> dict[str, object]:
+    files = []
+    key_requirements = []
+    for relative_path in manifest.metadata_files:
+        path = (repo_root / relative_path).resolve()
+        text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+        requirements = _extract_key_requirements(text)
+        key_requirements.extend(requirements)
+        files.append(
+            {
+                "path": relative_path,
+                "title": _first_heading(text) or path.name,
+                "exists": path.exists(),
+                "headings": _headings(text),
+                "key_requirements": requirements,
+            }
+        )
+    return {
+        "files": files,
+        "key_requirements": key_requirements,
+    }
+
+
+def _first_heading(text: str) -> str | None:
+    for line in text.splitlines():
+        if line.startswith("# "):
+            return line.removeprefix("# ").strip()
+    return None
+
+
+def _headings(text: str) -> list[str]:
+    return [line.lstrip("#").strip() for line in text.splitlines() if line.startswith("#")]
+
+
+def _extract_key_requirements(text: str) -> list[str]:
+    lines = text.splitlines()
+    requirements: list[str] = []
+    in_requirements = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            in_requirements = "preservation requirements" in stripped.lower()
+            continue
+        if in_requirements and stripped.startswith("- "):
+            requirements.append(stripped.removeprefix("- ").strip())
+    return requirements
+
+
+def _claims_from_source(source: Source, text: str, *, start_index: int) -> tuple[list[Claim], dict[str, object]]:
     claims: list[Claim] = []
-    sentences = _sentences(text)
-    for sentence in sentences:
+    normalized_text = _normalized_text(text)
+    source_text_hash = _stable_hash(normalized_text)
+    sentence_spans = _sentence_spans(normalized_text)
+    telemetry = {
+        "source_id": source.source_id,
+        "source_text_hash": source_text_hash,
+        "candidate_sentences": len(sentence_spans),
+        "claims_created": 0,
+        "skipped_short": 0,
+        "skipped_no_marker": 0,
+    }
+    for sentence, start, end in sentence_spans:
         lowered = sentence.lower()
         if len(sentence.split()) < 8:
+            telemetry["skipped_short"] += 1
             continue
         if not any(marker in lowered for marker in CLAIM_MARKERS):
+            telemetry["skipped_no_marker"] += 1
             continue
         claim_id = f"claim_{start_index + len(claims):04d}"
         claims.append(
@@ -78,18 +173,45 @@ def _claims_from_source(source: Source, text: str, *, start_index: int) -> list[
                 claim_id=claim_id,
                 text=sentence,
                 source_id=source.source_id,
-                source_span="heuristic_sentence",
+                source_span=f"normalized_chars:{start}-{end}",
+                source_start=start,
+                source_end=end,
+                source_text_hash=source_text_hash,
+                excerpt_hash=_stable_hash(sentence),
+                extraction_method="deterministic_marker_sentence_v1",
+                provenance_tag="local_source_text" if source.path or source.text else "local_seed_note",
+                review_state="source_supported",
+                entailed_by_excerpt="yes",
                 claim_type=_classify_claim(sentence),
                 confidence="low",
                 tags=_tags(sentence),
             )
         )
-    return claims
+    telemetry["claims_created"] = len(claims)
+    return claims, telemetry
 
 
-def _sentences(text: str) -> list[str]:
-    compact = " ".join(text.split())
-    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", compact) if part.strip()]
+def _normalized_text(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _sentence_spans(text: str) -> list[tuple[str, int, int]]:
+    spans = []
+    for match in re.finditer(r"[^.!?]+(?:[.!?]+|$)", text):
+        raw = match.group(0)
+        leading = len(raw) - len(raw.lstrip())
+        trailing = len(raw) - len(raw.rstrip())
+        sentence = raw.strip()
+        if not sentence:
+            continue
+        start = match.start() + leading
+        end = match.end() - trailing
+        spans.append((sentence, start, end))
+    return spans
+
+
+def _stable_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
 def _classify_claim(sentence: str) -> str:

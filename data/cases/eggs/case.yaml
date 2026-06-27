@@ -9,6 +9,11 @@ notes:
   - "Use as the second worked example because the case has heterogeneous populations, endpoints, and study designs."
   - "Source-grounded acquisition was added on 2026-06-26; claims and relations still need human/agent audit before review status can be upgraded."
   - "Raw downloaded documents are stored under data/cases/eggs/sources/raw/."
+metadata_files:
+  - "data/cases/eggs/metadata/source_method_metadata.md"
+  - "data/cases/eggs/metadata/source_independence.md"
+  - "data/cases/eggs/metadata/guideline_evolution_timeline.md"
+  - "data/cases/eggs/metadata/stakeholder_contexts.md"
 sources:
   - source_id: aha_2019_dietary_cholesterol_pubmed
     title: "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"
@@ -30,6 +35,16 @@ sources:
     path: "data/cases/eggs/sources/text/aha_2023_dietary_cholesterol_news.txt"
     excerpt: "AHA public explanation summarizing current dietary cholesterol guidance, including how eggs can fit into a healthy diet for many adults."
     notes: "Raw HTML: data/cases/eggs/sources/raw/aha_2023_dietary_cholesterol_news.html"
+  - source_id: dga_2020_2025_pmc_summary
+    title: "Dietary Guidelines for Americans, 2020-2025"
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC8713704/"
+    author: "U.S. Department of Agriculture and U.S. Department of Health and Human Services"
+    publication_date: "2020"
+    retrieval_date: "2026-06-26"
+    source_type: federal_dietary_guideline_summary
+    path: "data/cases/eggs/sources/text/dga_2020_2025_pmc_summary.txt"
+    excerpt: "PMC summary of the Dietary Guidelines for Americans, including dietary pattern framing and protein food groups that include eggs."
+    notes: "Raw HTML: data/cases/eggs/sources/raw/dga_2020_2025_pmc_summary.html. Full PDF retrieval was unreliable during acquisition."
   - source_id: bmj_2020_egg_consumption_cvd
     title: "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"
     url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7190072/"

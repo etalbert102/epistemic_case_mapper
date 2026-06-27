@@ -14,6 +14,7 @@ This directory stores source documents for the source-grounded eggs-and-health c
 | --- | --- | --- | --- |
 | `aha_2019_dietary_cholesterol_pubmed` | AHA science advisory record | `raw/aha_2019_dietary_cholesterol_pubmed.html` | `text/aha_2019_dietary_cholesterol_pubmed.txt` |
 | `aha_2023_dietary_cholesterol_news` | AHA public guidance explainer | `raw/aha_2023_dietary_cholesterol_news.html` | `text/aha_2023_dietary_cholesterol_news.txt` |
+| `dga_2020_2025_pmc_summary` | U.S. federal dietary guideline summary | `raw/dga_2020_2025_pmc_summary.html` | `text/dga_2020_2025_pmc_summary.txt` |
 | `bmj_2020_egg_consumption_cvd` | large cohorts plus updated meta-analysis | `raw/bmj_2020_egg_consumption_cvd_pmc.html` | `text/bmj_2020_egg_consumption_cvd_pmc.txt` |
 | `bmj_2013_egg_consumption_chd_stroke` | dose-response prospective-cohort meta-analysis | `raw/bmj_2013_egg_consumption_chd_stroke_pmc.html` | `text/bmj_2013_egg_consumption_chd_stroke_pmc.txt` |
 | `jama_2019_dietary_cholesterol_eggs` | pooled cohort study with cautionary findings | `raw/jama_2019_dietary_cholesterol_eggs_pmc.html` | `text/jama_2019_dietary_cholesterol_eggs_pmc.txt` |
@@ -28,6 +29,7 @@ This directory stores source documents for the source-grounded eggs-and-health c
 
 - `aha_2019_dietary_cholesterol_pubmed`: https://pubmed.ncbi.nlm.nih.gov/31838890/
 - `aha_2023_dietary_cholesterol_news`: https://www.heart.org/en/news/2023/08/25/heres-the-latest-on-dietary-cholesterol-and-how-it-fits-in-with-a-healthy-diet
+- `dga_2020_2025_pmc_summary`: https://pmc.ncbi.nlm.nih.gov/articles/PMC8713704/
 - `bmj_2020_egg_consumption_cvd`: https://pmc.ncbi.nlm.nih.gov/articles/PMC7190072/
 - `bmj_2013_egg_consumption_chd_stroke`: https://pmc.ncbi.nlm.nih.gov/articles/PMC3538567/
 - `jama_2019_dietary_cholesterol_eggs`: https://pmc.ncbi.nlm.nih.gov/articles/PMC6439941/
@@ -41,7 +43,7 @@ This directory stores source documents for the source-grounded eggs-and-health c
 ## Notes
 
 - Direct BMJ and AHA publisher downloads blocked automated access; PMC/PubMed/AHA public pages were used where available.
-- Direct Dietary Guidelines PDF retrieval stalled during acquisition. The guideline role is represented by AHA guidance and the Nordic Nutrition Recommendations scoping review; a future pass can add the full USDA/HHS Dietary Guidelines PDF if needed.
+- Direct Dietary Guidelines PDF retrieval stalled during acquisition. The guideline role is represented by the PMC summary of the Dietary Guidelines for Americans, AHA guidance, and the Nordic Nutrition Recommendations scoping review; a future pass can add the full USDA/HHS PDF if needed.
 - The corpus intentionally includes neutral, cautionary, mechanistic, and guideline-oriented sources so the map can preserve disagreement and heterogeneity.
 
 ## Checksums
