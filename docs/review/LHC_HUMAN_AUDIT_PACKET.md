@@ -29,6 +29,8 @@ prompt_versions:
 
 ## Review Files
 
+- Reviewer start page: `docs/review/REVIEWER_START_HERE.md`
+- Self-contained Tier 1 checklist: `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - Worked map: `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
 - Region definition: `docs/worked_regions/lhc_cosmic_ray_argument.md`
 - Best-region pointer: `examples/lhc_black_holes/BEST_REGIONS.md`
@@ -37,15 +39,16 @@ prompt_versions:
 - Erosion audit: `examples/lhc_black_holes/decision_space_erosion_audit.md`
 - Blinded comparator audit: `docs/review/BLINDED_BASELINE_AUDIT.md`
 - Multi-model comparator audit: `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-- Fillable checklist: `docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv`
+- Full fillable checklist: `docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv`
 
 ## Reviewer Tasks
 
-1. Check source fidelity for every claim in the worked map.
-2. Check that velocity/trapping, compact-star scope, Plaga critique, and GM response claims are not stronger than their excerpts.
-3. Check whether relation labels distinguish support, challenge, dependency, tension, and crux correctly.
-4. Check whether each counted erosion loss is fair to a normal concise synthesis.
-5. Check whether any blinded model baseline already preserves a claimed loss well enough that the loss should be narrowed or rejected.
+1. Complete the LHC rows in `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv` before opening the full map.
+2. Check source fidelity for every claim in the worked map.
+3. Check that velocity/trapping, compact-star scope, Plaga critique, and GM response claims are not stronger than their excerpts.
+4. Check whether relation labels distinguish support, challenge, dependency, tension, and crux correctly.
+5. Check whether each counted erosion loss is fair to a normal concise synthesis.
+6. Check whether any blinded model baseline already preserves a claimed loss well enough that the loss should be narrowed or rejected.
 
 ## Priority Claims
 

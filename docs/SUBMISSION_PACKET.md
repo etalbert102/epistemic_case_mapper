@@ -40,28 +40,30 @@ The UI is an inspection dashboard over the checked-in LHC and eggs artifacts. It
 2. `ui/index.html`
 3. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
 4. `docs/HUMAN_AUDIT_GUIDE.md`
-5. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-6. `examples/covid_origins_slice/BEST_REGIONS.md`
-7. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-8. `examples/covid_origins_slice/decision_space_erosion_audit.md`
-9. `examples/lhc_black_holes/full_case_index.md`
-10. `examples/lhc_black_holes/full_case_map.md`
-11. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-12. `examples/lhc_black_holes/BEST_REGIONS.md`
-13. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-14. `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
-15. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-16. `examples/eggs/full_case_index.md`
-17. `examples/eggs/full_case_map.md`
-18. `examples/eggs/full_case_flat_synthesis_baseline.md`
-19. `examples/eggs/BEST_REGIONS.md`
-20. `examples/eggs/worked_region_observational_vs_rct_map.md`
-21. `examples/eggs/decision_space_erosion_audit.md`
-22. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-23. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-24. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-25. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-26. `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
+5. `docs/review/REVIEWER_START_HERE.md`
+6. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
+7. `docs/NEW_SOURCE_UPDATE_DEMO.md`
+8. `examples/covid_origins_slice/BEST_REGIONS.md`
+9. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+10. `examples/covid_origins_slice/decision_space_erosion_audit.md`
+11. `examples/lhc_black_holes/full_case_index.md`
+12. `examples/lhc_black_holes/full_case_map.md`
+13. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+14. `examples/lhc_black_holes/BEST_REGIONS.md`
+15. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+16. `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
+17. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+18. `examples/eggs/full_case_index.md`
+19. `examples/eggs/full_case_map.md`
+20. `examples/eggs/full_case_flat_synthesis_baseline.md`
+21. `examples/eggs/BEST_REGIONS.md`
+22. `examples/eggs/worked_region_observational_vs_rct_map.md`
+23. `examples/eggs/decision_space_erosion_audit.md`
+24. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+25. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+26. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+27. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
+28. `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
 
 ## Submission Shape
 
@@ -147,6 +149,8 @@ The contribution is the workflow:
   - `docs/NEW_SOURCE_UPDATE_DEMO.md`
   - `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
 - Human review packets:
+  - `docs/review/REVIEWER_START_HERE.md`
+  - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
   - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
   - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
   - `docs/review/COVID_HUMAN_AUDIT_PACKET.md`

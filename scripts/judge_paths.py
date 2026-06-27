@@ -12,6 +12,8 @@ JUDGE_PATHS = (
     "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "ui/index.html",
+    "docs/review/REVIEWER_START_HERE.md",
+    "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/COVID_HUMAN_AUDIT_PACKET.md",

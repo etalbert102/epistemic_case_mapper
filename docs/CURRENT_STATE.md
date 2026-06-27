@@ -30,6 +30,9 @@ Last updated: 2026-06-27.
 - A one-command judge demo exists in `scripts/run_flf_demo.py`.
 - A compact before/after comparison exists in `docs/FLF_BEFORE_AFTER_COMPARISON.md`.
 - Case-specific human audit packets exist for LHC, eggs, and the COVID slice.
+- A reviewer-first handoff page and self-contained Tier 1 checklist exist:
+  - `docs/review/REVIEWER_START_HERE.md`
+  - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - A single judge-facing submission packet exists in `docs/SUBMISSION_PACKET.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
 - A combined criteria self-assessment, failure-mode analysis, and risk register exists in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`.
@@ -96,6 +99,7 @@ PYTHONPATH=src python3 scripts/build_ui_data.py --check
 PYTHONPATH=src python3 scripts/validate_ui.py
 PYTHONPATH=src python3 scripts/export_worked_region_json.py --check
 PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py --check
+PYTHONPATH=src python3 scripts/build_tier1_review_checklist.py --check
 PYTHONPATH=src python3 scripts/validate_update_demo.py
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yaml

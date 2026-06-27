@@ -52,6 +52,7 @@ def main() -> int:
     _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)

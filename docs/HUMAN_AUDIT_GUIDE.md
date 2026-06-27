@@ -35,6 +35,9 @@ This is not a bad answer. It is broadly plausible and useful as prose. The map a
 
 Use this sequence before trusting a worked-region artifact.
 
+0. Start with the reviewer entry point and self-contained Tier 1 checklist.
+   - `docs/review/REVIEWER_START_HERE.md`
+   - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 1. Audit the source subset before model outputs.
    - Do all source IDs exist in the case manifest?
    - Does each source have local text and provenance?
@@ -126,6 +129,8 @@ Codex or another model must not assign a human-reviewed status without explicit 
 
 Case-specific packets:
 
+- `docs/review/REVIEWER_START_HERE.md`
+- `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
 - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
 - `docs/review/COVID_HUMAN_AUDIT_PACKET.md`

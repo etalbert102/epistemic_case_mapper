@@ -30,14 +30,16 @@ Scale: 1 means mostly absent, 3 means demonstrated but incomplete, 5 means stron
 3. `examples/eggs/worked_region_observational_vs_rct_map.md`
 4. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 5. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-6. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-7. `docs/HUMAN_AUDIT_GUIDE.md`
-8. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-9. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-10. `examples/eggs/full_case_flat_synthesis_baseline.md`
-11. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-12. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-13. `ui/index.html`
+6. `docs/review/REVIEWER_START_HERE.md`
+7. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
+8. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+9. `docs/HUMAN_AUDIT_GUIDE.md`
+10. `docs/NEW_SOURCE_UPDATE_DEMO.md`
+11. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+12. `examples/eggs/full_case_flat_synthesis_baseline.md`
+13. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+14. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+15. `ui/index.html`
 
 ## Failure Modes
 

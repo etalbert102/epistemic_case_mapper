@@ -10,12 +10,16 @@ Worked region: `covid_bayesian_disagreement`
 
 Core files:
 
+- `docs/review/REVIEWER_START_HERE.md`
+- `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 - `examples/covid_origins_slice/flat_synthesis_baseline.md`
 - `examples/covid_origins_slice/decision_space_erosion_audit.md`
 - `examples/covid_origins_slice/BEST_REGIONS.md`
 
 ## Priority Claims
+
+Complete the COVID rows in `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv` first. It inlines the row text, source support, review question, and falsification prompt.
 
 Start with:
 
@@ -76,4 +80,3 @@ reviewer_note:
 - Do not infer that this map adjudicates COVID origins.
 - Check original sources before marking claims human-reviewed; current source files are source-local notes.
 - Be stricter than in LHC or eggs because COVID is adversarial, politically charged, and methodologically contested.
-

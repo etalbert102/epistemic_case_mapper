@@ -74,6 +74,8 @@ REQUIRED_GLOBAL_FILES = (
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_PACKET.md",
     "ui/index.html",
+    "docs/review/REVIEWER_START_HERE.md",
+    "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv",

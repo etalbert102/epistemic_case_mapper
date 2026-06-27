@@ -63,6 +63,8 @@ Start with:
 - `docs/SUBMISSION_PACKET.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+- `docs/review/REVIEWER_START_HERE.md`
+- `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - `docs/HUMAN_AUDIT_GUIDE.md`
 - `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
 - `docs/FLF_SUBMISSION_DRAFT.md`

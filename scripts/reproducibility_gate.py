@@ -35,11 +35,15 @@ REQUIRED_DOCS = (
     "docs/worked_regions/mini_filled_example.md",
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
     "docs/review/BLINDED_BASELINE_AUDIT.md",
+    "docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv",
+    "docs/review/COVID_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
+    "docs/review/REVIEWER_START_HERE.md",
+    "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv",
 )
 
 FORBIDDEN_TERMS = (
@@ -91,6 +95,7 @@ def main() -> int:
         _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)

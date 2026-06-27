@@ -31,6 +31,8 @@ prompt_versions:
 
 ## Review Files
 
+- Reviewer start page: `docs/review/REVIEWER_START_HERE.md`
+- Self-contained Tier 1 checklist: `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - Worked map: `examples/eggs/worked_region_observational_vs_rct_map.md`
 - Region definition: `docs/worked_regions/eggs_observational_vs_rct.md`
 - Best-region pointer: `examples/eggs/BEST_REGIONS.md`
@@ -39,15 +41,16 @@ prompt_versions:
 - Erosion audit: `examples/eggs/decision_space_erosion_audit.md`
 - Blinded comparator audit: `docs/review/BLINDED_BASELINE_AUDIT.md`
 - Multi-model comparator audit: `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-- Fillable checklist: `docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv`
+- Full fillable checklist: `docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv`
 
 ## Reviewer Tasks
 
-1. Check source fidelity for every claim in the worked map.
-2. Check that observational CVD outcome claims are kept separate from randomized lipid-marker claims.
-3. Check that guideline-process claims are not treated as direct outcome evidence.
-4. Check whether subgroup caveats, replacement-food logic, and NNR scoping-review limits are preserved fairly.
-5. Check whether each counted erosion loss is fair against the stronger blinded model baselines.
+1. Complete the eggs rows in `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv` before opening the full map.
+2. Check source fidelity for every claim in the worked map.
+3. Check that observational CVD outcome claims are kept separate from randomized lipid-marker claims.
+4. Check that guideline-process claims are not treated as direct outcome evidence.
+5. Check whether subgroup caveats, replacement-food logic, and NNR scoping-review limits are preserved fairly.
+6. Check whether each counted erosion loss is fair against the stronger blinded model baselines.
 
 ## Priority Claims
 
