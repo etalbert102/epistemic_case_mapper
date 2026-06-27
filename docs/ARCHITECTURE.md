@@ -34,7 +34,7 @@ flowchart TD
 | Assessment | erosion audits and blinded baseline audits | Check what flat synthesis preserved, flattened, omitted, or distorted. |
 | Compounding | JSON exports and human audit packets | Let another reviewer inspect, revise, or extend the artifact. |
 | Full-case navigation | `examples/*/full_case_index.md`, `examples/*/full_case_map.md` | Show how worked-region anchors sit inside broader case-level knowledge bases. |
-| Operational realism | `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`, `examples/*/investigator_task_queue.md` | Show how a real investigator continues, reviews, and extends the artifact. |
+| Operational realism | `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`, `examples/*/investigator_task_queue.md` | Show how a real investigator continues, reviews, and extends the artifact. |
 | UI inspection | `ui/index.html`, `ui/data.json` | Gives judges a polished dashboard over canonical artifacts. |
 
 ## Validation Surface

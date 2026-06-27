@@ -68,13 +68,33 @@ Key files:
 
 The map keeps observational CVD outcomes, randomized lipid markers, dietary-pattern guidance, replacement-food modeling, baseline intake, high-LDL guidance, diabetes and regional caveats, and NNR evidence-grade limits separate. The flat baseline gives a reasonable answer but weakens the endpoint boundary and the BMJ/JAMA tension.
 
+## COVID Worked-Region Summary
+
+Region: `covid_bayesian_disagreement`
+
+Question: how should a synthesis preserve disagreement about Bayesian weighting, early-case geography, and post-debate updates without pretending to settle the full COVID origins question?
+
+Key files:
+
+- `docs/worked_regions/covid_bayesian_disagreement.md`
+- `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+- `examples/covid_origins_slice/flat_synthesis_baseline.md`
+- `examples/covid_origins_slice/decision_space_erosion_audit.md`
+- `examples/covid_origins_slice/BEST_REGIONS.md`
+
+The map keeps the debate outcome, Rootclaim postmortem, aggregate forecast, minority forecast distribution, formal Bayesian decomposition, early-case geography assumptions, methodological replies, and later phylogeny critique separate. The flat baseline gives a reasonable high-level account but weakens the difference between process critique, substantive posterior disagreement, and subargument scope.
+
+This is a deliberately narrow adversarial worked region, not a full COVID origins case map or adjudication.
+
 ## Evidence That Flat Synthesis Loses Decision-Relevant Structure
 
 The LHC erosion audit counts six surviving losses. The strongest is `lhc_loss_001`: the flat baseline mentions the velocity caveat but loses the dependency between low LHC product velocities, Earth trapping, and why Earth cosmic-ray survival alone is not the whole argument.
 
 The eggs erosion audit counts seven surviving losses. The strongest is `eggs_loss_001`: the flat baseline mentions biomarkers but does not preserve that randomized egg trials measure LDL-c and LDL-c/HDL-c rather than direct CVD outcomes.
 
-The repository also includes a reproducible local-model blinded-baseline procedure in `scripts/run_blinded_baselines.py`. It generates flat syntheses from raw source text line spans without loading the curated maps, erosion audits, judge walkthrough, or `BEST_REGIONS.md` files. Checked-in outputs include Gemma4, Qwen3, Phi4, and Granite baselines for both worked regions.
+The COVID erosion audit counts six surviving losses. The strongest is `covid_loss_004`: the flat baseline reports Levin's large odds ratio but does not preserve the decomposition assumptions and working-paper status as separate audit targets.
+
+The repository also includes a reproducible local-model blinded-baseline procedure in `scripts/run_blinded_baselines.py`. It generates flat syntheses from raw source text line spans without loading the curated maps, erosion audits, judge walkthrough, or `BEST_REGIONS.md` files. Checked-in outputs include Gemma4, Qwen3, Phi4, and Granite baselines for the LHC and eggs worked regions.
 
 An agent-authored audit of the original Gemma4 blinded baselines is recorded in `docs/review/BLINDED_BASELINE_AUDIT.md`. A broader multi-model audit is recorded in `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`.
 
@@ -86,7 +106,7 @@ These are not claims that the flat syntheses are bad. They are claims that a nor
 
 - Current worked regions are source-grounded but not human-reviewed.
 - Original baseline comparisons are illustrative; the added blinded local-model baselines improve isolation from the map, but they are span-limited and still need human fairness audit before being treated as decisive evidence.
-- The curated maps cover strong slices, not full exhaustive case maps.
+- The curated maps cover strong slices, not full exhaustive case maps; the COVID slice is especially narrow.
 - Relation labels and crux choices need domain-review pressure.
 - The current prototype is file-based and command-line oriented.
 - More source-span automation would improve scale and reduce manual curation burden.
@@ -108,7 +128,7 @@ PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions 
 
 ## Remaining Human-Review Needs
 
-Use `docs/HUMAN_REVIEW_CHECKLIST.md` to review:
+Use `docs/HUMAN_AUDIT_GUIDE.md` to review:
 
 - whether each source excerpt entails its claim,
 - whether relation types are justified,
@@ -120,5 +140,6 @@ Case-specific handoff packets are available at:
 
 - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
 - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+- `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
 
 Until that pass occurs, the artifact should remain `human-review-needed`.

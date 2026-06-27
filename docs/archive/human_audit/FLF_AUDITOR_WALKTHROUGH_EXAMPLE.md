@@ -1,5 +1,7 @@
 # FLF Auditor Walkthrough Example
 
+Status: `human-review-needed`
+
 Purpose: show the review workflow a judge or external auditor should follow before trusting a worked-region artifact.
 
 This example uses the LHC black-hole risk case because the source base contains a closed technical safety argument, a critique, a response, public communication, and later experimental context.

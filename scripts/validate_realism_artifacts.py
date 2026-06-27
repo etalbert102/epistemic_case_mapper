@@ -10,8 +10,7 @@ from epistemic_case_mapper.schema import CaseManifest
 
 
 REALISM_DOCS = (
-    "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
-    "docs/OPERATIONAL_REALISM_AUDIT.md",
+    "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
     "examples/lhc_black_holes/investigator_task_queue.md",
     "examples/eggs/investigator_task_queue.md",
 )
@@ -63,15 +62,15 @@ def main() -> int:
 
 
 def _validate_playbook(repo_root: Path, failures: list[str]) -> None:
-    text = (repo_root / "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md").read_text(encoding="utf-8")
-    for required in ("Roles", "Realistic Workflow", "Realism Guardrails", "Current Realism Boundary"):
+    text = (repo_root / "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md").read_text(encoding="utf-8")
+    for required in ("Roles", "Realistic Workflow", "Full-Case Scaffold Design", "Realism Verdict"):
         if required not in text:
             failures.append(f"playbook_missing_section section={required}")
 
 
 def _validate_realism_audit(repo_root: Path, failures: list[str]) -> None:
-    text = (repo_root / "docs/OPERATIONAL_REALISM_AUDIT.md").read_text(encoding="utf-8")
-    for required in ("What Is Realistic Now", "Remaining Realism Gaps", "Realism Verdict"):
+    text = (repo_root / "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md").read_text(encoding="utf-8")
+    for required in ("What Is Realistic Now", "Remaining Gaps", "Realism Verdict"):
         if required not in text:
             failures.append(f"realism_audit_missing_section section={required}")
 

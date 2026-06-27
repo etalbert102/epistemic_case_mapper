@@ -51,21 +51,21 @@ EXTENSION_ARTIFACTS = (
         "status": "demo from already acquired source",
     },
     {
-        "artifact": "Criteria self-assessment",
+        "artifact": "Self-assessment and limitations",
         "case": "Submission",
-        "path": "docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md",
+        "path": "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
         "status": "human-review-needed",
     },
     {
-        "artifact": "Worked judge example",
-        "case": "Eggs and health",
-        "path": "docs/FLF_WORKED_JUDGE_EXAMPLE.md",
+        "artifact": "Human audit guide",
+        "case": "Submission",
+        "path": "docs/HUMAN_AUDIT_GUIDE.md",
         "status": "human-review-needed",
     },
     {
-        "artifact": "Failure modes and counterexamples",
+        "artifact": "Operational workflow and realism",
         "case": "Submission",
-        "path": "docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md",
+        "path": "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
         "status": "human-review-needed",
     },
 )
@@ -173,7 +173,7 @@ def render_summary(repo_root: Path) -> str:
             "",
             "## Interpretation",
             "",
-            "These counts are not quality scores. They help judges verify that the submission includes source grounding, structured relations, cruxes, erosion findings, and multi-model comparators for both worked regions.",
+            "These counts are not quality scores. They help judges verify that the submission includes source grounding, structured relations, cruxes, erosion findings, and multi-model comparators for the worked regions. Full-case coverage remains limited to LHC and eggs; the COVID artifact is a narrow worked region.",
             "",
         ]
     )

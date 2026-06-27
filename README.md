@@ -26,14 +26,17 @@ The central failure mode is **decision-space erosion**: a synthesis can remain f
 
 ## Current Shape
 
-The current implementation is a scaffold:
+The current implementation is a runnable contest prototype:
 
-- case manifests in `data/cases/*/case.yaml`
-- a deterministic starter map builder in `scripts/build_case_map.py`
-- shared schema helpers in `src/epistemic_case_mapper/`
-- FLF-facing protocol notes in `docs/`
+- source-grounded case manifests and local source text for LHC black holes, eggs, and a narrow COVID origins slice,
+- deterministic starter map generation in `scripts/build_case_map.py`,
+- curated worked-region maps with claim, relation, crux, and erosion-audit surfaces,
+- full-case scaffolds and illustrative full-case flat baselines,
+- multi-model local blinded baselines for the worked regions,
+- human audit packets, review checklists, and judge-facing walkthroughs,
+- a static inspection UI under `ui/`.
 
-The deterministic builder is not the final AI workflow. It creates an auditable artifact shape that the LLM-assisted workflow can fill.
+The deterministic builder is not the final AI workflow. It creates a repeatable artifact shape; the checked-in examples show how that shape is filled, audited, and handed to a reviewer.
 
 ## Quick Start
 
@@ -43,7 +46,7 @@ python -m venv .venv
 ./.venv/bin/python scripts/run_flf_demo.py
 ```
 
-The demo command regenerates the deterministic starter artifacts, validates the checked-in LHC and eggs worked regions, validates the blinded baseline set, and prints the judge-facing entry points.
+The demo command regenerates the deterministic starter artifacts, validates the checked-in LHC, eggs, and COVID worked regions, validates the blinded baseline set, and prints the judge-facing entry points.
 
 For a faster checked-in artifact audit without rebuilding generated starter outputs:
 
@@ -57,11 +60,11 @@ Generated starter output is written to `artifacts/<case_id>/`. Curated judge-fac
 
 Start with:
 
-- `docs/FLF_JUDGE_INDEX.md`
 - `docs/SUBMISSION_PACKET.md`
 - `ui/index.html`
-- `docs/FLF_JUDGE_WALKTHROUGH.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+- `docs/HUMAN_AUDIT_GUIDE.md`
+- `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
 - `docs/FLF_SUBMISSION_DRAFT.md`
 
 The fastest evidence check is:
@@ -80,8 +83,7 @@ Full-case scaffold entry points:
 
 Operational realism entry points:
 
-- `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
-- `docs/OPERATIONAL_REALISM_AUDIT.md`
+- `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
 - `examples/lhc_black_holes/investigator_task_queue.md`
 - `examples/eggs/investigator_task_queue.md`
 
@@ -97,6 +99,7 @@ Reusable structured exports are checked in at:
 
 - `examples/lhc_black_holes/worked_region_cosmic_ray_map.json`
 - `examples/eggs/worked_region_observational_vs_rct_map.json`
+- `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json`
 
 ## Target FLF Demonstrations
 
@@ -104,7 +107,7 @@ Initial demonstration cases:
 
 1. `lhc_black_holes`: closed technical risk case; good for dependency and crux mapping.
 2. `eggs`: messy everyday evidence case; good for heterogeneity, framing, and methods-of-knowing.
-3. `covid_origins_slice`: optional narrow slice; good stress test, but not the first full worked example.
+3. `covid_origins_slice`: narrow adversarial slice; good for Bayesian disagreement, update triggers, and subargument boundaries, but not a full COVID origins assessment.
 
 ## Intended Submission Package
 

@@ -30,7 +30,7 @@ This artifact is source-grounded according to the case manifest.
 | Compounding | 2 | JSON schema, stable IDs, and Markdown outputs support reuse. |
 | Judge usability | 2 | Report is navigable, but claims and relations remain draft until audited. |
 | Verification | 1 | Build command generated artifacts; full validator should be run separately. |
-| Plan discipline | 1 | Goal-plan discipline is documented in docs/plans/lhc_demo_goal_plan.md. |
+| Plan discipline | 1 | Internal goal-plan history is archived under docs/archive/internal/plans/. |
 
 ## Missing Evidence
 

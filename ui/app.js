@@ -18,6 +18,10 @@ const elements = {
   fullMapLink: document.getElementById("fullMapLink"),
   workedMapLink: document.getElementById("workedMapLink"),
   auditLink: document.getElementById("auditLink"),
+  bestRegionsLink: document.getElementById("bestRegionsLink"),
+  fullBaselineLink: document.getElementById("fullBaselineLink"),
+  workedBaselineLink: document.getElementById("workedBaselineLink"),
+  multiModelAuditLink: document.getElementById("multiModelAuditLink"),
   taskQueueLink: document.getElementById("taskQueueLink"),
   reviewPacketLink: document.getElementById("reviewPacketLink"),
   reviewChecklistLink: document.getElementById("reviewChecklistLink"),
@@ -68,6 +72,10 @@ function renderCase() {
   elements.fullMapLink.href = artifactHref(caseItem.artifacts.fullMap);
   elements.workedMapLink.href = artifactHref(caseItem.artifacts.workedMap);
   elements.auditLink.href = artifactHref(caseItem.artifacts.erosionAudit);
+  elements.bestRegionsLink.href = artifactHref(caseItem.artifacts.bestRegions);
+  elements.fullBaselineLink.href = artifactHref(caseItem.artifacts.fullCaseBaseline);
+  elements.workedBaselineLink.href = artifactHref(caseItem.artifacts.workedBaseline);
+  elements.multiModelAuditLink.href = artifactHref(caseItem.artifacts.multiModelAudit);
   elements.taskQueueLink.href = artifactHref(caseItem.artifacts.taskQueue);
   elements.reviewPacketLink.href = artifactHref(caseItem.artifacts.reviewPacket);
   elements.reviewChecklistLink.href = artifactHref(caseItem.artifacts.reviewChecklist);

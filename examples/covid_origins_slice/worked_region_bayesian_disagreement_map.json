@@ -1,0 +1,367 @@
+{
+  "case_key": "covid",
+  "case_label": "COVID origins slice",
+  "erosion_audit": {
+    "baseline_comparator": "examples/covid_origins_slice/flat_synthesis_baseline.md",
+    "borderline_or_rejected": [
+      "The flat baseline does preserve the high-level warning that COVID should be represented as structured disagreement, so this audit should not claim that the prose is misleading overall.",
+      "The flat baseline explicitly names multiple evidence families; the remaining losses are about auditability and relation structure, not total omission."
+    ],
+    "losses": [
+      {
+        "adversarial_check": "survives; a paragraph can fairly mention all three, but the reviewer cannot inspect which relation is concession, tension, or process refinement.",
+        "case_map_preserves": "covid_c005`, `covid_c006`, `covid_c007`, `covid_r002`, `covid_r003",
+        "flat_baseline_omission": "The prose compresses these into a post-debate disagreement paragraph.",
+        "loss_id": "covid_loss_001",
+        "loss_type": "adjudication/process distinction",
+        "lost_item": "The flat baseline mentions Rootclaim's concession and process critique but does not make the distinction between debate outcome, process critique, and substantive posterior disagreement directly auditable.",
+        "source_support": "- `rootclaim_debate_results`"
+      },
+      {
+        "adversarial_check": "survives; the distinction matters because aggregate and distribution answer different review questions.",
+        "case_map_preserves": "covid_c009`, `covid_c010`, `covid_r005",
+        "flat_baseline_omission": "The prose does not make the minority-disagreement qualification an explicit relation.",
+        "loss_id": "covid_loss_002",
+        "loss_type": "aggregate/minority distribution",
+        "lost_item": "The flat baseline says Good Judgment was not unanimous but does not preserve the aggregate forecast and persistent minority as separate reviewable claims.",
+        "source_support": "- `good_judgment_superforecasting`"
+      },
+      {
+        "adversarial_check": "survives; the role of geography is a high-leverage disagreement, not just context.",
+        "case_map_preserves": "covid_c004`, `covid_c012`, `covid_c013`, `covid_r008`, `covid_r012`, `covid_r014",
+        "flat_baseline_omission": "The prose leaves the market-geography roles in one sentence.",
+        "loss_id": "covid_loss_003",
+        "loss_type": "market-geography role ambiguity",
+        "lost_item": "The flat baseline lists origin site, superspreading location, and ascertainment assumptions but does not turn them into a navigable crux.",
+        "source_support": "- `acx_rootclaim_review` - `debarre_worobey_reply`"
+      },
+      {
+        "adversarial_check": "survives; this is exactly where a reviewer needs to inspect assumptions before trusting the number.",
+        "case_map_preserves": "covid_c014`, `covid_c015`, `covid_c016`, `covid_r009`, `covid_r010`, `covid_r013",
+        "flat_baseline_omission": "The prose gives the odds ratio and decomposition at high level but not the relation between decomposition, result, and source-status caveat.",
+        "loss_id": "covid_loss_004",
+        "loss_type": "Bayesian decomposition authority",
+        "lost_item": "The flat baseline reports Levin's large odds ratio but does not preserve the decomposition and working-paper status as separate audit targets.",
+        "source_support": "- `levin_2025_bayesian_assessment`"
+      },
+      {
+        "adversarial_check": "survives; this boundary prevents a later user from over-updating on a narrow methodological critique.",
+        "case_map_preserves": "covid_c017`, `covid_c018`, `covid_r011",
+        "flat_baseline_omission": "The prose includes the caution but not as an auditable claim-relation pair.",
+        "loss_id": "covid_loss_005",
+        "loss_type": "subargument/whole-case boundary",
+        "lost_item": "The flat baseline says Weissman's critique does not resolve the whole case, but it does not preserve the subargument boundary as an explicit relation.",
+        "source_support": "- `weissman_2026_phylogeny_comment`"
+      },
+      {
+        "adversarial_check": "survives; concrete update triggers are part of what makes the artifact reusable.",
+        "case_map_preserves": "covid_c011`, `covid_r006`, `covid_r015",
+        "flat_baseline_omission": "The prose converts specific update triggers into a generic future-evidence sentence.",
+        "loss_id": "covid_loss_006",
+        "loss_type": "update-trigger flattening",
+        "lost_item": "The flat baseline says future evidence would move the assessment but does not preserve Good Judgment's update triggers as a separate conditional belief state.",
+        "source_support": "- `good_judgment_superforecasting`"
+      }
+    ],
+    "map_comparator": "examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md",
+    "prompt_procedure": "decision_space_erosion_audit_v1",
+    "status": "human-review-needed",
+    "title": "COVID Origins Slice Decision-Space Erosion Audit"
+  },
+  "worked_map": {
+    "claims": [
+      {
+        "claim": "FLF frames COVID origins as a hard epistemic case because expert judgment favored zoonosis while Bayesian analyses of the evidence diverged sharply.",
+        "claim_id": "covid_c001",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"judges ruled for zoonosis; Bayesian analyses diverged sharply\"",
+        "role": "case framing",
+        "source_id": "flf_covid_case_brief",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "FLF treats the COVID record as difficult because it is expert-heavy, hard to navigate, and still evolving after the debate.",
+        "claim_id": "covid_c002",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"hard to navigate, requires significant expertise, and continues to evolve\"",
+        "role": "case difficulty",
+        "source_id": "flf_covid_case_brief",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Scott Alexander frames the Rootclaim debate as a test of explicit Bayesian reasoning applied to a fuzzy real-world dispute.",
+        "claim_id": "covid_c003",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Rootclaim as an attempt to apply explicit Bayesian reasoning\"",
+        "role": "method framing",
+        "source_id": "acx_rootclaim_review",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "The Huanan market can be relevant as a superspreading location even if that fact alone does not establish the first infection occurred there.",
+        "claim_id": "covid_c004",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"a busy, poorly ventilated market could be a plausible superspreading location\"",
+        "role": "market-location caveat",
+        "source_id": "acx_rootclaim_review",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Rootclaim concedes that Peter Miller won the judged debate.",
+        "claim_id": "covid_c005",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Peter Miller won the debate\"",
+        "role": "participant concession",
+        "source_id": "rootclaim_debate_results",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Rootclaim maintains after the debate that lab leak remains the most likely explanation.",
+        "claim_id": "covid_c006",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"lab leak remains the most likely explanation\"",
+        "role": "participant disagreement",
+        "source_id": "rootclaim_debate_results",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Rootclaim argues that the live debate format rewarded memorized detail and disadvantaged its preferred reasoning process.",
+        "claim_id": "covid_c007",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"live format advantaged the debater with more memorized detail\"",
+        "role": "process critique",
+        "source_id": "rootclaim_debate_results",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Rootclaim's postmortem criticizes the judges' probabilistic inference rather than merely rejecting the bottom-line ruling.",
+        "claim_id": "covid_c008",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"judges' probabilistic inference assigned unrealistic numbers\"",
+        "role": "Bayesian critique",
+        "source_id": "rootclaim_debate_results",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Good Judgment's aggregate forecast favored natural zoonosis over biomedical research-related accident.",
+        "claim_id": "covid_c009",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"natural zoonosis as the most likely cause at 74%\"",
+        "role": "forecast aggregate",
+        "source_id": "good_judgment_superforecasting",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Good Judgment also preserves persistent minority disagreement: some forecasters considered a biomedical research-related accident most likely.",
+        "claim_id": "covid_c010",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"10 of 54 forecasters saw a biomedical research-related accident as most likely\"",
+        "role": "forecast disagreement",
+        "source_id": "good_judgment_superforecasting",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Good Judgment identifies concrete update triggers on both sides, including an ancestor virus, a definitive animal host, or strong lab-leak evidence.",
+        "claim_id": "covid_c011",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"would update on evidence such as an identified ancestor virus\"",
+        "role": "update trigger",
+        "source_id": "good_judgment_superforecasting",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Debarre and Worobey reject the inference that early Wuhan case geography reveals major proximity ascertainment bias.",
+        "claim_id": "covid_c012",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"no internal evidence of major bias\"",
+        "role": "methodological rebuttal",
+        "source_id": "debarre_worobey_reply",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Their rebuttal depends partly on distinguishing residential locations from infection locations and allowing stochasticity.",
+        "claim_id": "covid_c013",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"infection locations were not limited to residential neighborhoods\"",
+        "role": "geography caveat",
+        "source_id": "debarre_worobey_reply",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Levin's Bayesian assessment decomposes the origins question into four conditional factors rather than one undifferentiated probability.",
+        "claim_id": "covid_c014",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"decomposes the Bayes factor into four components\"",
+        "role": "Bayesian decomposition",
+        "source_id": "levin_2025_bayesian_assessment",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "Levin reports a very large odds ratio favoring accidental lab leak.",
+        "claim_id": "covid_c015",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"14,900:1 favoring accidental lab leak\"",
+        "role": "lab-leak-favoring result",
+        "source_id": "levin_2025_bayesian_assessment",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Levin's source status should be kept distinct from a peer-reviewed consensus result because it is an NBER working paper.",
+        "claim_id": "covid_c016",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"NBER working papers are circulated for discussion\"",
+        "role": "review-status caveat",
+        "source_id": "levin_2025_bayesian_assessment",
+        "source_span": "source notes paragraph 3"
+      },
+      {
+        "claim": "Weissman's later critique argues that correcting a Bayesian error favors a single introduction over two introductions.",
+        "claim_id": "covid_c017",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"larger likelihood for a single introduction than for two introductions\"",
+        "role": "phylogeny critique",
+        "source_id": "weissman_2026_phylogeny_comment",
+        "source_span": "source notes paragraph 2"
+      },
+      {
+        "claim": "The multiple-introduction critique is a subargument and should not be automatically treated as a full COVID origins resolution.",
+        "claim_id": "covid_c018",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"subissue, not the whole origins question\"",
+        "role": "scope caveat",
+        "source_id": "weissman_2026_phylogeny_comment",
+        "source_span": "source notes paragraph 3"
+      }
+    ],
+    "crux_candidates": [
+      "crux: Are Huanan-market spatial patterns best treated as origin-site evidence, superspreading evidence, or an artifact of ascertainment/infection-location assumptions? Linked claims: `covid_c004`, `covid_c012`, `covid_c013`.",
+      "crux: Are Bayesian decompositions like Levin's robust, or do correlated/contestable factors drive extreme odds ratios? Linked claims: `covid_c014`, `covid_c015`, `covid_c016`.",
+      "crux: Should post-debate process critiques change confidence in the debate outcome, or only the design of future adjudication? Linked claims: `covid_c005`, `covid_c007`, `covid_c008`."
+    ],
+    "evidence_mode": "source_grounded_slice",
+    "prompt_procedure": "covid_worked_region_v1_source_notes_manual_audit",
+    "relations": [
+      {
+        "rationale": "The sharp divergence between expert judgment and Bayesian analyses explains why FLF treats the case as hard to navigate.",
+        "relation_id": "covid_r001",
+        "relation_type": "supports",
+        "source_claim": "covid_c001",
+        "target_claim": "covid_c002"
+      },
+      {
+        "rationale": "Rootclaim concedes the debate result while maintaining the opposite substantive bottom line.",
+        "relation_id": "covid_r002",
+        "relation_type": "in_tension_with",
+        "source_claim": "covid_c005",
+        "target_claim": "covid_c006"
+      },
+      {
+        "rationale": "The process critique narrows what Rootclaim accepts from the loss: debate outcome, not epistemic settlement.",
+        "relation_id": "covid_r003",
+        "relation_type": "refines",
+        "source_claim": "covid_c007",
+        "target_claim": "covid_c005"
+      },
+      {
+        "rationale": "Both claims concern Bayesian inference, but one criticizes debate judgments while the other describes a formal decomposition.",
+        "relation_id": "covid_r004",
+        "relation_type": "similar_to",
+        "source_claim": "covid_c008",
+        "target_claim": "covid_c014"
+      },
+      {
+        "rationale": "The minority distribution qualifies the aggregate forecast and prevents flattening Good Judgment into unanimity.",
+        "relation_id": "covid_r005",
+        "relation_type": "refines",
+        "source_claim": "covid_c009",
+        "target_claim": "covid_c010"
+      },
+      {
+        "rationale": "Update triggers turn the aggregate forecast into a conditional belief state rather than a fixed conclusion.",
+        "relation_id": "covid_r006",
+        "relation_type": "refines",
+        "source_claim": "covid_c011",
+        "target_claim": "covid_c009"
+      },
+      {
+        "rationale": "The Debarre/Worobey reply challenges one kind of geography-based lab-leak-favoring inference, although it does not evaluate all of Levin's decomposition.",
+        "relation_id": "covid_r007",
+        "relation_type": "challenges",
+        "source_claim": "covid_c012",
+        "target_claim": "covid_c015"
+      },
+      {
+        "rationale": "The rejection of major ascertainment bias depends partly on the residential-location versus infection-location distinction.",
+        "relation_id": "covid_r008",
+        "relation_type": "depends_on",
+        "source_claim": "covid_c013",
+        "target_claim": "covid_c012"
+      },
+      {
+        "rationale": "The reported odds ratio follows from Levin's factor decomposition and factor estimates.",
+        "relation_id": "covid_r009",
+        "relation_type": "supports",
+        "source_claim": "covid_c014",
+        "target_claim": "covid_c015"
+      },
+      {
+        "rationale": "The working-paper status qualifies how much authority a reviewer should assign to the reported odds ratio.",
+        "relation_id": "covid_r010",
+        "relation_type": "refines",
+        "source_claim": "covid_c016",
+        "target_claim": "covid_c015"
+      },
+      {
+        "rationale": "The critique may weaken a two-spillover subclaim, but the scope caveat prevents treating it as whole-case resolution.",
+        "relation_id": "covid_r011",
+        "relation_type": "in_tension_with",
+        "source_claim": "covid_c017",
+        "target_claim": "covid_c018"
+      },
+      {
+        "rationale": "Market relevance can be framed as superspreading location or origin-site evidence, which changes how geography is weighted.",
+        "relation_id": "covid_r012",
+        "relation_type": "in_tension_with",
+        "source_claim": "covid_c004",
+        "target_claim": "covid_c012"
+      },
+      {
+        "rationale": "Whether Bayesian decompositions are robust is central to explaining the sharp divergence FLF flags.",
+        "relation_id": "covid_r013",
+        "relation_type": "crux_for",
+        "source_claim": "covid_c014",
+        "target_claim": "covid_c001"
+      },
+      {
+        "rationale": "Whether early-case geography survives bias critiques affects a major evidence family in the COVID origins dispute.",
+        "relation_id": "covid_r014",
+        "relation_type": "crux_for",
+        "source_claim": "covid_c012",
+        "target_claim": "covid_c001"
+      },
+      {
+        "rationale": "Explicit update triggers show why the case remains evolving rather than settled once and for all.",
+        "relation_id": "covid_r015",
+        "relation_type": "supports",
+        "source_claim": "covid_c011",
+        "target_claim": "covid_c002"
+      }
+    ],
+    "similar_but_not_identical": [
+      "`covid_c009` and `covid_c010`: aggregate forecast and minority disagreement are related but not interchangeable.",
+      "`covid_c004`, `covid_c012`, and `covid_c013`: all concern location evidence, but they represent different roles for market geography.",
+      "`covid_c015` and `covid_c017`: both favor lab-leak-compatible updates, but one is whole-decomposition odds and one is a phylogenetic subargument."
+    ],
+    "sources": [
+      "flf_covid_case_brief",
+      "acx_rootclaim_review",
+      "rootclaim_debate_results",
+      "good_judgment_superforecasting",
+      "debarre_worobey_reply",
+      "levin_2025_bayesian_assessment",
+      "weissman_2026_phylogeny_comment"
+    ],
+    "status": "human-review-needed",
+    "title": "COVID Worked Region: Bayesian Disagreement And Update Structure"
+  }
+}

@@ -28,8 +28,14 @@ Scale: 1 means mostly absent, 3 means demonstrated but incomplete, 5 means stron
 3. `examples/eggs/worked_region_observational_vs_rct_map.md`
 4. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
 5. `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md`
-6. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-7. `ui/index.html`
+6. `docs/FLF_WORKED_JUDGE_EXAMPLE.md`
+7. `docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md`
+8. `docs/NEW_SOURCE_UPDATE_DEMO.md`
+9. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+10. `examples/eggs/full_case_flat_synthesis_baseline.md`
+11. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+12. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+13. `ui/index.html`
 
 ## What Would Upgrade The Scores
 

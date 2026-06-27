@@ -21,11 +21,12 @@ This regenerates deterministic starter artifacts, validates the checked-in worke
 3. Read `docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md` to see how the prototype maps to FLF's criteria.
 4. Inspect `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md` to see where the method can fail.
 5. Read `docs/FLF_WORKED_JUDGE_EXAMPLE.md` for a compact task/output/auditor-decision example.
-6. Inspect `docs/NEW_SOURCE_UPDATE_DEMO.md` to see the compounding/update workflow.
-7. Skim the two full-case flat baselines:
+6. Read `docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md` to see the audit sequence before trusting a worked region.
+7. Inspect `docs/NEW_SOURCE_UPDATE_DEMO.md` to see the compounding/update workflow.
+8. Skim the two full-case flat baselines:
    - `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
    - `examples/eggs/full_case_flat_synthesis_baseline.md`
-8. Use the two-minute LHC and eggs paths below to verify the worked-region evidence.
+9. Use the two-minute LHC and eggs paths below to verify the worked-region evidence.
 
 ## Two-Minute Path: LHC
 

@@ -68,7 +68,7 @@ def _validate_static_assets(repo_root: Path, failures: list[str]) -> None:
     index = (repo_root / "ui/index.html").read_text(encoding="utf-8") if (repo_root / "ui/index.html").exists() else ""
     styles = (repo_root / "ui/styles.css").read_text(encoding="utf-8") if (repo_root / "ui/styles.css").exists() else ""
     script = (repo_root / "ui/app.js").read_text(encoding="utf-8") if (repo_root / "ui/app.js").exists() else ""
-    for marker in ("caseTabs", "clusterGrid", "lossList", "taskList"):
+    for marker in ("caseTabs", "clusterGrid", "lossList", "taskList", "bestRegionsLink", "fullBaselineLink"):
         if marker not in index:
             failures.append(f"ui_index_missing_marker marker={marker}")
     for marker in ("renderCase", "renderClusters", "renderClaims", "renderTasks"):

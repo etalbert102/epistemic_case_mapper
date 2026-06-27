@@ -1,0 +1,12 @@
+# Debarre and Worobey Reply Notes
+
+Source: https://arxiv.org/abs/2405.08040
+Authors: Florence Debarre and Michael Worobey
+Date: 2024-05-13
+Retrieved: 2026-06-27
+
+Debarre and Worobey reply to Weissman's claim about proximity ascertainment bias. They say his conclusion rests on a flawed premise and that there is no internal evidence of major bias.
+
+They argue that the observed pattern can be explained if infection locations were not limited to residential neighborhoods and if stochasticity is considered, without requiring major ascertainment bias.
+
+Use in worked region: methodological challenge to one lab-leak-favoring interpretation of early case geography.

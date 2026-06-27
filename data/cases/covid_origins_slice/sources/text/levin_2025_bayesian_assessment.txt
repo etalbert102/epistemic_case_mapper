@@ -1,0 +1,12 @@
+# Levin Bayesian Assessment Notes
+
+Source: https://www.nber.org/system/files/working_papers/w33428/w33428.pdf
+Author: Andrew T. Levin
+Date: January 2025
+Retrieved: 2026-06-27
+
+Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data. It decomposes the Bayes factor into four components: PRC location, Wuhan location given PRC, non-market early-case pattern, and Huanan vendor-case pattern.
+
+The paper reports conditional Bayes factors of 2.3:1, 20:1, 27:1, and 12:1, and an overall odds ratio of 14,900:1 favoring accidental lab leak. It also states that NBER working papers are circulated for discussion and have not been peer reviewed by the NBER board.
+
+Use in worked region: example of a formal Bayesian analysis with a very strong lab-leak-favoring result and explicit decomposition choices.

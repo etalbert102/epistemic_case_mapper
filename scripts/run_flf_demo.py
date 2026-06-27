@@ -6,43 +6,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from judge_paths import JUDGE_PATHS
+
 
 CASES = (
     ("data/cases/lhc_black_holes/case.yaml", "examples/lhc_black_holes"),
     ("data/cases/eggs/case.yaml", "examples/eggs"),
-)
-
-JUDGE_PATHS = (
-    "docs/SUBMISSION_PACKET.md",
-    "docs/FLF_JUDGE_INDEX.md",
-    "docs/FLF_JUDGE_WALKTHROUGH.md",
-    "docs/FLF_BEFORE_AFTER_COMPARISON.md",
-    "docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md",
-    "docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md",
-    "docs/FLF_WORKED_JUDGE_EXAMPLE.md",
-    "docs/NEW_SOURCE_UPDATE_DEMO.md",
-    "docs/FLF_SUBMISSION_DRAFT.md",
-    "docs/ARCHITECTURE.md",
-    "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
-    "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
-    "docs/OPERATIONAL_REALISM_AUDIT.md",
-    "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
-    "docs/SUBMISSION_LIMITATIONS.md",
-    "ui/index.html",
-    "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
-    "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
-    "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
-    "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
-    "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
-    "examples/lhc_black_holes/full_case_index.md",
-    "examples/lhc_black_holes/full_case_map.md",
-    "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
-    "examples/lhc_black_holes/worked_region_public_risk_framing_map.md",
-    "examples/lhc_black_holes/investigator_task_queue.md",
-    "examples/eggs/full_case_index.md",
-    "examples/eggs/full_case_map.md",
-    "examples/eggs/full_case_flat_synthesis_baseline.md",
-    "examples/eggs/investigator_task_queue.md",
 )
 
 
@@ -86,6 +55,7 @@ def main() -> int:
     _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_update_demo.py"], repo_root, failures)
     _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 
     if failures:

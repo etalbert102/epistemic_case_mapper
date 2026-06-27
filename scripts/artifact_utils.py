@@ -35,6 +35,15 @@ REGION_FILES = (
         best_path="examples/eggs/BEST_REGIONS.md",
         output_json_path="examples/eggs/worked_region_observational_vs_rct_map.json",
     ),
+    RegionFiles(
+        case_key="covid",
+        case_label="COVID origins slice",
+        map_path="examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md",
+        audit_path="examples/covid_origins_slice/decision_space_erosion_audit.md",
+        baseline_path="examples/covid_origins_slice/flat_synthesis_baseline.md",
+        best_path="examples/covid_origins_slice/BEST_REGIONS.md",
+        output_json_path="examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json",
+    ),
 )
 
 

@@ -1,0 +1,10 @@
+# FLF COVID Case Brief Notes
+
+Source: https://forum.effectivealtruism.org/posts/kP8TGXggDcaPhdjqn/lab-leaks-black-holes-and-eggs-epistemic-case-study
+Retrieved: 2026-06-27
+
+The contest brief presents COVID origins as one of three challenge cases for AI-assisted epistemic workflows. It describes the 2024 Rootclaim debate as a public dispute involving epidemiology, viral genetics, Bayesian inference, and institutional analysis.
+
+The brief says two expert judges ruled decisively for zoonosis, while six independent Bayesian analyses of the same evidence spanned 23 orders of magnitude. It emphasizes that the record is hard to navigate, requires significant expertise, and continues to evolve after the debate.
+
+Use in worked region: scope-setting source, not an independent scientific authority on COVID origins.

@@ -54,7 +54,7 @@ def render_audit(case_map: CaseMap) -> str:
         ("Compounding", _score_compounding(case_map), "JSON schema, stable IDs, and Markdown outputs support reuse."),
         ("Judge usability", _score_judge_usability(case_map), judge_usability_evidence),
         ("Verification", 1, "Build command generated artifacts; full validator should be run separately."),
-        ("Plan discipline", 1, "Goal-plan discipline is documented in docs/plans/lhc_demo_goal_plan.md."),
+        ("Plan discipline", 1, "Internal goal-plan history is archived under docs/archive/internal/plans/."),
     ]
     lines = [
         f"# {case_map.title} Audit",

@@ -66,6 +66,30 @@ Fast check:
 
 Result: the eggs example demonstrates decision-space preservation most strongly for evidence-grade boundaries, guideline-process provenance, and scope distinctions around moderate egg intake.
 
+## COVID Worked Region
+
+Question: how should a synthesis preserve disagreement about Bayesian weighting, early-case geography, and post-debate updates without pretending to settle the full COVID origins question?
+
+Before: flat synthesis.
+
+- File: `examples/covid_origins_slice/flat_synthesis_baseline.md`
+- The baseline is reasonable: it says the judges and superforecasters leaned zoonotic while Rootclaim, Levin, and Weissman kept lab-leak-favoring arguments alive.
+- The weakness is that normal prose tends to collapse debate outcome, process critique, substantive posterior disagreement, source-status caveats, and subargument boundaries into one narrative.
+
+After: decision-space-preserving map.
+
+- File: `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+- The map keeps the debate result, Rootclaim postmortem, aggregate forecast, minority forecast distribution, formal Bayesian decomposition, early-case geography assumptions, methodological replies, and later phylogeny critique as separate review targets.
+- A reviewer can inspect whether a claim is evidence, a methodological caveat, a process critique, a post-debate update, or a scope boundary.
+
+Fast check:
+
+- Open `examples/covid_origins_slice/decision_space_erosion_audit.md`.
+- Inspect `covid_loss_001`, `covid_loss_004`, and `covid_loss_006`.
+- Use `docs/review/COVID_HUMAN_AUDIT_PACKET.md` before treating any relation as reviewed.
+
+Result: the COVID slice demonstrates decision-space preservation most strongly for live disagreement, Bayesian decomposition, and subargument scope control. It is deliberately narrow and should not be read as a full COVID origins assessment.
+
 ## Why Multi-Model Baselines Matter
 
 The local model baselines show that flat synthesis quality varies by model family:

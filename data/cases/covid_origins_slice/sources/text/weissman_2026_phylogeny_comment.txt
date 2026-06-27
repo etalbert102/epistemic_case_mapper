@@ -1,0 +1,12 @@
+# Weissman Phylogeny Comment Notes
+
+Source: https://econjwatch.org/articles/an-article-in-science-on-covid-origins-contains-a-fundamental-error
+Author: Michael B. Weissman
+Date: March 2026
+Retrieved: 2026-06-27
+
+Weissman argues that a 2022 Science article on multiple zoonotic origins contained a Bayesian reasoning error. He says correcting the error makes the results imply larger likelihood for a single introduction than for two introductions.
+
+He also says this correction reduces compatibility with the wet-market zoonosis account. This source is about the phylogenetic/multiple-introduction subissue, not the whole origins question.
+
+Use in worked region: example of a later methodological critique that could update one sub-argument without resolving the entire dispute.

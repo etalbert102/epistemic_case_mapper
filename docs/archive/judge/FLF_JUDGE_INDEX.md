@@ -29,39 +29,41 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
    - `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md`
 6. Inspect the compact worked judge example:
    - `docs/FLF_WORKED_JUDGE_EXAMPLE.md`
-7. Inspect the full-case scaffolds:
+7. Inspect the auditor workflow example:
+   - `docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md`
+8. Inspect the full-case scaffolds:
    - `examples/lhc_black_holes/full_case_index.md`
    - `examples/lhc_black_holes/full_case_map.md`
    - `examples/eggs/full_case_index.md`
    - `examples/eggs/full_case_map.md`
-8. Inspect the full-case flat baselines:
+9. Inspect the full-case flat baselines:
    - `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
    - `examples/eggs/full_case_flat_synthesis_baseline.md`
-9. Inspect the worked-region anchors:
+10. Inspect the worked-region anchors:
    - `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
    - `examples/eggs/worked_region_observational_vs_rct_map.md`
-10. Inspect the draft extension region and update demo:
+11. Inspect the draft extension region and update demo:
    - `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
    - `docs/NEW_SOURCE_UPDATE_DEMO.md`
-11. Compare the flat baselines:
+12. Compare the flat baselines:
    - `examples/lhc_black_holes/flat_synthesis_baseline.md`
    - `examples/eggs/flat_synthesis_baseline.md`
-12. Compare the more isolated blinded local-model baselines:
+13. Compare the more isolated blinded local-model baselines:
    - `examples/lhc_black_holes/blinded_flat_synthesis_baseline_*.md`
    - `examples/eggs/blinded_flat_synthesis_baseline_*.md`
-13. Inspect erosion audits:
+14. Inspect erosion audits:
    - `examples/lhc_black_holes/decision_space_erosion_audit.md`
    - `examples/eggs/decision_space_erosion_audit.md`
-14. Inspect the blinded-comparator survival audits:
+15. Inspect the blinded-comparator survival audits:
    - `docs/review/BLINDED_BASELINE_AUDIT.md`
    - `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-15. Inspect best-region pointers:
+16. Inspect best-region pointers:
    - `examples/lhc_black_holes/BEST_REGIONS.md`
    - `examples/eggs/BEST_REGIONS.md`
-16. Use the human audit packets before trusting the examples as reviewed:
+17. Use the human audit packets before trusting the examples as reviewed:
    - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
    - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-17. Inspect operational realism artifacts:
+18. Inspect operational realism artifacts:
    - `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
    - `docs/OPERATIONAL_REALISM_AUDIT.md`
    - `examples/lhc_black_holes/investigator_task_queue.md`

@@ -1,0 +1,14 @@
+# ACX Rootclaim Debate Review Notes
+
+Source: https://www.astralcodexten.com/p/practically-a-book-review-rootclaim
+Author: Scott Alexander
+Date: 2024-03-28
+Retrieved: 2026-06-27
+
+Scott Alexander frames Rootclaim as an attempt to apply explicit Bayesian reasoning to fuzzy real-world disputes. He describes Rootclaim's COVID origins position as favoring lab leak and Peter Miller as someone who came to think the lab-leak hypothesis was very likely false.
+
+The writeup presents the Huanan market argument, including the idea that a busy, poorly ventilated market could be a plausible superspreading location even if the first infection happened elsewhere.
+
+Scott also distinguishes the value of a public debate from the risk that "nobody accepted my challenge" rhetoric can be mistaken for evidence.
+
+Use in worked region: public synthesis and debate-context source, not a primary epidemiological analysis.

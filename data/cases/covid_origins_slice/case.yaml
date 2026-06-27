@@ -1,25 +1,74 @@
 case_id: covid_origins_slice
 title: "COVID Origins Debate Slice"
-question: "How should a narrow slice of COVID origins evidence be represented without flattening the dispute?"
+question: "How should a narrow slice of COVID origins evidence be represented without flattening Bayesian disagreement?"
 case_type: "adversarial live case slice"
-status: draft
+evidence_mode: source_grounded
+review_status: human-review-needed
+status: in_progress
 notes:
-  - "Use only as a stretch example until the workflow is strong enough for adversarial material."
-  - "Scope must remain narrow; do not attempt a full COVID origins assessment in the initial prototype."
+  - "Use only as a narrow worked-region stress test; do not treat this as a full COVID origins assessment."
+  - "The slice focuses on disagreement about Bayesian weighting, market/geography evidence, and post-debate updates."
 sources:
-  - source_id: debate_writeup_seed
-    title: "Debate writeup seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for a source-local slice from a public debate writeup."
-    text: >
-      The debate evidence includes competing interpretations of epidemiological patterns, institutional behavior, and viral genetics.
-      The assessment depends on which evidence is treated as independent and which evidence is correlated through shared assumptions.
-      A structured map should preserve disagreements because different analysts can update in opposite directions from the same broad evidence base.
-  - source_id: judge_decision_seed
-    title: "Judge decision seed notes"
-    source_type: seed_notes
-    notes: "Placeholder for judge reasoning."
-    text: >
-      Judge reasoning may identify which claims carried evidential weight and which claims were less decisive.
-      The decision challenges a flat summary because it matters which subclaims were treated as cruxes.
-      The map should distinguish what the debate settled from what it merely performed settling.
+  - source_id: flf_covid_case_brief
+    title: "FLF Epistemic Case Study Competition COVID brief"
+    url: "https://forum.effectivealtruism.org/posts/kP8TGXggDcaPhdjqn/lab-leaks-black-holes-and-eggs-epistemic-case-study"
+    author: "Future of Life Foundation"
+    publication_date: "2026-06-04"
+    retrieval_date: "2026-06-27"
+    source_type: contest_brief
+    path: data/cases/covid_origins_slice/sources/text/flf_covid_case_brief.txt
+    excerpt: "FLF frames COVID origins as a rich, difficult, evolving epistemic dispute where two judges ruled for zoonosis and Bayesian analyses diverged sharply."
+  - source_id: acx_rootclaim_review
+    title: "Practically-A-Book Review: Rootclaim $100,000 Lab Leak Debate"
+    url: "https://www.astralcodexten.com/p/practically-a-book-review-rootclaim"
+    author: "Scott Alexander"
+    publication_date: "2024-03-28"
+    retrieval_date: "2026-06-27"
+    source_type: public_analysis
+    path: data/cases/covid_origins_slice/sources/text/acx_rootclaim_review.txt
+    excerpt: "Scott Alexander summarizes the debate as an unusually detailed public argument over Rootclaim-style Bayesian reasoning and COVID origins evidence."
+  - source_id: rootclaim_debate_results
+    title: "Rootclaim's COVID-19 Origins debate results"
+    url: "https://blog.rootclaim.com/rootclaims-covid-19-origins-debate-results/"
+    author: "Rootclaim"
+    publication_date: "2024-02-18"
+    retrieval_date: "2026-06-27"
+    source_type: participant_response
+    path: data/cases/covid_origins_slice/sources/text/rootclaim_debate_results.txt
+    excerpt: "Rootclaim concedes Peter Miller won the debate while maintaining that lab leak remains more likely and criticizing the live-debate process."
+  - source_id: good_judgment_superforecasting
+    title: "Superforecasting the Origins of the COVID-19 Pandemic"
+    url: "https://goodjudgment.com/wp-content/uploads/2024/03/Superforecasters-Covid-Origin-240312.pdf"
+    author: "Good Judgment"
+    publication_date: "2024-03-12"
+    retrieval_date: "2026-06-27"
+    source_type: forecasting_report
+    path: data/cases/covid_origins_slice/sources/text/good_judgment_superforecasting.txt
+    excerpt: "Good Judgment reports aggregate superforecaster probabilities favoring natural zoonosis while preserving persistent minority disagreement."
+  - source_id: debarre_worobey_reply
+    title: "No evidence of systematic proximity ascertainment bias in early COVID-19 cases in Wuhan"
+    url: "https://arxiv.org/abs/2405.08040"
+    author: "Florence Debarre and Michael Worobey"
+    publication_date: "2024-05-13"
+    retrieval_date: "2026-06-27"
+    source_type: scientific_reply
+    path: data/cases/covid_origins_slice/sources/text/debarre_worobey_reply.txt
+    excerpt: "Debarre and Worobey reject Weissman's inference of major proximity ascertainment bias in early Wuhan case locations."
+  - source_id: levin_2025_bayesian_assessment
+    title: "A Bayesian Assessment of the Origins of COVID-19 using Spatiotemporal and Zoonotic Data"
+    url: "https://www.nber.org/system/files/working_papers/w33428/w33428.pdf"
+    author: "Andrew T. Levin"
+    publication_date: "2025-01"
+    retrieval_date: "2026-06-27"
+    source_type: working_paper
+    path: data/cases/covid_origins_slice/sources/text/levin_2025_bayesian_assessment.txt
+    excerpt: "Levin decomposes a Bayesian assessment into four factors and reports a very large odds ratio favoring lab leak, while noting NBER working-paper status."
+  - source_id: weissman_2026_phylogeny_comment
+    title: "An Article in Science on Covid Origins Contains a Fundamental Error"
+    url: "https://econjwatch.org/articles/an-article-in-science-on-covid-origins-contains-a-fundamental-error"
+    author: "Michael B. Weissman"
+    publication_date: "2026-03"
+    retrieval_date: "2026-06-27"
+    source_type: scholarly_comment
+    path: data/cases/covid_origins_slice/sources/text/weissman_2026_phylogeny_comment.txt
+    excerpt: "Weissman argues that correcting a Bayesian error in a Science article makes the results favor a single introduction over two introductions."

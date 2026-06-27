@@ -1,0 +1,12 @@
+# Good Judgment COVID Origins Forecasting Notes
+
+Source: https://goodjudgment.com/wp-content/uploads/2024/03/Superforecasters-Covid-Origin-240312.pdf
+Author: Good Judgment
+Date: 2024-03-12
+Retrieved: 2026-06-27
+
+Good Judgment reports that professional Superforecasters assessed natural zoonosis as the most likely cause at 74%, with biomedical research-related accident second at 25%. The report also says disagreement persisted and that 10 of 54 forecasters saw a biomedical research-related accident as most likely.
+
+The report identifies themes including base rates, scientific evidence, geopolitical context, transparency concerns, trust in intelligence, and methodological critiques. It notes that forecasters would update on evidence such as an identified ancestor virus, definitive animal host, or strong lab-leak evidence.
+
+Use in worked region: independent probabilistic assessment and disagreement-structure source.

@@ -4,11 +4,14 @@
       "artifacts": {
         "bestRegions": "examples/lhc_black_holes/BEST_REGIONS.md",
         "erosionAudit": "examples/lhc_black_holes/decision_space_erosion_audit.md",
+        "fullCaseBaseline": "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
         "fullIndex": "examples/lhc_black_holes/full_case_index.md",
         "fullMap": "examples/lhc_black_holes/full_case_map.md",
+        "multiModelAudit": "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
         "reviewChecklist": "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
         "reviewPacket": "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
         "taskQueue": "examples/lhc_black_holes/investigator_task_queue.md",
+        "workedBaseline": "examples/lhc_black_holes/flat_synthesis_baseline.md",
         "workedMap": "examples/lhc_black_holes/worked_region_cosmic_ray_map.md"
       },
       "caseId": "lhc_black_holes",
@@ -607,11 +610,14 @@
       "artifacts": {
         "bestRegions": "examples/eggs/BEST_REGIONS.md",
         "erosionAudit": "examples/eggs/decision_space_erosion_audit.md",
+        "fullCaseBaseline": "examples/eggs/full_case_flat_synthesis_baseline.md",
         "fullIndex": "examples/eggs/full_case_index.md",
         "fullMap": "examples/eggs/full_case_map.md",
+        "multiModelAudit": "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
         "reviewChecklist": "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
         "reviewPacket": "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
         "taskQueue": "examples/eggs/investigator_task_queue.md",
+        "workedBaseline": "examples/eggs/flat_synthesis_baseline.md",
         "workedMap": "examples/eggs/worked_region_observational_vs_rct_map.md"
       },
       "caseId": "eggs",

@@ -15,32 +15,25 @@ CASES = (
 REQUIRED_DOCS = (
     "docs/ARCHITECTURE.md",
     "docs/CURRENT_STATE.md",
-    "docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
-    "docs/FLF_JUDGE_INDEX.md",
-    "docs/FLF_JUDGE_WALKTHROUGH.md",
+    "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
-    "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
-    "docs/HUMAN_REVIEW_CHECKLIST.md",
-    "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
-    "docs/OPERATIONAL_REALISM_AUDIT.md",
+    "docs/HUMAN_AUDIT_GUIDE.md",
+    "docs/NEW_SOURCE_UPDATE_DEMO.md",
+    "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
-    "docs/SUBMISSION_LIMITATIONS.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/VALIDATOR_FAILURE_GUIDE.md",
     "ui/index.html",
     "ui/styles.css",
     "ui/app.js",
     "ui/data.json",
-    "docs/plans/GOAL_PROMPT.md",
-    "docs/plans/flf_workspace_enhancement_backlog.md",
     "docs/worked_regions/eggs_source_excerpt_packet.md",
     "docs/worked_regions/lhc_source_excerpt_packet.md",
     "docs/worked_regions/mini_filled_example.md",
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
-    "docs/review/HUMAN_REVIEW_RUBRIC.md",
     "docs/review/BLINDED_BASELINE_AUDIT.md",
     "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
@@ -101,6 +94,7 @@ def main() -> int:
     _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_update_demo.py"], repo_root, failures)
     _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 
     if failures:
