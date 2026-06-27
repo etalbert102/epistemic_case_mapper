@@ -13,12 +13,18 @@ CASES = (
 )
 
 JUDGE_PATHS = (
+    "docs/SUBMISSION_PACKET.md",
     "docs/FLF_JUDGE_INDEX.md",
     "docs/FLF_JUDGE_WALKTHROUGH.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
+    "docs/ARCHITECTURE.md",
+    "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
+    "docs/SUBMISSION_LIMITATIONS.md",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
+    "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
+    "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
 )
 
@@ -56,6 +62,10 @@ def main() -> int:
 
     _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
+    _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
+    _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 
     if failures:
         for failure in failures:

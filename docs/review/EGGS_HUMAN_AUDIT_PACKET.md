@@ -39,6 +39,7 @@ prompt_versions:
 - Erosion audit: `examples/eggs/decision_space_erosion_audit.md`
 - Blinded comparator audit: `docs/review/BLINDED_BASELINE_AUDIT.md`
 - Multi-model comparator audit: `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+- Fillable checklist: `docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv`
 
 ## Reviewer Tasks
 

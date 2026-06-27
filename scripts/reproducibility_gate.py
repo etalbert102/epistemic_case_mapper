@@ -13,6 +13,7 @@ CASES = (
 )
 
 REQUIRED_DOCS = (
+    "docs/ARCHITECTURE.md",
     "docs/CURRENT_STATE.md",
     "docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
@@ -22,6 +23,9 @@ REQUIRED_DOCS = (
     "docs/HUMAN_REVIEW_CHECKLIST.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
+    "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
+    "docs/SUBMISSION_LIMITATIONS.md",
+    "docs/SUBMISSION_PACKET.md",
     "docs/VALIDATOR_FAILURE_GUIDE.md",
     "docs/plans/GOAL_PROMPT.md",
     "docs/plans/flf_workspace_enhancement_backlog.md",
@@ -31,7 +35,9 @@ REQUIRED_DOCS = (
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
     "docs/review/HUMAN_REVIEW_RUBRIC.md",
     "docs/review/BLINDED_BASELINE_AUDIT.md",
+    "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
+    "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
 )
@@ -81,6 +87,10 @@ def main() -> int:
         _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
     if args.include_blinded_baselines:
         _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
+    _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
+    _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 
     if failures:
         for failure in failures:

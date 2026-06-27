@@ -2,6 +2,8 @@
 
 Lightweight FLF competition prototype for producing reusable, navigable epistemic case maps with AI assistance.
 
+Start with the judge packet: `docs/SUBMISSION_PACKET.md`.
+
 This repo is intentionally separate from `decision_space_harness`.
 
 - `decision_space_harness`: research benchmark, metrics, paper-grade evaluation.
@@ -54,6 +56,7 @@ Generated starter output is written to `artifacts/<case_id>/`. Curated judge-fac
 Start with:
 
 - `docs/FLF_JUDGE_INDEX.md`
+- `docs/SUBMISSION_PACKET.md`
 - `docs/FLF_JUDGE_WALKTHROUGH.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/FLF_SUBMISSION_DRAFT.md`
@@ -65,6 +68,11 @@ The fastest evidence check is:
 3. Read the erosion audit.
 4. Check the blinded and multi-model baseline audits to see which losses survive stronger comparators.
 5. Use the case-specific human audit packet before treating any artifact as reviewed.
+
+Reusable structured exports are checked in at:
+
+- `examples/lhc_black_holes/worked_region_cosmic_ray_map.json`
+- `examples/eggs/worked_region_observational_vs_rct_map.json`
 
 ## Target FLF Demonstrations
 

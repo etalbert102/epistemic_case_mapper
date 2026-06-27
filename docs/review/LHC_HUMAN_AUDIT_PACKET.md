@@ -37,6 +37,7 @@ prompt_versions:
 - Erosion audit: `examples/lhc_black_holes/decision_space_erosion_audit.md`
 - Blinded comparator audit: `docs/review/BLINDED_BASELINE_AUDIT.md`
 - Multi-model comparator audit: `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+- Fillable checklist: `docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv`
 
 ## Reviewer Tasks
 

@@ -1,0 +1,400 @@
+{
+  "case_key": "eggs",
+  "case_label": "Eggs and health",
+  "erosion_audit": {
+    "baseline_comparator": "examples/eggs/flat_synthesis_baseline.md",
+    "borderline_or_rejected": [
+      "Not counted: The baseline does not discuss cancer or allergy outcomes, because this worked region is specifically scoped to CVD outcomes, lipid markers, and guidance.",
+      "Not counted: The baseline does not include the optional BMJ 2013, Ma 2021, or Huang 2020 sources, because the fixed subset excludes them."
+    ],
+    "losses": [
+      {
+        "adversarial_check": "survives, because the source subset and baseline prompt both make endpoint caveats central to the answer.",
+        "case_map_preserves": "`eggs_c015`, `eggs_c016`, `eggs_c017`, `eggs_r005`, `eggs_r006`, `eggs_r007`.",
+        "flat_baseline_omission": "The baseline mentions biomarkers but does not make the biomarker-versus-health-outcome boundary a navigable dependency.",
+        "loss_id": "eggs_loss_001",
+        "loss_type": "endpoint collapse",
+        "lost_item": "The flat baseline says randomized trials \"add another layer\" but does not preserve the endpoint boundary that Li measures LDL-c and LDL-c/HDL-c rather than CVD events.",
+        "source_support": "`li_2020_egg_cholesterol_rct_meta` lines 30-36, 188-201, and 292-293."
+      },
+      {
+        "adversarial_check": "survives, because the same-source subset contains both findings and the relation changes what a reviewer should inspect next.",
+        "case_map_preserves": "`eggs_c008`, `eggs_c012`, `eggs_c013`, `eggs_r003`.",
+        "flat_baseline_omission": "The baseline reports both results but does not keep an explicit conflict edge between null moderate-intake evidence and positive dose-response evidence.",
+        "loss_id": "eggs_loss_002",
+        "loss_type": "study-design tension flattened",
+        "lost_item": "The flat baseline states BMJ and JAMA findings sequentially but does not preserve their tension as a relation requiring method, exposure-unit, and adjustment comparison.",
+        "source_support": "`bmj_2020_egg_consumption_cvd` lines 40-43 and 537-544; `jama_2019_dietary_cholesterol_eggs` lines 33-52 and 70-73."
+      },
+      {
+        "adversarial_check": "survives, because subgroup caveats are in the fixed sources and materially affect dietary advice.",
+        "case_map_preserves": "`eggs_c007`, `eggs_c009`, `eggs_r010`, `eggs_r017`.",
+        "flat_baseline_omission": "High LDL and diabetes appear in a final caveat list rather than as claims that qualify different parts of the recommendation.",
+        "loss_id": "eggs_loss_003",
+        "loss_type": "population caveat weakened",
+        "lost_item": "The flat baseline mentions high LDL and diabetes, but does not preserve these as separate subgroup caveats with different source bases and implications.",
+        "source_support": "`aha_2023_dietary_cholesterol_news` lines 56-62; `bmj_2020_egg_consumption_cvd` lines 524-532."
+      },
+      {
+        "adversarial_check": "survives, because replacement context is source-supported and directly affects the practical meaning of \"eat fewer eggs\" or \"eggs are fine.\"",
+        "case_map_preserves": "`eggs_c010`, `eggs_r011`, `eggs_r016`.",
+        "flat_baseline_omission": "The baseline does not name red meat or full-fat milk replacements and does not preserve the modeling caution.",
+        "loss_id": "eggs_loss_004",
+        "loss_type": "replacement context compressed",
+        "lost_item": "The flat baseline says advice depends on foods eggs replace, but does not preserve BMJ's specific replacement-food finding or the warning that replacement analysis is statistical modeling.",
+        "source_support": "`bmj_2020_egg_consumption_cvd` lines 241 and 531-536."
+      },
+      {
+        "adversarial_check": "survives, because the guideline-process distinction is in the source subset and affects how evidence is converted into advice.",
+        "case_map_preserves": "`eggs_c001`, `eggs_c002`, `eggs_c003`, `eggs_r013`.",
+        "flat_baseline_omission": "The baseline cites guideline direction but does not show why guideline documents should be separated from individual evidence studies.",
+        "loss_id": "eggs_loss_005",
+        "loss_type": "guideline authority blurred",
+        "lost_item": "The flat baseline treats federal and AHA guidance as advice but does not preserve that DGA is a preponderance-of-evidence policy process using systematic review, data analysis, and food-pattern modeling.",
+        "source_support": "`dga_2020_2025_pmc_summary` lines 31-37 and 54-60."
+      },
+      {
+        "adversarial_check": "survives, because the limitation affects confidence in the umbrella conclusion and is explicitly in the fixed source subset.",
+        "case_map_preserves": "`eggs_c018`, `eggs_c019`, `eggs_r014`.",
+        "flat_baseline_omission": "The baseline summarizes NNR's conclusion without the evidence-grade caveat.",
+        "loss_id": "eggs_loss_006",
+        "loss_type": "scoping-review limitation omitted",
+        "lost_item": "The flat baseline uses NNR as a total-picture summary but does not preserve that the NNR egg review was a scoping review without de novo or qualified systematic reviews for the egg topic.",
+        "source_support": "`nnr_2023_eggs_scoping_review` lines 42-52."
+      },
+      {
+        "adversarial_check": "survives, because same-wording cross-source claims are exactly where ordinary synthesis can hide disagreement and scope differences.",
+        "case_map_preserves": "`eggs_c007`, `eggs_c008`, `eggs_c018`, and the Similar But Not Identical section.",
+        "flat_baseline_omission": "The baseline uses the same phrase across sources without preserving source role and scope distinctions.",
+        "loss_id": "eggs_loss_007",
+        "loss_type": "similar claims merged",
+        "lost_item": "The flat baseline merges \"up to one egg per day\" across AHA, BMJ, and NNR even though each source uses it differently: public guidance for healthy people, observational cohort conclusion, and scoping-review synthesis.",
+        "source_support": "`aha_2023_dietary_cholesterol_news` lines 56-62; `bmj_2020_egg_consumption_cvd` lines 40-43 and 537-544; `nnr_2023_eggs_scoping_review` lines 30-41."
+      }
+    ],
+    "map_comparator": "examples/eggs/worked_region_observational_vs_rct_map.md",
+    "prompt_procedure": "erosion_audit_prompt_v1",
+    "status": "human-review-needed",
+    "title": "Eggs Decision-Space Erosion Audit"
+  },
+  "worked_map": {
+    "claims": [
+      {
+        "claim": "The Dietary Guidelines are a policy-oriented synthesis grounded in preponderance of evidence, not a single egg-specific causal study.",
+        "claim_id": "eggs_c001",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"The Dietary Guidelines... is grounded in the current body of scientific evidence... aims to promote health and prevent chronic diseases... provides science-based advice... mandated by law to reflect the preponderance of scientific evidence.\"",
+        "role": "guideline context",
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 31-37"
+      },
+      {
+        "claim": "DGA advice combines multiple evidence methods, including systematic review, data analysis, and food-pattern modeling.",
+        "claim_id": "eggs_c002",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"The Committee answered each question... using... data analysis, food pattern modeling, and... systematic reviews... looked across all of the conclusion statements... to develop overarching advice.\"",
+        "role": "method context",
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 54-60"
+      },
+      {
+        "claim": "DGA frames adults' advice around healthy dietary patterns and recommends keeping dietary cholesterol as low as possible within those patterns.",
+        "claim_id": "eggs_c003",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Healthy dietary patterns... low in red and processed meats... advised limiting intake of saturated fats... and keeping dietary cholesterol intake as low as possible.\"",
+        "role": "diet-pattern framing",
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 73-80"
+      },
+      {
+        "claim": "The AHA advisory separates observational CVD outcome evidence, which generally lacks significant association, from intervention lipid evidence, which often shows elevated total or LDL cholesterol at higher intakes.",
+        "claim_id": "eggs_c004",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Observational studies... generally does not indicate a significant association with cardiovascular disease risk... intervention studies... associate intakes... with elevated total or low-density lipoprotein cholesterol.\"",
+        "role": "method split",
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 122-124"
+      },
+      {
+        "claim": "AHA guidance favors dietary-pattern advice over a standalone numeric cholesterol target.",
+        "claim_id": "eggs_c005",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Dietary guidance should focus on healthy dietary patterns... relatively low in cholesterol... guidance focused on dietary patterns is more likely to improve diet quality.\"",
+        "role": "guideline framing",
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "line 123"
+      },
+      {
+        "claim": "AHA's public explanation warns that removing a numeric cholesterol target is not permission to ignore cholesterol, saturated fat, and total diet.",
+        "claim_id": "eggs_c006",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Keeping dietary cholesterol consumption 'as low as possible without compromising the nutritional adequacy of the diet'... not a free pass... cannot isolate dietary cholesterol from that total fat intake.\"",
+        "role": "public guidance caveat",
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 49-52"
+      },
+      {
+        "claim": "AHA public guidance allows up to one egg per day for healthy people but separates high-LDL groups for stricter saturated-fat and cholesterol reduction.",
+        "claim_id": "eggs_c007",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Healthy people can include up to a whole egg... each day... Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol.\"",
+        "role": "population caveat",
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 56-62"
+      },
+      {
+        "claim": "BMJ 2020 reports no overall CVD association for moderate egg consumption up to one egg per day in its cohorts and updated meta-analysis.",
+        "claim_id": "eggs_c008",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Consumption of at least one egg per day was not associated with incident cardiovascular disease risk... moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.\"",
+        "role": "observational outcome",
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 40-43"
+      },
+      {
+        "claim": "BMJ preserves regional heterogeneity and a possible type 2 diabetes caveat rather than giving one global egg effect.",
+        "claim_id": "eggs_c009",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Considerable heterogeneity existed... US, Europe, and Asia... high egg consumption could be associated with a higher risk... among people with type 2 diabetes... further studies are warranted.\"",
+        "role": "heterogeneity caveat",
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 524-532"
+      },
+      {
+        "claim": "BMJ replacement models make egg interpretation depend on what replaces eggs, while warning that replacement analyses are statistical modeling rather than observed substitutions.",
+        "claim_id": "eggs_c010",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Higher risk... when eggs were replaced with processed red meat... unprocessed red meat... full fat milk... replacement analysis is a statistical modeling strategy... interpreted with caution.\"",
+        "role": "replacement context",
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 241 and 531-536"
+      },
+      {
+        "claim": "BMJ's \"up to one egg per day\" conclusion must be read alongside relatively low typical intake in the included cohorts.",
+        "claim_id": "eggs_c011",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Moderate egg consumption (up to one egg per day) is not associated... mean egg consumption... was relatively low... most participants consumed one to less than five eggs per week.\"",
+        "role": "baseline-intake caveat",
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 537-544"
+      },
+      {
+        "claim": "JAMA 2019 reports positive dose-response associations for dietary cholesterol and eggs, with egg associations attenuating after adjustment for dietary cholesterol.",
+        "claim_id": "eggs_c012",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Each additional 300 mg... dietary cholesterol... higher risk of incident CVD... each additional half an egg... higher risk... associations between egg consumption... were no longer significant after adjusting for dietary cholesterol consumption.\"",
+        "role": "observational outcome",
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 33-52"
+      },
+      {
+        "claim": "JAMA explicitly models dietary cholesterol, egg consumption, correlated nutrients, food groups, dietary patterns, and subgroups, which affects interpretation of the positive associations.",
+        "claim_id": "eggs_c013",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Cohort-stratified... models... nutrients correlated with dietary cholesterol... adjusted... dietary patterns... subgroup analyses... diabetes... hyperlipidemia... low lipids.\"",
+        "role": "method detail",
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 70-73"
+      },
+      {
+        "claim": "JAMA treats its findings as guideline-relevant but acknowledges residual confounding and that observational data cannot establish causality.",
+        "claim_id": "eggs_c014",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Residual confounding was a potential reason for inconsistent results... observational and cannot establish causality... findings should be considered in the development of dietary guidelines.\"",
+        "role": "causal caveat",
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 477-484"
+      },
+      {
+        "claim": "Li 2020 is randomized evidence in healthy participants, but it measures lipid markers rather than long-term CVD events.",
+        "claim_id": "eggs_c015",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Only included randomized controlled trials... healthy populations... pooled results showed... higher LDL-c/HDL-c ratio... higher LDL-c... RCTs with long term follow-up are needed.\"",
+        "role": "randomized biomarker evidence",
+        "source_id": "li_2020_egg_cholesterol_rct_meta",
+        "source_span": "lines 30-36"
+      },
+      {
+        "claim": "Li reports higher LDL-c/HDL-c ratio and LDL-c with more egg consumption, while HDL-c does not significantly change in the pooled analysis.",
+        "claim_id": "eggs_c016",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"More egg consumption... significant elevation... LDL-c/HDL-c ratio... significantly higher concentration of LDL-c... did not show significant difference... HDL-c.\"",
+        "role": "randomized biomarker evidence",
+        "source_id": "li_2020_egg_cholesterol_rct_meta",
+        "source_span": "lines 188-201"
+      },
+      {
+        "claim": "Li's RCT synthesis suggests longer duration may matter but does not establish a clean dose trend or long-term health-outcome effect.",
+        "claim_id": "eggs_c017",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"Results did not show a clear trend... longer-term high egg-consumption may lead to higher LDL-c/HDL-c ratio and LDL-c... RCTs with long term follow-up are needed.\"",
+        "role": "duration and dose caveat",
+        "source_id": "li_2020_egg_cholesterol_rct_meta",
+        "source_span": "lines 207 and 279-293"
+      },
+      {
+        "claim": "NNR synthesizes the tension by treating RCT lipid changes as heterogeneous warning signals while observational evidence gives little support for harm from up to one egg per day, especially in European studies.",
+        "claim_id": "eggs_c018",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"RCTs suggest lipid changes with substantial heterogeneity... observational studies does not provide strong support for a detrimental role of moderate egg consumption... up to one egg/day... one egg/day is unlikely to adversely affect overall disease risk.\"",
+        "role": "umbrella synthesis",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_span": "lines 30-41"
+      },
+      {
+        "claim": "NNR's egg review is a scoping review built from existing reviews rather than a de novo qualified systematic review, limiting how strongly it can settle the question.",
+        "claim_id": "eggs_c019",
+        "entailed_by_excerpt": "yes",
+        "excerpt": "\"No de novo systematic reviews or qualified systematic reviews available... literature search... 38 articles... systematic review or meta-analysis... most recent and comprehensive meta-analyses were chosen.\"",
+        "role": "evidence-grade caveat",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_span": "lines 42-52"
+      }
+    ],
+    "crux_candidates": [
+      "crux: Should direct observational CVD outcome evidence outweigh randomized lipid-marker evidence when giving dietary advice? Linked claims: `eggs_c004`, `eggs_c008`, `eggs_c015`, `eggs_c016`, `eggs_c018`.",
+      "crux: Is \"moderate intake\" adequately represented as up to one egg/day, or should low typical cohort intake and high-LDL/diabetes caveats narrow the advice? Linked claims: `eggs_c007`, `eggs_c009`, `eggs_c011`.",
+      "crux: Should eggs be evaluated as an isolated food, as a dietary cholesterol source, or as a replacement within a dietary pattern? Linked claims: `eggs_c003`, `eggs_c005`, `eggs_c010`, `eggs_c012`."
+    ],
+    "evidence_mode": "source_grounded",
+    "prompt_procedure": "source_mapping_prompt_v1`, `relation_extraction_prompt_v1",
+    "relations": [
+      {
+        "rationale": "AHA's observational-versus-intervention split is echoed by NNR's summary of observational outcomes and RCT lipid changes.",
+        "relation_id": "eggs_r001",
+        "relation_type": "supports",
+        "source_claim": "eggs_c004",
+        "target_claim": "eggs_c018"
+      },
+      {
+        "rationale": "BMJ's moderate-consumption null finding supports NNR's \"up to one egg/day\" no-harm summary.",
+        "relation_id": "eggs_r002",
+        "relation_type": "supports",
+        "source_claim": "eggs_c008",
+        "target_claim": "eggs_c018"
+      },
+      {
+        "rationale": "JAMA's positive dose-response association and BMJ's null moderate-intake conclusion point in different directions and require method/context comparison.",
+        "relation_id": "eggs_r003",
+        "relation_type": "in_tension_with",
+        "source_claim": "eggs_c012",
+        "target_claim": "eggs_c008"
+      },
+      {
+        "rationale": "JAMA's causal caveat limits how directly its positive association should be converted into advice.",
+        "relation_id": "eggs_r004",
+        "relation_type": "refines",
+        "source_claim": "eggs_c014",
+        "target_claim": "eggs_c012"
+      },
+      {
+        "rationale": "The biomarker result depends on the RCT endpoint scope: LDL-c and LDL-c/HDL-c, not direct CVD outcomes.",
+        "relation_id": "eggs_r005",
+        "relation_type": "depends_on",
+        "source_claim": "eggs_c015",
+        "target_claim": "eggs_c016"
+      },
+      {
+        "rationale": "Randomized lipid-marker worsening can coexist with observational null CVD outcome findings but should not be collapsed into them.",
+        "relation_id": "eggs_r006",
+        "relation_type": "in_tension_with",
+        "source_claim": "eggs_c016",
+        "target_claim": "eggs_c008"
+      },
+      {
+        "rationale": "Duration and dose caveats qualify the interpretation of the LDL-c and LDL-c/HDL-c findings.",
+        "relation_id": "eggs_r007",
+        "relation_type": "refines",
+        "source_claim": "eggs_c017",
+        "target_claim": "eggs_c016"
+      },
+      {
+        "rationale": "DGA and AHA both frame dietary cholesterol through overall dietary patterns rather than isolated egg counts.",
+        "relation_id": "eggs_r008",
+        "relation_type": "similar_to",
+        "source_claim": "eggs_c003",
+        "target_claim": "eggs_c005"
+      },
+      {
+        "rationale": "The public AHA \"not a free pass\" caveat explains why the one-egg/day statement is conditional on diet and LDL status.",
+        "relation_id": "eggs_r009",
+        "relation_type": "refines",
+        "source_claim": "eggs_c006",
+        "target_claim": "eggs_c007"
+      },
+      {
+        "rationale": "Regional and diabetes heterogeneity qualifies BMJ's overall null finding.",
+        "relation_id": "eggs_r010",
+        "relation_type": "refines",
+        "source_claim": "eggs_c009",
+        "target_claim": "eggs_c008"
+      },
+      {
+        "rationale": "Replacement context affects what \"egg risk\" means in actual dietary choices.",
+        "relation_id": "eggs_r011",
+        "relation_type": "refines",
+        "source_claim": "eggs_c010",
+        "target_claim": "eggs_c008"
+      },
+      {
+        "rationale": "Low typical cohort intake constrains how broadly the \"up to one egg/day\" conclusion should be read.",
+        "relation_id": "eggs_r012",
+        "relation_type": "refines",
+        "source_claim": "eggs_c011",
+        "target_claim": "eggs_c008"
+      },
+      {
+        "rationale": "The guideline cholesterol recommendation depends on a policy process using preponderance of evidence, not on one study alone.",
+        "relation_id": "eggs_r013",
+        "relation_type": "depends_on",
+        "source_claim": "eggs_c001",
+        "target_claim": "eggs_c003"
+      },
+      {
+        "rationale": "NNR's evidence-grade caveat limits confidence in the scoping-review synthesis.",
+        "relation_id": "eggs_r014",
+        "relation_type": "refines",
+        "source_claim": "eggs_c019",
+        "target_claim": "eggs_c018"
+      },
+      {
+        "rationale": "How to weigh observational outcomes against intervention lipid markers is a crux for the overall egg recommendation.",
+        "relation_id": "eggs_r015",
+        "relation_type": "crux_for",
+        "source_claim": "eggs_c004",
+        "target_claim": "eggs_c018"
+      },
+      {
+        "rationale": "Replacement foods and dietary-pattern framing are a crux for converting evidence into advice.",
+        "relation_id": "eggs_r016",
+        "relation_type": "crux_for",
+        "source_claim": "eggs_c010",
+        "target_claim": "eggs_c005"
+      },
+      {
+        "rationale": "High-LDL subgroup guidance prevents the NNR one-egg/day summary from becoming a universal free pass.",
+        "relation_id": "eggs_r017",
+        "relation_type": "refines",
+        "source_claim": "eggs_c007",
+        "target_claim": "eggs_c018"
+      }
+    ],
+    "similar_but_not_identical": [
+      "`eggs_c008` and `eggs_c018` both support moderate egg intake, but BMJ is a cohort/meta-analysis finding and NNR is a scoping synthesis.",
+      "`eggs_c012` and `eggs_c016` both push toward caution, but JAMA is observational CVD/mortality association while Li is randomized lipid-marker evidence.",
+      "`eggs_c003`, `eggs_c005`, and `eggs_c006` all concern guidance, but DGA gives federal guideline process, AHA 2019 gives advisory framing, and AHA 2023 gives public interpretation.",
+      "`eggs_c009`, `eggs_c011`, and `eggs_c017` are different caveats: population heterogeneity, baseline intake, and trial duration/dose."
+    ],
+    "sources": [
+      "dga_2020_2025_pmc_summary",
+      "aha_2019_dietary_cholesterol_pubmed",
+      "aha_2023_dietary_cholesterol_news",
+      "bmj_2020_egg_consumption_cvd",
+      "jama_2019_dietary_cholesterol_eggs",
+      "li_2020_egg_cholesterol_rct_meta",
+      "nnr_2023_eggs_scoping_review"
+    ],
+    "status": "human-review-needed",
+    "title": "Eggs Worked Region: Observational Outcomes Versus RCT Lipid Markers"
+  }
+}

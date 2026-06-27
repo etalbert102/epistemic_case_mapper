@@ -31,6 +31,13 @@ Last updated: 2026-06-27.
 - A one-command judge demo exists in `scripts/run_flf_demo.py`.
 - A compact before/after comparison exists in `docs/FLF_BEFORE_AFTER_COMPARISON.md`.
 - Case-specific human audit packets exist for LHC and eggs.
+- A single judge-facing submission packet exists in `docs/SUBMISSION_PACKET.md`.
+- A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
+- A limitations and risk register exists in `docs/SUBMISSION_LIMITATIONS.md`.
+- Structured worked-region JSON exports exist for both curated maps.
+- `scripts/validate_submission_references.py` checks judge-facing file, claim, relation, and loss references.
+- `scripts/judge_smoke_test.py` validates and prints the ten-minute judge path.
+- `scripts/summarize_submission_artifacts.py` generates `docs/SUBMISSION_ARTIFACT_SUMMARY.md`.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
 
@@ -60,6 +67,10 @@ The prototype currently demonstrates artifact shape, source grounding, provenanc
 PYTHONPATH=src python3 -m pytest -q
 PYTHONPATH=src python3 scripts/run_flf_demo.py
 PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+PYTHONPATH=src python3 scripts/judge_smoke_test.py
+PYTHONPATH=src python3 scripts/validate_submission_references.py
+PYTHONPATH=src python3 scripts/export_worked_region_json.py --check
+PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py --check
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yaml
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes
