@@ -73,6 +73,12 @@ Record at least one concrete implication from each input before implementation e
 - `data/cases/eggs/sources/SOURCE_INVENTORY.md`: Eggs sources include guideline context, cohort/meta-analysis evidence, RCT lipid-marker evidence, and scoping-review context.
 - `examples/lhc_black_holes/`: Existing generated artifacts are heuristic drafts; the goal must create curated worked-region files instead of treating the generated report as final.
 - `examples/eggs/`: Existing generated artifacts are heuristic drafts; the goal must create curated worked-region files instead of treating the generated report as final.
+- `docs/reference/codex_goal_ability_research.md`: Keep this as a bounded goal with a living plan, exact verification commands, and artifact evidence rather than broad improvement work.
+- `src/epistemic_case_mapper/schema.py`: The checked-in JSON schema supports stable source IDs, claim IDs, relation IDs, entailment checks, review states, and relation types; curated worked-region Markdown should mirror these concepts without claiming human review.
+- `src/epistemic_case_mapper/starter_mapper.py`: The deterministic mapper is intentionally heuristic; worked-region maps must be hand-curated from source excerpts rather than copied from marker-sentence extraction.
+- `scripts/build_case_map.py`: Generated reports and audits are useful scaffold outputs, but they still label relations as seed/draft and are not substitutes for judge-facing worked-region artifacts.
+- `scripts/validate_worked_regions.py`: The mandatory gate checks concrete Markdown fields, source IDs against manifests, claim counts, relation types, crux mentions, prompt/isolation notes, erosion losses, and FLF score rows.
+- `tests/`: Existing tests cover starter-map behavior, case-artifact metadata/open questions, and basic worked-region validator behavior; the final run must include the full pytest suite.
 
 ## Current Inventory
 
@@ -342,7 +348,11 @@ Showable threshold:
 
 ## Progress
 
-- [ ] Plan recorded.
+- [x] Plan recorded.
+- [x] Required repo, protocol, source-packet, validator, schema, mapper, CLI, and test context read.
+- [x] LHC worked-region artifacts filled and region validator passing.
+- [x] Eggs worked-region artifacts filled and region validator passing.
+- [x] Judge-facing packet filled and full validation passing.
 
 ## Decisions
 
@@ -354,51 +364,71 @@ Showable threshold:
 
 Record unexpected source, artifact, or validation issues here.
 
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py` fails at baseline because the worked-region definitions, maps, baselines, erosion audits, best-region indexes, and judge docs are still templates or undersized stubs. This is expected starting-state work, not a validator defect.
+
 ## Verification Log
 
 Record exact commands, timestamps, and outcomes here.
 
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py` failed with template, missing/undersized map, baseline, erosion-audit, best-region, and judge-doc failures for both worked regions. Use as starting-state baseline before edits.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py --region lhc_cosmic_ray_argument` passed after filling the LHC definition, map, flat baseline, erosion audit, and best-region pointer.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py --region eggs_observational_vs_rct` passed after filling the eggs definition, map, flat baseline, erosion audit, and best-region pointer.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 -m pytest -q` passed: 4 tests.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml` passed and wrote `artifacts/lhc_black_holes/case_map.json`, `report.md`, and `audit.md`.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yaml` passed and wrote `artifacts/eggs/case_map.json`, `report.md`, and `audit.md`.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes` passed.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/eggs/case.yaml --examples examples/eggs` passed.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/validate_worked_regions.py` passed.
+- 2026-06-27 / Codex: `PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions` passed.
+
 ## Residual Risks
 
-- Current source-grounded examples are still heuristic drafts.
-- Human review has not occurred.
-- The strongest contest submission likely needs a concise narrative in addition to artifacts.
+- Human review has not occurred; all new worked-region artifacts remain `human-review-needed`.
+- The flat baselines are illustrative rather than blinded evaluations because the same Codex run had access to source-packet and curated-map context.
+- Relation labels, crux choices, and erosion-loss fairness need domain-review pressure before public overclaiming.
+- The worked regions are high-value slices, not exhaustive maps of the full LHC or eggs corpora.
+- The deterministic starter maps remain heuristic drafts; the curated worked-region files are the judge-facing source-grounded demonstrations.
 
 ## Deferred Work
 
 Use this format:
 
-- Owner:
-  Reason:
-  Risk:
-  Next action:
+- Owner: Human reviewer
+  Reason: Source fidelity, relation labels, crux choices, and flat-synthesis loss fairness require accountable review.
+  Risk: The demo could overstate technical or nutrition-evidence certainty if shown as human-reviewed.
+  Next action: Use `docs/HUMAN_REVIEW_CHECKLIST.md` on both worked-region maps and erosion audits.
+
+- Owner: Future developer
+  Reason: Baseline isolation was not possible inside this single Codex run.
+  Risk: Erosion comparisons are illustrative rather than evaluative.
+  Next action: Regenerate flat baselines in a clean context that has only the fixed source excerpts and prompt.
 
 ## Done Checklist
 
-- [ ] Required reading is complete and implications are recorded.
-- [ ] LHC worked-region definition exists.
-- [ ] Eggs worked-region definition exists.
-- [ ] LHC curated worked-region map exists.
-- [ ] Eggs curated worked-region map exists.
-- [ ] LHC flat-synthesis baseline exists.
-- [ ] Eggs flat-synthesis baseline exists.
-- [ ] LHC decision-space erosion audit exists.
-- [ ] Eggs decision-space erosion audit exists.
-- [ ] Judge walkthrough exists.
-- [ ] Submission draft exists.
-- [ ] LHC best-regions index exists.
-- [ ] Eggs best-regions index exists.
-- [ ] Human review checklist exists.
-- [ ] Each worked region has 12-25 curated claims.
-- [ ] Each worked region has at least three relation types.
-- [ ] Each worked region has at least two crux candidates.
-- [ ] Every curated claim includes source-local excerpt and entailment check.
-- [ ] Each baseline records the fixed prompt and source subset.
-- [ ] Each erosion audit names at least five concrete losses that survive adversarial checks.
-- [ ] Each worked region scores itself against FLF's four judge questions.
-- [ ] Mandatory worked-region validator passes.
-- [ ] LHC example validation passes.
-- [ ] Eggs example validation passes.
-- [ ] Tests pass.
-- [ ] Residual risks are recorded.
-- [ ] Review status is no stronger than `human-review-needed`.
+- [x] Required reading is complete and implications are recorded.
+- [x] LHC worked-region definition exists.
+- [x] Eggs worked-region definition exists.
+- [x] LHC curated worked-region map exists.
+- [x] Eggs curated worked-region map exists.
+- [x] LHC flat-synthesis baseline exists.
+- [x] Eggs flat-synthesis baseline exists.
+- [x] LHC decision-space erosion audit exists.
+- [x] Eggs decision-space erosion audit exists.
+- [x] Judge walkthrough exists.
+- [x] Submission draft exists.
+- [x] LHC best-regions index exists.
+- [x] Eggs best-regions index exists.
+- [x] Human review checklist exists.
+- [x] Each worked region has 12-25 curated claims.
+- [x] Each worked region has at least three relation types.
+- [x] Each worked region has at least two crux candidates.
+- [x] Every curated claim includes source-local excerpt and entailment check.
+- [x] Each baseline records the fixed prompt and source subset.
+- [x] Each erosion audit names at least five concrete losses that survive adversarial checks.
+- [x] Each worked region scores itself against FLF's four judge questions.
+- [x] Mandatory worked-region validator passes.
+- [x] LHC example validation passes.
+- [x] Eggs example validation passes.
+- [x] Tests pass.
+- [x] Residual risks are recorded.
+- [x] Review status is no stronger than `human-review-needed`.
