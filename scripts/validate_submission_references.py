@@ -13,6 +13,9 @@ DOCS_TO_SCAN = (
     "docs/FLF_JUDGE_INDEX.md",
     "docs/FLF_JUDGE_WALKTHROUGH.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
+    "docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md",
+    "docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md",
+    "docs/NEW_SOURCE_UPDATE_DEMO.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
     "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
     "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
@@ -27,9 +30,12 @@ DOCS_TO_SCAN = (
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
     "examples/lhc_black_holes/full_case_index.md",
     "examples/lhc_black_holes/full_case_map.md",
+    "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
+    "examples/lhc_black_holes/worked_region_public_risk_framing_map.md",
     "examples/lhc_black_holes/investigator_task_queue.md",
     "examples/eggs/full_case_index.md",
     "examples/eggs/full_case_map.md",
+    "examples/eggs/full_case_flat_synthesis_baseline.md",
     "examples/eggs/investigator_task_queue.md",
 )
 

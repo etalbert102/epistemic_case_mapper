@@ -38,21 +38,27 @@ The UI is an inspection dashboard over the same checked-in artifacts. It is not 
 
 1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 2. `ui/index.html`
-3. `examples/lhc_black_holes/full_case_index.md`
-4. `examples/lhc_black_holes/full_case_map.md`
-5. `examples/lhc_black_holes/BEST_REGIONS.md`
-6. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-7. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-8. `examples/eggs/full_case_index.md`
-9. `examples/eggs/full_case_map.md`
-10. `examples/eggs/BEST_REGIONS.md`
-11. `examples/eggs/worked_region_observational_vs_rct_map.md`
-12. `examples/eggs/decision_space_erosion_audit.md`
-13. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-14. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-15. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-16. `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
-17. `docs/OPERATIONAL_REALISM_AUDIT.md`
+3. `docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md`
+4. `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md`
+5. `docs/NEW_SOURCE_UPDATE_DEMO.md`
+6. `examples/lhc_black_holes/full_case_index.md`
+7. `examples/lhc_black_holes/full_case_map.md`
+8. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+9. `examples/lhc_black_holes/BEST_REGIONS.md`
+10. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+11. `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
+12. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+13. `examples/eggs/full_case_index.md`
+14. `examples/eggs/full_case_map.md`
+15. `examples/eggs/full_case_flat_synthesis_baseline.md`
+16. `examples/eggs/BEST_REGIONS.md`
+17. `examples/eggs/worked_region_observational_vs_rct_map.md`
+18. `examples/eggs/decision_space_erosion_audit.md`
+19. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+20. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+21. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+22. `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+23. `docs/OPERATIONAL_REALISM_AUDIT.md`
 
 ## Submission Shape
 
@@ -62,6 +68,9 @@ The package now has two evidence depths:
 
 - full-case scaffolds that cover every currently acquired source for LHC and eggs,
 - worked-region anchors that provide deeper claim-level and relation-level audit surfaces for the most important slices.
+- full-case flat baselines that let judges inspect how whole-case prose compresses structure.
+- a new-source update demo that shows how an investigator can add a source-local update without rebuilding the whole case.
+- failure-mode and criteria self-assessment documents that make the submission easier to judge adversarially.
 
 The contribution is the workflow:
 
@@ -114,8 +123,15 @@ The contribution is the workflow:
 - Broad full-case scaffolds:
   - `examples/lhc_black_holes/full_case_index.md`
   - `examples/lhc_black_holes/full_case_map.md`
+  - `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
   - `examples/eggs/full_case_index.md`
   - `examples/eggs/full_case_map.md`
+  - `examples/eggs/full_case_flat_synthesis_baseline.md`
+- Draft extension artifacts:
+  - `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
+  - `docs/NEW_SOURCE_UPDATE_DEMO.md`
+  - `docs/FAILURE_MODES_AND_COUNTEREXAMPLES.md`
+  - `docs/FLF_CONTEST_CRITERIA_SELF_ASSESSMENT.md`
 - Human review packets:
   - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
   - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
