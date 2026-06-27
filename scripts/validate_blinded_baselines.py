@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 
 
-BASELINES = (
+BASELINE_GROUPS = (
     {
-        "path": "examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md",
+        "glob": "examples/lhc_black_holes/blinded_flat_synthesis_baseline_*.md",
         "required_sources": {
             "lsag_2008_safety_review",
             "spc_2008_lsag_review",
@@ -16,7 +16,7 @@ BASELINES = (
         },
     },
     {
-        "path": "examples/eggs/blinded_flat_synthesis_baseline_gemma4.md",
+        "glob": "examples/eggs/blinded_flat_synthesis_baseline_*.md",
         "required_sources": {
             "dga_2020_2025_pmc_summary",
             "aha_2019_dietary_cholesterol_pubmed",
@@ -33,8 +33,12 @@ BASELINES = (
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     failures: list[str] = []
-    for baseline in BASELINES:
-        _validate_baseline(repo_root / str(baseline["path"]), set(baseline["required_sources"]), failures)
+    for group in BASELINE_GROUPS:
+        paths = sorted(repo_root.glob(str(group["glob"])))
+        if not paths:
+            failures.append(f"missing_blinded_baseline glob={group['glob']}")
+        for path in paths:
+            _validate_baseline(path, set(group["required_sources"]), failures)
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
@@ -50,7 +54,7 @@ def _validate_baseline(path: Path, required_sources: set[str], failures: list[st
     text = path.read_text(encoding="utf-8")
     required_markers = (
         "flat_baseline_prompt_v1_blinded_ollama",
-        "Model: `gemma4:",
+        "Model: `",
         "baseline_writer_had_access_to_curated_map: `no`",
         "Blinding protocol:",
         "## Baseline Output",
@@ -63,7 +67,7 @@ def _validate_baseline(path: Path, required_sources: set[str], failures: list[st
             failures.append(f"blinded_baseline_missing_source path={path} source={source_id}")
     if len(text.split()) < 300:
         failures.append(f"blinded_baseline_too_short path={path} words={len(text.split())}")
-    for artifact in ("Thinking", "done thinking"):
+    for artifact in ("Thinking", "done thinking", "<think>", "</think>"):
         if artifact in text:
             failures.append(f"blinded_baseline_contains_reasoning_artifact path={path} artifact={artifact}")
     if "\x1b" in text or "\x08" in text:

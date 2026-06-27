@@ -146,6 +146,10 @@ def main() -> int:
     parser.add_argument("--case", choices=["all", *CONFIGS.keys()], default="all")
     parser.add_argument("--model", default="gemma4:e4b")
     parser.add_argument(
+        "--output-label",
+        help="Filename label for outputs. Defaults to a stable label derived from --model.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print prompts and write no output; useful for checking isolation.",
@@ -153,6 +157,7 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    output_label = args.output_label or _model_label(args.model)
     selected = CONFIGS.values() if args.case == "all" else (CONFIGS[args.case],)
     for config in selected:
         prompt = build_prompt(repo_root, config)
@@ -160,8 +165,9 @@ def main() -> int:
             print(f"\n--- {config.region_id} prompt ---\n{prompt}")
             continue
         output = _clean_model_output(_run_ollama(args.model, prompt))
-        _write_baseline(repo_root, config, args.model, output)
-        print(f"Wrote {config.output_path}")
+        output_path = _output_path(config, output_label)
+        _write_baseline(repo_root, config, args.model, output_path, output)
+        print(f"Wrote {output_path}")
     return 0
 
 
@@ -208,6 +214,7 @@ def _run_ollama(model: str, prompt: str) -> str:
 
 def _clean_model_output(output: str) -> str:
     output = _render_terminal_rewrites(output)
+    output = re.sub(r"(?is)<think>.*?</think>\s*", "", output).strip()
     output = re.sub(r"(?is)^\s*Thinking\.\.\..*?\.\.\.done thinking\.\s*", "", output).strip()
     return output
 
@@ -258,8 +265,18 @@ def _next_line_end(rendered: list[str], cursor: int) -> int:
     return len(rendered)
 
 
-def _write_baseline(repo_root: Path, config: BaselineConfig, model: str, output: str) -> None:
-    output_path = repo_root / config.output_path
+def _model_label(model: str) -> str:
+    if model == "gemma4:e4b":
+        return "gemma4"
+    return re.sub(r"[^A-Za-z0-9]+", "_", model).strip("_").lower()
+
+
+def _output_path(config: BaselineConfig, output_label: str) -> str:
+    return config.output_path.replace("_gemma4.md", f"_{output_label}.md")
+
+
+def _write_baseline(repo_root: Path, config: BaselineConfig, model: str, output_path_text: str, output: str) -> None:
+    output_path = repo_root / output_path_text
     output_path.parent.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     source_list = "\n".join(f"- `{source_id}`" for source_id in config.required_sources)
