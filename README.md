@@ -36,10 +36,35 @@ The deterministic builder is not the final AI workflow. It creates an auditable 
 ```bash
 python -m venv .venv
 ./.venv/bin/pip install -e ".[dev]"
-./.venv/bin/python scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml
+./.venv/bin/python scripts/run_flf_demo.py
 ```
 
-Output is written to `artifacts/<case_id>/`.
+The demo command regenerates the deterministic starter artifacts, validates the checked-in LHC and eggs worked regions, validates the blinded baseline set, and prints the judge-facing entry points.
+
+For a faster checked-in artifact audit without rebuilding generated starter outputs:
+
+```bash
+PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+```
+
+Generated starter output is written to `artifacts/<case_id>/`. Curated judge-facing snapshots live under `examples/`.
+
+## Judge Path
+
+Start with:
+
+- `docs/FLF_JUDGE_INDEX.md`
+- `docs/FLF_JUDGE_WALKTHROUGH.md`
+- `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+- `docs/FLF_SUBMISSION_DRAFT.md`
+
+The fastest evidence check is:
+
+1. Inspect the best-region pointer for a case.
+2. Compare the worked-region map to the flat synthesis baseline.
+3. Read the erosion audit.
+4. Check the blinded and multi-model baseline audits to see which losses survive stronger comparators.
+5. Use the case-specific human audit packet before treating any artifact as reviewed.
 
 ## Target FLF Demonstrations
 

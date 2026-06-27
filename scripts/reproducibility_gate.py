@@ -15,6 +15,10 @@ CASES = (
 REQUIRED_DOCS = (
     "docs/CURRENT_STATE.md",
     "docs/FLF_AUDITOR_WALKTHROUGH_EXAMPLE.md",
+    "docs/FLF_BEFORE_AFTER_COMPARISON.md",
+    "docs/FLF_JUDGE_INDEX.md",
+    "docs/FLF_JUDGE_WALKTHROUGH.md",
+    "docs/FLF_SUBMISSION_DRAFT.md",
     "docs/HUMAN_REVIEW_CHECKLIST.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
@@ -27,6 +31,9 @@ REQUIRED_DOCS = (
     "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
     "docs/review/HUMAN_REVIEW_RUBRIC.md",
     "docs/review/BLINDED_BASELINE_AUDIT.md",
+    "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
+    "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
+    "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
 )
 
 FORBIDDEN_TERMS = (

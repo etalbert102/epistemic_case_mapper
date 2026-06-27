@@ -47,9 +47,14 @@ REGIONS = (
 )
 
 REQUIRED_GLOBAL_FILES = (
+    "docs/FLF_BEFORE_AFTER_COMPARISON.md",
+    "docs/FLF_JUDGE_INDEX.md",
     "docs/FLF_JUDGE_WALKTHROUGH.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
     "docs/HUMAN_REVIEW_CHECKLIST.md",
+    "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
+    "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
+    "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
 )
 
 

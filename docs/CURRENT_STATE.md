@@ -26,6 +26,11 @@ Last updated: 2026-06-27.
 - Reproducible blinded local-model baseline generation exists in `scripts/run_blinded_baselines.py`.
 - Checked-in blinded Gemma4 flat-synthesis baselines can be validated with `scripts/validate_blinded_baselines.py`.
 - Agent-authored blinded-baseline survival audit exists in `docs/review/BLINDED_BASELINE_AUDIT.md`.
+- Checked-in Qwen3, Phi4, and Granite blinded baselines exist for both worked regions.
+- A multi-model blinded-baseline audit exists in `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`.
+- A one-command judge demo exists in `scripts/run_flf_demo.py`.
+- A compact before/after comparison exists in `docs/FLF_BEFORE_AFTER_COMPARISON.md`.
+- Case-specific human audit packets exist for LHC and eggs.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
 
@@ -47,12 +52,14 @@ Last updated: 2026-06-27.
 
 ## Current Evidence Boundary
 
-The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes a reproducible local Gemma4 blinded-baseline path that prompts only from selected source spans and does not expose the curated maps or erosion audits. The blinded-baseline audit finds that several LHC losses survive, while the eggs comparator preserves more endpoint and study-design structure than the illustrative baseline.
+The prototype currently demonstrates artifact shape, source grounding, provenance discipline, auditability scaffolding, and two worked-region comparisons where curated maps preserve structure that flat synthesis weakens. The original baselines are illustrative because they were produced in the same Codex run as the maps. The repository now also includes reproducible local blinded-baseline paths that prompt only from selected source spans and do not expose the curated maps or erosion audits. Multi-model baselines show that flat synthesis preservation is model-dependent: some models preserve more detail, but none make the decision-relevant structure as reviewable as the maps.
 
 ## Validation Commands
 
 ```bash
 PYTHONPATH=src python3 -m pytest -q
+PYTHONPATH=src python3 scripts/run_flf_demo.py
+PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/eggs/case.yaml
 PYTHONPATH=src python3 scripts/validate_case_artifact.py --case data/cases/lhc_black_holes/case.yaml --examples examples/lhc_black_holes
