@@ -60,6 +60,7 @@ function renderCase() {
   const caseItem = uiData.cases.find((item) => item.caseKey === activeCaseKey);
   if (!caseItem) return;
 
+  document.body.dataset.theme = caseItem.theme || "default";
   elements.reviewStatus.textContent =
     "Artifacts are inspectable but remain human-review-needed until packet decisions are recorded.";
   elements.caseTitle.textContent = caseItem.label;
