@@ -11,17 +11,21 @@ REVIEW_PATH = (
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "examples/lhc_black_holes/full_case_index.md",
     "examples/lhc_black_holes/full_case_map.md",
+    "examples/lhc_black_holes/investigator_task_queue.md",
     "examples/lhc_black_holes/BEST_REGIONS.md",
     "examples/lhc_black_holes/worked_region_cosmic_ray_map.md",
     "examples/lhc_black_holes/decision_space_erosion_audit.md",
     "examples/eggs/full_case_index.md",
     "examples/eggs/full_case_map.md",
+    "examples/eggs/investigator_task_queue.md",
     "examples/eggs/BEST_REGIONS.md",
     "examples/eggs/worked_region_observational_vs_rct_map.md",
     "examples/eggs/decision_space_erosion_audit.md",
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
+    "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
+    "docs/OPERATIONAL_REALISM_AUDIT.md",
 )
 
 

@@ -24,6 +24,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 - Crux candidates: `6`
 - Erosion findings: `13`
 - Blinded local-model baselines: `8`
+- Investigator task queue items: `10`
 
 ## Interpretation
 

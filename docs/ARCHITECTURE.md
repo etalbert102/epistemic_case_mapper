@@ -15,11 +15,13 @@ flowchart TD
     E --> G[Decision-space erosion audit]
     F --> G
     G --> H[Human audit packet]
+    H --> L[Investigator task queue]
     E --> I[JSON export]
     G --> J[Submission packet]
     H --> J
     I --> J
     K --> J
+    L --> J
 ```
 
 ## Layers
@@ -31,6 +33,7 @@ flowchart TD
 | Assessment | erosion audits and blinded baseline audits | Check what flat synthesis preserved, flattened, omitted, or distorted. |
 | Compounding | JSON exports and human audit packets | Let another reviewer inspect, revise, or extend the artifact. |
 | Full-case navigation | `examples/*/full_case_index.md`, `examples/*/full_case_map.md` | Show how worked-region anchors sit inside broader case-level knowledge bases. |
+| Operational realism | `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`, `examples/*/investigator_task_queue.md` | Show how a real investigator continues, reviews, and extends the artifact. |
 
 ## Validation Surface
 
@@ -39,6 +42,7 @@ flowchart TD
 - `scripts/validate_blinded_baselines.py`: checks local-model flat baselines.
 - `scripts/validate_submission_references.py`: checks judge-facing file and ID references.
 - `scripts/validate_full_case_knowledge.py`: checks source coverage in full-case scaffolds.
+- `scripts/validate_realism_artifacts.py`: checks operational playbook, realism audit, and task queues.
 - `scripts/export_worked_region_json.py --check`: checks structured exports.
 - `scripts/summarize_submission_artifacts.py --check`: checks artifact count summary.
 - `scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines`: end-to-end reproducibility gate.

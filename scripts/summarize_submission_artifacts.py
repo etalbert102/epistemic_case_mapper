@@ -112,6 +112,7 @@ def render_summary(repo_root: Path) -> str:
             f"- Crux candidates: `{totals['cruxes']}`",
             f"- Erosion findings: `{totals['losses']}`",
             f"- Blinded local-model baselines: `{totals['baselines']}`",
+            f"- Investigator task queue items: `{_task_count(repo_root)}`",
             "",
             "## Interpretation",
             "",
@@ -120,6 +121,18 @@ def render_summary(repo_root: Path) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _task_count(repo_root: Path) -> int:
+    count = 0
+    for relative_path in (
+        "examples/lhc_black_holes/investigator_task_queue.md",
+        "examples/eggs/investigator_task_queue.md",
+    ):
+        path = repo_root / relative_path
+        if path.exists():
+            count += len(re.findall(r"^task_id:\s*", path.read_text(encoding="utf-8"), flags=re.MULTILINE))
+    return count
 
 
 if __name__ == "__main__":

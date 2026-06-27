@@ -75,6 +75,13 @@ Full-case scaffold entry points:
 - `examples/lhc_black_holes/full_case_index.md`
 - `examples/eggs/full_case_index.md`
 
+Operational realism entry points:
+
+- `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+- `docs/OPERATIONAL_REALISM_AUDIT.md`
+- `examples/lhc_black_holes/investigator_task_queue.md`
+- `examples/eggs/investigator_task_queue.md`
+
 Reusable structured exports are checked in at:
 
 - `examples/lhc_black_holes/worked_region_cosmic_ray_map.json`

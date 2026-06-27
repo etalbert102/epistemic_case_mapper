@@ -38,6 +38,8 @@ The demo validates source-grounded artifacts, worked regions, blinded baselines,
 12. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
 13. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
 14. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+15. `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+16. `docs/OPERATIONAL_REALISM_AUDIT.md`
 
 ## Submission Shape
 
@@ -106,6 +108,11 @@ The contribution is the workflow:
   - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
   - `docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv`
   - `docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv`
+- Operational realism artifacts:
+  - `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+  - `docs/OPERATIONAL_REALISM_AUDIT.md`
+  - `examples/lhc_black_holes/investigator_task_queue.md`
+  - `examples/eggs/investigator_task_queue.md`
 
 ## What Is Not Claimed
 

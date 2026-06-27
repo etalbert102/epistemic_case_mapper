@@ -48,6 +48,11 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 11. Use the human audit packets before trusting the examples as reviewed:
    - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
    - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+12. Inspect operational realism artifacts:
+   - `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+   - `docs/OPERATIONAL_REALISM_AUDIT.md`
+   - `examples/lhc_black_holes/investigator_task_queue.md`
+   - `examples/eggs/investigator_task_queue.md`
 
 ## What The Judge Should See
 

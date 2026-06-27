@@ -15,6 +15,8 @@ DOCS_TO_SCAN = (
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
     "docs/FULL_CASE_KNOWLEDGE_BASE_PLAN.md",
+    "docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md",
+    "docs/OPERATIONAL_REALISM_AUDIT.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/SUBMISSION_LIMITATIONS.md",
     "docs/ARCHITECTURE.md",
@@ -24,8 +26,10 @@ DOCS_TO_SCAN = (
     "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
     "examples/lhc_black_holes/full_case_index.md",
     "examples/lhc_black_holes/full_case_map.md",
+    "examples/lhc_black_holes/investigator_task_queue.md",
     "examples/eggs/full_case_index.md",
     "examples/eggs/full_case_map.md",
+    "examples/eggs/investigator_task_queue.md",
 )
 
 
