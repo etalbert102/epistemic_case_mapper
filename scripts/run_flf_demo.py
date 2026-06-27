@@ -24,6 +24,7 @@ JUDGE_PATHS = (
     "docs/OPERATIONAL_REALISM_AUDIT.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_LIMITATIONS.md",
+    "ui/index.html",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
@@ -75,6 +76,8 @@ def main() -> int:
     _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
     _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 

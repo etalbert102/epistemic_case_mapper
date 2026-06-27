@@ -59,6 +59,7 @@ REQUIRED_GLOBAL_FILES = (
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_LIMITATIONS.md",
     "docs/SUBMISSION_PACKET.md",
+    "ui/index.html",
     "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
     "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
     "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",

@@ -46,6 +46,9 @@ Last updated: 2026-06-27.
   - `examples/lhc_black_holes/investigator_task_queue.md`
   - `examples/eggs/investigator_task_queue.md`
 - `scripts/validate_realism_artifacts.py` checks playbook, realism audit, and task queue structure.
+- A static inspection UI exists under `ui/`, generated from checked-in artifacts.
+- `scripts/build_ui_data.py` generates `ui/data.json`.
+- `scripts/validate_ui.py` checks UI files and artifact references.
 - Structured worked-region JSON exports exist for both curated maps.
 - `scripts/validate_submission_references.py` checks judge-facing file, claim, relation, and loss references.
 - `scripts/judge_smoke_test.py` validates and prints the ten-minute judge path.
@@ -83,6 +86,8 @@ PYTHONPATH=src python3 scripts/judge_smoke_test.py
 PYTHONPATH=src python3 scripts/validate_submission_references.py
 PYTHONPATH=src python3 scripts/validate_full_case_knowledge.py
 PYTHONPATH=src python3 scripts/validate_realism_artifacts.py
+PYTHONPATH=src python3 scripts/build_ui_data.py --check
+PYTHONPATH=src python3 scripts/validate_ui.py
 PYTHONPATH=src python3 scripts/export_worked_region_json.py --check
 PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py --check
 PYTHONPATH=src python3 scripts/build_case_map.py --case data/cases/lhc_black_holes/case.yaml

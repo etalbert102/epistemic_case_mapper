@@ -4,6 +4,8 @@ Lightweight FLF competition prototype for producing reusable, navigable epistemi
 
 Start with the judge packet: `docs/SUBMISSION_PACKET.md`.
 
+For a visual inspection surface, run the static UI at `ui/index.html`.
+
 This repo is intentionally separate from `decision_space_harness`.
 
 - `decision_space_harness`: research benchmark, metrics, paper-grade evaluation.
@@ -57,6 +59,7 @@ Start with:
 
 - `docs/FLF_JUDGE_INDEX.md`
 - `docs/SUBMISSION_PACKET.md`
+- `ui/index.html`
 - `docs/FLF_JUDGE_WALKTHROUGH.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/FLF_SUBMISSION_DRAFT.md`
@@ -81,6 +84,14 @@ Operational realism entry points:
 - `docs/OPERATIONAL_REALISM_AUDIT.md`
 - `examples/lhc_black_holes/investigator_task_queue.md`
 - `examples/eggs/investigator_task_queue.md`
+
+To open the UI locally:
+
+```bash
+python3 -m http.server 8787
+```
+
+Then visit `http://localhost:8787/ui/`.
 
 Reusable structured exports are checked in at:
 

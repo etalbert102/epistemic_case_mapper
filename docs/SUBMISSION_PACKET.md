@@ -22,24 +22,37 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 
 The demo validates source-grounded artifacts, worked regions, blinded baselines, structured exports, internal references, and the judge path.
 
+## Visual UI
+
+Run a local static server from the repository root:
+
+```bash
+python3 -m http.server 8787
+```
+
+Then open `http://localhost:8787/ui/`.
+
+The UI is an inspection dashboard over the same checked-in artifacts. It is not the source of truth; the Markdown/JSON artifacts remain canonical.
+
 ## What To Inspect First
 
 1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-2. `examples/lhc_black_holes/full_case_index.md`
-3. `examples/lhc_black_holes/full_case_map.md`
-4. `examples/lhc_black_holes/BEST_REGIONS.md`
-5. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-6. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-7. `examples/eggs/full_case_index.md`
-8. `examples/eggs/full_case_map.md`
-9. `examples/eggs/BEST_REGIONS.md`
-10. `examples/eggs/worked_region_observational_vs_rct_map.md`
-11. `examples/eggs/decision_space_erosion_audit.md`
-12. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-13. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-14. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-15. `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
-16. `docs/OPERATIONAL_REALISM_AUDIT.md`
+2. `ui/index.html`
+3. `examples/lhc_black_holes/full_case_index.md`
+4. `examples/lhc_black_holes/full_case_map.md`
+5. `examples/lhc_black_holes/BEST_REGIONS.md`
+6. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+7. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+8. `examples/eggs/full_case_index.md`
+9. `examples/eggs/full_case_map.md`
+10. `examples/eggs/BEST_REGIONS.md`
+11. `examples/eggs/worked_region_observational_vs_rct_map.md`
+12. `examples/eggs/decision_space_erosion_audit.md`
+13. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+14. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+15. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+16. `docs/INVESTIGATOR_WORKFLOW_PLAYBOOK.md`
+17. `docs/OPERATIONAL_REALISM_AUDIT.md`
 
 ## Submission Shape
 
@@ -113,6 +126,9 @@ The contribution is the workflow:
   - `docs/OPERATIONAL_REALISM_AUDIT.md`
   - `examples/lhc_black_holes/investigator_task_queue.md`
   - `examples/eggs/investigator_task_queue.md`
+- Static UI:
+  - `ui/index.html`
+  - `ui/data.json`
 
 ## What Is Not Claimed
 

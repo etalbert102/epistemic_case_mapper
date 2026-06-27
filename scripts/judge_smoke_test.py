@@ -8,6 +8,7 @@ from pathlib import Path
 
 REVIEW_PATH = (
     "docs/SUBMISSION_PACKET.md",
+    "ui/index.html",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "examples/lhc_black_holes/full_case_index.md",
     "examples/lhc_black_holes/full_case_map.md",

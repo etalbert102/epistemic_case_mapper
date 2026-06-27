@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Epistemic Case Mapper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Prototype navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">ECM</div>
+          <div>
+            <h1>Epistemic Case Mapper</h1>
+            <p>FLF prototype inspection UI</p>
+          </div>
+        </div>
+
+        <nav class="case-tabs" id="caseTabs" aria-label="Case selector"></nav>
+
+        <div class="sidebar-panel">
+          <h2>Review Status</h2>
+          <p id="reviewStatus">Loading artifacts...</p>
+        </div>
+
+        <div class="sidebar-panel">
+          <h2>Artifact Search</h2>
+          <label class="search-box">
+            <span>Filter</span>
+            <input id="searchInput" type="search" placeholder="claim, source, task..." />
+          </label>
+        </div>
+      </aside>
+
+      <main class="dashboard">
+        <section class="overview-band" aria-labelledby="caseTitle">
+          <div>
+            <p class="eyebrow">Decision-space preservation workflow</p>
+            <h2 id="caseTitle">Loading case</h2>
+            <p id="caseQuestion" class="case-question"></p>
+          </div>
+          <div class="metric-grid" id="metricGrid"></div>
+        </section>
+
+        <section class="section-grid">
+          <article class="panel case-card">
+            <header class="panel-header">
+              <div>
+                <p class="eyebrow">Full Case</p>
+                <h3>Knowledge Clusters</h3>
+              </div>
+              <a id="fullMapLink" class="text-link" href="#" target="_blank" rel="noreferrer">Open map</a>
+            </header>
+            <div class="cluster-grid" id="clusterGrid"></div>
+          </article>
+
+          <article class="panel">
+            <header class="panel-header">
+              <div>
+                <p class="eyebrow">Worked Anchor</p>
+                <h3>Claims And Relations</h3>
+              </div>
+              <a id="workedMapLink" class="text-link" href="#" target="_blank" rel="noreferrer">Open anchor</a>
+            </header>
+            <div class="split-columns">
+              <div>
+                <h4>Priority Claims</h4>
+                <div id="claimList" class="stacked-list"></div>
+              </div>
+              <div>
+                <h4>Cruxes</h4>
+                <div id="cruxList" class="stacked-list compact"></div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Before / After</p>
+              <h3>Decision-Relevant Distinctions</h3>
+            </div>
+            <a href="../docs/FLF_BEFORE_AFTER_COMPARISON.md" class="text-link" target="_blank" rel="noreferrer">Open comparison</a>
+          </header>
+          <div class="comparison-table" id="spotlightTable"></div>
+        </section>
+
+        <section class="section-grid bottom-grid">
+          <article class="panel">
+            <header class="panel-header">
+              <div>
+                <p class="eyebrow">Assessment</p>
+                <h3>Erosion Losses</h3>
+              </div>
+              <a id="auditLink" class="text-link" href="#" target="_blank" rel="noreferrer">Open audit</a>
+            </header>
+            <div id="lossList" class="stacked-list"></div>
+          </article>
+
+          <article class="panel">
+            <header class="panel-header">
+              <div>
+                <p class="eyebrow">Operational Realism</p>
+                <h3>Investigator Task Queue</h3>
+              </div>
+              <a id="taskQueueLink" class="text-link" href="#" target="_blank" rel="noreferrer">Open queue</a>
+            </header>
+            <div id="taskList" class="stacked-list"></div>
+          </article>
+        </section>
+
+        <section class="panel review-panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Human Handoff</p>
+              <h3>Review Packet</h3>
+            </div>
+            <div class="link-row">
+              <a id="reviewPacketLink" class="text-link" href="#" target="_blank" rel="noreferrer">Packet</a>
+              <a id="reviewChecklistLink" class="text-link" href="#" target="_blank" rel="noreferrer">Checklist</a>
+            </div>
+          </header>
+          <p>
+            Treat this UI as an inspection surface, not a completed review. The artifacts remain
+            <code>human-review-needed</code> until a reviewer records decisions in the case packet.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

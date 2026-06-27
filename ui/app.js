@@ -1,0 +1,235 @@
+let uiData = null;
+let activeCaseKey = null;
+let query = "";
+
+const elements = {
+  caseTabs: document.getElementById("caseTabs"),
+  reviewStatus: document.getElementById("reviewStatus"),
+  searchInput: document.getElementById("searchInput"),
+  caseTitle: document.getElementById("caseTitle"),
+  caseQuestion: document.getElementById("caseQuestion"),
+  metricGrid: document.getElementById("metricGrid"),
+  clusterGrid: document.getElementById("clusterGrid"),
+  claimList: document.getElementById("claimList"),
+  cruxList: document.getElementById("cruxList"),
+  spotlightTable: document.getElementById("spotlightTable"),
+  lossList: document.getElementById("lossList"),
+  taskList: document.getElementById("taskList"),
+  fullMapLink: document.getElementById("fullMapLink"),
+  workedMapLink: document.getElementById("workedMapLink"),
+  auditLink: document.getElementById("auditLink"),
+  taskQueueLink: document.getElementById("taskQueueLink"),
+  reviewPacketLink: document.getElementById("reviewPacketLink"),
+  reviewChecklistLink: document.getElementById("reviewChecklistLink"),
+};
+
+async function boot() {
+  const response = await fetch("data.json");
+  uiData = await response.json();
+  activeCaseKey = uiData.cases[0].caseKey;
+  elements.searchInput.addEventListener("input", (event) => {
+    query = event.target.value.trim().toLowerCase();
+    renderCase();
+  });
+  renderTabs();
+  renderCase();
+}
+
+function renderTabs() {
+  elements.caseTabs.innerHTML = uiData.cases
+    .map((caseItem) => {
+      const active = caseItem.caseKey === activeCaseKey ? "is-active" : "";
+      return `
+        <button class="case-tab ${active}" data-case-key="${escapeHtml(caseItem.caseKey)}">
+          <span>${escapeHtml(caseItem.shortLabel)}</span>
+          <span>${caseItem.sources.length} sources</span>
+        </button>
+      `;
+    })
+    .join("");
+  elements.caseTabs.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeCaseKey = button.dataset.caseKey;
+      renderTabs();
+      renderCase();
+    });
+  });
+}
+
+function renderCase() {
+  const caseItem = uiData.cases.find((item) => item.caseKey === activeCaseKey);
+  if (!caseItem) return;
+
+  elements.reviewStatus.textContent =
+    "Artifacts are inspectable but remain human-review-needed until packet decisions are recorded.";
+  elements.caseTitle.textContent = caseItem.label;
+  elements.caseQuestion.textContent = caseItem.question;
+  elements.fullMapLink.href = artifactHref(caseItem.artifacts.fullMap);
+  elements.workedMapLink.href = artifactHref(caseItem.artifacts.workedMap);
+  elements.auditLink.href = artifactHref(caseItem.artifacts.erosionAudit);
+  elements.taskQueueLink.href = artifactHref(caseItem.artifacts.taskQueue);
+  elements.reviewPacketLink.href = artifactHref(caseItem.artifacts.reviewPacket);
+  elements.reviewChecklistLink.href = artifactHref(caseItem.artifacts.reviewChecklist);
+
+  renderMetrics(caseItem);
+  renderClusters(caseItem);
+  renderClaims(caseItem);
+  renderSpotlights(caseItem);
+  renderLosses(caseItem);
+  renderTasks(caseItem);
+}
+
+function renderMetrics(caseItem) {
+  const metrics = [
+    ["Sources", caseItem.sources.length],
+    ["Full-case clusters", caseItem.clusters.length],
+    ["Worked claims", caseItem.worked.claims.length],
+    ["Task queue items", caseItem.tasks.length],
+  ];
+  elements.metricGrid.innerHTML = metrics
+    .map(([label, value]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`)
+    .join("");
+}
+
+function renderClusters(caseItem) {
+  const clusters = filterItems(caseItem.clusters, ["topic", "cluster_claim", "decision_space_preserved", "sources"]);
+  elements.clusterGrid.innerHTML = clusters.length
+    ? clusters
+        .map(
+          (cluster) => `
+            <article class="cluster-card" data-status="${escapeHtml(cluster.map_status || "")}">
+              <h4>${escapeHtml(cluster.topic || cluster.cluster_id)}</h4>
+              <p>${escapeHtml(cluster.cluster_claim || cluster.decision_space_preserved || "")}</p>
+              <div class="tag-row">
+                <span class="tag">${escapeHtml(cluster.map_status || "broad scaffold")}</span>
+                <span class="tag">${escapeHtml(cluster.cluster_id)}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : emptyState("No clusters match the current filter.");
+}
+
+function renderClaims(caseItem) {
+  const claims = filterItems(caseItem.worked.claims, ["claim", "role", "source_id"]).slice(0, 7);
+  elements.claimList.innerHTML = claims.length
+    ? claims
+        .map(
+          (claim) => `
+            <article class="list-card">
+              <h4>${escapeHtml(claim.claim_id)} · ${escapeHtml(claim.role || "claim")}</h4>
+              <p>${escapeHtml(claim.claim || "")}</p>
+              <div class="tag-row">
+                <span class="tag">${escapeHtml(claim.source_id || "")}</span>
+                <span class="tag">${escapeHtml(claim.entailed_by_excerpt || "unreviewed")}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : emptyState("No claims match the current filter.");
+
+  const cruxes = filterText(caseItem.worked.cruxes).slice(0, 4);
+  elements.cruxList.innerHTML = cruxes.length
+    ? cruxes.map((crux) => `<article class="list-card"><p>${formatInline(crux)}</p></article>`).join("")
+    : emptyState("No cruxes match the current filter.");
+}
+
+function renderSpotlights(caseItem) {
+  elements.spotlightTable.innerHTML = caseItem.spotlights
+    .map(
+      (row) => `
+        <div class="comparison-row">
+          <p><strong>Distinction</strong>${escapeHtml(row.distinction)}</p>
+          <p><strong>Flat synthesis</strong>${escapeHtml(row.flat)}</p>
+          <p><strong>Map surface</strong>${formatInline(row.map)}</p>
+          <p><strong>Status</strong>${escapeHtml(row.status)}</p>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderLosses(caseItem) {
+  const losses = filterItems(caseItem.erosion.losses, ["loss_id", "loss_type", "lost_item", "case_map_preserves"]);
+  elements.lossList.innerHTML = losses.length
+    ? losses
+        .slice(0, 8)
+        .map(
+          (loss) => `
+            <article class="list-card">
+              <h4>${escapeHtml(loss.loss_id)} · ${escapeHtml(loss.loss_type || "")}</h4>
+              <p>${escapeHtml(loss.lost_item || "")}</p>
+              <div class="tag-row">
+                <span class="tag">${escapeHtml(loss.adversarial_check || "human review needed")}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : emptyState("No losses match the current filter.");
+}
+
+function renderTasks(caseItem) {
+  const tasks = filterItems(caseItem.tasks, ["task_id", "task_type", "task", "realism_value", "cluster"]);
+  elements.taskList.innerHTML = tasks.length
+    ? tasks
+        .map(
+          (task) => `
+            <article class="list-card">
+              <h4>${escapeHtml(task.task_id)} · ${escapeHtml(task.priority || "priority")}</h4>
+              <p>${escapeHtml(task.task || "")}</p>
+              <div class="tag-row">
+                <span class="tag">${escapeHtml(task.task_type || "")}</span>
+                <span class="tag">${escapeHtml(task.cluster || "")}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : emptyState("No tasks match the current filter.");
+}
+
+function filterItems(items, keys) {
+  if (!query) return items;
+  return items.filter((item) =>
+    keys.some((key) =>
+      String(item[key] || "")
+        .toLowerCase()
+        .includes(query),
+    ),
+  );
+}
+
+function filterText(items) {
+  if (!query) return items;
+  return items.filter((item) => String(item).toLowerCase().includes(query));
+}
+
+function artifactHref(path) {
+  return `../${path}`;
+}
+
+function emptyState(text) {
+  return `<div class="empty-state">${escapeHtml(text)}</div>`;
+}
+
+function formatInline(text) {
+  return escapeHtml(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+boot().catch((error) => {
+  document.body.innerHTML = `<main class="dashboard"><section class="panel"><h1>Unable to load UI data</h1><p>${escapeHtml(
+    error.message,
+  )}</p></section></main>`;
+});

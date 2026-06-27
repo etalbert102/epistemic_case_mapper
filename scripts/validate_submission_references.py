@@ -19,6 +19,7 @@ DOCS_TO_SCAN = (
     "docs/OPERATIONAL_REALISM_AUDIT.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/SUBMISSION_LIMITATIONS.md",
+    "ui/index.html",
     "docs/ARCHITECTURE.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/review/LHC_HUMAN_AUDIT_PACKET.md",

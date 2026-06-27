@@ -30,6 +30,10 @@ REQUIRED_DOCS = (
     "docs/SUBMISSION_LIMITATIONS.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/VALIDATOR_FAILURE_GUIDE.md",
+    "ui/index.html",
+    "ui/styles.css",
+    "ui/app.js",
+    "ui/data.json",
     "docs/plans/GOAL_PROMPT.md",
     "docs/plans/flf_workspace_enhancement_backlog.md",
     "docs/worked_regions/eggs_source_excerpt_packet.md",
@@ -94,6 +98,8 @@ def main() -> int:
         _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
     _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
     _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
+    _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
     _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
     _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
 
