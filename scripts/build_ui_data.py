@@ -193,7 +193,8 @@ def _parse_tasks(text: str) -> list[dict[str, str]]:
 
 
 def _blocks(text: str, id_field: str) -> list[str]:
-    pattern = rf"(?ms)^{re.escape(id_field)}:\s*.+?(?=^{re.escape(id_field)}:\s|\n## |\Z)"
+    block_fields = "claim_id|relation_id|cluster_id|task_id|loss_id"
+    pattern = rf"(?ms)^{re.escape(id_field)}:\s*.+?(?=^(?:{block_fields}):\s|\n## |\Z)"
     return [match.group(0).strip() for match in re.finditer(pattern, text)]
 
 
@@ -217,8 +218,8 @@ def _parse_block(block: str) -> dict[str, str]:
 
 def _strip(value: str) -> str:
     if value.startswith("`") and value.endswith("`"):
-        return value[1:-1]
-    return value
+        value = value[1:-1]
+    return value.replace("`", "")
 
 
 if __name__ == "__main__":

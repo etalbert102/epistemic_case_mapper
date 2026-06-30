@@ -49,6 +49,15 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
     monkeypatch.setattr(
         cli.sys,
         "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "package", "prepare"],
+    )
+    assert cli.main() == 0
+    assert (tmp_path / "ui/index.html").exists()
+    assert "Demo Package Reviewer Start" in (tmp_path / "docs/review/REVIEWER_START_HERE.md").read_text(encoding="utf-8")
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
         ["ecm.py", "--repo-root", str(tmp_path), "validate", "package"],
     )
     assert cli.main() == 0

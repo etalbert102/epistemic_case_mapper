@@ -11,6 +11,7 @@ Current migration steps already completed:
 - UI data includes all worked regions for each included case,
 - reference validation uses manifest-configured ID patterns,
 - `ecm` and `scripts/ecm.py` expose package-facing commands,
+- `ecm package prepare` generates reusable package-facing UI and reviewer handoff assets,
 - JSON worked-map/audit adapters are available for non-markdown packages,
 - `run_flf_demo.py`, `reproducibility_gate.py`, and `judge_smoke_test.py` propagate manifest selection.
 

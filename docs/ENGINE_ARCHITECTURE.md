@@ -16,4 +16,6 @@ The case is the source-corpus unit. The worked region is the operational unit fo
 PYTHONPATH=src python3 scripts/ecm.py --repo-root /tmp/package validate package
 ```
 
+Use `ecm package prepare` to generate product-facing assets for an arbitrary package: `ui/data.json`, the reusable static UI shell, a Tier 1 checklist, and `docs/review/REVIEWER_START_HERE.md`.
+
 The current FLF submission is one package configured by `submission_manifest.yaml`.

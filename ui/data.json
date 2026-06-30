@@ -53,16 +53,16 @@
           "cluster_id": "lhc_full_cluster_001",
           "decision_space_preserved": "formal review and independent review should be separated from the underlying physics arguments they summarize or endorse.",
           "map_status": "broad scaffold",
-          "sources": "lsag_2008_safety_review`, `spc_2008_lsag_review",
+          "sources": "lsag_2008_safety_review, spc_2008_lsag_review",
           "topic": "Institutional safety conclusion"
         },
         {
-          "anchor_claims": "lhc_c001`, `lhc_c002`, `lhc_c003`, `lhc_c004`, `lhc_c012",
+          "anchor_claims": "lhc_c001, lhc_c002, lhc_c003, lhc_c004, lhc_c012",
           "cluster_claim": "Natural high-energy collisions provide a central empirical constraint, but the collider-specific low-velocity/trapping issue requires additional analysis beyond a simple Earth-survival analogy.",
           "cluster_id": "lhc_full_cluster_002",
           "decision_space_preserved": "Earth, Sun, wider stellar exposure, velocity/trapping caveats, and compact-object extensions should remain separate.",
           "map_status": "worked-region anchor",
-          "sources": "lsag_2008_safety_review`, `spc_2008_lsag_review`, `giddings_mangano_2008_stable_black_holes",
+          "sources": "lsag_2008_safety_review, spc_2008_lsag_review, giddings_mangano_2008_stable_black_holes",
           "topic": "Natural cosmic-ray exposure"
         },
         {
@@ -70,34 +70,34 @@
           "cluster_id": "lhc_full_cluster_003",
           "decision_space_preserved": "rapid-decay arguments should be distinguished from stable-black-hole worst-case arguments.",
           "map_status": "broad scaffold",
-          "sources": "lsag_2008_safety_review`, `spc_2008_lsag_review`, `cern_tiny_black_holes_page",
+          "sources": "lsag_2008_safety_review, spc_2008_lsag_review, cern_tiny_black_holes_page",
           "topic": "Hawking radiation and independent decay"
         },
         {
-          "anchor_claims": "lhc_c005`, `lhc_c006`, `lhc_c008",
+          "anchor_claims": "lhc_c005, lhc_c006, lhc_c008",
           "cluster_claim": "Stable dangerous scenarios require a stack of assumptions about TeV-scale gravity, suppressed decay, accretion, charge/neutralization behavior, and astrophysical survival constraints.",
           "cluster_id": "lhc_full_cluster_004",
           "decision_space_preserved": "worst-case reasoning depends on multiple assumptions that should not be flattened into \"scientists considered the risk.\"",
           "map_status": "broad scaffold",
-          "sources": "giddings_mangano_2008_stable_black_holes`, `spc_2008_lsag_review`, `lsag_2008_safety_review",
+          "sources": "giddings_mangano_2008_stable_black_holes, spc_2008_lsag_review, lsag_2008_safety_review",
           "topic": "Stable black-hole worst-case assumptions"
         },
         {
-          "anchor_claims": "lhc_c009`, `lhc_c010`, `lhc_c011",
+          "anchor_claims": "lhc_c009, lhc_c010, lhc_c011",
           "cluster_claim": "Compact-object survival is a key observational layer for stable-black-hole scenarios, but the evidential role differs across white dwarfs and neutron stars.",
           "cluster_id": "lhc_full_cluster_005",
           "decision_space_preserved": "white-dwarf and neutron-star arguments have different scope and assumption dependencies.",
           "map_status": "worked-region anchor",
-          "sources": "giddings_mangano_2008_stable_black_holes`, `spc_2008_lsag_review",
+          "sources": "giddings_mangano_2008_stable_black_holes, spc_2008_lsag_review",
           "topic": "Compact-star bounds"
         },
         {
-          "anchor_claims": "lhc_c013`, `lhc_c014`, `lhc_c015`, `lhc_c016",
+          "anchor_claims": "lhc_c013, lhc_c014, lhc_c015, lhc_c016",
           "cluster_claim": "Plaga challenges whether some metastable scenarios evade exclusions; GM respond that the scenario relies on inconsistent assumptions and unsupported accretion reasoning.",
           "cluster_id": "lhc_full_cluster_006",
           "decision_space_preserved": "residual-risk critiques and technical rebuttals should remain reviewable instead of being compressed into \"there was a dispute.\"",
           "map_status": "worked-region anchor",
-          "sources": "plaga_2008_metastable_black_holes`, `giddings_mangano_2008_comments_plaga",
+          "sources": "plaga_2008_metastable_black_holes, giddings_mangano_2008_comments_plaga",
           "topic": "Critique and technical response"
         },
         {
@@ -105,7 +105,7 @@
           "cluster_id": "lhc_full_cluster_007",
           "decision_space_preserved": "non-observation in model searches is a later empirical update, not the same thing as the original catastrophic-risk proof.",
           "map_status": "broad scaffold",
-          "sources": "cms_2010_black_hole_search_paper`, `cms_2011_black_hole_search",
+          "sources": "cms_2010_black_hole_search_paper, cms_2011_black_hole_search",
           "topic": "Later empirical searches"
         },
         {
@@ -113,7 +113,7 @@
           "cluster_id": "lhc_full_cluster_008",
           "decision_space_preserved": "public-facing reassurance should be linked back to the technical layers it compresses.",
           "map_status": "broad scaffold",
-          "sources": "cern_lhc_current_page`, `cern_tiny_black_holes_page`, `cms_2011_black_hole_search",
+          "sources": "cern_lhc_current_page, cern_tiny_black_holes_page, cms_2011_black_hole_search",
           "topic": "Public communication"
         },
         {
@@ -283,7 +283,7 @@
           "done_when": "The full-case map has claim IDs, excerpts, and relation rationales for the CMS search cluster.",
           "priority": "high",
           "realism_value": "Prevents later empirical non-observation from being overstated as a complete safety proof.",
-          "sources": "cms_2010_black_hole_search_paper`, `cms_2011_black_hole_search",
+          "sources": "cms_2010_black_hole_search_paper, cms_2011_black_hole_search",
           "task": "Extract source-grounded claims about what the CMS searches did and did not test.",
           "task_id": "lhc_task_001",
           "task_type": "source_excerpt_expansion"
@@ -303,17 +303,17 @@
           "done_when": "The map records which public claims trace to decay, cosmic-ray, compact-star, or search evidence.",
           "priority": "medium",
           "realism_value": "Tests decision-space erosion in science communication, a realistic FLF use case.",
-          "sources": "cern_lhc_current_page`, `cern_tiny_black_holes_page`, `cms_2011_black_hole_search",
+          "sources": "cern_lhc_current_page, cern_tiny_black_holes_page, cms_2011_black_hole_search",
           "task": "Compare public-facing explanations against the technical clusters they compress.",
           "task_id": "lhc_task_003",
           "task_type": "public_communication_audit"
         },
         {
           "cluster": "all",
-          "done_when": "A full-case baseline and full-case erosion audit exist and are marked `human-review-needed`.",
+          "done_when": "A full-case baseline and full-case erosion audit exist and are marked human-review-needed.",
           "priority": "medium",
           "realism_value": "Tests whether the technique still helps beyond a hand-picked worked region.",
-          "sources": "lsag_2008_safety_review`, `spc_2008_lsag_review`, `giddings_mangano_2008_stable_black_holes`, `cern_lhc_current_page`, `cern_tiny_black_holes_page`, `cms_2011_black_hole_search`, `cms_2010_black_hole_search_paper`, `plaga_2008_metastable_black_holes`, `giddings_mangano_2008_comments_plaga`, `johnson_2009_black_hole_case",
+          "sources": "lsag_2008_safety_review, spc_2008_lsag_review, giddings_mangano_2008_stable_black_holes, cern_lhc_current_page, cern_tiny_black_holes_page, cms_2011_black_hole_search, cms_2010_black_hole_search_paper, plaga_2008_metastable_black_holes, giddings_mangano_2008_comments_plaga, johnson_2009_black_hole_case",
           "task": "Generate a whole-case flat synthesis from source abstracts/excerpts, then audit whether it preserves the full-case cluster structure.",
           "task_id": "lhc_task_004",
           "task_type": "full_case_baseline"
@@ -323,7 +323,7 @@
           "done_when": "The human audit checklist records accept/revise/reject decisions for critique and response claims.",
           "priority": "high",
           "realism_value": "Tests whether the artifact can survive adversarial pressure rather than just summarize the institutional conclusion.",
-          "sources": "plaga_2008_metastable_black_holes`, `giddings_mangano_2008_comments_plaga",
+          "sources": "plaga_2008_metastable_black_holes, giddings_mangano_2008_comments_plaga",
           "task": "Have a reviewer decide whether the Plaga/GM exchange is represented fairly.",
           "task_id": "lhc_task_005",
           "task_type": "adversarial_review"
@@ -1018,57 +1018,57 @@
       ],
       "clusters": [
         {
-          "anchor_claims": "eggs_c001`, `eggs_c002`, `eggs_c003`, `eggs_c005`, `eggs_c006`, `eggs_c007`, `eggs_c018`, `eggs_c019",
+          "anchor_claims": "eggs_c001, eggs_c002, eggs_c003, eggs_c005, eggs_c006, eggs_c007, eggs_c018, eggs_c019",
           "cluster_claim": "Major guidance sources frame eggs through dietary patterns, cholesterol exposure, nutritional adequacy, and population risk rather than treating eggs as an isolated universally good or bad food.",
           "cluster_id": "eggs_full_cluster_001",
           "decision_space_preserved": "guideline statements should be distinguished from primary causal evidence and from public-facing simplifications.",
           "map_status": "worked-region anchor",
-          "sources": "dga_2020_2025_pmc_summary`, `aha_2019_dietary_cholesterol_pubmed`, `aha_2023_dietary_cholesterol_news`, `nnr_2023_eggs_scoping_review",
+          "sources": "dga_2020_2025_pmc_summary, aha_2019_dietary_cholesterol_pubmed, aha_2023_dietary_cholesterol_news, nnr_2023_eggs_scoping_review",
           "topic": "Guideline and dietary-pattern framing"
         },
         {
-          "anchor_claims": "eggs_c008`, `eggs_c009`, `eggs_c010`, `eggs_c011`, `eggs_c012`, `eggs_c013`, `eggs_c014",
+          "anchor_claims": "eggs_c008, eggs_c009, eggs_c010, eggs_c011, eggs_c012, eggs_c013, eggs_c014",
           "cluster_claim": "Observational outcome evidence is mixed: some syntheses support no clear harm for moderate intake, while other pooled or dose-response analyses support more caution, especially around dietary cholesterol and subgroups.",
           "cluster_id": "eggs_full_cluster_002",
           "decision_space_preserved": "observational cohorts and meta-analyses should be compared by outcome, exposure unit, adjustment, cohort overlap, and population heterogeneity.",
           "map_status": "worked-region anchor",
-          "sources": "bmj_2020_egg_consumption_cvd`, `bmj_2013_egg_consumption_chd_stroke`, `jama_2019_dietary_cholesterol_eggs`, `ma_2021_egg_cvd_dose_response",
+          "sources": "bmj_2020_egg_consumption_cvd, bmj_2013_egg_consumption_chd_stroke, jama_2019_dietary_cholesterol_eggs, ma_2021_egg_cvd_dose_response",
           "topic": "Observational CVD outcome evidence"
         },
         {
-          "anchor_claims": "eggs_c004`, `eggs_c015`, `eggs_c016`, `eggs_c017`, `eggs_c018",
+          "anchor_claims": "eggs_c004, eggs_c015, eggs_c016, eggs_c017, eggs_c018",
           "cluster_claim": "Randomized trials show lipid-marker concerns, especially LDL-C and LDL-C/HDL-C ratio, but do not by themselves settle long-term CVD event risk.",
           "cluster_id": "eggs_full_cluster_003",
           "decision_space_preserved": "randomized lipid-marker evidence is more controlled but less direct than long-term clinical outcome evidence.",
           "map_status": "worked-region anchor",
-          "sources": "li_2020_egg_cholesterol_rct_meta`, `aha_2019_dietary_cholesterol_pubmed`, `nnr_2023_eggs_scoping_review",
+          "sources": "li_2020_egg_cholesterol_rct_meta, aha_2019_dietary_cholesterol_pubmed, nnr_2023_eggs_scoping_review",
           "topic": "Randomized lipid-marker evidence"
         },
         {
-          "anchor_claims": "eggs_c003`, `eggs_c006`, `eggs_c010",
+          "anchor_claims": "eggs_c003, eggs_c006, eggs_c010",
           "cluster_claim": "Eggs cannot be evaluated only as a cholesterol unit; replacement foods and overall dietary pattern change the interpretation of risk.",
           "cluster_id": "eggs_full_cluster_004",
           "decision_space_preserved": "advice about eggs depends on what they replace and what dietary pattern they sit within.",
           "map_status": "broad scaffold",
-          "sources": "bmj_2020_egg_consumption_cvd`, `dga_2020_2025_pmc_summary`, `aha_2023_dietary_cholesterol_news",
+          "sources": "bmj_2020_egg_consumption_cvd, dga_2020_2025_pmc_summary, aha_2023_dietary_cholesterol_news",
           "topic": "Replacement-food and dietary-context interpretation"
         },
         {
-          "anchor_claims": "eggs_c007`, `eggs_c009`, `eggs_c011",
+          "anchor_claims": "eggs_c007, eggs_c009, eggs_c011",
           "cluster_claim": "The practical recommendation changes across healthy adults, high-LDL groups, diabetes or prediabetes contexts, and populations with different baseline diets.",
           "cluster_id": "eggs_full_cluster_005",
           "decision_space_preserved": "healthy adults, high-LDL individuals, people with diabetes, and regional populations should not be merged.",
           "map_status": "broad scaffold",
-          "sources": "bmj_2020_egg_consumption_cvd`, `aha_2023_dietary_cholesterol_news`, `bmj_2013_egg_consumption_chd_stroke`, `nnr_2023_eggs_scoping_review",
+          "sources": "bmj_2020_egg_consumption_cvd, aha_2023_dietary_cholesterol_news, bmj_2013_egg_consumption_chd_stroke, nnr_2023_eggs_scoping_review",
           "topic": "Population heterogeneity"
         },
         {
-          "anchor_claims": "eggs_c018`, `eggs_c019",
+          "anchor_claims": "eggs_c018, eggs_c019",
           "cluster_claim": "Evidence synthesis sources help map the landscape, but their conclusions depend on included reviews, overlapping primary studies, scope, and review method.",
           "cluster_id": "eggs_full_cluster_006",
           "decision_space_preserved": "umbrella maps, scoping reviews, and dose-response meta-analyses differ in what they can settle.",
           "map_status": "broad scaffold",
-          "sources": "huang_2020_egg_health_outcomes_evidence_mapping`, `nnr_2023_eggs_scoping_review`, `ma_2021_egg_cvd_dose_response",
+          "sources": "huang_2020_egg_health_outcomes_evidence_mapping, nnr_2023_eggs_scoping_review, ma_2021_egg_cvd_dose_response",
           "topic": "Evidence synthesis and scoping limits"
         },
         {
@@ -1076,7 +1076,7 @@
           "cluster_id": "eggs_full_cluster_007",
           "decision_space_preserved": "narrative reviews are useful for interpretive framing and counterpoints, but they should not be counted as independent primary evidence.",
           "map_status": "broad scaffold",
-          "sources": "eggs_dietary_cholesterol_cvd_review`, `dietary_cholesterol_lack_evidence_cvd_review",
+          "sources": "eggs_dietary_cholesterol_cvd_review, dietary_cholesterol_lack_evidence_cvd_review",
           "topic": "Narrative review and counterpoint context"
         },
         {
@@ -1084,7 +1084,7 @@
           "cluster_id": "eggs_full_cluster_008",
           "decision_space_preserved": "CVD, T2D, cancer, nutrient adequacy, and other outcomes should not be collapsed into one health judgment.",
           "map_status": "broad scaffold",
-          "sources": "huang_2020_egg_health_outcomes_evidence_mapping`, `nnr_2023_eggs_scoping_review",
+          "sources": "huang_2020_egg_health_outcomes_evidence_mapping, nnr_2023_eggs_scoping_review",
           "topic": "Broader health outcomes beyond CVD"
         }
       ],
@@ -1269,7 +1269,7 @@
           "done_when": "The full-case map records which observational sources are independent, overlapping, or methodologically distinct.",
           "priority": "high",
           "realism_value": "Prevents correlated evidence from being counted as independent support.",
-          "sources": "bmj_2020_egg_consumption_cvd`, `bmj_2013_egg_consumption_chd_stroke`, `jama_2019_dietary_cholesterol_eggs`, `ma_2021_egg_cvd_dose_response",
+          "sources": "bmj_2020_egg_consumption_cvd, bmj_2013_egg_consumption_chd_stroke, jama_2019_dietary_cholesterol_eggs, ma_2021_egg_cvd_dose_response",
           "task": "Identify cohort overlap and endpoint differences across the observational/meta-analysis sources.",
           "task_id": "eggs_task_001",
           "task_type": "source_overlap_audit"
@@ -1279,7 +1279,7 @@
           "done_when": "Claims separate CVD, T2D, cancer, nutrient adequacy, and review-method limits.",
           "priority": "high",
           "realism_value": "Tests whether the method can handle vague everyday questions where outcome scope is part of the decision.",
-          "sources": "huang_2020_egg_health_outcomes_evidence_mapping`, `nnr_2023_eggs_scoping_review",
+          "sources": "huang_2020_egg_health_outcomes_evidence_mapping, nnr_2023_eggs_scoping_review",
           "task": "Create a worked region on broader health outcomes beyond CVD.",
           "task_id": "eggs_task_002",
           "task_type": "worked_region_candidate"
@@ -1289,17 +1289,17 @@
           "done_when": "The map distinguishes healthy-adult guidance, high-LDL caution, and diabetes/prediabetes uncertainty.",
           "priority": "high",
           "realism_value": "Makes the artifact useful for different real users instead of an average-person summary.",
-          "sources": "aha_2023_dietary_cholesterol_news`, `bmj_2020_egg_consumption_cvd`, `bmj_2013_egg_consumption_chd_stroke`, `nnr_2023_eggs_scoping_review",
+          "sources": "aha_2023_dietary_cholesterol_news, bmj_2020_egg_consumption_cvd, bmj_2013_egg_consumption_chd_stroke, nnr_2023_eggs_scoping_review",
           "task": "Expand high-LDL, diabetes, and healthy-adult subgroup caveats into source-grounded claims.",
           "task_id": "eggs_task_003",
           "task_type": "subgroup_review"
         },
         {
           "cluster": "all",
-          "done_when": "A full-case baseline and full-case erosion audit exist and are marked `human-review-needed`.",
+          "done_when": "A full-case baseline and full-case erosion audit exist and are marked human-review-needed.",
           "priority": "medium",
           "realism_value": "Tests whether the technique helps on the full everyday-evidence question, not only the CVD/lipid worked region.",
-          "sources": "aha_2019_dietary_cholesterol_pubmed`, `aha_2023_dietary_cholesterol_news`, `dga_2020_2025_pmc_summary`, `bmj_2020_egg_consumption_cvd`, `bmj_2013_egg_consumption_chd_stroke`, `jama_2019_dietary_cholesterol_eggs`, `li_2020_egg_cholesterol_rct_meta`, `ma_2021_egg_cvd_dose_response`, `huang_2020_egg_health_outcomes_evidence_mapping`, `nnr_2023_eggs_scoping_review`, `eggs_dietary_cholesterol_cvd_review`, `dietary_cholesterol_lack_evidence_cvd_review",
+          "sources": "aha_2019_dietary_cholesterol_pubmed, aha_2023_dietary_cholesterol_news, dga_2020_2025_pmc_summary, bmj_2020_egg_consumption_cvd, bmj_2013_egg_consumption_chd_stroke, jama_2019_dietary_cholesterol_eggs, li_2020_egg_cholesterol_rct_meta, ma_2021_egg_cvd_dose_response, huang_2020_egg_health_outcomes_evidence_mapping, nnr_2023_eggs_scoping_review, eggs_dietary_cholesterol_cvd_review, dietary_cholesterol_lack_evidence_cvd_review",
           "task": "Generate a whole-case flat synthesis from source abstracts/excerpts, then audit whether it preserves endpoint, population, replacement, and evidence-grade structure.",
           "task_id": "eggs_task_004",
           "task_type": "full_case_baseline"

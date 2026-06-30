@@ -170,7 +170,7 @@ ecm review checklist --package package.yaml
 
 Old scripts can remain wrappers while tests move to the CLI.
 
-Implementation: `ecm` and `scripts/ecm.py` expose `validate package`, `validate region`, `export json`, `export region`, `ui build`, `baseline prompt`, `baseline run`, and `review checklist` as package-manifest-oriented commands.
+Implementation: `ecm` and `scripts/ecm.py` expose `package prepare`, `validate package`, `validate region`, `export json`, `export region`, `ui build`, `baseline prompt`, `baseline run`, and `review checklist` as package-manifest-oriented commands.
 
 ## Phase 11: Add Package Fixtures
 

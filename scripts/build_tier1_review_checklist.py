@@ -5,6 +5,8 @@ import csv
 from pathlib import Path
 
 from artifact_utils import RegionFiles, parse_erosion_audit, parse_worked_map, region_files_from_manifest
+from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import ReviewPriority, SubmissionManifest, load_submission_manifest
 
 
@@ -65,6 +67,9 @@ def render_csv(repo_root: Path, manifest_path: str = "submission_manifest.yaml")
         priority = worked_region.review
         if priority is None:
             continue
+        case = manifest.case_for_key(worked_region.case_key)
+        case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
+        source_paths = {source.source_id: source.path or "" for source in case_manifest.sources}
         region = region_files[worked_region.region_id]
         worked_map = parse_worked_map(repo_root / region.map_path, region.map_format)
         audit = parse_erosion_audit(repo_root / region.audit_path, region.audit_format)
@@ -74,7 +79,7 @@ def render_csv(repo_root: Path, manifest_path: str = "submission_manifest.yaml")
 
         for claim_id in priority.claim_ids:
             claim = _required_item("claim", worked_region.region_id, claim_id, claims)
-            rows.append(_claim_row(region, priority.worked_region_id, claim))
+            rows.append(_claim_row(region, priority.worked_region_id, claim, source_paths))
         for relation_id in priority.relation_ids:
             relation = _required_item("relation", worked_region.region_id, relation_id, relations)
             rows.append(_relation_row(region, priority.worked_region_id, relation, claims))
@@ -100,18 +105,29 @@ def _required_item(
     return items[item_id]
 
 
-def _claim_row(region: RegionFiles, worked_region_id: str, claim: dict[str, str]) -> dict[str, str]:
+def _claim_row(
+    region: RegionFiles,
+    worked_region_id: str,
+    claim: dict[str, str],
+    source_paths: dict[str, str],
+) -> dict[str, str]:
     claim_id = claim["claim_id"]
+    source_id = claim.get("source_id", "")
+    source_path = source_paths.get(source_id, "")
+    source_span = claim.get("source_span", "")
+    source_or_file = source_path if source_path else region.map_path
+    if source_span:
+        source_or_file = f"{source_or_file} {source_span}"
     return _base_row(
         region=region,
         worked_region_id=worked_region_id,
         item_type="claim",
         item_id=claim_id,
-        source_id=claim.get("source_id", ""),
-        source_or_file=region.map_path,
+        source_id=source_id,
+        source_or_file=source_or_file,
         item_text=claim.get("claim", ""),
         source_excerpt_or_support=claim.get("excerpt", ""),
-        map_context=f"role={claim.get('role', '')}; span={claim.get('source_span', '')}; entailed_by_excerpt={claim.get('entailed_by_excerpt', '')}",
+        map_context=f"role={claim.get('role', '')}; source_file={source_path}; span={source_span}; entailed_by_excerpt={claim.get('entailed_by_excerpt', '')}",
         review_question="Does the excerpt/source support this exact claim without making it too strong?",
         falsification_prompt="Mark revise or reject if the claim adds causal force, certainty, scope, or consensus not present in the source.",
     )
