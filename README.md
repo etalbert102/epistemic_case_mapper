@@ -64,7 +64,6 @@ Start with:
 
 - `docs/START_HERE.md`
 - `docs/SUBMISSION_PACKET.md`
-- `docs/reference/flf_judging_rubric.md`
 - `docs/REFERENCE_LINEAGE.md`
 - `docs/GENERALIZABILITY_RED_TEAM.md`
 - `ui/index.html`
@@ -72,8 +71,10 @@ Start with:
 - `docs/review/REVIEWER_START_HERE.md`
 - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - `docs/HUMAN_AUDIT_GUIDE.md`
-- `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
+- `docs/EVIDENCE_AND_LIMITATIONS.md`
 - `docs/FLF_SUBMISSION_DRAFT.md`
+
+Background contest-reference notes, including the recorded judging rubric, live under `docs/reference/`.
 
 The fastest evidence check is:
 

@@ -47,14 +47,14 @@ def render_audit(case_map: CaseMap) -> str:
         if source_grounded
         else "Report is navigable but still seed-mode unless upgraded to source-grounded evidence."
     )
-    score_rows = [
-        ("Ingestion", _score_ingestion(case_map), ingestion_evidence),
-        ("Structure", _score_structure(case_map), "Relations are candidate links and rationales are explicit."),
-        ("Assessment", _score_assessment(case_map), "Open questions surface cruxes and missing sources."),
-        ("Compounding", _score_compounding(case_map), "JSON schema, stable IDs, and Markdown outputs support reuse."),
-        ("Judge usability", _score_judge_usability(case_map), judge_usability_evidence),
-        ("Verification", 1, "Build command generated artifacts; full validator should be run separately."),
-        ("Plan discipline", 1, "Internal goal-plan history is archived under docs/archive/internal/plans/."),
+    evidence_rows = [
+        ("Ingestion", ingestion_evidence, "Completeness signals are not a substitute for source review."),
+        ("Structure", "Relations are candidate links and rationales are explicit.", "Relation labels remain draft."),
+        ("Assessment", "Open questions surface cruxes and missing sources.", "Crux usefulness needs human review."),
+        ("Compounding", "JSON schema, stable IDs, and Markdown outputs support reuse.", "Multi-reviewer workflow is not exercised here."),
+        ("Navigation", judge_usability_evidence, "Large starter reports are less useful than curated worked regions."),
+        ("Verification", "Build command generated artifacts; full validator should be run separately.", "Generated starter output is not final evidence."),
+        ("Plan discipline", "Internal goal-plan history is archived under docs/archive/internal/plans/.", "Archives are implementation history, not first-read material."),
     ]
     lines = [
         f"# {case_map.title} Audit",
@@ -89,14 +89,14 @@ def render_audit(case_map: CaseMap) -> str:
             f"- Key preservation requirements: {len(metadata_requirements)}",
             f"- Workflow telemetry stages: {len(workflow_telemetry)}",
             "",
-            "## FLF Criteria Score",
+            "## Artifact Evidence Check",
             "",
-            "| Area | Score | Evidence |",
-            "| --- | ---: | --- |",
+            "| Area | Evidence | Boundary |",
+            "| --- | --- | --- |",
         ]
     )
-    for area, score, evidence in score_rows:
-        lines.append(f"| {area} | {score} | {evidence} |")
+    for area, evidence, boundary in evidence_rows:
+        lines.append(f"| {area} | {evidence} | {boundary} |")
     lines.extend(
         [
             "",

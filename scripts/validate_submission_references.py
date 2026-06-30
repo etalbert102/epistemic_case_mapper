@@ -15,7 +15,7 @@ DOCS_TO_SCAN = (
     "docs/GENERALIZABILITY_RED_TEAM.md",
     "docs/reference/flf_judging_rubric.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
-    "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
+    "docs/EVIDENCE_AND_LIMITATIONS.md",
     "docs/HUMAN_AUDIT_GUIDE.md",
     "docs/NEW_SOURCE_UPDATE_DEMO.md",
     "docs/FLF_SUBMISSION_DRAFT.md",

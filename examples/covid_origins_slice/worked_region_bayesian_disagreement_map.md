@@ -279,11 +279,11 @@ rationale: Explicit update triggers show why the case remains evolving rather th
 - The source notes are deliberately short and must be checked against original sources before any human-reviewed status.
 - The map is strongest as a demonstration of disagreement preservation and weakest as a substantive origins adjudication.
 
-## FLF Judge Questions
+## Evidence Check
 
-| Criterion | Score | Evidence | Residual risk |
-| --- | ---: | --- | --- |
-| Helps reasoning | 2 | Separates debate outcome, forecasting aggregate, Bayesian decomposition, and methodological replies. | Needs human/domain review. |
-| Generalizes | 2 | Adds the contest's adversarial case as a narrow slice after LHC and eggs. | Still not full COVID. |
-| Scales | 1 | Uses same source/claim/relation/audit pattern as other worked regions. | Source ingestion is source-note based, not full-corpus automated. |
-| Compounds | 2 | Stable IDs and update triggers identify where future evidence would attach. | No multi-reviewer disagreement handling yet. |
+| Probe | Evidence | Boundary |
+| --- | --- | --- |
+| Local reasoning value | Separates debate outcome, forecasting aggregate, Bayesian decomposition, and methodological replies. | Needs human/domain review. |
+| Transfer beyond this case | Adds the adversarial case as a narrow slice after LHC and eggs. | Still not full COVID. |
+| Ability to absorb more work | Uses same source/claim/relation/audit pattern as other worked regions. | Source ingestion is source-note based, not full-corpus automated. |
+| Reuse by later reviewers | Stable IDs and update triggers identify where future evidence would attach. | No multi-reviewer disagreement handling yet. |

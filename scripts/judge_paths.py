@@ -4,11 +4,10 @@ from __future__ import annotations
 JUDGE_PATHS = (
     "docs/START_HERE.md",
     "docs/SUBMISSION_PACKET.md",
-    "docs/reference/flf_judging_rubric.md",
     "docs/REFERENCE_LINEAGE.md",
     "docs/GENERALIZABILITY_RED_TEAM.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
-    "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
+    "docs/EVIDENCE_AND_LIMITATIONS.md",
     "docs/HUMAN_AUDIT_GUIDE.md",
     "docs/NEW_SOURCE_UPDATE_DEMO.md",
     "docs/FLF_SUBMISSION_DRAFT.md",

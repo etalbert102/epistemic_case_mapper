@@ -278,13 +278,11 @@ rationale: The failure mode in ordinary legal tools motivates the proposed need 
 - Earth survival, compact-star survival, and CMS non-observation are different evidence types.
 - Legal adequacy, public reassurance, and technical sufficiency are related but separate decision contexts.
 
-## FLF Judge Questions
+## Evidence Check
 
-Scale: 0 means not demonstrated, 1 means partially demonstrated, and 2 means demonstrated enough to inspect as a draft extension.
-
-| Criterion | Score | Rationale |
-| --- | ---: | --- |
-| Helps reasoning | 2 | Separates public reassurance from technical and legal decision layers. |
-| Generalizes | 2 | Demonstrates mapping beyond technical evidence into governance framing. |
-| Scales | 1 | Draft region is manually curated and needs validation before promotion. |
-| Compounds | 2 | Adds a new layer without rewriting the cosmic-ray worked region. |
+| Probe | Evidence | Boundary |
+| --- | --- | --- |
+| Local reasoning value | Separates public reassurance from technical and legal decision layers. | Draft region is not yet part of the canonical validator set. |
+| Transfer beyond this case | Demonstrates mapping beyond technical evidence into governance framing. | Needs validation before promotion. |
+| Ability to absorb more work | Adds a new layer without rewriting the cosmic-ray worked region. | Still manually curated. |
+| Reuse by later reviewers | Stable claims and relations let reviewers challenge public-risk framing separately from technical risk. | No human review has been recorded. |

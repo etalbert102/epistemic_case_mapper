@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-This prototype is easiest to judge through one concrete question:
+This prototype is easiest to inspect through one concrete question:
 
 > Can an AI-assisted workflow preserve the reasoning structure that a normal synthesis tends to flatten?
 
@@ -32,17 +32,15 @@ The LHC map preserves that dependency as reviewable pieces:
 
 This is the submission's value proposition: the map keeps the part of the reasoning a later reviewer would need to accept, challenge, or revise.
 
-## Fastest Judge Path
+## Fastest Path
 
 1. Read `docs/FLF_BEFORE_AFTER_COMPARISON.md`.
 2. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus the first six claims.
 3. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
 
-That path should be enough to decide whether the core mechanism is interesting. Then use eggs for generalization and COVID as a narrow adversarial disagreement stress test.
+That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
 
-The full judging rubric is recorded in `docs/reference/flf_judging_rubric.md`. The self-assessment in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md` maps the submission to those seven dimensions.
-
-For the most important red-team challenge, read `docs/GENERALIZABILITY_RED_TEAM.md`. It states where the workflow appears portable, where that claim is still under-proven, and what fresh-case or second-operator test would strengthen it.
+For limits and open validation work, read `docs/EVIDENCE_AND_LIMITATIONS.md`. For the most important transfer concern, read `docs/GENERALIZABILITY_RED_TEAM.md`.
 
 ## What The Prototype Shows
 

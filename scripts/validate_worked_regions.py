@@ -69,7 +69,7 @@ REQUIRED_GLOBAL_FILES = (
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/GENERALIZABILITY_RED_TEAM.md",
     "docs/FLF_SUBMISSION_DRAFT.md",
-    "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
+    "docs/EVIDENCE_AND_LIMITATIONS.md",
     "docs/HUMAN_AUDIT_GUIDE.md",
     "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
     "docs/REFERENCE_LINEAGE.md",
@@ -179,15 +179,21 @@ def _validate_map(region_id: str, path: Path, source_ids: set[str], failures: li
         failures.append(f"worked_map_missing_relation_rationales region={region_id} path={path}")
     if crux_count < 2:
         failures.append(f"worked_map_too_few_cruxes region={region_id} count={crux_count} path={path}")
-    scores = []
+    if "## Evidence Check" not in text:
+        failures.append(f"worked_map_missing_evidence_check region={region_id} path={path}")
+    evidence_rows = []
+    in_evidence_check = False
     for line in text.splitlines():
+        if line.startswith("## "):
+            in_evidence_check = line == "## Evidence Check"
+            continue
+        if not in_evidence_check or not line.startswith("|"):
+            continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) >= 4 and cells[1].isdigit():
-            scores.append(int(cells[1]))
-    if len(scores) < 4:
-        failures.append(f"worked_map_missing_flf_scores region={region_id} path={path}")
-    elif min(scores[:4]) == 0:
-        failures.append(f"worked_map_flf_score_zero region={region_id} scores={scores[:4]} path={path}")
+        if len(cells) >= 3 and cells[0] not in {"Probe", "---"} and not set(cells[0]) <= {"-", ":"}:
+            evidence_rows.append(cells)
+    if len(evidence_rows) < 4:
+        failures.append(f"worked_map_evidence_check_too_short region={region_id} rows={len(evidence_rows)} path={path}")
 
 
 def _validate_baseline(region_id: str, path: Path, required_sources: set[str], failures: list[str]) -> None:

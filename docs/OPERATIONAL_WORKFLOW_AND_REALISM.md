@@ -53,7 +53,7 @@ Review status semantics:
 | Full-case navigation | Full-case indexes and maps cover all acquired LHC and eggs sources. | Useful case-level scaffold, not a full audited knowledge base. |
 | Baseline comparison | Illustrative and blinded local-model flat syntheses exist across multiple model families. | Useful, but span-limited. |
 | Full-case synthesis comparison | Full-case flat baselines exist for LHC and eggs. | Stronger realism check, still human-review-needed. |
-| Human handoff | Review packets, checklist, rubric, and CSVs exist. | Operationally plausible, not yet executed. |
+| Human handoff | Review packets, checklists, and CSVs exist. | Operationally plausible, not yet executed. |
 | UI inspection | Static dashboard over checked-in artifacts. | Good inspection surface, not an editor. |
 | Source-update workflow | `docs/NEW_SOURCE_UPDATE_DEMO.md` shows how a new-to-map source affects claims and relations. | Useful demonstration; needs a future fresh external-source update. |
 

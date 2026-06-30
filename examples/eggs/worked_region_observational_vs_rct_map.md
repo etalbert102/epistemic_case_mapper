@@ -483,11 +483,11 @@ rationale: High-LDL subgroup guidance prevents the NNR one-egg/day summary from 
 - The baseline comparison is illustrative because this same Codex run had access to the curated-map task and source-packet orientation.
 - This map intentionally keeps "eggs", "dietary cholesterol", "LDL-c", and "CVD outcomes" separate because merging them is the main erosion risk.
 
-## FLF Judge Questions
+## Evidence Check
 
-| Question | Score | Evidence | Residual risk |
-| --- | ---: | --- | --- |
-| Would this help someone reason better about this case? | 2 | It separates methods, endpoints, populations, replacement foods, and guideline framing. | Nutrition specialists should review whether the selected caveats are weighted fairly. |
-| Does it generalize? | 2 | The method/endpoints/guideline distinction applies to many everyday evidence questions. | Some domains need stronger evidence-independence metadata. |
-| Does it scale with improvements to AI or more compute? | 2 | More compute can expand source coverage while preserving the same claim and relation protocol. | Automated extraction may overproduce weak claims without review. |
-| Does it compound with multiple people or teams? | 2 | Stable IDs and cruxes let future reviewers add studies or dispute relation labels locally. | Actual multi-reviewer workflow remains untested. |
+| Probe | Evidence | Boundary |
+| --- | --- | --- |
+| Local reasoning value | Separates methods, endpoints, populations, replacement foods, and guideline framing. | Nutrition specialists should review whether the selected caveats are weighted fairly. |
+| Transfer beyond this case | The method/endpoints/guideline distinction applies to many everyday evidence questions. | Some domains need stronger evidence-independence metadata. |
+| Ability to absorb more work | More compute can expand source coverage while preserving the same claim and relation protocol. | Automated extraction may overproduce weak claims without review. |
+| Reuse by later reviewers | Stable IDs and cruxes let future reviewers add studies or dispute relation labels locally. | Actual multi-reviewer workflow remains untested. |

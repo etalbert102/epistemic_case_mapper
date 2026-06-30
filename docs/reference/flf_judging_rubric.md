@@ -1,8 +1,8 @@
-# FLF Judging Rubric
+# FLF Judging Rubric Reference
 
 Source: user-provided contest judging criteria, recorded 2026-06-30.
 
-This document records the scoring dimensions and prize-tier guidance that should guide the `epistemic_case_mapper` submission. It complements `docs/reference/flf_epistemic_case_study_competition_criteria.md`, which records the broader contest framing and case-study setup.
+This document records the scoring dimensions and prize-tier guidance used for internal submission QA. It is background reference, not a first-read guide or a request that reviewers score the submission in this structure. It complements `docs/reference/flf_epistemic_case_study_competition_criteria.md`, which records the broader contest framing and case-study setup.
 
 ## Scoring Dimensions
 
@@ -83,9 +83,9 @@ Multiple prizes may be awarded per tier. The pool can expand for a wave of stron
 - Read for the spec, not the polish. A clear workflow with a rough prototype usually beats a polished prototype with opaque methodology.
 - Run it, don't just read it. For tool and workflow submissions, exercise the methodology on a sub-question you are personally curious about; usefulness shows up in use, not only in the writeup.
 
-## Implications For This Repo
+## Internal QA Implications
 
-The submission should make the seven dimensions easy to inspect:
+The repository should retain evidence relevant to these concerns without making the front-door packet read like a rubric checklist:
 
 1. Epistemic uplift: lead with the LHC dependency example and the erosion audit.
 2. Generalizability: show LHC, eggs, and the narrow COVID slice as differently shaped cases.

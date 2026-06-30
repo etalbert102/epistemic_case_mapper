@@ -12,7 +12,7 @@ The current package does not yet prove that a second operator can apply the work
 
 ## Red-Team Objection
 
-A skeptical judge can reasonably say:
+A skeptical reviewer can reasonably say:
 
 > The method generalizes as a schema, but the repository mainly shows that a skilled curator can pick cases where mapping is useful and fill the map well.
 
@@ -111,9 +111,9 @@ Passing result: the reviewer can localize disagreements and improve the artifact
 
 Failing result: the reviewer cannot tell what each relation means, cannot locate the source support, or has to reconstruct the argument from scratch.
 
-## What Would Raise The Generalizability Score
+## What Would Strengthen The Transfer Claim
 
-Current evidence supports a plausible score in the high-promising to low-strong range for generalizability. The score should rise materially only with one of these additions:
+Current evidence makes transfer plausible, but it should be treated as demonstrated only after one of these additions:
 
 - a completed fresh-case transfer test outside LHC, eggs, and COVID;
 - a second-operator review log with actual accept/revise/reject decisions;

@@ -74,13 +74,13 @@ At least one relation lacks `rationale:`. Every relation needs a short explanati
 
 The map uses the word `crux` fewer than two times. Add real crux candidates, not decorative labels.
 
-`worked_map_missing_flf_scores`
+`worked_map_missing_evidence_check`
 
-The map lacks a judge-facing FLF score table. Include at least four rows covering reasoning help, generalization, scaling, and compounding.
+The map lacks an `## Evidence Check` section. Include at least four rows covering local reasoning value, transfer beyond the case, ability to absorb more work, and reuse by later reviewers.
 
-`worked_map_flf_score_zero`
+`worked_map_evidence_check_too_short`
 
-One of the first four FLF score rows is zero. A zero means the worked region does not yet demonstrate that criterion.
+The evidence check has fewer than four substantive rows. Add concrete evidence and boundaries rather than numeric scores.
 
 `baseline_missing_prompt_version`
 

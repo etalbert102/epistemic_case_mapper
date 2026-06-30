@@ -51,9 +51,9 @@ EXTENSION_ARTIFACTS = (
         "status": "demo from already acquired source",
     },
     {
-        "artifact": "Self-assessment and limitations",
+        "artifact": "Evidence and limitations",
         "case": "Submission",
-        "path": "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
+        "path": "docs/EVIDENCE_AND_LIMITATIONS.md",
         "status": "human-review-needed",
     },
     {

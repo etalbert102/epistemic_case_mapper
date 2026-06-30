@@ -429,11 +429,11 @@ rationale: Both claims preserve the velocity/trapping distinction, with LSAG giv
 - The baseline comparison is illustrative because this same Codex run had access to the curated-map task and source-packet orientation.
 - The map intentionally preserves critique and response even though the bottom-line risk assessment remains strongly against catastrophic LHC danger.
 
-## FLF Judge Questions
+## Evidence Check
 
-| Question | Score | Evidence | Residual risk |
-| --- | ---: | --- | --- |
-| Would this help someone reason better about this case? | 2 | It separates exposure, velocity caveat, compact-star bounds, assumption stack, critique, and response. | A physicist should review whether relation labels are technically fair. |
-| Does it generalize? | 2 | The same pattern applies to other technical-risk arguments with analogies, caveats, and adversarial critiques. | Other domains may need richer quantitative uncertainty fields. |
-| Does it scale with improvements to AI or more compute? | 2 | Better extraction can fill more source spans while preserving the same claim/relation protocol. | Automated relation typing remains a hard problem. |
-| Does it compound with multiple people or teams? | 2 | Stable claim IDs, source IDs, and explicit cruxes let reviewers add objections without rewriting the artifact. | Human review workflow still needs actual reviewer decisions. |
+| Probe | Evidence | Boundary |
+| --- | --- | --- |
+| Local reasoning value | Separates exposure, velocity caveat, compact-star bounds, assumption stack, critique, and response. | A physicist should review whether relation labels are technically fair. |
+| Transfer beyond this case | The same pattern appears in other technical-risk arguments with analogies, caveats, and adversarial critiques. | Other domains may need richer quantitative uncertainty fields. |
+| Ability to absorb more work | Better extraction can fill more source spans while preserving the same claim/relation protocol. | Automated relation typing remains a hard problem. |
+| Reuse by later reviewers | Stable claim IDs, source IDs, and explicit cruxes let reviewers add objections without rewriting the artifact. | Human review workflow still needs actual reviewer decisions. |

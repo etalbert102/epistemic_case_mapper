@@ -8,7 +8,7 @@ Modern AI systems can produce fluent syntheses, but fluent synthesis often erode
 
 This prototype offers a lightweight workflow and artifact format for AI-assisted epistemic case mapping. The goal is not to maximize summary polish. The goal is to preserve source-grounded structure so another investigator can inspect, challenge, extend, and reuse the work.
 
-This maps directly to the FLF contest brief. FLF asks for AI-assisted workflows that produce reusable, refinable knowledge artifacts rather than single-user summaries. Decision-space erosion names the failure mode; epistemic case maps provide the preservation artifact; erosion audits provide the measurement layer.
+This is aimed at the part of the FLF brief concerned with reusable, refinable knowledge artifacts rather than single-user summaries. Decision-space erosion names the failure mode; epistemic case maps provide the preservation artifact; erosion audits provide the measurement layer.
 
 ## Workflow Summary
 
@@ -33,7 +33,7 @@ The core schema in `src/epistemic_case_mapper/schema.py` represents sources, cla
 - relation IDs, relation types, and rationales,
 - crux candidates,
 - similar-but-not-identical groupings,
-- FLF judge-question scores,
+- evidence and limitation notes,
 - flat-synthesis erosion audits.
 
 ## LHC Worked-Region Summary

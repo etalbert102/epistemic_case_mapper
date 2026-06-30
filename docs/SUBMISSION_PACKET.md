@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-This is the judge-facing entry point. For the fastest path, start with `docs/START_HERE.md`; this packet records the fuller submission boundary.
+This is the fuller submission boundary. For the fastest path, start with `docs/START_HERE.md`.
 
 ## Core Claim
 
@@ -30,19 +30,20 @@ The LHC map preserves the dependency as reviewable pieces:
 
 Why this matters: the map does not merely cite sources. It preserves the part of the reasoning a later reviewer would need to accept, challenge, or revise.
 
-## What To Evaluate
+## What The Package Is Trying To Show
 
-Evaluate the submission against the full rubric in `docs/reference/flf_judging_rubric.md`. The shortest version is:
+The package is built around one empirical bet: when a later reviewer needs to inspect a disputed distinction, a structured map leaves better handles than a fluent synthesis alone.
 
-1. Epistemic uplift: do the maps help a thoughtful person reason better than ordinary synthesis or deep research?
-2. Generalizability: does the workflow travel across differently shaped cases?
-3. Compounding and shareability: can another investigator extend the artifact?
-4. Scalability: does the approach improve with better models, more compute, or more reviewers?
-5. Methodological transparency: are the workflow, tradeoffs, and uncertainties inspectable?
-6. Adversarial robustness: does the method hold up under motivated reading and misleading sources?
-7. Insight contribution: does the submission shift how judges think about AI-assisted epistemic work?
+The most relevant handles are:
 
-Do not evaluate it as a finished interactive product or a fully automated literature-review system. The current value is the workflow and audit surface.
+- source-grounded claim IDs and relation IDs,
+- visible caveats and scope limits,
+- critique/response structure,
+- cruxes and update triggers,
+- flat-synthesis loss audits,
+- human-review packets that preserve local accept/revise/reject work.
+
+The current value is the workflow and audit surface, not a finished interactive product or a fully automated literature-review system.
 
 ## Three-Minute Path
 
@@ -57,7 +58,7 @@ For deeper review, continue with:
 1. `examples/eggs/worked_region_observational_vs_rct_map.md`
 2. `examples/eggs/decision_space_erosion_audit.md`
 3. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-4. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
+4. `docs/EVIDENCE_AND_LIMITATIONS.md`
 5. `docs/GENERALIZABILITY_RED_TEAM.md`
 
 Optional UI:
@@ -163,4 +164,4 @@ What is not claimed:
 - The UI is not an editor and does not persist review decisions.
 - The method has not yet been independently applied by a second operator to a fresh, mundane contested case.
 
-For the full risk register, use `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`. For human review, start with `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.
+For the full risk register, use `docs/EVIDENCE_AND_LIMITATIONS.md`. For human review, start with `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.

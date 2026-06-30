@@ -195,8 +195,8 @@ def _validate_markdown(artifact_dir: Path, manifest: CaseManifest, failures: lis
             failures.append(f"missing_markdown path={path}")
             continue
         text = path.read_text(encoding="utf-8")
-        if name == "audit.md" and "FLF Criteria Score" not in text:
-            failures.append(f"missing_audit_score_table path={path}")
+        if name == "audit.md" and "Artifact Evidence Check" not in text:
+            failures.append(f"missing_audit_evidence_check path={path}")
         if name == "report.md" and "Open Questions" not in text:
             failures.append(f"missing_report_open_questions path={path}")
         if manifest.metadata_files and "Preservation Metadata" not in text:

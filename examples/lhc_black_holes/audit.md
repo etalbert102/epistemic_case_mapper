@@ -20,17 +20,17 @@ This artifact is source-grounded according to the case manifest.
 - Key preservation requirements: 5
 - Workflow telemetry stages: 3
 
-## FLF Criteria Score
+## Artifact Evidence Check
 
-| Area | Score | Evidence |
-| --- | ---: | --- |
-| Ingestion | 2 | Claims preserve source IDs, normalized spans, text hashes, and source-grounded local paths/excerpts. |
-| Structure | 2 | Relations are candidate links and rationales are explicit. |
-| Assessment | 2 | Open questions surface cruxes and missing sources. |
-| Compounding | 2 | JSON schema, stable IDs, and Markdown outputs support reuse. |
-| Judge usability | 2 | Report is navigable, but claims and relations remain draft until audited. |
-| Verification | 1 | Build command generated artifacts; full validator should be run separately. |
-| Plan discipline | 1 | Internal goal-plan history is archived under docs/archive/internal/plans/. |
+| Area | Evidence | Boundary |
+| --- | --- | --- |
+| Ingestion | Claims preserve source IDs, normalized spans, text hashes, and source-grounded local paths/excerpts. | Completeness signals are not a substitute for source review. |
+| Structure | Relations are candidate links and rationales are explicit. | Relation labels remain draft. |
+| Assessment | Open questions surface cruxes and missing sources. | Crux usefulness needs human review. |
+| Compounding | JSON schema, stable IDs, and Markdown outputs support reuse. | Multi-reviewer workflow is not exercised here. |
+| Navigation | Report is navigable, but claims and relations remain draft until audited. | Large starter reports are less useful than curated worked regions. |
+| Verification | Build command generated artifacts; full validator should be run separately. | Generated starter output is not final evidence. |
+| Plan discipline | Internal goal-plan history is archived under docs/archive/internal/plans/. | Archives are implementation history, not first-read material. |
 
 ## Missing Evidence
 

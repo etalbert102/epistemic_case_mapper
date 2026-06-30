@@ -34,11 +34,11 @@ Last updated: 2026-06-27.
   - `docs/review/REVIEWER_START_HERE.md`
   - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - A polished judge-first start page exists at `docs/START_HERE.md`, with the fuller submission packet at `docs/SUBMISSION_PACKET.md`.
-- The full seven-dimension FLF judging rubric is recorded at `docs/reference/flf_judging_rubric.md` and reflected in the self-assessment.
+- The full seven-dimension FLF judging rubric is recorded as background reference at `docs/reference/flf_judging_rubric.md`; first-read docs use evidence-first framing rather than a direct criteria map.
 - A reference-lineage note maps contest-provided examples of epistemic scrutiny to the prototype's design choices at `docs/REFERENCE_LINEAGE.md`.
 - A generalizability red-team note names transfer limits, failure boundaries, fresh-case test criteria, and a second-operator validation path at `docs/GENERALIZABILITY_RED_TEAM.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
-- A combined criteria self-assessment, failure-mode analysis, and risk register exists in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`.
+- A combined evidence ledger, failure-mode analysis, and risk register exists in `docs/EVIDENCE_AND_LIMITATIONS.md`.
 - Broad full-case knowledge scaffolds exist for LHC and eggs:
   - `examples/lhc_black_holes/full_case_index.md`
   - `examples/lhc_black_holes/full_case_map.md`
@@ -61,7 +61,7 @@ Last updated: 2026-06-27.
 - Filled decision-space erosion audits compare each baseline to its frozen map.
 - Judge walkthrough and submission draft point to completed worked-region artifacts.
 - Full-case flat synthesis baselines exist for LHC and eggs as illustrative, non-blinded whole-case comparison surfaces.
-- Criteria self-assessment, failure modes, and limitations are consolidated in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`.
+- Evidence, failure modes, and limitations are consolidated in `docs/EVIDENCE_AND_LIMITATIONS.md`.
 - A new-to-map source update demonstration exists in `docs/NEW_SOURCE_UPDATE_DEMO.md`.
 - The compact worked judge example and fuller auditor walkthrough are consolidated in `docs/HUMAN_AUDIT_GUIDE.md`.
 - A draft public-risk/governance worked region exists at `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`.

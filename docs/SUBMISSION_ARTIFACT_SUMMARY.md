@@ -25,7 +25,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | Full-case flat baseline | Eggs and health | `examples/eggs/full_case_flat_synthesis_baseline.md` | illustrative, non-blinded |
 | Draft public-risk worked region | LHC black holes | `examples/lhc_black_holes/worked_region_public_risk_framing_map.md` | draft extension, not canonical counts |
 | New-to-map source update demo | LHC black holes | `docs/NEW_SOURCE_UPDATE_DEMO.md` | demo from already acquired source |
-| Self-assessment and limitations | Submission | `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md` | human-review-needed |
+| Evidence and limitations | Submission | `docs/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
 | Human audit guide | Submission | `docs/HUMAN_AUDIT_GUIDE.md` | human-review-needed |
 | Operational workflow and realism | Submission | `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md` | human-review-needed |
 
