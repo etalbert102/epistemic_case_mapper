@@ -53,8 +53,8 @@ def render_summary(repo_root: Path, manifest_path: str = "submission_manifest.ya
     ]
     totals = Counter()
     for region in region_files:
-        worked_map = parse_worked_map(repo_root / region.map_path)
-        audit = parse_erosion_audit(repo_root / region.audit_path)
+        worked_map = parse_worked_map(repo_root / region.map_path, region.map_format)
+        audit = parse_erosion_audit(repo_root / region.audit_path, region.audit_format)
         relation_types = Counter(str(relation.get("relation_type", "")) for relation in worked_map["relations"])
         baseline_count = len(list((repo_root / Path(region.baseline_path).parent).glob("blinded_flat_synthesis_baseline_*.md")))
         totals.update(

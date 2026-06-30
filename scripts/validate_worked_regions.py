@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 
+from artifact_utils import parse_erosion_audit, parse_worked_map
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, ValidationThresholds, WorkedRegion, load_submission_manifest
@@ -56,8 +57,13 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
     map_path = repo_root / region.map_path
     baseline = repo_root / region.baseline_path
     audit = repo_root / region.audit_path
-    best = repo_root / region.best_path
-    for path in (definition, map_path, baseline, audit, best):
+    paths = [definition, map_path, baseline, audit]
+    if region.thresholds.require_best_sections:
+        if region.best_path is None:
+            failures.append(f"missing_best_regions region={region.region_id}")
+        else:
+            paths.append(repo_root / region.best_path)
+    for path in paths:
         _require_file(path, failures)
         _require_no_template_status(path, failures)
         _require_no_todo(path, failures)
@@ -69,22 +75,25 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
                 failures.append(f"definition_missing_source region={region.region_id} source={source_id}")
 
     if map_path.exists():
-        _validate_map(region.region_id, map_path, source_ids, region.thresholds, failures)
+        _validate_map(region.region_id, map_path, region.map_format, source_ids, region.thresholds, failures)
     if baseline.exists():
         _validate_baseline(region.region_id, baseline, required_sources, region.thresholds, failures)
     if audit.exists():
-        _validate_audit(region.region_id, audit, region.thresholds, failures)
-    if best.exists():
-        _validate_best(region.region_id, best, failures)
+        _validate_audit(region.region_id, audit, region.audit_format, region.thresholds, failures)
+    if region.best_path and (repo_root / region.best_path).exists() and region.thresholds.require_best_sections:
+        _validate_best(region.region_id, repo_root / region.best_path, failures)
 
 
 def _validate_map(
-    region_id: str, path: Path, source_ids: set[str], thresholds: ValidationThresholds, failures: list[str]
+    region_id: str, path: Path, artifact_format: str, source_ids: set[str], thresholds: ValidationThresholds, failures: list[str]
 ) -> None:
-    text = path.read_text(encoding="utf-8")
-    claim_ids = [_clean_value(value) for value in re.findall(rf"claim_id:\s*{VALUE_PATTERN}", text)]
-    relation_types = set(_clean_value(value) for value in re.findall(rf"relation_type:\s*{VALUE_PATTERN}", text))
-    crux_count = len(re.findall(r"(?i)crux", text))
+    worked_map = parse_worked_map(path, artifact_format)
+    claims = worked_map["claims"]
+    relations = worked_map["relations"]
+    claim_ids = [str(claim.get("claim_id", "")) for claim in claims]
+    relation_ids = [str(relation.get("relation_id", "")) for relation in relations]
+    relation_types = {str(relation.get("relation_type", "")) for relation in relations if relation.get("relation_type")}
+    crux_count = len(worked_map.get("crux_candidates", []))
     if not thresholds.min_claims <= len(claim_ids) <= thresholds.max_claims:
         failures.append(
             f"worked_map_claim_count region={region_id} count={len(claim_ids)} "
@@ -92,40 +101,30 @@ def _validate_map(
         )
     if len(set(claim_ids)) != len(claim_ids):
         failures.append(f"duplicate_claim_ids region={region_id} path={path}")
-    source_refs = [_clean_value(value) for value in re.findall(rf"source_id:\s*{VALUE_PATTERN}", text)]
+    source_refs = [str(claim.get("source_id", "")) for claim in claims if claim.get("source_id")]
     if len(source_refs) < len(claim_ids):
         failures.append(f"worked_map_missing_source_ids region={region_id} path={path}")
     for source_id in source_refs:
         if source_id not in source_ids:
             failures.append(f"unknown_worked_map_source region={region_id} source={source_id} path={path}")
-    if text.count("excerpt:") < len(claim_ids):
+    if sum(1 for claim in claims if claim.get("excerpt")) < len(claim_ids):
         failures.append(f"worked_map_missing_excerpts region={region_id} path={path}")
-    if text.count("entailed_by_excerpt:") < len(claim_ids):
+    if sum(1 for claim in claims if claim.get("entailed_by_excerpt")) < len(claim_ids):
         failures.append(f"worked_map_missing_entailment_checks region={region_id} path={path}")
-    if re.search(r"entailed_by_excerpt:\s*no", text) and "audit concern" not in text.lower():
+    text = path.read_text(encoding="utf-8")
+    if any(str(claim.get("entailed_by_excerpt", "")).lower() == "no" for claim in claims) and "audit concern" not in text.lower():
         failures.append(f"unsupported_claim_not_moved_to_audit region={region_id} path={path}")
-    relation_ids = [_clean_value(value) for value in re.findall(rf"relation_id:\s*{VALUE_PATTERN}", text)]
     if len(relation_ids) == 0:
         failures.append(f"worked_map_missing_relations region={region_id} path={path}")
     if len(relation_types) < thresholds.min_relation_types:
         failures.append(f"worked_map_too_few_relation_types region={region_id} count={len(relation_types)} path={path}")
-    if text.count("rationale:") < len(relation_ids):
+    if sum(1 for relation in relations if relation.get("rationale")) < len(relation_ids):
         failures.append(f"worked_map_missing_relation_rationales region={region_id} path={path}")
     if crux_count < thresholds.min_crux_mentions:
         failures.append(f"worked_map_too_few_cruxes region={region_id} count={crux_count} path={path}")
-    if "## Evidence Check" not in text:
+    evidence_rows = worked_map.get("evidence_check", [])
+    if not evidence_rows:
         failures.append(f"worked_map_missing_evidence_check region={region_id} path={path}")
-    evidence_rows = []
-    in_evidence_check = False
-    for line in text.splitlines():
-        if line.startswith("## "):
-            in_evidence_check = line == "## Evidence Check"
-            continue
-        if not in_evidence_check or not line.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) >= 3 and cells[0] not in {"Probe", "---"} and not set(cells[0]) <= {"-", ":"}:
-            evidence_rows.append(cells)
     if len(evidence_rows) < thresholds.min_evidence_rows:
         failures.append(f"worked_map_evidence_check_too_short region={region_id} rows={len(evidence_rows)} path={path}")
 
@@ -145,16 +144,16 @@ def _validate_baseline(
         failures.append(f"baseline_too_short region={region_id} words={len(text.split())} path={path}")
 
 
-def _validate_audit(region_id: str, path: Path, thresholds: ValidationThresholds, failures: list[str]) -> None:
-    text = path.read_text(encoding="utf-8")
-    losses = [_clean_value(value) for value in re.findall(rf"loss_id:\s*{VALUE_PATTERN}", text)]
+def _validate_audit(region_id: str, path: Path, artifact_format: str, thresholds: ValidationThresholds, failures: list[str]) -> None:
+    audit = parse_erosion_audit(path, artifact_format)
+    losses = audit["losses"]
     if len(losses) < thresholds.min_losses:
         failures.append(f"erosion_audit_too_few_losses region={region_id} count={len(losses)} path={path}")
-    if text.count("adversarial_check: survives") < thresholds.min_surviving_checks:
+    if sum(1 for loss in losses if str(loss.get("adversarial_check", "")).lower().startswith("survives")) < thresholds.min_surviving_checks:
         failures.append(f"erosion_audit_too_few_surviving_checks region={region_id} path={path}")
-    for required in ("lost_item:", "source_support:", "flat_baseline_omission:", "case_map_preserves:"):
-        if text.count(required) < thresholds.min_losses:
-            failures.append(f"erosion_audit_missing_field region={region_id} field={required} path={path}")
+    for required in ("lost_item", "source_support", "flat_baseline_omission", "case_map_preserves"):
+        if sum(1 for loss in losses if loss.get(required)) < thresholds.min_losses:
+            failures.append(f"erosion_audit_missing_field region={region_id} field={required}: path={path}")
 
 
 def _validate_best(region_id: str, path: Path, failures: list[str]) -> None:

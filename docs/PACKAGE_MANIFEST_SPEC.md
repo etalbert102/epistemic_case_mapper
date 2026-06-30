@@ -31,6 +31,8 @@ Each worked region declares:
 - `baseline_path`
 - `best_path`
 - `output_json_path`
+- `map_format`
+- `audit_format`
 - `required_sources`
 - `thresholds`
 - optional `review`
@@ -46,3 +48,10 @@ id_patterns:
 ```
 
 Defaults support the current FLF style: `lhc_c001`, `lhc_r001`, and `lhc_loss_001`.
+
+Supported artifact formats:
+
+- `markdown_kv_v1`
+- `json_case_map_v1`
+
+`best_path` may be omitted when `thresholds.require_best_sections: false`.

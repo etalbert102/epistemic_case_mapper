@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,9 +14,11 @@ class RegionFiles:
     case_label: str
     region_id: str
     map_path: str
+    map_format: str
     audit_path: str
+    audit_format: str
     baseline_path: str
-    best_path: str
+    best_path: str | None
     output_json_path: str
 
 
@@ -26,7 +29,9 @@ def region_files_from_manifest(manifest: SubmissionManifest) -> tuple[RegionFile
             case_label=region.case_label,
             region_id=region.region_id,
             map_path=region.map_path,
+            map_format=region.map_format,
             audit_path=region.audit_path,
+            audit_format=region.audit_format,
             baseline_path=region.baseline_path,
             best_path=region.best_path,
             output_json_path=region.output_json_path,
@@ -42,7 +47,11 @@ def load_region_files(repo_root: Path, manifest_path: str | Path = "submission_m
 REGION_FILES = load_region_files(Path(__file__).resolve().parents[1])
 
 
-def parse_worked_map(path: Path) -> dict:
+def parse_worked_map(path: Path, artifact_format: str = "markdown_kv_v1") -> dict:
+    if artifact_format == "json_case_map_v1":
+        return _parse_json_worked_map(path)
+    if artifact_format != "markdown_kv_v1":
+        raise ValueError(f"unknown_worked_map_format format={artifact_format}")
     text = path.read_text(encoding="utf-8")
     return {
         "title": _first_heading(text),
@@ -54,10 +63,15 @@ def parse_worked_map(path: Path) -> dict:
         "relations": [_parse_key_value_block(block) for block in _blocks(text, "relation_id")],
         "crux_candidates": _section_bullets(text, "Crux Candidates"),
         "similar_but_not_identical": _section_bullets(text, "Similar But Not Identical"),
+        "evidence_check": _evidence_check_rows(text),
     }
 
 
-def parse_erosion_audit(path: Path) -> dict:
+def parse_erosion_audit(path: Path, artifact_format: str = "markdown_kv_v1") -> dict:
+    if artifact_format == "json_case_map_v1":
+        return _parse_json_erosion_audit(path)
+    if artifact_format != "markdown_kv_v1":
+        raise ValueError(f"unknown_audit_format format={artifact_format}")
     text = path.read_text(encoding="utf-8")
     return {
         "title": _first_heading(text),
@@ -77,8 +91,8 @@ def collect_ids(
     ids: dict[str, set[str]] = {"claim": set(), "relation": set(), "loss": set()}
     region_files = region_files_from_manifest(manifest) if manifest is not None else REGION_FILES
     for region in region_files:
-        worked_map = parse_worked_map(repo_root / region.map_path)
-        audit = parse_erosion_audit(repo_root / region.audit_path)
+        worked_map = parse_worked_map(repo_root / region.map_path, region.map_format)
+        audit = parse_erosion_audit(repo_root / region.audit_path, region.audit_format)
         ids["claim"].update(str(claim.get("claim_id", "")) for claim in worked_map["claims"])
         ids["relation"].update(str(relation.get("relation_id", "")) for relation in worked_map["relations"])
         ids["loss"].update(str(loss.get("loss_id", "")) for loss in audit["losses"])
@@ -128,6 +142,54 @@ def _section_bullets(text: str, heading: str) -> list[str]:
         if line.startswith("- "):
             items.append(_strip_marker(line[2:].strip()))
     return items
+
+
+def _evidence_check_rows(text: str) -> list[list[str]]:
+    rows = []
+    in_evidence_check = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            in_evidence_check = line == "## Evidence Check"
+            continue
+        if not in_evidence_check or not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and cells[0] not in {"Probe", "---"} and not set(cells[0]) <= {"-", ":"}:
+            rows.append(cells)
+    return rows
+
+
+def _parse_json_worked_map(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    worked = data.get("worked_map", data)
+    return {
+        "title": worked.get("title", ""),
+        "status": worked.get("status", ""),
+        "prompt_procedure": worked.get("prompt_procedure", ""),
+        "evidence_mode": worked.get("evidence_mode", ""),
+        "sources": list(worked.get("sources", [])),
+        "claims": list(worked.get("claims", [])),
+        "relations": list(worked.get("relations", [])),
+        "crux_candidates": list(worked.get("crux_candidates", worked.get("cruxes", []))),
+        "similar_but_not_identical": list(
+            worked.get("similar_but_not_identical", worked.get("similar_claims", []))
+        ),
+        "evidence_check": list(worked.get("evidence_check", [])),
+    }
+
+
+def _parse_json_erosion_audit(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    audit = data.get("erosion_audit", data)
+    return {
+        "title": audit.get("title", ""),
+        "status": audit.get("status", ""),
+        "prompt_procedure": audit.get("prompt_procedure", ""),
+        "baseline_comparator": audit.get("baseline_comparator", ""),
+        "map_comparator": audit.get("map_comparator", ""),
+        "losses": list(audit.get("losses", [])),
+        "borderline_or_rejected": list(audit.get("borderline_or_rejected", [])),
+    }
 
 
 def _strip_marker(value: str) -> str:

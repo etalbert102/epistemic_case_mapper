@@ -90,9 +90,10 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
     artifacts = {
         "workedMap": worked_region.map_path,
         "erosionAudit": worked_region.audit_path,
-        "bestRegions": worked_region.best_path,
         "workedBaseline": worked_region.baseline_path,
     }
+    if worked_region.best_path:
+        artifacts["bestRegions"] = worked_region.best_path
     if config.ui.multi_model_audit_path:
         artifacts["multiModelAudit"] = config.ui.multi_model_audit_path
     if config.full_case is not None:
@@ -147,20 +148,22 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
 
 
 def _build_worked_region_payload(repo_root: Path, worked_region) -> dict:
-    worked_map = parse_worked_map(repo_root / worked_region.map_path)
-    audit = parse_erosion_audit(repo_root / worked_region.audit_path)
+    worked_map = parse_worked_map(repo_root / worked_region.map_path, worked_region.map_format)
+    audit = parse_erosion_audit(repo_root / worked_region.audit_path, worked_region.audit_format)
+    artifacts = {
+        "definition": worked_region.definition_path,
+        "workedMap": worked_region.map_path,
+        "erosionAudit": worked_region.audit_path,
+        "workedBaseline": worked_region.baseline_path,
+    }
+    if worked_region.best_path:
+        artifacts["bestRegions"] = worked_region.best_path
     return {
         "regionId": worked_region.region_id,
         "caseKey": worked_region.case_key,
         "caseLabel": worked_region.case_label,
         "idPrefix": worked_region.id_prefix,
-        "artifacts": {
-            "definition": worked_region.definition_path,
-            "workedMap": worked_region.map_path,
-            "erosionAudit": worked_region.audit_path,
-            "bestRegions": worked_region.best_path,
-            "workedBaseline": worked_region.baseline_path,
-        },
+        "artifacts": artifacts,
         "worked": {
             "title": worked_map["title"],
             "status": worked_map["status"],

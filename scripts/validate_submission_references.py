@@ -39,7 +39,9 @@ def main() -> int:
 def _docs_to_scan(manifest: SubmissionManifest) -> list[str]:
     docs = list(manifest.reference_scan_paths)
     for region in manifest.iter_worked_regions():
-        docs.extend([region.best_path, region.map_path, region.baseline_path, region.audit_path])
+        docs.extend([region.map_path, region.baseline_path, region.audit_path])
+        if region.best_path:
+            docs.append(region.best_path)
     for case in manifest.cases:
         if case.full_case is not None:
             docs.extend([case.full_case.index_path, case.full_case.map_path])

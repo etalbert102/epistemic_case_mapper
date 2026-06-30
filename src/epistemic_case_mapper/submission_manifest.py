@@ -20,6 +20,7 @@ class ValidationThresholds(BaseModel):
     min_losses: int = 5
     min_surviving_checks: int = 5
     min_baseline_words: int = 250
+    require_best_sections: bool = True
 
 
 class ReviewPriority(BaseModel):
@@ -53,9 +54,11 @@ class WorkedRegion(BaseModel):
     id_prefix: str
     definition_path: str
     map_path: str
+    map_format: Literal["markdown_kv_v1", "json_case_map_v1"] = "markdown_kv_v1"
     audit_path: str
+    audit_format: Literal["markdown_kv_v1", "json_case_map_v1"] = "markdown_kv_v1"
     baseline_path: str
-    best_path: str
+    best_path: str | None = None
     output_json_path: str
     required_sources: list[str] = Field(default_factory=list)
     thresholds: ValidationThresholds = Field(default_factory=ValidationThresholds)

@@ -221,6 +221,28 @@
       "crux: Does Plaga's metastable/Eddington-limited scenario define a coherent physical gap in GM's bounds, or does GM's response defeat the calculation and assumptions? Linked claims: `lhc_c013`, `lhc_c014`, `lhc_c015`, `lhc_c016`.",
       "crux: Are white-dwarf observations sufficient for the LHC-energy risk question, while neutron-star arguments mainly affect broader extrapolation? Linked claims: `lhc_c009`, `lhc_c011`."
     ],
+    "evidence_check": [
+      [
+        "Local reasoning value",
+        "Separates exposure, velocity caveat, compact-star bounds, assumption stack, critique, and response.",
+        "A physicist should review whether relation labels are technically fair."
+      ],
+      [
+        "Transfer beyond this case",
+        "The same pattern appears in other technical-risk arguments with analogies, caveats, and adversarial critiques.",
+        "Other domains may need richer quantitative uncertainty fields."
+      ],
+      [
+        "Ability to absorb more work",
+        "Better extraction can fill more source spans while preserving the same claim/relation protocol.",
+        "Automated relation typing remains a hard problem."
+      ],
+      [
+        "Reuse by later reviewers",
+        "Stable claim IDs, source IDs, and explicit cruxes let reviewers add objections without rewriting the artifact.",
+        "Human review workflow still needs actual reviewer decisions."
+      ]
+    ],
     "evidence_mode": "source_grounded",
     "prompt_procedure": "source_mapping_prompt_v1`, `relation_extraction_prompt_v1",
     "relations": [

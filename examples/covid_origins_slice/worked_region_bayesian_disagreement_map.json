@@ -239,6 +239,28 @@
       "crux: Are Bayesian decompositions like Levin's robust, or do correlated/contestable factors drive extreme odds ratios? Linked claims: `covid_c014`, `covid_c015`, `covid_c016`.",
       "crux: Should post-debate process critiques change confidence in the debate outcome, or only the design of future adjudication? Linked claims: `covid_c005`, `covid_c007`, `covid_c008`."
     ],
+    "evidence_check": [
+      [
+        "Local reasoning value",
+        "Separates debate outcome, forecasting aggregate, Bayesian decomposition, and methodological replies.",
+        "Needs human/domain review."
+      ],
+      [
+        "Transfer beyond this case",
+        "Adds the adversarial case as a narrow slice after LHC and eggs.",
+        "Still not full COVID."
+      ],
+      [
+        "Ability to absorb more work",
+        "Uses same source/claim/relation/audit pattern as other worked regions.",
+        "Source ingestion is source-note based, not full-corpus automated."
+      ],
+      [
+        "Reuse by later reviewers",
+        "Stable IDs and update triggers identify where future evidence would attach.",
+        "No multi-reviewer disagreement handling yet."
+      ]
+    ],
     "evidence_mode": "source_grounded_slice",
     "prompt_procedure": "covid_worked_region_v1_source_notes_manual_audit",
     "relations": [

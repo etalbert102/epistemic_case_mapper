@@ -149,10 +149,14 @@ def _validate_region(
         ("worked_map_missing", region.map_path),
         ("region_baseline_missing", region.baseline_path),
         ("region_audit_missing", region.audit_path),
-        ("region_best_missing", region.best_path),
     )
     for failure_label, relative_path in paths:
         _require_path(repo_root, relative_path, failures, failure_label)
+    if region.thresholds.require_best_sections:
+        if region.best_path is None:
+            failures.append(f"region_best_missing region={region.region_id}")
+        else:
+            _require_path(repo_root, region.best_path, failures, "region_best_missing")
 
     if region.review is not None:
         _validate_review_ids(repo_root, manifest, region, failures)
@@ -173,8 +177,8 @@ def _validate_review_ids(
             f"review_region_id_mismatch region={region.region_id} review={region.review.worked_region_id}"
         )
     try:
-        worked_map = parse_worked_map(repo_root / region.map_path)
-        audit = parse_erosion_audit(repo_root / region.audit_path)
+        worked_map = parse_worked_map(repo_root / region.map_path, region.map_format)
+        audit = parse_erosion_audit(repo_root / region.audit_path, region.audit_format)
     except FileNotFoundError:
         return
 

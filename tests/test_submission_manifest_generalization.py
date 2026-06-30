@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from epistemic_case_mapper import cli
@@ -25,7 +26,7 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
     assert validate_worked_regions.main() == 0
 
     baseline_configs = _configs_from_manifest(tmp_path)
-    assert sorted(baseline_configs) == ["demo_region", "demo_region_followup"]
+    assert sorted(baseline_configs) == ["demo_region", "demo_region_followup", "demo_region_json.baseline"]
     assert {config.case_key for config in baseline_configs.values()} == {"demo"}
 
     ui_payload = build_ui_data.build_payload(tmp_path)
@@ -35,6 +36,7 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
     assert [region["regionId"] for region in ui_payload["cases"][0]["workedRegions"]] == [
         "demo_region",
         "demo_region_followup",
+        "demo_region_json",
     ]
 
     monkeypatch.setattr(
@@ -50,6 +52,33 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
         ["ecm.py", "--repo-root", str(tmp_path), "validate", "package"],
     )
     assert cli.main() == 0
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "export", "region", "--region", "demo_region_json"],
+    )
+    assert cli.main() == 0
+    assert (tmp_path / "examples/demo/worked_map_json_export.json").exists()
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "ui", "build"],
+    )
+    assert cli.main() == 0
+    assert "Demo Package" in (tmp_path / "ui/data.json").read_text(encoding="utf-8")
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "review", "checklist"],
+    )
+    assert cli.main() == 0
+    assert "demo_region_json" in (tmp_path / "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv").read_text(encoding="utf-8")
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "baseline", "run", "--region", "demo_region_json", "--dry-run"],
+    )
+    assert cli.main() == 0
 
     (tmp_path / "docs/demo_doc.md").write_text("This stale reference should fail: `claim:demo:999`.\n", encoding="utf-8")
     monkeypatch.setattr(
@@ -61,7 +90,7 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
 
 
 def _write_transfer_fixture(repo_root: Path) -> None:
-    for relative_dir in ("data/cases/demo/sources/text", "docs/worked_regions", "examples/demo"):
+    for relative_dir in ("data/cases/demo/sources/text", "docs/worked_regions", "docs/review", "examples/demo", "ui"):
         (repo_root / relative_dir).mkdir(parents=True)
     (repo_root / "docs").mkdir(exist_ok=True)
 
@@ -103,6 +132,12 @@ sources:
     (repo_root / "examples/demo/audit_followup.md").write_text(_audit_text("loss:demo:101", "claim:demo:103", "rel:demo:102"), encoding="utf-8")
     (repo_root / "examples/demo/baseline_followup.md").write_text(_baseline_text(), encoding="utf-8")
     (repo_root / "examples/demo/BEST_REGIONS_FOLLOWUP.md").write_text(_best_regions_text("claim:demo:103", "rel:demo:102", "loss:demo:101"), encoding="utf-8")
+    (repo_root / "examples/demo/worked_map_json.json").write_text(json.dumps(_json_worked_map(), indent=2), encoding="utf-8")
+    (repo_root / "examples/demo/audit_json.json").write_text(json.dumps(_json_audit(), indent=2), encoding="utf-8")
+    (repo_root / "examples/demo/baseline_json.md").write_text(_baseline_text(), encoding="utf-8")
+    (repo_root / "examples/demo/full_case_index.md").write_text("# Demo Full Case\n\nStatus: `broad-scaffold`\n\nRemaining Expansion Work\n\n- demo_source_1\n- demo_source_2\n", encoding="utf-8")
+    (repo_root / "examples/demo/full_case_map.md").write_text(_full_case_map_text(), encoding="utf-8")
+    (repo_root / "examples/demo/task_queue.md").write_text(_task_queue_text(), encoding="utf-8")
     (repo_root / "submission_manifest.yaml").write_text(_manifest_text(), encoding="utf-8")
 
 
@@ -138,6 +173,16 @@ cases:
     case_id: demo
     label: Demo Transfer Case
     case_path: data/cases/demo/case.yaml
+    full_case:
+      index_path: examples/demo/full_case_index.md
+      map_path: examples/demo/full_case_map.md
+      worked_anchor: examples/demo/worked_map.md
+      min_clusters: 1
+      min_relations: 1
+    task_queue:
+      path: examples/demo/task_queue.md
+      prefix: demo_task_
+      min_tasks: 1
     ui:
       include: true
       label: Demo Transfer Case
@@ -213,6 +258,49 @@ cases:
           title: Demo Followup Blinded Baseline
           question: Can the second demo region be synthesized from spans?
           output_path: examples/demo/blinded_followup_flat_synthesis_baseline_gemma4.md
+          required_sources: [demo_source_1, demo_source_2]
+          spans:
+            - source_id: demo_source_1
+              path: data/cases/demo/sources/text/source_1.txt
+              ranges: [[1, 2]]
+            - source_id: demo_source_2
+              path: data/cases/demo/sources/text/source_2.txt
+              ranges: [[1, 2]]
+          min_words: 10
+      - case_key: demo
+        case_label: Demo Transfer Case
+        region_id: demo_region_json
+        id_prefix: demo
+        definition_path: docs/worked_regions/demo_region.md
+        map_path: examples/demo/worked_map_json.json
+        map_format: json_case_map_v1
+        audit_path: examples/demo/audit_json.json
+        audit_format: json_case_map_v1
+        baseline_path: examples/demo/baseline_json.md
+        output_json_path: examples/demo/worked_map_json_export.json
+        required_sources:
+          - demo_source_1
+          - demo_source_2
+        thresholds:
+          min_claims: 3
+          max_claims: 8
+          min_relation_types: 2
+          min_crux_mentions: 1
+          min_evidence_rows: 2
+          min_losses: 1
+          min_surviving_checks: 1
+          min_baseline_words: 10
+          require_best_sections: false
+        review:
+          worked_region_id: demo_region_json
+          claim_ids: ["claim:demo:201", "claim:demo:202"]
+          relation_ids: ["rel:demo:201"]
+          loss_ids: ["loss:demo:201"]
+        blinded_baseline:
+          baseline_id: demo_region_json.baseline
+          title: Demo JSON Blinded Baseline
+          question: Can the JSON demo region be synthesized from spans?
+          output_path: examples/demo/blinded_json_flat_synthesis_baseline_gemma4.md
           required_sources: [demo_source_1, demo_source_2]
           spans:
             - source_id: demo_source_1
@@ -332,4 +420,111 @@ The fixture caveat.
 
 ## Strongest Flat-Synthesis Loss
 {loss_id}
+"""
+
+
+def _json_worked_map() -> dict:
+    return {
+        "title": "Demo JSON Worked Map",
+        "status": "human-review-needed",
+        "prompt_procedure": "synthetic_transfer_fixture",
+        "evidence_mode": "source_grounded",
+        "sources": ["demo_source_1", "demo_source_2"],
+        "claims": [
+            {
+                "claim_id": "claim:demo:201",
+                "claim": "Alpha supports a JSON claim.",
+                "source_id": "demo_source_1",
+                "excerpt": "Alpha line.",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "claim:demo:202",
+                "claim": "Beta supports another JSON claim.",
+                "source_id": "demo_source_1",
+                "excerpt": "Beta line.",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "claim:demo:203",
+                "claim": "Gamma is a JSON crux claim.",
+                "source_id": "demo_source_2",
+                "excerpt": "Gamma line.",
+                "entailed_by_excerpt": "yes",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "rel:demo:201",
+                "source_claim": "claim:demo:201",
+                "target_claim": "claim:demo:202",
+                "relation_type": "supports",
+                "rationale": "The first JSON claim supports the second.",
+            },
+            {
+                "relation_id": "rel:demo:202",
+                "source_claim": "claim:demo:203",
+                "target_claim": "claim:demo:202",
+                "relation_type": "crux_for",
+                "rationale": "The third JSON claim is a crux.",
+            },
+        ],
+        "crux_candidates": ["crux: claim:demo:203 changes claim:demo:202."],
+        "similar_but_not_identical": ["claim:demo:201 and claim:demo:202 are related but distinct."],
+        "evidence_check": [["Source one", "Survives", "Excerpts are present."], ["Source two", "Survives", "Crux evidence is present."]],
+    }
+
+
+def _json_audit() -> dict:
+    return {
+        "title": "Demo JSON Audit",
+        "status": "human-review-needed",
+        "prompt_procedure": "synthetic_transfer_fixture",
+        "baseline_comparator": "examples/demo/baseline_json.md",
+        "map_comparator": "examples/demo/worked_map_json.json",
+        "losses": [
+            {
+                "loss_id": "loss:demo:201",
+                "lost_item": "The flat baseline drops the JSON crux.",
+                "source_support": "demo_source_2",
+                "flat_baseline_omission": "It summarizes without the JSON crux.",
+                "case_map_preserves": "claim:demo:203 and rel:demo:202 preserve the crux.",
+                "adversarial_check": "survives",
+            }
+        ],
+        "borderline_or_rejected": [],
+    }
+
+
+def _full_case_map_text() -> str:
+    return """# Demo Full Case Map
+
+Status: `broad-scaffold`
+
+cluster_id: demo_cluster_001
+topic: Demo sources
+cluster_claim: Demo sources preserve a small transfer case.
+map_status: broad scaffold
+sources: demo_source_1`, `demo_source_2
+
+relation_id: demo_full_rel_001
+source_cluster: demo_cluster_001
+target_cluster: demo_cluster_001
+relation_type: supports
+rationale: The cluster supports itself in the minimal fixture.
+
+Remaining Expansion Work
+"""
+
+
+def _task_queue_text() -> str:
+    return """# Demo Task Queue
+
+task_id: demo_task_001
+task_type: source_check
+priority: high
+cluster: demo_cluster_001
+sources: demo_source_1`, `demo_source_2
+task: Check that the demo source excerpts support the fixture claims.
+realism_value: Confirms the task queue parser works for arbitrary packages.
 """

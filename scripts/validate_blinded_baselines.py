@@ -21,7 +21,9 @@ def main() -> int:
         paths = sorted(output_dir.glob("blinded_flat_synthesis_baseline_*.md"))
         if not paths:
             failures.append(f"missing_blinded_baseline case={region.case_key} dir={output_dir.relative_to(repo_root)}")
-        forbidden_references = {Path(region.map_path).name, Path(region.audit_path).name, Path(region.best_path).name}
+        forbidden_references = {Path(region.map_path).name, Path(region.audit_path).name}
+        if region.best_path:
+            forbidden_references.add(Path(region.best_path).name)
         for path in paths:
             _validate_baseline(path, set(baseline.required_sources), baseline.min_words, forbidden_references, failures)
     if failures:

@@ -1,6 +1,6 @@
 # Reusable Engine Plan
 
-Status: `implemented-core`
+Status: `implemented`
 
 Purpose: turn `epistemic_case_mapper` from a strong FLF submission package into a reusable engine for arbitrary epistemic-map packages.
 
@@ -170,7 +170,7 @@ ecm review checklist --package package.yaml
 
 Old scripts can remain wrappers while tests move to the CLI.
 
-Initial implementation: `scripts/ecm.py` now exposes `validate package`, `validate region`, `export json`, `ui build`, and `baseline prompt` as package-manifest-oriented wrappers around the existing engine scripts.
+Implementation: `ecm` and `scripts/ecm.py` expose `validate package`, `validate region`, `export json`, `export region`, `ui build`, `baseline prompt`, `baseline run`, and `review checklist` as package-manifest-oriented commands.
 
 ## Phase 11: Add Package Fixtures
 
@@ -184,6 +184,8 @@ Fixture packages should cover:
 6. two blinded baselines,
 7. JSON artifact format,
 8. invalid reference negative case.
+
+Coverage lives in `tests/test_submission_manifest_generalization.py`. The fixture builds a temporary package with multiple regions under one case, custom ID grammar, UI enabled without FLF strings, full-case scaffold, task queue, two markdown regions, one JSON region, multiple blinded baselines, review checklist generation, region export, baseline dry-run, and an invalid-reference negative check.
 
 ## Phase 12: Documentation
 
@@ -215,3 +217,5 @@ And the package:
 - enables UI,
 - has at least one blinded baseline,
 - passes without Python edits.
+
+This done definition is covered by the synthetic transfer fixture and the `ecm` command tests.

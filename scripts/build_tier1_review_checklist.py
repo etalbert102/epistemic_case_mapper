@@ -66,8 +66,8 @@ def render_csv(repo_root: Path, manifest_path: str = "submission_manifest.yaml")
         if priority is None:
             continue
         region = region_files[worked_region.region_id]
-        worked_map = parse_worked_map(repo_root / region.map_path)
-        audit = parse_erosion_audit(repo_root / region.audit_path)
+        worked_map = parse_worked_map(repo_root / region.map_path, region.map_format)
+        audit = parse_erosion_audit(repo_root / region.audit_path, region.audit_format)
         claims = {claim["claim_id"]: claim for claim in worked_map["claims"]}
         relations = {relation["relation_id"]: relation for relation in worked_map["relations"]}
         losses = {loss["loss_id"]: loss for loss in audit["losses"]}

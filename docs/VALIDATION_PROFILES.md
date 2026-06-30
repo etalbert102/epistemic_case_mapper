@@ -1,6 +1,6 @@
 # Validation Profiles
 
-Status: `implemented-core`
+Status: `implemented`
 
 Validation is package-configured through each worked region's `thresholds`.
 
@@ -14,7 +14,10 @@ Supported thresholds:
 - `min_losses`
 - `min_surviving_checks`
 - `min_baseline_words`
+- `require_best_sections`
 
 This lets small transfer fixtures and larger curated regions use the same validator without Python edits.
 
-The current validators still assume the markdown key-value artifact shape. Package-specific optional section requirements should be added as explicit profile fields before supporting substantially different audit formats.
+`require_best_sections: false` lets non-FLF packages omit `BEST_REGIONS.md`.
+
+Validators support both `markdown_kv_v1` and `json_case_map_v1` worked-region artifacts.

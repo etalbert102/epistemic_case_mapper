@@ -31,6 +31,9 @@ def main() -> int:
     export_subparsers = export_parser.add_subparsers(dest="export_target", required=True)
     export_json = export_subparsers.add_parser("json", help="Export worked regions as JSON.")
     export_json.add_argument("--check", action="store_true")
+    export_region = export_subparsers.add_parser("region", help="Export one worked region as JSON.")
+    export_region.add_argument("--region", required=True)
+    export_region.add_argument("--check", action="store_true")
 
     ui_parser = subparsers.add_parser("ui", help="Build UI artifacts.")
     ui_subparsers = ui_parser.add_subparsers(dest="ui_target", required=True)
@@ -41,6 +44,17 @@ def main() -> int:
     baseline_subparsers = baseline_parser.add_subparsers(dest="baseline_target", required=True)
     baseline_prompt = baseline_subparsers.add_parser("prompt", help="Render a blinded baseline prompt.")
     baseline_prompt.add_argument("--baseline", required=True, help="Baseline ID or region ID.")
+    baseline_run = baseline_subparsers.add_parser("run", help="Run or dry-run blinded baseline generation.")
+    baseline_run.add_argument("--region", help="Region ID or baseline ID.")
+    baseline_run.add_argument("--case", help="Case key grouping selector.")
+    baseline_run.add_argument("--model", default="gemma4:e4b")
+    baseline_run.add_argument("--output-label")
+    baseline_run.add_argument("--dry-run", action="store_true")
+
+    review_parser = subparsers.add_parser("review", help="Build review artifacts.")
+    review_subparsers = review_parser.add_subparsers(dest="review_target", required=True)
+    review_checklist = review_subparsers.add_parser("checklist", help="Build Tier 1 review checklist.")
+    review_checklist.add_argument("--check", action="store_true")
 
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
@@ -62,6 +76,11 @@ def main() -> int:
         if args.check:
             command.append("--check")
         return _run(repo_root, command, args.package)
+    if args.command == "export" and args.export_target == "region":
+        command = ["scripts/export_worked_region_json.py", "--region", args.region]
+        if args.check:
+            command.append("--check")
+        return _run(repo_root, command, args.package)
     if args.command == "ui" and args.ui_target == "build":
         command = ["scripts/build_ui_data.py"]
         if args.check:
@@ -69,6 +88,22 @@ def main() -> int:
         return _run(repo_root, command, args.package)
     if args.command == "baseline" and args.baseline_target == "prompt":
         return _print_baseline_prompt(repo_root, args.package, args.baseline)
+    if args.command == "baseline" and args.baseline_target == "run":
+        command = ["scripts/run_blinded_baselines.py", "--model", args.model]
+        if args.region:
+            command.extend(["--region", args.region])
+        if args.case:
+            command.extend(["--case", args.case])
+        if args.output_label:
+            command.extend(["--output-label", args.output_label])
+        if args.dry_run:
+            command.append("--dry-run")
+        return _run(repo_root, command, args.package)
+    if args.command == "review" and args.review_target == "checklist":
+        command = ["scripts/build_tier1_review_checklist.py"]
+        if args.check:
+            command.append("--check")
+        return _run(repo_root, command, args.package)
 
     parser.error("unknown command")
     return 2
