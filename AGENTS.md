@@ -23,10 +23,10 @@ Do not optimize for fluent summaries at the expense of provenance or disagreemen
 Before a multi-file change or Codex `/goal` run, read:
 
 - `README.md`
-- `docs/WORKFLOW_SPEC.md`
+- `docs/archive/internal/WORKFLOW_SPEC.md`
 - `docs/protocols/epistemic_case_map_v0.md`
-- `docs/CODEX_GOAL_FLF_PROTOTYPE_CRITERIA.md`
-- the relevant `docs/plans/*.md`
+- `docs/archive/internal/CODEX_GOAL_FLF_PROTOTYPE_CRITERIA.md`
+- the relevant `docs/archive/internal/plans/*.md`
 - the relevant `data/cases/*/case.yaml`
 
 Record at least one concrete implication from each required input in the active plan before broad implementation edits.

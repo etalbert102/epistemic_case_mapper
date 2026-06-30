@@ -2,176 +2,135 @@
 
 Status: `human-review-needed`
 
-Purpose: provide a single judge-facing entry point for the FLF epistemic case study competition prototype.
+This is the judge-facing entry point. It is intentionally shorter than the repo because the submission should be evaluated as a prototype workflow, not as a document archive.
 
-## One-Sentence Claim
+## Core Claim
 
-Fluent AI synthesis can preserve surface plausibility while eroding the decision space needed for accountable review; this prototype keeps claims, provenance, relations, cruxes, caveats, and losses as inspectable artifacts so another investigator can audit and extend the work.
+AI synthesis can be broadly correct while still erasing the structure a later investigator needs to audit: source boundaries, caveats, dependencies, cruxes, similar-but-not-identical claims, and live disagreements.
 
-## What To Run
+The prototype tests a simple alternative: preserve those elements as source-grounded map artifacts, compare them to ordinary flat syntheses, and audit what survived, flattened, disappeared, or distorted.
 
-```bash
-PYTHONPATH=src python3 scripts/run_flf_demo.py
-```
+## What To Evaluate
 
-For a faster check over the checked-in artifacts:
+Evaluate the submission on three things:
 
-```bash
-PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
-```
+1. Whether the maps make decision-relevant structure more inspectable than normal prose.
+2. Whether the artifact format can be extended by another investigator without starting over.
+3. Whether the limitations are clear enough that the prototype does not overclaim human review or full-case adjudication.
 
-The demo validates source-grounded artifacts, worked regions, blinded baselines, structured exports, internal references, and the judge path.
+Do not evaluate it as a finished interactive product or a fully automated literature-review system. The current value is the workflow and audit surface.
 
-## Visual UI
+## Ten-Minute Path
 
-Run a local static server from the repository root:
+Read these in order:
+
+1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+2. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+3. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+4. `examples/eggs/worked_region_observational_vs_rct_map.md`
+5. `examples/eggs/decision_space_erosion_audit.md`
+6. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+7. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
+
+Optional UI:
 
 ```bash
 python3 -m http.server 8787
 ```
 
-Then open `http://localhost:8787/ui/`.
+Then open `http://localhost:8787/ui/`. The UI is only an inspection surface; the Markdown and JSON artifacts are canonical.
 
-The UI is an inspection dashboard over the checked-in LHC and eggs artifacts. It is not the source of truth; the Markdown/JSON artifacts remain canonical. The COVID slice is currently Markdown/JSON-first rather than a full UI case.
+## Run The Checks
 
-## What To Inspect First
+From the repo root:
 
-1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-2. `ui/index.html`
-3. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
-4. `docs/HUMAN_AUDIT_GUIDE.md`
-5. `docs/review/REVIEWER_START_HERE.md`
-6. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-7. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-8. `examples/covid_origins_slice/BEST_REGIONS.md`
-9. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-10. `examples/covid_origins_slice/decision_space_erosion_audit.md`
-11. `examples/lhc_black_holes/full_case_index.md`
-12. `examples/lhc_black_holes/full_case_map.md`
-13. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-14. `examples/lhc_black_holes/BEST_REGIONS.md`
-15. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-16. `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
-17. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-18. `examples/eggs/full_case_index.md`
-19. `examples/eggs/full_case_map.md`
-20. `examples/eggs/full_case_flat_synthesis_baseline.md`
-21. `examples/eggs/BEST_REGIONS.md`
-22. `examples/eggs/worked_region_observational_vs_rct_map.md`
-23. `examples/eggs/decision_space_erosion_audit.md`
-24. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-25. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-26. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-27. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-28. `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
+```bash
+PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+```
 
-## Submission Shape
+For the fuller local reproducibility check:
 
-This is a methodology plus runnable reference prototype. It is not a finished interactive product.
+```bash
+PYTHONPATH=src python3 scripts/reproducibility_gate.py --include-worked-regions
+```
 
-The package now has several evidence layers:
+These commands validate checked-in examples, worked-region structure, blinded baselines, full-case scaffolds, UI references, and judge-path references. Passing validation means the package is reproducible and internally consistent. It does not mean the maps have been externally human-reviewed.
 
-- full-case scaffolds that cover every currently acquired source for LHC and eggs,
-- worked-region anchors that provide deeper claim-level and relation-level audit surfaces for the most important slices, now including a narrow COVID origins disagreement slice.
-- full-case flat baselines that let judges inspect how whole-case prose compresses structure.
-- a new-source update demo that shows how an investigator can add a source-local update without rebuilding the whole case.
-- failure-mode and criteria self-assessment documents that make the submission easier to judge adversarially.
-
-The contribution is the workflow:
-
-1. Scope a worked region.
-2. Fix a source subset.
-3. Extract source-grounded claims with excerpts.
-4. Preserve relations, caveats, cruxes, and similar-but-not-identical claims.
-5. Generate normal flat syntheses from the same source subset.
-6. Audit where flat synthesis preserved, flattened, omitted, or distorted decision-relevant distinctions.
-7. Hand the result to a human reviewer through a structured packet.
-
-## FLF Criteria Mapping
-
-| FLF criterion | Prototype evidence | Main residual risk |
-| --- | --- | --- |
-| Helps someone reason better | Worked maps separate source claims, caveats, dependencies, critiques, and cruxes that flat synthesis tends to merge. | Human reviewers still need to confirm relation correctness. |
-| Generalizes | Demonstrated on a closed technical-risk case, a messy nutrition evidence case, and a narrow adversarial COVID origins slice. | The COVID slice is not a full COVID map and needs especially strict human review. |
-| Scales with better AI or more compute | The schema and validators can accept more sources, claims, relations, and baselines. | Automated extraction can overproduce weak claims unless review pressure remains explicit. |
-| Compounds across people or teams | Stable IDs, JSON exports, source spans, and review packets let another investigator revise local pieces. | Multi-reviewer merge workflow is not implemented yet. |
-
-## Side-By-Side Evidence
+## Evidence In The Package
 
 ### LHC Black Holes
 
-| Decision-relevant distinction | Flat synthesis behavior | Map preservation | Blinded-baseline status |
-| --- | --- | --- | --- |
-| Low-velocity LHC products may be trappable even if cosmic-ray products are not. | Mentions velocity briefly without preserving the dependency on trapping and Earth cosmic-ray limits. | `lhc_c004`, `lhc_c012`, `lhc_r003`, `lhc_r004`, `lhc_r016`. | Recurs across models; Qwen is more detailed but still compresses the dependency. |
-| White-dwarf and neutron-star arguments have different scope. | Lists compact stars together. | `lhc_c009`, `lhc_c011`, `lhc_r009`, `lhc_r014`. | Partly preserved by stronger baselines but still usually flattened. |
-| Plaga critique and GM response are multi-threaded. | Treats critique/response as broad disagreement. | `lhc_c013`, `lhc_c014`, `lhc_c015`, `lhc_c016`, `lhc_r010` through `lhc_r013`. | Gemma preserves Plaga better; GM response threads still tend to erode. |
-| Earth, Sun, stars, and universe-scale exposure are separate support roles. | Merges them into one natural-exposure reassurance. | `lhc_c001`, `lhc_c002`, `lhc_c003`, `lhc_c007`, `lhc_r001`, `lhc_r002`, `lhc_r005`. | Recurs across model families as a similar-claim merger. |
+The LHC worked region tests whether a synthesis preserves the structure of the cosmic-ray safety argument. The map keeps separate:
+
+- Earth, Sun, white-dwarf, neutron-star, and wider cosmic-exposure roles.
+- The low-velocity/trapping caveat for LHC-produced objects.
+- Hawking-radiation reasoning versus independent stable-black-hole arguments.
+- Plaga's critique and Giddings/Mangano's response.
+
+Primary files:
+
+- `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+- `examples/lhc_black_holes/flat_synthesis_baseline.md`
+- `examples/lhc_black_holes/decision_space_erosion_audit.md`
+- `examples/lhc_black_holes/BEST_REGIONS.md`
 
 ### Eggs And Health
 
-| Decision-relevant distinction | Flat synthesis behavior | Map preservation | Blinded-baseline status |
-| --- | --- | --- | --- |
-| Observational CVD outcomes and randomized lipid markers answer different questions. | Original baseline weakens the endpoint boundary. | `eggs_c004`, `eggs_c015`, `eggs_c016`, `eggs_c017`, `eggs_r005`, `eggs_r006`. | Gemma and Qwen preserve this better, so the claim should be narrowed for blinded comparators. |
-| BMJ and JAMA are in tension rather than merely sequential findings. | Reports both but does not make the tension a navigable relation. | `eggs_c008`, `eggs_c012`, `eggs_c013`, `eggs_r003`. | Stronger baselines preserve more of the tension; still useful as a review edge. |
-| Guidelines are policy syntheses, not direct outcome studies. | Treats guidance as advice without preserving process provenance. | `eggs_c001`, `eggs_c002`, `eggs_c003`, `eggs_r013`. | Recurs across blinded baselines. |
-| NNR is a scoping review with evidence-grade limits. | Uses NNR as total-picture synthesis without the review-method caveat. | `eggs_c018`, `eggs_c019`, `eggs_r014`. | Recurs across blinded baselines. |
-| `up to one egg/day` has different meanings across sources. | Similar wording is merged across AHA, BMJ, and NNR. | `eggs_c007`, `eggs_c008`, `eggs_c018`, Similar But Not Identical section. | Recurs across blinded baselines as a scope-distinction loss. |
+The eggs worked region tests whether a synthesis preserves boundaries between observational outcome evidence, randomized lipid-marker evidence, guideline framing, and population caveats. The map keeps separate:
+
+- Observational CVD endpoints versus randomized lipid markers.
+- BMJ and JAMA findings as a live tension rather than a blended result.
+- Guideline-process claims versus direct causal evidence.
+- Baseline intake, substitution context, high-LDL guidance, diabetes caveats, and NNR evidence-grade limits.
+
+Primary files:
+
+- `examples/eggs/worked_region_observational_vs_rct_map.md`
+- `examples/eggs/flat_synthesis_baseline.md`
+- `examples/eggs/decision_space_erosion_audit.md`
+- `examples/eggs/BEST_REGIONS.md`
 
 ### COVID Origins Slice
 
-| Decision-relevant distinction | Flat synthesis behavior | Map preservation | Review status |
-| --- | --- | --- | --- |
-| Debate outcome, process critique, and substantive posterior disagreement are different claims. | A paragraph can say Rootclaim lost but still disagreed. | `covid_c005`, `covid_c006`, `covid_c007`, `covid_r002`, `covid_r003`. | New narrow slice; needs strict human review. |
-| Aggregate forecasts and minority disagreement answer different questions. | Reports the aggregate and minority in prose. | `covid_c009`, `covid_c010`, `covid_r005`. | Useful disagreement-preservation test. |
-| Market geography can play multiple evidential roles. | Lists origin site, superspreading, and ascertainment assumptions together. | `covid_c004`, `covid_c012`, `covid_c013`, `covid_r008`, `covid_r012`, `covid_r014`. | Strongest COVID crux. |
-| A subargument critique is not a whole-case resolution. | Says the critique does not settle the full case. | `covid_c017`, `covid_c018`, `covid_r011`. | Scope boundary requires reviewer pressure. |
+The COVID artifact is deliberately narrow. It tests whether a synthesis preserves Bayesian disagreement and subargument boundaries without pretending to settle COVID origins.
 
-## Reusable Outputs
+The map keeps separate:
 
-- Markdown worked maps for human review.
-- JSON worked-region exports:
-  - `examples/lhc_black_holes/worked_region_cosmic_ray_map.json`
-  - `examples/eggs/worked_region_observational_vs_rct_map.json`
-  - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json`
-- Artifact count summary:
-  - `docs/SUBMISSION_ARTIFACT_SUMMARY.md`
-- Broad full-case scaffolds:
-  - `examples/lhc_black_holes/full_case_index.md`
-  - `examples/lhc_black_holes/full_case_map.md`
-  - `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-  - `examples/eggs/full_case_index.md`
-  - `examples/eggs/full_case_map.md`
-  - `examples/eggs/full_case_flat_synthesis_baseline.md`
-- Draft extension artifacts:
-  - `examples/lhc_black_holes/worked_region_public_risk_framing_map.md`
-  - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-  - `docs/HUMAN_AUDIT_GUIDE.md`
-  - `docs/NEW_SOURCE_UPDATE_DEMO.md`
-  - `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
-- Human review packets:
-  - `docs/review/REVIEWER_START_HERE.md`
-  - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-  - `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-  - `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-  - `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-  - `docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv`
-  - `docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv`
-  - `docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv`
-- Operational realism artifacts:
-  - `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
-  - `examples/lhc_black_holes/investigator_task_queue.md`
-  - `examples/eggs/investigator_task_queue.md`
-- Static UI:
-  - `ui/index.html`
-  - `ui/data.json`
+- Debate outcome versus process critique.
+- Aggregate forecast versus minority disagreement.
+- Formal Bayesian decomposition assumptions.
+- Early-case geography assumptions and later phylogeny critique.
+- Subargument critique versus whole-case resolution.
 
-## What Is Not Claimed
+Primary files:
 
-- The maps are not human-reviewed yet.
-- The worked regions are not exhaustive full-case maps.
-- The COVID worked region is especially narrow and should not be read as an origins adjudication.
-- The baselines are span-limited, not full-corpus literature reviews.
-- The prototype is file-based, not an interactive product.
-- The claim is not that all summaries fail. The claim is that flat synthesis preservation is brittle and model-dependent unless reviewable structure is preserved explicitly.
+- `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+- `examples/covid_origins_slice/flat_synthesis_baseline.md`
+- `examples/covid_origins_slice/decision_space_erosion_audit.md`
+- `examples/covid_origins_slice/BEST_REGIONS.md`
 
-See `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md` for the full risk register.
+## Why This Is FLF-Relevant
+
+The submission is about compounding epistemic work. A flat synthesis can be useful for immediate understanding, but it is hard for another person to revise locally. A case map gives future reviewers stable source IDs, claim IDs, relation IDs, excerpts, rationales, cruxes, and open questions.
+
+The useful comparison is not "map good, summary bad." The useful comparison is: when a later reviewer needs to inspect a disputed distinction, which artifact still exposes the distinction as something reviewable?
+
+## Current Boundary
+
+What is demonstrated:
+
+- Source-grounded worked-region maps.
+- Structured claims, excerpts, relation rationales, cruxes, and open questions.
+- Flat-synthesis erosion audits.
+- Reproducible validation and baseline checks.
+- Human-review packets and checklists.
+
+What is not claimed:
+
+- The artifacts are not human-reviewed.
+- The maps are not exhaustive full-case adjudications.
+- The COVID slice is not a full COVID origins case.
+- The baselines are useful comparators, not final quantitative evidence.
+- The UI is not an editor and does not persist review decisions.
+
+For the full risk register, use `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`. For human review, start with `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.
