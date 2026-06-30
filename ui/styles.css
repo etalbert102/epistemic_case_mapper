@@ -206,6 +206,92 @@ input {
   padding: 32px;
 }
 
+.judge-mode {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 22px;
+  padding: 30px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(255, 254, 250, 0.96), rgba(237, 242, 238, 0.82)),
+    var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.judge-copy h2 {
+  max-width: 780px;
+  margin: 0;
+  font-size: clamp(32px, 4vw, 58px);
+  line-height: 1.02;
+}
+
+.judge-copy p {
+  max-width: 790px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.judge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.action-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 254, 250, 0.8);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.action-link.primary {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #fffefa;
+}
+
+.dependency-card {
+  display: grid;
+  gap: 12px;
+}
+
+.dependency-card div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 254, 250, 0.82);
+}
+
+.dependency-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.dependency-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .overview-band {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.95fr);
@@ -502,6 +588,7 @@ code {
     border-right: 0;
   }
 
+  .judge-mode,
   .overview-band,
   .section-grid {
     grid-template-columns: 1fr;
@@ -514,6 +601,7 @@ code {
     padding: 16px;
   }
 
+  .judge-mode,
   .overview-band,
   .panel {
     padding: 16px;

@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-This is the judge-facing entry point. It is intentionally shorter than the repo because the submission should be evaluated as a prototype workflow, not as a document archive.
+This is the judge-facing entry point. For the fastest path, start with `docs/START_HERE.md`; this packet records the fuller submission boundary.
 
 ## Core Claim
 

@@ -71,6 +71,7 @@ REQUIRED_GLOBAL_FILES = (
     "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
     "docs/HUMAN_AUDIT_GUIDE.md",
     "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
+    "docs/START_HERE.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_PACKET.md",
     "ui/index.html",

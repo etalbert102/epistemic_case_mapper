@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 JUDGE_PATHS = (
+    "docs/START_HERE.md",
     "docs/SUBMISSION_PACKET.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",

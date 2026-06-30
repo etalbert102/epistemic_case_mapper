@@ -2,7 +2,9 @@
 
 Lightweight FLF competition prototype for producing reusable, navigable epistemic case maps with AI assistance.
 
-Start with the judge packet: `docs/SUBMISSION_PACKET.md`.
+Start with the polished judge path: `docs/START_HERE.md`.
+
+Then use the fuller judge packet: `docs/SUBMISSION_PACKET.md`.
 
 For a visual inspection surface, run the static UI at `ui/index.html`.
 
@@ -60,6 +62,7 @@ Generated starter output is written to `artifacts/<case_id>/`. Curated judge-fac
 
 Start with:
 
+- `docs/START_HERE.md`
 - `docs/SUBMISSION_PACKET.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
@@ -71,12 +74,11 @@ Start with:
 
 The fastest evidence check is:
 
-1. Start with the full-case index for a case.
-2. Inspect the best-region pointer and worked-region anchor.
-3. Compare the worked-region map to the flat synthesis baseline.
-4. Read the erosion audit.
-5. Check the blinded and multi-model baseline audits to see which losses survive stronger comparators.
-6. Use the case-specific human audit packet before treating any artifact as reviewed.
+1. Read `docs/START_HERE.md`.
+2. Open the LHC worked-region map and read `What To Notice` plus the first six claims.
+3. Open the LHC erosion audit and inspect `lhc_loss_001`.
+4. Use eggs for generalization and the COVID slice for adversarial disagreement structure.
+5. Use the case-specific human audit packet before treating any artifact as reviewed.
 
 Full-case scaffold entry points:
 

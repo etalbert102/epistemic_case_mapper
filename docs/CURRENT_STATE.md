@@ -33,7 +33,7 @@ Last updated: 2026-06-27.
 - A reviewer-first handoff page and self-contained Tier 1 checklist exist:
   - `docs/review/REVIEWER_START_HERE.md`
   - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-- A single judge-facing submission packet exists in `docs/SUBMISSION_PACKET.md`.
+- A polished judge-first start page exists at `docs/START_HERE.md`, with the fuller submission packet at `docs/SUBMISSION_PACKET.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
 - A combined criteria self-assessment, failure-mode analysis, and risk register exists in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`.
 - Broad full-case knowledge scaffolds exist for LHC and eggs:
