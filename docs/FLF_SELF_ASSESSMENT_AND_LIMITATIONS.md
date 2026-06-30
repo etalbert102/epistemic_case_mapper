@@ -12,16 +12,14 @@ The central claim is that flat synthesis can be broadly useful while still erodi
 
 ## Criteria Mapping
 
-| FLF criterion | Current evidence | Self-score | Residual risk |
-| --- | --- | ---: | --- |
-| Helps someone reason better about a case | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, erosion audits, and review packets surface candidate distinctions a reviewer can inspect rather than trust implicitly. | 4 | Human reviewers still need to score relation correctness and claim fidelity. |
-| Generalizes across cases | Demonstrated on LHC black-hole risk, eggs/health, and a narrow COVID origins Bayesian-disagreement slice, which differ by domain, evidentiary closure, controversy profile, and decision context. | 4 | The COVID slice is not a full COVID map and needs strict human review before being treated as a worked case. |
-| Scales with better AI or more compute | Stable schema, source IDs, claim IDs, relation IDs, Markdown/JSON exports, validators, and task queues make additional extraction/model passes composable. | 4 | Extraction and relation labeling are still curated rather than fully automated. |
-| Compounds across people or teams | Review packets, CSV checklists, stable IDs, source inventories, and task queues let another investigator accept, reject, or extend local pieces. | 4 | Multi-reviewer merge and conflict-resolution workflow is only specified, not implemented. |
-| Stands up to adversarial pressure | Erosion audits include adversarial checks, blinded local-model baselines, failure examples, and explicit limitations. | 3 | No completed external audit yet. |
-| Produces reusable knowledge artifacts | Full-case scaffolds, worked-region maps, JSON exports, source metadata, and UI dashboard are all checked into the repo. | 4 | The static UI is inspection-only and cannot yet persist reviewer decisions. |
-
-Scale: 1 means mostly absent, 3 means demonstrated but incomplete, 5 means strong contest-grade evidence.
+| FLF criterion | Evidence in this package | Weakness | Next validation |
+| --- | --- | --- | --- |
+| Helps someone reason better about a case | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, erosion audits, and review packets surface candidate distinctions a reviewer can inspect rather than trust implicitly. | Human reviewers still need to score relation correctness and claim fidelity. | External reviewer records accept/revise/reject decisions on claims, relations, and losses. |
+| Generalizes across cases | Demonstrated on LHC black-hole risk, eggs/health, and a narrow COVID origins Bayesian-disagreement slice, which differ by domain, evidentiary closure, controversy profile, and decision context. | The COVID slice is not a full COVID map and needs strict human review before being treated as a worked case. | Add at least one independently reviewed worked region outside the current author-selected set. |
+| Scales with better AI or more compute | Stable schema, source IDs, claim IDs, relation IDs, Markdown/JSON exports, validators, and task queues make additional extraction/model passes composable. | Extraction and relation labeling are still curated rather than fully automated. | Run a logged LLM extraction pass and compare it against the curated maps. |
+| Compounds across people or teams | Review packets, CSV checklists, stable IDs, source inventories, and task queues let another investigator accept, reject, or extend local pieces. | Multi-reviewer merge and conflict-resolution workflow is only specified, not implemented. | Have a second reviewer edit one map and preserve decision IDs through revision. |
+| Stands up to adversarial pressure | Erosion audits include adversarial checks, blinded local-model baselines, failure examples, and explicit limitations. | No completed external audit yet. | Human-score the blinded baselines and map losses for fairness. |
+| Produces reusable knowledge artifacts | Full-case scaffolds, worked-region maps, JSON exports, source metadata, and UI dashboard are all checked into the repo. | The static UI is inspection-only and cannot yet persist reviewer decisions. | Add reviewer decision persistence only after provenance handling is explicit. |
 
 ## Best Evidence To Inspect
 

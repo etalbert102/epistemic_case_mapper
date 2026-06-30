@@ -13,6 +13,15 @@ Review note: agent-curated from local source excerpts; human review has not occu
 - `plaga_2008_metastable_black_holes`
 - `giddings_mangano_2008_comments_plaga`
 
+## What To Notice
+
+This map is not trying to prove the LHC case in prose. It makes the safety argument reviewable by separating:
+
+- natural exposure claims from trapping caveats,
+- Earth/Sun exposure from white-dwarf and neutron-star arguments,
+- Plaga's critique from Giddings/Mangano's response,
+- broad safety reassurance from the dependencies a reviewer would need to inspect.
+
 ## Curated Claims
 
 claim_id: lhc_c001

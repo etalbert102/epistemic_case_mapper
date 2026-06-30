@@ -15,6 +15,15 @@ Review note: agent-curated from local source excerpts; human review has not occu
 - `li_2020_egg_cholesterol_rct_meta`
 - `nnr_2023_eggs_scoping_review`
 
+## What To Notice
+
+This map is not trying to give dietary advice. It makes the evidence structure reviewable by separating:
+
+- observational CVD outcomes from randomized lipid-marker trials,
+- BMJ/JAMA tension from guideline language,
+- general healthy-pattern advice from population-specific caveats,
+- "up to one egg per day" statements that do different work in different sources.
+
 ## Curated Claims
 
 claim_id: eggs_c001

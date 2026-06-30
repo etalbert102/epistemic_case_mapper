@@ -14,6 +14,15 @@ Evidence mode: `source_grounded_slice`
 - `levin_2025_bayesian_assessment`
 - `weissman_2026_phylogeny_comment`
 
+## What To Notice
+
+This slice is not a COVID origins adjudication. It makes disagreement structure reviewable by separating:
+
+- debate outcome from substantive posterior disagreement,
+- aggregate forecasts from minority forecasts,
+- Bayesian decomposition assumptions from source-status caveats,
+- early-case geography arguments from whole-case resolution.
+
 ## Curated Claims
 
 claim_id: covid_c001
@@ -278,4 +287,3 @@ rationale: Explicit update triggers show why the case remains evolving rather th
 | Generalizes | 2 | Adds the contest's adversarial case as a narrow slice after LHC and eggs. | Still not full COVID. |
 | Scales | 1 | Uses same source/claim/relation/audit pattern as other worked regions. | Source ingestion is source-note based, not full-corpus automated. |
 | Compounds | 2 | Stable IDs and update triggers identify where future evidence would attach. | No multi-reviewer disagreement handling yet. |
-

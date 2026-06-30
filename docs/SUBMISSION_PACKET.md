@@ -10,6 +10,20 @@ AI synthesis can be broadly correct while still erasing the structure a later in
 
 The prototype tests a simple alternative: preserve those elements as source-grounded map artifacts, compare them to ordinary flat syntheses, and audit what survived, flattened, disappeared, or distorted.
 
+## One-Minute Example
+
+Flat synthesis can say: "Cosmic-ray exposure shows LHC black-hole risk is ruled out."
+
+That is broadly right, but it hides a dependency. Earth cosmic-ray survival is not the whole argument once LHC-produced objects may be slower and more trappable than cosmic-ray products.
+
+The LHC map preserves the dependency as reviewable pieces:
+
+- `lhc_c004`: the velocity caveat.
+- `lhc_c012`: the trapping analysis.
+- `lhc_r003` and `lhc_r004`: why compact-star arguments become relevant.
+
+Why this matters: the map does not merely cite sources. It preserves the part of the reasoning a later reviewer would need to accept, challenge, or revise.
+
 ## What To Evaluate
 
 Evaluate the submission on three things:
@@ -20,17 +34,20 @@ Evaluate the submission on three things:
 
 Do not evaluate it as a finished interactive product or a fully automated literature-review system. The current value is the workflow and audit surface.
 
-## Ten-Minute Path
+## Three-Minute Path
 
 Read these in order:
 
 1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 2. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
 3. `examples/lhc_black_holes/decision_space_erosion_audit.md`
-4. `examples/eggs/worked_region_observational_vs_rct_map.md`
-5. `examples/eggs/decision_space_erosion_audit.md`
-6. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-7. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
+
+For deeper review, continue with:
+
+1. `examples/eggs/worked_region_observational_vs_rct_map.md`
+2. `examples/eggs/decision_space_erosion_audit.md`
+3. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
+4. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
 
 Optional UI:
 

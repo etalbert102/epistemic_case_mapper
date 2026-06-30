@@ -8,6 +8,8 @@ Purpose: give judges a compact way to see the prototype's central claim: ordinar
 
 The map is not better because it is longer. It is better only when it preserves a distinction that changes what a reviewer can inspect, challenge, extend, or decide.
 
+This is narrower than ordinary provenance tracking. Provenance says where a claim came from. Decision-space preservation asks whether the distinction remains actionable for later review.
+
 Count a before/after improvement when the map preserves at least one of:
 
 - a source boundary,
