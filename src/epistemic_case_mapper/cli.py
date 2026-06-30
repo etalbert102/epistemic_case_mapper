@@ -9,6 +9,7 @@ from pathlib import Path
 
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
+from epistemic_case_mapper.unseen_quality import init_quality_test, validate_quality_test
 
 ENGINE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = ENGINE_ROOT / "scripts"
@@ -63,6 +64,21 @@ def main() -> int:
     review_checklist = review_subparsers.add_parser("checklist", help="Build Tier 1 review checklist.")
     review_checklist.add_argument("--check", action="store_true")
 
+    quality_parser = subparsers.add_parser("quality", help="Initialize and check unseen-case quality reviews.")
+    quality_subparsers = quality_parser.add_subparsers(dest="quality_target", required=True)
+    quality_init = quality_subparsers.add_parser("init", help="Create unseen-case quality review templates.")
+    quality_init.add_argument("--case", required=True, help="Unseen-case slug.")
+    quality_init.add_argument("--title", required=True, help="Human-readable case title.")
+    quality_init.add_argument("--question", required=True, help="Case question.")
+    quality_init.add_argument("--force", action="store_true", help="Overwrite existing quality review files.")
+    quality_check = quality_subparsers.add_parser("check", help="Check completed unseen-case quality review files.")
+    quality_check.add_argument("--case", required=True, help="Unseen-case slug.")
+    quality_gate = quality_subparsers.add_parser(
+        "gate",
+        help="Prepare package assets, run package gates, then check unseen-case quality review files.",
+    )
+    quality_gate.add_argument("--case", required=True, help="Unseen-case slug.")
+
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
 
@@ -113,6 +129,30 @@ def main() -> int:
         if args.check:
             command.append("--check")
         return _run(repo_root, command, args.package)
+    if args.command == "quality" and args.quality_target == "init":
+        return _init_quality(repo_root, args.case, args.title, args.question, args.force)
+    if args.command == "quality" and args.quality_target == "check":
+        return _check_quality(repo_root, args.case)
+    if args.command == "quality" and args.quality_target == "gate":
+        result = _prepare_package(repo_root, args.package)
+        if result != 0:
+            return result
+        result = _run_many(
+            repo_root,
+            [
+                ["scripts/validate_submission_manifest.py"],
+                ["scripts/validate_worked_regions.py"],
+                ["scripts/validate_submission_references.py"],
+                ["scripts/export_worked_region_json.py"],
+                ["scripts/export_worked_region_json.py", "--check"],
+                ["scripts/build_ui_data.py", "--check"],
+                ["scripts/build_tier1_review_checklist.py", "--check"],
+            ],
+            args.package,
+        )
+        if result != 0:
+            return result
+        return _check_quality(repo_root, args.case)
 
     parser.error("unknown command")
     return 2
@@ -222,6 +262,33 @@ def _write_reviewer_start(repo_root: Path, manifest: SubmissionManifest) -> None
         ]
     )
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _init_quality(repo_root: Path, case_slug: str, title: str, question: str, force: bool) -> int:
+    try:
+        written = init_quality_test(repo_root, case_slug, title, question, force=force)
+    except ValueError as exc:
+        print(f"quality_init_failed {exc}", file=sys.stderr)
+        return 1
+    for path in written:
+        print(f"Wrote {path.relative_to(repo_root).as_posix()}")
+    if not written:
+        print("No quality files changed")
+    return 0
+
+
+def _check_quality(repo_root: Path, case_slug: str) -> int:
+    try:
+        failures = validate_quality_test(repo_root, case_slug)
+    except ValueError as exc:
+        print(f"quality_check_failed {exc}", file=sys.stderr)
+        return 1
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}", file=sys.stderr)
+        return 1
+    print(f"Validated unseen-case quality review case={case_slug}")
+    return 0
 
 
 if __name__ == "__main__":

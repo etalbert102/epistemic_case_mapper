@@ -37,6 +37,7 @@ Last updated: 2026-06-27.
 - The full seven-dimension FLF judging rubric is recorded as background reference at `docs/reference/flf_judging_rubric.md`; first-read docs use evidence-first framing rather than a direct criteria map.
 - A reference-lineage note maps contest-provided examples of epistemic scrutiny to the prototype's design choices at `docs/REFERENCE_LINEAGE.md`.
 - A generalizability red-team note names transfer limits, failure boundaries, fresh-case test criteria, and a second-operator validation path at `docs/GENERALIZABILITY_RED_TEAM.md`.
+- An unseen-case quality test plan and `ecm quality init/check/gate` workflow exist at `docs/UNSEEN_CASE_QUALITY_TEST_PLAN.md`.
 - A code generalizability implementation plan is saved at `docs/CODE_GENERALIZABILITY_PLAN.md`.
 - A reusable-engine plan is recorded at `docs/REUSABLE_ENGINE_PLAN.md`.
 - Reusable-engine architecture and manifest docs are recorded at `docs/ENGINE_ARCHITECTURE.md` and `docs/PACKAGE_MANIFEST_SPEC.md`.

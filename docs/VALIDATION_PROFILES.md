@@ -21,3 +21,5 @@ This lets small transfer fixtures and larger curated regions use the same valida
 `require_best_sections: false` lets non-FLF packages omit `BEST_REGIONS.md`.
 
 Validators support both `markdown_kv_v1` and `json_case_map_v1` worked-region artifacts.
+
+Unseen-case quality validation is separate from package syntax validation. `ecm quality check --case <case_slug>` verifies that the quality-review packet exists, has no placeholder text, includes the required protocol and comparison sections, records 1-5 scores for the ten quality dimensions, and records acceptance statuses for the unseen-case criteria. `ecm quality gate --case <case_slug>` combines that review check with package preparation and package/export/UI/checklist validation.
