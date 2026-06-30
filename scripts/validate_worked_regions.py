@@ -120,7 +120,7 @@ def _validate_map(
     text = path.read_text(encoding="utf-8")
     if any(str(claim.get("entailed_by_excerpt", "")).lower() == "no" for claim in claims) and "audit concern" not in text.lower():
         failures.append(f"unsupported_claim_not_moved_to_audit region={region_id} path={path}")
-    if len(relation_ids) == 0:
+    if thresholds.min_relation_types > 0 and len(relation_ids) == 0:
         failures.append(f"worked_map_missing_relations region={region_id} path={path}")
     if len(relation_types) < thresholds.min_relation_types:
         failures.append(f"worked_map_too_few_relation_types region={region_id} count={len(relation_types)} path={path}")

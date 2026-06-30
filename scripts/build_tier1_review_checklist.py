@@ -54,6 +54,7 @@ def main() -> int:
             return 1
         print("Tier 1 human review checklist is current")
         return 0
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered, encoding="utf-8")
     print(f"Wrote {OUTPUT_PATH}")
     return 0

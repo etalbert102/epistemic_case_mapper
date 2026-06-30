@@ -7,7 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from epistemic_case_mapper.case_initializer import init_case_package
 from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.semantic_pipeline import (
     build_critique_prompt,
@@ -37,6 +39,17 @@ def main() -> int:
     parser.add_argument("--repo-root", default=ENGINE_ROOT, help="Package root for relative paths.")
     parser.add_argument("--package", default="submission_manifest.yaml", help="Package manifest path.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    case_parser = subparsers.add_parser("case", help="Initialize reusable case packages from documents.")
+    case_subparsers = case_parser.add_subparsers(dest="case_target", required=True)
+    case_init = case_subparsers.add_parser("init", help="Create a package skeleton from documents and a question.")
+    case_init.add_argument("--case-id", required=True, help="Stable case slug.")
+    case_init.add_argument("--title", required=True, help="Human-readable case title.")
+    case_init.add_argument("--question", required=True, help="Case question.")
+    case_init.add_argument("--docs", nargs="+", required=True, help="Document files to import.")
+    case_init.add_argument("--region", help="Worked-region ID. Defaults to <case-id>_initial_region.")
+    case_init.add_argument("--model-backend", default="prompt", help="Default backend: prompt, command:<cmd>, or ollama:<model>.")
+    case_init.add_argument("--force", action="store_true", help="Overwrite initializer-managed files.")
 
     package_parser = subparsers.add_parser("package", help="Prepare package-facing generated assets.")
     package_subparsers = package_parser.add_subparsers(dest="package_target", required=True)
@@ -101,6 +114,19 @@ def main() -> int:
     semantic_critique_prompt = semantic_prompt_subparsers.add_parser("critique", help="Render a JSON critique prompt.")
     semantic_critique_prompt.add_argument("--region", required=True)
     semantic_critique_prompt.add_argument("--map-path", help="Candidate map path. Defaults to the region map path.")
+    semantic_run = semantic_subparsers.add_parser("run", help="Run source-bounded prompts through a swappable model backend.")
+    semantic_run_subparsers = semantic_run.add_subparsers(dest="semantic_run_target", required=True)
+    semantic_map_run = semantic_run_subparsers.add_parser("map", help="Generate or render a candidate JSON worked map.")
+    semantic_map_run.add_argument("--region", required=True)
+    semantic_map_run.add_argument("--backend", help="Override manifest default backend.")
+    semantic_map_run.add_argument("--output", help="Output path. Defaults to prompt file for prompt backend, else region map path.")
+    semantic_map_run.add_argument("--no-validate", action="store_true", help="Skip semantic JSON validation.")
+    semantic_critique_run = semantic_run_subparsers.add_parser("critique", help="Generate or render semantic critique JSON.")
+    semantic_critique_run.add_argument("--region", required=True)
+    semantic_critique_run.add_argument("--backend", help="Override manifest default backend.")
+    semantic_critique_run.add_argument("--map-path", help="Candidate map path. Defaults to the region map path.")
+    semantic_critique_run.add_argument("--output", help="Output path. Defaults to prompt file for prompt backend, else artifacts/semantic.")
+    semantic_critique_run.add_argument("--no-validate", action="store_true", help="Skip semantic JSON validation.")
     semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
     semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
     semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")
@@ -112,6 +138,18 @@ def main() -> int:
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
 
+    if args.command == "case" and args.case_target == "init":
+        return _init_case_package(
+            repo_root,
+            args.package,
+            args.case_id,
+            args.title,
+            args.question,
+            [Path(path) for path in args.docs],
+            args.region,
+            args.model_backend,
+            args.force,
+        )
     if args.command == "package" and args.package_target == "prepare":
         return _prepare_package(repo_root, args.package)
     if args.command == "validate" and args.validate_target == "package":
@@ -207,6 +245,18 @@ def main() -> int:
     if args.command == "semantic" and args.semantic_target == "prompt" and args.semantic_prompt_target == "critique":
         print(build_critique_prompt(repo_root, args.package, args.region, args.map_path), end="")
         return 0
+    if args.command == "semantic" and args.semantic_target == "run" and args.semantic_run_target == "map":
+        return _run_semantic_map(repo_root, args.package, args.region, args.backend, args.output, args.no_validate)
+    if args.command == "semantic" and args.semantic_target == "run" and args.semantic_run_target == "critique":
+        return _run_semantic_critique(
+            repo_root,
+            args.package,
+            args.region,
+            args.backend,
+            args.map_path,
+            args.output,
+            args.no_validate,
+        )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "critique":
@@ -214,6 +264,134 @@ def main() -> int:
 
     parser.error("unknown command")
     return 2
+
+
+def _init_case_package(
+    repo_root: Path,
+    package: str,
+    case_id: str,
+    title: str,
+    question: str,
+    docs: list[Path],
+    region: str | None,
+    model_backend: str,
+    force: bool,
+) -> int:
+    try:
+        initialized = init_case_package(
+            repo_root=repo_root,
+            package_path=package,
+            case_id=case_id,
+            title=title,
+            question=question,
+            doc_paths=docs,
+            region_id=region,
+            model_backend=model_backend,
+            force=force,
+        )
+    except ValueError as exc:
+        print(f"case_init_failed {exc}", file=sys.stderr)
+        return 1
+    print(f"Initialized case package case={initialized.case_id} region={initialized.region_id}")
+    for path in initialized.written_paths:
+        print(f"Wrote {_display_path(repo_root, path)}")
+    return 0
+
+
+def _run_semantic_map(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    output: str | None,
+    no_validate: bool,
+) -> int:
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        region = manifest.region_for_id(region_id)
+    except KeyError:
+        print(f"semantic_run_failed unknown_region={region_id}", file=sys.stderr)
+        return 1
+    prompt = build_map_prompt(repo_root, package, region_id)
+    return _write_backend_result(
+        repo_root=repo_root,
+        region_id=region_id,
+        prompt=prompt,
+        backend=backend or manifest.default_model_backend,
+        output=output,
+        default_candidate_path=region.map_path,
+        prompt_path=f"prompts/{region_id}/map_prompt.txt",
+        validate=lambda path: _validate_semantic_map(repo_root, package, region_id, str(path)),
+        no_validate=no_validate,
+    )
+
+
+def _run_semantic_critique(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    map_path: str | None,
+    output: str | None,
+    no_validate: bool,
+) -> int:
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        manifest.region_for_id(region_id)
+    except KeyError:
+        print(f"semantic_run_failed unknown_region={region_id}", file=sys.stderr)
+        return 1
+    prompt = build_critique_prompt(repo_root, package, region_id, map_path)
+    return _write_backend_result(
+        repo_root=repo_root,
+        region_id=region_id,
+        prompt=prompt,
+        backend=backend or manifest.default_model_backend,
+        output=output,
+        default_candidate_path=f"artifacts/semantic/{region_id}_critique.json",
+        prompt_path=f"prompts/{region_id}/critique_prompt.txt",
+        validate=lambda path: _validate_semantic_critique(str(path)),
+        no_validate=no_validate,
+    )
+
+
+def _write_backend_result(
+    repo_root: Path,
+    region_id: str,
+    prompt: str,
+    backend: str,
+    output: str | None,
+    default_candidate_path: str,
+    prompt_path: str,
+    validate,
+    no_validate: bool,
+) -> int:
+    try:
+        result = run_model_backend(prompt, backend)
+    except (RuntimeError, ValueError) as exc:
+        print(f"semantic_run_failed region={region_id} backend={backend} error={exc}", file=sys.stderr)
+        return 1
+    relative_output = output or (prompt_path if result.prompt_only else default_candidate_path)
+    output_path = Path(relative_output)
+    if not output_path.is_absolute():
+        output_path = repo_root / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(result.text, encoding="utf-8")
+    print(f"Wrote {_display_path(repo_root, output_path)} backend={result.backend}")
+    if result.prompt_only:
+        print("Prompt backend selected; no JSON validation run.")
+        return 0
+    if no_validate:
+        print("Semantic validation skipped.")
+        return 0
+    return validate(output_path)
+
+
+def _display_path(repo_root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _run_many(repo_root: Path, commands: list[list[str]], package: str) -> int:

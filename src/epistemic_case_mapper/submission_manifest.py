@@ -173,6 +173,7 @@ class SubmissionManifest(BaseModel):
     schema_version: int = 1
     package_id: str = "flf_submission"
     package_label: str = "FLF Submission"
+    default_model_backend: str = "prompt"
     id_patterns: IdPatterns = Field(default_factory=IdPatterns)
     relation_ontology: RelationOntology = Field(default_factory=RelationOntology)
     ui_hero: UiHero = Field(default_factory=UiHero)

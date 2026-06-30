@@ -9,6 +9,7 @@ Core package fields:
 - `schema_version`
 - `package_id`
 - `package_label`
+- `default_model_backend`
 - `id_patterns`
 - `relation_ontology`
 - `ui_hero`
@@ -18,6 +19,8 @@ Core package fields:
 - `extension_artifacts`
 - `update_demos`
 - `cases`
+
+`default_model_backend` controls `ecm semantic run ...` when `--backend` is omitted. Supported values are documented in `docs/CASE_INIT_AND_MODEL_BACKENDS.md`; the default is `prompt`, which writes prompts without calling a model.
 
 Each case declares its case manifest path, optional starter output path, optional full-case scaffold, optional task queue, UI settings, and one or more worked regions.
 
