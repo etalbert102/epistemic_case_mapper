@@ -58,6 +58,7 @@ For deeper review, continue with:
 2. `examples/eggs/decision_space_erosion_audit.md`
 3. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 4. `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`
+5. `docs/GENERALIZABILITY_RED_TEAM.md`
 
 Optional UI:
 
@@ -151,6 +152,7 @@ What is demonstrated:
 - Flat-synthesis erosion audits.
 - Reproducible validation and baseline checks.
 - Human-review packets and checklists.
+- A generalizability red-team analysis that names where transfer is plausible, where it is under-proven, and how to test it.
 
 What is not claimed:
 
@@ -159,5 +161,6 @@ What is not claimed:
 - The COVID slice is not a full COVID origins case.
 - The baselines are useful comparators, not final quantitative evidence.
 - The UI is not an editor and does not persist review decisions.
+- The method has not yet been independently applied by a second operator to a fresh, mundane contested case.
 
 For the full risk register, use `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`. For human review, start with `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.

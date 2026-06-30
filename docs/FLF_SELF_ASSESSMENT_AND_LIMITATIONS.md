@@ -17,7 +17,7 @@ This table uses the seven official judging dimensions recorded in `docs/referenc
 | Judging dimension | Evidence in this package | Weakness | Next validation |
 | --- | --- | --- | --- |
 | Epistemic uplift | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, and erosion audits show distinctions that ordinary synthesis can flatten: LHC velocity/trapping dependencies, eggs endpoint boundaries, and COVID disagreement structure. | The comparison against off-the-shelf deep research and top-range Claude Code is still mostly qualitative, despite multi-model baseline audits. | Have judges or external reviewers compare the map workflow against a fresh deep-research baseline on the same sub-question. |
-| Generalizability | Demonstrated on LHC black-hole risk, eggs/health, and a narrow COVID origins slice, which differ by closure, controversy, evidence type, and adversarial pressure. | The strongest maps are still author-selected worked regions rather than randomly sampled case slices. | Add at least one independently chosen worked region outside the current author-selected set. |
+| Generalizability | Demonstrated on LHC black-hole risk, eggs/health, and a narrow COVID origins slice, which differ by closure, controversy, evidence type, and adversarial pressure. `docs/GENERALIZABILITY_RED_TEAM.md` now makes the portability claim explicit, including failure boundaries and transfer-test criteria. | The strongest maps are still author-selected worked regions rather than randomly sampled case slices, and no second operator has applied the method independently. | Run one fresh-case transfer test outside the current set, or have a second reviewer revise 10 claims and 10 relations while recording accept/revise/reject decisions. |
 | Compounding and shareability | Stable source IDs, claim IDs, relation IDs, Markdown/JSON exports, review packets, and task queues let another investigator inspect or extend local pieces. | Multi-reviewer merge and conflict-resolution workflow is specified but not implemented. | Have a second reviewer revise one map while preserving IDs and recording accept/revise/reject decisions. |
 | Scalability | Validators, schema, prompt inventory, source manifests, and JSON exports can accept more sources, claims, relations, and model passes. | Extraction and relation labeling are still curated; the current strongest artifact depends on careful human/agent curation. | Run a logged LLM extraction pass and compare it against the curated maps for recall, precision, and review cost. |
 | Methodological transparency | Workflow docs, prompt inventory, validators, source manifests, audit notes, and `human-review-needed` status make design choices and uncertainty visible. | Some source-fidelity and relation-correctness judgments are still embedded in curated Markdown rather than independently reviewed. | Add a completed review log that shows which claims, relations, and losses were accepted, revised, or rejected. |
@@ -31,16 +31,17 @@ This table uses the seven official judging dimensions recorded in `docs/referenc
 3. `examples/eggs/worked_region_observational_vs_rct_map.md`
 4. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 5. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-6. `docs/review/REVIEWER_START_HERE.md`
-7. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-8. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-9. `docs/HUMAN_AUDIT_GUIDE.md`
-10. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-11. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-12. `examples/eggs/full_case_flat_synthesis_baseline.md`
-13. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-14. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-15. `ui/index.html`
+6. `docs/GENERALIZABILITY_RED_TEAM.md`
+7. `docs/review/REVIEWER_START_HERE.md`
+8. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
+9. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
+10. `docs/HUMAN_AUDIT_GUIDE.md`
+11. `docs/NEW_SOURCE_UPDATE_DEMO.md`
+12. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+13. `examples/eggs/full_case_flat_synthesis_baseline.md`
+14. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+15. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+16. `ui/index.html`
 
 ## Failure Modes
 
@@ -73,6 +74,7 @@ Review packets can look rigorous while reviewers only skim. The method needs exp
 | Risk | Why it matters | Current mitigation | Remaining work |
 | --- | --- | --- | --- |
 | No completed human review | Agent-authored maps and audits can be biased or subtly wrong. | Human audit packets and checklists are included. | A named reviewer should record claim, relation, and erosion decisions. |
+| Generalizability is plausible but under-tested | Judges may accept that the artifact shape travels while still doubting that another operator can apply it well to a fresh case. | `docs/GENERALIZABILITY_RED_TEAM.md` names suitable and unsuitable case shapes, gives a minimal portable workflow, and defines fresh-case and second-operator tests. | Complete one transfer test on a mundane contested case or record an independent second-operator review. |
 | Full-case maps are broad scaffolds | Judges may want full source-excerpt-level maps, not just coverage scaffolds. | Every acquired LHC and eggs source is represented in a full-case index and map. | Add source-excerpt-level claims for every full-case cluster. |
 | COVID slice is not a full COVID map | A narrow adversarial slice can be mistaken for an origins adjudication or full case study. | COVID artifacts are labeled as a Bayesian-disagreement worked region with a dedicated human audit packet. | Keep it as a worked region unless enough sources and review are added for a full COVID case. |
 | Baselines are partly span-limited | A full-document or better-prompted baseline might preserve more structure. | Multi-model blinded baselines and full-case flat baselines make this limitation visible. | Human-score the full-case baselines and add full-document model logs for paper-grade evidence. |

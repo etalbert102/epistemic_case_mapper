@@ -42,6 +42,8 @@ That path should be enough to decide whether the core mechanism is interesting. 
 
 The full judging rubric is recorded in `docs/reference/flf_judging_rubric.md`. The self-assessment in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md` maps the submission to those seven dimensions.
 
+For the most important red-team challenge, read `docs/GENERALIZABILITY_RED_TEAM.md`. It states where the workflow appears portable, where that claim is still under-proven, and what fresh-case or second-operator test would strengthen it.
+
 ## What The Prototype Shows
 
 - LHC: dependency structure and critique/response structure survive as reviewable nodes.

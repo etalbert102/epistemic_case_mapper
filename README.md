@@ -66,6 +66,7 @@ Start with:
 - `docs/SUBMISSION_PACKET.md`
 - `docs/reference/flf_judging_rubric.md`
 - `docs/REFERENCE_LINEAGE.md`
+- `docs/GENERALIZABILITY_RED_TEAM.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/review/REVIEWER_START_HERE.md`
@@ -80,7 +81,8 @@ The fastest evidence check is:
 2. Open the LHC worked-region map and read `What To Notice` plus the first six claims.
 3. Open the LHC erosion audit and inspect `lhc_loss_001`.
 4. Use eggs for generalization and the COVID slice for adversarial disagreement structure.
-5. Use the case-specific human audit packet before treating any artifact as reviewed.
+5. Read `docs/GENERALIZABILITY_RED_TEAM.md` for the transfer claim and its failure boundary.
+6. Use the case-specific human audit packet before treating any artifact as reviewed.
 
 Full-case scaffold entry points:
 

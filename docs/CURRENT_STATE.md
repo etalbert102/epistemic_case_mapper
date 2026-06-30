@@ -36,6 +36,7 @@ Last updated: 2026-06-27.
 - A polished judge-first start page exists at `docs/START_HERE.md`, with the fuller submission packet at `docs/SUBMISSION_PACKET.md`.
 - The full seven-dimension FLF judging rubric is recorded at `docs/reference/flf_judging_rubric.md` and reflected in the self-assessment.
 - A reference-lineage note maps contest-provided examples of epistemic scrutiny to the prototype's design choices at `docs/REFERENCE_LINEAGE.md`.
+- A generalizability red-team note names transfer limits, failure boundaries, fresh-case test criteria, and a second-operator validation path at `docs/GENERALIZABILITY_RED_TEAM.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
 - A combined criteria self-assessment, failure-mode analysis, and risk register exists in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md`.
 - Broad full-case knowledge scaffolds exist for LHC and eggs:
