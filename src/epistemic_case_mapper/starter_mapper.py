@@ -4,7 +4,7 @@ import hashlib
 import re
 from pathlib import Path
 
-from epistemic_case_mapper.schema import CaseManifest, CaseMap, Claim, OpenQuestion, Relation, Source
+from epistemic_case_mapper.schema import CaseManifest, CaseMap, Claim, OpenQuestion, OpenQuestionTemplate, Relation, Source
 
 
 CLAIM_MARKERS = (
@@ -260,60 +260,8 @@ def _starter_relations(claims: list[Claim]) -> list[Relation]:
 
 
 def _starter_open_questions(manifest: CaseManifest, claims: list[Claim]) -> list[OpenQuestion]:
-    if manifest.case_id == "lhc_black_holes":
-        return [
-            OpenQuestion(
-                question_id="oq_0001",
-                text="Which assumptions make the natural cosmic-ray analogue valid or invalid for LHC conditions?",
-                why_it_matters="The safety case depends on whether naturally occurring collisions cover the relevant collider-specific conditions.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "cosmic-ray" in claim.text.lower() or "naturally" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources],
-                gap_type="crux",
-            ),
-            OpenQuestion(
-                question_id="oq_0002",
-                text="Which source-grounded evidence directly supports the claim that hypothetical microscopic black holes would evaporate quickly?",
-                why_it_matters="The Hawking-radiation premise is a major dependency and should not be treated as settled by seed notes alone.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "evaporate" in claim.text.lower() or "hawking" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources if "safety" in source.source_id],
-                gap_type="missing source needed",
-            ),
-            OpenQuestion(
-                question_id="oq_0003",
-                text="Which independent reviews, critiques, or public-risk arguments should be added before treating this as source-grounded?",
-                why_it_matters="A useful FLF artifact should preserve why the concern seemed live to critics as well as why the final safety conclusion was reassuring.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "concern" in claim.text.lower() or "critic" in claim.text.lower() or "transparent" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources if "concern" in source.source_id],
-                gap_type="missing source needed",
-            ),
-        ]
-    if manifest.case_id == "eggs":
-        return [
-            OpenQuestion(
-                question_id="oq_0001",
-                text="Which findings depend on substitution context: what foods eggs replace or accompany?",
-                why_it_matters="Egg guidance can change if eggs replace refined carbohydrates, processed meat, fish, legumes, or other protein sources.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "diet" in claim.text.lower() or "pattern" in claim.text.lower() or "replace" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources if "aha" in source.source_id or "nnr" in source.source_id],
-                gap_type="crux",
-            ),
-            OpenQuestion(
-                question_id="oq_0002",
-                text="How should observational cardiovascular findings be weighted against randomized lipid-marker findings?",
-                why_it_matters="The eggs case turns on whether clinical outcomes, residual confounding, or biomarker changes should carry more weight.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "cardiovascular" in claim.text.lower() or "ldl" in claim.text.lower() or "cholesterol" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources if "jama" in source.source_id or "bmj" in source.source_id or "li_2020" in source.source_id],
-                gap_type="crux",
-            ),
-            OpenQuestion(
-                question_id="oq_0003",
-                text="Which populations need separate guidance, especially people with diabetes, high LDL cholesterol, or different baseline dietary patterns?",
-                why_it_matters="A single global egg recommendation may erase heterogeneity across baseline risk, cholesterol response, and dietary context.",
-                linked_claim_ids=[claim.claim_id for claim in claims if "diabetes" in claim.text.lower() or "population" in claim.text.lower() or "subgroup" in claim.text.lower()][:5],
-                linked_source_ids=[source.source_id for source in manifest.sources],
-                gap_type="population heterogeneity",
-            ),
-        ]
+    if manifest.open_question_templates:
+        return [_open_question_from_template(template, manifest, claims) for template in manifest.open_question_templates]
     return [
         OpenQuestion(
             question_id="oq_0001",
@@ -327,3 +275,26 @@ def _starter_open_questions(manifest: CaseManifest, claims: list[Claim]) -> list
             why_it_matters="The map should surface missing evidence rather than perform false closure.",
         ),
     ]
+
+
+def _open_question_from_template(
+    template: OpenQuestionTemplate, manifest: CaseManifest, claims: list[Claim]
+) -> OpenQuestion:
+    claim_keywords = [keyword.lower() for keyword in template.claim_keywords]
+    source_keywords = [keyword.lower() for keyword in template.source_id_keywords]
+    return OpenQuestion(
+        question_id=template.question_id,
+        text=template.text,
+        why_it_matters=template.why_it_matters,
+        linked_claim_ids=[
+            claim.claim_id
+            for claim in claims
+            if any(keyword in claim.text.lower() for keyword in claim_keywords)
+        ][:5],
+        linked_source_ids=[
+            source.source_id
+            for source in manifest.sources
+            if not source_keywords or any(keyword in source.source_id.lower() for keyword in source_keywords)
+        ],
+        gap_type=template.gap_type,
+    )

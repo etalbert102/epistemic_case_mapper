@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
+
 
 @dataclass(frozen=True)
 class RegionFiles:
@@ -16,35 +18,26 @@ class RegionFiles:
     output_json_path: str
 
 
-REGION_FILES = (
-    RegionFiles(
-        case_key="lhc",
-        case_label="LHC black holes",
-        map_path="examples/lhc_black_holes/worked_region_cosmic_ray_map.md",
-        audit_path="examples/lhc_black_holes/decision_space_erosion_audit.md",
-        baseline_path="examples/lhc_black_holes/flat_synthesis_baseline.md",
-        best_path="examples/lhc_black_holes/BEST_REGIONS.md",
-        output_json_path="examples/lhc_black_holes/worked_region_cosmic_ray_map.json",
-    ),
-    RegionFiles(
-        case_key="eggs",
-        case_label="Eggs and health",
-        map_path="examples/eggs/worked_region_observational_vs_rct_map.md",
-        audit_path="examples/eggs/decision_space_erosion_audit.md",
-        baseline_path="examples/eggs/flat_synthesis_baseline.md",
-        best_path="examples/eggs/BEST_REGIONS.md",
-        output_json_path="examples/eggs/worked_region_observational_vs_rct_map.json",
-    ),
-    RegionFiles(
-        case_key="covid",
-        case_label="COVID origins slice",
-        map_path="examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md",
-        audit_path="examples/covid_origins_slice/decision_space_erosion_audit.md",
-        baseline_path="examples/covid_origins_slice/flat_synthesis_baseline.md",
-        best_path="examples/covid_origins_slice/BEST_REGIONS.md",
-        output_json_path="examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json",
-    ),
-)
+def region_files_from_manifest(manifest: SubmissionManifest) -> tuple[RegionFiles, ...]:
+    return tuple(
+        RegionFiles(
+            case_key=region.case_key,
+            case_label=region.case_label,
+            map_path=region.map_path,
+            audit_path=region.audit_path,
+            baseline_path=region.baseline_path,
+            best_path=region.best_path,
+            output_json_path=region.output_json_path,
+        )
+        for region in manifest.iter_worked_regions()
+    )
+
+
+def load_region_files(repo_root: Path, manifest_path: str | Path = "submission_manifest.yaml") -> tuple[RegionFiles, ...]:
+    return region_files_from_manifest(load_submission_manifest(repo_root, manifest_path))
+
+
+REGION_FILES = load_region_files(Path(__file__).resolve().parents[1])
 
 
 def parse_worked_map(path: Path) -> dict:
@@ -75,9 +68,13 @@ def parse_erosion_audit(path: Path) -> dict:
     }
 
 
-def collect_ids(repo_root: Path) -> dict[str, set[str]]:
+def collect_ids(
+    repo_root: Path,
+    manifest: SubmissionManifest | None = None,
+) -> dict[str, set[str]]:
     ids: dict[str, set[str]] = {"claim": set(), "relation": set(), "loss": set()}
-    for region in REGION_FILES:
+    region_files = region_files_from_manifest(manifest) if manifest is not None else REGION_FILES
+    for region in region_files:
         worked_map = parse_worked_map(repo_root / region.map_path)
         audit = parse_erosion_audit(repo_root / region.audit_path)
         ids["claim"].update(str(claim.get("claim_id", "")) for claim in worked_map["claims"])

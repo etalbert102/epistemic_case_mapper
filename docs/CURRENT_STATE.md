@@ -37,6 +37,11 @@ Last updated: 2026-06-27.
 - The full seven-dimension FLF judging rubric is recorded as background reference at `docs/reference/flf_judging_rubric.md`; first-read docs use evidence-first framing rather than a direct criteria map.
 - A reference-lineage note maps contest-provided examples of epistemic scrutiny to the prototype's design choices at `docs/REFERENCE_LINEAGE.md`.
 - A generalizability red-team note names transfer limits, failure boundaries, fresh-case test criteria, and a second-operator validation path at `docs/GENERALIZABILITY_RED_TEAM.md`.
+- A code generalizability implementation plan is saved at `docs/CODE_GENERALIZABILITY_PLAN.md`.
+- `submission_manifest.yaml` is the source of truth for worked regions, full-case scaffolds, UI inclusion, review priorities, validation thresholds, and blinded baseline spans.
+- `scripts/validate_submission_manifest.py` checks manifest wiring, paths, source membership, review target IDs, and blinded-baseline span bounds.
+- `tests/test_submission_manifest_generalization.py` builds a temporary synthetic case with a custom ID prefix and runs the manifest, worked-region, and reference validators against it.
+- A contributor guide for adding cases exists at `docs/ADDING_A_CASE.md`.
 - A compact architecture diagram exists in `docs/ARCHITECTURE.md`.
 - A combined evidence ledger, failure-mode analysis, and risk register exists in `docs/EVIDENCE_AND_LIMITATIONS.md`.
 - Broad full-case knowledge scaffolds exist for LHC and eggs:
@@ -70,7 +75,7 @@ Last updated: 2026-06-27.
 
 - The starter mapper produces heuristic candidate claims, not a final curated case map.
 - Relations are deterministic shared-tag seed links, not audited source-grounded argument relations.
-- Open questions are useful but hand-coded by case.
+- Starter open questions can be supplied through case manifest templates; the fallback questions remain heuristic.
 - Reports are navigable but still too large because they include many heuristic claims.
 - Preservation metadata is incorporated, but not yet used to guide relation extraction automatically.
 - Human-review workflow is specified, but no human-reviewed decisions have been recorded.
@@ -95,6 +100,7 @@ PYTHONPATH=src python3 -m pytest -q
 PYTHONPATH=src python3 scripts/run_flf_demo.py
 PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 PYTHONPATH=src python3 scripts/judge_smoke_test.py
+PYTHONPATH=src python3 scripts/validate_submission_manifest.py
 PYTHONPATH=src python3 scripts/validate_submission_references.py
 PYTHONPATH=src python3 scripts/validate_full_case_knowledge.py
 PYTHONPATH=src python3 scripts/validate_realism_artifacts.py

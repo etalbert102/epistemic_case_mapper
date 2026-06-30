@@ -1,44 +1,29 @@
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
-
-BASELINE_GROUPS = (
-    {
-        "glob": "examples/lhc_black_holes/blinded_flat_synthesis_baseline_*.md",
-        "required_sources": {
-            "lsag_2008_safety_review",
-            "spc_2008_lsag_review",
-            "giddings_mangano_2008_stable_black_holes",
-            "plaga_2008_metastable_black_holes",
-            "giddings_mangano_2008_comments_plaga",
-        },
-    },
-    {
-        "glob": "examples/eggs/blinded_flat_synthesis_baseline_*.md",
-        "required_sources": {
-            "dga_2020_2025_pmc_summary",
-            "aha_2019_dietary_cholesterol_pubmed",
-            "aha_2023_dietary_cholesterol_news",
-            "bmj_2020_egg_consumption_cvd",
-            "jama_2019_dietary_cholesterol_eggs",
-            "li_2020_egg_cholesterol_rct_meta",
-            "nnr_2023_eggs_scoping_review",
-        },
-    },
-)
+from epistemic_case_mapper.submission_manifest import load_submission_manifest
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
+    parser = argparse.ArgumentParser(description="Validate checked-in blinded flat-synthesis baselines.")
+    parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
+    args = parser.parse_args()
+
+    repo_root = Path(args.repo_root).resolve()
+    manifest = load_submission_manifest(repo_root, args.manifest)
     failures: list[str] = []
-    for group in BASELINE_GROUPS:
-        paths = sorted(repo_root.glob(str(group["glob"])))
+    for region, baseline in manifest.iter_blinded_baselines():
+        output_dir = (repo_root / baseline.output_path).parent
+        paths = sorted(output_dir.glob("blinded_flat_synthesis_baseline_*.md"))
         if not paths:
-            failures.append(f"missing_blinded_baseline glob={group['glob']}")
+            failures.append(f"missing_blinded_baseline case={region.case_key} dir={output_dir.relative_to(repo_root)}")
+        forbidden_references = {Path(region.map_path).name, Path(region.audit_path).name, Path(region.best_path).name}
         for path in paths:
-            _validate_baseline(path, set(group["required_sources"]), failures)
+            _validate_baseline(path, set(baseline.required_sources), baseline.min_words, forbidden_references, failures)
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
@@ -47,7 +32,13 @@ def main() -> int:
     return 0
 
 
-def _validate_baseline(path: Path, required_sources: set[str], failures: list[str]) -> None:
+def _validate_baseline(
+    path: Path,
+    required_sources: set[str],
+    min_words: int,
+    forbidden_references: set[str],
+    failures: list[str],
+) -> None:
     if not path.exists():
         failures.append(f"missing_blinded_baseline path={path}")
         return
@@ -65,19 +56,13 @@ def _validate_baseline(path: Path, required_sources: set[str], failures: list[st
     for source_id in required_sources:
         if source_id not in text:
             failures.append(f"blinded_baseline_missing_source path={path} source={source_id}")
-    if len(text.split()) < 300:
+    if len(text.split()) < min_words:
         failures.append(f"blinded_baseline_too_short path={path} words={len(text.split())}")
     for artifact in ("Thinking", "done thinking", "<think>", "</think>"):
         if artifact in text:
             failures.append(f"blinded_baseline_contains_reasoning_artifact path={path} artifact={artifact}")
     if "\x1b" in text or "\x08" in text:
         failures.append(f"blinded_baseline_contains_terminal_control path={path}")
-    forbidden_references = (
-        "worked_region_cosmic_ray_map.md",
-        "worked_region_observational_vs_rct_map.md",
-        "decision_space_erosion_audit.md",
-        "BEST_REGIONS.md",
-    )
     for forbidden in forbidden_references:
         if forbidden in text:
             failures.append(f"blinded_baseline_references_map_artifact path={path} forbidden={forbidden}")

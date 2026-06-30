@@ -1,0 +1,355 @@
+schema_version: 1
+
+judge_paths:
+  - docs/START_HERE.md
+  - docs/SUBMISSION_PACKET.md
+  - docs/REFERENCE_LINEAGE.md
+  - docs/GENERALIZABILITY_RED_TEAM.md
+  - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/ADDING_A_CASE.md
+  - docs/FLF_BEFORE_AFTER_COMPARISON.md
+  - docs/EVIDENCE_AND_LIMITATIONS.md
+  - docs/HUMAN_AUDIT_GUIDE.md
+  - docs/NEW_SOURCE_UPDATE_DEMO.md
+  - docs/FLF_SUBMISSION_DRAFT.md
+  - docs/ARCHITECTURE.md
+  - docs/OPERATIONAL_WORKFLOW_AND_REALISM.md
+  - docs/SUBMISSION_ARTIFACT_SUMMARY.md
+  - ui/index.html
+  - docs/review/REVIEWER_START_HERE.md
+  - docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv
+  - docs/review/LHC_HUMAN_AUDIT_PACKET.md
+  - docs/review/EGGS_HUMAN_AUDIT_PACKET.md
+  - docs/review/COVID_HUMAN_AUDIT_PACKET.md
+  - docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/BLINDED_BASELINE_AUDIT.md
+  - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
+  - examples/covid_origins_slice/BEST_REGIONS.md
+  - examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
+  - examples/covid_origins_slice/flat_synthesis_baseline.md
+  - examples/covid_origins_slice/decision_space_erosion_audit.md
+  - examples/lhc_black_holes/full_case_index.md
+  - examples/lhc_black_holes/full_case_map.md
+  - examples/lhc_black_holes/full_case_flat_synthesis_baseline.md
+  - examples/lhc_black_holes/BEST_REGIONS.md
+  - examples/lhc_black_holes/worked_region_cosmic_ray_map.md
+  - examples/lhc_black_holes/flat_synthesis_baseline.md
+  - examples/lhc_black_holes/decision_space_erosion_audit.md
+  - examples/lhc_black_holes/worked_region_public_risk_framing_map.md
+  - examples/lhc_black_holes/investigator_task_queue.md
+  - examples/eggs/full_case_index.md
+  - examples/eggs/full_case_map.md
+  - examples/eggs/full_case_flat_synthesis_baseline.md
+  - examples/eggs/BEST_REGIONS.md
+  - examples/eggs/worked_region_observational_vs_rct_map.md
+  - examples/eggs/flat_synthesis_baseline.md
+  - examples/eggs/decision_space_erosion_audit.md
+  - examples/eggs/investigator_task_queue.md
+
+required_docs:
+  - docs/ARCHITECTURE.md
+  - docs/CURRENT_STATE.md
+  - docs/FLF_BEFORE_AFTER_COMPARISON.md
+  - docs/GENERALIZABILITY_RED_TEAM.md
+  - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/ADDING_A_CASE.md
+  - docs/EVIDENCE_AND_LIMITATIONS.md
+  - docs/FLF_SUBMISSION_DRAFT.md
+  - docs/HUMAN_AUDIT_GUIDE.md
+  - docs/NEW_SOURCE_UPDATE_DEMO.md
+  - docs/OPERATIONAL_WORKFLOW_AND_REALISM.md
+  - docs/PROMPT_INVENTORY.md
+  - docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md
+  - docs/REFERENCE_LINEAGE.md
+  - docs/reference/flf_judging_rubric.md
+  - docs/START_HERE.md
+  - docs/SUBMISSION_ARTIFACT_SUMMARY.md
+  - docs/SUBMISSION_PACKET.md
+  - docs/VALIDATOR_FAILURE_GUIDE.md
+  - ui/index.html
+  - ui/styles.css
+  - ui/app.js
+  - ui/data.json
+  - docs/worked_regions/eggs_source_excerpt_packet.md
+  - docs/worked_regions/lhc_source_excerpt_packet.md
+  - docs/worked_regions/mini_filled_example.md
+  - docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md
+  - docs/review/BLINDED_BASELINE_AUDIT.md
+  - docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/COVID_HUMAN_AUDIT_PACKET.md
+  - docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/EGGS_HUMAN_AUDIT_PACKET.md
+  - docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv
+  - docs/review/LHC_HUMAN_AUDIT_PACKET.md
+  - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
+  - docs/review/REVIEWER_START_HERE.md
+  - docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv
+
+reference_scan_paths:
+  - README.md
+  - docs/START_HERE.md
+  - docs/REFERENCE_LINEAGE.md
+  - docs/GENERALIZABILITY_RED_TEAM.md
+  - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/ADDING_A_CASE.md
+  - docs/reference/flf_judging_rubric.md
+  - docs/FLF_BEFORE_AFTER_COMPARISON.md
+  - docs/EVIDENCE_AND_LIMITATIONS.md
+  - docs/HUMAN_AUDIT_GUIDE.md
+  - docs/NEW_SOURCE_UPDATE_DEMO.md
+  - docs/FLF_SUBMISSION_DRAFT.md
+  - docs/OPERATIONAL_WORKFLOW_AND_REALISM.md
+  - docs/SUBMISSION_PACKET.md
+  - ui/index.html
+  - docs/ARCHITECTURE.md
+  - docs/SUBMISSION_ARTIFACT_SUMMARY.md
+  - docs/review/REVIEWER_START_HERE.md
+  - docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv
+  - docs/review/LHC_HUMAN_AUDIT_PACKET.md
+  - docs/review/EGGS_HUMAN_AUDIT_PACKET.md
+  - docs/review/COVID_HUMAN_AUDIT_PACKET.md
+  - docs/review/BLINDED_BASELINE_AUDIT.md
+  - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
+
+extension_artifacts:
+  - artifact: Full-case flat baseline
+    case: LHC black holes
+    path: examples/lhc_black_holes/full_case_flat_synthesis_baseline.md
+    status: illustrative, non-blinded
+  - artifact: Full-case flat baseline
+    case: Eggs and health
+    path: examples/eggs/full_case_flat_synthesis_baseline.md
+    status: illustrative, non-blinded
+  - artifact: Draft public-risk worked region
+    case: LHC black holes
+    path: examples/lhc_black_holes/worked_region_public_risk_framing_map.md
+    status: draft extension, not canonical counts
+  - artifact: New-to-map source update demo
+    case: LHC black holes
+    path: docs/NEW_SOURCE_UPDATE_DEMO.md
+    status: demo from already acquired source
+  - artifact: Evidence and limitations
+    case: Submission
+    path: docs/EVIDENCE_AND_LIMITATIONS.md
+    status: human-review-needed
+  - artifact: Human audit guide
+    case: Submission
+    path: docs/HUMAN_AUDIT_GUIDE.md
+    status: human-review-needed
+  - artifact: Operational workflow and realism
+    case: Submission
+    path: docs/OPERATIONAL_WORKFLOW_AND_REALISM.md
+    status: human-review-needed
+
+update_demos:
+  - demo_id: lhc_new_source_update
+    case_key: lhc
+    path: docs/NEW_SOURCE_UPDATE_DEMO.md
+    claim_id_prefix: lhc_update_c
+    relation_id_prefix: lhc_update_r
+
+cases:
+  - case_key: lhc
+    case_id: lhc_black_holes
+    label: LHC black holes
+    case_path: data/cases/lhc_black_holes/case.yaml
+    examples_path: examples/lhc_black_holes
+    build_starter: true
+    full_case:
+      index_path: examples/lhc_black_holes/full_case_index.md
+      map_path: examples/lhc_black_holes/full_case_map.md
+      worked_anchor: examples/lhc_black_holes/worked_region_cosmic_ray_map.md
+      baseline_path: examples/lhc_black_holes/full_case_flat_synthesis_baseline.md
+      min_clusters: 8
+    task_queue:
+      path: examples/lhc_black_holes/investigator_task_queue.md
+      prefix: lhc_task_
+      min_tasks: 5
+    ui:
+      include: true
+      label: LHC Black Hole Risk
+      short_label: LHC
+      theme: risk
+      review_packet_path: docs/review/LHC_HUMAN_AUDIT_PACKET.md
+      review_checklist_path: docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv
+      spotlights:
+        - distinction: Low-velocity LHC products may be trappable even if cosmic-ray products are not.
+          flat: Flat synthesis tends to mention velocity without preserving the dependency on trapping and Earth cosmic-ray limits.
+          map: The worked map preserves `lhc_c004`, `lhc_c012`, `lhc_r003`, `lhc_r004`, and `lhc_r016`.
+          status: Recurring loss across model families.
+        - distinction: Critique and response are multi-threaded.
+          flat: A synthesis can treat the Plaga/GM exchange as a broad dispute.
+          map: The map separates Plaga scenario claims, white-dwarf stopping critique, power-output response, and accretion response.
+          status: Strong review target.
+    worked_regions:
+      - case_key: lhc
+        case_label: LHC black holes
+        region_id: lhc_cosmic_ray_argument
+        id_prefix: lhc
+        definition_path: docs/worked_regions/lhc_cosmic_ray_argument.md
+        map_path: examples/lhc_black_holes/worked_region_cosmic_ray_map.md
+        baseline_path: examples/lhc_black_holes/flat_synthesis_baseline.md
+        audit_path: examples/lhc_black_holes/decision_space_erosion_audit.md
+        best_path: examples/lhc_black_holes/BEST_REGIONS.md
+        output_json_path: examples/lhc_black_holes/worked_region_cosmic_ray_map.json
+        required_sources:
+          - lsag_2008_safety_review
+          - spc_2008_lsag_review
+          - giddings_mangano_2008_stable_black_holes
+          - plaga_2008_metastable_black_holes
+          - giddings_mangano_2008_comments_plaga
+        review:
+          worked_region_id: lhc_cosmic_ray_argument
+          claim_ids: [lhc_c001, lhc_c002, lhc_c003, lhc_c004, lhc_c005, lhc_c006, lhc_c007, lhc_c008, lhc_c009, lhc_c010, lhc_c011, lhc_c012, lhc_c013, lhc_c014]
+          relation_ids: [lhc_r003, lhc_r004, lhc_r016]
+          loss_ids: [lhc_loss_001, lhc_loss_002, lhc_loss_005, lhc_loss_006]
+        blinded_baseline:
+          title: LHC Blinded Flat Synthesis Baseline
+          question: Does the cosmic-ray safety argument, including compact-star variants and critiques, rule out decision-relevant LHC microscopic-black-hole risk?
+          output_path: examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md
+          required_sources:
+            - lsag_2008_safety_review
+            - spc_2008_lsag_review
+            - giddings_mangano_2008_stable_black_holes
+            - plaga_2008_metastable_black_holes
+            - giddings_mangano_2008_comments_plaga
+          spans:
+            - source_id: lsag_2008_safety_review
+              path: data/cases/lhc_black_holes/sources/text/lsag_2008_safety_review.txt
+              ranges: [[119, 138], [175, 183], [193, 207], [292, 350]]
+            - source_id: spc_2008_lsag_review
+              path: data/cases/lhc_black_holes/sources/text/spc_2008_lsag_review.txt
+              ranges: [[43, 72], [101, 140], [167, 178]]
+            - source_id: giddings_mangano_2008_stable_black_holes
+              path: data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_stable_black_holes.txt
+              ranges: [[2402, 2411], [2415, 2460], [2465, 2508], [3600, 3641], [3710, 3716]]
+            - source_id: plaga_2008_metastable_black_holes
+              path: data/cases/lhc_black_holes/sources/text/plaga_2008_metastable_black_holes.txt
+              ranges: [[18, 31], [94, 107], [421, 430], [439, 498], [563, 606]]
+            - source_id: giddings_mangano_2008_comments_plaga
+              path: data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_comments_plaga.txt
+              ranges: [[39, 46], [61, 105]]
+
+  - case_key: eggs
+    case_id: eggs
+    label: Eggs and health
+    case_path: data/cases/eggs/case.yaml
+    examples_path: examples/eggs
+    build_starter: true
+    full_case:
+      index_path: examples/eggs/full_case_index.md
+      map_path: examples/eggs/full_case_map.md
+      worked_anchor: examples/eggs/worked_region_observational_vs_rct_map.md
+      baseline_path: examples/eggs/full_case_flat_synthesis_baseline.md
+      min_clusters: 7
+    task_queue:
+      path: examples/eggs/investigator_task_queue.md
+      prefix: eggs_task_
+      min_tasks: 5
+    ui:
+      include: true
+      label: Eggs And Health
+      short_label: Eggs
+      theme: evidence
+      review_packet_path: docs/review/EGGS_HUMAN_AUDIT_PACKET.md
+      review_checklist_path: docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv
+      spotlights:
+        - distinction: Outcome evidence and lipid-marker evidence answer different questions.
+          flat: Flat synthesis can collapse randomized lipid findings into general health outcome language.
+          map: The worked map preserves endpoint boundaries through `eggs_c015`, `eggs_c016`, `eggs_r005`, and `eggs_r006`.
+          status: Partly preserved by stronger blinded baselines.
+        - distinction: "`Up to one egg/day` has different meanings across sources."
+          flat: Similar wording is easy to merge across AHA, BMJ, and NNR.
+          map: The map separates public guidance, cohort conclusion, and scoping-review synthesis.
+          status: Recurring scope-distinction loss.
+    worked_regions:
+      - case_key: eggs
+        case_label: Eggs and health
+        region_id: eggs_observational_vs_rct
+        id_prefix: eggs
+        definition_path: docs/worked_regions/eggs_observational_vs_rct.md
+        map_path: examples/eggs/worked_region_observational_vs_rct_map.md
+        baseline_path: examples/eggs/flat_synthesis_baseline.md
+        audit_path: examples/eggs/decision_space_erosion_audit.md
+        best_path: examples/eggs/BEST_REGIONS.md
+        output_json_path: examples/eggs/worked_region_observational_vs_rct_map.json
+        required_sources:
+          - dga_2020_2025_pmc_summary
+          - aha_2019_dietary_cholesterol_pubmed
+          - aha_2023_dietary_cholesterol_news
+          - bmj_2020_egg_consumption_cvd
+          - jama_2019_dietary_cholesterol_eggs
+          - li_2020_egg_cholesterol_rct_meta
+          - nnr_2023_eggs_scoping_review
+        review:
+          worked_region_id: eggs_observational_vs_rct
+          claim_ids: [eggs_c004, eggs_c008, eggs_c012, eggs_c015, eggs_c016, eggs_c018, eggs_c019]
+          relation_ids: [eggs_r003, eggs_r005, eggs_r006, eggs_r007, eggs_r015]
+          loss_ids: [eggs_loss_003, eggs_loss_005, eggs_loss_006, eggs_loss_007]
+        blinded_baseline:
+          title: Eggs Blinded Flat Synthesis Baseline
+          question: How should a synthesis preserve the relationship between observational CVD outcome evidence, randomized lipid-marker evidence, guideline framing, and population/context caveats for egg consumption?
+          output_path: examples/eggs/blinded_flat_synthesis_baseline_gemma4.md
+          required_sources:
+            - dga_2020_2025_pmc_summary
+            - aha_2019_dietary_cholesterol_pubmed
+            - aha_2023_dietary_cholesterol_news
+            - bmj_2020_egg_consumption_cvd
+            - jama_2019_dietary_cholesterol_eggs
+            - li_2020_egg_cholesterol_rct_meta
+            - nnr_2023_eggs_scoping_review
+          spans:
+            - source_id: dga_2020_2025_pmc_summary
+              path: data/cases/eggs/sources/text/dga_2020_2025_pmc_summary.txt
+              ranges: [[31, 37], [45, 60], [73, 86]]
+            - source_id: aha_2019_dietary_cholesterol_pubmed
+              path: data/cases/eggs/sources/text/aha_2019_dietary_cholesterol_pubmed.txt
+              ranges: [[122, 124]]
+            - source_id: aha_2023_dietary_cholesterol_news
+              path: data/cases/eggs/sources/text/aha_2023_dietary_cholesterol_news.txt
+              ranges: [[39, 71]]
+            - source_id: bmj_2020_egg_consumption_cvd
+              path: data/cases/eggs/sources/text/bmj_2020_egg_consumption_cvd_pmc.txt
+              ranges: [[40, 43], [238, 241], [524, 544]]
+            - source_id: jama_2019_dietary_cholesterol_eggs
+              path: data/cases/eggs/sources/text/jama_2019_dietary_cholesterol_eggs_pmc.txt
+              ranges: [[33, 52], [70, 73], [367, 383], [471, 484]]
+            - source_id: li_2020_egg_cholesterol_rct_meta
+              path: data/cases/eggs/sources/text/li_2020_egg_cholesterol_rct_meta_pmc.txt
+              ranges: [[30, 36], [188, 201], [207, 207], [279, 293]]
+            - source_id: nnr_2023_eggs_scoping_review
+              path: data/cases/eggs/sources/text/nnr_2023_eggs_scoping_review_pmc.txt
+              ranges: [[30, 52], [600, 617]]
+
+  - case_key: covid
+    case_id: covid_origins_slice
+    label: COVID origins slice
+    case_path: data/cases/covid_origins_slice/case.yaml
+    ui:
+      include: false
+    worked_regions:
+      - case_key: covid
+        case_label: COVID origins slice
+        region_id: covid_bayesian_disagreement
+        id_prefix: covid
+        definition_path: docs/worked_regions/covid_bayesian_disagreement.md
+        map_path: examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
+        baseline_path: examples/covid_origins_slice/flat_synthesis_baseline.md
+        audit_path: examples/covid_origins_slice/decision_space_erosion_audit.md
+        best_path: examples/covid_origins_slice/BEST_REGIONS.md
+        output_json_path: examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json
+        required_sources:
+          - flf_covid_case_brief
+          - acx_rootclaim_review
+          - rootclaim_debate_results
+          - good_judgment_superforecasting
+          - debarre_worobey_reply
+          - levin_2025_bayesian_assessment
+          - weissman_2026_phylogeny_comment
+        review:
+          worked_region_id: covid_bayesian_disagreement
+          claim_ids: [covid_c005, covid_c006, covid_c009, covid_c010, covid_c012, covid_c013, covid_c014, covid_c015, covid_c016, covid_c017, covid_c018]
+          relation_ids: [covid_r002, covid_r005, covid_r007, covid_r010, covid_r011, covid_r014]
+          loss_ids: [covid_loss_003, covid_loss_004, covid_loss_005]

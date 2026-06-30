@@ -4,67 +4,12 @@ import argparse
 import csv
 from pathlib import Path
 
-from artifact_utils import RegionFiles, parse_erosion_audit, parse_worked_map
+from artifact_utils import RegionFiles, parse_erosion_audit, parse_worked_map, region_files_from_manifest
+from epistemic_case_mapper.submission_manifest import ReviewPriority, SubmissionManifest, load_submission_manifest
 
 
 OUTPUT_PATH = "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv"
 ALLOWED_DECISIONS = "accept|revise|reject|needs_discussion"
-
-PRIORITIES = {
-    "lhc": {
-        "worked_region_id": "lhc_cosmic_ray_argument",
-        "claim_ids": [
-            "lhc_c001",
-            "lhc_c002",
-            "lhc_c003",
-            "lhc_c004",
-            "lhc_c005",
-            "lhc_c006",
-            "lhc_c007",
-            "lhc_c008",
-            "lhc_c009",
-            "lhc_c010",
-            "lhc_c011",
-            "lhc_c012",
-            "lhc_c013",
-            "lhc_c014",
-        ],
-        "relation_ids": ["lhc_r003", "lhc_r004", "lhc_r016"],
-        "loss_ids": ["lhc_loss_001", "lhc_loss_002", "lhc_loss_005", "lhc_loss_006"],
-    },
-    "eggs": {
-        "worked_region_id": "eggs_observational_vs_rct",
-        "claim_ids": [
-            "eggs_c004",
-            "eggs_c008",
-            "eggs_c012",
-            "eggs_c015",
-            "eggs_c016",
-            "eggs_c018",
-            "eggs_c019",
-        ],
-        "relation_ids": ["eggs_r003", "eggs_r005", "eggs_r006", "eggs_r007", "eggs_r015"],
-        "loss_ids": ["eggs_loss_003", "eggs_loss_005", "eggs_loss_006", "eggs_loss_007"],
-    },
-    "covid": {
-        "worked_region_id": "covid_bayesian_disagreement",
-        "claim_ids": [
-            "covid_c005",
-            "covid_c006",
-            "covid_c009",
-            "covid_c010",
-            "covid_c012",
-            "covid_c013",
-            "covid_c014",
-            "covid_c015",
-            "covid_c016",
-            "covid_c017",
-            "covid_c018",
-        ],
-        "relation_ids": ["covid_r002", "covid_r005", "covid_r007", "covid_r010", "covid_r011", "covid_r014"],
-        "loss_ids": ["covid_loss_003", "covid_loss_004", "covid_loss_005"],
-    },
-}
 
 
 FIELDNAMES = [
@@ -91,11 +36,12 @@ FIELDNAMES = [
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a self-contained Tier 1 human review checklist.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument("--check", action="store_true", help="Check that the checked-in checklist is current.")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
-    rendered = render_csv(repo_root)
+    rendered = render_csv(repo_root, args.manifest)
     output_path = repo_root / OUTPUT_PATH
     if args.check:
         if not output_path.exists():
@@ -111,26 +57,31 @@ def main() -> int:
     return 0
 
 
-def render_csv(repo_root: Path) -> str:
+def render_csv(repo_root: Path, manifest_path: str = "submission_manifest.yaml") -> str:
+    manifest = load_submission_manifest(repo_root, manifest_path)
+    region_files = {region.region_id: files for region, files in zip(manifest.iter_worked_regions(), region_files_from_manifest(manifest))}
     rows: list[dict[str, str]] = []
-    for region in _region_files():
-        priority = PRIORITIES[region.case_key]
+    for worked_region in manifest.iter_worked_regions():
+        priority = worked_region.review
+        if priority is None:
+            continue
+        region = region_files[worked_region.region_id]
         worked_map = parse_worked_map(repo_root / region.map_path)
         audit = parse_erosion_audit(repo_root / region.audit_path)
         claims = {claim["claim_id"]: claim for claim in worked_map["claims"]}
         relations = {relation["relation_id"]: relation for relation in worked_map["relations"]}
         losses = {loss["loss_id"]: loss for loss in audit["losses"]}
 
-        for claim_id in priority["claim_ids"]:
-            claim = claims[claim_id]
-            rows.append(_claim_row(region, str(priority["worked_region_id"]), claim))
-        for relation_id in priority["relation_ids"]:
-            relation = relations[relation_id]
-            rows.append(_relation_row(region, str(priority["worked_region_id"]), relation, claims))
-        for loss_id in priority["loss_ids"]:
-            loss = losses[loss_id]
-            rows.append(_loss_row(region, str(priority["worked_region_id"]), loss))
-        rows.append(_overall_row(region, str(priority["worked_region_id"])))
+        for claim_id in priority.claim_ids:
+            claim = _required_item("claim", worked_region.region_id, claim_id, claims)
+            rows.append(_claim_row(region, priority.worked_region_id, claim))
+        for relation_id in priority.relation_ids:
+            relation = _required_item("relation", worked_region.region_id, relation_id, relations)
+            rows.append(_relation_row(region, priority.worked_region_id, relation, claims))
+        for loss_id in priority.loss_ids:
+            loss = _required_item("loss", worked_region.region_id, loss_id, losses)
+            rows.append(_loss_row(region, priority.worked_region_id, loss))
+        rows.append(_overall_row(region, priority.worked_region_id))
 
     from io import StringIO
 
@@ -141,10 +92,12 @@ def render_csv(repo_root: Path) -> str:
     return output.getvalue()
 
 
-def _region_files() -> tuple[RegionFiles, ...]:
-    from artifact_utils import REGION_FILES
-
-    return REGION_FILES
+def _required_item(
+    item_type: str, region_id: str, item_id: str, items: dict[str, dict[str, str]]
+) -> dict[str, str]:
+    if item_id not in items:
+        raise KeyError(f"missing_review_priority_item type={item_type} region={region_id} id={item_id}")
+    return items[item_id]
 
 
 def _claim_row(region: RegionFiles, worked_region_id: str, claim: dict[str, str]) -> dict[str, str]:

@@ -14,6 +14,24 @@ metadata_files:
   - "data/cases/eggs/metadata/source_independence.md"
   - "data/cases/eggs/metadata/guideline_evolution_timeline.md"
   - "data/cases/eggs/metadata/stakeholder_contexts.md"
+open_question_templates:
+  - question_id: oq_0001
+    text: "Which findings depend on substitution context: what foods eggs replace or accompany?"
+    why_it_matters: "Egg guidance can change if eggs replace refined carbohydrates, processed meat, fish, legumes, or other protein sources."
+    claim_keywords: ["diet", "pattern", "replace"]
+    source_id_keywords: ["aha", "nnr"]
+    gap_type: crux
+  - question_id: oq_0002
+    text: "How should observational cardiovascular findings be weighted against randomized lipid-marker findings?"
+    why_it_matters: "The eggs case turns on whether clinical outcomes, residual confounding, or biomarker changes should carry more weight."
+    claim_keywords: ["cardiovascular", "ldl", "cholesterol"]
+    source_id_keywords: ["jama", "bmj", "li_2020"]
+    gap_type: crux
+  - question_id: oq_0003
+    text: "Which populations need separate guidance, especially people with diabetes, high LDL cholesterol, or different baseline dietary patterns?"
+    why_it_matters: "A single global egg recommendation may erase heterogeneity across baseline risk, cholesterol response, and dietary context."
+    claim_keywords: ["diabetes", "population", "subgroup"]
+    gap_type: "population heterogeneity"
 sources:
   - source_id: aha_2019_dietary_cholesterol_pubmed
     title: "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"

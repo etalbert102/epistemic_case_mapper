@@ -19,6 +19,15 @@ class Source(BaseModel):
     excerpt: str | None = None
 
 
+class OpenQuestionTemplate(BaseModel):
+    question_id: str
+    text: str
+    why_it_matters: str
+    claim_keywords: list[str] = Field(default_factory=list)
+    source_id_keywords: list[str] = Field(default_factory=list)
+    gap_type: str | None = None
+
+
 class CaseManifest(BaseModel):
     case_id: str
     title: str
@@ -30,6 +39,7 @@ class CaseManifest(BaseModel):
     sources: list[Source] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     metadata_files: list[str] = Field(default_factory=list)
+    open_question_templates: list[OpenQuestionTemplate] = Field(default_factory=list)
 
 
 class Claim(BaseModel):

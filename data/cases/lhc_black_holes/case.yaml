@@ -14,6 +14,24 @@ metadata_files:
   - "data/cases/lhc_black_holes/metadata/source_independence.md"
   - "data/cases/lhc_black_holes/metadata/argument_evolution_timeline.md"
   - "data/cases/lhc_black_holes/metadata/stakeholder_contexts.md"
+open_question_templates:
+  - question_id: oq_0001
+    text: "Which assumptions make the natural cosmic-ray analogue valid or invalid for LHC conditions?"
+    why_it_matters: "The safety case depends on whether naturally occurring collisions cover the relevant collider-specific conditions."
+    claim_keywords: ["cosmic-ray", "naturally"]
+    gap_type: crux
+  - question_id: oq_0002
+    text: "Which source-grounded evidence directly supports the claim that hypothetical microscopic black holes would evaporate quickly?"
+    why_it_matters: "The Hawking-radiation premise is a major dependency and should not be treated as settled by seed notes alone."
+    claim_keywords: ["evaporate", "hawking"]
+    source_id_keywords: ["safety"]
+    gap_type: "missing source needed"
+  - question_id: oq_0003
+    text: "Which independent reviews, critiques, or public-risk arguments should be added before treating this as source-grounded?"
+    why_it_matters: "A useful FLF artifact should preserve why the concern seemed live to critics as well as why the final safety conclusion was reassuring."
+    claim_keywords: ["concern", "critic", "transparent"]
+    source_id_keywords: ["concern"]
+    gap_type: "missing source needed"
 sources:
   - source_id: lsag_2008_safety_review
     title: "Review of the Safety of LHC Collisions"

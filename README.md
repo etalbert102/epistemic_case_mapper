@@ -66,6 +66,8 @@ Start with:
 - `docs/SUBMISSION_PACKET.md`
 - `docs/REFERENCE_LINEAGE.md`
 - `docs/GENERALIZABILITY_RED_TEAM.md`
+- `docs/CODE_GENERALIZABILITY_PLAN.md`
+- `docs/ADDING_A_CASE.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/review/REVIEWER_START_HERE.md`
@@ -109,6 +111,8 @@ Reusable structured exports are checked in at:
 - `examples/lhc_black_holes/worked_region_cosmic_ray_map.json`
 - `examples/eggs/worked_region_observational_vs_rct_map.json`
 - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json`
+
+To add another case or worked region, follow `docs/ADDING_A_CASE.md`; the submission manifest is the source of truth for discovery, validation, export, review-checklist generation, baseline configuration, and UI inclusion.
 
 ## Target FLF Demonstrations
 

@@ -7,17 +7,13 @@ import sys
 from pathlib import Path
 
 from judge_paths import JUDGE_PATHS
-
-
-CASES = (
-    ("data/cases/lhc_black_holes/case.yaml", "examples/lhc_black_holes"),
-    ("data/cases/eggs/case.yaml", "examples/eggs"),
-)
+from epistemic_case_mapper.submission_manifest import load_submission_manifest
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the judge-facing FLF prototype demo checks.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument(
         "--skip-build",
         action="store_true",
@@ -26,21 +22,22 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
+    manifest = load_submission_manifest(repo_root, args.manifest)
     failures: list[str] = []
 
     if not args.skip_build:
-        for case_path, _examples_path in CASES:
-            _run([sys.executable, "scripts/build_case_map.py", "--case", case_path], repo_root, failures)
+        for case in manifest.iter_starter_cases():
+            _run([sys.executable, "scripts/build_case_map.py", "--case", case.case_path], repo_root, failures)
 
-    for case_path, examples_path in CASES:
+    for case in manifest.iter_starter_cases():
         _run(
             [
                 sys.executable,
                 "scripts/validate_case_artifact.py",
                 "--case",
-                case_path,
+                case.case_path,
                 "--examples",
-                examples_path,
+                str(case.examples_path),
             ],
             repo_root,
             failures,

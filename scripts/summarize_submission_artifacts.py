@@ -5,80 +5,24 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from artifact_utils import REGION_FILES, parse_erosion_audit, parse_worked_map
+from artifact_utils import load_region_files, parse_erosion_audit, parse_worked_map
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
+from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 
 
 OUTPUT_PATH = "docs/SUBMISSION_ARTIFACT_SUMMARY.md"
-FULL_CASES = (
-    {
-        "label": "LHC black holes",
-        "case_path": "data/cases/lhc_black_holes/case.yaml",
-        "map_path": "examples/lhc_black_holes/full_case_map.md",
-        "index_path": "examples/lhc_black_holes/full_case_index.md",
-    },
-    {
-        "label": "Eggs and health",
-        "case_path": "data/cases/eggs/case.yaml",
-        "map_path": "examples/eggs/full_case_map.md",
-        "index_path": "examples/eggs/full_case_index.md",
-    },
-)
-EXTENSION_ARTIFACTS = (
-    {
-        "artifact": "Full-case flat baseline",
-        "case": "LHC black holes",
-        "path": "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
-        "status": "illustrative, non-blinded",
-    },
-    {
-        "artifact": "Full-case flat baseline",
-        "case": "Eggs and health",
-        "path": "examples/eggs/full_case_flat_synthesis_baseline.md",
-        "status": "illustrative, non-blinded",
-    },
-    {
-        "artifact": "Draft public-risk worked region",
-        "case": "LHC black holes",
-        "path": "examples/lhc_black_holes/worked_region_public_risk_framing_map.md",
-        "status": "draft extension, not canonical counts",
-    },
-    {
-        "artifact": "New-to-map source update demo",
-        "case": "LHC black holes",
-        "path": "docs/NEW_SOURCE_UPDATE_DEMO.md",
-        "status": "demo from already acquired source",
-    },
-    {
-        "artifact": "Evidence and limitations",
-        "case": "Submission",
-        "path": "docs/EVIDENCE_AND_LIMITATIONS.md",
-        "status": "human-review-needed",
-    },
-    {
-        "artifact": "Human audit guide",
-        "case": "Submission",
-        "path": "docs/HUMAN_AUDIT_GUIDE.md",
-        "status": "human-review-needed",
-    },
-    {
-        "artifact": "Operational workflow and realism",
-        "case": "Submission",
-        "path": "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
-        "status": "human-review-needed",
-    },
-)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Summarize judge-facing FLF artifacts.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument("--check", action="store_true", help="Check that the checked-in summary is current.")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
-    rendered = render_summary(repo_root)
+    rendered = render_summary(repo_root, args.manifest)
     output_path = repo_root / OUTPUT_PATH
     if args.check:
         if not output_path.exists():
@@ -94,7 +38,9 @@ def main() -> int:
     return 0
 
 
-def render_summary(repo_root: Path) -> str:
+def render_summary(repo_root: Path, manifest_path: str = "submission_manifest.yaml") -> str:
+    manifest = load_submission_manifest(repo_root, manifest_path)
+    region_files = load_region_files(repo_root, manifest_path)
     lines = [
         "# Submission Artifact Summary",
         "",
@@ -106,7 +52,7 @@ def render_summary(repo_root: Path) -> str:
         "| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
     ]
     totals = Counter()
-    for region in REGION_FILES:
+    for region in region_files:
         worked_map = parse_worked_map(repo_root / region.map_path)
         audit = parse_erosion_audit(repo_root / region.audit_path)
         relation_types = Counter(str(relation.get("relation_type", "")) for relation in worked_map["relations"])
@@ -136,14 +82,14 @@ def render_summary(repo_root: Path) -> str:
             "| --- | ---: | ---: | ---: | --- |",
         ]
     )
-    for full_case in FULL_CASES:
-        manifest = CaseManifest.model_validate(read_yaml(repo_root / str(full_case["case_path"])))
-        map_text = (repo_root / str(full_case["map_path"])).read_text(encoding="utf-8")
+    for case, full_case in manifest.iter_full_cases():
+        case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
+        map_text = (repo_root / full_case.map_path).read_text(encoding="utf-8")
         cluster_count = len(re.findall(r"^cluster_id:\s*", map_text, flags=re.MULTILINE))
         relation_count = len(re.findall(r"^relation_id:\s*", map_text, flags=re.MULTILINE))
         lines.append(
-            f"| {full_case['label']} | {len(manifest.sources)} | {cluster_count} | {relation_count} | "
-            f"`{full_case['index_path']}`, `{full_case['map_path']}` |"
+            f"| {case.label} | {len(case_manifest.sources)} | {cluster_count} | {relation_count} | "
+            f"`{full_case.index_path}`, `{full_case.map_path}` |"
         )
     lines.extend(
         [
@@ -154,9 +100,9 @@ def render_summary(repo_root: Path) -> str:
             "| --- | --- | --- | --- |",
         ]
     )
-    for artifact in EXTENSION_ARTIFACTS:
+    for artifact in manifest.extension_artifacts:
         lines.append(
-            f"| {artifact['artifact']} | {artifact['case']} | `{artifact['path']}` | {artifact['status']} |"
+            f"| {artifact.artifact} | {artifact.case} | `{artifact.path}` | {artifact.status} |"
         )
     lines.extend(
         [
@@ -169,7 +115,7 @@ def render_summary(repo_root: Path) -> str:
             f"- Crux candidates: `{totals['cruxes']}`",
             f"- Erosion findings: `{totals['losses']}`",
             f"- Blinded local-model baselines: `{totals['baselines']}`",
-            f"- Investigator task queue items: `{_task_count(repo_root)}`",
+            f"- Investigator task queue items: `{_task_count(repo_root, manifest)}`",
             "",
             "## Interpretation",
             "",
@@ -180,13 +126,10 @@ def render_summary(repo_root: Path) -> str:
     return "\n".join(lines)
 
 
-def _task_count(repo_root: Path) -> int:
+def _task_count(repo_root: Path, manifest: SubmissionManifest) -> int:
     count = 0
-    for relative_path in (
-        "examples/lhc_black_holes/investigator_task_queue.md",
-        "examples/eggs/investigator_task_queue.md",
-    ):
-        path = repo_root / relative_path
+    for _case, queue in manifest.iter_task_queues():
+        path = repo_root / queue.path
         if path.exists():
             count += len(re.findall(r"^task_id:\s*", path.read_text(encoding="utf-8"), flags=re.MULTILINE))
     return count

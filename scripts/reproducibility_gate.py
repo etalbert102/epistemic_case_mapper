@@ -6,49 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-CASES = (
-    ("data/cases/lhc_black_holes/case.yaml", "examples/lhc_black_holes"),
-    ("data/cases/eggs/case.yaml", "examples/eggs"),
-)
-
-REQUIRED_DOCS = (
-    "docs/ARCHITECTURE.md",
-    "docs/CURRENT_STATE.md",
-    "docs/FLF_BEFORE_AFTER_COMPARISON.md",
-    "docs/GENERALIZABILITY_RED_TEAM.md",
-    "docs/EVIDENCE_AND_LIMITATIONS.md",
-    "docs/FLF_SUBMISSION_DRAFT.md",
-    "docs/HUMAN_AUDIT_GUIDE.md",
-    "docs/NEW_SOURCE_UPDATE_DEMO.md",
-    "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
-    "docs/PROMPT_INVENTORY.md",
-    "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
-    "docs/REFERENCE_LINEAGE.md",
-    "docs/reference/flf_judging_rubric.md",
-    "docs/START_HERE.md",
-    "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
-    "docs/SUBMISSION_PACKET.md",
-    "docs/VALIDATOR_FAILURE_GUIDE.md",
-    "ui/index.html",
-    "ui/styles.css",
-    "ui/app.js",
-    "ui/data.json",
-    "docs/worked_regions/eggs_source_excerpt_packet.md",
-    "docs/worked_regions/lhc_source_excerpt_packet.md",
-    "docs/worked_regions/mini_filled_example.md",
-    "docs/review/HUMAN_REVIEW_PACKET_TEMPLATE.md",
-    "docs/review/BLINDED_BASELINE_AUDIT.md",
-    "docs/review/COVID_HUMAN_AUDIT_CHECKLIST.csv",
-    "docs/review/COVID_HUMAN_AUDIT_PACKET.md",
-    "docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv",
-    "docs/review/EGGS_HUMAN_AUDIT_PACKET.md",
-    "docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv",
-    "docs/review/LHC_HUMAN_AUDIT_PACKET.md",
-    "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
-    "docs/review/REVIEWER_START_HERE.md",
-    "docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv",
-)
+from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 
 FORBIDDEN_TERMS = (
     "decision-space " + "compression",
@@ -59,6 +17,7 @@ FORBIDDEN_TERMS = (
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the lightweight FLF reproducibility gate.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument(
         "--include-worked-regions",
         action="store_true",
@@ -72,12 +31,16 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
+    manifest = load_submission_manifest(repo_root, args.manifest)
     failures: list[str] = []
 
-    _check_required_docs(repo_root, failures)
+    _check_required_docs(repo_root, manifest, failures)
     _check_terms(repo_root, failures)
     _run_tests(repo_root, failures)
-    for case_path, examples_path in CASES:
+    _run([sys.executable, "scripts/validate_submission_manifest.py"], repo_root, failures)
+    for case in manifest.iter_starter_cases():
+        case_path = case.case_path
+        examples_path = str(case.examples_path)
         _run([sys.executable, "scripts/build_case_map.py", "--case", case_path], repo_root, failures)
         _run(
             [
@@ -114,8 +77,8 @@ def main() -> int:
     return 0
 
 
-def _check_required_docs(repo_root: Path, failures: list[str]) -> None:
-    for relative_path in REQUIRED_DOCS:
+def _check_required_docs(repo_root: Path, manifest: SubmissionManifest, failures: list[str]) -> None:
+    for relative_path in manifest.required_docs:
         if not (repo_root / relative_path).exists():
             failures.append(f"missing_required_doc path={relative_path}")
 

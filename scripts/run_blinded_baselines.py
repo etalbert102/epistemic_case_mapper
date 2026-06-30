@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from epistemic_case_mapper.submission_manifest import BlindedBaseline, WorkedRegion, load_submission_manifest
+
 
 BASELINE_PROMPT_VERSION = "flat_baseline_prompt_v1_blinded_ollama"
 BASELINE_PROMPT = (
@@ -36,114 +38,36 @@ class BaselineConfig:
     spans: tuple[Span, ...]
 
 
-CONFIGS = {
-    "lhc": BaselineConfig(
-        case_key="lhc",
-        region_id="lhc_cosmic_ray_argument",
-        title="LHC Blinded Flat Synthesis Baseline",
-        question=(
-            "Does the cosmic-ray safety argument, including compact-star variants and critiques, "
-            "rule out decision-relevant LHC microscopic-black-hole risk?"
+def _configs_from_manifest(repo_root: Path, manifest_path: str = "submission_manifest.yaml") -> dict[str, BaselineConfig]:
+    manifest = load_submission_manifest(repo_root, manifest_path)
+    configs: dict[str, BaselineConfig] = {}
+    for region, baseline in manifest.iter_blinded_baselines():
+        configs[region.case_key] = _baseline_config(region, baseline)
+    return configs
+
+
+def _baseline_config(region: WorkedRegion, baseline: BlindedBaseline) -> BaselineConfig:
+    return BaselineConfig(
+        case_key=region.case_key,
+        region_id=region.region_id,
+        title=baseline.title,
+        question=baseline.question,
+        output_path=baseline.output_path,
+        required_sources=tuple(baseline.required_sources),
+        spans=tuple(
+            Span(span.source_id, span.path, tuple(tuple(item) for item in span.ranges))
+            for span in baseline.spans
         ),
-        output_path="examples/lhc_black_holes/blinded_flat_synthesis_baseline_gemma4.md",
-        required_sources=(
-            "lsag_2008_safety_review",
-            "spc_2008_lsag_review",
-            "giddings_mangano_2008_stable_black_holes",
-            "plaga_2008_metastable_black_holes",
-            "giddings_mangano_2008_comments_plaga",
-        ),
-        spans=(
-            Span(
-                "lsag_2008_safety_review",
-                "data/cases/lhc_black_holes/sources/text/lsag_2008_safety_review.txt",
-                ((119, 138), (175, 183), (193, 207), (292, 350)),
-            ),
-            Span(
-                "spc_2008_lsag_review",
-                "data/cases/lhc_black_holes/sources/text/spc_2008_lsag_review.txt",
-                ((43, 72), (101, 140), (167, 178)),
-            ),
-            Span(
-                "giddings_mangano_2008_stable_black_holes",
-                "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_stable_black_holes.txt",
-                ((2402, 2411), (2415, 2460), (2465, 2508), (3600, 3641), (3710, 3716)),
-            ),
-            Span(
-                "plaga_2008_metastable_black_holes",
-                "data/cases/lhc_black_holes/sources/text/plaga_2008_metastable_black_holes.txt",
-                ((18, 31), (94, 107), (421, 430), (439, 498), (563, 606)),
-            ),
-            Span(
-                "giddings_mangano_2008_comments_plaga",
-                "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_comments_plaga.txt",
-                ((39, 46), (61, 105)),
-            ),
-        ),
-    ),
-    "eggs": BaselineConfig(
-        case_key="eggs",
-        region_id="eggs_observational_vs_rct",
-        title="Eggs Blinded Flat Synthesis Baseline",
-        question=(
-            "How should a synthesis preserve the relationship between observational CVD outcome "
-            "evidence, randomized lipid-marker evidence, guideline framing, and population/context "
-            "caveats for egg consumption?"
-        ),
-        output_path="examples/eggs/blinded_flat_synthesis_baseline_gemma4.md",
-        required_sources=(
-            "dga_2020_2025_pmc_summary",
-            "aha_2019_dietary_cholesterol_pubmed",
-            "aha_2023_dietary_cholesterol_news",
-            "bmj_2020_egg_consumption_cvd",
-            "jama_2019_dietary_cholesterol_eggs",
-            "li_2020_egg_cholesterol_rct_meta",
-            "nnr_2023_eggs_scoping_review",
-        ),
-        spans=(
-            Span(
-                "dga_2020_2025_pmc_summary",
-                "data/cases/eggs/sources/text/dga_2020_2025_pmc_summary.txt",
-                ((31, 37), (45, 60), (73, 86)),
-            ),
-            Span(
-                "aha_2019_dietary_cholesterol_pubmed",
-                "data/cases/eggs/sources/text/aha_2019_dietary_cholesterol_pubmed.txt",
-                ((122, 124),),
-            ),
-            Span(
-                "aha_2023_dietary_cholesterol_news",
-                "data/cases/eggs/sources/text/aha_2023_dietary_cholesterol_news.txt",
-                ((39, 71),),
-            ),
-            Span(
-                "bmj_2020_egg_consumption_cvd",
-                "data/cases/eggs/sources/text/bmj_2020_egg_consumption_cvd_pmc.txt",
-                ((40, 43), (238, 241), (524, 544)),
-            ),
-            Span(
-                "jama_2019_dietary_cholesterol_eggs",
-                "data/cases/eggs/sources/text/jama_2019_dietary_cholesterol_eggs_pmc.txt",
-                ((33, 52), (70, 73), (367, 383), (471, 484)),
-            ),
-            Span(
-                "li_2020_egg_cholesterol_rct_meta",
-                "data/cases/eggs/sources/text/li_2020_egg_cholesterol_rct_meta_pmc.txt",
-                ((30, 36), (188, 201), (207, 207), (279, 293)),
-            ),
-            Span(
-                "nnr_2023_eggs_scoping_review",
-                "data/cases/eggs/sources/text/nnr_2023_eggs_scoping_review_pmc.txt",
-                ((30, 52), (600, 617)),
-            ),
-        ),
-    ),
-}
+    )
+
+
+CONFIGS = _configs_from_manifest(Path(__file__).resolve().parents[1])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate blinded flat-synthesis baselines with Ollama.")
-    parser.add_argument("--case", choices=["all", *CONFIGS.keys()], default="all")
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
+    parser.add_argument("--case", default="all")
     parser.add_argument("--model", default="gemma4:e4b")
     parser.add_argument(
         "--output-label",
@@ -157,9 +81,13 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    configs = _configs_from_manifest(repo_root, args.manifest)
+    if args.case != "all" and args.case not in configs:
+        parser.error(f"unknown case {args.case!r}; choose all or one of {', '.join(sorted(configs))}")
     output_label = args.output_label or _model_label(args.model)
-    selected = CONFIGS.values() if args.case == "all" else (CONFIGS[args.case],)
+    selected = configs.values() if args.case == "all" else (configs[args.case],)
     for config in selected:
+        _validate_config_spans(repo_root, config)
         prompt = build_prompt(repo_root, config)
         if args.dry_run:
             print(f"\n--- {config.region_id} prompt ---\n{prompt}")
@@ -196,6 +124,27 @@ def _format_span_block(repo_root: Path, span: Span) -> str:
         numbered = "\n".join(f"{line_number}: {line}" for line_number, line in zip(range(start, end + 1), selected))
         excerpts.append(f"lines {start}-{end}\n{numbered}")
     return f"source_id: {span.source_id}\nsource_path: {span.path}\n" + "\n\n".join(excerpts)
+
+
+def _validate_config_spans(repo_root: Path, config: BaselineConfig) -> None:
+    span_sources = {span.source_id for span in config.spans}
+    missing_sources = set(config.required_sources) - span_sources
+    if missing_sources:
+        raise SystemExit(
+            "baseline_missing_source_span "
+            + f"case={config.case_key} sources={','.join(sorted(missing_sources))}"
+        )
+    for span in config.spans:
+        path = repo_root / span.path
+        if not path.exists():
+            raise SystemExit(f"baseline_span_missing_file case={config.case_key} path={span.path}")
+        line_count = len(path.read_text(encoding="utf-8").splitlines())
+        for start, end in span.ranges:
+            if start < 1 or end < start or end > line_count:
+                raise SystemExit(
+                    f"baseline_span_out_of_range case={config.case_key} "
+                    f"source={span.source_id} range={start}-{end} line_count={line_count}"
+                )
 
 
 def _run_ollama(model: str, prompt: str) -> str:

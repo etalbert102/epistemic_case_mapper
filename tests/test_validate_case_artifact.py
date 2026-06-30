@@ -11,6 +11,31 @@ def test_lhc_case_map_has_required_metadata_and_open_questions() -> None:
             "title": "LHC",
             "question": "Why is the LHC risk low?",
             "case_type": "test",
+            "open_question_templates": [
+                {
+                    "question_id": "oq_0001",
+                    "text": "Which assumptions make the natural analogue valid?",
+                    "why_it_matters": "The top-level conclusion depends on this.",
+                    "claim_keywords": ["naturally"],
+                    "gap_type": "crux",
+                },
+                {
+                    "question_id": "oq_0002",
+                    "text": "Which evidence supports quick evaporation?",
+                    "why_it_matters": "This is a major dependency.",
+                    "claim_keywords": ["evaporate", "hawking"],
+                    "source_id_keywords": ["safety"],
+                    "gap_type": "missing source needed",
+                },
+                {
+                    "question_id": "oq_0003",
+                    "text": "Which critiques should be added?",
+                    "why_it_matters": "The map should preserve public concern and critique.",
+                    "claim_keywords": ["concern"],
+                    "source_id_keywords": ["concern"],
+                    "gap_type": "missing source needed",
+                },
+            ],
             "sources": [
                 {
                     "source_id": "cern_faq_seed",

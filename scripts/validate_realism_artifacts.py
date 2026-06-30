@@ -7,37 +7,23 @@ from pathlib import Path
 
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
-
-
-REALISM_DOCS = (
-    "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
-    "examples/lhc_black_holes/investigator_task_queue.md",
-    "examples/eggs/investigator_task_queue.md",
-)
-
-TASK_QUEUES = (
-    {
-        "case_path": "data/cases/lhc_black_holes/case.yaml",
-        "task_path": "examples/lhc_black_holes/investigator_task_queue.md",
-        "prefix": "lhc_task_",
-    },
-    {
-        "case_path": "data/cases/eggs/case.yaml",
-        "task_path": "examples/eggs/investigator_task_queue.md",
-        "prefix": "eggs_task_",
-    },
-)
+from epistemic_case_mapper.submission_manifest import SubmissionCase, TaskQueue, load_submission_manifest
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate operational realism artifacts.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
+    manifest = load_submission_manifest(repo_root, args.manifest)
     failures: list[str] = []
 
-    for relative_path in REALISM_DOCS:
+    realism_docs = ["docs/OPERATIONAL_WORKFLOW_AND_REALISM.md"] + [
+        queue.path for _case, queue in manifest.iter_task_queues()
+    ]
+    for relative_path in realism_docs:
         path = repo_root / relative_path
         if not path.exists():
             failures.append(f"missing_realism_doc path={relative_path}")
@@ -50,8 +36,8 @@ def main() -> int:
 
     _validate_playbook(repo_root, failures)
     _validate_realism_audit(repo_root, failures)
-    for queue in TASK_QUEUES:
-        _validate_task_queue(repo_root, queue, failures)
+    for case, queue in manifest.iter_task_queues():
+        _validate_task_queue(repo_root, case, queue, failures)
 
     if failures:
         for failure in failures:
@@ -75,14 +61,14 @@ def _validate_realism_audit(repo_root: Path, failures: list[str]) -> None:
             failures.append(f"realism_audit_missing_section section={required}")
 
 
-def _validate_task_queue(repo_root: Path, queue: dict[str, str], failures: list[str]) -> None:
-    manifest = CaseManifest.model_validate(read_yaml(repo_root / queue["case_path"]))
-    text = (repo_root / queue["task_path"]).read_text(encoding="utf-8")
+def _validate_task_queue(repo_root: Path, case: SubmissionCase, queue: TaskQueue, failures: list[str]) -> None:
+    manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
+    text = (repo_root / queue.path).read_text(encoding="utf-8")
     task_ids = re.findall(r"^task_id:\s*([A-Za-z0-9_\\-]+)", text, flags=re.MULTILINE)
-    if len(task_ids) < 5:
+    if len(task_ids) < queue.min_tasks:
         failures.append(f"task_queue_too_few_tasks case={manifest.case_id} count={len(task_ids)}")
     for task_id in task_ids:
-        if not task_id.startswith(queue["prefix"]):
+        if not task_id.startswith(queue.prefix):
             failures.append(f"task_queue_bad_prefix case={manifest.case_id} task_id={task_id}")
     for required in ("task_type:", "priority:", "cluster:", "sources:", "realism_value:", "done_when:"):
         if text.count(required) < len(task_ids):

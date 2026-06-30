@@ -4,18 +4,19 @@ import argparse
 import json
 from pathlib import Path
 
-from artifact_utils import REGION_FILES, parse_erosion_audit, parse_worked_map
+from artifact_utils import load_region_files, parse_erosion_audit, parse_worked_map
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export curated worked-region Markdown maps to structured JSON.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument("--check", action="store_true", help="Check that checked-in JSON exports are current.")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
     failures: list[str] = []
-    for region in REGION_FILES:
+    for region in load_region_files(repo_root, args.manifest):
         payload = {
             "case_key": region.case_key,
             "case_label": region.case_label,

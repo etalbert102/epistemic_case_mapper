@@ -19,8 +19,8 @@ def test_worked_region_validator_rejects_templates(tmp_path: Path) -> None:
 def test_worked_region_validator_accepts_single_region_selector(monkeypatch) -> None:
     selected: list[str] = []
 
-    def fake_validate_region(repo_root: Path, region: dict, failures: list[str]) -> None:
-        selected.append(region["region_id"])
+    def fake_validate_region(repo_root: Path, manifest, region, failures: list[str]) -> None:
+        selected.append(region.region_id)
 
     monkeypatch.setattr(validate_worked_regions, "_validate_region", fake_validate_region)
     monkeypatch.setattr(validate_worked_regions.sys, "argv", ["validate_worked_regions.py", "--region", "lhc_cosmic_ray_argument"])
