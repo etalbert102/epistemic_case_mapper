@@ -10,6 +10,12 @@ AI synthesis can be broadly correct while still erasing the structure a later in
 
 The prototype tests a simple alternative: preserve those elements as source-grounded map artifacts, compare them to ordinary flat syntheses, and audit what survived, flattened, disappeared, or distorted.
 
+## Contest Reference Lineage
+
+The contest reference examples are not just related work; they clarify the kind of epistemic labor this prototype is trying to support. Transparent Replications, Measurement Schmeasurement, construct-validity critiques of development RCTs, systems-theoretic safety work, Society Library-style perspective mapping, and structured analytic techniques all point toward the same need: make hidden mismatches inspectable before synthesis smooths them away.
+
+This prototype translates that need into claim maps, relation maps, cruxes, caveats, and erosion audits. See `docs/REFERENCE_LINEAGE.md` for the compact mapping.
+
 ## One-Minute Example
 
 Flat synthesis can say: "Cosmic-ray exposure shows LHC black-hole risk is ruled out."
@@ -26,11 +32,15 @@ Why this matters: the map does not merely cite sources. It preserves the part of
 
 ## What To Evaluate
 
-Evaluate the submission on three things:
+Evaluate the submission against the full rubric in `docs/reference/flf_judging_rubric.md`. The shortest version is:
 
-1. Whether the maps make decision-relevant structure more inspectable than normal prose.
-2. Whether the artifact format can be extended by another investigator without starting over.
-3. Whether the limitations are clear enough that the prototype does not overclaim human review or full-case adjudication.
+1. Epistemic uplift: do the maps help a thoughtful person reason better than ordinary synthesis or deep research?
+2. Generalizability: does the workflow travel across differently shaped cases?
+3. Compounding and shareability: can another investigator extend the artifact?
+4. Scalability: does the approach improve with better models, more compute, or more reviewers?
+5. Methodological transparency: are the workflow, tradeoffs, and uncertainties inspectable?
+6. Adversarial robustness: does the method hold up under motivated reading and misleading sources?
+7. Insight contribution: does the submission shift how judges think about AI-assisted epistemic work?
 
 Do not evaluate it as a finished interactive product or a fully automated literature-review system. The current value is the workflow and audit surface.
 

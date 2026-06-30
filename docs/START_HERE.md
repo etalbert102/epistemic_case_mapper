@@ -8,6 +8,14 @@ This prototype is easiest to judge through one concrete question:
 
 The answer demonstrated here is not a better paragraph. It is a reusable review surface: source-grounded claims, relation IDs, caveats, cruxes, erosion losses, and human-review handoff packets.
 
+## Reference Lineage
+
+The contest examples point to a family of epistemic work where progress comes from finding hidden mismatches: the measure is not the construct, the same label hides different interventions, the dataset is not what it appears to be, or a broadly true result is framed as more decisive than it is.
+
+This prototype is built for that kind of scrutiny. It gives reviewers stable handles for source boundaries, measurement or endpoint fit, same-label differences, relation dependencies, caveats, cruxes, and update triggers.
+
+For the fuller mapping from contest references to prototype design, see `docs/REFERENCE_LINEAGE.md`.
+
 ## One-Minute Demo
 
 Flat synthesis can say:
@@ -31,6 +39,8 @@ This is the submission's value proposition: the map keeps the part of the reason
 3. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
 
 That path should be enough to decide whether the core mechanism is interesting. Then use eggs for generalization and COVID as a narrow adversarial disagreement stress test.
+
+The full judging rubric is recorded in `docs/reference/flf_judging_rubric.md`. The self-assessment in `docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md` maps the submission to those seven dimensions.
 
 ## What The Prototype Shows
 

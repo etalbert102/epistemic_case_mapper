@@ -23,6 +23,8 @@ REQUIRED_DOCS = (
     "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md",
     "docs/PROMPT_INVENTORY.md",
     "docs/REGULATORY_FULL_DOCUMENT_PROTOCOL.md",
+    "docs/REFERENCE_LINEAGE.md",
+    "docs/reference/flf_judging_rubric.md",
     "docs/START_HERE.md",
     "docs/SUBMISSION_ARTIFACT_SUMMARY.md",
     "docs/SUBMISSION_PACKET.md",

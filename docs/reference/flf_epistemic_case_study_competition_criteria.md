@@ -4,6 +4,8 @@ Source: user-provided copy of the FLF competition page, dated June 4, 2026.
 
 This document records the competition requirements and evaluation criteria that should guide the `epistemic_case_mapper` prototype.
 
+For the newer detailed seven-dimension judging rubric and prize-tier guidance, see `docs/reference/flf_judging_rubric.md`.
+
 ## Competition Summary
 
 FLF is running a competition for workflows and methodologies that use AI to produce reliable, trustworthy knowledge bases grounded in real-world cases. The competition emphasizes reusable, refinable, structured analyses that can survive scrutiny and support future investigations.

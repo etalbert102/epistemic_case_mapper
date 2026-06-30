@@ -11,6 +11,8 @@ from artifact_utils import collect_ids
 DOCS_TO_SCAN = (
     "README.md",
     "docs/START_HERE.md",
+    "docs/REFERENCE_LINEAGE.md",
+    "docs/reference/flf_judging_rubric.md",
     "docs/FLF_BEFORE_AFTER_COMPARISON.md",
     "docs/FLF_SELF_ASSESSMENT_AND_LIMITATIONS.md",
     "docs/HUMAN_AUDIT_GUIDE.md",

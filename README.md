@@ -64,6 +64,8 @@ Start with:
 
 - `docs/START_HERE.md`
 - `docs/SUBMISSION_PACKET.md`
+- `docs/reference/flf_judging_rubric.md`
+- `docs/REFERENCE_LINEAGE.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/review/REVIEWER_START_HERE.md`
