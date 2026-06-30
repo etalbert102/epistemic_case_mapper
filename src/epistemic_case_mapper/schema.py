@@ -17,6 +17,19 @@ class Source(BaseModel):
     text: str | None = None
     path: str | None = None
     excerpt: str | None = None
+    provenance_level: Literal[
+        "unspecified",
+        "primary",
+        "official_guidance",
+        "peer_reviewed",
+        "preprint",
+        "secondary_summary",
+        "local_note",
+        "synthetic_note",
+    ] = "unspecified"
+    evidence_role: str = "unspecified"
+    limitations: list[str] = Field(default_factory=list)
+    needs_upgrade: bool = False
 
 
 class OpenQuestionTemplate(BaseModel):

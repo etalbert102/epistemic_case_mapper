@@ -9,6 +9,7 @@ from artifact_utils import parse_erosion_audit, parse_worked_map
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import SubmissionCase, load_submission_manifest
+from epistemic_case_mapper.unseen_quality import quality_signals, quality_summary
 
 
 OUTPUT_PATH = "ui/data.json"
@@ -107,6 +108,18 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
         artifacts["reviewPacket"] = config.ui.review_packet_path
     if config.ui.review_checklist_path:
         artifacts["reviewChecklist"] = config.ui.review_checklist_path
+    quality = quality_summary(repo_root, config.case_key)
+    for artifact_key, quality_path_key in (
+        ("qualityProtocol", "protocol"),
+        ("qualityReview", "qualityReview"),
+        ("qualityBaselineComparison", "baselineComparison"),
+        ("qualityScorecard", "scorecard"),
+        ("qualityRiskTasks", "riskTasks"),
+    ):
+        quality_path = quality["paths"].get(quality_path_key)
+        if quality_path:
+            artifacts[artifact_key] = quality_path
+    signals = quality_signals(repo_root, config.case_key, manifest)
     return {
         "caseKey": config.case_key,
         "caseId": config.case_id,
@@ -121,11 +134,17 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
                 "sourceId": source.source_id,
                 "title": source.title,
                 "sourceType": source.source_type,
+                "provenanceLevel": source.provenance_level,
+                "evidenceRole": source.evidence_role,
+                "limitations": source.limitations,
+                "needsUpgrade": source.needs_upgrade,
                 "excerpt": source.excerpt,
                 "path": source.path,
             }
             for source in manifest.sources
         ],
+        "quality": quality,
+        "qualityWarnings": [signal.__dict__ for signal in signals],
         "clusters": clusters,
         "clusterRelations": cluster_relations,
         "worked": {

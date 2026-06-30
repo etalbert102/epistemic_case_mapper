@@ -31,6 +31,7 @@ def main() -> int:
 
     _validate_uniqueness(manifest, failures)
     _validate_id_patterns(manifest, failures)
+    _validate_relation_ontology(manifest, failures)
     _validate_top_level_paths(repo_root, manifest, failures)
     for case in manifest.cases:
         _validate_case(repo_root, manifest, case, failures)
@@ -76,6 +77,21 @@ def _validate_id_patterns(manifest: SubmissionManifest, failures: list[str]) -> 
             re.compile(pattern)
         except re.error as exc:
             failures.append(f"invalid_id_pattern kind={label} error={exc}")
+
+
+def _validate_relation_ontology(manifest: SubmissionManifest, failures: list[str]) -> None:
+    seen: set[str] = set()
+    for relation_type in manifest.relation_ontology.allowed_types:
+        if not relation_type.strip():
+            failures.append("blank_relation_type_allowed")
+        if relation_type in seen:
+            failures.append(f"duplicate_relation_type_allowed type={relation_type}")
+        seen.add(relation_type)
+    for relation_type, definition in manifest.relation_ontology.custom_definitions.items():
+        if not relation_type.strip():
+            failures.append("blank_custom_relation_type")
+        if not definition.strip():
+            failures.append(f"blank_custom_relation_definition type={relation_type}")
 
 
 def _validate_top_level_paths(repo_root: Path, manifest: SubmissionManifest, failures: list[str]) -> None:

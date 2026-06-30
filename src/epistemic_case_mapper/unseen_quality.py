@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from epistemic_case_mapper.schema import CaseManifest
+
 
 BASE_DIR = Path("docs/unseen_case_tests")
 REQUIRED_FILES = (
@@ -57,6 +59,8 @@ ACCEPTANCE_CRITERIA = (
     "human_reviewer_can_inspect",
     "better_than_flat_baseline",
 )
+WEAK_PROVENANCE_LEVELS = {"secondary_summary", "local_note", "synthetic_note"}
+RISK_STATUSES = {"risk", "fail"}
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,14 @@ class UnseenCaseInfo:
     case_slug: str
     title: str
     question: str
+
+
+@dataclass(frozen=True)
+class QualitySignal:
+    signal_type: str
+    severity: str
+    label: str
+    evidence: str
 
 
 def init_quality_test(
@@ -119,6 +131,194 @@ def validate_quality_test(repo_root: Path, case_slug: str) -> list[str]:
     _validate_headings(slug, case_dir / "BASELINE_COMPARISON.md", BASELINE_COMPARISON_HEADINGS, repo_root, failures)
     _validate_scorecard(slug, case_dir / "SCORECARD.md", repo_root, failures)
     return failures
+
+
+def quality_summary(repo_root: Path, case_slug: str) -> dict:
+    slug = _normalize_slug(case_slug)
+    case_dir = quality_case_dir(repo_root, slug)
+    scorecard_path = case_dir / "SCORECARD.md"
+    review_path = case_dir / "QUALITY_REVIEW.md"
+    summary = {
+        "exists": case_dir.exists(),
+        "caseSlug": slug,
+        "paths": {
+            "protocol": (case_dir / "TEST_PROTOCOL.md").relative_to(repo_root).as_posix()
+            if (case_dir / "TEST_PROTOCOL.md").exists()
+            else None,
+            "qualityReview": review_path.relative_to(repo_root).as_posix() if review_path.exists() else None,
+            "baselineComparison": (case_dir / "BASELINE_COMPARISON.md").relative_to(repo_root).as_posix()
+            if (case_dir / "BASELINE_COMPARISON.md").exists()
+            else None,
+            "scorecard": scorecard_path.relative_to(repo_root).as_posix() if scorecard_path.exists() else None,
+            "riskTasks": (case_dir / "GENERATED_RISK_TASKS.md").relative_to(repo_root).as_posix()
+            if (case_dir / "GENERATED_RISK_TASKS.md").exists()
+            else None,
+        },
+        "overallResult": None,
+        "riskCriteria": [],
+        "lowScores": [],
+    }
+    if scorecard_path.exists():
+        scorecard = scorecard_path.read_text(encoding="utf-8")
+        match = re.search(r"^Overall result:\s*`?([^`\n]+)`?\s*$", scorecard, re.MULTILINE | re.IGNORECASE)
+        if match:
+            summary["overallResult"] = match.group(1).strip().lower()
+        summary["riskCriteria"] = _risk_criteria(scorecard)
+    if review_path.exists():
+        summary["lowScores"] = _low_quality_scores(review_path.read_text(encoding="utf-8"))
+    return summary
+
+
+def source_quality_signals(case_manifest: CaseManifest) -> list[QualitySignal]:
+    signals: list[QualitySignal] = []
+    for source in case_manifest.sources:
+        if source.needs_upgrade:
+            signals.append(
+                QualitySignal(
+                    signal_type="source_upgrade",
+                    severity="risk",
+                    label=source.source_id,
+                    evidence="Source is marked needs_upgrade=true.",
+                )
+            )
+        if source.provenance_level in WEAK_PROVENANCE_LEVELS:
+            signals.append(
+                QualitySignal(
+                    signal_type="source_provenance",
+                    severity="risk",
+                    label=source.source_id,
+                    evidence=f"provenance_level={source.provenance_level}",
+                )
+            )
+        for limitation in source.limitations:
+            signals.append(
+                QualitySignal(
+                    signal_type="source_limitation",
+                    severity="note",
+                    label=source.source_id,
+                    evidence=limitation,
+                )
+            )
+    return signals
+
+
+def quality_signals(repo_root: Path, case_slug: str, case_manifest: CaseManifest) -> list[QualitySignal]:
+    signals = source_quality_signals(case_manifest)
+    summary = quality_summary(repo_root, case_slug)
+    for criterion in summary["riskCriteria"]:
+        signals.append(
+            QualitySignal(
+                signal_type="scorecard_criterion",
+                severity=criterion["status"],
+                label=criterion["criterion"],
+                evidence=criterion["evidence"],
+            )
+        )
+    for score in summary["lowScores"]:
+        signals.append(
+            QualitySignal(
+                signal_type="quality_score",
+                severity="risk",
+                label=score["dimension"],
+                evidence=f"score={score['score']}; {score['evidence']}",
+            )
+        )
+    overall = summary["overallResult"]
+    if overall in {"fail", "inconclusive"}:
+        signals.append(
+            QualitySignal(
+                signal_type="overall_quality_result",
+                severity="risk" if overall == "inconclusive" else "fail",
+                label="overall_result",
+                evidence=overall,
+            )
+        )
+    return signals
+
+
+def write_quality_risk_tasks(repo_root: Path, case_slug: str, case_manifest: CaseManifest) -> Path:
+    slug = _normalize_slug(case_slug)
+    case_dir = quality_case_dir(repo_root, slug)
+    case_dir.mkdir(parents=True, exist_ok=True)
+    output_path = case_dir / "GENERATED_RISK_TASKS.md"
+    signals = quality_signals(repo_root, slug, case_manifest)
+    lines = [
+        f"# {case_manifest.title} Generated Risk Tasks",
+        "",
+        "Status: `generated`",
+        "",
+        "These tasks are generated from source provenance metadata and unseen-case quality review risk/fail rows.",
+        "",
+    ]
+    if not signals:
+        lines.extend(["No quality risk tasks generated.", ""])
+    for index, signal in enumerate(signals, start=1):
+        task_id = f"quality_task_{index:03d}"
+        lines.extend(
+            [
+                f"task_id: {task_id}",
+                f"task_type: {signal.signal_type}",
+                f"priority: {_priority_for_signal(signal)}",
+                f"target: {signal.label}",
+                f"risk_status: {signal.severity}",
+                f"task: {_task_text(signal)}",
+                f"evidence: {signal.evidence}",
+                "",
+            ]
+        )
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
+def _risk_criteria(scorecard: str) -> list[dict[str, str]]:
+    criteria: list[dict[str, str]] = []
+    for line in scorecard.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = _split_table_row(line)
+        if len(cells) < 3:
+            continue
+        criterion, status, evidence = cells[0], cells[1].lower(), cells[2]
+        if status in RISK_STATUSES:
+            criteria.append({"criterion": criterion, "status": status, "evidence": evidence})
+    return criteria
+
+
+def _low_quality_scores(review: str) -> list[dict[str, str]]:
+    scores: list[dict[str, str]] = []
+    for dimension in QUALITY_DIMENSIONS:
+        row = _table_row_for_label(review, dimension)
+        if row is None:
+            continue
+        cells = _split_table_row(row)
+        if len(cells) < 3 or not re.fullmatch(r"[1-5]", cells[1]):
+            continue
+        score = int(cells[1])
+        if score <= 2:
+            scores.append({"dimension": dimension, "score": str(score), "evidence": cells[2]})
+    return scores
+
+
+def _priority_for_signal(signal: QualitySignal) -> str:
+    if signal.severity == "fail":
+        return "high"
+    if signal.signal_type in {"source_upgrade", "source_provenance", "overall_quality_result"}:
+        return "high"
+    return "medium"
+
+
+def _task_text(signal: QualitySignal) -> str:
+    if signal.signal_type in {"source_upgrade", "source_provenance"}:
+        return f"Upgrade or justify source provenance for {signal.label} before treating it as load-bearing."
+    if signal.signal_type == "source_limitation":
+        return f"Bound the limitation for {signal.label} in the map, checklist, or source inventory."
+    if signal.signal_type == "scorecard_criterion":
+        return f"Resolve the unseen-case scorecard {signal.severity} criterion {signal.label}."
+    if signal.signal_type == "quality_score":
+        return f"Improve the low quality dimension {signal.label} or record why the limitation is acceptable."
+    if signal.signal_type == "overall_quality_result":
+        return "Resolve the non-passing overall unseen-case quality result before presenting the package as showable."
+    return f"Review quality signal {signal.label}."
 
 
 def quality_case_dir(repo_root: Path, case_slug: str) -> Path:

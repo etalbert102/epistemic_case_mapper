@@ -20,4 +20,6 @@ Use `ecm package prepare` to generate product-facing assets for an arbitrary pac
 
 Use `ecm quality init --case <case_slug> --title "<title>" --question "<question>"` to create the unseen-case quality review packet under `docs/unseen_case_tests/<case_slug>/`. After completing the protocol, scorecard, quality review, and baseline comparison, use `ecm quality gate --case <case_slug>` to regenerate package-facing assets, run the package validators, check export/UI/review freshness, and validate the completed quality documents.
 
+Quality signals flow into generated artifacts. Source provenance metadata and unseen-case scorecards produce reviewer-start warnings, UI quality warnings, and `GENERATED_RISK_TASKS.md` follow-up tasks.
+
 The current FLF submission is one package configured by `submission_manifest.yaml`.

@@ -358,6 +358,26 @@ input {
   font-size: 13px;
 }
 
+.quality-panel {
+  margin-bottom: 20px;
+  border-color: color-mix(in srgb, var(--risk) 28%, var(--line));
+}
+
+.quality-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 180px));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.quality-summary .metric {
+  min-height: 78px;
+}
+
+.quality-summary .metric strong {
+  font-size: 24px;
+}
+
 .section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -537,6 +557,12 @@ input {
 
 .stacked-list.compact .list-card {
   background: var(--panel-strong);
+}
+
+.quality-warning[data-severity="risk"],
+.quality-warning[data-severity="fail"] {
+  border-color: color-mix(in srgb, var(--risk) 38%, var(--line));
+  background: #fff8f6;
 }
 
 .comparison-table {

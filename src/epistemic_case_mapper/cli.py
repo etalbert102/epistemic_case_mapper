@@ -8,8 +8,15 @@ import sys
 from pathlib import Path
 
 from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
-from epistemic_case_mapper.unseen_quality import init_quality_test, validate_quality_test
+from epistemic_case_mapper.unseen_quality import (
+    quality_signals,
+    quality_summary,
+    init_quality_test,
+    validate_quality_test,
+    write_quality_risk_tasks,
+)
 
 ENGINE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = ENGINE_ROOT / "scripts"
@@ -134,6 +141,25 @@ def main() -> int:
     if args.command == "quality" and args.quality_target == "check":
         return _check_quality(repo_root, args.case)
     if args.command == "quality" and args.quality_target == "gate":
+        result = _run_many(
+            repo_root,
+            [
+                ["scripts/validate_submission_manifest.py"],
+                ["scripts/validate_worked_regions.py"],
+                ["scripts/validate_submission_references.py"],
+                ["scripts/export_worked_region_json.py"],
+            ],
+            args.package,
+        )
+        if result != 0:
+            return result
+        result = _check_quality(repo_root, args.case)
+        if result != 0:
+            return result
+        manifest = load_submission_manifest(repo_root, args.package)
+        result = _write_quality_tasks(repo_root, manifest, args.case)
+        if result != 0:
+            return result
         result = _prepare_package(repo_root, args.package)
         if result != 0:
             return result
@@ -143,7 +169,6 @@ def main() -> int:
                 ["scripts/validate_submission_manifest.py"],
                 ["scripts/validate_worked_regions.py"],
                 ["scripts/validate_submission_references.py"],
-                ["scripts/export_worked_region_json.py"],
                 ["scripts/export_worked_region_json.py", "--check"],
                 ["scripts/build_ui_data.py", "--check"],
                 ["scripts/build_tier1_review_checklist.py", "--check"],
@@ -152,7 +177,7 @@ def main() -> int:
         )
         if result != 0:
             return result
-        return _check_quality(repo_root, args.case)
+        return 0
 
     parser.error("unknown command")
     return 2
@@ -240,16 +265,27 @@ def _write_reviewer_start(repo_root: Path, manifest: SubmissionManifest) -> None
             lines.append(f"- `{path}`")
     lines.extend(["", "## Cases", ""])
     for case in manifest.cases:
-        case_manifest = read_yaml(repo_root / case.case_path)
+        case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
         lines.append(f"### {case.label}")
         lines.append("")
-        lines.append(f"- Question: {case_manifest.get('question', '')}")
+        lines.append(f"- Question: {case_manifest.question}")
         lines.append(f"- Case manifest: `{case.case_path}`")
         for region in case.worked_regions:
             lines.append(f"- Worked region `{region.region_id}`: `{region.map_path}`")
             lines.append(f"- Erosion audit `{region.region_id}`: `{region.audit_path}`")
         if case.task_queue is not None:
             lines.append(f"- Task queue: `{case.task_queue.path}`")
+        quality = quality_summary(repo_root, case.case_key)
+        if quality["paths"]["scorecard"]:
+            lines.append(f"- Quality scorecard: `{quality['paths']['scorecard']}`")
+        if quality["paths"]["riskTasks"]:
+            lines.append(f"- Generated quality tasks: `{quality['paths']['riskTasks']}`")
+        signals = quality_signals(repo_root, case.case_key, case_manifest)
+        if signals:
+            lines.append("")
+            lines.append("Quality warnings:")
+            for signal in signals[:8]:
+                lines.append(f"- {signal.severity}: {signal.label} - {signal.evidence}")
         lines.append("")
     lines.extend(
         [
@@ -288,6 +324,20 @@ def _check_quality(repo_root: Path, case_slug: str) -> int:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
     print(f"Validated unseen-case quality review case={case_slug}")
+    return 0
+
+
+def _write_quality_tasks(repo_root: Path, manifest: SubmissionManifest, case_slug: str) -> int:
+    try:
+        case = manifest.case_for_key(case_slug)
+    except KeyError:
+        if len(manifest.cases) != 1:
+            print(f"quality_task_failed unknown_case={case_slug}", file=sys.stderr)
+            return 1
+        case = manifest.cases[0]
+    case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
+    path = write_quality_risk_tasks(repo_root, case_slug, case_manifest)
+    print(f"Wrote {path.relative_to(repo_root).as_posix()}")
     return 0
 
 

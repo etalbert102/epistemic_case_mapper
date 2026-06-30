@@ -98,6 +98,38 @@ def test_manifest_driven_validators_accept_synthetic_transfer_case(monkeypatch, 
     assert validate_submission_references.main() == 1
 
 
+def test_unknown_relation_type_requires_manifest_definition(monkeypatch, tmp_path: Path) -> None:
+    _write_transfer_fixture(tmp_path)
+    map_path = tmp_path / "examples/demo/worked_map.md"
+    map_path.write_text(
+        map_path.read_text(encoding="utf-8").replace("relation_type: supports", "relation_type: custom_supports", 1),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        validate_worked_regions.sys,
+        "argv",
+        ["validate_worked_regions.py", "--repo-root", str(tmp_path), "--region", "demo_region"],
+    )
+    assert validate_worked_regions.main() == 1
+
+    manifest_path = tmp_path / "submission_manifest.yaml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            "ui_hero:",
+            "relation_ontology:\n  custom_definitions:\n    custom_supports: Custom support edge used by the transfer fixture.\nui_hero:",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        validate_worked_regions.sys,
+        "argv",
+        ["validate_worked_regions.py", "--repo-root", str(tmp_path), "--region", "demo_region"],
+    )
+    assert validate_worked_regions.main() == 0
+
+
 def _write_transfer_fixture(repo_root: Path) -> None:
     for relative_dir in ("data/cases/demo/sources/text", "docs/worked_regions", "docs/review", "examples/demo", "ui"):
         (repo_root / relative_dir).mkdir(parents=True)

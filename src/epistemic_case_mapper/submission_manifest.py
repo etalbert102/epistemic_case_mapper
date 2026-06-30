@@ -9,6 +9,15 @@ from epistemic_case_mapper.io import read_yaml
 
 
 DEFAULT_MANIFEST_PATH = "submission_manifest.yaml"
+DEFAULT_RELATION_TYPES = (
+    "supports",
+    "challenges",
+    "refines",
+    "similar_to",
+    "depends_on",
+    "crux_for",
+    "in_tension_with",
+)
 
 
 class ValidationThresholds(BaseModel):
@@ -152,11 +161,20 @@ class IdPatterns(BaseModel):
     loss: str = r"[A-Za-z0-9_\-]+_loss_\d+"
 
 
+class RelationOntology(BaseModel):
+    allowed_types: list[str] = Field(default_factory=lambda: list(DEFAULT_RELATION_TYPES))
+    custom_definitions: dict[str, str] = Field(default_factory=dict)
+
+    def permitted_types(self) -> set[str]:
+        return {*self.allowed_types, *self.custom_definitions}
+
+
 class SubmissionManifest(BaseModel):
     schema_version: int = 1
     package_id: str = "flf_submission"
     package_label: str = "FLF Submission"
     id_patterns: IdPatterns = Field(default_factory=IdPatterns)
+    relation_ontology: RelationOntology = Field(default_factory=RelationOntology)
     ui_hero: UiHero = Field(default_factory=UiHero)
     judge_paths: list[str] = Field(default_factory=list)
     required_docs: list[str] = Field(default_factory=list)

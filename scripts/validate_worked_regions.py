@@ -75,7 +75,7 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
                 failures.append(f"definition_missing_source region={region.region_id} source={source_id}")
 
     if map_path.exists():
-        _validate_map(region.region_id, map_path, region.map_format, source_ids, region.thresholds, failures)
+        _validate_map(region.region_id, map_path, region.map_format, source_ids, region.thresholds, manifest, failures)
     if baseline.exists():
         _validate_baseline(region.region_id, baseline, required_sources, region.thresholds, failures)
     if audit.exists():
@@ -85,7 +85,13 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
 
 
 def _validate_map(
-    region_id: str, path: Path, artifact_format: str, source_ids: set[str], thresholds: ValidationThresholds, failures: list[str]
+    region_id: str,
+    path: Path,
+    artifact_format: str,
+    source_ids: set[str],
+    thresholds: ValidationThresholds,
+    manifest: SubmissionManifest,
+    failures: list[str],
 ) -> None:
     worked_map = parse_worked_map(path, artifact_format)
     claims = worked_map["claims"]
@@ -118,6 +124,10 @@ def _validate_map(
         failures.append(f"worked_map_missing_relations region={region_id} path={path}")
     if len(relation_types) < thresholds.min_relation_types:
         failures.append(f"worked_map_too_few_relation_types region={region_id} count={len(relation_types)} path={path}")
+    permitted_relation_types = manifest.relation_ontology.permitted_types()
+    for relation_type in sorted(relation_types):
+        if relation_type not in permitted_relation_types:
+            failures.append(f"worked_map_unknown_relation_type region={region_id} type={relation_type} path={path}")
     if sum(1 for relation in relations if relation.get("rationale")) < len(relation_ids):
         failures.append(f"worked_map_missing_relation_rationales region={region_id} path={path}")
     if crux_count < thresholds.min_crux_mentions:

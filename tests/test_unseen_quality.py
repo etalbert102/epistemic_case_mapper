@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.unseen_quality import init_quality_test, validate_quality_test
 from test_submission_manifest_generalization import _write_transfer_fixture
@@ -31,6 +33,15 @@ def test_unseen_quality_init_and_check_lifecycle(tmp_path: Path) -> None:
 
 def test_quality_cli_gate_accepts_completed_transfer_package(monkeypatch, tmp_path: Path) -> None:
     _write_transfer_fixture(tmp_path)
+    case_path = tmp_path / "data/cases/demo/case.yaml"
+    case_path.write_text(
+        case_path.read_text(encoding="utf-8").replace(
+            "    source_type: test\n    path: data/cases/demo/sources/text/source_1.txt",
+            "    source_type: test\n    provenance_level: local_note\n    evidence_role: implementation\n    needs_upgrade: true\n    limitations:\n      - Fixture source is not primary evidence.\n    path: data/cases/demo/sources/text/source_1.txt",
+            1,
+        ),
+        encoding="utf-8",
+    )
     init_quality_test(
         tmp_path,
         "demo_unseen",
@@ -48,6 +59,11 @@ def test_quality_cli_gate_accepts_completed_transfer_package(monkeypatch, tmp_pa
     assert cli.main() == 0
     assert (tmp_path / "ui/index.html").exists()
     assert (tmp_path / "examples/demo/worked_map_json_export.json").exists()
+    risk_tasks = tmp_path / "docs/unseen_case_tests/demo_unseen/GENERATED_RISK_TASKS.md"
+    assert "demo_source_1" in risk_tasks.read_text(encoding="utf-8")
+    ui_data = json.loads((tmp_path / "ui/data.json").read_text(encoding="utf-8"))
+    warnings = ui_data["cases"][0]["qualityWarnings"]
+    assert any(warning["label"] == "demo_source_1" for warning in warnings)
 
 
 def _write_completed_quality_docs(repo_root: Path, case_slug: str, title: str) -> None:

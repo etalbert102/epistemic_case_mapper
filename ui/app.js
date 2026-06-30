@@ -30,6 +30,10 @@ const elements = {
   taskQueueLink: document.getElementById("taskQueueLink"),
   reviewPacketLink: document.getElementById("reviewPacketLink"),
   reviewChecklistLink: document.getElementById("reviewChecklistLink"),
+  qualityPanel: document.getElementById("qualityPanel"),
+  qualitySummary: document.getElementById("qualitySummary"),
+  qualityWarningList: document.getElementById("qualityWarningList"),
+  qualityScorecardLink: document.getElementById("qualityScorecardLink"),
 };
 
 async function boot() {
@@ -108,13 +112,46 @@ function renderCase() {
   setArtifactLink(elements.taskQueueLink, caseItem.artifacts.taskQueue);
   setArtifactLink(elements.reviewPacketLink, caseItem.artifacts.reviewPacket);
   setArtifactLink(elements.reviewChecklistLink, caseItem.artifacts.reviewChecklist);
+  setArtifactLink(elements.qualityScorecardLink, caseItem.artifacts.qualityScorecard);
 
   renderMetrics(caseItem);
+  renderQuality(caseItem);
   renderClusters(caseItem);
   renderClaims(caseItem);
   renderSpotlights(caseItem);
   renderLosses(caseItem);
   renderTasks(caseItem);
+}
+
+function renderQuality(caseItem) {
+  const warnings = caseItem.qualityWarnings || [];
+  const quality = caseItem.quality || {};
+  const hasQuality = quality.exists || warnings.length > 0;
+  elements.qualityPanel.hidden = !hasQuality;
+  if (!hasQuality) return;
+
+  const overall = quality.overallResult || "not recorded";
+  const riskCount = warnings.filter((warning) => ["risk", "fail"].includes(warning.severity)).length;
+  elements.qualitySummary.innerHTML = `
+    <div class="metric"><strong>${escapeHtml(overall)}</strong><span>Overall result</span></div>
+    <div class="metric"><strong>${riskCount}</strong><span>Risk/fail warnings</span></div>
+  `;
+  elements.qualityWarningList.innerHTML = warnings.length
+    ? warnings
+        .slice(0, 8)
+        .map(
+          (warning) => `
+            <article class="list-card quality-warning" data-severity="${escapeHtml(warning.severity)}">
+              <h4>${escapeHtml(warning.severity)} · ${escapeHtml(warning.label)}</h4>
+              <p>${escapeHtml(warning.evidence || "")}</p>
+              <div class="tag-row">
+                <span class="tag">${escapeHtml(warning.signal_type || "")}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : emptyState("No quality warnings recorded.");
 }
 
 function renderMetrics(caseItem) {

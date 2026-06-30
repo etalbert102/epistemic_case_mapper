@@ -188,76 +188,131 @@
         ]
       },
       "label": "LHC Black Hole Risk",
+      "quality": {
+        "caseSlug": "lhc",
+        "exists": false,
+        "lowScores": [],
+        "overallResult": null,
+        "paths": {
+          "baselineComparison": null,
+          "protocol": null,
+          "qualityReview": null,
+          "riskTasks": null,
+          "scorecard": null
+        },
+        "riskCriteria": []
+      },
+      "qualityWarnings": [],
       "question": "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?",
       "reviewStatus": "draft",
       "shortLabel": "LHC",
       "sources": [
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Formal LSAG review of LHC collision safety, including cosmic-ray comparisons, microscopic black holes, Hawking radiation, stable-black-hole scenarios, astronomical body stability, strangelets, vacuum bubbles, and magnetic monopoles.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/lsag_2008_safety_review.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "lsag_2008_safety_review",
           "sourceType": "formal_safety_review",
           "title": "Review of the Safety of LHC Collisions"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Independent review by a CERN Scientific Policy Committee panel of the LSAG report and Giddings-Mangano paper, including discussion of cosmic-ray comparisons, stable microscopic black holes, and remaining caveats.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/spc_2008_lsag_review.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "spc_2008_lsag_review",
           "sourceType": "independent_review",
           "title": "SPC Report on LSAG Documents"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Technical analysis of hypothetical stable TeV-scale black holes, accretion scenarios, and astrophysical constraints from white dwarfs and neutron stars.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_stable_black_holes.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "giddings_mangano_2008_stable_black_holes",
           "sourceType": "technical_safety_analysis",
           "title": "Astrophysical implications of hypothetical stable TeV-scale black holes"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Current CERN public LHC page with a public-facing answer to whether the LHC can create black holes.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/cern_lhc_current_page.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "cern_lhc_current_page",
           "sourceType": "public_explanation_current",
           "title": "Large Hadron Collider"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "CERN public explanation of extra dimensions, gravitons, microscopic black holes, and expected rapid disintegration if such objects appeared in LHC collisions.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/cern_tiny_black_holes_page.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "cern_tiny_black_holes_page",
           "sourceType": "public_explanation_current",
           "title": "Extra dimensions, gravitons, and tiny black holes"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "CMS public summary of a search for microscopic black holes in 2010 LHC proton-proton collision data, reporting no experimental evidence in the searched model range.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/cms_2011_black_hole_search.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "cms_2011_black_hole_search",
           "sourceType": "experimental_result_public_summary",
           "title": "Search for microscopic black hole signatures at the Large Hadron Collider"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "CMS technical paper on a microscopic black-hole search using 7 TeV proton-proton collision data.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/cms_black_hole_search_paper.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "cms_2010_black_hole_search_paper",
           "sourceType": "experimental_result_paper",
           "title": "Search for Microscopic Black Hole Signatures at the Large Hadron Collider"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Technical critique arguing that some risk analyses may not completely exclude certain metastable microscopic black-hole scenarios and proposing operational measures.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/plaga_2008_metastable_black_holes.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "plaga_2008_metastable_black_holes",
           "sourceType": "technical_critique",
           "title": "On the potential catastrophic risk from metastable quantum-black holes produced at particle colliders"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Technical response to Plaga's claimed metastable black-hole risk, arguing that the risk claim rests on inconsistent assumptions.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/giddings_mangano_2008_comments_plaga.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "giddings_mangano_2008_comments_plaga",
           "sourceType": "technical_response",
           "title": "Comments on claimed risk from metastable black holes"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Legal analysis of injunction requests and decision-making challenges around claimed LHC black-hole catastrophe risks.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/lhc_black_holes/sources/text/johnson_2009_black_hole_case.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "johnson_2009_black_hole_case",
           "sourceType": "legal_public_risk_framing",
           "title": "The Black Hole Case: The Injunction Against the End of the World"
@@ -1160,90 +1215,153 @@
         ]
       },
       "label": "Eggs And Health",
+      "quality": {
+        "caseSlug": "eggs",
+        "exists": false,
+        "lowScores": [],
+        "overallResult": null,
+        "paths": {
+          "baselineComparison": null,
+          "protocol": null,
+          "qualityReview": null,
+          "riskTasks": null,
+          "scorecard": null
+        },
+        "riskCriteria": []
+      },
+      "qualityWarnings": [],
       "question": "What should an investigator believe about the health effects of eating eggs?",
       "reviewStatus": "draft",
       "shortLabel": "Eggs",
       "sources": [
         {
+          "evidenceRole": "unspecified",
           "excerpt": "PubMed record for the AHA science advisory on dietary cholesterol, blood lipids, lipoproteins, cardiovascular disease risk, and egg guidance.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/aha_2019_dietary_cholesterol_pubmed.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "aha_2019_dietary_cholesterol_pubmed",
           "sourceType": "guideline_abstract",
           "title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "AHA public explanation summarizing current dietary cholesterol guidance, including how eggs can fit into a healthy diet for many adults.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/aha_2023_dietary_cholesterol_news.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "aha_2023_dietary_cholesterol_news",
           "sourceType": "guideline_public_explanation",
           "title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "PMC summary of the Dietary Guidelines for Americans, including dietary pattern framing and protein food groups that include eggs.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/dga_2020_2025_pmc_summary.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "dga_2020_2025_pmc_summary",
           "sourceType": "federal_dietary_guideline_summary",
           "title": "Dietary Guidelines for Americans, 2020-2025"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Large prospective cohort analysis and updated meta-analysis evaluating egg consumption and cardiovascular disease risk.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/bmj_2020_egg_consumption_cvd_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "bmj_2020_egg_consumption_cvd",
           "sourceType": "cohort_studies_systematic_review_meta_analysis",
           "title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Dose-response meta-analysis of prospective cohort studies on egg consumption, coronary heart disease, and stroke.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/bmj_2013_egg_consumption_chd_stroke_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "bmj_2013_egg_consumption_chd_stroke",
           "sourceType": "dose_response_meta_analysis",
           "title": "Egg consumption and risk of coronary heart disease and stroke: dose-response meta-analysis of prospective cohort studies"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Pooled cohort study reporting associations between dietary cholesterol or egg consumption and incident cardiovascular disease and mortality.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/jama_2019_dietary_cholesterol_eggs_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "jama_2019_dietary_cholesterol_eggs",
           "sourceType": "pooled_cohort_study",
           "title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Meta-analysis of randomized controlled trials on egg consumption and lipid profiles, including LDL-C, HDL-C, and LDL-C/HDL-C ratio.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/li_2020_egg_cholesterol_rct_meta_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "li_2020_egg_cholesterol_rct_meta",
           "sourceType": "randomized_trial_meta_analysis",
           "title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Dose-response meta-analysis evaluating egg consumption and cardiovascular disease risk or mortality, including CHD, stroke, and heart failure.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/ma_2021_egg_cvd_dose_response_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "ma_2021_egg_cvd_dose_response",
           "sourceType": "dose_response_meta_analysis",
           "title": "Egg consumption and cardiovascular risk: a dose-response meta-analysis of prospective cohort studies"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Evidence mapping overview of systematic reviews on egg consumption and multiple health outcomes.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/huang_2020_egg_health_outcomes_evidence_mapping_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "huang_2020_egg_health_outcomes_evidence_mapping",
           "sourceType": "evidence_mapping_overview",
           "title": "Egg consumption and health outcomes: a global evidence mapping based on an overview of systematic reviews"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Scoping review for Nordic Nutrition Recommendations 2023 summarizing egg evidence and guideline-relevant considerations.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/nnr_2023_eggs_scoping_review_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "nnr_2023_eggs_scoping_review",
           "sourceType": "nutrition_guideline_scoping_review",
           "title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Narrative review discussing eggs, dietary cholesterol, and cardiovascular disease, including subgroup concerns.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/eggs_dietary_cholesterol_cvd_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "eggs_dietary_cholesterol_cvd_review",
           "sourceType": "narrative_review",
           "title": "Eggs, dietary cholesterol, and cardiovascular disease"
         },
         {
+          "evidenceRole": "unspecified",
           "excerpt": "Narrative review arguing that evidence for dietary cholesterol as a cardiovascular disease driver is limited or inconsistent.",
+          "limitations": [],
+          "needsUpgrade": false,
           "path": "data/cases/eggs/sources/text/dietary_cholesterol_lack_evidence_cvd_pmc.txt",
+          "provenanceLevel": "unspecified",
           "sourceId": "dietary_cholesterol_lack_evidence_cvd_review",
           "sourceType": "narrative_review",
           "title": "Dietary Cholesterol and the Lack of Evidence in Cardiovascular Disease"
