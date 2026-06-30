@@ -37,7 +37,8 @@ def main() -> int:
     _check_required_docs(repo_root, manifest, failures)
     _check_terms(repo_root, failures)
     _run_tests(repo_root, failures)
-    _run([sys.executable, "scripts/validate_submission_manifest.py"], repo_root, failures)
+    manifest_args = ["--manifest", args.manifest]
+    _run([sys.executable, "scripts/validate_submission_manifest.py", *manifest_args], repo_root, failures)
     for case in manifest.iter_starter_cases():
         case_path = case.case_path
         examples_path = str(case.examples_path)
@@ -55,19 +56,19 @@ def main() -> int:
             failures,
         )
     if args.include_worked_regions:
-        _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_full_case_knowledge.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_realism_artifacts.py"], repo_root, failures)
+        _run([sys.executable, "scripts/validate_worked_regions.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_full_case_knowledge.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_realism_artifacts.py", *manifest_args], repo_root, failures)
     if args.include_blinded_baselines:
-        _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
-    _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_update_demo.py"], repo_root, failures)
-    _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
+        _run([sys.executable, "scripts/validate_blinded_baselines.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/export_worked_region_json.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/build_ui_data.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_ui.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_submission_references.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_update_demo.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/judge_smoke_test.py", *manifest_args], repo_root, failures)
 
     if failures:
         for failure in failures:

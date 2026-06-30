@@ -6,6 +6,11 @@ const elements = {
   caseTabs: document.getElementById("caseTabs"),
   reviewStatus: document.getElementById("reviewStatus"),
   searchInput: document.getElementById("searchInput"),
+  heroEyebrow: document.getElementById("heroEyebrow"),
+  heroTitle: document.getElementById("judgeModeTitle"),
+  heroBody: document.getElementById("heroBody"),
+  heroLinks: document.getElementById("heroLinks"),
+  heroCards: document.getElementById("heroCards"),
   caseTitle: document.getElementById("caseTitle"),
   caseQuestion: document.getElementById("caseQuestion"),
   metricGrid: document.getElementById("metricGrid"),
@@ -36,7 +41,31 @@ async function boot() {
     renderCase();
   });
   renderTabs();
+  renderHero();
   renderCase();
+}
+
+function renderHero() {
+  const hero = uiData.hero || {};
+  elements.heroEyebrow.textContent = hero.eyebrow || "Inspection Mode";
+  elements.heroTitle.textContent = hero.title || uiData.package?.packageLabel || "Epistemic Case Mapper";
+  elements.heroBody.textContent = hero.body || "";
+  elements.heroLinks.innerHTML = (hero.links || [])
+    .map((link) => {
+      const primary = link.primary ? " primary" : "";
+      return `<a class="action-link${primary}" href="${artifactHref(link.path)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`;
+    })
+    .join("");
+  elements.heroCards.innerHTML = (hero.cards || [])
+    .map(
+      (card) => `
+        <div>
+          <span>${escapeHtml(card.label)}</span>
+          <p>${formatInline(card.text || "")}</p>
+        </div>
+      `,
+    )
+    .join("");
 }
 
 function renderTabs() {
@@ -69,16 +98,16 @@ function renderCase() {
     "Artifacts are inspectable but remain human-review-needed until packet decisions are recorded.";
   elements.caseTitle.textContent = caseItem.label;
   elements.caseQuestion.textContent = caseItem.question;
-  elements.fullMapLink.href = artifactHref(caseItem.artifacts.fullMap);
-  elements.workedMapLink.href = artifactHref(caseItem.artifacts.workedMap);
-  elements.auditLink.href = artifactHref(caseItem.artifacts.erosionAudit);
-  elements.bestRegionsLink.href = artifactHref(caseItem.artifacts.bestRegions);
-  elements.fullBaselineLink.href = artifactHref(caseItem.artifacts.fullCaseBaseline);
-  elements.workedBaselineLink.href = artifactHref(caseItem.artifacts.workedBaseline);
-  elements.multiModelAuditLink.href = artifactHref(caseItem.artifacts.multiModelAudit);
-  elements.taskQueueLink.href = artifactHref(caseItem.artifacts.taskQueue);
-  elements.reviewPacketLink.href = artifactHref(caseItem.artifacts.reviewPacket);
-  elements.reviewChecklistLink.href = artifactHref(caseItem.artifacts.reviewChecklist);
+  setArtifactLink(elements.fullMapLink, caseItem.artifacts.fullMap);
+  setArtifactLink(elements.workedMapLink, caseItem.artifacts.workedMap);
+  setArtifactLink(elements.auditLink, caseItem.artifacts.erosionAudit);
+  setArtifactLink(elements.bestRegionsLink, caseItem.artifacts.bestRegions);
+  setArtifactLink(elements.fullBaselineLink, caseItem.artifacts.fullCaseBaseline);
+  setArtifactLink(elements.workedBaselineLink, caseItem.artifacts.workedBaseline);
+  setArtifactLink(elements.multiModelAuditLink, caseItem.artifacts.multiModelAudit);
+  setArtifactLink(elements.taskQueueLink, caseItem.artifacts.taskQueue);
+  setArtifactLink(elements.reviewPacketLink, caseItem.artifacts.reviewPacket);
+  setArtifactLink(elements.reviewChecklistLink, caseItem.artifacts.reviewChecklist);
 
   renderMetrics(caseItem);
   renderClusters(caseItem);
@@ -218,6 +247,16 @@ function filterText(items) {
 
 function artifactHref(path) {
   return `../${path}`;
+}
+
+function setArtifactLink(element, path) {
+  if (!path) {
+    element.hidden = true;
+    element.removeAttribute("href");
+    return;
+  }
+  element.hidden = false;
+  element.href = artifactHref(path);
 }
 
 function emptyState(text) {

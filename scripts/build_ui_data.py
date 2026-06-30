@@ -49,12 +49,21 @@ def build_payload(repo_root: Path, manifest_path: str = "submission_manifest.yam
     return {
         "generatedFrom": "scripts/build_ui_data.py",
         "status": "human-review-needed",
+        "package": {
+            "packageId": manifest_config.package_id,
+            "packageLabel": manifest_config.package_label,
+        },
+        "hero": manifest_config.ui_hero.model_dump(),
         "summary": {
             "caseCount": len(cases),
             "sourceCount": sum(len(case["sources"]) for case in cases),
             "clusterCount": sum(len(case["clusters"]) for case in cases),
-            "claimCount": sum(len(case["worked"]["claims"]) for case in cases),
-            "relationCount": sum(len(case["worked"]["relations"]) for case in cases),
+            "claimCount": sum(
+                len(region["worked"]["claims"]) for case in cases for region in case["workedRegions"]
+            ),
+            "relationCount": sum(
+                len(region["worked"]["relations"]) for case in cases for region in case["workedRegions"]
+            ),
             "taskCount": sum(len(case["tasks"]) for case in cases),
         },
         "cases": cases,
@@ -66,8 +75,9 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
     if not config.worked_regions:
         raise ValueError(f"ui_case_missing_worked_region case={config.case_key}")
     worked_region = config.worked_regions[0]
-    worked_map = parse_worked_map(repo_root / worked_region.map_path)
-    audit = parse_erosion_audit(repo_root / worked_region.audit_path)
+    worked_regions = [_build_worked_region_payload(repo_root, region) for region in config.worked_regions]
+    worked_map = worked_regions[0]["worked"]
+    audit = worked_regions[0]["erosion"]
     clusters: list[dict[str, str]] = []
     cluster_relations: list[dict[str, str]] = []
     if config.full_case is not None:
@@ -82,8 +92,9 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
         "erosionAudit": worked_region.audit_path,
         "bestRegions": worked_region.best_path,
         "workedBaseline": worked_region.baseline_path,
-        "multiModelAudit": "docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md",
     }
+    if config.ui.multi_model_audit_path:
+        artifacts["multiModelAudit"] = config.ui.multi_model_audit_path
     if config.full_case is not None:
         artifacts["fullIndex"] = config.full_case.index_path
         artifacts["fullMap"] = config.full_case.map_path
@@ -121,16 +132,48 @@ def _build_case_payload(repo_root: Path, config: SubmissionCase) -> dict:
             "status": worked_map["status"],
             "claims": worked_map["claims"],
             "relations": worked_map["relations"],
-            "cruxes": worked_map["crux_candidates"],
-            "similarClaims": worked_map["similar_but_not_identical"],
+            "cruxes": worked_map["cruxes"],
+            "similarClaims": worked_map["similarClaims"],
         },
         "erosion": {
             "losses": audit["losses"],
             "borderline": audit["borderline_or_rejected"],
         },
+        "workedRegions": worked_regions,
         "tasks": tasks,
         "spotlights": [spotlight.model_dump() for spotlight in config.ui.spotlights],
         "artifacts": artifacts,
+    }
+
+
+def _build_worked_region_payload(repo_root: Path, worked_region) -> dict:
+    worked_map = parse_worked_map(repo_root / worked_region.map_path)
+    audit = parse_erosion_audit(repo_root / worked_region.audit_path)
+    return {
+        "regionId": worked_region.region_id,
+        "caseKey": worked_region.case_key,
+        "caseLabel": worked_region.case_label,
+        "idPrefix": worked_region.id_prefix,
+        "artifacts": {
+            "definition": worked_region.definition_path,
+            "workedMap": worked_region.map_path,
+            "erosionAudit": worked_region.audit_path,
+            "bestRegions": worked_region.best_path,
+            "workedBaseline": worked_region.baseline_path,
+        },
+        "worked": {
+            "title": worked_map["title"],
+            "status": worked_map["status"],
+            "claims": worked_map["claims"],
+            "relations": worked_map["relations"],
+            "cruxes": worked_map["crux_candidates"],
+            "similarClaims": worked_map["similar_but_not_identical"],
+        },
+        "erosion": {
+            "losses": audit["losses"],
+            "borderline_or_rejected": audit["borderline_or_rejected"],
+            "borderline": audit["borderline_or_rejected"],
+        },
     }
 
 

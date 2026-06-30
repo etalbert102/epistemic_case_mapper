@@ -604,7 +604,363 @@
         ],
         "status": "human-review-needed",
         "title": "LHC Worked Region: Cosmic-Ray Argument Map"
-      }
+      },
+      "workedRegions": [
+        {
+          "artifacts": {
+            "bestRegions": "examples/lhc_black_holes/BEST_REGIONS.md",
+            "definition": "docs/worked_regions/lhc_cosmic_ray_argument.md",
+            "erosionAudit": "examples/lhc_black_holes/decision_space_erosion_audit.md",
+            "workedBaseline": "examples/lhc_black_holes/flat_synthesis_baseline.md",
+            "workedMap": "examples/lhc_black_holes/worked_region_cosmic_ray_map.md"
+          },
+          "caseKey": "lhc",
+          "caseLabel": "LHC black holes",
+          "erosion": {
+            "borderline": [
+              "Not counted: The baseline does not discuss current post-2010 CMS searches, because those sources are outside this fixed worked-region subset.",
+              "Not counted: The baseline does not evaluate legal or public-risk governance implications, because the Johnson legal source is optional context and not part of the fixed subset."
+            ],
+            "borderline_or_rejected": [
+              "Not counted: The baseline does not discuss current post-2010 CMS searches, because those sources are outside this fixed worked-region subset.",
+              "Not counted: The baseline does not evaluate legal or public-risk governance implications, because the Johnson legal source is optional context and not part of the fixed subset."
+            ],
+            "losses": [
+              {
+                "adversarial_check": "survives, because the caveat is in the fixed source subset and directly affects the strength of the cosmic-ray analogy.",
+                "case_map_preserves": "`lhc_c004`, `lhc_c012`, `lhc_r003`, `lhc_r004`, `lhc_r016`.",
+                "flat_baseline_omission": "The baseline mentions slower LHC products in one sentence without the trapping mechanism or relation to the natural-exposure proof.",
+                "loss_id": "lhc_loss_001",
+                "loss_type": "hidden dependency",
+                "lost_item": "The flat baseline says the velocity issue was studied but does not preserve the explicit dependence between low LHC product velocities, Earth trapping, and why Earth cosmic-ray survival alone is not the whole argument.",
+                "source_support": "`lsag_2008_safety_review` lines 292-298; `giddings_mangano_2008_stable_black_holes` lines 3600-3641."
+              },
+              {
+                "adversarial_check": "survives, because the distinction is source-supported and important for LHC-specific versus future-collider inference.",
+                "case_map_preserves": "`lhc_c009`, `lhc_c011`, `lhc_r009`, `lhc_r014`.",
+                "flat_baseline_omission": "The baseline lists white dwarfs and neutron stars together and says the technical arguments vary by assumptions, but it does not keep their different evidential roles navigable.",
+                "loss_id": "lhc_loss_002",
+                "loss_type": "scope collapse",
+                "lost_item": "The flat baseline treats compact-star evidence as one safety layer and loses the white-dwarf versus neutron-star split, including the stronger LHC-energy scope of white dwarfs and the broader but more assumption-dependent neutron-star argument.",
+                "source_support": "`spc_2008_lsag_review` lines 130-137; `giddings_mangano_2008_stable_black_holes` lines 2415-2460."
+              },
+              {
+                "adversarial_check": "survives, because the baseline prompt asked for important caveats where they affect the answer and this stack affects whether compact-star bounds need to be invoked.",
+                "case_map_preserves": "`lhc_c005`, `lhc_c006`, `lhc_c008`, `lhc_r006`, `lhc_r007`, `lhc_r008`.",
+                "flat_baseline_omission": "The baseline combines stable-black-hole assumptions into broad language about conservative worst cases rather than showing which assumptions must all hold.",
+                "loss_id": "lhc_loss_003",
+                "loss_type": "assumption stack flattened",
+                "lost_item": "The flat baseline says the ordinary expectation is rapid decay, but it does not preserve the full dangerous-scenario assumption stack: TeV-scale gravity, failed Hawking/general decay, retained Schwinger or neutralization effects, and worst-case substitution under uncertainty.",
+                "source_support": "`spc_2008_lsag_review` lines 101-128; `giddings_mangano_2008_stable_black_holes` lines 2465-2477."
+              },
+              {
+                "adversarial_check": "survives, because the specific objection is in the source subset and matters to whether the compact-star proof survives adversarial pressure.",
+                "case_map_preserves": "`lhc_c014`, `lhc_r010`, `lhc_r015`.",
+                "flat_baseline_omission": "The baseline says Plaga challenged completeness but does not identify the stopping-premise target of that challenge.",
+                "loss_id": "lhc_loss_004",
+                "loss_type": "critique collapsed",
+                "lost_item": "The flat baseline preserves that Plaga objected, but it compresses the objection into a generic metastable scenario and loses the specific white-dwarf stopping challenge based on semiclassical assumptions and possible smaller scattering cross sections.",
+                "source_support": "`plaga_2008_metastable_black_holes` lines 439-471."
+              },
+              {
+                "adversarial_check": "survives, because the response rationale determines whether the critique is merely institutionally rejected or technically answered.",
+                "case_map_preserves": "`lhc_c015`, `lhc_c016`, `lhc_r011`, `lhc_r012`, `lhc_r013`.",
+                "flat_baseline_omission": "The baseline mentions an erroneous power calculation but does not show how the response splits into calculation, accretion, and literature/quotation objections.",
+                "loss_id": "lhc_loss_005",
+                "loss_type": "response rationale weakened",
+                "lost_item": "The flat baseline reports that GM found Plaga's assumptions inconsistent but does not preserve the two separate response threads: a 23-order-of-magnitude power-output dispute and a challenge to Eddington-limited accretion/microcanonical assumptions.",
+                "source_support": "`giddings_mangano_2008_comments_plaga` lines 61-105."
+              },
+              {
+                "adversarial_check": "survives, because the source subset explicitly separates these scales and they affect how robust the analogy appears.",
+                "case_map_preserves": "`lhc_c001`, `lhc_c002`, `lhc_c003`, `lhc_c007`, `lhc_r001`, `lhc_r002`, `lhc_r005`.",
+                "flat_baseline_omission": "The baseline gives examples of astronomical survival but does not preserve Earth exposure, solar exposure, and universe-wide exposure as distinct support nodes.",
+                "loss_id": "lhc_loss_006",
+                "loss_type": "similar claims merged",
+                "lost_item": "The flat baseline merges Earth, Sun, and broader stellar exposure into one natural-exposure claim, making it harder to see how the observational base scales from Earth-specific reassurance to wider astronomical constraints.",
+                "source_support": "`lsag_2008_safety_review` lines 175-207; `spc_2008_lsag_review` lines 43-65."
+              }
+            ]
+          },
+          "idPrefix": "lhc",
+          "regionId": "lhc_cosmic_ray_argument",
+          "worked": {
+            "claims": [
+              {
+                "claim": "The LSAG cosmic-ray argument says LHC-scale dangerous products should already have appeared naturally, and astronomical survival constrains that danger.",
+                "claim_id": "lhc_c001",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"The Universe is replicating the total number of collisions to be made by the LHC... astronomical bodies withstand cosmic-ray bombardment... If some microscopic black holes were produced by the LHC, they would also have been produced by cosmic rays.\"",
+                "role": "core support",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 119-138"
+              },
+              {
+                "claim": "Earth has already received many LHC-equivalent or higher-energy cosmic-ray collisions without catastrophic destruction.",
+                "claim_id": "lhc_c002",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Over 3x1022 cosmic rays... equal to or greater than the LHC energy, have struck the Earth's surface... and the planet still exists.\"",
+                "role": "exposure evidence",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 175-183"
+              },
+              {
+                "claim": "The cosmic-ray exposure argument extends beyond Earth to the Sun, Milky Way stars, and visible-universe stellar populations.",
+                "claim_id": "lhc_c003",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Nature has therefore already conducted the LHC experimental programme about one billion times... via the collisions of cosmic rays with the Sun... Cosmic rays have been hitting all these stars.\"",
+                "role": "exposure evidence",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 193-207"
+              },
+              {
+                "claim": "The cosmic-ray analogy has a velocity caveat because LHC products may be slower and more trappable than cosmic-ray products.",
+                "claim_id": "lhc_c004",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"One significant difference... any massive new particles produced by the LHC collisions will tend to have low velocities, whereas cosmic-ray collisions would produce them with high velocities.\"",
+                "role": "caveat",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 292-298"
+              },
+              {
+                "claim": "Hawking radiation is treated as broadly accepted theory, but not directly experimentally detected in this context.",
+                "claim_id": "lhc_c005",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"There is broad consensus among physicists on the reality of Hawking radiation, but so far no experiment has had the sensitivity required to find direct evidence for it.\"",
+                "role": "theory caveat",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 315-327"
+              },
+              {
+                "claim": "LSAG offers a decay argument independent of Hawking radiation and says stable microscopic black holes require suppressing basic quantum or relativistic principles.",
+                "claim_id": "lhc_c006",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Independently of the reasoning based on Hawking radiation... the expected lifetime would be very short... stable microscopic black hole... would require a violation of some of the basic principles of quantum mechanics... and/or of general relativity.\"",
+                "role": "independent support",
+                "source_id": "lsag_2008_safety_review",
+                "source_span": "lines 329-350"
+              },
+              {
+                "claim": "The SPC review treats the cosmic-ray comparison as the basis for later safety proofs and endorses the survival-of-astronomical-bodies inference.",
+                "claim_id": "lhc_c007",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"The results and the considerations given in this section are the basis for the safety proofs... irreconcilable with the fact that the Earth, the Sun and other objects... have persisted.\"",
+                "role": "independent endorsement",
+                "source_id": "spc_2008_lsag_review",
+                "source_span": "lines 43-65"
+              },
+              {
+                "claim": "The dangerous stable-black-hole scenario depends on an unlikely assumption stack, including TeV-scale gravity, failed decay mechanisms, and retained neutralization physics.",
+                "claim_id": "lhc_c008",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"A number of increasingly unlikely conditions should be satisfied... fundamental scale of gravity... Hawking radiation... should fail... Schwinger mechanism... should still work... conservative or 'worst-case' scenario.\"",
+                "role": "dependency stack",
+                "source_id": "spc_2008_lsag_review",
+                "source_span": "lines 101-128"
+              },
+              {
+                "claim": "The SPC review distinguishes stronger white-dwarf bounds for LHC energies from neutron-star arguments that matter for higher energies but depend on cosmic-ray and neutrino assumptions.",
+                "claim_id": "lhc_c009",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"At the LHC energy... ruled out... by... white dwarf stars... valid for the LHC... future colliders... neutron stars... relies on properties of cosmic rays and neutrinos that... require confirmation.\"",
+                "role": "scope limit",
+                "source_id": "spc_2008_lsag_review",
+                "source_span": "lines 130-137"
+              },
+              {
+                "claim": "GM argue that scenarios dangerous to Earth would disrupt white dwarfs faster than their observed lifetimes, so those scenarios are ruled out.",
+                "claim_id": "lhc_c010",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Cosmic rays will produce black holes on such astronomical objects... accreting black holes will disrupt such objects... white dwarf ages exceeding 10^9 years... scenarios... are ruled out.\"",
+                "role": "compact-star support",
+                "source_id": "giddings_mangano_2008_stable_black_holes",
+                "source_span": "lines 2402-2411"
+              },
+              {
+                "claim": "GM split the compact-star argument by dimensionality, using white dwarfs for lower-dimensional cases and neutron stars as additional evidence for higher-dimensional cases.",
+                "claim_id": "lhc_c011",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"D = 5... contrary to observations... D = 7... contrary to observation... D >= 8... neutron stars... provide therefore additional evidence.\"",
+                "role": "model split",
+                "source_id": "giddings_mangano_2008_stable_black_holes",
+                "source_span": "lines 2415-2460"
+              },
+              {
+                "claim": "GM explicitly analyze the trapping difference: highly relativistic cosmic-ray black holes are hard to stop in Earth, while non-relativistic LHC black holes may slow and be captured.",
+                "claim_id": "lhc_c012",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"For a black hole to get trapped... its speed should not exceed the escape velocity... Earth density does not provide enough material to stop a highly relativistic black hole, such as those produced by cosmic rays... some slow-down will typically arise for non-relativistic black holes produced at the LHC.\"",
+                "role": "trapping caveat",
+                "source_id": "giddings_mangano_2008_stable_black_holes",
+                "source_span": "lines 3600-3641"
+              },
+              {
+                "claim": "Plaga argues that a metastable Eddington-limited scenario might evade GM-style astrophysical exclusions because it starts from different microscopic-black-hole assumptions.",
+                "claim_id": "lhc_c013",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"A plausible scenario... accrete ambient matter at the Eddington limit... remain undetectable in existing astrophysical observations and thus evade... Giddings & Mangano... different initial assumptions.\"",
+                "role": "challenge",
+                "source_id": "plaga_2008_metastable_black_holes",
+                "source_span": "lines 18-31"
+              },
+              {
+                "claim": "Plaga's strongest technical challenge is that GM's white-dwarf stopping argument may not cover quantum-gravity-regime black holes with smaller-than-semiclassical scattering cross sections.",
+                "claim_id": "lhc_c014",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"This exclusion depends on... 'dangerous' mBHs are stopped in white dwarfs... based on an assumed validity of the semiclassical approximation... might have smaller scattering cross section... This would void G & M's exclusion.\"",
+                "role": "challenge",
+                "source_id": "plaga_2008_metastable_black_holes",
+                "source_span": "lines 439-471"
+              },
+              {
+                "claim": "GM respond that Plaga's dangerous power output follows from an inconsistent radius-mass calculation and differs from their estimate by 23 orders of magnitude.",
+                "claim_id": "lhc_c015",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"One readily finds... a negligible power output... differing by a factor of 10^23... inconsistent application... four-dimensional relationship between radius and mass... clearly wrong.\"",
+                "role": "response",
+                "source_id": "giddings_mangano_2008_comments_plaga",
+                "source_span": "lines 61-90"
+              },
+              {
+                "claim": "GM also argue that Plaga has not established Eddington-limited accretion, relies on an implausible microcanonical/Hawking split, and misrepresents GM's conservative-assumption stance.",
+                "claim_id": "lhc_c016",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"One can in fact not establish Eddington-limited accretion in a white dwarf... the bounds of that paper would apply... microcanonical picture... appears implausible... misquoted our paper.\"",
+                "role": "response",
+                "source_id": "giddings_mangano_2008_comments_plaga",
+                "source_span": "lines 91-105"
+              }
+            ],
+            "cruxes": [
+              "crux: Does the compact-star argument cover the relevant low-velocity LHC capture scenario once cosmic-ray products differ in velocity? Linked claims: `lhc_c004`, `lhc_c012`, `lhc_c010`.",
+              "crux: Does Plaga's metastable/Eddington-limited scenario define a coherent physical gap in GM's bounds, or does GM's response defeat the calculation and assumptions? Linked claims: `lhc_c013`, `lhc_c014`, `lhc_c015`, `lhc_c016`.",
+              "crux: Are white-dwarf observations sufficient for the LHC-energy risk question, while neutron-star arguments mainly affect broader extrapolation? Linked claims: `lhc_c009`, `lhc_c011`."
+            ],
+            "relations": [
+              {
+                "rationale": "Earth exposure is a concrete instance of the broader LSAG natural-exposure argument.",
+                "relation_id": "lhc_r001",
+                "relation_type": "supports",
+                "source_claim": "lhc_c002",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "Solar and stellar exposure increases the observational base beyond Earth alone.",
+                "relation_id": "lhc_r002",
+                "relation_type": "supports",
+                "source_claim": "lhc_c003",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "The velocity difference specifies when the cosmic-ray analogy needs additional analysis.",
+                "relation_id": "lhc_r003",
+                "relation_type": "refines",
+                "source_claim": "lhc_c004",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "GM's trapping analysis provides the technical version of the velocity caveat.",
+                "relation_id": "lhc_r004",
+                "relation_type": "supports",
+                "source_claim": "lhc_c012",
+                "target_claim": "lhc_c004"
+              },
+              {
+                "rationale": "The independent SPC review endorses the same cosmic-ray proof structure.",
+                "relation_id": "lhc_r005",
+                "relation_type": "supports",
+                "source_claim": "lhc_c007",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "Compact-star bounds become relevant only after the stable-black-hole assumption stack is entertained.",
+                "relation_id": "lhc_r006",
+                "relation_type": "depends_on",
+                "source_claim": "lhc_c008",
+                "target_claim": "lhc_c010"
+              },
+              {
+                "rationale": "Hawking radiation is broadly accepted but undetected; the risk scenario requires treating that uncertainty as live.",
+                "relation_id": "lhc_r007",
+                "relation_type": "in_tension_with",
+                "source_claim": "lhc_c005",
+                "target_claim": "lhc_c008"
+              },
+              {
+                "rationale": "The independent decay argument makes the stable-black-hole assumption stack harder to satisfy.",
+                "relation_id": "lhc_r008",
+                "relation_type": "challenges",
+                "source_claim": "lhc_c006",
+                "target_claim": "lhc_c008"
+              },
+              {
+                "rationale": "SPC's white-dwarf/neutron-star scope distinction mirrors GM's dimensional split.",
+                "relation_id": "lhc_r009",
+                "relation_type": "refines",
+                "source_claim": "lhc_c009",
+                "target_claim": "lhc_c011"
+              },
+              {
+                "rationale": "Plaga targets the white-dwarf stopping premise used in GM's compact-star exclusion.",
+                "relation_id": "lhc_r010",
+                "relation_type": "challenges",
+                "source_claim": "lhc_c014",
+                "target_claim": "lhc_c010"
+              },
+              {
+                "rationale": "Plaga's metastable power-output scenario and GM's quantitative response cannot both be right as stated.",
+                "relation_id": "lhc_r011",
+                "relation_type": "in_tension_with",
+                "source_claim": "lhc_c013",
+                "target_claim": "lhc_c015"
+              },
+              {
+                "rationale": "GM directly attacks the calculation behind Plaga's proposed dangerous output.",
+                "relation_id": "lhc_r012",
+                "relation_type": "challenges",
+                "source_claim": "lhc_c015",
+                "target_claim": "lhc_c013"
+              },
+              {
+                "rationale": "GM argues the Eddington-limited and microcanonical assumptions behind Plaga's claimed gap are not established.",
+                "relation_id": "lhc_r013",
+                "relation_type": "challenges",
+                "source_claim": "lhc_c016",
+                "target_claim": "lhc_c014"
+              },
+              {
+                "rationale": "The white-dwarf versus neutron-star scope is a crux for how far the safety argument can be extrapolated beyond the LHC.",
+                "relation_id": "lhc_r014",
+                "relation_type": "crux_for",
+                "source_claim": "lhc_c009",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "If the white-dwarf stopping challenge survived, it would weaken a core observational layer of the cosmic-ray argument.",
+                "relation_id": "lhc_r015",
+                "relation_type": "crux_for",
+                "source_claim": "lhc_c014",
+                "target_claim": "lhc_c001"
+              },
+              {
+                "rationale": "Both claims preserve the velocity/trapping distinction, with LSAG giving the high-level caveat and GM giving the technical analysis.",
+                "relation_id": "lhc_r016",
+                "relation_type": "similar_to",
+                "source_claim": "lhc_c004",
+                "target_claim": "lhc_c012"
+              }
+            ],
+            "similarClaims": [
+              "`lhc_c001`, `lhc_c002`, and `lhc_c003` are not duplicates: the first is the general inference, the second is Earth exposure, and the third widens the observational base.",
+              "`lhc_c004` and `lhc_c012` both concern velocity, but `lhc_c004` states the caveat while `lhc_c012` explains the trapping/stopping mechanism.",
+              "`lhc_c009` and `lhc_c011` both concern compact stars, but `lhc_c009` is a review-level scope judgment and `lhc_c011` is a dimensional technical split.",
+              "`lhc_c013` and `lhc_c014` are related Plaga challenges, but one is the scenario-level risk claim and the other is the specific white-dwarf stopping objection."
+            ],
+            "status": "human-review-needed",
+            "title": "LHC Worked Region: Cosmic-Ray Argument Map"
+          }
+        }
+      ]
     },
     {
       "artifacts": {
@@ -1268,10 +1624,449 @@
         ],
         "status": "human-review-needed",
         "title": "Eggs Worked Region: Observational Outcomes Versus RCT Lipid Markers"
-      }
+      },
+      "workedRegions": [
+        {
+          "artifacts": {
+            "bestRegions": "examples/eggs/BEST_REGIONS.md",
+            "definition": "docs/worked_regions/eggs_observational_vs_rct.md",
+            "erosionAudit": "examples/eggs/decision_space_erosion_audit.md",
+            "workedBaseline": "examples/eggs/flat_synthesis_baseline.md",
+            "workedMap": "examples/eggs/worked_region_observational_vs_rct_map.md"
+          },
+          "caseKey": "eggs",
+          "caseLabel": "Eggs and health",
+          "erosion": {
+            "borderline": [
+              "Not counted: The baseline does not discuss cancer or allergy outcomes, because this worked region is specifically scoped to CVD outcomes, lipid markers, and guidance.",
+              "Not counted: The baseline does not include the optional BMJ 2013, Ma 2021, or Huang 2020 sources, because the fixed subset excludes them."
+            ],
+            "borderline_or_rejected": [
+              "Not counted: The baseline does not discuss cancer or allergy outcomes, because this worked region is specifically scoped to CVD outcomes, lipid markers, and guidance.",
+              "Not counted: The baseline does not include the optional BMJ 2013, Ma 2021, or Huang 2020 sources, because the fixed subset excludes them."
+            ],
+            "losses": [
+              {
+                "adversarial_check": "survives, because the source subset and baseline prompt both make endpoint caveats central to the answer.",
+                "case_map_preserves": "`eggs_c015`, `eggs_c016`, `eggs_c017`, `eggs_r005`, `eggs_r006`, `eggs_r007`.",
+                "flat_baseline_omission": "The baseline mentions biomarkers but does not make the biomarker-versus-health-outcome boundary a navigable dependency.",
+                "loss_id": "eggs_loss_001",
+                "loss_type": "endpoint collapse",
+                "lost_item": "The flat baseline says randomized trials \"add another layer\" but does not preserve the endpoint boundary that Li measures LDL-c and LDL-c/HDL-c rather than CVD events.",
+                "source_support": "`li_2020_egg_cholesterol_rct_meta` lines 30-36, 188-201, and 292-293."
+              },
+              {
+                "adversarial_check": "survives, because the same-source subset contains both findings and the relation changes what a reviewer should inspect next.",
+                "case_map_preserves": "`eggs_c008`, `eggs_c012`, `eggs_c013`, `eggs_r003`.",
+                "flat_baseline_omission": "The baseline reports both results but does not keep an explicit conflict edge between null moderate-intake evidence and positive dose-response evidence.",
+                "loss_id": "eggs_loss_002",
+                "loss_type": "study-design tension flattened",
+                "lost_item": "The flat baseline states BMJ and JAMA findings sequentially but does not preserve their tension as a relation requiring method, exposure-unit, and adjustment comparison.",
+                "source_support": "`bmj_2020_egg_consumption_cvd` lines 40-43 and 537-544; `jama_2019_dietary_cholesterol_eggs` lines 33-52 and 70-73."
+              },
+              {
+                "adversarial_check": "survives, because subgroup caveats are in the fixed sources and materially affect dietary advice.",
+                "case_map_preserves": "`eggs_c007`, `eggs_c009`, `eggs_r010`, `eggs_r017`.",
+                "flat_baseline_omission": "High LDL and diabetes appear in a final caveat list rather than as claims that qualify different parts of the recommendation.",
+                "loss_id": "eggs_loss_003",
+                "loss_type": "population caveat weakened",
+                "lost_item": "The flat baseline mentions high LDL and diabetes, but does not preserve these as separate subgroup caveats with different source bases and implications.",
+                "source_support": "`aha_2023_dietary_cholesterol_news` lines 56-62; `bmj_2020_egg_consumption_cvd` lines 524-532."
+              },
+              {
+                "adversarial_check": "survives, because replacement context is source-supported and directly affects the practical meaning of \"eat fewer eggs\" or \"eggs are fine.\"",
+                "case_map_preserves": "`eggs_c010`, `eggs_r011`, `eggs_r016`.",
+                "flat_baseline_omission": "The baseline does not name red meat or full-fat milk replacements and does not preserve the modeling caution.",
+                "loss_id": "eggs_loss_004",
+                "loss_type": "replacement context compressed",
+                "lost_item": "The flat baseline says advice depends on foods eggs replace, but does not preserve BMJ's specific replacement-food finding or the warning that replacement analysis is statistical modeling.",
+                "source_support": "`bmj_2020_egg_consumption_cvd` lines 241 and 531-536."
+              },
+              {
+                "adversarial_check": "survives, because the guideline-process distinction is in the source subset and affects how evidence is converted into advice.",
+                "case_map_preserves": "`eggs_c001`, `eggs_c002`, `eggs_c003`, `eggs_r013`.",
+                "flat_baseline_omission": "The baseline cites guideline direction but does not show why guideline documents should be separated from individual evidence studies.",
+                "loss_id": "eggs_loss_005",
+                "loss_type": "guideline authority blurred",
+                "lost_item": "The flat baseline treats federal and AHA guidance as advice but does not preserve that DGA is a preponderance-of-evidence policy process using systematic review, data analysis, and food-pattern modeling.",
+                "source_support": "`dga_2020_2025_pmc_summary` lines 31-37 and 54-60."
+              },
+              {
+                "adversarial_check": "survives, because the limitation affects confidence in the umbrella conclusion and is explicitly in the fixed source subset.",
+                "case_map_preserves": "`eggs_c018`, `eggs_c019`, `eggs_r014`.",
+                "flat_baseline_omission": "The baseline summarizes NNR's conclusion without the evidence-grade caveat.",
+                "loss_id": "eggs_loss_006",
+                "loss_type": "scoping-review limitation omitted",
+                "lost_item": "The flat baseline uses NNR as a total-picture summary but does not preserve that the NNR egg review was a scoping review without de novo or qualified systematic reviews for the egg topic.",
+                "source_support": "`nnr_2023_eggs_scoping_review` lines 42-52."
+              },
+              {
+                "adversarial_check": "survives, because same-wording cross-source claims are exactly where ordinary synthesis can hide disagreement and scope differences.",
+                "case_map_preserves": "`eggs_c007`, `eggs_c008`, `eggs_c018`, and the Similar But Not Identical section.",
+                "flat_baseline_omission": "The baseline uses the same phrase across sources without preserving source role and scope distinctions.",
+                "loss_id": "eggs_loss_007",
+                "loss_type": "similar claims merged",
+                "lost_item": "The flat baseline merges \"up to one egg per day\" across AHA, BMJ, and NNR even though each source uses it differently: public guidance for healthy people, observational cohort conclusion, and scoping-review synthesis.",
+                "source_support": "`aha_2023_dietary_cholesterol_news` lines 56-62; `bmj_2020_egg_consumption_cvd` lines 40-43 and 537-544; `nnr_2023_eggs_scoping_review` lines 30-41."
+              }
+            ]
+          },
+          "idPrefix": "eggs",
+          "regionId": "eggs_observational_vs_rct",
+          "worked": {
+            "claims": [
+              {
+                "claim": "The Dietary Guidelines are a policy-oriented synthesis grounded in preponderance of evidence, not a single egg-specific causal study.",
+                "claim_id": "eggs_c001",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"The Dietary Guidelines... is grounded in the current body of scientific evidence... aims to promote health and prevent chronic diseases... provides science-based advice... mandated by law to reflect the preponderance of scientific evidence.\"",
+                "role": "guideline context",
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_span": "lines 31-37"
+              },
+              {
+                "claim": "DGA advice combines multiple evidence methods, including systematic review, data analysis, and food-pattern modeling.",
+                "claim_id": "eggs_c002",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"The Committee answered each question... using... data analysis, food pattern modeling, and... systematic reviews... looked across all of the conclusion statements... to develop overarching advice.\"",
+                "role": "method context",
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_span": "lines 54-60"
+              },
+              {
+                "claim": "DGA frames adults' advice around healthy dietary patterns and recommends keeping dietary cholesterol as low as possible within those patterns.",
+                "claim_id": "eggs_c003",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Healthy dietary patterns... low in red and processed meats... advised limiting intake of saturated fats... and keeping dietary cholesterol intake as low as possible.\"",
+                "role": "diet-pattern framing",
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_span": "lines 73-80"
+              },
+              {
+                "claim": "The AHA advisory separates observational CVD outcome evidence, which generally lacks significant association, from intervention lipid evidence, which often shows elevated total or LDL cholesterol at higher intakes.",
+                "claim_id": "eggs_c004",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Observational studies... generally does not indicate a significant association with cardiovascular disease risk... intervention studies... associate intakes... with elevated total or low-density lipoprotein cholesterol.\"",
+                "role": "method split",
+                "source_id": "aha_2019_dietary_cholesterol_pubmed",
+                "source_span": "lines 122-124"
+              },
+              {
+                "claim": "AHA guidance favors dietary-pattern advice over a standalone numeric cholesterol target.",
+                "claim_id": "eggs_c005",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Dietary guidance should focus on healthy dietary patterns... relatively low in cholesterol... guidance focused on dietary patterns is more likely to improve diet quality.\"",
+                "role": "guideline framing",
+                "source_id": "aha_2019_dietary_cholesterol_pubmed",
+                "source_span": "line 123"
+              },
+              {
+                "claim": "AHA's public explanation warns that removing a numeric cholesterol target is not permission to ignore cholesterol, saturated fat, and total diet.",
+                "claim_id": "eggs_c006",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Keeping dietary cholesterol consumption 'as low as possible without compromising the nutritional adequacy of the diet'... not a free pass... cannot isolate dietary cholesterol from that total fat intake.\"",
+                "role": "public guidance caveat",
+                "source_id": "aha_2023_dietary_cholesterol_news",
+                "source_span": "lines 49-52"
+              },
+              {
+                "claim": "AHA public guidance allows up to one egg per day for healthy people but separates high-LDL groups for stricter saturated-fat and cholesterol reduction.",
+                "claim_id": "eggs_c007",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Healthy people can include up to a whole egg... each day... Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol.\"",
+                "role": "population caveat",
+                "source_id": "aha_2023_dietary_cholesterol_news",
+                "source_span": "lines 56-62"
+              },
+              {
+                "claim": "BMJ 2020 reports no overall CVD association for moderate egg consumption up to one egg per day in its cohorts and updated meta-analysis.",
+                "claim_id": "eggs_c008",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Consumption of at least one egg per day was not associated with incident cardiovascular disease risk... moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.\"",
+                "role": "observational outcome",
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_span": "lines 40-43"
+              },
+              {
+                "claim": "BMJ preserves regional heterogeneity and a possible type 2 diabetes caveat rather than giving one global egg effect.",
+                "claim_id": "eggs_c009",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Considerable heterogeneity existed... US, Europe, and Asia... high egg consumption could be associated with a higher risk... among people with type 2 diabetes... further studies are warranted.\"",
+                "role": "heterogeneity caveat",
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_span": "lines 524-532"
+              },
+              {
+                "claim": "BMJ replacement models make egg interpretation depend on what replaces eggs, while warning that replacement analyses are statistical modeling rather than observed substitutions.",
+                "claim_id": "eggs_c010",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Higher risk... when eggs were replaced with processed red meat... unprocessed red meat... full fat milk... replacement analysis is a statistical modeling strategy... interpreted with caution.\"",
+                "role": "replacement context",
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_span": "lines 241 and 531-536"
+              },
+              {
+                "claim": "BMJ's \"up to one egg per day\" conclusion must be read alongside relatively low typical intake in the included cohorts.",
+                "claim_id": "eggs_c011",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Moderate egg consumption (up to one egg per day) is not associated... mean egg consumption... was relatively low... most participants consumed one to less than five eggs per week.\"",
+                "role": "baseline-intake caveat",
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_span": "lines 537-544"
+              },
+              {
+                "claim": "JAMA 2019 reports positive dose-response associations for dietary cholesterol and eggs, with egg associations attenuating after adjustment for dietary cholesterol.",
+                "claim_id": "eggs_c012",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Each additional 300 mg... dietary cholesterol... higher risk of incident CVD... each additional half an egg... higher risk... associations between egg consumption... were no longer significant after adjusting for dietary cholesterol consumption.\"",
+                "role": "observational outcome",
+                "source_id": "jama_2019_dietary_cholesterol_eggs",
+                "source_span": "lines 33-52"
+              },
+              {
+                "claim": "JAMA explicitly models dietary cholesterol, egg consumption, correlated nutrients, food groups, dietary patterns, and subgroups, which affects interpretation of the positive associations.",
+                "claim_id": "eggs_c013",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Cohort-stratified... models... nutrients correlated with dietary cholesterol... adjusted... dietary patterns... subgroup analyses... diabetes... hyperlipidemia... low lipids.\"",
+                "role": "method detail",
+                "source_id": "jama_2019_dietary_cholesterol_eggs",
+                "source_span": "lines 70-73"
+              },
+              {
+                "claim": "JAMA treats its findings as guideline-relevant but acknowledges residual confounding and that observational data cannot establish causality.",
+                "claim_id": "eggs_c014",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Residual confounding was a potential reason for inconsistent results... observational and cannot establish causality... findings should be considered in the development of dietary guidelines.\"",
+                "role": "causal caveat",
+                "source_id": "jama_2019_dietary_cholesterol_eggs",
+                "source_span": "lines 477-484"
+              },
+              {
+                "claim": "Li 2020 is randomized evidence in healthy participants, but it measures lipid markers rather than long-term CVD events.",
+                "claim_id": "eggs_c015",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Only included randomized controlled trials... healthy populations... pooled results showed... higher LDL-c/HDL-c ratio... higher LDL-c... RCTs with long term follow-up are needed.\"",
+                "role": "randomized biomarker evidence",
+                "source_id": "li_2020_egg_cholesterol_rct_meta",
+                "source_span": "lines 30-36"
+              },
+              {
+                "claim": "Li reports higher LDL-c/HDL-c ratio and LDL-c with more egg consumption, while HDL-c does not significantly change in the pooled analysis.",
+                "claim_id": "eggs_c016",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"More egg consumption... significant elevation... LDL-c/HDL-c ratio... significantly higher concentration of LDL-c... did not show significant difference... HDL-c.\"",
+                "role": "randomized biomarker evidence",
+                "source_id": "li_2020_egg_cholesterol_rct_meta",
+                "source_span": "lines 188-201"
+              },
+              {
+                "claim": "Li's RCT synthesis suggests longer duration may matter but does not establish a clean dose trend or long-term health-outcome effect.",
+                "claim_id": "eggs_c017",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"Results did not show a clear trend... longer-term high egg-consumption may lead to higher LDL-c/HDL-c ratio and LDL-c... RCTs with long term follow-up are needed.\"",
+                "role": "duration and dose caveat",
+                "source_id": "li_2020_egg_cholesterol_rct_meta",
+                "source_span": "lines 207 and 279-293"
+              },
+              {
+                "claim": "NNR synthesizes the tension by treating RCT lipid changes as heterogeneous warning signals while observational evidence gives little support for harm from up to one egg per day, especially in European studies.",
+                "claim_id": "eggs_c018",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"RCTs suggest lipid changes with substantial heterogeneity... observational studies does not provide strong support for a detrimental role of moderate egg consumption... up to one egg/day... one egg/day is unlikely to adversely affect overall disease risk.\"",
+                "role": "umbrella synthesis",
+                "source_id": "nnr_2023_eggs_scoping_review",
+                "source_span": "lines 30-41"
+              },
+              {
+                "claim": "NNR's egg review is a scoping review built from existing reviews rather than a de novo qualified systematic review, limiting how strongly it can settle the question.",
+                "claim_id": "eggs_c019",
+                "entailed_by_excerpt": "yes",
+                "excerpt": "\"No de novo systematic reviews or qualified systematic reviews available... literature search... 38 articles... systematic review or meta-analysis... most recent and comprehensive meta-analyses were chosen.\"",
+                "role": "evidence-grade caveat",
+                "source_id": "nnr_2023_eggs_scoping_review",
+                "source_span": "lines 42-52"
+              }
+            ],
+            "cruxes": [
+              "crux: Should direct observational CVD outcome evidence outweigh randomized lipid-marker evidence when giving dietary advice? Linked claims: `eggs_c004`, `eggs_c008`, `eggs_c015`, `eggs_c016`, `eggs_c018`.",
+              "crux: Is \"moderate intake\" adequately represented as up to one egg/day, or should low typical cohort intake and high-LDL/diabetes caveats narrow the advice? Linked claims: `eggs_c007`, `eggs_c009`, `eggs_c011`.",
+              "crux: Should eggs be evaluated as an isolated food, as a dietary cholesterol source, or as a replacement within a dietary pattern? Linked claims: `eggs_c003`, `eggs_c005`, `eggs_c010`, `eggs_c012`."
+            ],
+            "relations": [
+              {
+                "rationale": "AHA's observational-versus-intervention split is echoed by NNR's summary of observational outcomes and RCT lipid changes.",
+                "relation_id": "eggs_r001",
+                "relation_type": "supports",
+                "source_claim": "eggs_c004",
+                "target_claim": "eggs_c018"
+              },
+              {
+                "rationale": "BMJ's moderate-consumption null finding supports NNR's \"up to one egg/day\" no-harm summary.",
+                "relation_id": "eggs_r002",
+                "relation_type": "supports",
+                "source_claim": "eggs_c008",
+                "target_claim": "eggs_c018"
+              },
+              {
+                "rationale": "JAMA's positive dose-response association and BMJ's null moderate-intake conclusion point in different directions and require method/context comparison.",
+                "relation_id": "eggs_r003",
+                "relation_type": "in_tension_with",
+                "source_claim": "eggs_c012",
+                "target_claim": "eggs_c008"
+              },
+              {
+                "rationale": "JAMA's causal caveat limits how directly its positive association should be converted into advice.",
+                "relation_id": "eggs_r004",
+                "relation_type": "refines",
+                "source_claim": "eggs_c014",
+                "target_claim": "eggs_c012"
+              },
+              {
+                "rationale": "The biomarker result depends on the RCT endpoint scope: LDL-c and LDL-c/HDL-c, not direct CVD outcomes.",
+                "relation_id": "eggs_r005",
+                "relation_type": "depends_on",
+                "source_claim": "eggs_c015",
+                "target_claim": "eggs_c016"
+              },
+              {
+                "rationale": "Randomized lipid-marker worsening can coexist with observational null CVD outcome findings but should not be collapsed into them.",
+                "relation_id": "eggs_r006",
+                "relation_type": "in_tension_with",
+                "source_claim": "eggs_c016",
+                "target_claim": "eggs_c008"
+              },
+              {
+                "rationale": "Duration and dose caveats qualify the interpretation of the LDL-c and LDL-c/HDL-c findings.",
+                "relation_id": "eggs_r007",
+                "relation_type": "refines",
+                "source_claim": "eggs_c017",
+                "target_claim": "eggs_c016"
+              },
+              {
+                "rationale": "DGA and AHA both frame dietary cholesterol through overall dietary patterns rather than isolated egg counts.",
+                "relation_id": "eggs_r008",
+                "relation_type": "similar_to",
+                "source_claim": "eggs_c003",
+                "target_claim": "eggs_c005"
+              },
+              {
+                "rationale": "The public AHA \"not a free pass\" caveat explains why the one-egg/day statement is conditional on diet and LDL status.",
+                "relation_id": "eggs_r009",
+                "relation_type": "refines",
+                "source_claim": "eggs_c006",
+                "target_claim": "eggs_c007"
+              },
+              {
+                "rationale": "Regional and diabetes heterogeneity qualifies BMJ's overall null finding.",
+                "relation_id": "eggs_r010",
+                "relation_type": "refines",
+                "source_claim": "eggs_c009",
+                "target_claim": "eggs_c008"
+              },
+              {
+                "rationale": "Replacement context affects what \"egg risk\" means in actual dietary choices.",
+                "relation_id": "eggs_r011",
+                "relation_type": "refines",
+                "source_claim": "eggs_c010",
+                "target_claim": "eggs_c008"
+              },
+              {
+                "rationale": "Low typical cohort intake constrains how broadly the \"up to one egg/day\" conclusion should be read.",
+                "relation_id": "eggs_r012",
+                "relation_type": "refines",
+                "source_claim": "eggs_c011",
+                "target_claim": "eggs_c008"
+              },
+              {
+                "rationale": "The guideline cholesterol recommendation depends on a policy process using preponderance of evidence, not on one study alone.",
+                "relation_id": "eggs_r013",
+                "relation_type": "depends_on",
+                "source_claim": "eggs_c001",
+                "target_claim": "eggs_c003"
+              },
+              {
+                "rationale": "NNR's evidence-grade caveat limits confidence in the scoping-review synthesis.",
+                "relation_id": "eggs_r014",
+                "relation_type": "refines",
+                "source_claim": "eggs_c019",
+                "target_claim": "eggs_c018"
+              },
+              {
+                "rationale": "How to weigh observational outcomes against intervention lipid markers is a crux for the overall egg recommendation.",
+                "relation_id": "eggs_r015",
+                "relation_type": "crux_for",
+                "source_claim": "eggs_c004",
+                "target_claim": "eggs_c018"
+              },
+              {
+                "rationale": "Replacement foods and dietary-pattern framing are a crux for converting evidence into advice.",
+                "relation_id": "eggs_r016",
+                "relation_type": "crux_for",
+                "source_claim": "eggs_c010",
+                "target_claim": "eggs_c005"
+              },
+              {
+                "rationale": "High-LDL subgroup guidance prevents the NNR one-egg/day summary from becoming a universal free pass.",
+                "relation_id": "eggs_r017",
+                "relation_type": "refines",
+                "source_claim": "eggs_c007",
+                "target_claim": "eggs_c018"
+              }
+            ],
+            "similarClaims": [
+              "`eggs_c008` and `eggs_c018` both support moderate egg intake, but BMJ is a cohort/meta-analysis finding and NNR is a scoping synthesis.",
+              "`eggs_c012` and `eggs_c016` both push toward caution, but JAMA is observational CVD/mortality association while Li is randomized lipid-marker evidence.",
+              "`eggs_c003`, `eggs_c005`, and `eggs_c006` all concern guidance, but DGA gives federal guideline process, AHA 2019 gives advisory framing, and AHA 2023 gives public interpretation.",
+              "`eggs_c009`, `eggs_c011`, and `eggs_c017` are different caveats: population heterogeneity, baseline intake, and trial duration/dose."
+            ],
+            "status": "human-review-needed",
+            "title": "Eggs Worked Region: Observational Outcomes Versus RCT Lipid Markers"
+          }
+        }
+      ]
     }
   ],
   "generatedFrom": "scripts/build_ui_data.py",
+  "hero": {
+    "body": "A flat synthesis can say cosmic-ray exposure rules out LHC black-hole risk. The map keeps the hidden dependency reviewable: slower LHC products may be more trappable than cosmic-ray products, so compact-star arguments become decision-relevant.",
+    "cards": [
+      {
+        "label": "Flat synthesis",
+        "text": "Cosmic-ray exposure shows LHC black-hole risk is ruled out."
+      },
+      {
+        "label": "Hidden dependency",
+        "text": "Earth cosmic-ray survival is incomplete if LHC products are slower and more trappable."
+      },
+      {
+        "label": "Map surface",
+        "text": "`lhc_c004` velocity caveat, `lhc_c012` trapping analysis, `lhc_r003`/`lhc_r004` dependency links."
+      }
+    ],
+    "eyebrow": "Judge Mode",
+    "links": [
+      {
+        "label": "Start here",
+        "path": "docs/START_HERE.md",
+        "primary": true
+      },
+      {
+        "label": "Open LHC map",
+        "path": "examples/lhc_black_holes/worked_region_cosmic_ray_map.md",
+        "primary": false
+      },
+      {
+        "label": "Open audit",
+        "path": "examples/lhc_black_holes/decision_space_erosion_audit.md",
+        "primary": false
+      }
+    ],
+    "title": "See the value in one dependency."
+  },
+  "package": {
+    "packageId": "flf_submission",
+    "packageLabel": "FLF Submission"
+  },
   "status": "human-review-needed",
   "summary": {
     "caseCount": 2,

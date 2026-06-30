@@ -47,37 +47,60 @@ def main() -> int:
 def _validate_data(repo_root: Path, manifest, failures: list[str]) -> None:
     data = json.loads((repo_root / "ui/data.json").read_text(encoding="utf-8"))
     cases = data.get("cases", [])
+    hero = data.get("hero", {})
+    if not hero.get("title") or not hero.get("body"):
+        failures.append("ui_missing_hero_copy")
+    for link in hero.get("links", []):
+        path = link.get("path", "")
+        if path and not (repo_root / path).exists():
+            failures.append(f"ui_missing_hero_link path={path}")
     expected_case_count = len(manifest.iter_ui_cases())
     if len(cases) != expected_case_count:
         failures.append(f"ui_data_case_count count={len(cases)} expected={expected_case_count}")
     summary = data.get("summary", {})
-    for key in ("sourceCount", "clusterCount", "claimCount", "relationCount", "taskCount"):
+    for key in ("sourceCount", "claimCount", "relationCount"):
         if int(summary.get(key, 0)) <= 0:
             failures.append(f"ui_data_empty_summary key={key}")
+    if any(case.full_case is not None for case in manifest.iter_ui_cases()) and int(summary.get("clusterCount", 0)) <= 0:
+        failures.append("ui_data_empty_summary key=clusterCount")
+    if any(case.task_queue is not None for case in manifest.iter_ui_cases()) and int(summary.get("taskCount", 0)) <= 0:
+        failures.append("ui_data_empty_summary key=taskCount")
     for case in cases:
         case_key = case.get("caseKey", "unknown")
         manifest_case = manifest.case_for_key(case_key)
-        if len(case.get("sources", [])) < 5:
+        min_sources = min((len(region.required_sources) for region in manifest_case.worked_regions), default=1)
+        if len(case.get("sources", [])) < min_sources:
             failures.append(f"ui_case_too_few_sources case={case_key}")
         if manifest_case.full_case is not None and len(case.get("clusters", [])) < 5:
             failures.append(f"ui_case_too_few_clusters case={case_key}")
-        if len(case.get("worked", {}).get("claims", [])) < 10:
+        first_region = manifest_case.worked_regions[0] if manifest_case.worked_regions else None
+        min_claims = first_region.thresholds.min_claims if first_region is not None else 1
+        if len(case.get("worked", {}).get("claims", [])) < min_claims:
             failures.append(f"ui_case_too_few_claims case={case_key}")
+        if len(case.get("workedRegions", [])) != len(manifest_case.worked_regions):
+            failures.append(
+                f"ui_case_worked_region_count case={case_key} "
+                f"count={len(case.get('workedRegions', []))} expected={len(manifest_case.worked_regions)}"
+            )
         if manifest_case.task_queue is not None and len(case.get("tasks", [])) < manifest_case.task_queue.min_tasks:
             failures.append(f"ui_case_too_few_tasks case={case_key}")
         for artifact_path in case.get("artifacts", {}).values():
             if not (repo_root / artifact_path).exists():
                 failures.append(f"ui_missing_artifact case={case_key} path={artifact_path}")
+        for region in case.get("workedRegions", []):
+            for artifact_path in region.get("artifacts", {}).values():
+                if not (repo_root / artifact_path).exists():
+                    failures.append(f"ui_missing_region_artifact case={case_key} path={artifact_path}")
 
 
 def _validate_static_assets(repo_root: Path, failures: list[str]) -> None:
     index = (repo_root / "ui/index.html").read_text(encoding="utf-8") if (repo_root / "ui/index.html").exists() else ""
     styles = (repo_root / "ui/styles.css").read_text(encoding="utf-8") if (repo_root / "ui/styles.css").exists() else ""
     script = (repo_root / "ui/app.js").read_text(encoding="utf-8") if (repo_root / "ui/app.js").exists() else ""
-    for marker in ("caseTabs", "clusterGrid", "lossList", "taskList", "bestRegionsLink", "fullBaselineLink"):
+    for marker in ("caseTabs", "heroLinks", "heroCards", "clusterGrid", "lossList", "taskList", "bestRegionsLink", "fullBaselineLink"):
         if marker not in index:
             failures.append(f"ui_index_missing_marker marker={marker}")
-    for marker in ("renderCase", "renderClusters", "renderClaims", "renderTasks"):
+    for marker in ("renderHero", "renderCase", "renderClusters", "renderClaims", "renderTasks"):
         if marker not in script:
             failures.append(f"ui_script_missing_function marker={marker}")
     for marker in ("--ink", "--paper", "--accent", ".dashboard", ".case-card"):

@@ -67,6 +67,8 @@ Start with:
 - `docs/REFERENCE_LINEAGE.md`
 - `docs/GENERALIZABILITY_RED_TEAM.md`
 - `docs/CODE_GENERALIZABILITY_PLAN.md`
+- `docs/REUSABLE_ENGINE_PLAN.md`
+- `docs/PACKAGE_MANIFEST_SPEC.md`
 - `docs/ADDING_A_CASE.md`
 - `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`

@@ -20,6 +20,7 @@ def main() -> int:
         payload = {
             "case_key": region.case_key,
             "case_label": region.case_label,
+            "region_id": region.region_id,
             "worked_map": parse_worked_map(repo_root / region.map_path),
             "erosion_audit": parse_erosion_audit(repo_root / region.audit_path),
         }

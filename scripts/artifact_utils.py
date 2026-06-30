@@ -11,6 +11,7 @@ from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_s
 class RegionFiles:
     case_key: str
     case_label: str
+    region_id: str
     map_path: str
     audit_path: str
     baseline_path: str
@@ -23,6 +24,7 @@ def region_files_from_manifest(manifest: SubmissionManifest) -> tuple[RegionFile
         RegionFiles(
             case_key=region.case_key,
             case_label=region.case_label,
+            region_id=region.region_id,
             map_path=region.map_path,
             audit_path=region.audit_path,
             baseline_path=region.baseline_path,

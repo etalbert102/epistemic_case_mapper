@@ -1,4 +1,26 @@
 schema_version: 1
+package_id: flf_submission
+package_label: FLF Submission
+
+ui_hero:
+  eyebrow: Judge Mode
+  title: See the value in one dependency.
+  body: "A flat synthesis can say cosmic-ray exposure rules out LHC black-hole risk. The map keeps the hidden dependency reviewable: slower LHC products may be more trappable than cosmic-ray products, so compact-star arguments become decision-relevant."
+  links:
+    - label: Start here
+      path: docs/START_HERE.md
+      primary: true
+    - label: Open LHC map
+      path: examples/lhc_black_holes/worked_region_cosmic_ray_map.md
+    - label: Open audit
+      path: examples/lhc_black_holes/decision_space_erosion_audit.md
+  cards:
+    - label: Flat synthesis
+      text: Cosmic-ray exposure shows LHC black-hole risk is ruled out.
+    - label: Hidden dependency
+      text: Earth cosmic-ray survival is incomplete if LHC products are slower and more trappable.
+    - label: Map surface
+      text: "`lhc_c004` velocity caveat, `lhc_c012` trapping analysis, `lhc_r003`/`lhc_r004` dependency links."
 
 judge_paths:
   - docs/START_HERE.md
@@ -6,6 +28,12 @@ judge_paths:
   - docs/REFERENCE_LINEAGE.md
   - docs/GENERALIZABILITY_RED_TEAM.md
   - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/REUSABLE_ENGINE_PLAN.md
+  - docs/ENGINE_ARCHITECTURE.md
+  - docs/PACKAGE_MANIFEST_SPEC.md
+  - docs/ARTIFACT_FORMATS.md
+  - docs/VALIDATION_PROFILES.md
+  - docs/MIGRATING_FLF_SUBMISSION.md
   - docs/ADDING_A_CASE.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
@@ -54,6 +82,12 @@ required_docs:
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
   - docs/GENERALIZABILITY_RED_TEAM.md
   - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/REUSABLE_ENGINE_PLAN.md
+  - docs/ENGINE_ARCHITECTURE.md
+  - docs/PACKAGE_MANIFEST_SPEC.md
+  - docs/ARTIFACT_FORMATS.md
+  - docs/VALIDATION_PROFILES.md
+  - docs/MIGRATING_FLF_SUBMISSION.md
   - docs/ADDING_A_CASE.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/FLF_SUBMISSION_DRAFT.md
@@ -93,6 +127,12 @@ reference_scan_paths:
   - docs/REFERENCE_LINEAGE.md
   - docs/GENERALIZABILITY_RED_TEAM.md
   - docs/CODE_GENERALIZABILITY_PLAN.md
+  - docs/REUSABLE_ENGINE_PLAN.md
+  - docs/ENGINE_ARCHITECTURE.md
+  - docs/PACKAGE_MANIFEST_SPEC.md
+  - docs/ARTIFACT_FORMATS.md
+  - docs/VALIDATION_PROFILES.md
+  - docs/MIGRATING_FLF_SUBMISSION.md
   - docs/ADDING_A_CASE.md
   - docs/reference/flf_judging_rubric.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
@@ -174,6 +214,7 @@ cases:
       theme: risk
       review_packet_path: docs/review/LHC_HUMAN_AUDIT_PACKET.md
       review_checklist_path: docs/review/LHC_HUMAN_AUDIT_CHECKLIST.csv
+      multi_model_audit_path: docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
       spotlights:
         - distinction: Low-velocity LHC products may be trappable even if cosmic-ray products are not.
           flat: Flat synthesis tends to mention velocity without preserving the dependency on trapping and Earth cosmic-ray limits.
@@ -255,6 +296,7 @@ cases:
       theme: evidence
       review_packet_path: docs/review/EGGS_HUMAN_AUDIT_PACKET.md
       review_checklist_path: docs/review/EGGS_HUMAN_AUDIT_CHECKLIST.csv
+      multi_model_audit_path: docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
       spotlights:
         - distinction: Outcome evidence and lipid-marker evidence answer different questions.
           flat: Flat synthesis can collapse randomized lipid findings into general health outcome language.

@@ -37,6 +37,7 @@ class SourceSpan(BaseModel):
 
 
 class BlindedBaseline(BaseModel):
+    baseline_id: str | None = None
     title: str
     question: str
     output_path: str
@@ -84,6 +85,25 @@ class UiSpotlight(BaseModel):
     status: str
 
 
+class UiHeroLink(BaseModel):
+    label: str
+    path: str
+    primary: bool = False
+
+
+class UiHeroCard(BaseModel):
+    label: str
+    text: str
+
+
+class UiHero(BaseModel):
+    eyebrow: str = "Inspection Mode"
+    title: str = "Inspect the package evidence."
+    body: str = "Use the configured cases and worked regions to inspect source-grounded claims, relations, cruxes, and audit findings."
+    links: list[UiHeroLink] = Field(default_factory=list)
+    cards: list[UiHeroCard] = Field(default_factory=list)
+
+
 class UiConfig(BaseModel):
     include: bool = False
     label: str | None = None
@@ -91,6 +111,7 @@ class UiConfig(BaseModel):
     theme: str = "default"
     review_packet_path: str | None = None
     review_checklist_path: str | None = None
+    multi_model_audit_path: str | None = None
     spotlights: list[UiSpotlight] = Field(default_factory=list)
 
 
@@ -122,8 +143,18 @@ class UpdateDemo(BaseModel):
     relation_id_prefix: str
 
 
+class IdPatterns(BaseModel):
+    claim: str = r"[A-Za-z0-9_\-]+_c\d+"
+    relation: str = r"[A-Za-z0-9_\-]+_r\d+"
+    loss: str = r"[A-Za-z0-9_\-]+_loss_\d+"
+
+
 class SubmissionManifest(BaseModel):
     schema_version: int = 1
+    package_id: str = "flf_submission"
+    package_label: str = "FLF Submission"
+    id_patterns: IdPatterns = Field(default_factory=IdPatterns)
+    ui_hero: UiHero = Field(default_factory=UiHero)
     judge_paths: list[str] = Field(default_factory=list)
     required_docs: list[str] = Field(default_factory=list)
     reference_scan_paths: list[str] = Field(default_factory=list)
@@ -155,6 +186,18 @@ class SubmissionManifest(BaseModel):
             if region.blinded_baseline is not None:
                 baselines.append((region, region.blinded_baseline))
         return baselines
+
+    def baseline_id_for(self, region: WorkedRegion, baseline: BlindedBaseline) -> str:
+        return baseline.baseline_id or region.region_id
+
+    def blinded_baseline_for_id(self, baseline_id: str) -> tuple[WorkedRegion, BlindedBaseline]:
+        for region, baseline in self.iter_blinded_baselines():
+            if self.baseline_id_for(region, baseline) == baseline_id:
+                return region, baseline
+        raise KeyError(baseline_id)
+
+    def regions_for_case_key(self, case_key: str) -> list[WorkedRegion]:
+        return [region for region in self.iter_worked_regions() if region.case_key == case_key]
 
     def case_for_key(self, case_key: str) -> SubmissionCase:
         for case in self.cases:

@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from judge_paths import JUDGE_PATHS
+from judge_paths import get_judge_paths
 from epistemic_case_mapper.submission_manifest import load_submission_manifest
 
 
@@ -43,18 +43,20 @@ def main() -> int:
             failures,
         )
 
-    _run([sys.executable, "scripts/validate_worked_regions.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_full_case_knowledge.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_realism_artifacts.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_blinded_baselines.py"], repo_root, failures)
-    _run([sys.executable, "scripts/export_worked_region_json.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/build_ui_data.py", "--check"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_ui.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_submission_references.py"], repo_root, failures)
-    _run([sys.executable, "scripts/validate_update_demo.py"], repo_root, failures)
-    _run([sys.executable, "scripts/judge_smoke_test.py"], repo_root, failures)
+    manifest_args = ["--manifest", args.manifest]
+    _run([sys.executable, "scripts/validate_submission_manifest.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_worked_regions.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_full_case_knowledge.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_realism_artifacts.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_blinded_baselines.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/export_worked_region_json.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/summarize_submission_artifacts.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/build_tier1_review_checklist.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/build_ui_data.py", "--check", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_ui.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_submission_references.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_update_demo.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/judge_smoke_test.py", *manifest_args], repo_root, failures)
 
     if failures:
         for failure in failures:
@@ -64,7 +66,7 @@ def main() -> int:
     print("FLF demo checks passed")
     print("")
     print("Judge-facing entry points:")
-    for relative_path in JUDGE_PATHS:
+    for relative_path in get_judge_paths(repo_root, args.manifest):
         print(f"- {relative_path}")
     return 0
 

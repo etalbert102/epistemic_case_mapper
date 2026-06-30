@@ -29,6 +29,7 @@ class Span:
 
 @dataclass(frozen=True)
 class BaselineConfig:
+    baseline_id: str
     case_key: str
     region_id: str
     title: str
@@ -42,12 +43,14 @@ def _configs_from_manifest(repo_root: Path, manifest_path: str = "submission_man
     manifest = load_submission_manifest(repo_root, manifest_path)
     configs: dict[str, BaselineConfig] = {}
     for region, baseline in manifest.iter_blinded_baselines():
-        configs[region.case_key] = _baseline_config(region, baseline)
+        config = _baseline_config(region, baseline)
+        configs[config.baseline_id] = config
     return configs
 
 
 def _baseline_config(region: WorkedRegion, baseline: BlindedBaseline) -> BaselineConfig:
     return BaselineConfig(
+        baseline_id=baseline.baseline_id or region.region_id,
         case_key=region.case_key,
         region_id=region.region_id,
         title=baseline.title,
@@ -61,13 +64,27 @@ def _baseline_config(region: WorkedRegion, baseline: BlindedBaseline) -> Baselin
     )
 
 
-CONFIGS = _configs_from_manifest(Path(__file__).resolve().parents[1])
+def _legacy_configs_from_manifest(repo_root: Path, manifest_path: str = "submission_manifest.yaml") -> dict[str, BaselineConfig]:
+    configs = _configs_from_manifest(repo_root, manifest_path)
+    legacy = dict(configs)
+    by_case: dict[str, list[BaselineConfig]] = {}
+    for config in configs.values():
+        by_case.setdefault(config.case_key, []).append(config)
+    for case_key, case_configs in by_case.items():
+        if len(case_configs) == 1:
+            legacy[case_key] = case_configs[0]
+    return legacy
+
+
+CONFIGS = _legacy_configs_from_manifest(Path(__file__).resolve().parents[1])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate blinded flat-synthesis baselines with Ollama.")
+    parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
     parser.add_argument("--manifest", default="submission_manifest.yaml")
-    parser.add_argument("--case", default="all")
+    parser.add_argument("--case", help="Run all baseline configs for one case key.")
+    parser.add_argument("--region", help="Run one baseline config by region ID or baseline ID.")
     parser.add_argument("--model", default="gemma4:e4b")
     parser.add_argument(
         "--output-label",
@@ -80,12 +97,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(args.repo_root).resolve()
     configs = _configs_from_manifest(repo_root, args.manifest)
-    if args.case != "all" and args.case not in configs:
-        parser.error(f"unknown case {args.case!r}; choose all or one of {', '.join(sorted(configs))}")
+    if args.case and args.region:
+        parser.error("use --case or --region, not both")
     output_label = args.output_label or _model_label(args.model)
-    selected = configs.values() if args.case == "all" else (configs[args.case],)
+    selected = _select_configs(configs, args.case, args.region, parser)
     for config in selected:
         _validate_config_spans(repo_root, config)
         prompt = build_prompt(repo_root, config)
@@ -99,6 +116,32 @@ def main() -> int:
     return 0
 
 
+def _select_configs(
+    configs: dict[str, BaselineConfig],
+    case_key: str | None,
+    region_or_baseline_id: str | None,
+    parser: argparse.ArgumentParser,
+) -> tuple[BaselineConfig, ...]:
+    if region_or_baseline_id is not None:
+        matches = [
+            config
+            for baseline_id, config in configs.items()
+            if baseline_id == region_or_baseline_id or config.region_id == region_or_baseline_id
+        ]
+        if not matches:
+            choices = sorted({*configs.keys(), *(config.region_id for config in configs.values())})
+            parser.error(f"unknown region/baseline {region_or_baseline_id!r}; choose one of {', '.join(choices)}")
+        return tuple(matches)
+    if case_key is not None:
+        matches = [config for config in configs.values() if config.case_key == case_key]
+        if not matches:
+            parser.error(
+                f"unknown case {case_key!r}; choose one of {', '.join(sorted({config.case_key for config in configs.values()}))}"
+            )
+        return tuple(matches)
+    return tuple(configs.values())
+
+
 def build_prompt(repo_root: Path, config: BaselineConfig) -> str:
     source_blocks = []
     for span in config.spans:
@@ -107,6 +150,8 @@ def build_prompt(repo_root: Path, config: BaselineConfig) -> str:
         (
             "You are writing a blinded flat synthesis baseline.",
             "Do not create a claim map, relation map, audit, or critique of a map.",
+            f"Baseline ID: {config.baseline_id}",
+            f"Region ID: {config.region_id}",
             f"Worked region question: {config.question}",
             f"Prompt version: {BASELINE_PROMPT_VERSION}",
             f"Task: {BASELINE_PROMPT}",

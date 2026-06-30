@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from artifact_utils import collect_ids
-from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
+from epistemic_case_mapper.submission_manifest import IdPatterns, SubmissionManifest, load_submission_manifest
 
 
 def main() -> int:
@@ -70,22 +70,36 @@ def _validate_ids(
     ids: dict[str, set[str]],
     failures: list[str],
 ) -> None:
-    prefixes = sorted(re.escape(prefix) for prefix in manifest.known_id_prefixes())
-    if not prefixes:
-        return
-    prefix_pattern = "|".join(prefixes)
-    for match in sorted(set(re.findall(rf"`(({prefix_pattern})_c\d+)`", text))):
-        claim_id = match[0]
+    patterns = _id_patterns_for_manifest(manifest)
+    for claim_id in _backticked_matches(text, patterns.claim):
         if claim_id not in ids["claim"]:
             failures.append(f"missing_claim_reference doc={relative_path} id={claim_id}")
-    for match in sorted(set(re.findall(rf"`(({prefix_pattern})_r\d+)`", text))):
-        relation_id = match[0]
+    for relation_id in _backticked_matches(text, patterns.relation):
         if relation_id not in ids["relation"]:
             failures.append(f"missing_relation_reference doc={relative_path} id={relation_id}")
-    for match in sorted(set(re.findall(rf"`(({prefix_pattern})_loss_\d+)`", text))):
-        loss_id = match[0]
+    for loss_id in _backticked_matches(text, patterns.loss):
         if loss_id not in ids["loss"]:
             failures.append(f"missing_loss_reference doc={relative_path} id={loss_id}")
+
+
+def _id_patterns_for_manifest(manifest: SubmissionManifest) -> IdPatterns:
+    defaults = IdPatterns()
+    if manifest.id_patterns != defaults:
+        return manifest.id_patterns
+    prefixes = sorted(re.escape(prefix) for prefix in manifest.known_id_prefixes())
+    if not prefixes:
+        return defaults
+    prefix_pattern = "|".join(prefixes)
+    return IdPatterns(
+        claim=rf"(?:{prefix_pattern})_c\d+",
+        relation=rf"(?:{prefix_pattern})_r\d+",
+        loss=rf"(?:{prefix_pattern})_loss_\d+",
+    )
+
+
+def _backticked_matches(text: str, pattern: str) -> list[str]:
+    compiled = re.compile(rf"`({pattern})`")
+    return sorted(set(match.group(1) for match in compiled.finditer(text)))
 
 
 if __name__ == "__main__":

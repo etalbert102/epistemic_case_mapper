@@ -9,6 +9,8 @@ from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, ValidationThresholds, WorkedRegion, load_submission_manifest
 
+VALUE_PATTERN = r"([^\n\r]+)"
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate curated FLF worked-region artifacts.")
@@ -80,8 +82,8 @@ def _validate_map(
     region_id: str, path: Path, source_ids: set[str], thresholds: ValidationThresholds, failures: list[str]
 ) -> None:
     text = path.read_text(encoding="utf-8")
-    claim_ids = re.findall(r"claim_id:\s*([A-Za-z0-9_\\-]+)", text)
-    relation_types = set(re.findall(r"relation_type:\s*([A-Za-z0-9_\\-]+)", text))
+    claim_ids = [_clean_value(value) for value in re.findall(rf"claim_id:\s*{VALUE_PATTERN}", text)]
+    relation_types = set(_clean_value(value) for value in re.findall(rf"relation_type:\s*{VALUE_PATTERN}", text))
     crux_count = len(re.findall(r"(?i)crux", text))
     if not thresholds.min_claims <= len(claim_ids) <= thresholds.max_claims:
         failures.append(
@@ -90,9 +92,10 @@ def _validate_map(
         )
     if len(set(claim_ids)) != len(claim_ids):
         failures.append(f"duplicate_claim_ids region={region_id} path={path}")
-    if len(re.findall(r"source_id:\s*([A-Za-z0-9_\\-]+)", text)) < len(claim_ids):
+    source_refs = [_clean_value(value) for value in re.findall(rf"source_id:\s*{VALUE_PATTERN}", text)]
+    if len(source_refs) < len(claim_ids):
         failures.append(f"worked_map_missing_source_ids region={region_id} path={path}")
-    for source_id in re.findall(r"source_id:\s*([A-Za-z0-9_\\-]+)", text):
+    for source_id in source_refs:
         if source_id not in source_ids:
             failures.append(f"unknown_worked_map_source region={region_id} source={source_id} path={path}")
     if text.count("excerpt:") < len(claim_ids):
@@ -101,11 +104,12 @@ def _validate_map(
         failures.append(f"worked_map_missing_entailment_checks region={region_id} path={path}")
     if re.search(r"entailed_by_excerpt:\s*no", text) and "audit concern" not in text.lower():
         failures.append(f"unsupported_claim_not_moved_to_audit region={region_id} path={path}")
-    if len(re.findall(r"relation_id:\s*([A-Za-z0-9_\\-]+)", text)) == 0:
+    relation_ids = [_clean_value(value) for value in re.findall(rf"relation_id:\s*{VALUE_PATTERN}", text)]
+    if len(relation_ids) == 0:
         failures.append(f"worked_map_missing_relations region={region_id} path={path}")
     if len(relation_types) < thresholds.min_relation_types:
         failures.append(f"worked_map_too_few_relation_types region={region_id} count={len(relation_types)} path={path}")
-    if text.count("rationale:") < len(re.findall(r"relation_id:\s*([A-Za-z0-9_\\-]+)", text)):
+    if text.count("rationale:") < len(relation_ids):
         failures.append(f"worked_map_missing_relation_rationales region={region_id} path={path}")
     if crux_count < thresholds.min_crux_mentions:
         failures.append(f"worked_map_too_few_cruxes region={region_id} count={crux_count} path={path}")
@@ -143,7 +147,7 @@ def _validate_baseline(
 
 def _validate_audit(region_id: str, path: Path, thresholds: ValidationThresholds, failures: list[str]) -> None:
     text = path.read_text(encoding="utf-8")
-    losses = re.findall(r"loss_id:\s*([A-Za-z0-9_\\-]+)", text)
+    losses = [_clean_value(value) for value in re.findall(rf"loss_id:\s*{VALUE_PATTERN}", text)]
     if len(losses) < thresholds.min_losses:
         failures.append(f"erosion_audit_too_few_losses region={region_id} count={len(losses)} path={path}")
     if text.count("adversarial_check: survives") < thresholds.min_surviving_checks:
@@ -180,6 +184,13 @@ def _require_no_template_status(path: Path, failures: list[str]) -> None:
 def _require_no_todo(path: Path, failures: list[str]) -> None:
     if path.exists() and "TODO" in path.read_text(encoding="utf-8"):
         failures.append(f"todo_remaining path={path}")
+
+
+def _clean_value(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value.startswith("`") and value.endswith("`"):
+        return value[1:-1]
+    return value
 
 
 if __name__ == "__main__":

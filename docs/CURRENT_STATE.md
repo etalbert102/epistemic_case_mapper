@@ -38,6 +38,8 @@ Last updated: 2026-06-27.
 - A reference-lineage note maps contest-provided examples of epistemic scrutiny to the prototype's design choices at `docs/REFERENCE_LINEAGE.md`.
 - A generalizability red-team note names transfer limits, failure boundaries, fresh-case test criteria, and a second-operator validation path at `docs/GENERALIZABILITY_RED_TEAM.md`.
 - A code generalizability implementation plan is saved at `docs/CODE_GENERALIZABILITY_PLAN.md`.
+- A reusable-engine plan is recorded at `docs/REUSABLE_ENGINE_PLAN.md`.
+- Reusable-engine architecture and manifest docs are recorded at `docs/ENGINE_ARCHITECTURE.md` and `docs/PACKAGE_MANIFEST_SPEC.md`.
 - `submission_manifest.yaml` is the source of truth for worked regions, full-case scaffolds, UI inclusion, review priorities, validation thresholds, and blinded baseline spans.
 - `scripts/validate_submission_manifest.py` checks manifest wiring, paths, source membership, review target IDs, and blinded-baseline span bounds.
 - `tests/test_submission_manifest_generalization.py` builds a temporary synthetic case with a custom ID prefix and runs the manifest, worked-region, and reference validators against it.

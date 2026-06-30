@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ def main() -> int:
     failures: list[str] = []
 
     _validate_uniqueness(manifest, failures)
+    _validate_id_patterns(manifest, failures)
     _validate_top_level_paths(repo_root, manifest, failures)
     for case in manifest.cases:
         _validate_case(repo_root, manifest, case, failures)
@@ -49,7 +51,11 @@ def _validate_uniqueness(manifest: SubmissionManifest, failures: list[str]) -> N
     _require_unique("case_key", [case.case_key for case in manifest.cases], failures)
     _require_unique("case_id", [case.case_id for case in manifest.cases], failures)
     _require_unique("region_id", [region.region_id for region in manifest.iter_worked_regions()], failures)
-    _require_unique("id_prefix", [region.id_prefix for region in manifest.iter_worked_regions()], failures)
+    _require_unique(
+        "baseline_id",
+        [manifest.baseline_id_for(region, baseline) for region, baseline in manifest.iter_blinded_baselines()],
+        failures,
+    )
 
 
 def _require_unique(label: str, values: list[str], failures: list[str]) -> None:
@@ -58,6 +64,18 @@ def _require_unique(label: str, values: list[str], failures: list[str]) -> None:
         if value in seen:
             failures.append(f"duplicate_manifest_{label} value={value}")
         seen.add(value)
+
+
+def _validate_id_patterns(manifest: SubmissionManifest, failures: list[str]) -> None:
+    for label, pattern in (
+        ("claim", manifest.id_patterns.claim),
+        ("relation", manifest.id_patterns.relation),
+        ("loss", manifest.id_patterns.loss),
+    ):
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            failures.append(f"invalid_id_pattern kind={label} error={exc}")
 
 
 def _validate_top_level_paths(repo_root: Path, manifest: SubmissionManifest, failures: list[str]) -> None:
@@ -96,6 +114,8 @@ def _validate_case(
         _require_path(repo_root, case.ui.review_packet_path, failures, "ui_review_packet_missing")
     if case.ui.review_checklist_path is not None:
         _require_path(repo_root, case.ui.review_checklist_path, failures, "ui_review_checklist_missing")
+    if case.ui.multi_model_audit_path is not None:
+        _require_path(repo_root, case.ui.multi_model_audit_path, failures, "ui_multi_model_audit_missing")
 
     if case.full_case is not None:
         _require_path(repo_root, case.full_case.index_path, failures, "full_case_index_missing")

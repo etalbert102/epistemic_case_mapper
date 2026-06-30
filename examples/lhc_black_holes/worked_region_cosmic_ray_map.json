@@ -68,6 +68,7 @@
     "status": "human-review-needed",
     "title": "LHC Decision-Space Erosion Audit"
   },
+  "region_id": "lhc_cosmic_ray_argument",
   "worked_map": {
     "claims": [
       {
