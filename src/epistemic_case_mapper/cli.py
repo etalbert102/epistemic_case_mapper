@@ -9,6 +9,12 @@ from pathlib import Path
 
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
+from epistemic_case_mapper.semantic_pipeline import (
+    build_critique_prompt,
+    build_map_prompt,
+    validate_critique_candidate,
+    validate_map_candidate,
+)
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 from epistemic_case_mapper.unseen_quality import (
     quality_signals,
@@ -85,6 +91,23 @@ def main() -> int:
         help="Prepare package assets, run package gates, then check unseen-case quality review files.",
     )
     quality_gate.add_argument("--case", required=True, help="Unseen-case slug.")
+
+    semantic_parser = subparsers.add_parser("semantic", help="Build and validate model-assisted semantic work.")
+    semantic_subparsers = semantic_parser.add_subparsers(dest="semantic_target", required=True)
+    semantic_prompt = semantic_subparsers.add_parser("prompt", help="Render source-bounded prompts for LLM work.")
+    semantic_prompt_subparsers = semantic_prompt.add_subparsers(dest="semantic_prompt_target", required=True)
+    semantic_map_prompt = semantic_prompt_subparsers.add_parser("map", help="Render a JSON map-generation prompt.")
+    semantic_map_prompt.add_argument("--region", required=True)
+    semantic_critique_prompt = semantic_prompt_subparsers.add_parser("critique", help="Render a JSON critique prompt.")
+    semantic_critique_prompt.add_argument("--region", required=True)
+    semantic_critique_prompt.add_argument("--map-path", help="Candidate map path. Defaults to the region map path.")
+    semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
+    semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
+    semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")
+    semantic_map_validate.add_argument("--region", required=True)
+    semantic_map_validate.add_argument("--path", required=True)
+    semantic_critique_validate = semantic_validate_subparsers.add_parser("critique", help="Validate a candidate JSON critique.")
+    semantic_critique_validate.add_argument("--path", required=True)
 
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
@@ -178,6 +201,16 @@ def main() -> int:
         if result != 0:
             return result
         return 0
+    if args.command == "semantic" and args.semantic_target == "prompt" and args.semantic_prompt_target == "map":
+        print(build_map_prompt(repo_root, args.package, args.region), end="")
+        return 0
+    if args.command == "semantic" and args.semantic_target == "prompt" and args.semantic_prompt_target == "critique":
+        print(build_critique_prompt(repo_root, args.package, args.region, args.map_path), end="")
+        return 0
+    if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
+        return _validate_semantic_map(repo_root, args.package, args.region, args.path)
+    if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "critique":
+        return _validate_semantic_critique(args.path)
 
     parser.error("unknown command")
     return 2
@@ -338,6 +371,26 @@ def _write_quality_tasks(repo_root: Path, manifest: SubmissionManifest, case_slu
     case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
     path = write_quality_risk_tasks(repo_root, case_slug, case_manifest)
     print(f"Wrote {path.relative_to(repo_root).as_posix()}")
+    return 0
+
+
+def _validate_semantic_map(repo_root: Path, package: str, region_id: str, path: str) -> int:
+    failures = validate_map_candidate(repo_root, package, region_id, Path(path))
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}", file=sys.stderr)
+        return 1
+    print(f"Validated semantic map candidate region={region_id} path={path}")
+    return 0
+
+
+def _validate_semantic_critique(path: str) -> int:
+    failures = validate_critique_candidate(Path(path))
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}", file=sys.stderr)
+        return 1
+    print(f"Validated semantic critique candidate path={path}")
     return 0
 
 

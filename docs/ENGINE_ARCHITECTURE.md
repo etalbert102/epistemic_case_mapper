@@ -22,4 +22,6 @@ Use `ecm quality init --case <case_slug> --title "<title>" --question "<question
 
 Quality signals flow into generated artifacts. Source provenance metadata and unseen-case scorecards produce reviewer-start warnings, UI quality warnings, and `GENERATED_RISK_TASKS.md` follow-up tasks.
 
+For model-assisted semantic work, use `ecm semantic prompt map`, `ecm semantic prompt critique`, `ecm semantic validate map`, and `ecm semantic validate critique`. This keeps LLM work on candidate claims, relations, cruxes, and critiques while deterministic code owns source-bounded prompt construction, source/excerpt checks, relation ontology checks, and package gates.
+
 The current FLF submission is one package configured by `submission_manifest.yaml`.

@@ -30,6 +30,18 @@ Extract only claims directly supported by the source excerpts. For each claim, r
 Do not merge similar-but-not-identical claims. Preserve caveats, uncertainty, minority views, and source-level disagreement.
 ```
 
+Executable prompt builder:
+
+```bash
+ecm semantic prompt map --region <region_id>
+```
+
+The executable prompt uses `source_mapping_prompt_v2_json` and requires JSON output that can be checked with:
+
+```bash
+ecm semantic validate map --region <region_id> --path <candidate_map.json>
+```
+
 ## Relation Extraction Prompt
 
 Use after candidate claims have source excerpts.
@@ -48,6 +60,8 @@ Allowed relation types:
 
 For each relation, provide source_claim_id, target_claim_id, relation_type, and a one-sentence rationale. Do not create a relation unless both endpoints are source-grounded or explicitly marked as interpretation candidates.
 ```
+
+Relation extraction is now folded into the JSON semantic map candidate. Deterministic validation checks relation endpoints and package relation ontology.
 
 ## Flat Baseline Prompt
 
@@ -108,6 +122,13 @@ For each counted loss, record:
 Do not count unsupported map items or baseline omissions outside the source subset.
 ```
 
+For adversarial critique of a candidate map before accepting it, use:
+
+```bash
+ecm semantic prompt critique --region <region_id> --map-path <candidate_map.json>
+ecm semantic validate critique --path <candidate_critique.json>
+```
+
 ## Human Review Handoff Prompt
 
 Use when asking a human reviewer to audit a worked region.
@@ -132,8 +153,10 @@ Use these tags in generated or curated artifacts:
 
 - `deterministic_marker_sentence_v1`: local deterministic starter extraction.
 - `source_mapping_prompt_v1`: source-grounded claim mapping prompt above.
+- `source_mapping_prompt_v2_json`: executable JSON semantic map prompt built by `ecm semantic prompt map`.
 - `relation_extraction_prompt_v1`: relation extraction prompt above.
 - `flat_baseline_prompt_v1`: flat baseline prompt above.
 - `flat_baseline_prompt_v1_blinded_ollama`: blinded local Ollama baseline procedure above.
 - `erosion_audit_prompt_v1`: decision-space erosion audit prompt above.
+- `semantic_critique_prompt_v1_json`: executable JSON critique prompt built by `ecm semantic prompt critique`.
 - `human_review_handoff_v1`: human review procedure above.
