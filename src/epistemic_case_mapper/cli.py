@@ -10,6 +10,7 @@ from pathlib import Path
 from epistemic_case_mapper.case_initializer import init_case_package
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.semantic_pipeline import (
     build_critique_prompt,
@@ -376,7 +377,8 @@ def _write_backend_result(
     if not output_path.is_absolute():
         output_path = repo_root / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(result.text, encoding="utf-8")
+    output_text = result.text if result.prompt_only else canonical_json_output(result.text)
+    output_path.write_text(output_text, encoding="utf-8")
     print(f"Wrote {_display_path(repo_root, output_path)} backend={result.backend}")
     if result.prompt_only:
         print("Prompt backend selected; no JSON validation run.")

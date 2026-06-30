@@ -26,7 +26,7 @@ Supported backend specs:
 
 - `prompt`: write the source-bounded prompt to `prompts/<region>/...` without calling a model.
 - `command:<command>`: run a local command that reads the prompt from stdin and writes the response to stdout.
-- `ollama:<model>`: run `ollama run <model>` with the prompt on stdin.
+- `ollama:<model>`: run `ollama run <model> --format json --hidethinking --nowordwrap` with the prompt on stdin.
 
 The backend can be overridden per run:
 
@@ -36,6 +36,6 @@ ecm --repo-root /path/to/package --package package.yaml semantic run map \
   --backend command:'my-json-model --temperature 0'
 ```
 
-For non-prompt backends, `semantic run map` writes to the region `map_path` by default and then runs semantic JSON validation. `semantic run critique` writes to `artifacts/semantic/<region>_critique.json` by default and validates the critique JSON. Use `--output` to redirect either file and `--no-validate` only when intentionally capturing raw model output for debugging.
+For non-prompt backends, `semantic run map` writes to the region `map_path` by default and then runs semantic JSON validation. `semantic run critique` writes to `artifacts/semantic/<region>_critique.json` by default and validates the critique JSON. The runner canonicalizes JSON returned inside a fenced block or after prefatory text before validation. Use `--output` to redirect either file and `--no-validate` only when intentionally capturing model output for debugging.
 
 The deterministic code owns package layout, source copying, prompt construction, path selection, and JSON validation. The model backend owns only semantic extraction or critique text generation.

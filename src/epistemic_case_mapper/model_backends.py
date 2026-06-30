@@ -48,7 +48,7 @@ def _run_command(command: str, prompt: str) -> str:
 
 def _run_ollama(model: str, prompt: str) -> str:
     result = subprocess.run(
-        ["ollama", "run", model],
+        ["ollama", "run", model, "--format", "json", "--hidethinking", "--nowordwrap"],
         input=prompt,
         capture_output=True,
         text=True,

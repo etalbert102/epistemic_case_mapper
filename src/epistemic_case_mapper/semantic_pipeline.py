@@ -86,6 +86,13 @@ Return only JSON matching this shape:
   "evidence_check": [["Probe", "Survives|Needs review|Fails", "Notes"]]
 }}
 
+Hard JSON requirements:
+- Every claim must be an object with these exact keys: "claim_id", "claim", "source_id", "source_span", "excerpt", "entailed_by_excerpt", "role".
+- Every relation must be an object with these exact keys: "relation_id", "source_claim", "target_claim", "relation_type", "rationale".
+- Put IDs as values, never as object keys. Do not write keys like "{region.id_prefix}_c001: claim text".
+- Use claim IDs like "{region.id_prefix}_c001", "{region.id_prefix}_c002", and relation IDs like "{region.id_prefix}_r001".
+- Include at least {region.thresholds.min_evidence_rows} evidence_check rows.
+
 Rules:
 - Extract only claims supported by exact excerpts in the source packet.
 - Do not convert a weak local note into a stronger external-evidence claim.

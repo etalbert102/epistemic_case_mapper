@@ -90,6 +90,8 @@ def test_semantic_run_uses_command_backend_and_validates(monkeypatch, tmp_path: 
     fake_model = tmp_path / "fake_model.py"
     fake_model.write_text(
         "import json\n"
+        "print('Thinking...')\n"
+        "print('```json')\n"
         "print(json.dumps({\n"
         "  'title': 'Generated Demo Map',\n"
         "  'status': 'human-review-needed',\n"
@@ -98,13 +100,14 @@ def test_semantic_run_uses_command_backend_and_validates(monkeypatch, tmp_path: 
         "  'sources': ['demo_case_doc_a', 'demo_case_doc_b'],\n"
         "  'claims': [\n"
         "    {'claim_id': 'demo_case_c101', 'claim': 'Alpha supports a generated claim.', 'source_id': 'demo_case_doc_a', 'source_span': 'lines 1-1', 'excerpt': 'Alpha line.', 'entailed_by_excerpt': 'yes', 'role': 'conclusion_support'},\n"
-        "    {'claim_id': 'demo_case_c102', 'claim': 'Gamma supplies a crux candidate.', 'source_id': 'demo_case_doc_b', 'source_span': 'lines 1-1', 'excerpt': 'Gamma line.', 'entailed_by_excerpt': 'yes', 'role': 'crux'}\n"
+        "    {'claim_id': 'demo_case_c102', 'claim': 'Gamma supplies a crux candidate.', 'sourcecap_id': 'demo_case_doc_b', 'source_span': 'lines 1-1', 'excerpt': 'Gamma line.', 'entailed_by__excerpt': 'yes', 'role': 'crux'}\n"
         "  ],\n"
-        "  'relations': [{'relation_id': 'demo_case_r101', 'source_claim': 'demo_case_c102', 'target_claim': 'demo_case_c101', 'relation_type': 'crux_for', 'rationale': 'The second claim affects how the first should be read.'}],\n"
+        "  'relations': [{'relation_id': 'demo_case_r101', 'source_claim': 'demo_case_c102', 'target_claim': 'demo_case_c101', 'relation_type': 'crux_for', 'ration_type': 'The second claim affects how the first should be read.'}],\n"
         "  'crux_candidates': ['demo_case_c102 changes the interpretation of demo_case_c101.'],\n"
         "  'similar_but_not_identical': ['The two claims are related but distinct.'],\n"
         "  'evidence_check': [['Source grounding', 'Survives', 'Exact excerpts are present.']]\n"
-        "}))\n",
+        "}))\n"
+        "print('```')\n",
         encoding="utf-8",
     )
 
@@ -129,7 +132,10 @@ def test_semantic_run_uses_command_backend_and_validates(monkeypatch, tmp_path: 
     assert cli.main() == 0
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
     assert generated["prompt_procedure"] == MAP_PROMPT_VERSION
+    assert generated["claims"][1]["source_id"] == "demo_case_doc_b"
+    assert generated["claims"][1]["entailed_by_excerpt"] == "yes"
     assert generated["relations"][0]["relation_type"] == "crux_for"
+    assert generated["relations"][0]["rationale"].startswith("The second claim")
 
 
 def test_prompt_backend_returns_prompt_text() -> None:
