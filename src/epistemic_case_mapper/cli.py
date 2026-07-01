@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from epistemic_case_mapper.case_initializer import init_case_package
 from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.llm_stress_eval import run_llm_stress_eval
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest
@@ -106,6 +108,25 @@ def main() -> int:
         help="Prepare package assets, run package gates, then check unseen-case quality review files.",
     )
     quality_gate.add_argument("--case", required=True, help="Unseen-case slug.")
+
+    eval_parser = subparsers.add_parser("eval", help="Run automated quality and robustness evaluations.")
+    eval_subparsers = eval_parser.add_subparsers(dest="eval_target", required=True)
+    llm_stress = eval_subparsers.add_parser(
+        "llm-stress",
+        help="Run LLM-assisted baseline, critique, relation, and metamorphic stress checks.",
+    )
+    llm_stress.add_argument("--region", required=True)
+    llm_stress.add_argument("--backend", help="Primary backend. Defaults to manifest default_model_backend.")
+    llm_stress.add_argument(
+        "--compare-backend",
+        action="append",
+        default=[],
+        help="Additional backend to run on the same prompts. May be passed multiple times.",
+    )
+    llm_stress.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/llm_stress_eval/<region>.")
+    llm_stress.add_argument("--baseline-path", help="Override flat baseline path.")
+    llm_stress.add_argument("--backend-timeout", type=int, default=90)
+    llm_stress.add_argument("--backend-retries", type=int, default=0)
 
     semantic_parser = subparsers.add_parser("semantic", help="Build and validate model-assisted semantic work.")
     semantic_subparsers = semantic_parser.add_subparsers(dest="semantic_target", required=True)
@@ -258,6 +279,18 @@ def main() -> int:
         if result != 0:
             return result
         return 0
+    if args.command == "eval" and args.eval_target == "llm-stress":
+        return _run_llm_stress_eval(
+            repo_root=repo_root,
+            package=args.package,
+            region_id=args.region,
+            backend=args.backend,
+            compare_backends=args.compare_backend,
+            output_dir=args.output_dir,
+            baseline_path=args.baseline_path,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
+        )
     if args.command == "semantic" and args.semantic_target == "prompt" and args.semantic_prompt_target == "map":
         print(build_map_prompt(repo_root, args.package, args.region), end="")
         return 0
@@ -476,6 +509,48 @@ def _run_staged_semantic_map(
         print("Semantic validation skipped.")
     else:
         print(f"Validated staged semantic map region={region_id} path={result.output_path}")
+    return 0
+
+
+def _run_llm_stress_eval(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    compare_backends: list[str],
+    output_dir: str | None,
+    baseline_path: str | None,
+    backend_timeout: int,
+    backend_retries: int,
+) -> int:
+    if backend_timeout < 1:
+        print("llm_stress_eval_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("llm_stress_eval_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        result = run_llm_stress_eval(
+            repo_root=repo_root,
+            manifest_path=package,
+            region_id=region_id,
+            backend=backend or manifest.default_model_backend,
+            compare_backends=compare_backends,
+            output_dir=output_dir,
+            baseline_path=baseline_path,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+        )
+    except (KeyError, RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(f"llm_stress_eval_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+    print(
+        "LLM stress eval wrote "
+        f"{_display_path(repo_root, result.json_path)} and {_display_path(repo_root, result.markdown_path)} "
+        f"prompts={result.prompt_count} model_runs={result.model_run_count} "
+        f"findings={result.finding_count} reference_issues={result.reference_issue_count}"
+    )
     return 0
 
 

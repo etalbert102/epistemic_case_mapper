@@ -15,6 +15,10 @@ The optimal split is: models propose semantic structure; deterministic code cons
 - relation ontology enforcement
 - package validation and freshness checks
 - baseline isolation
+- automated map-vs-baseline stress evaluation
+- reference checks for model-generated eval findings
+- cross-backend disagreement summaries
+- built-in metamorphic test inventory
 - review checklist generation
 - UI and reviewer-start generation
 - generated quality risk tasks
@@ -28,6 +32,9 @@ The optimal split is: models propose semantic structure; deterministic code cons
 - similar-but-not-identical distinctions
 - erosion-audit drafting
 - adversarial critique of a candidate map
+- map-vs-flat-baseline insight-delta proposals
+- relation-usefulness proxy judgments
+- metamorphic pressure-test proposals
 - source-upgrade and "what would change my mind" suggestions
 
 LLM outputs remain candidates until deterministic validation and human review accept them.
@@ -57,6 +64,35 @@ Validate a model-produced critique:
 ```bash
 ecm semantic validate critique --path <candidate_critique.json>
 ```
+
+Run automated LLM stress evaluation over a worked region:
+
+```bash
+ecm eval llm-stress --region <region_id> --backend ollama:<model>
+```
+
+Run the same prompts against additional backends to surface disagreement:
+
+```bash
+ecm eval llm-stress \
+  --region <region_id> \
+  --backend ollama:gemma4:26b \
+  --compare-backend ollama:qwen3:8b \
+  --compare-backend ollama:phi4:14b
+```
+
+Use `--backend prompt` to write the stress prompts without model calls. This is useful for CI and for inspecting exactly what the evaluation asks.
+
+Test whether stress actually improves synthesis rather than merely producing plausible critique:
+
+```bash
+PYTHONPATH=src python3 scripts/run_synthesis_uplift_eval.py \
+  --region <region_id> \
+  --backend ollama:<model> \
+  --judge-backend ollama:<model>
+```
+
+This compiles erosion-audit losses into validated rewrite requirements, anchors them to map claims, relations, and source refs, then compares a map-only synthesis with a map-plus-stress synthesis. Deterministic coverage is treated as the primary safety signal; model judgments are retained as noisy comparison evidence.
 
 ## Candidate Map Requirements
 
@@ -95,6 +131,27 @@ Each finding has:
 - `recommended_fix`
 
 This keeps adversarial model work structured enough to feed quality warnings and follow-up tasks.
+
+## Automated Stress Evaluation
+
+`ecm eval llm-stress` uses LLMs to propose stress signals, then deterministic code records and checks those signals. It emits:
+
+- `llm_stress_eval.json`
+- `LLM_STRESS_EVAL.md`
+- prompt files
+- raw model outputs
+- parsed model outputs when JSON is valid
+
+The evaluation prompts cover:
+
+- insight deltas between the map and the flat baseline
+- adversarial critique for unsupported confidence, rhetoric-as-evidence, missing caveats, and source-status confusion
+- relation usefulness as distinct from relation schema validity
+- metamorphic pressure tests for caveat injection, counterexample injection, loaded language, source-order shuffle, and source removal
+
+The deterministic layer checks whether model findings cite known claim IDs, relation IDs, source IDs, and baseline excerpts. A finding with an invalid ID or missing baseline excerpt is retained as a model/backend weakness rather than silently accepted.
+
+The synthesis uplift harness adds another gate: stress findings may only improve synthesis through map-anchored rewrite requirements. Requirements include claim anchors, relation anchors, source refs, coverage terms, and directional phrases. If a model draft misses or reverses a required mapped distinction, the harness attempts a repair and then applies a narrow deterministic patch as a last resort.
 
 ## Boundary
 

@@ -114,6 +114,16 @@ Reusable structured exports are checked in at:
 - `examples/eggs/worked_region_observational_vs_rct_map.json`
 - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json`
 
+To use LLMs as automated red-teamers rather than final judges:
+
+```bash
+PYTHONPATH=src python3 scripts/ecm.py eval llm-stress \
+  --region lhc_cosmic_ray_argument \
+  --backend ollama:gemma4:26b
+```
+
+This writes `llm_stress_eval.json`, `LLM_STRESS_EVAL.md`, prompts, raw outputs, reference-check failures, and built-in metamorphic checks under `artifacts/llm_stress_eval/<region>/`.
+
 To add another case or worked region, follow `docs/ADDING_A_CASE.md`; the submission manifest is the source of truth for discovery, validation, export, review-checklist generation, baseline configuration, and UI inclusion.
 
 ## Target FLF Demonstrations
