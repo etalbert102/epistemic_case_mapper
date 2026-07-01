@@ -137,8 +137,12 @@ def main() -> int:
     semantic_staged_map.add_argument("--output", help="Output path. Defaults to the region map path.")
     semantic_staged_map.add_argument("--artifact-dir", help="Directory for intermediate prompts and model outputs.")
     semantic_staged_map.add_argument("--chunk-lines", type=int, default=40)
+    semantic_staged_map.add_argument("--chunk-overlap-lines", type=int, default=0)
+    semantic_staged_map.add_argument("--max-chunks-per-source", type=int, default=0, help="0 means no per-source chunk cap.")
+    semantic_staged_map.add_argument("--max-total-chunks", type=int, default=0, help="0 means no total chunk cap.")
     semantic_staged_map.add_argument("--max-claims-per-chunk", type=int, default=4)
     semantic_staged_map.add_argument("--max-relation-pairs", type=int, default=12)
+    semantic_staged_map.add_argument("--relation-batch-size", type=int, default=4)
     semantic_staged_map.add_argument("--backend-timeout", type=int, default=90, help="Seconds allowed for each backend call.")
     semantic_staged_map.add_argument("--backend-retries", type=int, default=1, help="Retries for transient backend failures.")
     semantic_staged_map.add_argument("--no-validate", action="store_true", help="Skip final semantic JSON validation.")
@@ -281,8 +285,12 @@ def main() -> int:
             args.output,
             args.artifact_dir,
             args.chunk_lines,
+            args.chunk_overlap_lines,
+            args.max_chunks_per_source,
+            args.max_total_chunks,
             args.max_claims_per_chunk,
             args.max_relation_pairs,
+            args.relation_batch_size,
             args.backend_timeout,
             args.backend_retries,
             args.no_validate,
@@ -393,8 +401,12 @@ def _run_staged_semantic_map(
     output: str | None,
     artifact_dir: str | None,
     chunk_lines: int,
+    chunk_overlap_lines: int,
+    max_chunks_per_source: int,
+    max_total_chunks: int,
     max_claims_per_chunk: int,
     max_relation_pairs: int,
+    relation_batch_size: int,
     backend_timeout: int,
     backend_retries: int,
     no_validate: bool,
@@ -402,11 +414,23 @@ def _run_staged_semantic_map(
     if chunk_lines < 1:
         print("semantic_staged_failed chunk_lines_must_be_positive", file=sys.stderr)
         return 1
+    if chunk_overlap_lines < 0 or chunk_overlap_lines >= chunk_lines:
+        print("semantic_staged_failed chunk_overlap_lines_must_be_nonnegative_and_smaller_than_chunk_lines", file=sys.stderr)
+        return 1
+    if max_chunks_per_source < 0:
+        print("semantic_staged_failed max_chunks_per_source_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if max_total_chunks < 0:
+        print("semantic_staged_failed max_total_chunks_must_be_nonnegative", file=sys.stderr)
+        return 1
     if max_claims_per_chunk < 1:
         print("semantic_staged_failed max_claims_per_chunk_must_be_positive", file=sys.stderr)
         return 1
     if max_relation_pairs < 1:
         print("semantic_staged_failed max_relation_pairs_must_be_positive", file=sys.stderr)
+        return 1
+    if relation_batch_size < 1:
+        print("semantic_staged_failed relation_batch_size_must_be_positive", file=sys.stderr)
         return 1
     if backend_timeout < 1:
         print("semantic_staged_failed backend_timeout_must_be_positive", file=sys.stderr)
@@ -424,8 +448,12 @@ def _run_staged_semantic_map(
             output_path=output,
             artifact_dir=artifact_dir,
             chunk_lines=chunk_lines,
+            chunk_overlap_lines=chunk_overlap_lines,
+            max_chunks_per_source=max_chunks_per_source or None,
+            max_total_chunks=max_total_chunks or None,
             max_claims_per_chunk=max_claims_per_chunk,
             max_relation_pairs=max_relation_pairs,
+            relation_batch_size=relation_batch_size,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             validate=not no_validate,

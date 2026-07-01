@@ -9,7 +9,11 @@ import pytest
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION
-from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
+from epistemic_case_mapper.staged_semantic_pipeline import (
+    CLAIM_EXTRACTION_PROMPT_VERSION,
+    RELATION_BATCH_PROMPT_VERSION,
+    RELATION_PROMPT_VERSION,
+)
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
 
 
@@ -287,6 +291,113 @@ def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tm
     assert summary["rejected_relations"][-1]["reason"] == "model_under_related_used_deterministic_fallback"
 
 
+def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -> None:
+    _init_demo_case(monkeypatch, tmp_path)
+    fake_model = tmp_path / "budget_staged_model.py"
+    fake_model.write_text(
+        "import json, re, sys\n"
+        "prompt = sys.stdin.read()\n"
+        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
+        "    payload = {'claims': [{'claim': 'Budgeted staged claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
+        "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
+        "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
+        "    payload = {'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'The two budgeted chunks should be compared.', 'crux_candidates': ['budgeted crux'], 'similar_but_not_identical': []}\n"
+        "else:\n"
+        "    payload = {}\n"
+        "print(json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "semantic",
+            "staged",
+            "map",
+            "--region",
+            "demo_case_initial_region",
+            "--backend",
+            f"command:{sys.executable} {fake_model}",
+            "--chunk-lines",
+            "1",
+            "--chunk-overlap-lines",
+            "0",
+            "--max-total-chunks",
+            "2",
+        ],
+    )
+    assert cli.main() == 0
+    summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
+    assert summary["all_chunk_count"] == 4
+    assert summary["selected_chunk_count"] == 2
+    assert summary["skipped_chunk_count"] == 2
+    assert {chunk["source_id"] for chunk in summary["chunks"]} == {"demo_case_doc_a", "demo_case_doc_b"}
+
+
+def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path) -> None:
+    _init_three_doc_case(monkeypatch, tmp_path)
+    fake_model = tmp_path / "batch_relation_model.py"
+    fake_model.write_text(
+        "import json, re, sys\n"
+        "prompt = sys.stdin.read()\n"
+        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
+        "    payload = {'claims': [{'claim': 'Batched relation source claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        f"elif {RELATION_BATCH_PROMPT_VERSION!r} in prompt:\n"
+        "    pairs = re.findall(r'Pair ID: (pair_[0-9]+)', prompt)\n"
+        "    blocks = prompt.split('Pair ID: ')[1:]\n"
+        "    relations = []\n"
+        "    for pair_id, block in zip(pairs, blocks):\n"
+        "        ids = re.findall(r'claim_id: ([^\\n]+)', block)\n"
+        "        relations.append({'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'The batch classifies this pair.', 'crux_candidates': [pair_id + ' crux'], 'similar_but_not_identical': []})\n"
+        "    payload = {'relations': relations}\n"
+        f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {}\n"
+        "else:\n"
+        "    payload = {}\n"
+        "print(json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "semantic",
+            "staged",
+            "map",
+            "--region",
+            "demo_case_initial_region",
+            "--backend",
+            f"command:{sys.executable} {fake_model}",
+            "--max-relation-pairs",
+            "2",
+            "--relation-batch-size",
+            "2",
+        ],
+    )
+    assert cli.main() == 0
+    generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
+    assert len(generated["relations"]) == 2
+    summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
+    assert summary["relation_batch_size"] == 2
+    assert summary["relation_batch_count"] == 1
+    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_batches/batch_001_prompt.txt").exists()
+
+
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:
     doc_a = tmp_path / "doc_a.txt"
     doc_b = tmp_path / "doc_b.txt"
@@ -312,6 +423,39 @@ def _init_demo_case(monkeypatch, tmp_path: Path) -> None:
             "--docs",
             str(doc_a),
             str(doc_b),
+        ],
+    )
+    assert cli.main() == 0
+
+
+def _init_three_doc_case(monkeypatch, tmp_path: Path) -> None:
+    doc_a = tmp_path / "doc_a.txt"
+    doc_b = tmp_path / "doc_b.txt"
+    doc_c = tmp_path / "doc_c.txt"
+    doc_a.write_text("Alpha claim line.\n", encoding="utf-8")
+    doc_b.write_text("Beta claim line.\n", encoding="utf-8")
+    doc_c.write_text("Gamma claim line.\n", encoding="utf-8")
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "case",
+            "init",
+            "--case-id",
+            "demo_case",
+            "--title",
+            "Demo Case",
+            "--question",
+            "Can this package batch relation pairs?",
+            "--docs",
+            str(doc_a),
+            str(doc_b),
+            str(doc_c),
         ],
     )
     assert cli.main() == 0

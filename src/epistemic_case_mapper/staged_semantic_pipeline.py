@@ -16,6 +16,7 @@ from epistemic_case_mapper.submission_manifest import SubmissionManifest, Worked
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
 RELATION_PROMPT_VERSION = "staged_relation_prompt_v1_json"
+RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v1_json"
 VALID_CLAIM_ROLES = {
     "conclusion_support",
     "crux",
@@ -41,6 +42,7 @@ class SourceChunk:
     title: str
     start_line: int
     end_line: int
+    ordinal: int
     numbered_text: str
     plain_text: str
     spans: tuple[SourceSpan, ...]
@@ -65,17 +67,32 @@ def run_staged_map(
     output_path: str | Path | None = None,
     artifact_dir: str | Path | None = None,
     chunk_lines: int = 40,
+    chunk_overlap_lines: int = 0,
+    max_chunks_per_source: int | None = None,
+    max_total_chunks: int | None = None,
     max_claims_per_chunk: int = 4,
     max_relation_pairs: int = 12,
+    relation_batch_size: int = 4,
     backend_timeout: int | None = 90,
     backend_retries: int = 1,
     validate: bool = True,
 ) -> StagedMapResult:
+    if chunk_lines < 1:
+        raise ValueError("chunk_lines must be positive")
+    if chunk_overlap_lines < 0 or chunk_overlap_lines >= chunk_lines:
+        raise ValueError("chunk_overlap_lines must be nonnegative and smaller than chunk_lines")
+    if max_chunks_per_source is not None and max_chunks_per_source < 1:
+        raise ValueError("max_chunks_per_source must be positive when supplied")
+    if max_total_chunks is not None and max_total_chunks < 1:
+        raise ValueError("max_total_chunks must be positive when supplied")
+    if relation_batch_size < 1:
+        raise ValueError("relation_batch_size must be positive")
     manifest, region, case_manifest = _load_context(repo_root, manifest_path, region_id)
     artifacts = _artifact_dir(repo_root, region_id, artifact_dir)
     artifacts.mkdir(parents=True, exist_ok=True)
 
-    chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines)
+    all_chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines, chunk_overlap_lines)
+    chunks, skipped_chunks = _budget_chunks(all_chunks, max_chunks_per_source, max_total_chunks)
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
         manifest=manifest,
@@ -98,6 +115,7 @@ def run_staged_map(
         backend_retries=backend_retries,
         artifact_dir=artifacts,
         max_relation_pairs=max_relation_pairs,
+        relation_batch_size=relation_batch_size,
     )
     final_map = _assemble_map(
         region=region,
@@ -123,13 +141,22 @@ def run_staged_map(
             "region_id": region.region_id,
             "backend": backend,
             "chunk_lines": chunk_lines,
+            "chunk_overlap_lines": chunk_overlap_lines,
+            "max_chunks_per_source": max_chunks_per_source,
+            "max_total_chunks": max_total_chunks,
             "max_claims_per_chunk": max_claims_per_chunk,
             "max_relation_pairs": max_relation_pairs,
+            "relation_batch_size": relation_batch_size,
             "backend_timeout": backend_timeout,
             "backend_retries": backend_retries,
+            "all_chunk_count": len(all_chunks),
+            "selected_chunk_count": len(chunks),
+            "skipped_chunk_count": len(skipped_chunks),
             "chunks": [_chunk_summary(chunk) for chunk in chunks],
+            "skipped_chunks": skipped_chunks,
             "claim_count": len(claims),
             "relation_count": len(relations),
+            "relation_batch_count": _relation_batch_count(max_relation_pairs, relation_batch_size, claims),
             "rejected_claims": rejected_claims,
             "rejected_relations": rejected_relations,
             "candidate_path": _relative(repo_root, validation_target),
@@ -266,6 +293,7 @@ def _extract_relations(
     backend_retries: int,
     artifact_dir: Path,
     max_relation_pairs: int,
+    relation_batch_size: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
         return [], [], [{"reason": "too_few_claims"}]
@@ -278,9 +306,16 @@ def _extract_relations(
     seen: set[tuple[str, str, str]] = set()
     relation_index = 1
 
-    for packet in pair_packets:
-        prompt = _relation_pair_prompt(manifest, region, case_manifest, packet)
-        write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_prompt.txt", prompt)
+    for batch_index, batch in enumerate(_batches(pair_packets, relation_batch_size), start=1):
+        batch_id = f"batch_{batch_index:03d}"
+        prompt = (
+            _relation_pair_prompt(manifest, region, case_manifest, batch[0])
+            if len(batch) == 1
+            else _relation_batch_prompt(manifest, region, case_manifest, batch, batch_id)
+        )
+        artifact_subdir = "relation_pairs" if len(batch) == 1 else "relation_batches"
+        artifact_stem = batch[0]["pair_id"] if len(batch) == 1 else batch_id
+        write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_prompt.txt", prompt)
         try:
             result = run_model_backend(
                 prompt,
@@ -290,27 +325,88 @@ def _extract_relations(
             )
             raw = result.text
         except (RuntimeError, ValueError) as exc:
-            rejected.append({"pair_id": packet["pair_id"], "reason": "backend_error", "error": str(exc)})
+            if len(batch) > 1:
+                singleton_relations, singleton_payloads, singleton_rejected, relation_index = _classify_singleton_relations(
+                    manifest=manifest,
+                    region=region,
+                    case_manifest=case_manifest,
+                    batch=batch,
+                    claim_ids=claim_ids,
+                    permitted_types=permitted_types,
+                    seen=seen,
+                    relation_index=relation_index,
+                    backend=backend,
+                    backend_timeout=backend_timeout,
+                    backend_retries=backend_retries,
+                    artifact_dir=artifact_dir,
+                    batch_id=batch_id,
+                    batch_error=str(exc),
+                )
+                accepted.extend(singleton_relations)
+                payloads.extend(singleton_payloads)
+                rejected.extend(singleton_rejected)
+                continue
+            for packet in batch:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
             continue
-        write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_raw.txt", raw)
+        write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_raw.txt", raw)
         payload = _parse_model_json(raw)
-        write_json(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_canonical.json", payload or {})
+        write_json(artifact_dir / artifact_subdir / f"{artifact_stem}_canonical.json", payload or {})
         if not isinstance(payload, dict):
-            rejected.append({"pair_id": packet["pair_id"], "reason": "invalid_json"})
+            if len(batch) > 1:
+                singleton_relations, singleton_payloads, singleton_rejected, relation_index = _classify_singleton_relations(
+                    manifest=manifest,
+                    region=region,
+                    case_manifest=case_manifest,
+                    batch=batch,
+                    claim_ids=claim_ids,
+                    permitted_types=permitted_types,
+                    seen=seen,
+                    relation_index=relation_index,
+                    backend=backend,
+                    backend_timeout=backend_timeout,
+                    backend_retries=backend_retries,
+                    artifact_dir=artifact_dir,
+                    batch_id=batch_id,
+                    batch_error="invalid_json",
+                )
+                accepted.extend(singleton_relations)
+                payloads.extend(singleton_payloads)
+                rejected.extend(singleton_rejected)
+                continue
+            for packet in batch:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "invalid_json"})
             continue
         payloads.append(payload)
-        relation, reason = _normalize_relation_proposal(payload, claim_ids, permitted_types, packet)
-        if relation is None:
-            rejected.append({"pair_id": packet["pair_id"], "reason": reason, "proposal": payload})
+        packet_lookup = {packet["pair_id"]: packet for packet in batch}
+        proposals = _relation_proposals(payload)
+        if not proposals:
+            for packet in batch:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
             continue
-        key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
-        if key in seen:
-            rejected.append({"pair_id": packet["pair_id"], "reason": "duplicate_relation", "proposal": payload})
-            continue
-        seen.add(key)
-        relation["relation_id"] = f"{region.id_prefix}_r{relation_index:03d}"
-        relation_index += 1
-        accepted.append(relation)
+        proposed_pair_ids: set[str] = set()
+        for proposal in proposals:
+            pair_id = str(proposal.get("pair_id", "")).strip() if isinstance(proposal, dict) else ""
+            packet = packet_lookup.get(pair_id)
+            if packet is None:
+                rejected.append({"pair_id": pair_id or "missing", "batch_id": batch_id, "reason": "unknown_pair_id", "proposal": proposal})
+                continue
+            proposed_pair_ids.add(pair_id)
+            relation, reason = _normalize_relation_proposal(proposal, claim_ids, permitted_types, packet)
+            if relation is None:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
+                continue
+            key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
+            if key in seen:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "duplicate_relation", "proposal": proposal})
+                continue
+            seen.add(key)
+            relation["relation_id"] = f"{region.id_prefix}_r{relation_index:03d}"
+            relation_index += 1
+            accepted.append(relation)
+        for packet in batch:
+            if packet["pair_id"] not in proposed_pair_ids:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
     if not accepted:
         fallback = _fallback_relation(pair_packets, permitted_types)
         if fallback is not None:
@@ -328,6 +424,74 @@ def _extract_relations(
     return accepted, payloads, rejected
 
 
+def _classify_singleton_relations(
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    batch: list[dict[str, Any]],
+    claim_ids: set[str],
+    permitted_types: set[str],
+    seen: set[tuple[str, str, str]],
+    relation_index: int,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    artifact_dir: Path,
+    batch_id: str,
+    batch_error: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int]:
+    accepted: list[dict[str, Any]] = []
+    payloads: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = [
+        {
+            "batch_id": batch_id,
+            "reason": "batch_failed_used_singleton_fallback",
+            "error": batch_error,
+            "pair_ids": [packet["pair_id"] for packet in batch],
+        }
+    ]
+    for packet in batch:
+        prompt = _relation_pair_prompt(manifest, region, case_manifest, packet)
+        write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_prompt.txt", prompt)
+        try:
+            result = run_model_backend(
+                prompt,
+                backend,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+            )
+            raw = result.text
+        except (RuntimeError, ValueError) as exc:
+            rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
+            continue
+        write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_raw.txt", raw)
+        payload = _parse_model_json(raw)
+        write_json(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_canonical.json", payload or {})
+        if not isinstance(payload, dict):
+            rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "invalid_json"})
+            continue
+        payloads.append(payload)
+        proposals = _relation_proposals(payload)
+        if not proposals:
+            rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
+            continue
+        for proposal in proposals:
+            relation, reason = _normalize_relation_proposal(proposal, claim_ids, permitted_types, packet)
+            if relation is None:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
+                continue
+            key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
+            if key in seen:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "duplicate_relation", "proposal": proposal})
+                continue
+            seen.add(key)
+            relation["relation_id"] = f"{region.id_prefix}_r{relation_index:03d}"
+            relation_index += 1
+            accepted.append(relation)
+            break
+    return accepted, payloads, rejected, relation_index
+
+
 def _assemble_map(
     region: WorkedRegion,
     case_manifest: CaseManifest,
@@ -335,24 +499,12 @@ def _assemble_map(
     relations: list[dict[str, Any]],
     relation_payloads: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    cruxes = [
-        str(crux)
-        for payload in relation_payloads
-        for crux in (payload.get("crux_candidates", []) if isinstance(payload.get("crux_candidates", []), list) else [])
-    ]
+    cruxes = _payload_list_items(relation_payloads, "crux_candidates")
     if not cruxes and relations:
         cruxes = [
             f"{relations[0]['source_claim']} {relations[0]['relation_type']} {relations[0]['target_claim']} is a candidate crux for the question."
         ]
-    distinctions = [
-        str(item)
-        for payload in relation_payloads
-        for item in (
-            payload.get("similar_but_not_identical", [])
-            if isinstance(payload.get("similar_but_not_identical", []), list)
-            else []
-        )
-    ]
+    distinctions = _payload_list_items(relation_payloads, "similar_but_not_identical")
     evidence_rows = [
         [
             f"Does {claim['claim_id']} quote exact source text?",
@@ -374,6 +526,19 @@ def _assemble_map(
         "similar_but_not_identical": distinctions,
         "evidence_check": evidence_rows,
     }
+
+
+def _payload_list_items(payloads: list[dict[str, Any]], key: str) -> list[str]:
+    items: list[str] = []
+    for payload in payloads:
+        direct = payload.get(key, [])
+        if isinstance(direct, list):
+            items.extend(str(item) for item in direct)
+        for proposal in _relation_proposals(payload):
+            nested = proposal.get(key, [])
+            if isinstance(nested, list):
+                items.extend(str(item) for item in nested)
+    return items
 
 
 def _claim_prompt(
@@ -471,6 +636,72 @@ Rules:
 - Use only allowed relation types, or use relation_type "none".
 - If no defensible relation exists, set source_claim and target_claim to null and relation_type to "none".
 """
+
+
+def _relation_batch_prompt(
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    packets: list[dict[str, Any]],
+    batch_id: str,
+) -> str:
+    relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
+    pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
+    pair_ids = ", ".join(packet["pair_id"] for packet in packets)
+    return f"""You are classifying possible relations between already-validated claim cards.
+
+Prompt version: {RELATION_BATCH_PROMPT_VERSION}
+Region ID: {region.region_id}
+Batch ID: {batch_id}
+Case question: {case_manifest.question}
+
+Allowed relation types:
+{relation_types}
+
+Pairs to classify:
+{pair_blocks}
+
+Return only JSON:
+{{
+  "relations": [
+    {{
+      "pair_id": "one of: {pair_ids}",
+      "source_claim": "claim_id or null",
+      "target_claim": "claim_id or null",
+      "relation_type": "one allowed relation type or none",
+      "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+      "crux_candidates": ["crux text naming claim IDs"],
+      "similar_but_not_identical": ["distinction text naming claim IDs"]
+    }}
+  ]
+}}
+
+Rules:
+- Return exactly one object for each pair ID in this batch.
+- Do not include relation_id. Deterministic code assigns IDs later.
+- Use only the two claim IDs shown for each pair.
+- Use only allowed relation types, or use relation_type "none".
+- If no defensible relation exists for a pair, set source_claim and target_claim to null and relation_type to "none".
+"""
+
+
+def _relation_pair_block(packet: dict[str, Any]) -> str:
+    left = packet["left"]
+    right = packet["right"]
+    return f"""Pair ID: {packet['pair_id']}
+Claim A:
+- claim_id: {left['claim_id']}
+- claim: {left['claim']}
+- source_id: {left['source_id']}
+- role: {left['role']}
+- excerpt: {left['excerpt']}
+
+Claim B:
+- claim_id: {right['claim_id']}
+- claim: {right['claim']}
+- source_id: {right['source_id']}
+- role: {right['role']}
+- excerpt: {right['excerpt']}"""
 
 
 def _normalize_claim_proposal(
@@ -729,14 +960,24 @@ def _content_terms(text: str) -> set[str]:
     }
 
 
-def _source_chunks(repo_root: Path, case_manifest: CaseManifest, region: WorkedRegion, chunk_lines: int) -> list[SourceChunk]:
+def _source_chunks(
+    repo_root: Path,
+    case_manifest: CaseManifest,
+    region: WorkedRegion,
+    chunk_lines: int,
+    chunk_overlap_lines: int,
+) -> list[SourceChunk]:
     chunks: list[SourceChunk] = []
+    ordinal = 0
+    step = max(1, chunk_lines - chunk_overlap_lines)
     for source in _required_sources(case_manifest, region):
         lines = _source_text(repo_root, source).splitlines()
         if not lines:
             continue
-        for start in range(0, len(lines), chunk_lines):
+        for start in range(0, len(lines), step):
             selected = lines[start : start + chunk_lines]
+            if not selected:
+                continue
             start_line = start + 1
             end_line = start + len(selected)
             chunk_id = f"{source.source_id}_lines_{start_line}_{end_line}"
@@ -751,6 +992,7 @@ def _source_chunks(repo_root: Path, case_manifest: CaseManifest, region: WorkedR
                 for line_no, line in enumerate(selected, start=start_line)
                 if line.strip()
             )
+            ordinal += 1
             chunks.append(
                 SourceChunk(
                     chunk_id=_safe_filename(chunk_id),
@@ -758,6 +1000,7 @@ def _source_chunks(repo_root: Path, case_manifest: CaseManifest, region: WorkedR
                     title=source.title,
                     start_line=start_line,
                     end_line=end_line,
+                    ordinal=ordinal,
                     numbered_text=numbered,
                     plain_text="\n".join(selected),
                     spans=spans,
@@ -773,9 +1016,88 @@ def _chunk_summary(chunk: SourceChunk) -> dict[str, Any]:
         "title": chunk.title,
         "start_line": chunk.start_line,
         "end_line": chunk.end_line,
+        "ordinal": chunk.ordinal,
+        "signal_score": _chunk_signal_score(chunk),
         "span_count": len(chunk.spans),
         "spans": [span.__dict__ for span in chunk.spans],
     }
+
+
+def _budget_chunks(
+    chunks: list[SourceChunk],
+    max_chunks_per_source: int | None,
+    max_total_chunks: int | None,
+) -> tuple[list[SourceChunk], list[dict[str, Any]]]:
+    selected = list(chunks)
+    skipped: list[dict[str, Any]] = []
+    if max_chunks_per_source is not None:
+        selected_ids: set[str] = set()
+        by_source: dict[str, list[SourceChunk]] = {}
+        for chunk in selected:
+            by_source.setdefault(chunk.source_id, []).append(chunk)
+        for source_chunks in by_source.values():
+            ranked = sorted(source_chunks, key=_chunk_priority)
+            kept = set(ranked[:max_chunks_per_source])
+            selected_ids.update(chunk.chunk_id for chunk in kept)
+            for chunk in source_chunks:
+                if chunk not in kept:
+                    skipped.append(_skipped_chunk_summary(chunk, "max_chunks_per_source"))
+        selected = [chunk for chunk in selected if chunk.chunk_id in selected_ids]
+    if max_total_chunks is not None and len(selected) > max_total_chunks:
+        selected_set = _select_total_budget(selected, max_total_chunks)
+        for chunk in selected:
+            if chunk.chunk_id not in selected_set:
+                skipped.append(_skipped_chunk_summary(chunk, "max_total_chunks"))
+        selected = [chunk for chunk in selected if chunk.chunk_id in selected_set]
+    selected.sort(key=lambda chunk: chunk.ordinal)
+    skipped.sort(key=lambda item: int(item["ordinal"]))
+    return selected, skipped
+
+
+def _select_total_budget(chunks: list[SourceChunk], max_total_chunks: int) -> set[str]:
+    by_source: dict[str, list[SourceChunk]] = {}
+    for chunk in chunks:
+        by_source.setdefault(chunk.source_id, []).append(chunk)
+    if max_total_chunks < len(by_source):
+        return {chunk.chunk_id for chunk in sorted(chunks, key=_chunk_priority)[:max_total_chunks]}
+    selected_order: list[str] = []
+    selected: set[str] = set()
+    for source_chunks in sorted(by_source.values(), key=lambda items: min(chunk.ordinal for chunk in items)):
+        if len(selected) >= max_total_chunks:
+            break
+        chunk_id = min(source_chunks, key=_chunk_priority).chunk_id
+        selected.add(chunk_id)
+        selected_order.append(chunk_id)
+    if len(selected) >= max_total_chunks:
+        return set(selected_order[:max_total_chunks])
+    for chunk in sorted(chunks, key=_chunk_priority):
+        if len(selected) >= max_total_chunks:
+            break
+        if chunk.chunk_id not in selected:
+            selected.add(chunk.chunk_id)
+            selected_order.append(chunk.chunk_id)
+    return selected
+
+
+def _skipped_chunk_summary(chunk: SourceChunk, reason: str) -> dict[str, Any]:
+    return {
+        "chunk_id": chunk.chunk_id,
+        "source_id": chunk.source_id,
+        "start_line": chunk.start_line,
+        "end_line": chunk.end_line,
+        "ordinal": chunk.ordinal,
+        "signal_score": _chunk_signal_score(chunk),
+        "span_count": len(chunk.spans),
+        "reason": reason,
+    }
+
+
+def _chunk_priority(chunk: SourceChunk) -> tuple[int, int, int]:
+    return (-_chunk_signal_score(chunk), -len(chunk.spans), chunk.ordinal)
+
+
+def _chunk_signal_score(chunk: SourceChunk) -> int:
+    return sum(_span_signal_score(span.text) for span in chunk.spans)
 
 
 def _parse_model_json(text: str) -> dict[str, Any] | list[Any] | None:
@@ -784,6 +1106,28 @@ def _parse_model_json(text: str) -> dict[str, Any] | list[Any] | None:
         return json.loads(canonical)
     except json.JSONDecodeError:
         return None
+
+
+def _relation_proposals(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    if "pair_id" in payload:
+        return [payload]
+    proposals = payload.get("relations", [])
+    if isinstance(proposals, list):
+        return [proposal for proposal in proposals if isinstance(proposal, dict)]
+    return []
+
+
+def _batches(items: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
+    return [items[index : index + batch_size] for index in range(0, len(items), batch_size)]
+
+
+def _relation_batch_count(max_relation_pairs: int, relation_batch_size: int, claims: list[dict[str, Any]]) -> int:
+    if len(claims) < 2:
+        return 0
+    pair_count = len(_candidate_relation_pairs(claims, max_relation_pairs))
+    if pair_count == 0:
+        return 0
+    return (pair_count + relation_batch_size - 1) // relation_batch_size
 
 
 def _line_span_for_excerpt(chunk: SourceChunk, excerpt: str) -> str:

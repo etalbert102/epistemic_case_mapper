@@ -49,12 +49,17 @@ ecm --repo-root /path/to/package --package package.yaml semantic staged map \
   --region my_case_initial_region \
   --backend ollama:gemma4:26b \
   --backend-timeout 90 \
-  --backend-retries 1
+  --backend-retries 1 \
+  --chunk-lines 40 \
+  --chunk-overlap-lines 5 \
+  --relation-batch-size 4
 ```
 
 The staged mapper:
 
 - splits each required source into source-local line chunks,
+- supports overlapping chunks so important context is less likely to be split across chunk boundaries,
+- can optionally cap chunks per source or total chunks for long-document budgeted runs,
 - creates a deterministic source-span catalog with stable `span_id`s,
 - asks the backend to select `span_id`s and classify claims, not copy excerpts,
 - derives `source_id`, `source_span`, and exact `excerpt` deterministically from the selected span,
@@ -63,15 +68,37 @@ The staged mapper:
 - rejects malformed claims and unknown span IDs before assembly,
 - assigns claim IDs deterministically,
 - builds high-priority claim-pair packets deterministically,
-- asks the backend to classify one bounded pair at a time as a relation or `none`,
+- asks the backend to classify bounded batches of relation pairs as relations or `none`,
 - rejects relation endpoints and relation types that do not validate,
 - records a single deterministic fallback relation for review if no model-produced relation validates,
 - assembles the final map and runs the same semantic map validator,
 - writes invalid assembled maps to `failed_candidate.json` instead of overwriting the configured region map path.
 
-Intermediate prompts, raw model output, accepted objects, rejected objects, and `run_summary.json` are written under `artifacts/semantic/<region>/staged` unless `--artifact-dir` is supplied.
+Intermediate prompts, raw model output, accepted objects, rejected objects, and `run_summary.json` are written under `artifacts/semantic/<region>/staged` unless `--artifact-dir` is supplied. The summary records `all_chunk_count`, `selected_chunk_count`, `skipped_chunk_count`, and `skipped_chunks` so budgeted runs are auditable.
 
-`--backend-timeout` bounds each claim-chunk call and each relation-pair call. `--backend-retries` retries transient backend failures before fallback logic runs. `--max-relation-pairs` caps the deterministic relation opportunities sent to the backend.
+`--backend-timeout` bounds each claim-chunk call and each relation-batch call. `--backend-retries` retries transient backend failures before fallback logic runs. `--max-relation-pairs` caps the deterministic relation opportunities sent to the backend. `--relation-batch-size` controls how many candidate pairs are classified per backend call.
+
+For short packets, prefer exhaustive smaller chunks:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged map \
+  --region my_case_initial_region \
+  --chunk-lines 25 \
+  --chunk-overlap-lines 5
+```
+
+For long documents, use smaller chunks plus an explicit budget. `0` means unlimited for both budget flags:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged map \
+  --region my_case_initial_region \
+  --chunk-lines 25 \
+  --chunk-overlap-lines 5 \
+  --max-chunks-per-source 12 \
+  --max-total-chunks 80
+```
+
+Budgets preserve at least one selected chunk per source when the total budget allows it, then fill remaining slots by deterministic chunk score. This score only schedules model calls; it does not create final claims.
 
 Useful Ollama environment variables:
 
