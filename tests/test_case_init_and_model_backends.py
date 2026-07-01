@@ -4,9 +4,12 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION
+from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
 
 
@@ -142,6 +145,146 @@ def test_prompt_backend_returns_prompt_text() -> None:
     result = run_model_backend("source bounded prompt", "prompt")
     assert result.prompt_only is True
     assert result.text == "source bounded prompt"
+
+
+def test_command_backend_timeout_is_bounded() -> None:
+    with pytest.raises(RuntimeError, match="timed out"):
+        run_model_backend(
+            "prompt",
+            f"command:{sys.executable} -c 'import time; time.sleep(2)'",
+            timeout_seconds=1,
+        )
+
+
+def test_command_backend_retries_transient_failure(tmp_path: Path) -> None:
+    state_path = tmp_path / "attempts.txt"
+    fake_model = tmp_path / "flaky_model.py"
+    fake_model.write_text(
+        "import pathlib, sys\n"
+        f"path = pathlib.Path({str(state_path)!r})\n"
+        "count = int(path.read_text() or '0') if path.exists() else 0\n"
+        "path.write_text(str(count + 1))\n"
+        "sys.stdin.read()\n"
+        "if count == 0:\n"
+        "    print('temporary failure', file=sys.stderr)\n"
+        "    sys.exit(7)\n"
+        "print('{\"ok\": true}')\n",
+        encoding="utf-8",
+    )
+
+    result = run_model_backend(
+        "prompt",
+        f"command:{sys.executable} {fake_model}",
+        timeout_seconds=5,
+        max_retries=1,
+    )
+
+    assert result.text.strip() == '{"ok": true}'
+    assert result.attempts == 2
+
+
+def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatch, tmp_path: Path) -> None:
+    _init_demo_case(monkeypatch, tmp_path)
+    fake_model = tmp_path / "fake_staged_model.py"
+    fake_model.write_text(
+        "import json, sys\n"
+        "prompt = sys.stdin.read()\n"
+        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        "    if 'Source ID: demo_case_doc_a' in prompt:\n"
+        "        payload = {'claims': [\n"
+        "            {'claim': 'Alpha supports a staged claim.', 'span_id': 'demo_case_doc_a_s0001', 'excerpt_entailed_by_excerpt': 'yes', 'role': 'conclusion_support'},\n"
+        "            {'claim': 'Wrong span should be rejected.', 'span_id': 'missing_span', 'entailed_by_excerpt': 'yes', 'role': 'background'}\n"
+        "        ]}\n"
+        "    else:\n"
+        "        payload = {'claims': [\n"
+        "            {'claim': 'Gamma supplies a staged crux.', 'span_id': 'demo_case_doc_b_s0001', 'entailed_by_excerpt': 'yes', 'role': 'crux'}\n"
+        "        ]}\n"
+        f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim changes how the Alpha claim should be read.', 'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'], 'similar_but_not_identical': []}\n"
+        "else:\n"
+        "    payload = {}\n"
+        "print(json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "semantic",
+            "staged",
+            "map",
+            "--region",
+            "demo_case_initial_region",
+            "--backend",
+            f"command:{sys.executable} {fake_model}",
+        ],
+    )
+    assert cli.main() == 0
+    generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
+    assert [claim["claim_id"] for claim in generated["claims"]] == ["demo_case_c001", "demo_case_c002"]
+    assert generated["claims"][0]["excerpt"] == "Alpha line."
+    assert generated["relations"][0]["relation_id"] == "demo_case_r001"
+    assert generated["relations"][0]["source_claim"] == "demo_case_c002"
+    summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
+    assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
+    assert summary["rejected_relations"] == []
+
+
+def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tmp_path: Path) -> None:
+    _init_demo_case(monkeypatch, tmp_path)
+    fake_model = tmp_path / "fallback_staged_model.py"
+    fake_model.write_text(
+        "import json, sys\n"
+        "prompt = sys.stdin.read()\n"
+        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt and 'Source ID: demo_case_doc_a' in prompt:\n"
+        "    print('backend failed', file=sys.stderr)\n"
+        "    sys.exit(9)\n"
+        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {'claims': [\n"
+        "        {'claim': 'Gamma supplies a staged crux.', 'span_id': 'demo_case_doc_b_s0001', 'entailed_by_excerpt': 'yes', 'role': 'crux'}\n"
+        "    ]}\n"
+        f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {'pair_id': 'pair_001', 'source_claim': None, 'target_claim': None, 'relation_type': 'none', 'rationale': 'No edge.', 'crux_candidates': [], 'similar_but_not_identical': []}\n"
+        "else:\n"
+        "    payload = {}\n"
+        "print(json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "semantic",
+            "staged",
+            "map",
+            "--region",
+            "demo_case_initial_region",
+            "--backend",
+            f"command:{sys.executable} {fake_model}",
+            "--backend-retries",
+            "0",
+        ],
+    )
+    assert cli.main() == 0
+    generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
+    assert generated["claims"][0]["extraction_method"] == "deterministic_fallback_span"
+    assert generated["relations"][0]["extraction_method"] == "deterministic_fallback_pair"
+    summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
+    assert summary["backend_retries"] == 0
+    assert summary["rejected_claims"][0]["reason"] == "backend_error_used_deterministic_fallback"
+    assert summary["rejected_relations"][-1]["reason"] == "model_under_related_used_deterministic_fallback"
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

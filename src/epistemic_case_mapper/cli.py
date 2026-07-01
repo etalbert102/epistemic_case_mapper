@@ -18,6 +18,7 @@ from epistemic_case_mapper.semantic_pipeline import (
     validate_critique_candidate,
     validate_map_candidate,
 )
+from epistemic_case_mapper.staged_semantic_pipeline import run_staged_map
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 from epistemic_case_mapper.unseen_quality import (
     quality_signals,
@@ -128,6 +129,19 @@ def main() -> int:
     semantic_critique_run.add_argument("--map-path", help="Candidate map path. Defaults to the region map path.")
     semantic_critique_run.add_argument("--output", help="Output path. Defaults to prompt file for prompt backend, else artifacts/semantic.")
     semantic_critique_run.add_argument("--no-validate", action="store_true", help="Skip semantic JSON validation.")
+    semantic_staged = semantic_subparsers.add_parser("staged", help="Run chunked staged semantic mapping.")
+    semantic_staged_subparsers = semantic_staged.add_subparsers(dest="semantic_staged_target", required=True)
+    semantic_staged_map = semantic_staged_subparsers.add_parser("map", help="Extract claims by chunk, build relations, and assemble a map.")
+    semantic_staged_map.add_argument("--region", required=True)
+    semantic_staged_map.add_argument("--backend", help="Override manifest default backend.")
+    semantic_staged_map.add_argument("--output", help="Output path. Defaults to the region map path.")
+    semantic_staged_map.add_argument("--artifact-dir", help="Directory for intermediate prompts and model outputs.")
+    semantic_staged_map.add_argument("--chunk-lines", type=int, default=40)
+    semantic_staged_map.add_argument("--max-claims-per-chunk", type=int, default=4)
+    semantic_staged_map.add_argument("--max-relation-pairs", type=int, default=12)
+    semantic_staged_map.add_argument("--backend-timeout", type=int, default=90, help="Seconds allowed for each backend call.")
+    semantic_staged_map.add_argument("--backend-retries", type=int, default=1, help="Retries for transient backend failures.")
+    semantic_staged_map.add_argument("--no-validate", action="store_true", help="Skip final semantic JSON validation.")
     semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
     semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
     semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")
@@ -258,6 +272,21 @@ def main() -> int:
             args.output,
             args.no_validate,
         )
+    if args.command == "semantic" and args.semantic_target == "staged" and args.semantic_staged_target == "map":
+        return _run_staged_semantic_map(
+            repo_root,
+            args.package,
+            args.region,
+            args.backend,
+            args.output,
+            args.artifact_dir,
+            args.chunk_lines,
+            args.max_claims_per_chunk,
+            args.max_relation_pairs,
+            args.backend_timeout,
+            args.backend_retries,
+            args.no_validate,
+        )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "critique":
@@ -354,6 +383,72 @@ def _run_semantic_critique(
         validate=lambda path: _validate_semantic_critique(str(path)),
         no_validate=no_validate,
     )
+
+
+def _run_staged_semantic_map(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    output: str | None,
+    artifact_dir: str | None,
+    chunk_lines: int,
+    max_claims_per_chunk: int,
+    max_relation_pairs: int,
+    backend_timeout: int,
+    backend_retries: int,
+    no_validate: bool,
+) -> int:
+    if chunk_lines < 1:
+        print("semantic_staged_failed chunk_lines_must_be_positive", file=sys.stderr)
+        return 1
+    if max_claims_per_chunk < 1:
+        print("semantic_staged_failed max_claims_per_chunk_must_be_positive", file=sys.stderr)
+        return 1
+    if max_relation_pairs < 1:
+        print("semantic_staged_failed max_relation_pairs_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_timeout < 1:
+        print("semantic_staged_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("semantic_staged_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        result = run_staged_map(
+            repo_root=repo_root,
+            manifest_path=package,
+            region_id=region_id,
+            backend=backend or manifest.default_model_backend,
+            output_path=output,
+            artifact_dir=artifact_dir,
+            chunk_lines=chunk_lines,
+            max_claims_per_chunk=max_claims_per_chunk,
+            max_relation_pairs=max_relation_pairs,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            validate=not no_validate,
+        )
+    except (RuntimeError, ValueError, KeyError) as exc:
+        print(f"semantic_staged_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+    print(
+        "Staged map wrote "
+        f"{_display_path(repo_root, result.output_path)} "
+        f"claims={result.claim_count} relations={result.relation_count} "
+        f"rejected_claims={result.rejected_claim_count} rejected_relations={result.rejected_relation_count} "
+        f"artifacts={_display_path(repo_root, result.artifact_dir)}"
+    )
+    if result.failures:
+        for failure in result.failures:
+            print(f"FAIL: {failure}", file=sys.stderr)
+        return 1
+    if no_validate:
+        print("Semantic validation skipped.")
+    else:
+        print(f"Validated staged semantic map region={region_id} path={result.output_path}")
+    return 0
 
 
 def _write_backend_result(

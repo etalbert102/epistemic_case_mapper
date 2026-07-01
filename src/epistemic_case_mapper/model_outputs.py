@@ -55,6 +55,9 @@ def _repair_known_field_aliases(value):
 def _canonical_key(key: str) -> str:
     aliases = {
         "entailed_by__excerpt": "entailed_by_excerpt",
+        "excerpt_entailed_by_excerpt": "entailed_by_excerpt",
+        "entally_by_excerpt": "entailed_by_excerpt",
+        "entailed_by_by_excerpt": "entailed_by_excerpt",
         "entailed_by_source_excerpt": "entailed_by_excerpt",
         "sourcecap_id": "source_id",
         "sourceID": "source_id",
