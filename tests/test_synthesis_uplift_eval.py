@@ -6,6 +6,7 @@ from scripts.run_synthesis_uplift_eval import (
     _deterministic_requirement_coverage,
     _deterministic_patch_synthesis,
     _needs_repair,
+    _render_synthesis_packet,
 )
 
 
@@ -146,6 +147,26 @@ def test_directional_phrase_must_be_preserved_for_clear_coverage() -> None:
     )
     patched_coverage = _deterministic_requirement_coverage(patched, requirements)
 
+    assert "## Readable Synthesis" in patched
+    assert "## Mapped Distinctions Preserved" in patched
+    assert "## Stress-Test Caveats" in patched
     assert "LHC products may be slower than cosmic-ray products" in patched
     assert "cosmic-ray products may be slower than LHC products" not in patched
     assert patched_coverage["clear_count"] == 1
+
+
+def test_render_synthesis_packet_separates_prose_from_audit_sections() -> None:
+    rendered = _render_synthesis_packet(
+        {
+            "synthesis": "This is readable prose.",
+            "mapped_distinctions": ["Endpoint evidence is not event evidence."],
+            "stress_caveats": ["Check whether uncertainty is overstated."],
+        }
+    )
+
+    assert rendered.startswith("## Readable Synthesis")
+    assert "This is readable prose." in rendered
+    assert "## Mapped Distinctions Preserved" in rendered
+    assert "- Endpoint evidence is not event evidence." in rendered
+    assert "## Stress-Test Caveats" in rendered
+    assert "- Check whether uncertainty is overstated." in rendered

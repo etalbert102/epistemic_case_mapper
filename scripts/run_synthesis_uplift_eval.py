@@ -250,14 +250,15 @@ def _synthesis_prompt(
         (
             "You are revising a flat synthesis so it better preserves the decision space.",
             f"Region: {region.region_id}",
-            "Write a concise synthesis for an informed reader. Return valid JSON only.",
-            "Required JSON shape: {\"synthesis\": \"the revised synthesis as readable prose\"}",
+            "Write a concise review packet for an informed reader. Return valid JSON only.",
+            "Required JSON shape: {\"synthesis\": \"readable prose\", \"mapped_distinctions\": [\"map-backed distinction bullets\"], \"stress_caveats\": [\"stress caveat bullets\"]}",
             "Requirements:",
             "- Treat the validated rewrite requirements as the backbone of the synthesis.",
             "- Preserve the mapped claim and relation anchors before adding any stress finding.",
             "- Use stress findings only to add pressure, caveats, or uncertainty; do not let them replace map distinctions.",
             "- Preserve cruxes, caveats, source-role boundaries, and load-bearing relations.",
-            "- Do not merely list claim IDs; make the synthesis readable.",
+            "- Put readable prose in `synthesis`; put checklist-like material in `mapped_distinctions`, not in the prose.",
+            "- Do not merely list claim IDs; make the prose readable.",
             "- Keep uncertainty visible and avoid adding facts beyond the provided artifacts.",
             "- Prefer explicit distinctions over fluent compression when the distinction changes interpretation.",
             "- If a stress finding conflicts with a mapped source-backed distinction, keep the mapped distinction and phrase the stress finding as a question or caveat.",
@@ -733,14 +734,14 @@ def _repair_synthesis_prompt(
         )
     return "\n\n".join(
         (
-            "You are repairing a synthesis that failed deterministic map-coverage checks.",
+            "You are repairing a review packet that failed deterministic map-coverage checks.",
             f"Region: {region.region_id}",
             "Return valid JSON only.",
-            "Required JSON shape: {\"synthesis\": \"the repaired synthesis as readable prose\"}",
+            "Required JSON shape: {\"synthesis\": \"readable repaired prose\", \"mapped_distinctions\": [\"map-backed distinction bullets\"], \"stress_caveats\": [\"stress caveat bullets\"]}",
             "Repair rules:",
-            "- Preserve the existing readable synthesis where it is correct.",
+            "- Preserve the existing readable synthesis where it is correct, but do not bury checklist residue in it.",
             "- Correct any reversed directional distinction.",
-            "- Add the missing mapped distinctions below without turning the answer into an ID list.",
+            "- Add the missing mapped distinctions below to `mapped_distinctions` unless they can be integrated naturally into the prose.",
             "- Use exact directional/boundary phrases when supplied, unless grammar requires a minimal surrounding phrase.",
             "- Do not add facts beyond the mapped claim and relation anchors.",
             "Failed requirements:\n" + ("\n\n".join(failed_blocks) or "none"),
@@ -777,9 +778,50 @@ def _deterministic_patch_synthesis(
         else:
             additions.append(f"{req.loss_id}: {req.instruction}")
     if not additions:
-        return patched
-    patch = " Key mapped distinctions to keep explicit: " + " ".join(additions)
-    return patched.rstrip() + "\n\n" + patch.strip()
+        return _ensure_sectioned_packet(patched)
+    return _add_mapped_distinctions_section(patched, additions)
+
+
+def _ensure_sectioned_packet(text: str) -> str:
+    if "## Readable Synthesis" in text and "## Mapped Distinctions Preserved" in text:
+        return text
+    return "\n".join(
+        [
+            "## Readable Synthesis",
+            "",
+            text.strip(),
+            "",
+            "## Mapped Distinctions Preserved",
+            "",
+            "- No additional deterministic mapped-distinction patch required.",
+            "",
+            "## Stress-Test Caveats",
+            "",
+            "- No stress caveats returned.",
+            "",
+        ]
+    )
+
+
+def _add_mapped_distinctions_section(text: str, additions: list[str]) -> str:
+    unique_additions = [item for index, item in enumerate(additions) if item and item not in additions[:index]]
+    if "## Mapped Distinctions Preserved" not in text:
+        lines = ["## Readable Synthesis", "", text.strip(), "", "## Mapped Distinctions Preserved", ""]
+        lines.extend(f"- {item}" for item in unique_additions)
+        lines.extend(["", "## Stress-Test Caveats", "", "- No stress caveats returned.", ""])
+        return "\n".join(lines)
+    lines = text.rstrip().splitlines()
+    output = []
+    inserted = False
+    for line in lines:
+        if line.startswith("## Stress-Test Caveats") and not inserted:
+            output.extend(f"- {item}" for item in unique_additions)
+            output.append("")
+            inserted = True
+        output.append(line)
+    if not inserted:
+        output.extend(["", *[f"- {item}" for item in unique_additions]])
+    return "\n".join(output).rstrip() + "\n"
 
 
 def _replace_obvious_reversal(text: str, required_phrase: str) -> str:
@@ -933,8 +975,35 @@ def _run_synthesis_backend(prompt: str, backend: str, timeout_seconds: int, max_
     raw = _run_text_backend(prompt, backend, timeout_seconds, max_retries)
     payload = _parse_json(raw)
     if isinstance(payload, dict) and isinstance(payload.get("synthesis"), str):
-        return payload["synthesis"].strip()
+        return _render_synthesis_packet(payload)
     return raw
+
+
+def _render_synthesis_packet(payload: dict[str, Any]) -> str:
+    synthesis = _as_text(payload.get("synthesis"))
+    mapped = _string_list(payload.get("mapped_distinctions"))
+    caveats = _string_list(payload.get("stress_caveats"))
+    if not mapped and not caveats:
+        return synthesis
+    lines = ["## Readable Synthesis", "", synthesis or "No readable synthesis returned.", ""]
+    lines.extend(["## Mapped Distinctions Preserved", ""])
+    if mapped:
+        lines.extend(f"- {item}" for item in mapped)
+    else:
+        lines.append("- No mapped distinctions returned.")
+    lines.extend(["", "## Stress-Test Caveats", ""])
+    if caveats:
+        lines.extend(f"- {item}" for item in caveats)
+    else:
+        lines.append("- No stress caveats returned.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 def _parse_json(text: str) -> dict[str, Any] | None:
