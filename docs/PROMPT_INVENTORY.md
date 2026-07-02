@@ -100,6 +100,12 @@ Blinded baseline files must record:
 - `baseline_writer_had_access_to_curated_map: no`,
 - span-limited baseline limitation.
 
+## External Deep Research Baseline
+
+Use when comparing the mapper against an off-the-shelf retrieval-plus-synthesis workflow. The recorded eggs / dietary cholesterol baseline prompt is in `docs/protocols/DEEP_RESEARCH_EGGS_BASELINE_PROMPT.md`.
+
+This baseline should be run blind: do not expose the curated map, quality report, stress output, or config profile. Save both the final Deep Research report and the retrieved source list. For controlled comparison, run the mapper on the same retrieved documents with the same question.
+
 ## Decision-Space Erosion Audit Prompt
 
 Use after the flat baseline and curated map are fixed.
@@ -157,6 +163,7 @@ Use these tags in generated or curated artifacts:
 - `relation_extraction_prompt_v1`: relation extraction prompt above.
 - `flat_baseline_prompt_v1`: flat baseline prompt above.
 - `flat_baseline_prompt_v1_blinded_ollama`: blinded local Ollama baseline procedure above.
+- `deep_research_eggs_retrieval_baseline_v1`: external Deep Research baseline prompt for the eggs / dietary cholesterol case.
 - `erosion_audit_prompt_v1`: decision-space erosion audit prompt above.
 - `semantic_critique_prompt_v1_json`: executable JSON critique prompt built by `ecm semantic prompt critique`.
 - `human_review_handoff_v1`: human review procedure above.
