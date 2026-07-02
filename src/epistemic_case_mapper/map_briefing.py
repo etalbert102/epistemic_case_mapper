@@ -227,6 +227,8 @@ def build_map_briefing_prompt(
             "- Use the deterministic section buckets as hard boundaries: synthesize each evidence_roles section only from that section's bucket.",
             "- Use `briefing_contract.answer_frame` to set the bottom-line strength; do not make a stronger claim than the contract allows.",
             "- Use `briefing_contract.scope_ledger` to keep scope caveats separate from the general/default answer.",
+            "- Use `briefing_plan` as the prose outline: bottom line first, then weighted reasons, then counterposition, then scope/method limits.",
+            "- Use `evidence_weighting_ledger`; lead with high/medium weight direct evidence and identify low-weight evidence as limited, indirect, deterministic backfill, or source-incomplete.",
             "- Apply `briefing_contract.overstatement_lint` before returning: soften any sentence that violates an active lint rule.",
             "- `main_support` means evidence for the bottom-line answer or low-concern/default recommendation; do not put concern evidence there.",
             "- `conflicting_evidence` means evidence for harm, contrary findings, or tension with the bottom line.",
@@ -259,6 +261,8 @@ def briefing_scaffold(
     cruxes = partition["crux_candidates"]
     audit_trail = list(partition["audit_trail"])
     contract = build_briefing_contract(partition, quality_report)
+    evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
+    briefing_plan = build_briefing_plan(partition, contract, evidence_ledger, quality_report)
     for item in erosion_audit.get("items", []):
         if isinstance(item, dict) and item.get("reader_anchor"):
             audit_trail.append(str(item["reader_anchor"]))
@@ -273,6 +277,8 @@ def briefing_scaffold(
             "method_limits": "Measurement validity, source limitations, guideline/practical implementation limits, and abstract-only/full-text limits.",
         },
         "briefing_contract": contract,
+        "evidence_weighting_ledger": evidence_ledger,
+        "briefing_plan": briefing_plan,
         "evidence_roles": {key: _dedupe(items)[:8] for key, items in evidence_roles.items()},
         "crux_candidates": _dedupe_dicts(cruxes)[:8],
         "audit_trail": _dedupe(audit_trail)[:10],
@@ -322,6 +328,243 @@ def build_briefing_contract(partition: dict[str, Any], quality_report: dict[str,
         "support_signal_profile": support_profile,
         "overstatement_lint": active_lints,
     }
+
+
+def build_evidence_weighting_ledger(
+    candidate_map: dict[str, Any],
+    partition: dict[str, Any],
+    quality_report: dict[str, Any],
+    source_lookup: dict[str, str],
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for claim in _claims(candidate_map):
+        section = _claim_evidence_section(claim)
+        score, modifiers = _claim_evidence_weight_score(claim, section, quality_report, source_lookup)
+        rows.append(
+            {
+                "claim_id": str(claim.get("claim_id", "")),
+                "section": section,
+                "weight": _weight_label(score),
+                "score": score,
+                "modifiers": modifiers,
+                "claim": str(claim.get("claim") or claim.get("text") or ""),
+                "source": source_lookup.get(str(claim.get("source_id", "")), display_source_name(str(claim.get("source_id", "")))),
+                "supporting_source_count": len(_claim_supporting_sources_for_briefing(claim)),
+            }
+        )
+    rows.sort(key=lambda row: (-int(row["score"]), str(row["section"]), str(row["claim_id"])))
+    by_section: dict[str, list[dict[str, Any]]] = {
+        "main_support": [],
+        "conflicting_evidence": [],
+        "scope_limits": [],
+        "method_limits": [],
+    }
+    for row in rows:
+        by_section.setdefault(str(row["section"]), []).append(row)
+    return {
+        "schema_id": "evidence_weighting_ledger_v1",
+        "method": "generic_entailment_source_directness_support_role_scoring",
+        "quality_status": quality_report.get("status"),
+        "top_evidence_by_section": {section: items[:6] for section, items in by_section.items()},
+        "weight_counts": _counts(row["weight"] for row in rows),
+        "notes": [
+            "Weights are deterministic synthesis guidance, not statistical study-quality scores.",
+            "Low-weight evidence may still matter as a caveat, scope boundary, or source-completeness warning.",
+        ],
+        "partition_counts": {key: len(value) for key, value in partition.get("evidence_roles", {}).items()},
+    }
+
+
+def build_briefing_plan(
+    partition: dict[str, Any],
+    contract: dict[str, Any],
+    evidence_ledger: dict[str, Any],
+    quality_report: dict[str, Any],
+) -> dict[str, Any]:
+    top_by_section = evidence_ledger.get("top_evidence_by_section", {})
+    support = _ledger_claim_texts(top_by_section.get("main_support", []), weight_floor="medium")
+    conflicts = _ledger_claim_texts(top_by_section.get("conflicting_evidence", []), weight_floor="medium")
+    scope = _ledger_claim_texts(top_by_section.get("scope_limits", []), weight_floor="low")
+    methods = _ledger_claim_texts(top_by_section.get("method_limits", []), weight_floor="low")
+    answer_frame = contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {}
+    return {
+        "schema_id": "briefing_plan_v1",
+        "opening_move": answer_frame.get("default_stance_instruction", "Answer directly with calibrated uncertainty."),
+        "paragraph_order": [
+            {
+                "section": "bottom_line",
+                "job": "Give the answer in one calibrated paragraph and name the strongest counterposition if present.",
+                "must_use": _dedupe([str(answer_frame.get("strongest_counterposition", "")), *support[:2], *conflicts[:1]])[:4],
+            },
+            {
+                "section": "why_this_read",
+                "job": "Explain the weighted support without overstating null, indirect, or backfilled evidence.",
+                "must_use": support[:4],
+            },
+            {
+                "section": "what_pushes_back",
+                "job": "Explain contrary evidence and tensions as live considerations, not as afterthoughts.",
+                "must_use": conflicts[:4],
+            },
+            {
+                "section": "where_it_applies",
+                "job": "Separate population, dose, endpoint, and setting boundaries from the general answer.",
+                "must_use": scope[:4],
+            },
+            {
+                "section": "why_not_stronger",
+                "job": "Name method, source-completeness, quality-report, and coverage limits.",
+                "must_use": _dedupe([*methods[:4], *quality_report_issue_text(quality_report)[:3]])[:6],
+            },
+        ],
+        "section_transition_rules": [
+            "Do not repeat evidence-role bullets verbatim when a synthesis sentence can combine them.",
+            "Do not let low-weight evidence drive the bottom line unless it is the only evidence on a decision-critical caveat.",
+            "When evidence conflicts, state what scope or method difference explains the tension if the map supports one.",
+        ],
+    }
+
+
+def _claim_evidence_weight_score(
+    claim: dict[str, Any],
+    section: str,
+    quality_report: dict[str, Any],
+    source_lookup: dict[str, str],
+) -> tuple[int, list[str]]:
+    score = 2
+    modifiers: list[str] = ["base_source_grounded_claim"]
+    entailed = str(claim.get("entailed_by_excerpt", "")).lower()
+    if entailed == "yes":
+        score += 2
+        modifiers.append("entailed_by_excerpt")
+    elif entailed == "uncertain":
+        score -= 1
+        modifiers.append("uncertain_entailment")
+    else:
+        score -= 2
+        modifiers.append("not_entailed_or_unmarked")
+    role = str(claim.get("role", "other"))
+    if role in {"crux", "conclusion_support"}:
+        score += 2
+        modifiers.append(f"decision_role:{role}")
+    elif role in {"scope_limit", "external_validity", "implementation_constraint", "measurement_validity", "cost_feasibility"}:
+        score += 1
+        modifiers.append(f"boundary_role:{role}")
+    supporting_sources = _claim_supporting_sources_for_briefing(claim)
+    if len(supporting_sources) > 1:
+        score += min(2, len(supporting_sources) - 1)
+        modifiers.append(f"multi_source_support:{len(supporting_sources)}")
+    extraction_method = str(claim.get("extraction_method", "model"))
+    if extraction_method == "deterministic_coverage_backfill":
+        score -= 1
+        modifiers.append("coverage_backfill_lower_weight")
+    elif extraction_method.startswith("deterministic"):
+        score -= 1
+        modifiers.append("deterministic_fallback_lower_weight")
+    source_name = source_lookup.get(str(claim.get("source_id", "")), str(claim.get("source_id", "")))
+    source_text = f"{source_name} {claim.get('source_id', '')}".lower()
+    if any(marker in source_text for marker in ("abstract", "pubmed", "metadata")):
+        score -= 1
+        modifiers.append("source_incomplete_or_abstract")
+    text = _claim_text_bundle(claim)
+    if _looks_like_method_or_source_limit(text):
+        score -= 1
+        modifiers.append("method_or_source_limit")
+    if _looks_like_scope_or_subgroup(text):
+        modifiers.append("scope_specific")
+    if _contains_hard_outcome_signal(text):
+        score += 1
+        modifiers.append("hard_outcome_signal")
+    if _contains_surrogate_signal(text):
+        score -= 1
+        modifiers.append("surrogate_or_biomarker_signal")
+    if section in {"main_support", "conflicting_evidence"} and (
+        _looks_like_support_evidence(text) or _looks_like_concern_evidence(text)
+    ):
+        score += 1
+        modifiers.append("directional_decision_signal")
+    if any(isinstance(issue, dict) and issue.get("severity") == "risk" for issue in quality_report.get("issues", [])):
+        modifiers.append("quality_risk_context")
+    return max(0, min(score, 8)), modifiers
+
+
+def _weight_label(score: int) -> str:
+    if score >= 6:
+        return "high"
+    if score >= 3:
+        return "medium"
+    return "low"
+
+
+def _ledger_claim_texts(rows: Any, *, weight_floor: str) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    floor = {"low": 0, "medium": 1, "high": 2}.get(weight_floor, 0)
+    values = {"low": 0, "medium": 1, "high": 2}
+    texts: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if values.get(str(row.get("weight")), 0) < floor:
+            continue
+        claim = str(row.get("claim", "")).strip()
+        source = str(row.get("source", "")).strip()
+        weight = str(row.get("weight", "")).strip()
+        if claim:
+            texts.append(f"{claim} ({source}; {weight} weight)" if source else f"{claim} ({weight} weight)")
+    return texts
+
+
+def _claim_supporting_sources_for_briefing(claim: dict[str, Any]) -> list[str]:
+    sources = [str(claim.get("source_id", ""))]
+    for source_id in claim.get("supporting_sources", []):
+        if isinstance(source_id, str):
+            sources.append(source_id)
+    return sorted({source_id for source_id in sources if source_id})
+
+
+def _contains_hard_outcome_signal(text: str) -> bool:
+    normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
+    return any(
+        marker in normalized
+        for marker in (
+            " mortality ",
+            " death ",
+            " cardiovascular event ",
+            " cvd ",
+            " hospitalization ",
+            " incident ",
+            " stroke ",
+            " disease risk ",
+            " all-cause ",
+        )
+    )
+
+
+def _contains_surrogate_signal(text: str) -> bool:
+    normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
+    return any(
+        marker in normalized
+        for marker in (
+            " biomarker",
+            " surrogate",
+            " ldl",
+            " hdl",
+            " apob",
+            " marker",
+            " intermediate endpoint",
+        )
+    )
+
+
+def _counts(items: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        if not item:
+            continue
+        key = str(item)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def partition_map_evidence(

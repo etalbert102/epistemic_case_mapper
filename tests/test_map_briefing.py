@@ -8,6 +8,7 @@ from epistemic_case_mapper import cli
 from epistemic_case_mapper.map_briefing import (
     briefing_scaffold,
     build_briefing_contract,
+    build_evidence_weighting_ledger,
     calibrate_confidence,
     expand_reader_map_references,
     partition_map_evidence,
@@ -305,6 +306,53 @@ def test_briefing_contract_is_domain_neutral_and_flags_overstatement_risks() -> 
     assert contract["scope_ledger"]["population_or_actor"]
     assert contract["scope_ledger"]["measurement_endpoint"]
     assert "low-concern" in contract["answer_frame"]["default_stance_instruction"]
+
+
+def test_evidence_weighting_ledger_and_plan_prioritize_direct_evidence() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The intervention reduced hospitalization risk in adults.",
+                "source_id": "trial_full",
+                "source_span": "lines 1-1",
+                "excerpt": "The intervention reduced hospitalization risk in adults.",
+                "entailed_by_excerpt": "yes",
+                "role": "conclusion_support",
+                "supporting_sources": ["trial_full", "replication_full"],
+            },
+            {
+                "claim_id": "c002",
+                "claim": "The intervention improved a biomarker in a short abstract-only report.",
+                "source_id": "abstract_only",
+                "source_span": "lines 1-1",
+                "excerpt": "The intervention improved a biomarker in a short abstract-only report.",
+                "entailed_by_excerpt": "yes",
+                "role": "measurement_validity",
+                "extraction_method": "deterministic_coverage_backfill",
+            },
+        ],
+        "relations": [],
+    }
+    source_lookup = {
+        "trial_full": "Trial Full Text",
+        "replication_full": "Replication Full Text",
+        "abstract_only": "Abstract Only PubMed",
+    }
+    quality_report = {"status": "usable_with_review", "score": 90, "issues": []}
+    partition = partition_map_evidence(candidate_map, source_lookup)
+    ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
+    scaffold = briefing_scaffold(candidate_map, quality_report, source_lookup, {"items": []})
+
+    support_rows = ledger["top_evidence_by_section"]["main_support"]
+    method_rows = ledger["top_evidence_by_section"]["method_limits"]
+    assert support_rows[0]["claim_id"] == "c001"
+    assert support_rows[0]["weight"] == "high"
+    assert method_rows[0]["claim_id"] == "c002"
+    assert method_rows[0]["weight"] in {"low", "medium"}
+    assert "coverage_backfill_lower_weight" in method_rows[0]["modifiers"]
+    assert scaffold["briefing_plan"]["paragraph_order"][0]["section"] == "bottom_line"
+    assert "evidence_weighting_ledger" in scaffold
 
 
 def test_repair_briefing_payload_applies_contract_lint_to_final_prose() -> None:

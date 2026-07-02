@@ -30,6 +30,8 @@ VALID_CLAIM_ROLES = {
     "background",
     "other",
 }
+CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
+CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,22 @@ def run_staged_map(
         artifact_dir=artifacts,
         max_claims_per_chunk=max_claims_per_chunk,
     )
+    llm_claim_count = len(claims)
+    coverage_claims, coverage_report = _coverage_backfill_claims(
+        all_chunks=all_chunks,
+        selected_chunks=chunks,
+        existing_claims=claims,
+        id_prefix=region.id_prefix,
+    )
+    if coverage_claims:
+        claims.extend(coverage_claims)
+    pre_consolidation_claim_count = len(claims)
+    write_json(artifacts / "coverage_backfill_claims.json", coverage_report)
+    claims, consolidation_report = consolidate_claims_for_map(
+        claims,
+        min_claims=max(2, region.thresholds.min_claims),
+    )
+    write_json(artifacts / "claim_consolidation_report.json", consolidation_report)
     relations, relation_payloads, rejected_relations = _extract_relations(
         manifest=manifest,
         region=region,
@@ -214,6 +232,11 @@ def run_staged_map(
             "skipped_chunk_count": len(skipped_chunks),
             "chunks": [_chunk_summary(chunk) for chunk in chunks],
             "skipped_chunks": skipped_chunks,
+            "coverage_backfill": coverage_report,
+            "claim_consolidation": consolidation_report,
+            "llm_claim_count": llm_claim_count,
+            "coverage_claim_count": len(coverage_claims),
+            "pre_consolidation_claim_count": pre_consolidation_claim_count,
             "initial_claim_count": len(claims),
             "initial_relation_count": len(relations),
             "relation_sharpening": _relation_sharpening_summary(relations),
@@ -353,6 +376,306 @@ def _extract_claims(
                     )
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
+
+
+def _coverage_backfill_claims(
+    *,
+    all_chunks: list[SourceChunk],
+    selected_chunks: list[SourceChunk],
+    existing_claims: list[dict[str, Any]],
+    id_prefix: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    selected_ids = {chunk.chunk_id for chunk in selected_chunks}
+    existing_keys = {
+        (
+            str(claim.get("source_id", "")),
+            _normalize_text(str(claim.get("excerpt", ""))),
+            _normalize_text(str(claim.get("claim", ""))),
+        )
+        for claim in existing_claims
+    }
+    next_index = _next_claim_index(existing_claims, id_prefix)
+    backfilled: list[dict[str, Any]] = []
+    skipped_chunk_ids: list[str] = []
+    duplicate_chunk_ids: list[str] = []
+    no_signal_chunk_ids: list[str] = []
+    for chunk in all_chunks:
+        if chunk.chunk_id in selected_ids:
+            continue
+        skipped_chunk_ids.append(chunk.chunk_id)
+        fallback = _fallback_claim_for_chunk(chunk)
+        if fallback is None:
+            no_signal_chunk_ids.append(chunk.chunk_id)
+            continue
+        key = (
+            fallback["source_id"],
+            _normalize_text(fallback["excerpt"]),
+            _normalize_text(fallback["claim"]),
+        )
+        if key in existing_keys:
+            duplicate_chunk_ids.append(chunk.chunk_id)
+            continue
+        existing_keys.add(key)
+        fallback["claim_id"] = f"{id_prefix}_c{next_index:03d}"
+        next_index += 1
+        fallback["extraction_method"] = "deterministic_coverage_backfill"
+        fallback["coverage_backfill"] = {
+            "chunk_id": chunk.chunk_id,
+            "reason": "chunk_skipped_by_budget",
+            "signal_score": _chunk_signal_score(chunk),
+            "line_range": f"{chunk.start_line}-{chunk.end_line}",
+        }
+        backfilled.append(fallback)
+    report = {
+        "schema_id": "coverage_backfill_v1",
+        "method": "deterministic_best_span_for_budget_skipped_chunks",
+        "skipped_chunk_count": len(skipped_chunk_ids),
+        "backfilled_claim_count": len(backfilled),
+        "duplicate_chunk_count": len(duplicate_chunk_ids),
+        "no_signal_chunk_count": len(no_signal_chunk_ids),
+        "backfilled_claim_ids": [claim["claim_id"] for claim in backfilled],
+        "duplicate_chunk_ids": duplicate_chunk_ids[:50],
+        "no_signal_chunk_ids": no_signal_chunk_ids[:50],
+    }
+    return backfilled, report
+
+
+def _next_claim_index(claims: list[dict[str, Any]], id_prefix: str) -> int:
+    max_index = 0
+    pattern = re.compile(rf"^{re.escape(id_prefix)}_c(\d+)$")
+    for claim in claims:
+        match = pattern.match(str(claim.get("claim_id", "")))
+        if match:
+            max_index = max(max_index, int(match.group(1)))
+    return max_index + 1
+
+
+def consolidate_claims_for_map(
+    claims: list[dict[str, Any]],
+    *,
+    min_claims: int = 1,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if len(claims) < 2:
+        return claims, {
+            "schema_id": "claim_consolidation_report_v1",
+            "changed": False,
+            "method": "tfidf_overlap_polarity_guarded_components",
+            "input_claim_count": len(claims),
+            "output_claim_count": len(claims),
+            "merged_groups": [],
+        }
+    duplicate_pairs = _consolidation_duplicate_pairs(claims)
+    groups = _claim_duplicate_components(claims, duplicate_pairs)
+    if not groups:
+        return claims, {
+            "schema_id": "claim_consolidation_report_v1",
+            "changed": False,
+            "method": "tfidf_overlap_polarity_guarded_components",
+            "input_claim_count": len(claims),
+            "output_claim_count": len(claims),
+            "duplicate_pairs": _duplicate_pair_rows(duplicate_pairs),
+            "merged_groups": [],
+        }
+    grouped_ids = {claim_id for group in groups for claim_id in group}
+    claim_lookup = {str(claim.get("claim_id")): claim for claim in claims}
+    consolidated: list[dict[str, Any]] = []
+    merged_group_rows: list[dict[str, Any]] = []
+    for group in groups:
+        group_claims = [claim_lookup[claim_id] for claim_id in group if claim_id in claim_lookup]
+        if not group_claims:
+            continue
+        canonical = _canonical_claim_for_group(group_claims)
+        merged_ids = [str(claim.get("claim_id")) for claim in group_claims]
+        merged_sources = _claim_supporting_sources(group_claims)
+        merged_excerpts = _claim_supporting_excerpts(group_claims)
+        merged_methods = sorted({str(claim.get("extraction_method", "model")) for claim in group_claims if claim.get("extraction_method")})
+        canonical = dict(canonical)
+        canonical["supporting_claim_ids"] = merged_ids
+        canonical["supporting_sources"] = merged_sources
+        canonical["supporting_excerpts"] = merged_excerpts[:6]
+        canonical["consolidation_method"] = "tfidf_overlap_polarity_guarded_components"
+        if merged_methods:
+            canonical["supporting_extraction_methods"] = merged_methods
+        consolidated.append(canonical)
+        merged_group_rows.append(
+            {
+                "canonical_claim_id": canonical.get("claim_id"),
+                "merged_claim_ids": merged_ids,
+                "supporting_sources": merged_sources,
+            }
+        )
+    for claim in claims:
+        if str(claim.get("claim_id")) not in grouped_ids:
+            consolidated.append(claim)
+    order = {str(claim.get("claim_id")): index for index, claim in enumerate(claims)}
+    consolidated.sort(key=lambda claim: order.get(str(claim.get("claim_id")), len(order)))
+    if len(consolidated) < min_claims:
+        return claims, {
+            "schema_id": "claim_consolidation_report_v1",
+            "changed": False,
+            "method": "tfidf_overlap_polarity_guarded_components",
+            "reason": "would_reduce_below_min_claims",
+            "min_claims": min_claims,
+            "input_claim_count": len(claims),
+            "output_claim_count": len(claims),
+            "candidate_output_claim_count": len(consolidated),
+            "duplicate_pairs": _duplicate_pair_rows(duplicate_pairs),
+            "merged_groups": merged_group_rows,
+        }
+    return consolidated, {
+        "schema_id": "claim_consolidation_report_v1",
+        "changed": True,
+        "method": "tfidf_overlap_polarity_guarded_components",
+        "input_claim_count": len(claims),
+        "output_claim_count": len(consolidated),
+        "duplicate_pairs": _duplicate_pair_rows(duplicate_pairs),
+        "merged_groups": merged_group_rows,
+    }
+
+
+def _consolidation_duplicate_pairs(claims: list[dict[str, Any]]) -> list[tuple[str, str, float]]:
+    ids = [str(claim.get("claim_id", "")) for claim in claims]
+    texts = [str(claim.get("claim", "") or claim.get("text", "")) for claim in claims]
+    tfidf_pairs = tfidf_near_duplicate_pairs(texts, ids, threshold=CONSOLIDATION_SIMILARITY_THRESHOLD)
+    pair_scores: dict[tuple[str, str], float] = {}
+    claim_lookup = {str(claim.get("claim_id")): claim for claim in claims}
+    for left, right, score in tfidf_pairs:
+        if _claims_can_merge(claim_lookup.get(left, {}), claim_lookup.get(right, {})):
+            pair_scores[(left, right)] = score
+    for left_index, left in enumerate(claims):
+        for right in claims[left_index + 1 :]:
+            if not _claims_can_merge(left, right):
+                continue
+            overlap = _text_overlap_ratio(str(left.get("claim", "")), str(right.get("claim", "")))
+            if overlap >= CONSOLIDATION_OVERLAP_THRESHOLD:
+                pair_scores.setdefault((str(left.get("claim_id", "")), str(right.get("claim_id", ""))), round(overlap, 4))
+    return [(left, right, score) for (left, right), score in pair_scores.items() if left and right]
+
+
+def _claims_can_merge(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    if not left or not right:
+        return False
+    left_polarity = _claim_polarity(str(left.get("claim", "")))
+    right_polarity = _claim_polarity(str(right.get("claim", "")))
+    if left_polarity != "mixed" and right_polarity != "mixed" and left_polarity != right_polarity:
+        return False
+    left_role = str(left.get("role", "other"))
+    right_role = str(right.get("role", "other"))
+    role_family = {
+        "conclusion_support": "directional",
+        "crux": "crux",
+        "scope_limit": "limit",
+        "external_validity": "limit",
+        "measurement_validity": "method",
+        "implementation_constraint": "method",
+        "cost_feasibility": "method",
+        "background": "background",
+        "other": "other",
+    }
+    return role_family.get(left_role, left_role) == role_family.get(right_role, right_role)
+
+
+def _claim_polarity(text: str) -> str:
+    normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
+    positive = any(marker in normalized for marker in (" lower risk ", " reduced risk ", " no association ", " not associated ", " no adverse ", " did not have adverse ", " beneficial "))
+    negative = any(marker in normalized for marker in (" higher risk ", " increased risk ", " harmful ", " adverse effect ", " adverse effects ", " mortality ", " concern "))
+    if positive and not negative:
+        return "positive_or_null"
+    if negative and not positive:
+        return "negative_or_concern"
+    return "mixed"
+
+
+def _claim_duplicate_components(
+    claims: list[dict[str, Any]],
+    duplicate_pairs: list[tuple[str, str, float]],
+) -> list[list[str]]:
+    ids = {str(claim.get("claim_id", "")) for claim in claims if claim.get("claim_id")}
+    parent = {claim_id: claim_id for claim_id in ids}
+
+    def find(item: str) -> str:
+        while parent[item] != item:
+            parent[item] = parent[parent[item]]
+            item = parent[item]
+        return item
+
+    def union(left: str, right: str) -> None:
+        if left not in parent or right not in parent:
+            return
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    for left, right, _score in duplicate_pairs:
+        union(left, right)
+    groups: dict[str, list[str]] = {}
+    for claim_id in ids:
+        groups.setdefault(find(claim_id), []).append(claim_id)
+    order = {str(claim.get("claim_id")): index for index, claim in enumerate(claims)}
+    return [
+        sorted(group, key=lambda claim_id: order.get(claim_id, len(order)))
+        for group in groups.values()
+        if len(group) > 1
+    ]
+
+
+def _canonical_claim_for_group(group_claims: list[dict[str, Any]]) -> dict[str, Any]:
+    return sorted(
+        group_claims,
+        key=lambda claim: (
+            1 if str(claim.get("extraction_method", "")).startswith("deterministic") else 0,
+            -_span_signal_score(str(claim.get("claim", ""))),
+            len(str(claim.get("claim", ""))),
+            str(claim.get("claim_id", "")),
+        ),
+    )[0]
+
+
+def _claim_supporting_sources(group_claims: list[dict[str, Any]]) -> list[str]:
+    sources: list[str] = []
+    for claim in group_claims:
+        source_id = str(claim.get("source_id", ""))
+        if source_id:
+            sources.append(source_id)
+        for source_id in claim.get("supporting_sources", []):
+            if isinstance(source_id, str):
+                sources.append(source_id)
+    return sorted(set(sources))
+
+
+def _claim_supporting_excerpts(group_claims: list[dict[str, Any]]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for claim in group_claims:
+        row = {
+            "claim_id": str(claim.get("claim_id", "")),
+            "source_id": str(claim.get("source_id", "")),
+            "source_span": str(claim.get("source_span", "")),
+            "excerpt": str(claim.get("excerpt", "")),
+        }
+        key = (row["source_id"], row["source_span"], row["excerpt"])
+        if key not in seen and row["excerpt"]:
+            seen.add(key)
+            rows.append(row)
+        for existing in claim.get("supporting_excerpts", []):
+            if not isinstance(existing, dict):
+                continue
+            existing_row = {
+                "claim_id": str(existing.get("claim_id", "")),
+                "source_id": str(existing.get("source_id", "")),
+                "source_span": str(existing.get("source_span", "")),
+                "excerpt": str(existing.get("excerpt", "")),
+            }
+            key = (existing_row["source_id"], existing_row["source_span"], existing_row["excerpt"])
+            if key not in seen and existing_row["excerpt"]:
+                seen.add(key)
+                rows.append(existing_row)
+    return rows
+
+
+def _duplicate_pair_rows(pairs: list[tuple[str, str, float]]) -> list[dict[str, Any]]:
+    return [{"left": left, "right": right, "score": score} for left, right, score in pairs]
 
 
 def _run_quality_repair(
@@ -833,9 +1156,15 @@ def evaluate_staged_map_quality(
     relations = [relation for relation in candidate_map.get("relations", []) if isinstance(relation, dict)]
     required_sources = [source.source_id for source in _required_sources(case_manifest, region)]
     source_claim_counts = {
-        source_id: sum(1 for claim in claims if claim.get("source_id") == source_id)
+        source_id: sum(1 for claim in claims if source_id in _claim_source_coverage_ids(claim))
         for source_id in required_sources
     }
+    backfilled_claim_count = sum(
+        1
+        for claim in claims
+        if str(claim.get("extraction_method", "")) == "deterministic_coverage_backfill"
+    )
+    consolidated_claim_count = sum(1 for claim in claims if claim.get("supporting_claim_ids"))
     role_counts = _counts(str(claim.get("role", "other")) for claim in claims)
     relation_type_counts = _counts(str(relation.get("relation_type", "")) for relation in relations)
     issues = _quality_issues(
@@ -866,6 +1195,8 @@ def evaluate_staged_map_quality(
             "all_chunk_count": len(all_chunks),
             "selected_chunk_count": len(selected_chunks),
             "skipped_chunk_count": len(skipped_chunks),
+            "coverage_backfilled_claim_count": backfilled_claim_count,
+            "consolidated_claim_count": consolidated_claim_count,
             "rejected_claim_count": len(rejected_claims),
             "rejected_relation_count": len(rejected_relations),
         },
@@ -990,6 +1321,20 @@ def _quality_issues(
             )
         )
     if skipped_chunks:
+        backfilled_claim_count = sum(
+            1
+            for claim in claims
+            if str(claim.get("extraction_method", "")) == "deterministic_coverage_backfill"
+        )
+        if backfilled_claim_count:
+            issues.append(
+                _quality_issue(
+                    "note",
+                    "chunk_budget_backfilled_content",
+                    f"Skipped {len(skipped_chunks)} source chunks due to configured chunk budgets; added {backfilled_claim_count} deterministic coverage claims.",
+                )
+            )
+            return issues
         issues.append(
             _quality_issue(
                 "note",
@@ -1002,6 +1347,14 @@ def _quality_issues(
 
 def _quality_issue(severity: str, issue_type: str, message: str) -> dict[str, str]:
     return {"severity": severity, "issue_type": issue_type, "message": message}
+
+
+def _claim_source_coverage_ids(claim: dict[str, Any]) -> set[str]:
+    source_ids = {str(claim.get("source_id", ""))}
+    for source_id in claim.get("supporting_sources", []):
+        if isinstance(source_id, str):
+            source_ids.add(source_id)
+    return {source_id for source_id in source_ids if source_id}
 
 
 def _weak_relation_rationale_ids(relations: list[dict[str, Any]]) -> list[str]:
