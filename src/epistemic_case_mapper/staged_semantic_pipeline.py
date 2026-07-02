@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from epistemic_case_mapper.classical_ml import tfidf_near_duplicate_pairs
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -57,6 +58,9 @@ class StagedMapResult:
     rejected_claim_count: int
     rejected_relation_count: int
     failures: tuple[str, ...]
+    quality_status: str = "not_run"
+    quality_repair_ran: bool = False
+    quality_repaired: bool = False
 
 
 def run_staged_map(
@@ -76,6 +80,7 @@ def run_staged_map(
     backend_timeout: int | None = 90,
     backend_retries: int = 1,
     validate: bool = True,
+    repair_quality: bool = False,
 ) -> StagedMapResult:
     if chunk_lines < 1:
         raise ValueError("chunk_lines must be positive")
@@ -124,6 +129,47 @@ def run_staged_map(
         relations=relations,
         relation_payloads=relation_payloads,
     )
+    quality_report = evaluate_staged_map_quality(
+        manifest=manifest,
+        region=region,
+        case_manifest=case_manifest,
+        all_chunks=all_chunks,
+        selected_chunks=chunks,
+        skipped_chunks=skipped_chunks,
+        candidate_map=final_map,
+        rejected_claims=rejected_claims,
+        rejected_relations=rejected_relations,
+    )
+    write_json(artifacts / "candidate_map_initial.json", final_map)
+    write_json(artifacts / "map_quality_report_initial.json", quality_report)
+    write_markdown(artifacts / "MAP_QUALITY_REPORT_INITIAL.md", _quality_markdown(quality_report))
+    repair_info: dict[str, Any] = {
+        "ran": False,
+        "accepted": False,
+        "reason": "not_requested",
+    }
+    if repair_quality:
+        repair_info = _run_quality_repair(
+            repo_root=repo_root,
+            manifest_path=manifest_path,
+            manifest=manifest,
+            region=region,
+            case_manifest=case_manifest,
+            all_chunks=all_chunks,
+            selected_chunks=chunks,
+            skipped_chunks=skipped_chunks,
+            candidate_map=final_map,
+            quality_report=quality_report,
+            rejected_claims=rejected_claims,
+            rejected_relations=rejected_relations,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            artifact_dir=artifacts,
+        )
+        if repair_info.get("accepted") and isinstance(repair_info.get("candidate_map"), dict):
+            final_map = repair_info["candidate_map"]
+            quality_report = repair_info["quality_report"]
     target = Path(output_path or region.map_path)
     if not target.is_absolute():
         target = repo_root / target
@@ -135,6 +181,13 @@ def run_staged_map(
     if failures and validate:
         target = artifacts / "failed_candidate.json"
     write_json(target, final_map)
+    write_json(artifacts / "map_quality_report.json", quality_report)
+    write_markdown(artifacts / "MAP_QUALITY_REPORT.md", _quality_markdown(quality_report))
+    repair_prompt_path = artifacts / "map_quality_repair_prompt.txt"
+    if not repair_prompt_path.exists():
+        write_markdown(repair_prompt_path, _map_quality_repair_prompt(region, case_manifest, final_map, quality_report))
+    final_claims = [claim for claim in final_map.get("claims", []) if isinstance(claim, dict)]
+    final_relations = [relation for relation in final_map.get("relations", []) if isinstance(relation, dict)]
     write_json(
         artifacts / "run_summary.json",
         {
@@ -154,24 +207,34 @@ def run_staged_map(
             "skipped_chunk_count": len(skipped_chunks),
             "chunks": [_chunk_summary(chunk) for chunk in chunks],
             "skipped_chunks": skipped_chunks,
-            "claim_count": len(claims),
-            "relation_count": len(relations),
+            "initial_claim_count": len(claims),
+            "initial_relation_count": len(relations),
+            "claim_count": len(final_claims),
+            "relation_count": len(final_relations),
             "relation_batch_count": _relation_batch_count(max_relation_pairs, relation_batch_size, claims),
             "rejected_claims": rejected_claims,
             "rejected_relations": rejected_relations,
             "candidate_path": _relative(repo_root, validation_target),
             "output_path": _relative(repo_root, target),
             "failures": failures,
+            "quality_status": quality_report["status"],
+            "quality_score": quality_report["score"],
+            "quality_report": _relative(repo_root, artifacts / "map_quality_report.json"),
+            "quality_repair_prompt": _relative(repo_root, artifacts / "map_quality_repair_prompt.txt"),
+            "quality_repair": _summary_repair_info(repo_root, repair_info),
         },
     )
     return StagedMapResult(
         output_path=target,
         artifact_dir=artifacts,
-        claim_count=len(claims),
-        relation_count=len(relations),
+        claim_count=len(final_claims),
+        relation_count=len(final_relations),
         rejected_claim_count=len(rejected_claims),
         rejected_relation_count=len(rejected_relations),
         failures=tuple(failures),
+        quality_status=str(quality_report["status"]),
+        quality_repair_ran=bool(repair_info.get("ran")),
+        quality_repaired=bool(repair_info.get("accepted")),
     )
 
 
@@ -281,6 +344,119 @@ def _extract_claims(
                     )
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
+
+
+def _run_quality_repair(
+    *,
+    repo_root: Path,
+    manifest_path: str,
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    all_chunks: list[SourceChunk],
+    selected_chunks: list[SourceChunk],
+    skipped_chunks: list[dict[str, Any]],
+    candidate_map: dict[str, Any],
+    quality_report: dict[str, Any],
+    rejected_claims: list[dict[str, Any]],
+    rejected_relations: list[dict[str, Any]],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    artifact_dir: Path,
+) -> dict[str, Any]:
+    if quality_report.get("status") == "usable_with_review":
+        return {"ran": False, "accepted": False, "reason": "quality_already_usable"}
+    prompt = _map_quality_repair_prompt(region, case_manifest, candidate_map, quality_report)
+    prompt_path = artifact_dir / "map_quality_repair_prompt.txt"
+    write_markdown(prompt_path, prompt)
+    info: dict[str, Any] = {
+        "ran": True,
+        "accepted": False,
+        "reason": "",
+        "prompt_path": prompt_path,
+    }
+    try:
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+        )
+        raw = result.text
+    except (RuntimeError, ValueError) as exc:
+        info["reason"] = "backend_error"
+        info["error"] = str(exc)
+        return info
+    raw_path = artifact_dir / "map_quality_repair_raw.txt"
+    write_markdown(raw_path, raw)
+    info["raw_path"] = raw_path
+    repaired = _parse_model_json(raw)
+    canonical_path = artifact_dir / "map_quality_repaired_candidate.json"
+    write_json(canonical_path, repaired or {})
+    info["candidate_path"] = canonical_path
+    if not isinstance(repaired, dict):
+        info["reason"] = "invalid_json"
+        return info
+    validation_failures = validate_map_candidate(repo_root, manifest_path, region.region_id, canonical_path)
+    write_json(artifact_dir / "map_quality_repair_validation.json", {"failures": validation_failures})
+    info["validation_failures"] = validation_failures
+    if validation_failures:
+        info["reason"] = "validation_failed"
+        return info
+    repaired_quality = evaluate_staged_map_quality(
+        manifest=manifest,
+        region=region,
+        case_manifest=case_manifest,
+        all_chunks=all_chunks,
+        selected_chunks=selected_chunks,
+        skipped_chunks=skipped_chunks,
+        candidate_map=repaired,
+        rejected_claims=rejected_claims,
+        rejected_relations=rejected_relations,
+    )
+    write_json(artifact_dir / "map_quality_repaired_report.json", repaired_quality)
+    write_markdown(artifact_dir / "MAP_QUALITY_REPAIRED_REPORT.md", _quality_markdown(repaired_quality))
+    info["initial_status"] = quality_report.get("status")
+    info["initial_score"] = quality_report.get("score")
+    info["repaired_status"] = repaired_quality.get("status")
+    info["repaired_score"] = repaired_quality.get("score")
+    if not _repair_improves_or_preserves_quality(quality_report, repaired_quality):
+        info["reason"] = "quality_not_improved_or_preserved"
+        return info
+    info["accepted"] = True
+    info["reason"] = "accepted"
+    info["candidate_map"] = repaired
+    info["quality_report"] = repaired_quality
+    return info
+
+
+def _repair_improves_or_preserves_quality(original: dict[str, Any], repaired: dict[str, Any]) -> bool:
+    original_rank = _quality_status_rank(str(original.get("status", "")))
+    repaired_rank = _quality_status_rank(str(repaired.get("status", "")))
+    original_score = int(original.get("score", 0))
+    repaired_score = int(repaired.get("score", 0))
+    return repaired_rank >= original_rank and repaired_score >= original_score
+
+
+def _quality_status_rank(status: str) -> int:
+    return {
+        "needs_repair": 0,
+        "review_recommended": 1,
+        "usable_with_review": 2,
+    }.get(status, -1)
+
+
+def _summary_repair_info(repo_root: Path, repair_info: dict[str, Any]) -> dict[str, Any]:
+    summary = {
+        key: value
+        for key, value in repair_info.items()
+        if key not in {"candidate_map", "quality_report"}
+    }
+    for key, value in list(summary.items()):
+        if isinstance(value, Path):
+            summary[key] = _relative(repo_root, value)
+    return summary
 
 
 def _extract_relations(
@@ -528,6 +704,405 @@ def _assemble_map(
     }
 
 
+def evaluate_staged_map_quality(
+    *,
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    all_chunks: list[SourceChunk],
+    selected_chunks: list[SourceChunk],
+    skipped_chunks: list[dict[str, Any]],
+    candidate_map: dict[str, Any],
+    rejected_claims: list[dict[str, Any]],
+    rejected_relations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    claims = [claim for claim in candidate_map.get("claims", []) if isinstance(claim, dict)]
+    relations = [relation for relation in candidate_map.get("relations", []) if isinstance(relation, dict)]
+    required_sources = [source.source_id for source in _required_sources(case_manifest, region)]
+    source_claim_counts = {
+        source_id: sum(1 for claim in claims if claim.get("source_id") == source_id)
+        for source_id in required_sources
+    }
+    role_counts = _counts(str(claim.get("role", "other")) for claim in claims)
+    relation_type_counts = _counts(str(relation.get("relation_type", "")) for relation in relations)
+    issues = _quality_issues(
+        manifest=manifest,
+        region=region,
+        required_sources=required_sources,
+        claims=claims,
+        relations=relations,
+        source_claim_counts=source_claim_counts,
+        role_counts=role_counts,
+        relation_type_counts=relation_type_counts,
+        rejected_claims=rejected_claims,
+        rejected_relations=rejected_relations,
+        skipped_chunks=skipped_chunks,
+    )
+    score = _quality_score(issues)
+    status = _quality_status(issues, score)
+    return {
+        "schema_id": "staged_map_quality_report_v1",
+        "status": status,
+        "score": score,
+        "summary": {
+            "claim_count": len(claims),
+            "relation_count": len(relations),
+            "relation_type_count": len([key for key in relation_type_counts if key]),
+            "required_source_count": len(required_sources),
+            "sources_with_claims": sum(1 for count in source_claim_counts.values() if count > 0),
+            "all_chunk_count": len(all_chunks),
+            "selected_chunk_count": len(selected_chunks),
+            "skipped_chunk_count": len(skipped_chunks),
+            "rejected_claim_count": len(rejected_claims),
+            "rejected_relation_count": len(rejected_relations),
+        },
+        "source_claim_counts": source_claim_counts,
+        "claim_role_counts": role_counts,
+        "relation_type_counts": relation_type_counts,
+        "issues": issues,
+        "scaffold": _map_quality_scaffold(manifest, region, case_manifest),
+    }
+
+
+def _quality_issues(
+    *,
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    required_sources: list[str],
+    claims: list[dict[str, Any]],
+    relations: list[dict[str, Any]],
+    source_claim_counts: dict[str, int],
+    role_counts: dict[str, int],
+    relation_type_counts: dict[str, int],
+    rejected_claims: list[dict[str, Any]],
+    rejected_relations: list[dict[str, Any]],
+    skipped_chunks: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    if not claims:
+        issues.append(_quality_issue("fail", "missing_claims", "No accepted claims were produced."))
+    if len(claims) < region.thresholds.min_claims:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "low_claim_count",
+                f"Accepted {len(claims)} claims; region target is at least {region.thresholds.min_claims}.",
+            )
+        )
+    if len(claims) > region.thresholds.max_claims:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "high_claim_count",
+                f"Accepted {len(claims)} claims; region target is at most {region.thresholds.max_claims}.",
+            )
+        )
+    missing_source_ids = [source_id for source_id, count in source_claim_counts.items() if count == 0]
+    for source_id in missing_source_ids:
+        issues.append(_quality_issue("fail", "missing_source_claim_coverage", f"No accepted claim from required source {source_id}."))
+    uncertain_claims = [
+        claim.get("claim_id", "")
+        for claim in claims
+        if str(claim.get("entailed_by_excerpt", "")) != "yes"
+    ]
+    if uncertain_claims:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "uncertain_claim_entailment",
+                "Claims not marked entailed by excerpt: " + ", ".join(str(item) for item in uncertain_claims[:8]),
+            )
+        )
+    for role in ("conclusion_support", "crux", "scope_limit"):
+        if role_counts.get(role, 0) == 0:
+            issues.append(_quality_issue("risk", "missing_claim_role", f"No accepted claim with role {role}."))
+    if len(claims) >= 2 and not relations:
+        issues.append(_quality_issue("fail", "missing_relations", "At least two claims exist but no accepted relations were produced."))
+    weak_relation_ids = _weak_relation_rationale_ids(relations)
+    if weak_relation_ids:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "weak_relation_rationales",
+                "Relations with vague or low-information rationales: " + ", ".join(weak_relation_ids[:8]),
+            )
+        )
+    if len(relation_type_counts) < region.thresholds.min_relation_types:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "low_relation_type_diversity",
+                f"Accepted {len(relation_type_counts)} relation types; region target is at least {region.thresholds.min_relation_types}.",
+            )
+        )
+    relation_types = set(relation_type_counts)
+    if relation_types.isdisjoint({"crux_for", "in_tension_with", "challenges"}):
+        issues.append(_quality_issue("risk", "missing_crux_or_tension_relation", "No accepted crux/tension/challenge relation."))
+    generic_relation_count = sum(relation_type_counts.get(kind, 0) for kind in ("similar_to", "refines", "supports"))
+    if relations and len(relations) >= 4 and generic_relation_count / len(relations) > 0.7:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "generic_relation_type_overuse",
+                "Most accepted relations use generic supports/refines/similar_to types rather than crux, tension, challenge, or dependency edges.",
+            )
+        )
+    duplicate_pairs = _near_duplicate_claim_pairs(claims)
+    if duplicate_pairs:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "near_duplicate_claims",
+                "Near-duplicate claim pairs: " + ", ".join(f"{left}/{right}" for left, right in duplicate_pairs[:6]),
+            )
+        )
+    permitted_types = manifest.relation_ontology.permitted_types()
+    unsupported_relation_types = sorted(set(relation_type_counts) - permitted_types)
+    for relation_type in unsupported_relation_types:
+        issues.append(_quality_issue("fail", "unsupported_relation_type", f"Relation type is not in ontology: {relation_type}."))
+    if rejected_claims and len(rejected_claims) > len(claims):
+        issues.append(
+            _quality_issue(
+                "risk",
+                "high_rejected_claim_ratio",
+                f"Rejected {len(rejected_claims)} claim proposals vs. {len(claims)} accepted claims.",
+            )
+        )
+    if rejected_relations and len(rejected_relations) > max(1, len(relations) * 2):
+        issues.append(
+            _quality_issue(
+                "note",
+                "high_rejected_relation_ratio",
+                f"Rejected {len(rejected_relations)} relation proposals vs. {len(relations)} accepted relations.",
+            )
+        )
+    if skipped_chunks:
+        issues.append(
+            _quality_issue(
+                "note",
+                "chunk_budget_skipped_content",
+                f"Skipped {len(skipped_chunks)} source chunks due to configured chunk budgets.",
+            )
+        )
+    return issues
+
+
+def _quality_issue(severity: str, issue_type: str, message: str) -> dict[str, str]:
+    return {"severity": severity, "issue_type": issue_type, "message": message}
+
+
+def _weak_relation_rationale_ids(relations: list[dict[str, Any]]) -> list[str]:
+    weak_ids: list[str] = []
+    vague_patterns = (
+        "are related",
+        "is related",
+        "should be read together",
+        "provide context",
+        "adds context",
+        "similar points",
+        "same topic",
+        "both discuss",
+    )
+    for relation in relations:
+        rationale = str(relation.get("rationale", "")).strip()
+        normalized = re.sub(r"\s+", " ", rationale.lower())
+        terms = _content_terms(normalized)
+        if len(terms) < 4 or any(pattern in normalized for pattern in vague_patterns):
+            weak_ids.append(str(relation.get("relation_id", "")) or "<missing_id>")
+    return weak_ids
+
+
+def _quality_score(issues: list[dict[str, str]]) -> int:
+    score = 100
+    for issue in issues:
+        severity = issue.get("severity")
+        if severity == "fail":
+            score -= 25
+        elif severity == "risk":
+            score -= 10
+        elif severity == "note":
+            score -= 2
+    return max(0, score)
+
+
+def _quality_status(issues: list[dict[str, str]], score: int) -> str:
+    if any(issue.get("severity") == "fail" for issue in issues):
+        return "needs_repair"
+    if score < 75:
+        return "review_recommended"
+    return "usable_with_review"
+
+
+def _quality_markdown(report: dict[str, Any]) -> str:
+    summary = report["summary"]
+    lines = [
+        "# Staged Map Quality Report",
+        "",
+        f"Status: `{report['status']}`",
+        f"Score: `{report['score']}`",
+        "",
+        "## Summary",
+        "",
+    ]
+    for key, value in summary.items():
+        lines.append(f"- {key}: `{value}`")
+    lines.extend(["", "## Issues", ""])
+    issues = report.get("issues", [])
+    if issues:
+        lines.extend(
+            f"- `{issue['severity']}` `{issue['issue_type']}`: {issue['message']}"
+            for issue in issues
+        )
+    else:
+        lines.append("- No deterministic map-quality issues detected.")
+    lines.extend(["", "## Scaffold", "", "```json", json.dumps(report.get("scaffold", {}), indent=2), "```", ""])
+    return "\n".join(lines)
+
+
+def _map_quality_repair_prompt(
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    candidate_map: dict[str, Any],
+    quality_report: dict[str, Any],
+) -> str:
+    return "\n\n".join(
+        (
+            "You are repairing a source-grounded epistemic case-map candidate.",
+            f"Region ID: {region.region_id}",
+            f"Case question: {case_manifest.question}",
+            "Return only JSON in the same map shape as the candidate.",
+            "Repair rules:",
+            "- Preserve accepted claims and relations that remain source-grounded.",
+            "- Address fail/risk issues in the deterministic quality report before adding polish.",
+            "- Add claims only when they are supported by exact excerpts already present in the candidate or staged artifacts.",
+            "- Do not invent source IDs, claim IDs, relation IDs, source spans, excerpts, effect sizes, or consensus.",
+            "- If a quality issue cannot be fixed from available artifacts, add an evidence_check row naming the missing source or review need.",
+            "- Keep relation types within the allowed relation ontology listed in the scaffold.",
+            "Deterministic quality report:\n" + json.dumps(quality_report, indent=2),
+            "Candidate map:\n" + json.dumps(candidate_map, indent=2),
+        )
+    )
+
+
+def _counts(items: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        if not item:
+            continue
+        counts[str(item)] = counts.get(str(item), 0) + 1
+    return counts
+
+
+def _near_duplicate_claim_pairs(claims: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    ids = [str(claim.get("claim_id", "")) for claim in claims]
+    texts = [str(claim.get("claim", "") or claim.get("text", "")) for claim in claims]
+    pair_scores = {
+        (left, right): score
+        for left, right, score in tfidf_near_duplicate_pairs(texts, ids, threshold=0.35)
+        if left and right
+    }
+    for left_index, left in enumerate(claims):
+        for right in claims[left_index + 1 :]:
+            pair = (str(left.get("claim_id", "")), str(right.get("claim_id", "")))
+            if _text_overlap_ratio(str(left.get("claim", "")), str(right.get("claim", ""))) >= 0.78:
+                pair_scores.setdefault(pair, 1.0)
+    return list(pair_scores)
+
+
+def _text_overlap_ratio(left: str, right: str) -> float:
+    left_terms = _content_terms(left)
+    right_terms = _content_terms(right)
+    if not left_terms or not right_terms:
+        return 0.0
+    return len(left_terms & right_terms) / min(len(left_terms), len(right_terms))
+
+
+def _map_quality_scaffold(
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    chunk: SourceChunk | None = None,
+) -> dict[str, Any]:
+    required_sources = _required_sources(case_manifest, region)
+    source_roles = {
+        source.source_id: _source_role_scaffold(source)
+        for source in required_sources
+    }
+    scaffold: dict[str, Any] = {
+        "case_question": case_manifest.question,
+        "required_sources": [source.source_id for source in required_sources],
+        "source_roles": source_roles,
+        "target_claim_roles": [
+            "conclusion_support",
+            "crux",
+            "scope_limit",
+            "implementation_constraint",
+            "background",
+            "other",
+        ],
+        "relation_goals": [
+            "connect at least one crux/scope-limit claim to a conclusion-support claim",
+            "preserve tensions instead of flattening them",
+            "use source limitations to bound claim strength",
+            "prefer cross-source relations when they clarify disagreement or scope",
+        ],
+        "allowed_relation_types": sorted(manifest.relation_ontology.permitted_types()),
+        "quality_checks": [
+            "every required source should contribute at least one useful claim unless genuinely irrelevant",
+            "claims must be entailed by exact excerpts",
+            "relations must use only accepted claim IDs and ontology relation types",
+            "the final map should expose cruxes, scope limits, and source-role boundaries",
+            "near-duplicate claims should be merged or given distinct roles",
+        ],
+    }
+    if chunk is not None:
+        scaffold["current_chunk"] = {
+            "chunk_id": chunk.chunk_id,
+            "source_id": chunk.source_id,
+            "line_range": f"{chunk.start_line}-{chunk.end_line}",
+            "source_role": source_roles.get(chunk.source_id, {}),
+        }
+    return scaffold
+
+
+def _source_role_scaffold(source: Source) -> dict[str, Any]:
+    inferred_role, inferred_provenance, inferred_limitations = _infer_source_role(source)
+    evidence_role = source.evidence_role if source.evidence_role != "unspecified" else inferred_role
+    provenance_level = source.provenance_level if source.provenance_level != "unspecified" else inferred_provenance
+    limitations = list(source.limitations)
+    for limitation in inferred_limitations:
+        if limitation not in limitations:
+            limitations.append(limitation)
+    return {
+        "display_title": source.title,
+        "evidence_role": evidence_role,
+        "provenance_level": provenance_level,
+        "limitations": limitations,
+        "needs_upgrade": source.needs_upgrade or source.provenance_level == "unspecified",
+        "inferred": source.evidence_role == "unspecified" or source.provenance_level == "unspecified",
+    }
+
+
+def _infer_source_role(source: Source) -> tuple[str, str, list[str]]:
+    text = " ".join(
+        str(part or "")
+        for part in (source.source_id, source.title, source.source_type, source.notes, source.path, source.url)
+    ).lower()
+    if any(token in text for token in ("randomized", "rct", "trial", "cohort", "case-control", "study")):
+        return "empirical study", "peer_reviewed", ["Check population, endpoint, and design limits before treating as direct decision evidence."]
+    if any(token in text for token in ("meta-analysis", "systematic review", "scoping review", "review")):
+        return "evidence synthesis", "secondary_summary", ["Review conclusions depend on included-study quality and inclusion criteria."]
+    if any(token in text for token in ("guideline", "advisory", "recommendation", "official", "cdc", "who")):
+        return "policy or guidance", "official_guidance", ["Guidance may combine evidence with policy judgment and may lag new evidence."]
+    if any(token in text for token in ("forecast", "prediction", "good judgment")):
+        return "forecasting aggregate", "secondary_summary", ["Forecasts summarize expectations, not direct causal evidence."]
+    if any(token in text for token in ("brief", "blog", "comment", "acx", "rootclaim", "analysis")):
+        return "commentary or case analysis", "secondary_summary", ["Use for framing and argument structure; verify factual claims against primary sources."]
+    if any(token in text for token in ("working paper", "preprint", "nber", "ssrn")):
+        return "working paper or preprint", "preprint", ["Treat as not fully peer-reviewed unless separately verified."]
+    return "source document", "unspecified", ["Source role was inferred from sparse metadata and needs human review."]
+
+
 def _payload_list_items(payloads: list[dict[str, Any]], key: str) -> list[str]:
     items: list[str] = []
     for payload in payloads:
@@ -552,6 +1127,7 @@ def _claim_prompt(
         f"- span_id: {span.span_id}\n  source_span: {span.source_span}\n  text: {span.text}"
         for span in chunk.spans
     )
+    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk), indent=2)
     return f"""You are selecting source-grounded claim candidates from one bounded source-span catalog.
 
 Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}
@@ -563,6 +1139,9 @@ Line range: {chunk.start_line}-{chunk.end_line}
 
 Source span catalog:
 {span_catalog}
+
+Deterministic map-quality scaffold:
+{scaffold}
 
 Return only JSON:
 {{
@@ -582,6 +1161,8 @@ Rules:
 - Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
 - Use only span IDs shown in the catalog.
 - Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, extract it as scope_limit or implementation_constraint.
 - If the chunk has no useful claim, return {{"claims": []}}.
 """
 
@@ -595,6 +1176,7 @@ def _relation_pair_prompt(
     left = packet["left"]
     right = packet["right"]
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
+    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     return f"""You are classifying one possible relation between two already-validated claim cards.
 
 Prompt version: {RELATION_PROMPT_VERSION}
@@ -619,6 +1201,9 @@ Claim B:
 - role: {right['role']}
 - excerpt: {right['excerpt']}
 
+Deterministic map-quality scaffold:
+{scaffold}
+
 Return only JSON:
 {{
   "pair_id": "{packet['pair_id']}",
@@ -634,6 +1219,7 @@ Rules:
 - Do not include relation_id. Deterministic code assigns IDs later.
 - Use only the two claim IDs shown above.
 - Use only allowed relation types, or use relation_type "none".
+- Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
 - If no defensible relation exists, set source_claim and target_claim to null and relation_type to "none".
 """
 
@@ -648,6 +1234,7 @@ def _relation_batch_prompt(
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
+    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     return f"""You are classifying possible relations between already-validated claim cards.
 
 Prompt version: {RELATION_BATCH_PROMPT_VERSION}
@@ -660,6 +1247,9 @@ Allowed relation types:
 
 Pairs to classify:
 {pair_blocks}
+
+Deterministic map-quality scaffold:
+{scaffold}
 
 Return only JSON:
 {{
@@ -681,6 +1271,7 @@ Rules:
 - Do not include relation_id. Deterministic code assigns IDs later.
 - Use only the two claim IDs shown for each pair.
 - Use only allowed relation types, or use relation_type "none".
+- Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
 - If no defensible relation exists for a pair, set source_claim and target_claim to null and relation_type to "none".
 """
 

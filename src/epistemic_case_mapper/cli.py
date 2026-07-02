@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 
 from epistemic_case_mapper.case_initializer import init_case_package
-from epistemic_case_mapper.io import read_yaml
+from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.llm_stress_eval import run_llm_stress_eval
+from epistemic_case_mapper.map_briefing import run_map_briefing
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest
@@ -89,6 +90,32 @@ def main() -> int:
     baseline_run.add_argument("--output-label")
     baseline_run.add_argument("--dry-run", action="store_true")
 
+    synthesize_parser = subparsers.add_parser("synthesize", help="Build product-facing synthesis artifacts.")
+    synthesize_subparsers = synthesize_parser.add_subparsers(dest="synthesize_target", required=True)
+    decision_packet = synthesize_subparsers.add_parser(
+        "decision-packet",
+        help="Build a hybrid stress-assisted decision packet for one worked region.",
+    )
+    decision_packet.add_argument("--region", required=True)
+    decision_packet.add_argument("--backend", help="Backend for stress, synthesis, and repair. Defaults to manifest default_model_backend.")
+    decision_packet.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/decision_packets/<region>.")
+    decision_packet.add_argument("--skip-stress-run", action="store_true", help="Reuse an existing stress report when present.")
+    decision_packet.add_argument("--backend-timeout", type=int, default=120)
+    decision_packet.add_argument("--backend-retries", type=int, default=0)
+    map_briefing = synthesize_subparsers.add_parser(
+        "map-briefing",
+        help="Build a readable decision briefing from a generated epistemic map and quality report.",
+    )
+    map_briefing.add_argument("--map", required=True, help="Generated map JSON path.")
+    map_briefing.add_argument("--quality-report", required=True, help="Map quality report JSON path.")
+    map_briefing.add_argument("--question", required=True, help="Decision-relevant question to brief.")
+    map_briefing.add_argument("--backend", help="Backend for briefing generation. Defaults to manifest default_model_backend.")
+    map_briefing.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/map_briefings/<map-stem>.")
+    map_briefing.add_argument("--region", help="Optional region ID used only to load source display names.")
+    map_briefing.add_argument("--max-claims", type=int, default=18, help="Briefing map claim budget after source-preserving prioritization.")
+    map_briefing.add_argument("--backend-timeout", type=int, default=120)
+    map_briefing.add_argument("--backend-retries", type=int, default=0)
+
     review_parser = subparsers.add_parser("review", help="Build review artifacts.")
     review_subparsers = review_parser.add_subparsers(dest="review_target", required=True)
     review_checklist = review_subparsers.add_parser("checklist", help="Build Tier 1 review checklist.")
@@ -166,7 +193,31 @@ def main() -> int:
     semantic_staged_map.add_argument("--relation-batch-size", type=int, default=4)
     semantic_staged_map.add_argument("--backend-timeout", type=int, default=90, help="Seconds allowed for each backend call.")
     semantic_staged_map.add_argument("--backend-retries", type=int, default=1, help="Retries for transient backend failures.")
+    semantic_staged_map.add_argument("--repair-quality", action="store_true", help="Run the map-quality repair prompt and accept it if it validates and preserves/improves quality.")
     semantic_staged_map.add_argument("--no-validate", action="store_true", help="Skip final semantic JSON validation.")
+    semantic_staged_brief = semantic_staged_subparsers.add_parser(
+        "brief",
+        help="Run staged mapping and produce a readable map-anchored decision briefing.",
+    )
+    semantic_staged_brief.add_argument("--region", required=True)
+    semantic_staged_brief.add_argument("--backend", help="Override manifest default backend.")
+    semantic_staged_brief.add_argument("--question", help="Decision question. Defaults to the case manifest question.")
+    semantic_staged_brief.add_argument("--output", help="Generated map path. Defaults to artifacts/semantic/<region>/staged_brief/generated_map.json.")
+    semantic_staged_brief.add_argument("--artifact-dir", help="Directory for staged-map intermediate artifacts.")
+    semantic_staged_brief.add_argument("--briefing-dir", help="Directory for briefing artifacts.")
+    semantic_staged_brief.add_argument("--chunk-lines", type=int, default=40)
+    semantic_staged_brief.add_argument("--chunk-overlap-lines", type=int, default=0)
+    semantic_staged_brief.add_argument("--max-chunks-per-source", type=int, default=0, help="0 means no per-source chunk cap.")
+    semantic_staged_brief.add_argument("--max-total-chunks", type=int, default=0, help="0 means no total chunk cap.")
+    semantic_staged_brief.add_argument("--max-claims-per-chunk", type=int, default=4)
+    semantic_staged_brief.add_argument("--max-relation-pairs", type=int, default=12)
+    semantic_staged_brief.add_argument("--relation-batch-size", type=int, default=4)
+    semantic_staged_brief.add_argument("--briefing-max-claims", type=int, default=18)
+    semantic_staged_brief.add_argument("--backend-timeout", type=int, default=90, help="Seconds allowed for each backend call.")
+    semantic_staged_brief.add_argument("--backend-retries", type=int, default=1, help="Retries for transient backend failures.")
+    semantic_staged_brief.add_argument("--repair-quality", action="store_true", default=True, help="Run quality repair before briefing.")
+    semantic_staged_brief.add_argument("--no-repair-quality", action="store_false", dest="repair_quality", help="Skip quality repair.")
+    semantic_staged_brief.add_argument("--no-validate", action="store_true", help="Skip final semantic JSON validation.")
     semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
     semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
     semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")
@@ -232,6 +283,31 @@ def main() -> int:
         if args.dry_run:
             command.append("--dry-run")
         return _run(repo_root, command, args.package)
+    if args.command == "synthesize" and args.synthesize_target == "decision-packet":
+        return _run_decision_packet(
+            repo_root=repo_root,
+            package=args.package,
+            region_id=args.region,
+            backend=args.backend,
+            output_dir=args.output_dir,
+            skip_stress_run=args.skip_stress_run,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
+        )
+    if args.command == "synthesize" and args.synthesize_target == "map-briefing":
+        return _run_map_briefing(
+            repo_root=repo_root,
+            package=args.package,
+            map_path=args.map,
+            quality_report_path=args.quality_report,
+            question=args.question,
+            backend=args.backend,
+            output_dir=args.output_dir,
+            region_id=args.region,
+            max_claims=args.max_claims,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
+        )
     if args.command == "review" and args.review_target == "checklist":
         command = ["scripts/build_tier1_review_checklist.py"]
         if args.check:
@@ -326,6 +402,30 @@ def main() -> int:
             args.relation_batch_size,
             args.backend_timeout,
             args.backend_retries,
+            args.repair_quality,
+            args.no_validate,
+        )
+    if args.command == "semantic" and args.semantic_target == "staged" and args.semantic_staged_target == "brief":
+        return _run_staged_semantic_brief(
+            repo_root,
+            args.package,
+            args.region,
+            args.backend,
+            args.question,
+            args.output,
+            args.artifact_dir,
+            args.briefing_dir,
+            args.chunk_lines,
+            args.chunk_overlap_lines,
+            args.max_chunks_per_source,
+            args.max_total_chunks,
+            args.max_claims_per_chunk,
+            args.max_relation_pairs,
+            args.relation_batch_size,
+            args.briefing_max_claims,
+            args.backend_timeout,
+            args.backend_retries,
+            args.repair_quality,
             args.no_validate,
         )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
@@ -442,6 +542,7 @@ def _run_staged_semantic_map(
     relation_batch_size: int,
     backend_timeout: int,
     backend_retries: int,
+    repair_quality: bool,
     no_validate: bool,
 ) -> int:
     if chunk_lines < 1:
@@ -490,6 +591,7 @@ def _run_staged_semantic_map(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             validate=not no_validate,
+            repair_quality=repair_quality,
         )
     except (RuntimeError, ValueError, KeyError) as exc:
         print(f"semantic_staged_failed region={region_id} error={exc}", file=sys.stderr)
@@ -499,8 +601,11 @@ def _run_staged_semantic_map(
         f"{_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
         f"rejected_claims={result.rejected_claim_count} rejected_relations={result.rejected_relation_count} "
+        f"quality={result.quality_status} "
+        f"repair_ran={str(result.quality_repair_ran).lower()} repair_accepted={str(result.quality_repaired).lower()} "
         f"artifacts={_display_path(repo_root, result.artifact_dir)}"
     )
+    print(f"Map quality report: {_display_path(repo_root, result.artifact_dir / 'map_quality_report.json')}")
     if result.failures:
         for failure in result.failures:
             print(f"FAIL: {failure}", file=sys.stderr)
@@ -509,6 +614,170 @@ def _run_staged_semantic_map(
         print("Semantic validation skipped.")
     else:
         print(f"Validated staged semantic map region={region_id} path={result.output_path}")
+    return 0
+
+
+def _run_map_briefing(
+    *,
+    repo_root: Path,
+    package: str,
+    map_path: str,
+    quality_report_path: str,
+    question: str,
+    backend: str | None,
+    output_dir: str | None,
+    region_id: str | None,
+    max_claims: int,
+    backend_timeout: int,
+    backend_retries: int,
+) -> int:
+    if max_claims < 1:
+        print("map_briefing_failed max_claims_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_timeout < 1:
+        print("map_briefing_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("map_briefing_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    try:
+        manifest = load_submission_manifest(repo_root, package) if (backend is None or region_id) else None
+        if backend is None and manifest is None:
+            print("map_briefing_failed backend_required_without_manifest", file=sys.stderr)
+            return 1
+        selected_backend = backend or manifest.default_model_backend
+        result = run_map_briefing(
+            repo_root=repo_root,
+            map_path=map_path,
+            quality_report_path=quality_report_path,
+            question=question,
+            backend=selected_backend,
+            output_dir=output_dir,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            source_titles=_source_titles_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
+            max_claims=max_claims,
+        )
+    except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+        print(f"map_briefing_failed error={exc}", file=sys.stderr)
+        return 1
+    print(
+        "Map briefing wrote "
+        f"{_display_path(repo_root, result.briefing_path)} "
+        f"backend={result.backend} "
+        f"quality={result.map_quality_status} "
+        f"confidence={result.model_confidence}->{result.calibrated_confidence}"
+    )
+    print(f"Summary: {_display_path(repo_root, result.summary_path)}")
+    print(f"Prompt: {_display_path(repo_root, result.prompt_path)}")
+    return 0
+
+
+def _run_staged_semantic_brief(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    question: str | None,
+    output: str | None,
+    artifact_dir: str | None,
+    briefing_dir: str | None,
+    chunk_lines: int,
+    chunk_overlap_lines: int,
+    max_chunks_per_source: int,
+    max_total_chunks: int,
+    max_claims_per_chunk: int,
+    max_relation_pairs: int,
+    relation_batch_size: int,
+    briefing_max_claims: int,
+    backend_timeout: int,
+    backend_retries: int,
+    repair_quality: bool,
+    no_validate: bool,
+) -> int:
+    if chunk_lines < 1:
+        print("semantic_staged_brief_failed chunk_lines_must_be_positive", file=sys.stderr)
+        return 1
+    if chunk_overlap_lines < 0 or chunk_overlap_lines >= chunk_lines:
+        print("semantic_staged_brief_failed chunk_overlap_lines_must_be_nonnegative_and_smaller_than_chunk_lines", file=sys.stderr)
+        return 1
+    if max_chunks_per_source < 0:
+        print("semantic_staged_brief_failed max_chunks_per_source_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if max_total_chunks < 0:
+        print("semantic_staged_brief_failed max_total_chunks_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if max_claims_per_chunk < 1:
+        print("semantic_staged_brief_failed max_claims_per_chunk_must_be_positive", file=sys.stderr)
+        return 1
+    if max_relation_pairs < 1:
+        print("semantic_staged_brief_failed max_relation_pairs_must_be_positive", file=sys.stderr)
+        return 1
+    if relation_batch_size < 1:
+        print("semantic_staged_brief_failed relation_batch_size_must_be_positive", file=sys.stderr)
+        return 1
+    if briefing_max_claims < 1:
+        print("semantic_staged_brief_failed briefing_max_claims_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_timeout < 1:
+        print("semantic_staged_brief_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("semantic_staged_brief_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        region = manifest.region_for_id(region_id)
+        selected_backend = backend or manifest.default_model_backend
+        map_output = output or Path("artifacts") / "semantic" / region_id / "staged_brief" / "generated_map.json"
+        map_artifacts = artifact_dir or Path("artifacts") / "semantic" / region_id / "staged_brief" / "map"
+        result = run_staged_map(
+            repo_root=repo_root,
+            manifest_path=package,
+            region_id=region_id,
+            backend=selected_backend,
+            output_path=map_output,
+            artifact_dir=map_artifacts,
+            chunk_lines=chunk_lines,
+            chunk_overlap_lines=chunk_overlap_lines,
+            max_chunks_per_source=max_chunks_per_source or None,
+            max_total_chunks=max_total_chunks or None,
+            max_claims_per_chunk=max_claims_per_chunk,
+            max_relation_pairs=max_relation_pairs,
+            relation_batch_size=relation_batch_size,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            validate=not no_validate,
+            repair_quality=repair_quality,
+        )
+        if result.failures:
+            for failure in result.failures:
+                print(f"FAIL: {failure}", file=sys.stderr)
+            return 1
+        briefing_result = run_map_briefing(
+            repo_root=repo_root,
+            map_path=result.output_path,
+            quality_report_path=result.artifact_dir / "map_quality_report.json",
+            question=question or _case_question_for_region(repo_root, manifest, region),
+            backend=selected_backend,
+            output_dir=briefing_dir or Path("artifacts") / "semantic" / region_id / "staged_brief" / "briefing",
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            source_titles=_source_titles_for_region(repo_root, manifest, region_id),
+            max_claims=briefing_max_claims,
+        )
+    except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+        print(f"semantic_staged_brief_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+    print(
+        "Staged brief wrote "
+        f"{_display_path(repo_root, briefing_result.briefing_path)} "
+        f"map={_display_path(repo_root, result.output_path)} "
+        f"claims={result.claim_count} relations={result.relation_count} "
+        f"quality={result.quality_status} "
+        f"confidence={briefing_result.model_confidence}->{briefing_result.calibrated_confidence}"
+    )
+    print(f"Briefing summary: {_display_path(repo_root, briefing_result.summary_path)}")
     return 0
 
 
@@ -554,6 +823,151 @@ def _run_llm_stress_eval(
     return 0
 
 
+def _run_decision_packet(
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    backend: str | None,
+    output_dir: str | None,
+    skip_stress_run: bool,
+    backend_timeout: int,
+    backend_retries: int,
+) -> int:
+    if backend_timeout < 1:
+        print("decision_packet_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("decision_packet_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+
+    from run_synthesis_uplift_eval import (  # noqa: PLC0415
+        _clean_reader_packet_metadata,
+        _compile_rewrite_requirements,
+        _deterministic_patch_synthesis,
+        _deterministic_requirement_coverage,
+        _needs_repair,
+        _parse_losses,
+        _read,
+        _read_map_payload,
+        _repair_synthesis_prompt,
+        _requirement_dict,
+        _requirements_markdown,
+        _run_synthesis_backend,
+        _synthesis_prompt,
+    )
+
+    manifest = load_submission_manifest(repo_root, package)
+    try:
+        region = manifest.region_for_id(region_id)
+    except KeyError:
+        print(f"decision_packet_failed unknown_region={region_id}", file=sys.stderr)
+        return 1
+
+    selected_backend = backend or manifest.default_model_backend
+    artifacts = Path(output_dir) if output_dir else Path("artifacts") / "decision_packets" / region_id
+    if not artifacts.is_absolute():
+        artifacts = repo_root / artifacts
+    artifacts.mkdir(parents=True, exist_ok=True)
+
+    stress_dir = artifacts / "stress"
+    stress_json = stress_dir / "llm_stress_eval.json"
+    try:
+        if not skip_stress_run or not stress_json.exists():
+            run_llm_stress_eval(
+                repo_root=repo_root,
+                manifest_path=package,
+                region_id=region_id,
+                backend=selected_backend,
+                output_dir=stress_dir,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+            )
+        stress_report = json.loads(stress_json.read_text(encoding="utf-8"))
+        losses = _parse_losses(repo_root / region.audit_path)
+        baseline = _read(repo_root / region.baseline_path)
+        map_payload = _read_map_payload(repo_root, region)
+        map_text = json.dumps(map_payload, indent=2)
+        requirements = _compile_rewrite_requirements(losses, map_payload, stress_report)
+
+        write_json(artifacts / "rewrite_requirements.json", {"requirements": [_requirement_dict(req) for req in requirements]})
+        write_markdown(artifacts / "REWRITE_REQUIREMENTS.md", _requirements_markdown(requirements))
+
+        prompt = _synthesis_prompt(region, baseline, map_text, losses, requirements=requirements, stress_report=stress_report)
+        write_markdown(artifacts / "decision_packet_prompt.txt", prompt)
+        packet = _run_synthesis_backend(
+            prompt,
+            selected_backend,
+            backend_timeout,
+            backend_retries,
+            map_payload,
+            requirements,
+        )
+        initial_coverage = _deterministic_requirement_coverage(packet, requirements)
+        repair_ran = False
+        deterministic_patch_ran = False
+        if _needs_repair(initial_coverage):
+            repair_ran = True
+            write_markdown(artifacts / "decision_packet_initial.md", packet)
+            repair_prompt = _repair_synthesis_prompt(region, packet, initial_coverage, requirements)
+            write_markdown(artifacts / "decision_packet_repair_prompt.txt", repair_prompt)
+            packet = _run_synthesis_backend(
+                repair_prompt,
+                selected_backend,
+                backend_timeout,
+                backend_retries,
+                map_payload,
+                requirements,
+            )
+            repaired_coverage = _deterministic_requirement_coverage(packet, requirements)
+            if _needs_repair(repaired_coverage):
+                deterministic_patch_ran = True
+                write_markdown(artifacts / "decision_packet_repaired_before_patch.md", packet)
+                packet = _deterministic_patch_synthesis(packet, repaired_coverage, requirements)
+        packet = _clean_reader_packet_metadata(packet)
+        coverage = _deterministic_requirement_coverage(packet, requirements)
+    except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(f"decision_packet_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+
+    packet_path = artifacts / "DECISION_PACKET.md"
+    coverage_path = artifacts / "deterministic_requirement_coverage.json"
+    summary_path = artifacts / "decision_packet.json"
+    write_markdown(packet_path, packet)
+    write_json(coverage_path, coverage)
+    write_json(
+        summary_path,
+        {
+            "schema_id": "decision_packet_v1",
+            "region_id": region_id,
+            "backend": selected_backend,
+            "paths": {
+                "decision_packet": _display_path(repo_root, packet_path),
+                "deterministic_requirement_coverage": _display_path(repo_root, coverage_path),
+                "rewrite_requirements": _display_path(repo_root, artifacts / "rewrite_requirements.json"),
+                "stress_report": _display_path(repo_root, stress_json),
+            },
+            "requirement_count": len(requirements),
+            "deterministic_coverage": {
+                "clear": coverage["clear_count"],
+                "partial": coverage["partial_count"],
+                "missing": coverage["missing_count"],
+            },
+            "repair_ran": repair_ran,
+            "deterministic_patch_ran": deterministic_patch_ran,
+        },
+    )
+    print(
+        "Decision packet wrote "
+        f"{_display_path(repo_root, packet_path)} "
+        f"backend={selected_backend} "
+        f"coverage={coverage['clear_count']}/{len(requirements)} clear "
+        f"repair_ran={str(repair_ran).lower()} patch_ran={str(deterministic_patch_ran).lower()}"
+    )
+    print(f"Coverage: {_display_path(repo_root, coverage_path)}")
+    print(f"Summary: {_display_path(repo_root, summary_path)}")
+    return 0
+
+
 def _write_backend_result(
     repo_root: Path,
     region_id: str,
@@ -585,6 +999,21 @@ def _write_backend_result(
         print("Semantic validation skipped.")
         return 0
     return validate(output_path)
+
+
+def _source_titles_for_region(repo_root: Path, manifest: SubmissionManifest, region_id: str) -> dict[str, str]:
+    region = manifest.region_for_id(region_id)
+    case_manifest = _case_manifest_for_region(repo_root, manifest, region)
+    return {source.source_id: source.title for source in case_manifest.sources}
+
+
+def _case_question_for_region(repo_root: Path, manifest: SubmissionManifest, region) -> str:
+    return _case_manifest_for_region(repo_root, manifest, region).question
+
+
+def _case_manifest_for_region(repo_root: Path, manifest: SubmissionManifest, region) -> CaseManifest:
+    case = manifest.case_for_key(region.case_key)
+    return CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
 
 
 def _display_path(repo_root: Path, path: Path) -> str:

@@ -8,11 +8,13 @@ import pytest
 
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION
 from epistemic_case_mapper.staged_semantic_pipeline import (
     CLAIM_EXTRACTION_PROMPT_VERSION,
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,
+    evaluate_staged_map_quality,
 )
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
 
@@ -238,6 +240,22 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
     assert summary["rejected_relations"] == []
+    assert summary["quality_status"] in {"usable_with_review", "review_recommended", "needs_repair"}
+    assert summary["quality_repair_prompt"] == "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_prompt.txt"
+    quality_report = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_report.json").read_text(encoding="utf-8"))
+    assert quality_report["schema_id"] == "staged_map_quality_report_v1"
+    assert quality_report["source_claim_counts"] == {"demo_case_doc_a": 1, "demo_case_doc_b": 1}
+    assert "conclusion_support" in quality_report["claim_role_counts"]
+    assert quality_report["scaffold"]["required_sources"] == ["demo_case_doc_a", "demo_case_doc_b"]
+    claim_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_chunks/demo_case_doc_a_lines_1_2_prompt.txt").read_text(encoding="utf-8")
+    assert "Deterministic map-quality scaffold" in claim_prompt
+    assert "target_claim_roles" in claim_prompt
+    relation_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_pairs/pair_001_prompt.txt").read_text(encoding="utf-8")
+    assert "Deterministic map-quality scaffold" in relation_prompt
+    assert "relation_goals" in relation_prompt
+    repair_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_prompt.txt").read_text(encoding="utf-8")
+    assert "Deterministic quality report" in repair_prompt
+    assert "Candidate map:" in repair_prompt
 
 
 def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tmp_path: Path) -> None:
@@ -289,6 +307,80 @@ def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tm
     assert summary["backend_retries"] == 0
     assert summary["rejected_claims"][0]["reason"] == "backend_error_used_deterministic_fallback"
     assert summary["rejected_relations"][-1]["reason"] == "model_under_related_used_deterministic_fallback"
+
+
+def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Path) -> None:
+    _init_demo_case(monkeypatch, tmp_path)
+    fake_model = tmp_path / "quality_repair_model.py"
+    fake_model.write_text(
+        "import json, re, sys\n"
+        "prompt = sys.stdin.read()\n"
+        "if 'Deterministic quality report:' in prompt:\n"
+        "    payload = {\n"
+        "      'title': 'Repaired Demo Map',\n"
+        "      'status': 'human-review-needed',\n"
+        f"      'prompt_procedure': {MAP_PROMPT_VERSION!r},\n"
+        "      'pipeline': 'staged_chunked_mapper_v1_quality_repaired',\n"
+        "      'evidence_mode': 'source_grounded',\n"
+        "      'sources': ['demo_case_doc_a', 'demo_case_doc_b'],\n"
+        "      'claims': [\n"
+        "        {'claim_id': 'demo_case_c001', 'claim': 'Alpha supports the initialized package question.', 'source_id': 'demo_case_doc_a', 'source_span': 'lines 1-1', 'excerpt': 'Alpha line.', 'entailed_by_excerpt': 'yes', 'role': 'conclusion_support'},\n"
+        "        {'claim_id': 'demo_case_c002', 'claim': 'Gamma supplies a crux for the initialized package question.', 'source_id': 'demo_case_doc_b', 'source_span': 'lines 1-1', 'excerpt': 'Gamma line.', 'entailed_by_excerpt': 'yes', 'role': 'crux'},\n"
+        "        {'claim_id': 'demo_case_c003', 'claim': 'Delta is a scope limit for the initialized package question.', 'source_id': 'demo_case_doc_b', 'source_span': 'lines 2-2', 'excerpt': 'Delta line.', 'entailed_by_excerpt': 'yes', 'role': 'scope_limit'}\n"
+        "      ],\n"
+        "      'relations': [\n"
+        "        {'relation_id': 'demo_case_r001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim changes how the Alpha claim should be read.'},\n"
+        "        {'relation_id': 'demo_case_r002', 'source_claim': 'demo_case_c003', 'target_claim': 'demo_case_c001', 'relation_type': 'refines', 'rationale': 'The Delta claim bounds the Alpha claim.'}\n"
+        "      ],\n"
+        "      'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'],\n"
+        "      'similar_but_not_identical': ['demo_case_c002 and demo_case_c003 play different roles.'],\n"
+        "      'evidence_check': [['Source grounding', 'Survives', 'Exact excerpts are present.']]\n"
+        "    }\n"
+        f"elif {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
+        "    payload = {'claims': [{'claim': 'Alpha supports an initial under-covered map.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'conclusion_support'}]}\n"
+        f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {}\n"
+        "else:\n"
+        "    payload = {}\n"
+        "print(json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "ecm.py",
+            "--repo-root",
+            str(tmp_path),
+            "--package",
+            "package.yaml",
+            "semantic",
+            "staged",
+            "map",
+            "--region",
+            "demo_case_initial_region",
+            "--backend",
+            f"command:{sys.executable} {fake_model}",
+            "--max-total-chunks",
+            "1",
+            "--repair-quality",
+        ],
+    )
+    assert cli.main() == 0
+    generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
+    assert generated["title"] == "Repaired Demo Map"
+    assert len(generated["claims"]) == 3
+    summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
+    assert summary["initial_claim_count"] == 1
+    assert summary["claim_count"] == 3
+    assert summary["quality_repair"]["ran"] is True
+    assert summary["quality_repair"]["accepted"] is True
+    assert summary["quality_repair"]["reason"] == "accepted"
+    assert summary["quality_repair"]["repaired_score"] >= summary["quality_repair"]["initial_score"]
+    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_raw.txt").exists()
+    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repaired_report.json").exists()
 
 
 def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -> None:
@@ -396,6 +488,149 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
     assert summary["relation_batch_size"] == 2
     assert summary["relation_batch_count"] == 1
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_batches/batch_001_prompt.txt").exists()
+
+
+def test_staged_map_quality_report_flags_missing_source_and_duplicates() -> None:
+    class _Thresholds:
+        min_claims = 3
+        max_claims = 8
+        min_relation_types = 2
+
+    class _Region:
+        required_sources = ["doc_a", "doc_b"]
+        thresholds = _Thresholds()
+
+    class _Ontology:
+        def permitted_types(self) -> set[str]:
+            return {"supports", "crux_for", "in_tension_with"}
+
+    class _Manifest:
+        relation_ontology = _Ontology()
+
+    case_manifest = CaseManifest.model_validate(
+        {
+            "case_id": "demo",
+            "title": "Demo",
+            "question": "What matters?",
+            "case_type": "test",
+            "sources": [
+                {"source_id": "doc_a", "title": "A", "text": "Alpha evidence."},
+                {"source_id": "doc_b", "title": "B", "text": "Beta evidence."},
+            ],
+        }
+    )
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "demo_c001",
+                "claim": "Alpha evidence changes the decision.",
+                "source_id": "doc_a",
+                "entailed_by_excerpt": "yes",
+                "role": "conclusion_support",
+            },
+            {
+                "claim_id": "demo_c002",
+                "claim": "Alpha evidence changes the decision substantially.",
+                "source_id": "doc_a",
+                "entailed_by_excerpt": "uncertain",
+                "role": "conclusion_support",
+            },
+        ],
+        "relations": [],
+    }
+
+    report = evaluate_staged_map_quality(
+        manifest=_Manifest(),
+        region=_Region(),
+        case_manifest=case_manifest,
+        all_chunks=[],
+        selected_chunks=[],
+        skipped_chunks=[],
+        candidate_map=candidate_map,
+        rejected_claims=[],
+        rejected_relations=[],
+    )
+
+    issue_types = {issue["issue_type"] for issue in report["issues"]}
+    assert report["status"] == "needs_repair"
+    assert "missing_source_claim_coverage" in issue_types
+    assert "missing_relations" in issue_types
+    assert "near_duplicate_claims" in issue_types
+    assert report["scaffold"]["source_roles"]["doc_a"]["display_title"] == "A"
+    assert report["scaffold"]["source_roles"]["doc_a"]["inferred"] is True
+
+
+def test_staged_map_quality_flags_weak_relation_rationales() -> None:
+    class _Thresholds:
+        min_claims = 2
+        max_claims = 8
+        min_relation_types = 1
+
+    class _Region:
+        required_sources = ["doc_a", "doc_b"]
+        thresholds = _Thresholds()
+
+    class _Ontology:
+        def permitted_types(self) -> set[str]:
+            return {"supports", "crux_for", "in_tension_with"}
+
+    class _Manifest:
+        relation_ontology = _Ontology()
+
+    case_manifest = CaseManifest.model_validate(
+        {
+            "case_id": "demo",
+            "title": "Demo",
+            "question": "What matters?",
+            "case_type": "test",
+            "sources": [
+                {"source_id": "doc_a", "title": "A", "text": "Alpha evidence."},
+                {"source_id": "doc_b", "title": "B", "text": "Beta evidence."},
+            ],
+        }
+    )
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "demo_c001",
+                "claim": "Alpha evidence changes the decision.",
+                "source_id": "doc_a",
+                "entailed_by_excerpt": "yes",
+                "role": "conclusion_support",
+            },
+            {
+                "claim_id": "demo_c002",
+                "claim": "Beta evidence is a crux.",
+                "source_id": "doc_b",
+                "entailed_by_excerpt": "yes",
+                "role": "crux",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "demo_r001",
+                "source_claim": "demo_c002",
+                "target_claim": "demo_c001",
+                "relation_type": "crux_for",
+                "rationale": "They are related.",
+            }
+        ],
+    }
+
+    report = evaluate_staged_map_quality(
+        manifest=_Manifest(),
+        region=_Region(),
+        case_manifest=case_manifest,
+        all_chunks=[],
+        selected_chunks=[],
+        skipped_chunks=[],
+        candidate_map=candidate_map,
+        rejected_claims=[],
+        rejected_relations=[],
+    )
+
+    issue_types = {issue["issue_type"] for issue in report["issues"]}
+    assert "weak_relation_rationales" in issue_types
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

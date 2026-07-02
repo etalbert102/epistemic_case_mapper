@@ -102,7 +102,7 @@ def _run_ollama_http(model: str, prompt: str, timeout_seconds: int | None) -> st
         "think": False,
         "options": {
             "temperature": float(os.environ.get("ECM_OLLAMA_TEMPERATURE", "0")),
-            "num_predict": int(os.environ.get("ECM_OLLAMA_NUM_PREDICT", "768")),
+            "num_predict": int(os.environ.get("ECM_OLLAMA_NUM_PREDICT", "2048")),
         },
     }
     body = json.dumps(payload).encode("utf-8")
