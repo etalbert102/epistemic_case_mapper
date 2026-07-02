@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.classical_ml import tfidf_near_duplicate_pairs
+from epistemic_case_mapper.config_profiles import (
+    EpistemicConfigProfile,
+    config_profile_from_manifest_payload,
+)
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -95,6 +99,7 @@ def run_staged_map(
     manifest, region, case_manifest = _load_context(repo_root, manifest_path, region_id)
     artifacts = _artifact_dir(repo_root, region_id, artifact_dir)
     artifacts.mkdir(parents=True, exist_ok=True)
+    config_profile = _case_config_profile(case_manifest)
 
     all_chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines, chunk_overlap_lines)
     chunks, skipped_chunks = _budget_chunks(all_chunks, max_chunks_per_source, max_total_chunks)
@@ -122,6 +127,7 @@ def run_staged_map(
         max_relation_pairs=max_relation_pairs,
         relation_batch_size=relation_batch_size,
     )
+    relations = _sharpen_relations(relations, claims, manifest.relation_ontology.permitted_types())
     final_map = _assemble_map(
         region=region,
         case_manifest=case_manifest,
@@ -202,6 +208,7 @@ def run_staged_map(
             "relation_batch_size": relation_batch_size,
             "backend_timeout": backend_timeout,
             "backend_retries": backend_retries,
+            "epistemic_config_profile": config_profile.profile_id,
             "all_chunk_count": len(all_chunks),
             "selected_chunk_count": len(chunks),
             "skipped_chunk_count": len(skipped_chunks),
@@ -209,6 +216,7 @@ def run_staged_map(
             "skipped_chunks": skipped_chunks,
             "initial_claim_count": len(claims),
             "initial_relation_count": len(relations),
+            "relation_sharpening": _relation_sharpening_summary(relations),
             "claim_count": len(final_claims),
             "relation_count": len(final_relations),
             "relation_batch_count": _relation_batch_count(max_relation_pairs, relation_batch_size, claims),
@@ -254,6 +262,7 @@ def _extract_claims(
     rejected: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     claim_index = 1
+    valid_roles = set(_configured_claim_roles(case_manifest))
 
     for chunk in chunks:
         span_lookup = {span.span_id: span for span in chunk.spans}
@@ -305,7 +314,7 @@ def _extract_claims(
             rejected.append({"chunk_id": chunk.chunk_id, "reason": "claims_not_list"})
             continue
         for proposal in proposals:
-            claim, reason = _normalize_claim_proposal(proposal, span_lookup)
+            claim, reason = _normalize_claim_proposal(proposal, span_lookup, valid_roles)
             if claim is None:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": reason, "proposal": proposal})
                 continue
@@ -668,6 +677,104 @@ def _classify_singleton_relations(
     return accepted, payloads, rejected, relation_index
 
 
+def _sharpen_relations(
+    relations: list[dict[str, Any]],
+    claims: list[dict[str, Any]],
+    permitted_types: set[str],
+) -> list[dict[str, Any]]:
+    claim_lookup = {str(claim.get("claim_id")): claim for claim in claims}
+    sharpened: list[dict[str, Any]] = []
+    for relation in relations:
+        updated = dict(relation)
+        original_type = str(updated.get("relation_type", ""))
+        sharper_type = _sharper_relation_type(updated, claim_lookup, permitted_types)
+        if sharper_type and sharper_type != original_type:
+            updated["relation_type"] = sharper_type
+            updated["rationale"] = _append_sharpening_note(
+                str(updated.get("rationale", "")),
+                original_type,
+                sharper_type,
+            )
+            updated["deterministic_sharpening"] = {
+                "from": original_type,
+                "to": sharper_type,
+                "method": "claim_role_and_rationale_rules_v1",
+            }
+        sharpened.append(updated)
+    return sharpened
+
+
+def _sharper_relation_type(
+    relation: dict[str, Any],
+    claim_lookup: dict[str, dict[str, Any]],
+    permitted_types: set[str],
+) -> str | None:
+    current = str(relation.get("relation_type", ""))
+    if current not in {"similar_to", "refines", "supports"}:
+        return current
+    source = claim_lookup.get(str(relation.get("source_claim")), {})
+    target = claim_lookup.get(str(relation.get("target_claim")), {})
+    source_role = str(source.get("role", ""))
+    target_role = str(target.get("role", ""))
+    rationale = str(relation.get("rationale", "")).lower()
+    claim_text = " ".join((str(source.get("claim", "")), str(target.get("claim", "")))).lower()
+    combined = f"{rationale} {claim_text}"
+    if "depends_on" in permitted_types and (
+        source_role == "implementation_constraint"
+        or target_role == "implementation_constraint"
+        or any(marker in combined for marker in ("requires", "only when", "if ", "unless", "depends", "must", "condition", "contingent", "when other", "where "))
+    ):
+        return "depends_on"
+    if "in_tension_with" in permitted_types and any(
+        marker in combined
+        for marker in (
+            "however",
+            "unclear",
+            "unproven",
+            "cannot",
+            "does not",
+            "do not",
+            "limitation",
+            "small reductions",
+            "not a solution",
+            "not replace",
+            "rather than",
+            "scope limit",
+            "tension",
+        )
+    ):
+        return "in_tension_with"
+    if "crux_for" in permitted_types and (
+        source_role == "crux"
+        or target_role == "crux"
+        or any(marker in combined for marker in ("crux", "determines", "would change", "changes whether", "changes how", "turns on"))
+    ):
+        return "crux_for"
+    if "challenges" in permitted_types and any(marker in combined for marker in ("contradicts", "undercuts", "weakens", "casts doubt")):
+        return "challenges"
+    return current
+
+
+def _append_sharpening_note(rationale: str, original_type: str, sharper_type: str) -> str:
+    base = rationale.strip()
+    if not base:
+        return f"Retagged from {original_type} to {sharper_type} because claim roles/rationale make the edge decision-relevant."
+    return base
+
+
+def _relation_sharpening_summary(relations: list[dict[str, Any]]) -> dict[str, Any]:
+    changed = [
+        {
+            "relation_id": relation.get("relation_id"),
+            "from": relation.get("deterministic_sharpening", {}).get("from"),
+            "to": relation.get("deterministic_sharpening", {}).get("to"),
+        }
+        for relation in relations
+        if isinstance(relation.get("deterministic_sharpening"), dict)
+    ]
+    return {"changed_count": len(changed), "changed": changed}
+
+
 def _assemble_map(
     region: WorkedRegion,
     case_manifest: CaseManifest,
@@ -694,6 +801,12 @@ def _assemble_map(
         "status": "human-review-needed",
         "prompt_procedure": MAP_PROMPT_VERSION,
         "pipeline": "staged_chunked_mapper_v1",
+        "epistemic_config": {
+            "profile_id": _case_config_profile(case_manifest).profile_id,
+            "source": case_manifest.epistemic_config.get("source", "default_profile")
+            if isinstance(case_manifest.epistemic_config, dict)
+            else "default_profile",
+        },
         "evidence_mode": "source_grounded",
         "sources": [source.source_id for source in _required_sources(case_manifest, region)],
         "claims": claims,
@@ -1009,6 +1122,22 @@ def _near_duplicate_claim_pairs(claims: list[dict[str, Any]]) -> list[tuple[str,
     return list(pair_scores)
 
 
+def _case_config_profile(case_manifest: CaseManifest) -> EpistemicConfigProfile:
+    return config_profile_from_manifest_payload(case_manifest.epistemic_config)
+
+
+def _configured_claim_roles(case_manifest: CaseManifest) -> list[str]:
+    roles = _case_config_profile(case_manifest).claim_role_ids()
+    if "other" not in roles:
+        roles.append("other")
+    return roles
+
+
+def _profile_relation_rule_text(case_manifest: CaseManifest) -> str:
+    rules = _case_config_profile(case_manifest).relation_prompt_rules
+    return "\n".join(f"- Profile guidance: {rule}" for rule in rules)
+
+
 def _text_overlap_ratio(left: str, right: str) -> float:
     left_terms = _content_terms(left)
     right_terms = _content_terms(right)
@@ -1024,27 +1153,57 @@ def _map_quality_scaffold(
     chunk: SourceChunk | None = None,
 ) -> dict[str, Any]:
     required_sources = _required_sources(case_manifest, region)
+    profile = _case_config_profile(case_manifest)
     source_roles = {
         source.source_id: _source_role_scaffold(source)
         for source in required_sources
     }
     scaffold: dict[str, Any] = {
         "case_question": case_manifest.question,
+        "epistemic_config_profile": {
+            "profile_id": profile.profile_id,
+            "label": profile.label,
+            "description": profile.description,
+        },
         "required_sources": [source.source_id for source in required_sources],
         "source_roles": source_roles,
-        "target_claim_roles": [
-            "conclusion_support",
-            "crux",
-            "scope_limit",
-            "implementation_constraint",
-            "background",
-            "other",
+        "source_role_taxonomy": [
+            {
+                "role_id": role.role_id,
+                "description": role.description,
+                "keyword_markers": role.keyword_markers,
+                "limitations": role.limitations,
+            }
+            for role in profile.source_roles
         ],
-        "relation_goals": [
+        "target_claim_roles": [
+            {"role_id": role.role_id, "description": role.description, "use_when": role.use_when}
+            for role in profile.claim_roles
+        ],
+        "relation_goals": profile.relation_prompt_rules + [
             "connect at least one crux/scope-limit claim to a conclusion-support claim",
             "preserve tensions instead of flattening them",
             "use source limitations to bound claim strength",
             "prefer cross-source relations when they clarify disagreement or scope",
+        ],
+        "profile_evidence_sections": [
+            {
+                "section_id": section.section_id,
+                "title": section.title,
+                "description": section.description,
+                "claim_roles": section.claim_roles,
+                "relation_types": section.relation_types,
+            }
+            for section in profile.evidence_sections
+        ],
+        "profile_relation_types": [
+            {
+                "relation_type": relation.relation_type,
+                "description": relation.description,
+                "use_when": relation.use_when,
+                "sharpness_markers": relation.sharpness_markers,
+            }
+            for relation in profile.relation_types
         ],
         "allowed_relation_types": sorted(manifest.relation_ontology.permitted_types()),
         "quality_checks": [
@@ -1128,6 +1287,7 @@ def _claim_prompt(
         for span in chunk.spans
     )
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk), indent=2)
+    role_options = "|".join(_configured_claim_roles(case_manifest))
     return f"""You are selecting source-grounded claim candidates from one bounded source-span catalog.
 
 Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}
@@ -1150,7 +1310,7 @@ Return only JSON:
       "claim": "one concise claim supported by the excerpt",
       "span_id": "one span_id from the catalog",
       "entailed_by_excerpt": "yes|no|uncertain",
-      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+      "role": "{role_options}"
     }}
   ]
 }}
@@ -1162,7 +1322,7 @@ Rules:
 - Use only span IDs shown in the catalog.
 - Prefer claims that affect the case question, not bibliographic metadata.
 - Use the map-quality scaffold to diversify claim roles and preserve source limitations.
-- If a source limitation changes how the question should be answered, extract it as scope_limit or implementation_constraint.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
 - If the chunk has no useful claim, return {{"claims": []}}.
 """
 
@@ -1177,6 +1337,7 @@ def _relation_pair_prompt(
     right = packet["right"]
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
+    profile_rules = _profile_relation_rule_text(case_manifest)
     return f"""You are classifying one possible relation between two already-validated claim cards.
 
 Prompt version: {RELATION_PROMPT_VERSION}
@@ -1220,6 +1381,10 @@ Rules:
 - Use only the two claim IDs shown above.
 - Use only allowed relation types, or use relation_type "none".
 - Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
+- Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
+{profile_rules}
+- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
+- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
 - If no defensible relation exists, set source_claim and target_claim to null and relation_type to "none".
 """
 
@@ -1235,6 +1400,7 @@ def _relation_batch_prompt(
     pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
+    profile_rules = _profile_relation_rule_text(case_manifest)
     return f"""You are classifying possible relations between already-validated claim cards.
 
 Prompt version: {RELATION_BATCH_PROMPT_VERSION}
@@ -1272,6 +1438,10 @@ Rules:
 - Use only the two claim IDs shown for each pair.
 - Use only allowed relation types, or use relation_type "none".
 - Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
+- Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
+{profile_rules}
+- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
+- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
 - If no defensible relation exists for a pair, set source_claim and target_claim to null and relation_type to "none".
 """
 
@@ -1298,6 +1468,7 @@ Claim B:
 def _normalize_claim_proposal(
     proposal: Any,
     span_lookup: dict[str, SourceSpan],
+    valid_roles: set[str] | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
     if not isinstance(proposal, dict):
         return None, "claim_not_object"
@@ -1312,8 +1483,11 @@ def _normalize_claim_proposal(
     if entailed not in VALID_ENTAILMENT:
         entailed = "uncertain"
     role = str(proposal.get("role", "other")).strip()
-    if role not in VALID_CLAIM_ROLES:
+    allowed_roles = valid_roles or VALID_CLAIM_ROLES
+    if role not in allowed_roles:
         role = "other"
+    if role not in allowed_roles:
+        role = sorted(allowed_roles)[0] if allowed_roles else "other"
     return (
         {
             "claim_id": "",

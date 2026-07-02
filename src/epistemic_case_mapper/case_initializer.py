@@ -27,6 +27,7 @@ def init_case_package(
     doc_paths: list[Path],
     region_id: str | None = None,
     model_backend: str = "prompt",
+    epistemic_config: dict | None = None,
     force: bool = False,
 ) -> InitializedCase:
     slug = _slugify(case_id)
@@ -58,7 +59,7 @@ def init_case_package(
 
     source_records = _copy_sources(repo_root, slug, doc_paths, force=force)
     manifest = _manifest(slug, title, question, region_slug, source_records, model_backend)
-    case_manifest = _case_manifest(slug, title, question, source_records)
+    case_manifest = _case_manifest(slug, title, question, source_records, epistemic_config)
     worked_map = _starter_map(repo_root, slug, title, source_records)
     audit = _starter_audit(slug)
 
@@ -214,7 +215,13 @@ def _manifest(
     }
 
 
-def _case_manifest(case_id: str, title: str, question: str, sources: list[dict[str, str]]) -> dict:
+def _case_manifest(
+    case_id: str,
+    title: str,
+    question: str,
+    sources: list[dict[str, str]],
+    epistemic_config: dict | None = None,
+) -> dict:
     return {
         "case_id": case_id,
         "title": title,
@@ -238,6 +245,7 @@ def _case_manifest(case_id: str, title: str, question: str, sources: list[dict[s
             }
             for source in sources
         ],
+        "epistemic_config": epistemic_config or {},
     }
 
 

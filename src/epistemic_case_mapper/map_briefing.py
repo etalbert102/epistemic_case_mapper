@@ -99,12 +99,14 @@ def run_map_briefing(
         max_claims=max_claims,
     )
     erosion_audit = generated_map_erosion_audit(prioritized_map)
+    scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
         question=question,
         source_lookup=source_lookup,
         erosion_audit=erosion_audit,
+        scaffold=scaffold,
     )
 
     prompt_path = artifacts / "map_briefing_prompt.txt"
@@ -131,6 +133,7 @@ def run_map_briefing(
             model_confidence = _confidence_label(payload.get("confidence"))
             calibration = calibrate_confidence(model_confidence, quality_report)
             calibrated = calibration["calibrated_confidence"]
+            payload = repair_briefing_payload(payload, scaffold, source_lookup, prioritized_map)
             payload["confidence"] = calibrated
             rendered = _render_synthesis_packet(payload, map_payload=prioritized_map, requirements=())
         elif _looks_like_structured_attempt(result.text):
@@ -147,6 +150,7 @@ def run_map_briefing(
     if not result.prompt_only:
         calibration = calibrate_confidence(model_confidence, quality_report)
     rendered = _ensure_confidence_visible(rendered, calibrated)
+    rendered = _normalize_reader_punctuation(expand_reader_map_references(rendered, prioritized_map))
     rendered = _clean_reader_packet_metadata(replace_source_ids(rendered, source_lookup))
     briefing_path = artifacts / "BRIEFING.md"
     summary_path = artifacts / "briefing_summary.json"
@@ -200,8 +204,9 @@ def build_map_briefing_prompt(
     question: str,
     source_lookup: dict[str, str],
     erosion_audit: dict[str, Any],
+    scaffold: dict[str, Any] | None = None,
 ) -> str:
-    scaffold = briefing_scaffold(candidate_map, quality_report, source_lookup, erosion_audit)
+    scaffold = scaffold or briefing_scaffold(candidate_map, quality_report, source_lookup, erosion_audit)
     return "\n\n".join(
         (
             "You are writing a decision-support briefing from a source-grounded epistemic map.",
@@ -219,6 +224,8 @@ def build_map_briefing_prompt(
             "- Use the deterministic scaffold as minimum content, not final wording.",
             "- Preserve tensions, scope limits, and method limits; do not flatten them into a single confident answer.",
             "- Use source display names, not raw source IDs, claim IDs, or relation IDs, in reader-facing fields.",
+            "- Every evidence_roles bullet must be a substantive evidence statement, not just a source name.",
+            "- An evidence_roles bullet is invalid if it only says which source exists; include the relevant claim and put the source in parentheses.",
             "- Do not invent facts beyond the map, quality report, or erosion audit.",
             "- Calibrate uncertainty to the quality report. A map marked review_recommended or needs_repair cannot support high confidence.",
             "- Keep the briefing concise and readable for a human judge.",
@@ -272,7 +279,7 @@ def briefing_scaffold(
     for item in erosion_audit.get("items", []):
         if isinstance(item, dict) and item.get("reader_anchor"):
             audit_trail.append(str(item["reader_anchor"]))
-    return {
+    scaffold = {
         "quality_status": quality_report.get("status"),
         "quality_score": quality_report.get("score"),
         "confidence_cap": confidence_cap(quality_report),
@@ -286,6 +293,184 @@ def briefing_scaffold(
             if isinstance(issue, dict)
         ][:8],
     }
+    return _expand_payload_reader_references(scaffold, candidate_map)
+
+
+def repair_briefing_payload(
+    payload: dict[str, Any],
+    scaffold: dict[str, Any],
+    source_lookup: dict[str, str],
+    candidate_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    repaired = dict(payload)
+    evidence_roles = repaired.get("evidence_roles")
+    if not isinstance(evidence_roles, dict):
+        evidence_roles = {}
+    repaired_roles: dict[str, list[str]] = {}
+    scaffold_roles = scaffold.get("evidence_roles", {})
+    source_names = set(source_lookup.values())
+    for role_key in ("main_support", "conflicting_evidence", "scope_limits", "method_limits"):
+        model_items = _string_list(evidence_roles.get(role_key))
+        substantive = [
+            item
+            for item in model_items
+            if _is_substantive_evidence_statement(item, source_names)
+        ]
+        for scaffold_item in _string_list(scaffold_roles.get(role_key)):
+            if _similar_text_exists(substantive, scaffold_item):
+                continue
+            substantive.append(scaffold_item)
+        repaired_roles[role_key] = _dedupe(substantive)[:8]
+    repaired["evidence_roles"] = repaired_roles
+    audit = _string_list(repaired.get("audit_trail"))
+    for item in _string_list(scaffold.get("audit_trail")):
+        if not _similar_text_exists(audit, item):
+            audit.append(item)
+    repaired["audit_trail"] = _dedupe(audit)[:10]
+    if candidate_map is not None:
+        repaired = _expand_payload_reader_references(repaired, candidate_map)
+    return repaired
+
+
+def expand_reader_map_references(text: str, candidate_map: dict[str, Any]) -> str:
+    claim_lookup = _claim_alias_lookup(candidate_map)
+    relation_lookup = _relation_alias_lookup(candidate_map, claim_lookup)
+    expanded = text
+    expanded = re.sub(
+        r"\s*\(([cCrR]\d{3,})\)",
+        lambda match: "" if match.group(1).lower() in {key.lower() for key in (*claim_lookup, *relation_lookup)} else match.group(0),
+        expanded,
+    )
+    expanded = _expand_claim_sentence_references(expanded, claim_lookup)
+    expanded = _expand_relation_sentence_references(expanded, relation_lookup)
+    expanded = re.sub(
+        r"\b[Cc]laim\s+([A-Za-z0-9_\-]*_?c\d{3,})\b",
+        lambda match: _claim_reference_phrase(match.group(1), claim_lookup),
+        expanded,
+    )
+    expanded = re.sub(
+        r"\b[Rr]elation\s+([A-Za-z0-9_\-]*_?r\d{3,})\b",
+        lambda match: _relation_reference_phrase(match.group(1), relation_lookup),
+        expanded,
+    )
+    expanded = re.sub(
+        r"`?([A-Za-z0-9_\-]+_c\d{3,}|[cC]\d{3,})`?",
+        lambda match: claim_lookup.get(match.group(1)) or claim_lookup.get(match.group(1).lower()) or match.group(0),
+        expanded,
+    )
+    expanded = re.sub(
+        r"`?([A-Za-z0-9_\-]+_r\d{3,}|[rR]\d{3,})`?",
+        lambda match: relation_lookup.get(match.group(1)) or relation_lookup.get(match.group(1).lower()) or match.group(0),
+        expanded,
+    )
+    return re.sub(r"\s+", " ", expanded) if "\n" not in expanded else "\n".join(
+        re.sub(r"[ \t]+", " ", line).rstrip() for line in expanded.splitlines()
+    )
+
+
+def _expand_payload_reader_references(value: Any, candidate_map: dict[str, Any]) -> Any:
+    if isinstance(value, str):
+        return expand_reader_map_references(value, candidate_map)
+    if isinstance(value, list):
+        return [_expand_payload_reader_references(item, candidate_map) for item in value]
+    if isinstance(value, dict):
+        return {key: _expand_payload_reader_references(item, candidate_map) for key, item in value.items()}
+    return value
+
+
+def _claim_alias_lookup(candidate_map: dict[str, Any]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for claim in _claims(candidate_map):
+        claim_id = str(claim.get("claim_id", "")).strip()
+        claim_text = str(claim.get("claim") or claim.get("text") or "").strip()
+        if not claim_id or not claim_text:
+            continue
+        aliases = {claim_id}
+        suffix = claim_id.rsplit("_", 1)[-1]
+        if re.fullmatch(r"c\d{3,}", suffix):
+            aliases.update({suffix, suffix.upper()})
+        for alias in aliases:
+            lookup[alias] = claim_text
+            lookup[alias.lower()] = claim_text
+    return lookup
+
+
+def _relation_alias_lookup(candidate_map: dict[str, Any], claim_lookup: dict[str, str]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for relation in _relations(candidate_map):
+        relation_id = str(relation.get("relation_id", "")).strip()
+        relation_text = str(relation.get("rationale", "")).strip()
+        if not relation_text:
+            left = claim_lookup.get(str(relation.get("source_claim", "")).lower(), "")
+            right = claim_lookup.get(str(relation.get("target_claim", "")).lower(), "")
+            relation_type = str(relation.get("relation_type", "")).replace("_", " ")
+            relation_text = " ".join(part for part in (left, relation_type, right) if part)
+        if not relation_id or not relation_text:
+            continue
+        relation_text = expand_reader_map_references(relation_text, {"claims": _claims(candidate_map), "relations": []})
+        aliases = {relation_id}
+        suffix = relation_id.rsplit("_", 1)[-1]
+        if re.fullmatch(r"r\d{3,}", suffix):
+            aliases.update({suffix, suffix.upper()})
+        for alias in aliases:
+            lookup[alias] = relation_text
+            lookup[alias.lower()] = relation_text
+    return lookup
+
+
+def _expand_claim_sentence_references(text: str, claim_lookup: dict[str, str]) -> str:
+    verbs = (
+        "acts",
+        "challenges",
+        "clarifies",
+        "creates",
+        "defines",
+        "establishes",
+        "expands",
+        "introduces",
+        "limits",
+        "provides",
+        "qualifies",
+        "questions",
+        "refines",
+        "reinforces",
+        "specifies",
+        "supports",
+    )
+    verb_pattern = "|".join(verbs)
+    return re.sub(
+        rf"\b[Cc]laim\s+([A-Za-z0-9_\-]*_?c\d{{3,}})\s+({verb_pattern})([^.\n]*)(\.)?",
+        lambda match: _claim_sentence_replacement(match, claim_lookup),
+        text,
+    )
+
+
+def _claim_sentence_replacement(match: re.Match[str], claim_lookup: dict[str, str]) -> str:
+    claim = claim_lookup.get(match.group(1)) or claim_lookup.get(match.group(1).lower())
+    if not claim:
+        return match.group(0)
+    verb = match.group(2)
+    rest = match.group(3).strip()
+    ending = match.group(4) or "."
+    return f"{claim}. This {verb}{(' ' + rest) if rest else ''}{ending}"
+
+
+def _expand_relation_sentence_references(text: str, relation_lookup: dict[str, str]) -> str:
+    return re.sub(
+        r"\b[Rr]elation\s+([A-Za-z0-9_\-]*_?r\d{3,})\s+(matters|is important|is central|is load-bearing)\b",
+        lambda match: f"{_relation_reference_phrase(match.group(1), relation_lookup)} {match.group(2)}",
+        text,
+    )
+
+
+def _claim_reference_phrase(alias: str, claim_lookup: dict[str, str]) -> str:
+    claim = claim_lookup.get(alias) or claim_lookup.get(alias.lower())
+    return claim if claim else f"Claim {alias}"
+
+
+def _relation_reference_phrase(alias: str, relation_lookup: dict[str, str]) -> str:
+    relation = relation_lookup.get(alias) or relation_lookup.get(alias.lower())
+    return relation if relation else f"Relation {alias}"
 
 
 def prioritize_map_for_briefing(
@@ -444,7 +629,10 @@ def build_source_display_lookup(
     *,
     source_titles: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    lookup = dict(source_titles or {})
+    lookup = {
+        source_id: polish_source_display_name(title)
+        for source_id, title in dict(source_titles or {}).items()
+    }
     for source_id in candidate_map.get("sources", []):
         if isinstance(source_id, str) and source_id not in lookup:
             lookup[source_id] = display_source_name(source_id)
@@ -469,6 +657,32 @@ def display_source_name(source_id: str) -> str:
         else:
             titled.append(word[:1].upper() + word[1:])
     return " ".join(titled) or source_id
+
+
+def polish_source_display_name(title: str) -> str:
+    words = str(title).split()
+    if not words:
+        return str(title)
+    polished = []
+    for word in words:
+        stripped = word.strip()
+        lower = re.sub(r"[^A-Za-z0-9.]", "", stripped).lower()
+        replacement = {
+            **DISPLAY_ACRONYMS,
+            "epa": "EPA",
+            "cdc": "CDC",
+            "hepa": "HEPA",
+            "hvac": "HVAC",
+            "ashrae": "ASHRAE",
+            "cadr": "CADR",
+            "merv": "MERV",
+            "pm": "PM",
+        }.get(lower)
+        if replacement:
+            polished.append(re.sub(re.escape(stripped), replacement, word))
+        else:
+            polished.append(word)
+    return " ".join(polished)
 
 
 def replace_source_ids(text: str, source_lookup: dict[str, str]) -> str:
@@ -603,6 +817,62 @@ def _dedupe_dicts(items: list[dict[str, str]]) -> list[dict[str, str]]:
     return result
 
 
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _is_substantive_evidence_statement(text: str, source_names: set[str]) -> bool:
+    stripped = re.sub(r"\s+", " ", text).strip(" -.;")
+    if not stripped:
+        return False
+    if stripped in source_names:
+        return False
+    without_parenthetical_sources = stripped
+    for source_name in source_names:
+        without_parenthetical_sources = without_parenthetical_sources.replace(f"({source_name})", "")
+    if without_parenthetical_sources.strip(" -.;") in source_names:
+        return False
+    terms = _content_terms(without_parenthetical_sources)
+    if len(terms) < 4:
+        return False
+    return any(
+        marker in without_parenthetical_sources.lower()
+        for marker in (
+            " is ",
+            " are ",
+            " can ",
+            " cannot ",
+            " should ",
+            " must ",
+            " reduce",
+            " lower",
+            " increase",
+            " depend",
+            " require",
+            " observed",
+            " tested",
+            " found",
+            " showed",
+        )
+    )
+
+
+def _similar_text_exists(items: list[str], candidate: str) -> bool:
+    candidate_terms = set(_content_terms(candidate))
+    if not candidate_terms:
+        return False
+    for item in items:
+        item_terms = set(_content_terms(item))
+        if not item_terms:
+            continue
+        overlap = len(candidate_terms & item_terms) / min(len(candidate_terms), len(item_terms))
+        if overlap >= 0.7:
+            return True
+    return False
+
+
 def _content_terms(text: str) -> list[str]:
     terms = []
     stopwords = {
@@ -653,6 +923,12 @@ def _ensure_confidence_visible(markdown: str, confidence: str) -> str:
     if "**Confidence:**" in markdown:
         return _replace_confidence_line(markdown, confidence)
     return markdown.rstrip() + f"\n\n**Confidence:** {confidence}\n"
+
+
+def _normalize_reader_punctuation(text: str) -> str:
+    cleaned = re.sub(r"\.{2,}", ".", text)
+    cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
+    return cleaned
 
 
 def _rel(repo_root: Path, path: Path) -> str:

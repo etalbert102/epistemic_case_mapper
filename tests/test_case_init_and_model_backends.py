@@ -15,6 +15,7 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,
     evaluate_staged_map_quality,
+    _sharpen_relations,
 )
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
 
@@ -631,6 +632,52 @@ def test_staged_map_quality_flags_weak_relation_rationales() -> None:
 
     issue_types = {issue["issue_type"] for issue in report["issues"]}
     assert "weak_relation_rationales" in issue_types
+
+
+def test_relation_sharpening_retags_generic_edges_when_roles_support_it() -> None:
+    claims = [
+        {
+            "claim_id": "demo_c001",
+            "claim": "Portable cleaners should be used as supplemental filtration.",
+            "role": "crux",
+        },
+        {
+            "claim_id": "demo_c002",
+            "claim": "Measured PM reductions may not imply meaningful health benefits.",
+            "role": "scope_limit",
+        },
+        {
+            "claim_id": "demo_c003",
+            "claim": "HVAC systems must still meet baseline ventilation requirements.",
+            "role": "implementation_constraint",
+        },
+    ]
+    relations = [
+        {
+            "relation_id": "demo_r001",
+            "source_claim": "demo_c002",
+            "target_claim": "demo_c001",
+            "relation_type": "refines",
+            "rationale": "The small PM reductions are unclear for health benefits and limit the support claim.",
+        },
+        {
+            "relation_id": "demo_r002",
+            "source_claim": "demo_c003",
+            "target_claim": "demo_c001",
+            "relation_type": "supports",
+            "rationale": "Portable cleaner deployment only works if baseline HVAC ventilation is maintained.",
+        },
+    ]
+
+    sharpened = _sharpen_relations(
+        relations,
+        claims,
+        {"supports", "refines", "similar_to", "depends_on", "crux_for", "in_tension_with"},
+    )
+
+    assert sharpened[0]["relation_type"] == "in_tension_with"
+    assert sharpened[1]["relation_type"] == "depends_on"
+    assert sharpened[0]["deterministic_sharpening"]["from"] == "refines"
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

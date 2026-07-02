@@ -6,8 +6,11 @@ from pathlib import Path
 
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.map_briefing import (
+    briefing_scaffold,
     calibrate_confidence,
+    expand_reader_map_references,
     prioritize_map_for_briefing,
+    repair_briefing_payload,
     run_map_briefing,
 )
 from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
@@ -97,6 +100,101 @@ def test_prioritization_reports_tfidf_duplicate_pairs() -> None:
     pairs = {(row["left"], row["right"]) for row in report["duplicate_claim_pairs"]}
     assert ("c001", "c002") in pairs
     assert report["centrality_scores"]["c001"] > report["centrality_scores"]["c002"]
+
+
+def test_repair_briefing_payload_replaces_source_only_evidence_roles() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "Portable cleaners should be supplemental when targeted filtration is needed.",
+                "source_id": "epa_school",
+                "role": "crux",
+            },
+            {
+                "claim_id": "c002",
+                "claim": "HVAC systems must still meet ventilation code requirements.",
+                "source_id": "cdc_school",
+                "role": "implementation_constraint",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "r001",
+                "source_claim": "c002",
+                "target_claim": "c001",
+                "relation_type": "depends_on",
+                "rationale": "Portable cleaner deployment depends on maintaining baseline HVAC ventilation.",
+            }
+        ],
+    }
+    source_lookup = {"epa_school": "EPA School Guidance", "cdc_school": "CDC School Guidance"}
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 95, "issues": []},
+        source_lookup,
+        {"items": []},
+    )
+    payload = {
+        "decision_brief": "Use portable cleaners as supplements.",
+        "confidence": "medium",
+        "evidence_roles": {
+            "main_support": ["EPA School Guidance"],
+            "conflicting_evidence": [],
+            "scope_limits": [],
+            "method_limits": ["CDC School Guidance"],
+        },
+        "audit_trail": [],
+    }
+
+    repaired = repair_briefing_payload(payload, scaffold, source_lookup)
+
+    assert repaired["evidence_roles"]["main_support"] != ["EPA School Guidance"]
+    role_text = "\n".join(repaired["evidence_roles"]["scope_limits"] + repaired["evidence_roles"]["method_limits"])
+    assert "HVAC systems must still meet ventilation code requirements" in role_text
+    assert "Portable cleaner deployment depends on maintaining baseline HVAC ventilation" in "\n".join(
+        repaired["audit_trail"]
+    )
+
+
+def test_expand_reader_map_references_removes_short_claim_ids() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "school_hepa_priority_c026",
+                "claim": "HEPA classrooms had lower PM 2.5 than comparison classrooms.",
+                "source_id": "trial",
+            },
+            {
+                "claim_id": "school_hepa_priority_c029",
+                "claim": "The health benefit of the small PM reduction remains unclear.",
+                "source_id": "trial",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "school_hepa_priority_r001",
+                "source_claim": "school_hepa_priority_c029",
+                "target_claim": "school_hepa_priority_c026",
+                "relation_type": "in_tension_with",
+                "rationale": "Claim c029 limits the interpretation of Claim c026.",
+            }
+        ],
+    }
+
+    expanded = expand_reader_map_references(
+        "Claim c026 supports the intervention, but Claim C029 limits it. Supported by trial (c026). Relation r001 matters.",
+        candidate_map,
+    )
+
+    assert "Claim c026" not in expanded
+    assert "Claim C029" not in expanded
+    assert "(c026)" not in expanded
+    assert "Relation r001" not in expanded
+    assert "the mapped claim that" not in expanded
+    assert "HEPA classrooms had lower PM 2.5" in expanded
+    assert "This supports the intervention" in expanded
+    assert "health benefit of the small PM reduction remains unclear" in expanded
 
 
 def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_path: Path) -> None:

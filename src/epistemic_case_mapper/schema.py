@@ -53,6 +53,7 @@ class CaseManifest(BaseModel):
     notes: list[str] = Field(default_factory=list)
     metadata_files: list[str] = Field(default_factory=list)
     open_question_templates: list[OpenQuestionTemplate] = Field(default_factory=list)
+    epistemic_config: dict[str, Any] = Field(default_factory=dict)
 
 
 class Claim(BaseModel):

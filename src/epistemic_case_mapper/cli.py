@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 
 from epistemic_case_mapper.case_initializer import init_case_package
+from epistemic_case_mapper.config_profiles import (
+    profile_for_id,
+    profile_manifest_payload,
+    recommend_config_profile,
+    render_config_recommendation_markdown,
+)
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.llm_stress_eval import run_llm_stress_eval
 from epistemic_case_mapper.map_briefing import run_map_briefing
@@ -54,7 +60,18 @@ def main() -> int:
     case_init.add_argument("--docs", nargs="+", required=True, help="Document files to import.")
     case_init.add_argument("--region", help="Worked-region ID. Defaults to <case-id>_initial_region.")
     case_init.add_argument("--model-backend", default="prompt", help="Default backend: prompt, command:<cmd>, or ollama:<model>.")
+    case_init.add_argument("--recommend-config", action="store_true", help="Use the model backend to select an epistemic config profile for this packet.")
+    case_init.add_argument("--config-backend", help="Backend for config recommendation. Defaults to --model-backend.")
+    case_init.add_argument("--config-timeout", type=int, default=60, help="Seconds allowed for config recommendation backend call.")
+    case_init.add_argument("--config-retries", type=int, default=0, help="Retries for config recommendation backend failures.")
     case_init.add_argument("--force", action="store_true", help="Overwrite initializer-managed files.")
+    case_config = case_subparsers.add_parser("recommend-config", help="Recommend an epistemic config profile for documents and a question.")
+    case_config.add_argument("--question", required=True, help="Decision-relevant question.")
+    case_config.add_argument("--docs", nargs="+", required=True, help="Document files to inspect.")
+    case_config.add_argument("--backend", default="prompt", help="Backend: prompt, command:<cmd>, or ollama:<model>.")
+    case_config.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/config_recommendations/<question-slug>.")
+    case_config.add_argument("--backend-timeout", type=int, default=60)
+    case_config.add_argument("--backend-retries", type=int, default=0)
 
     package_parser = subparsers.add_parser("package", help="Prepare package-facing generated assets.")
     package_subparsers = package_parser.add_subparsers(dest="package_target", required=True)
@@ -239,7 +256,21 @@ def main() -> int:
             [Path(path) for path in args.docs],
             args.region,
             args.model_backend,
+            args.recommend_config,
+            args.config_backend,
+            args.config_timeout,
+            args.config_retries,
             args.force,
+        )
+    if args.command == "case" and args.case_target == "recommend-config":
+        return _recommend_config(
+            repo_root=repo_root,
+            question=args.question,
+            docs=[Path(path) for path in args.docs],
+            backend=args.backend,
+            output_dir=args.output_dir,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
         )
     if args.command == "package" and args.package_target == "prepare":
         return _prepare_package(repo_root, args.package)
@@ -446,8 +477,33 @@ def _init_case_package(
     docs: list[Path],
     region: str | None,
     model_backend: str,
+    recommend_config: bool,
+    config_backend: str | None,
+    config_timeout: int,
+    config_retries: int,
     force: bool,
 ) -> int:
+    if config_timeout < 1:
+        print("case_init_failed config_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if config_retries < 0:
+        print("case_init_failed config_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    epistemic_config = None
+    if recommend_config:
+        try:
+            config_run = recommend_config_profile(
+                question=question,
+                doc_paths=docs,
+                backend=config_backend or model_backend,
+                timeout_seconds=config_timeout,
+                max_retries=config_retries,
+            )
+            selected_profile = profile_for_id(config_run.recommendation.profile_id)
+            epistemic_config = profile_manifest_payload(selected_profile, config_run.recommendation)
+        except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+            print(f"case_init_failed config_recommendation_error={exc}", file=sys.stderr)
+            return 1
     try:
         initialized = init_case_package(
             repo_root=repo_root,
@@ -458,14 +514,69 @@ def _init_case_package(
             doc_paths=docs,
             region_id=region,
             model_backend=model_backend,
+            epistemic_config=epistemic_config,
             force=force,
         )
     except ValueError as exc:
         print(f"case_init_failed {exc}", file=sys.stderr)
         return 1
     print(f"Initialized case package case={initialized.case_id} region={initialized.region_id}")
+    if epistemic_config:
+        print(f"Selected epistemic config profile={epistemic_config.get('profile_id')} confidence={epistemic_config.get('confidence', 'low')}")
     for path in initialized.written_paths:
         print(f"Wrote {_display_path(repo_root, path)}")
+    return 0
+
+
+def _recommend_config(
+    *,
+    repo_root: Path,
+    question: str,
+    docs: list[Path],
+    backend: str,
+    output_dir: str | None,
+    backend_timeout: int,
+    backend_retries: int,
+) -> int:
+    if backend_timeout < 1:
+        print("config_recommendation_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("config_recommendation_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    artifacts = Path(output_dir) if output_dir else Path("artifacts") / "config_recommendations" / _slugify_path_component(question)
+    if not artifacts.is_absolute():
+        artifacts = repo_root / artifacts
+    try:
+        run = recommend_config_profile(
+            question=question,
+            doc_paths=docs,
+            backend=backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+        )
+    except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(f"config_recommendation_failed error={exc}", file=sys.stderr)
+        return 1
+    profile = profile_for_id(run.recommendation.profile_id)
+    artifacts.mkdir(parents=True, exist_ok=True)
+    write_markdown(artifacts / "config_recommendation_prompt.txt", run.prompt)
+    write_markdown(artifacts / "config_recommendation_raw.txt", run.raw_output)
+    write_json(
+        artifacts / "config_recommendation.json",
+        {
+            "recommendation": run.recommendation.model_dump(),
+            "epistemic_config": profile_manifest_payload(profile, run.recommendation),
+        },
+    )
+    write_markdown(artifacts / "CONFIG_RECOMMENDATION.md", render_config_recommendation_markdown(run.recommendation, profile))
+    print(
+        "Config recommendation wrote "
+        f"{_display_path(repo_root, artifacts / 'config_recommendation.json')} "
+        f"profile={run.recommendation.profile_id} confidence={run.recommendation.confidence}"
+    )
+    if run.recommendation.fallback_reason:
+        print(f"Fallback: {run.recommendation.fallback_reason}")
     return 0
 
 
@@ -1021,6 +1132,13 @@ def _display_path(repo_root: Path, path: Path) -> str:
         return path.relative_to(repo_root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _slugify_path_component(text: str) -> str:
+    cleaned = "".join(char.lower() if char.isalnum() else "_" for char in text).strip("_")
+    while "__" in cleaned:
+        cleaned = cleaned.replace("__", "_")
+    return cleaned[:80] or "config_recommendation"
 
 
 def _run_many(repo_root: Path, commands: list[list[str]], package: str) -> int:
