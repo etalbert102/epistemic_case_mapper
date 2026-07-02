@@ -1,0 +1,561 @@
+You are writing a decision-support briefing from a source-grounded epistemic map.
+
+Return valid JSON only.
+
+Required JSON shape: {"decision_brief": "readable bottom-line prose", "confidence": "low|medium|high", "decision_implications": ["action-relevant implication"], "top_cruxes": [{"crux": "...", "why_it_matters": "...", "current_read": "...", "would_change_if": "..."}], "evidence_roles": {"main_support": ["..."], "conflicting_evidence": ["..."], "scope_limits": ["..."], "method_limits": ["..."]}, "stress_caveats": ["decision-relevant caveat"], "audit_trail": ["map-backed distinction or source-role boundary"]}
+
+Rules:
+
+- Answer the decision question directly, then explain the map-backed cruxes.
+
+- Use the deterministic section buckets as hard boundaries: synthesize each evidence_roles section only from that section's bucket.
+
+- `main_support` means evidence for the bottom-line answer or low-concern/default recommendation; do not put concern evidence there.
+
+- `conflicting_evidence` means evidence for harm, contrary findings, or tension with the bottom line.
+
+- `scope_limits` means subgroup, dose, population, endpoint, transfer, and conditional limits.
+
+- `method_limits` means measurement validity, source limitations, guideline/practical implementation limits, and abstract-only/full-text limitations.
+
+- Preserve tensions, scope limits, and method limits; do not flatten them into a single confident answer.
+
+- Write section prose in human terms; do not say `Claim A`, `Claim B`, raw claim IDs, or raw relation IDs.
+
+- Use source display names, not raw source IDs, claim IDs, or relation IDs, in reader-facing fields.
+
+- Every evidence_roles bullet must be a substantive evidence statement, not just a source name.
+
+- An evidence_roles bullet is invalid if it only says which source exists; include the relevant claim and put the source in parentheses.
+
+- Do not invent facts beyond the map, quality report, or erosion audit.
+
+- Calibrate uncertainty to the quality report. A map marked review_recommended or needs_repair cannot support high confidence.
+
+- Keep the briefing concise and readable for a human judge.
+
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+
+Deterministic briefing scaffold:
+{
+  "quality_status": "usable_with_review",
+  "quality_score": 88,
+  "confidence_cap": "medium",
+  "section_policy": {
+    "main_support": "Evidence supporting the bottom-line answer or low-concern/default recommendation.",
+    "conflicting_evidence": "Evidence for harm, contrary findings, or tensions with the bottom line.",
+    "scope_limits": "Subgroup, dose, population, endpoint, transfer, and conditional limits.",
+    "method_limits": "Measurement validity, source limitations, guideline/practical implementation limits, and abstract-only/full-text limits."
+  },
+  "evidence_roles": {
+    "main_support": [
+      "The PURE study included 146,011 individuals from 21 countries and found no significant associations between egg intake and blood lipids, mortality, or major CVD events. (Pure Dehghan 2020)",
+      "Saturated fat intake is positively correlated with LDL cholesterol levels, whereas dietary cholesterol was not. (Carter Ajcn 2025)",
+      "Consuming 2 eggs daily as part of a low-saturated fat diet lowers LDL concentrations compared with consuming a high-saturated fat diet with only 1 egg/wk. (Carter Ajcn 2025)"
+    ],
+    "conflicting_evidence": [
+      "Egg yolk and meat consumption are associated with cardiovascular harm beyond just cholesterol and saturated fat. (Spence Jaha 2021)",
+      "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake.. This challenges the direct association of eggs with CVD risk by identifying cholesterol as the primary driver, whereas Higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner among US adults. states a significant dose-response association for eggs.",
+      "Claim A suggests that egg consumption is not associated with CVD after adjusting for cholesterol, while Claim B asserts that egg yolk and meat have cardiovascular harm beyond just cholesterol and saturated fat.",
+      "Both claims support the finding that dietary cholesterol, rather than saturated fat or egg consumption itself, is the primary driver of LDL cholesterol and mortality risk.",
+      "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake. identifies a specific risk factor (cholesterol) as the driver of mortality associated with eggs, while Dietary guidance should focus on healthy dietary patterns (e.g., Mediterranean-style and DASH-style) rather than specific dietary cholesterol targets, as the latter are challenging for clinicians and consumers to implement. argues for moving away from cholesterol-specific targets toward general dietary patterns.",
+      "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake. attributes the risk of whole eggs primarily to cholesterol intake, whereas Egg yolk and meat consumption are associated with cardiovascular harm beyond just cholesterol and saturated fat. argues that harm exists beyond just cholesterol and saturated fat.",
+      "Claim A (AHA Carson 2020) argues for a shift away from specific dietary cholesterol targets toward healthy patterns due to implementation challenges, while Claim B (Zhong Jama 2019) provides evidence that specifically links higher consumption of dietary cholesterol/eggs to increased risk. This represents a tension between clinical feasibility and the underlying epidemiological evidence."
+    ],
+    "scope_limits": [
+      "The associations between egg consumption and incident CVD or all-cause mortality were no longer significant after adjusting for dietary cholesterol consumption. (Zhong JAMA 2019)",
+      "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall, but an inverse association was seen in Asian cohorts. (Drouin Chartier BMJ 2020)",
+      "The study included patients with either a prior cardiovascular event or 2 cardiovascular risk factors, including those with diabetes mellitus. (Prosperity Amhj 2025)",
+      "A high-egg diet (2 eggs/d for 6 d/wk) compared with a low-egg diet (<2 eggs/wk) was studied in overweight or obese people with prediabetes or T2D. (Diabegg Ajcn 2015)",
+      "The source document contains PubMed metadata and abstract text, which may not represent the full text of the study. (Eas Ference 2017)",
+      "The source document contains PubMed metadata and abstract text, which may not include the full research findings. (Spence Jaha 2021)",
+      "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake. (Zhuang Plos 2021)",
+      "The study population consisted of over 0.5 million adults aged 30-79 years from diverse survey sites in China. (Qin Heart 2018 Pubmed)"
+    ],
+    "method_limits": [
+      "The reduction in LDL concentrations from egg consumption may be mitigated by a reduction in less-atherogenic large LDL particles and an increase in more atherogenic small LDL particles. (Carter Ajcn 2025)",
+      "A high-egg diet (\u226512 eggs/wk) compared with a low-egg diet (<2 eggs/wk) did not have adverse effects on cardiometabolic risk factors in adults with type 2 diabetes. (Diabegg Ajcn 2018)",
+      "Dietary guidance should focus on healthy dietary patterns (e.g., Mediterranean-style and DASH-style) rather than specific dietary cholesterol targets, as the latter are challenging for clinicians and consumers to implement. (AHA Carson 2020)",
+      "Higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner among US adults. (Zhong JAMA 2019)"
+    ]
+  },
+  "crux_candidates": [
+    {
+      "candidate_crux": "The associations between egg consumption and incident CVD or all-cause mortality were no longer significant after adjusting for dietary cholesterol consumption. (Zhong JAMA 2019)",
+      "why_it_matters": "Changing this claim would materially change the decision read."
+    },
+    {
+      "candidate_crux": "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake. (Zhuang Plos 2021)",
+      "why_it_matters": "Changing this claim would materially change the decision read."
+    },
+    {
+      "candidate_crux": "Both claims describe the same finding from the Zhong Jama 2019 study: that the association between egg consumption and CVD/mortality is driven by dietary cholesterol intake.",
+      "why_it_matters": "This relation marks a claim that would change the bottom-line answer."
+    },
+    {
+      "candidate_crux": "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake.. This challenges the direct association of eggs with CVD risk by identifying cholesterol as the primary driver, whereas Higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner among US adults. states a significant dose-response association for eggs.",
+      "why_it_matters": "This relation names counterevidence that could weaken the bottom-line answer."
+    },
+    {
+      "candidate_crux": "Claim A provides the empirical basis (that egg-specific associations are not significant after adjusting for cholesterol) that justifies the policy shift in Claim B toward focusing on dietary patterns rather than specific cholesterol targets.",
+      "why_it_matters": "This relation identifies a condition that gates whether the recommendation holds."
+    },
+    {
+      "candidate_crux": "Both claims report that egg consumption is not significantly associated with CVD or mortality when adjusted for/considered in large-scale studies, though they use slightly different study populations (Zhong vs. PURE).",
+      "why_it_matters": "This relation marks a claim that would change the bottom-line answer."
+    },
+    {
+      "candidate_crux": "Claim B refines the interpretation of Claim A by specifying that the lack of association with CVD events in large cohorts is specifically due to the influence of cholesterol intake.",
+      "why_it_matters": "This relation marks a claim that would change the bottom-line answer."
+    },
+    {
+      "candidate_crux": "Claim B provides the mechanistic basis (saturated fat vs. cholesterol) that supports Claim A's finding that egg consumption is not independently associated with CVD once cholesterol is adjusted for.",
+      "why_it_matters": "This relation marks a claim that would change the bottom-line answer."
+    }
+  ],
+  "audit_trail": [
+    "The associations between egg consumption and incident CVD or all-cause mortality were no longer significant after adjusting for dietary cholesterol consumption. (Zhong JAMA 2019)",
+    "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake. (Zhuang Plos 2021)",
+    "Both claims describe the same finding from the Zhong Jama 2019 study: that the association between egg consumption and CVD/mortality is driven by dietary cholesterol intake.",
+    "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake.. This challenges the direct association of eggs with CVD risk by identifying cholesterol as the primary driver, whereas Higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner among US adults. states a significant dose-response association for eggs.",
+    "Claim A provides the empirical basis (that egg-specific associations are not significant after adjusting for cholesterol) that justifies the policy shift in Claim B toward focusing on dietary patterns rather than specific cholesterol targets.",
+    "Both claims report that egg consumption is not significantly associated with CVD or mortality when adjusted for/considered in large-scale studies, though they use slightly different study populations (Zhong vs. PURE).",
+    "Claim B refines the interpretation of Claim A by specifying that the lack of association with CVD events in large cohorts is specifically due to the influence of cholesterol intake.",
+    "Claim B provides the mechanistic basis (saturated fat vs. cholesterol) that supports Claim A's finding that egg consumption is not independently associated with CVD once cholesterol is adjusted for.",
+    "Claim A suggests that egg consumption is not associated with CVD after adjusting for cholesterol, while Claim B asserts that egg yolk and meat have cardiovascular harm beyond just cholesterol and saturated fat.",
+    "Both claims describe the same study (Zhong Jama 2019) and its findings regarding the lack of association between egg consumption and CVD/mortality."
+  ],
+  "source_display_names": {
+    "deep_research_eggs_sources_zhong_jama_2019": "Zhong JAMA 2019",
+    "deep_research_eggs_sources_drouin_chartier_bmj_2020": "Drouin Chartier BMJ 2020",
+    "deep_research_eggs_sources_prosperity_amhj_2025": "Prosperity Amhj 2025",
+    "deep_research_eggs_sources_carter_ajcn_2025": "Carter Ajcn 2025",
+    "deep_research_eggs_sources_diabegg_ajcn_2015": "Diabegg Ajcn 2015",
+    "deep_research_eggs_sources_diabegg_ajcn_2018": "Diabegg Ajcn 2018",
+    "deep_research_eggs_sources_aha_carson_2020": "AHA Carson 2020",
+    "deep_research_eggs_sources_pure_dehghan_2020": "Pure Dehghan 2020",
+    "deep_research_eggs_sources_eas_ference_2017": "Eas Ference 2017",
+    "deep_research_eggs_sources_spence_jaha_2021": "Spence Jaha 2021",
+    "deep_research_eggs_sources_zhuang_plos_2021": "Zhuang Plos 2021",
+    "deep_research_eggs_sources_qin_heart_2018_pubmed": "Qin Heart 2018 Pubmed",
+    "deep_research_eggs_sources_li_atherosclerosis_2013": "Li Atherosclerosis 2013"
+  },
+  "quality_issues": [
+    "risk: near_duplicate_claims - Near-duplicate claim pairs: A high-egg diet (2 eggs/d for 6 d/wk) compared with a low-egg diet (<2 eggs/wk) was studied in overweight or obese people with prediabetes or T2D./A high-egg diet (\u226512 eggs/wk) compared with a low-egg diet (<2 eggs/wk) did not have adverse effects on cardiometabolic risk factors in adults with type 2 diabetes., The source document contains PubMed metadata and abstract text, which may not represent the full text of the study./The source document contains PubMed metadata and abstract text, which may not include the full research findings.",
+    "note: chunk_budget_skipped_content - Skipped 11 source chunks due to configured chunk budgets."
+  ]
+}
+
+Map quality report:
+{
+  "status": "usable_with_review",
+  "score": 88,
+  "summary": {
+    "all_chunk_count": 24,
+    "claim_count": 39,
+    "rejected_claim_count": 0,
+    "rejected_relation_count": 3,
+    "relation_count": 27,
+    "relation_type_count": 7,
+    "required_source_count": 13,
+    "selected_chunk_count": 13,
+    "skipped_chunk_count": 11,
+    "sources_with_claims": 13
+  },
+  "issues": [
+    {
+      "issue_type": "near_duplicate_claims",
+      "message": "Near-duplicate claim pairs: deep_research_eggs_sources_c014/deep_research_eggs_sources_c016, deep_research_eggs_sources_c027/deep_research_eggs_sources_c029",
+      "severity": "risk"
+    },
+    {
+      "issue_type": "chunk_budget_skipped_content",
+      "message": "Skipped 11 source chunks due to configured chunk budgets.",
+      "severity": "note"
+    }
+  ]
+}
+
+Prioritized map artifact:
+{
+  "claims": [
+    {
+      "claim": "The associations between egg consumption and incident CVD or all-cause mortality were no longer significant after adjusting for dietary cholesterol consumption.",
+      "claim_id": "deep_research_eggs_sources_c002",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "RESULTS: This analysis included 29 615 participants (mean [SD] age, 51.6 [13.5] years at baseline) of whom 13 299 (44.9%) were men and 9204 (31.1%) were black. During a median follow-up of 17.5 years (interquartile range, 13.0-21.7; maximum, 31.3), there were 5400 incident CVD events and 6132 all-cause deaths. The associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were monotonic (all P values for nonlinear terms, .19-.83). Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]). Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]). The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, -0.47% [95% CI, -1.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, -0.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+      "role": "crux",
+      "source_id": "deep_research_eggs_sources_zhong_jama_2019",
+      "source_span": "lines 21-21"
+    },
+    {
+      "claim": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall, but an inverse association was seen in Asian cohorts.",
+      "claim_id": "deep_research_eggs_sources_c006",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "CONCLUSIONS: Results from the three cohorts and from the updated meta-analysis show that moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall, and is associated with potentially lower cardiovascular disease risk in Asian populations.",
+      "role": "external_validity",
+      "source_id": "deep_research_eggs_sources_drouin_chartier_bmj_2020",
+      "source_span": "lines 22-22"
+    },
+    {
+      "claim": "The study included patients with either a prior cardiovascular event or 2 cardiovascular risk factors, including those with diabetes mellitus.",
+      "claim_id": "deep_research_eggs_sources_c009",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "METHODS: The study was a unblinded, 2-by-2 factorial design, which randomized patients, with either a prior cardiovascular event or 2 cardiovascular risk factors, to FE or a nonegg supplemented diet and TRE or usual care diet. Patients randomized to FE were instructed to consume at least 12 FE/week (with eggs provided); those on a nonegg supplemented diet restricted egg consumption to <2 eggs/week. TRE participants were instructed to consume all calories within an 8-hour window daily and fasted for the remaining 16 hours. Patients randomized to usual diet were advised to maintain current dietary habits. Follow-up was performed in-person at 1 and 4 months, and telephone calls at 2 and 3 months. Co-primary endpoints were 4-month LDL- and HDL-cholesterol. Secondary endpoints included additional lipids, cardiometabolic- and inflammatory biomarkers and micronutrient levels at 4-months.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_prosperity_amhj_2025",
+      "source_span": "lines 17-17"
+    },
+    {
+      "claim": "The reduction in LDL concentrations from egg consumption may be mitigated by a reduction in less-atherogenic large LDL particles and an increase in more atherogenic small LDL particles.",
+      "claim_id": "deep_research_eggs_sources_c012",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "CONCLUSIONS: Saturated fat, not dietary cholesterol, elevates LDL cholesterol. Compared with consuming a high-saturated fat diet with only 1 egg/wk, consuming 2 eggs daily as part of a low-saturated fat diet lowers LDL concentrations, which may reduce CVD risk. However, this effect on CVD risk may be mitigated, at least in part, by a reduction in less-atherogenic large LDL particles and an increase in more atherogenic small LDL particles.",
+      "role": "measurement_validity",
+      "source_id": "deep_research_eggs_sources_carter_ajcn_2025",
+      "source_span": "lines 20-20"
+    },
+    {
+      "claim": "A high-egg diet (2 eggs/d for 6 d/wk) compared with a low-egg diet (<2 eggs/wk) was studied in overweight or obese people with prediabetes or T2D.",
+      "claim_id": "deep_research_eggs_sources_c014",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "OBJECTIVE: In this randomized controlled study, we aimed to determine whether a high-egg diet (2 eggs/d for 6 d/wk) compared with a low-egg diet (<2 eggs/wk) affected circulating lipid profiles, in particular high-density lipoprotein (HDL) cholesterol, in overweight or obese people with prediabetes or T2D.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_diabegg_ajcn_2015",
+      "source_span": "lines 17-17"
+    },
+    {
+      "claim": "A high-egg diet (\u226512 eggs/wk) compared with a low-egg diet (<2 eggs/wk) did not have adverse effects on cardiometabolic risk factors in adults with type 2 diabetes.",
+      "claim_id": "deep_research_eggs_sources_c016",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "BACKGROUND: Some country guidelines recommend that people with type 2 diabetes (T2D) limit their consumption of eggs and cholesterol. Our previously published 3-mo weight-maintenance study showed that a high-egg (\u226512 eggs/wk) diet compared with a low-egg diet (<2 eggs/wk) did not have adverse effects on cardiometabolic risk factors in adults with T2D.",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_diabegg_ajcn_2018",
+      "source_span": "lines 16-16"
+    },
+    {
+      "claim": "Dietary guidance should focus on healthy dietary patterns (e.g., Mediterranean-style and DASH-style) rather than specific dietary cholesterol targets, as the latter are challenging for clinicians and consumers to implement.",
+      "claim_id": "deep_research_eggs_sources_c021",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+      "role": "implementation_constraint",
+      "source_id": "deep_research_eggs_sources_aha_carson_2020",
+      "source_span": "lines 16-16"
+    },
+    {
+      "claim": "The PURE study included 146,011 individuals from 21 countries and found no significant associations between egg intake and blood lipids, mortality, or major CVD events.",
+      "claim_id": "deep_research_eggs_sources_c023",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "CONCLUSIONS: In 3 large international prospective studies including \u223c177,000 individuals, 12,701 deaths, and 13,658 CVD events from 50 countries in 6 continents, we did not find significant associations between egg intake and blood lipids, mortality, or major CVD events. The ONTARGET and TRANSCEND trials were registered at clinicaltrials.gov as NCT00153101. The PURE trial was registered at clinicaltrials.gov as NCT03225586.",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_pure_dehghan_2020",
+      "source_span": "lines 20-20"
+    },
+    {
+      "claim": "The source document contains PubMed metadata and abstract text, which may not represent the full text of the study.",
+      "claim_id": "deep_research_eggs_sources_c027",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "Limitations: This source document contains PubMed metadata/abstract text unless a separately fetched full text is available.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_eas_ference_2017",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The source document contains PubMed metadata and abstract text, which may not include the full research findings.",
+      "claim_id": "deep_research_eggs_sources_c029",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "Limitations: This source document contains PubMed metadata/abstract text unless a separately fetched full text is available.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_spence_jaha_2021",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The associations of whole egg consumption with higher all-cause and CVD mortality were largely influenced by cholesterol intake.",
+      "claim_id": "deep_research_eggs_sources_c033",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "We comprehensively examined the consumption of eggs and cholesterol in relation to mortality from different causes in 521,120 participants with a mean follow-up of 16 years. In this large cohort, we showed that whole egg and cholesterol consumption were both associated with higher all-cause, CVD, and major cause-specific mortality, whereas egg white/substitute consumption was related to lower mortality. The increased all-cause, CVD, and cancer mortality associated with egg consumption was largely influenced by cholesterol intake. Egg white/substitute consumption was related to lower mortality. Replacing whole eggs with an equivalent amount of egg whites/substitutes or alternative protein sources was associated with lower overall mortality and mortality from CVD, cancer, and RD.",
+      "role": "crux",
+      "source_id": "deep_research_eggs_sources_zhuang_plos_2021",
+      "source_span": "lines 204-204"
+    },
+    {
+      "claim": "The study population consisted of over 0.5 million adults aged 30-79 years from diverse survey sites in China.",
+      "claim_id": "deep_research_eggs_sources_c036",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "METHODS: During 2004-2008, over 0.5 million adults aged 30-79 years were recruited from 10 diverse survey sites in China. Participants were asked about the frequency of egg consumption and were followed up via linkages to multiple registries and active investigation. Among 461 213 participants free of prior cancer, CVD and diabetes, a total of 83 977 CVD incident cases and 9985 CVD deaths were documented, as well as 5103 MCE. Stratified Cox regression was performed to yield adjusted hazard ratios for CVD endpoints associated with egg consumption.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_qin_heart_2018_pubmed",
+      "source_span": "lines 17-17"
+    },
+    {
+      "claim": "Population in other western countries have increased CVD than ones in USA (RR 2.00, 95% CI 1.14 to 3.51 vs 1.13, 95% CI 0.98 to 1.30, P = 0.02 for subgroup difference).",
+      "claim_id": "deep_research_eggs_sources_c039",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "RESULTS: Fourteen studies involving 320,778 subjects were included. The pooled RRs of the risk of CVD, CVD for separated diabetes patients, and diabetes for the highest vs lowest egg intake were 1.19 (95% CI 1.02-1.38), 1.83 (95% CI 1.42-2.37), 1.68 (95% CI 1.41-2.00), respectively. For each 4/week increment in egg intake, the RRs of the risk for CVD, CVD for separated diabetes patients, diabetes was 1.06 (95% CI 1.03-1.10), 1.40 (95% CI 1.25-1.57), 1.29 (95% CI 1.21-1.37), respectively. Subgroup analyses showed that population in other western countries have increased CVD than ones in USA (RR 2.00, 95% CI 1.14 to 3.51 vs 1.13, 95% CI 0.98 to 1.30, P = 0.02 for subgroup difference).",
+      "role": "external_validity",
+      "source_id": "deep_research_eggs_sources_li_atherosclerosis_2013",
+      "source_span": "lines 18-18"
+    },
+    {
+      "claim": "The study included 29,615 participants with a median follow-up of 17.5 years to assess the associations of dietary cholesterol and egg consumption.",
+      "claim_id": "deep_research_eggs_sources_c003",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "RESULTS: This analysis included 29 615 participants (mean [SD] age, 51.6 [13.5] years at baseline) of whom 13 299 (44.9%) were men and 9204 (31.1%) were black. During a median follow-up of 17.5 years (interquartile range, 13.0-21.7; maximum, 31.3), there were 5400 incident CVD events and 6132 all-cause deaths. The associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were monotonic (all P values for nonlinear terms, .19-.83). Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]). Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]). The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, -0.47% [95% CI, -1.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, -0.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+      "role": "scope_limit",
+      "source_id": "deep_research_eggs_sources_zhong_jama_2019",
+      "source_span": "lines 21-21"
+    },
+    {
+      "claim": "Saturated fat intake is positively correlated with LDL cholesterol levels, whereas dietary cholesterol was not.",
+      "claim_id": "deep_research_eggs_sources_c010",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "RESULTS: Fifty-four participants completed \u22651 diet phase, and 48 completed all diet phases. Compared with CON, EGG but not EGG-FREE reduced LDL cholesterol (CON 109.3 \u00b1 3.1 \u03bcg/dL compared with EGG 103.6 \u00b1 3.1 \u03bcg/dL P = 0.02 compared with EGG-FREE 107.7 \u00b1 3.1 \u03bcg/dL, P = 0.52). Across all diets, saturated fat intake was positively correlated with LDL cholesterol (\u03b2 = 0.35, P = 0.002), whereas dietary cholesterol was not (\u03b2 = -0.006, P = 0.42). Compared with CON, EGG but not EGG-FREE reduced concentrations of large (EGG \u03b2 = -48.6, P = 0.03; EGG-FREE \u03b2 = -35.85, P = 0.12) and increased concentrations of small LDL particles (EGG \u03b2 = 95.1, P = 0.004; EGG-FREE \u03b2 = 55.82, P = 0.10).",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_carter_ajcn_2025",
+      "source_span": "lines 19-19"
+    },
+    {
+      "claim": "Consuming 2 eggs daily as part of a low-saturated fat diet lowers LDL concentrations compared with consuming a high-saturated fat diet with only 1 egg/wk.",
+      "claim_id": "deep_research_eggs_sources_c011",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "CONCLUSIONS: Saturated fat, not dietary cholesterol, elevates LDL cholesterol. Compared with consuming a high-saturated fat diet with only 1 egg/wk, consuming 2 eggs daily as part of a low-saturated fat diet lowers LDL concentrations, which may reduce CVD risk. However, this effect on CVD risk may be mitigated, at least in part, by a reduction in less-atherogenic large LDL particles and an increase in more atherogenic small LDL particles.",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_carter_ajcn_2025",
+      "source_span": "lines 20-20"
+    },
+    {
+      "claim": "Egg yolk and meat consumption are associated with cardiovascular harm beyond just cholesterol and saturated fat.",
+      "claim_id": "deep_research_eggs_sources_c028",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "Cardiovascular Harm From Egg Yolk and Meat: More Than Just Cholesterol and Saturated Fat.",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_spence_jaha_2021",
+      "source_span": "lines 13-13"
+    },
+    {
+      "claim": "Higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner among US adults.",
+      "claim_id": "deep_research_eggs_sources_c001",
+      "entailed_by_excerpt": "yes",
+      "excerpt": "CONCLUSIONS AND RELEVANCE: Among US adults, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner. These results should be considered in the development of dietary guidelines and updates.",
+      "role": "conclusion_support",
+      "source_id": "deep_research_eggs_sources_zhong_jama_2019",
+      "source_span": "lines 22-22"
+    }
+  ],
+  "crux_candidates": [
+    "c033",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c033",
+    "deep_research_eggs_sources_c033",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c028",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c031",
+    "deep_research_eggs_sources_c033",
+    "c033",
+    "c033",
+    "deep_research_eggs_sources_c033",
+    "deep_research_eggs_sources_c001",
+    "deep_research_eggs_sources_c002",
+    "deep_research_eggs_sources_c002"
+  ],
+  "epistemic_config": {
+    "profile_id": "empirical_policy_decision",
+    "source": "model_recommendation"
+  },
+  "evidence_check": [
+    [
+      "Does deep_research_eggs_sources_c001 quote exact source text?",
+      "Survives",
+      "deep_research_eggs_sources_zhong_jama_2019 lines 22-22: CONCLUSIONS AND RELEVANCE: Among US adults, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner. These results should be considered in the development of dietary guidelines and updates."
+    ]
+  ],
+  "evidence_mode": "source_grounded",
+  "pipeline": "staged_chunked_mapper_v1",
+  "prompt_procedure": "source_mapping_prompt_v2_json",
+  "relations": [
+    {
+      "deterministic_sharpening": {
+        "from": "similar_to",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "crux_for"
+      },
+      "rationale": "Both claims describe the same finding from the Zhong Jama 2019 study: that the association between egg consumption and CVD/mortality is driven by dietary cholesterol intake.",
+      "relation_id": "deep_research_eggs_sources_r001",
+      "relation_type": "crux_for",
+      "source_claim": "deep_research_eggs_sources_c003",
+      "target_claim": "deep_research_eggs_sources_c033"
+    },
+    {
+      "rationale": "Claim c033 challenges the direct association of eggs with CVD risk by identifying cholesterol as the primary driver, whereas c001 states a significant dose-response association for eggs.",
+      "relation_id": "deep_research_eggs_sources_r002",
+      "relation_type": "challenges",
+      "source_claim": "deep_research_eggs_sources_c033",
+      "target_claim": "deep_research_eggs_sources_c001"
+    },
+    {
+      "deterministic_sharpening": {
+        "from": "supports",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "depends_on"
+      },
+      "rationale": "Claim A provides the empirical basis (that egg-specific associations are not significant after adjusting for cholesterol) that justifies the policy shift in Claim B toward focusing on dietary patterns rather than specific cholesterol targets.",
+      "relation_id": "deep_research_eggs_sources_r006",
+      "relation_type": "depends_on",
+      "source_claim": "deep_research_eggs_sources_c002",
+      "target_claim": "deep_research_eggs_sources_c021"
+    },
+    {
+      "deterministic_sharpening": {
+        "from": "similar_to",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "crux_for"
+      },
+      "rationale": "Both claims report that egg consumption is not significantly associated with CVD or mortality when adjusted for/considered in large-scale studies, though they use slightly different study populations (Zhong vs. PURE).",
+      "relation_id": "deep_research_eggs_sources_r007",
+      "relation_type": "crux_for",
+      "source_claim": "deep_research_eggs_sources_c002",
+      "target_claim": "deep_research_eggs_sources_c023"
+    },
+    {
+      "deterministic_sharpening": {
+        "from": "refines",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "crux_for"
+      },
+      "rationale": "Claim B refines the interpretation of Claim A by specifying that the lack of association with CVD events in large cohorts is specifically due to the influence of cholesterol intake.",
+      "relation_id": "deep_research_eggs_sources_r011",
+      "relation_type": "crux_for",
+      "source_claim": "deep_research_eggs_sources_c033",
+      "target_claim": "deep_research_eggs_sources_c023"
+    },
+    {
+      "deterministic_sharpening": {
+        "from": "supports",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "crux_for"
+      },
+      "rationale": "Claim B provides the mechanistic basis (saturated fat vs. cholesterol) that supports Claim A's finding that egg consumption is not independently associated with CVD once cholesterol is adjusted for.",
+      "relation_id": "deep_research_eggs_sources_r012",
+      "relation_type": "crux_for",
+      "source_claim": "deep_research_eggs_sources_c002",
+      "target_claim": "deep_research_eggs_sources_c010"
+    },
+    {
+      "rationale": "Claim A suggests that egg consumption is not associated with CVD after adjusting for cholesterol, while Claim B asserts that egg yolk and meat have cardiovascular harm beyond just cholesterol and saturated fat.",
+      "relation_id": "deep_research_eggs_sources_r013",
+      "relation_type": "in_tension_with",
+      "source_claim": "deep_research_eggs_sources_c002",
+      "target_claim": "deep_research_eggs_sources_c028"
+    },
+    {
+      "rationale": "Both claims describe the same study (Zhong Jama 2019) and its findings regarding the lack of association between egg consumption and CVD/mortality.",
+      "relation_id": "deep_research_eggs_sources_r015",
+      "relation_type": "similar_to",
+      "source_claim": "deep_research_eggs_sources_c003",
+      "target_claim": "deep_research_eggs_sources_c023"
+    },
+    {
+      "rationale": "Claim B provides the conclusion for a high-egg diet in adults with type 2 diabetes; Claim A defines the specific patient population (prior CV event or 2 risk factors) that includes those with diabetes, refining the scope of the study.",
+      "relation_id": "deep_research_eggs_sources_r017",
+      "relation_type": "refines",
+      "source_claim": "deep_research_eggs_sources_c009",
+      "target_claim": "deep_research_eggs_sources_c016"
+    },
+    {
+      "deterministic_sharpening": {
+        "from": "supports",
+        "method": "claim_role_and_rationale_rules_v1",
+        "to": "in_tension_with"
+      },
+      "rationale": "Both claims support the finding that dietary cholesterol, rather than saturated fat or egg consumption itself, is the primary driver of LDL cholesterol and mortality risk.",
+      "relation_id": "deep_research_eggs_sources_r018",
+      "relation_type": "in_tension_with",
+      "source_claim": "deep_research_eggs_sources_c010",
+      "target_claim": "deep_research_eggs_sources_c033"
+    },
+    {
+      "rationale": "Claim c014 specifies the population (overweight/obese with prediabetes or T2D) for which the high-egg diet was studied, refining the scope of the general cardiovascular risk conclusion in c011.",
+      "relation_id": "deep_research_eggs_sources_r019",
+      "relation_type": "refines",
+      "source_claim": "deep_research_eggs_sources_c014",
+      "target_claim": "deep_research_eggs_sources_c011"
+    },
+    {
+      "rationale": "Both claims refer to the same study (Diabegg Ajcn 2015/2018) and describe high-egg diets in people with T2D, though c014 focuses on the study objective and c016 on the conclusion.",
+      "relation_id": "deep_research_eggs_sources_r020",
+      "relation_type": "similar_to",
+      "source_claim": "deep_research_eggs_sources_c014",
+      "target_claim": "deep_research_eggs_sources_c016"
+    },
+    {
+      "rationale": "Claim c033 identifies a specific risk factor (cholesterol) as the driver of mortality associated with eggs, while c021 argues for moving away from cholesterol-specific targets toward general dietary patterns.",
+      "relation_id": "deep_research_eggs_sources_r022",
+      "relation_type": "in_tension_with",
+      "source_claim": "deep_research_eggs_sources_c033",
+      "target_claim": "deep_research_eggs_sources_c021"
+    },
+    {
+      "rationale": "Claim c033 attributes the risk of whole eggs primarily to cholesterol intake, whereas claim c028 argues that harm exists beyond just cholesterol and saturated fat.",
+      "relation_id": "deep_research_eggs_sources_r023",
+      "relation_type": "challenges",
+      "source_claim": "deep_research_eggs_sources_c033",
+      "target_claim": "deep_research_eggs_sources_c028"
+    },
+    {
+      "rationale": "Claim A (AHA Carson 2020) argues for a shift away from specific dietary cholesterol targets toward healthy patterns due to implementation challenges, while Claim B (Zhong Jama 2019) provides evidence that specifically links higher consumption of dietary cholesterol/eggs to increased risk. This represents a tension between clinical feasibility and the underlying epidemiological evidence.",
+      "relation_id": "deep_research_eggs_sources_r025",
+      "relation_type": "in_tension_with",
+      "source_claim": "deep_research_eggs_sources_c021",
+      "target_claim": "deep_research_eggs_sources_c001"
+    }
+  ],
+  "similar_but_not_identical": [
+    "c003 provides the specific statistical results (HRs) while c033 summarizes the influence of cholesterol.",
+    "c002 focuses on cholesterol adjustment; c004 includes a broader range of updated lifestyle and dietary factors.",
+    "c002 focuses on CVD/mortality; c015 focuses on blood lipid levels and glucose.",
+    "c019 is a general policy statement on cholesterol; c002 is a specific study result regarding eggs.",
+    "Claim A is a finding; Claim B is an implementation strategy based on that finding.",
+    "Claim A focuses on the adjustment for dietary cholesterol; Claim C reports a broader lack of association in the PURE study.",
+    "Claim A is a specific adjustment result; Claim B describes the broader study finding including the adjustment.",
+    "Claim A is the result; Claim B provides the mediation analysis/mechanism.",
+    "Claim A is a specific finding in the PURE study; Claim B explains the underlying influence of cholesterol on that finding.",
+    "Claim A reports a null finding; Claim B explains the mechanism (cholesterol) behind that null finding.",
+    "Claim A is a specific study result; Claim B is the underlying physiological mechanism.",
+    "Claim A focuses on the adjustment for cholesterol; Claim B argues there are other independent risk factors.",
+    "Claim A is a result of adjustment; Claim B reports a raw positive association.",
+    "Claim A describes the study population/follow-up; Claim B describes the results.",
+    "c003 focuses on CVD events and mortality in a 29k cohort; c031 uses a much larger cohort (>500k) and specifically highlights the difference between whole eggs and egg whites.",
+    "c009 is a scope limit for the study population; c016 is the conclusion regarding cardiometabolic risk.",
+    "c010 specifically compares saturated fat vs. dietary cholesterol in an LDL context; c033 focuses on the influence of cholesterol on all-cause and CVD mortality.",
+    "c014 specifies a clinical population (prediabetes/T2D), while c011 discusses general LDL concentrations.",
+    "c014 is a scope/objective claim; c016 is a conclusion support claim.",
+    "c014 describes the study design; c017 provides the specific outcome (no adverse changes).",
+    "c033 identifies a biological mechanism (cholesterol), whereas c021 focuses on implementation and guidance strategy.",
+    "c033 emphasizes cholesterol as the primary driver; c028 suggests other factors are also involved.",
+    "The claims differ on whether the association is independent of cholesterol intake.",
+    "Claim A is an implementation-focused policy guidance; Claim B is an empirical study finding.",
+    "Claim A is a long-term observational study; Claim B is a short-term intervention trial.",
+    "Claim A is a long-term observational study; Claim B is a short-term intervention trial."
+  ],
+  "sources": [
+    "deep_research_eggs_sources_zhong_jama_2019",
+    "deep_research_eggs_sources_drouin_chartier_bmj_2020",
+    "deep_research_eggs_sources_prosperity_amhj_2025",
+    "deep_research_eggs_sources_carter_ajcn_2025",
+    "deep_research_eggs_sources_diabegg_ajcn_2015",
+    "deep_research_eggs_sources_diabegg_ajcn_2018",
+    "deep_research_eggs_sources_aha_carson_2020",
+    "deep_research_eggs_sources_pure_dehghan_2020",
+    "deep_research_eggs_sources_eas_ference_2017",
+    "deep_research_eggs_sources_spence_jaha_2021",
+    "deep_research_eggs_sources_zhuang_plos_2021",
+    "deep_research_eggs_sources_qin_heart_2018_pubmed",
+    "deep_research_eggs_sources_li_atherosclerosis_2013"
+  ],
+  "status": "human-review-needed",
+  "title": "Deep Research Eggs Source-Held Comparison Staged Map"
+}

@@ -1,0 +1,135 @@
+{
+  "sources": [
+    {
+      "source_id": "drouin_chartier_bmj_2020_full",
+      "title": "Drouin-Chartier BMJ 2020 egg consumption and CVD",
+      "kind": "europepmc_xml",
+      "pmcid": "PMC7190072",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7190072/fullTextXML",
+      "role": "major neutral cohort/meta-analysis; full-text XML",
+      "fetch_status": "full_text_xml",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/drouin_chartier_bmj_2020_full.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/drouin_chartier_bmj_2020_full.raw",
+      "char_count": 51589
+    },
+    {
+      "source_id": "eas_ference_2017_full",
+      "title": "EAS Consensus 2017 LDL causes ASCVD",
+      "kind": "europepmc_xml",
+      "pmcid": "PMC5837225",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5837225/fullTextXML",
+      "role": "causal LDL/ApoB framework; full-text XML",
+      "fetch_status": "full_text_xml",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/eas_ference_2017_full.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/eas_ference_2017_full.raw",
+      "char_count": 48466
+    },
+    {
+      "source_id": "spence_jaha_2021_full",
+      "title": "Spence JAHA 2021 cardiovascular harm from egg yolk and meat",
+      "kind": "europepmc_xml",
+      "pmcid": "PMC8174346",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8174346/fullTextXML",
+      "role": "strong concern/counterposition; full-text XML",
+      "fetch_status": "full_text_xml",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/spence_jaha_2021_full.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/spence_jaha_2021_full.raw",
+      "char_count": 23359
+    },
+    {
+      "source_id": "qin_heart_2018_full",
+      "title": "Qin Heart 2018 China Kadoorie egg consumption and CVD",
+      "kind": "europepmc_xml",
+      "pmcid": "PMC6241631",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6241631/fullTextXML",
+      "role": "Asian cohort inverse/null evidence; full-text XML",
+      "fetch_status": "full_text_xml",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/qin_heart_2018_full.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/qin_heart_2018_full.raw",
+      "char_count": 27702
+    },
+    {
+      "source_id": "zhuang_plos_2021_full",
+      "title": "Zhuang PLOS Medicine 2021 egg/cholesterol intake and mortality",
+      "kind": "html",
+      "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1003508",
+      "role": "cohort and substitution analysis; open full HTML",
+      "fetch_status": "html_stripped",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/zhuang_plos_2021_full.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/zhuang_plos_2021_full.raw",
+      "char_count": 59213
+    },
+    {
+      "source_id": "pure_dehghan_2020_fullish",
+      "title": "PURE Dehghan AJCN 2020 egg intake, lipids, CVD, mortality",
+      "kind": "pmc_html",
+      "pmcid": "PMC7138651",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7138651/",
+      "role": "large international observational evidence; PMC HTML",
+      "fetch_status": "html_stripped",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/pure_dehghan_2020_fullish.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/pure_dehghan_2020_fullish.raw",
+      "char_count": 57128
+    },
+    {
+      "source_id": "zhong_jama_2019_fullish",
+      "title": "Zhong JAMA 2019 dietary cholesterol or egg consumption with CVD and mortality",
+      "kind": "pmc_html",
+      "pmcid": "PMC6439941",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6439941/",
+      "role": "strong concern US pooled cohort; PMC HTML",
+      "fetch_status": "html_stripped",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/zhong_jama_2019_fullish.txt",
+      "raw_path": "artifacts/deep_research_eggs_fuller_sources/raw/zhong_jama_2019_fullish.raw",
+      "char_count": 68997
+    },
+    {
+      "source_id": "carter_ajcn_2025_abstract",
+      "title": "Carter AJCN 2025 egg cholesterol vs saturated fat LDL",
+      "kind": "pubmed",
+      "pmid": "40339906",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40339906/",
+      "role": "recent RCT; abstract only",
+      "fetch_status": "pubmed_abstract",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/carter_ajcn_2025_abstract.txt",
+      "raw_path": null,
+      "char_count": 2764
+    },
+    {
+      "source_id": "diabegg_2018_abstract",
+      "title": "DIABEGG 2018 high egg diet in prediabetes/T2D",
+      "kind": "pubmed",
+      "pmid": "29741558",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/29741558/",
+      "role": "diabetes RCT follow-up; abstract only",
+      "fetch_status": "pubmed_abstract",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/diabegg_2018_abstract.txt",
+      "raw_path": null,
+      "char_count": 2515
+    },
+    {
+      "source_id": "aha_carson_2020_abstract",
+      "title": "AHA Science Advisory 2020 dietary cholesterol and cardiovascular risk",
+      "kind": "pubmed",
+      "pmid": "31838890",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31838890/",
+      "role": "guideline/advisory; abstract only",
+      "fetch_status": "pubmed_abstract",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/aha_carson_2020_abstract.txt",
+      "raw_path": null,
+      "char_count": 2057
+    },
+    {
+      "source_id": "li_atherosclerosis_2013_abstract",
+      "title": "Li Atherosclerosis 2013 egg consumption and CVD/diabetes meta-analysis",
+      "kind": "pubmed",
+      "pmid": "23643053",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/23643053/",
+      "role": "diabetes subgroup meta-analysis; abstract only",
+      "fetch_status": "pubmed_abstract",
+      "text_path": "artifacts/deep_research_eggs_fuller_sources/text/li_atherosclerosis_2013_abstract.txt",
+      "raw_path": null,
+      "char_count": 1895
+    }
+  ]
+}

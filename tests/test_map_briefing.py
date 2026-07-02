@@ -7,8 +7,10 @@ from pathlib import Path
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.map_briefing import (
     briefing_scaffold,
+    build_briefing_contract,
     calibrate_confidence,
     expand_reader_map_references,
+    partition_map_evidence,
     prioritize_map_for_briefing,
     repair_briefing_payload,
     run_map_briefing,
@@ -157,6 +159,188 @@ def test_repair_briefing_payload_replaces_source_only_evidence_roles() -> None:
     )
 
 
+def test_partition_map_evidence_keeps_concern_out_of_main_support() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "eggs_c001",
+                "claim": "Higher consumption of dietary cholesterol or eggs was associated with higher risk of incident CVD.",
+                "source_id": "zhong_jama_2019",
+                "role": "conclusion_support",
+            },
+            {
+                "claim_id": "eggs_c002",
+                "claim": "Moderate egg consumption was not associated with cardiovascular disease risk.",
+                "source_id": "drouin_bmj_2020",
+                "role": "conclusion_support",
+            },
+            {
+                "claim_id": "eggs_c003",
+                "claim": "The diabetes subgroup has a more uncertain risk profile.",
+                "source_id": "li_2013",
+                "role": "scope_limit",
+            },
+            {
+                "claim_id": "eggs_c004",
+                "claim": "The source document contains PubMed abstract text rather than the full article.",
+                "source_id": "abstract_record",
+                "role": "background",
+            },
+            {
+                "claim_id": "eggs_c005",
+                "claim": "Daily egg consumption was associated with lower risk among Chinese middle-aged adults.",
+                "source_id": "qin_2018",
+                "role": "measurement_validity",
+            },
+            {
+                "claim_id": "eggs_c006",
+                "claim": "High egg consumption was associated with higher cardiovascular risk among people with type 2 diabetes.",
+                "source_id": "diabetes_meta",
+                "role": "scope_limit",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "eggs_r001",
+                "source_claim": "eggs_c001",
+                "target_claim": "eggs_c002",
+                "relation_type": "in_tension_with",
+                "rationale": "Positive US cohort findings remain in tension with neutral adjusted/meta-analytic evidence.",
+            }
+        ],
+    }
+
+    partition = partition_map_evidence(
+        candidate_map,
+        {
+            "zhong_jama_2019": "Zhong JAMA 2019",
+            "drouin_bmj_2020": "Drouin BMJ 2020",
+            "li_2013": "Li 2013",
+            "abstract_record": "Abstract Record",
+            "qin_2018": "Qin 2018",
+            "diabetes_meta": "Diabetes Meta-analysis",
+        },
+    )
+
+    main_support = "\n".join(partition["evidence_roles"]["main_support"])
+    conflicts = "\n".join(partition["evidence_roles"]["conflicting_evidence"])
+    scope = "\n".join(partition["evidence_roles"]["scope_limits"])
+    methods = "\n".join(partition["evidence_roles"]["method_limits"])
+    assert "Higher consumption" not in main_support
+    assert "Higher consumption" in conflicts
+    assert "not associated" in main_support
+    assert "lower risk among Chinese" in main_support
+    assert "High egg consumption" in conflicts
+    assert "diabetes subgroup" in scope
+    assert "abstract text" in methods
+    assert "Daily egg consumption" not in methods
+
+
+def test_repair_briefing_payload_moves_missectioned_concern_evidence() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "eggs_c001",
+                "claim": "Higher egg consumption was associated with increased CVD risk.",
+                "source_id": "zhong",
+                "role": "conclusion_support",
+            },
+            {
+                "claim_id": "eggs_c002",
+                "claim": "Moderate egg consumption was not associated with CVD risk.",
+                "source_id": "bmj",
+                "role": "conclusion_support",
+            },
+        ],
+        "relations": [],
+    }
+    source_lookup = {"zhong": "Zhong", "bmj": "BMJ"}
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 90, "issues": []},
+        source_lookup,
+        {"items": []},
+    )
+    payload = {
+        "confidence": "medium",
+        "evidence_roles": {
+            "main_support": ["Higher egg consumption was associated with increased CVD risk. (Zhong)"],
+            "conflicting_evidence": [],
+            "scope_limits": [],
+            "method_limits": ["Higher egg consumption was associated with increased CVD risk. (Zhong)"],
+        },
+    }
+
+    repaired = repair_briefing_payload(payload, scaffold, source_lookup, candidate_map)
+
+    assert "Higher egg consumption" not in "\n".join(repaired["evidence_roles"]["main_support"])
+    assert "Higher egg consumption" not in "\n".join(repaired["evidence_roles"]["method_limits"])
+    assert "Higher egg consumption" in "\n".join(repaired["evidence_roles"]["conflicting_evidence"])
+
+
+def test_briefing_contract_is_domain_neutral_and_flags_overstatement_risks() -> None:
+    partition = {
+        "evidence_roles": {
+            "main_support": [
+                "The intervention was not associated with worse long-term outcomes.",
+                "The short trial showed no adverse biomarker effects.",
+            ],
+            "conflicting_evidence": ["A cohort found higher risk in one subgroup."],
+            "scope_limits": ["The evidence applies to high-intensity use in adults over 4 months."],
+            "method_limits": ["The source contains abstract text and surrogate biomarker endpoints."],
+        },
+        "audit_trail": [],
+    }
+
+    contract = build_briefing_contract(
+        partition,
+        {"status": "usable_with_review", "score": 88, "issues": [{"severity": "risk", "issue_type": "abstract_only"}]},
+    )
+
+    lint_ids = {item["lint_id"] for item in contract["overstatement_lint"]}
+    assert "null_evidence_not_benefit" in lint_ids
+    assert "counterposition_visibility" in lint_ids
+    assert "subgroup_to_generalization" in lint_ids
+    assert "surrogate_to_hard_outcome" in lint_ids
+    assert contract["scope_ledger"]["population_or_actor"]
+    assert contract["scope_ledger"]["measurement_endpoint"]
+    assert "low-concern" in contract["answer_frame"]["default_stance_instruction"]
+
+
+def test_repair_briefing_payload_applies_contract_lint_to_final_prose() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The intervention was not associated with worse outcomes.",
+                "source_id": "trial",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+    source_lookup = {"trial": "Trial"}
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 88, "issues": [{"severity": "risk", "issue_type": "limited_followup"}]},
+        source_lookup,
+        {"items": []},
+    )
+    payload = {
+        "decision_brief": "The intervention is neutral to potentially beneficial and clearly safe.",
+        "confidence": "high",
+        "decision_implications": ["Patients can safely use it."],
+        "evidence_roles": {"main_support": [], "conflicting_evidence": [], "scope_limits": [], "method_limits": []},
+    }
+
+    repaired = repair_briefing_payload(payload, scaffold, source_lookup, candidate_map)
+
+    joined = json.dumps(repaired)
+    assert "potentially beneficial" not in joined
+    assert "clearly safe" not in joined
+    assert "low-concern under the stated conditions" in repaired["decision_brief"]
+
+
 def test_expand_reader_map_references_removes_short_claim_ids() -> None:
     candidate_map = {
         "claims": [
@@ -243,7 +427,7 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
         "  'top_cruxes': [{'crux': 'covid_c001', 'why_it_matters': 'It controls interpretation.', 'current_read': 'Mixed.', 'would_change_if': 'New evidence separated priors from likelihoods.'}],\n"
         "  'evidence_roles': {'main_support': [], 'conflicting_evidence': [], 'scope_limits': ['flf_covid_case_brief has a scope boundary.'], 'method_limits': []},\n"
         "  'stress_caveats': [],\n"
-        "  'audit_trail': ['covid_c001']\n"
+        "  'audit_trail': ['Claim A states that covid_c001 matters while Claim B is missing.']\n"
         "}))\n",
         encoding="utf-8",
     )
@@ -264,6 +448,10 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert "flf_covid_case_brief" not in rendered
     assert "FLF COVID Case Brief" in rendered
     assert "The case turns on whether priors or likelihood updates explain the disagreement." in rendered
+    assert "Claim A" not in rendered
+    assert "Claim B" not in rendered
+    assert "mapped claim" not in rendered
+    assert "source-grounded finding" not in rendered
     assert summary["model_confidence"] == "high"
     assert summary["calibrated_confidence"] == "medium"
 
