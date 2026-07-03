@@ -14,6 +14,11 @@ from epistemic_case_mapper.classical_ml import (
     tfidf_near_duplicate_pairs,
     weighted_pagerank,
 )
+from epistemic_case_mapper.config_profiles import (
+    DEFAULT_PROFILE_ID,
+    infer_profile_id_from_text,
+    profile_vocabulary,
+)
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -42,28 +47,6 @@ ROLE_PRIORITY = {
     "other": 5,
 }
 CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
-DISPLAY_ACRONYMS = {
-    "acx": "ACX",
-    "aha": "AHA",
-    "bmj": "BMJ",
-    "cdc": "CDC",
-    "cadr": "CADR",
-    "covid": "COVID",
-    "dga": "DGA",
-    "flf": "FLF",
-    "guv": "GUV",
-    "hepa": "HEPA",
-    "hvac": "HVAC",
-    "jama": "JAMA",
-    "merv": "MERV",
-    "nnr": "NNR",
-    "pm": "PM",
-    "pmc": "PMC",
-    "rct": "RCT",
-    "who": "WHO",
-}
-
-
 @dataclass(frozen=True)
 class MapBriefingResult:
     briefing_path: Path
@@ -450,7 +433,8 @@ def briefing_scaffold(
     evidence_roles = partition["evidence_roles"]
     cruxes = partition["crux_candidates"]
     audit_trail = list(partition["audit_trail"])
-    contract = build_briefing_contract(partition, quality_report)
+    vocabulary = _profile_vocabulary_for_map(candidate_map)
+    contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
     evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
     proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
     decision_model = build_decision_model(proposition_clusters, contract, quality_report, evidence_ledger)
@@ -474,6 +458,7 @@ def briefing_scaffold(
         "quality_status": quality_report.get("status"),
         "quality_score": quality_report.get("score"),
         "confidence_cap": confidence_cap(quality_report),
+        "epistemic_config": candidate_map.get("epistemic_config", {}),
         "section_policy": {
             "main_support": "Evidence supporting the bottom-line answer or low-concern/default recommendation.",
             "conflicting_evidence": "Evidence for harm, contrary findings, or tensions with the bottom line.",
@@ -778,12 +763,126 @@ def compose_final_reader_memo_package(rendered: str, scaffold: dict[str, Any]) -
 def annotate_map_with_evidence_slots(candidate_map: dict[str, Any]) -> dict[str, Any]:
     """Attach canonical evidence slots to claims without changing required schema fields."""
     enriched = json.loads(json.dumps(candidate_map))
+    vocabulary = _profile_vocabulary_for_map(enriched)
     for claim in enriched.get("claims", []) if isinstance(enriched.get("claims"), list) else []:
         if isinstance(claim, dict):
-            slots = _evidence_slots_for_claim(claim)
+            slots = _evidence_slots_for_claim(claim, vocabulary=vocabulary)
             claim["evidence_slots"] = slots
-            claim["decision_slots"] = _decision_slots_for_claim(claim)
+            claim["decision_slots"] = _decision_slots_for_claim(claim, vocabulary=vocabulary)
     return enriched
+
+
+def _profile_id_from_payload(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    return str(value.get("profile_id", "")).strip()
+
+
+def _profile_id_for_map(candidate_map: dict[str, Any]) -> str:
+    explicit = _profile_id_from_payload(candidate_map.get("epistemic_config"))
+    text = _map_profile_detection_text(candidate_map)
+    return infer_profile_id_from_text(text, fallback_profile_id=explicit or DEFAULT_PROFILE_ID)
+
+
+def _profile_id_for_scaffold(scaffold: dict[str, Any]) -> str:
+    explicit = _profile_id_from_payload(scaffold.get("epistemic_config"))
+    text = _scaffold_profile_detection_text(scaffold)
+    return infer_profile_id_from_text(text, fallback_profile_id=explicit or DEFAULT_PROFILE_ID)
+
+
+def _profile_vocabulary_for_map(candidate_map: dict[str, Any]) -> dict[str, Any]:
+    return profile_vocabulary(_profile_id_for_map(candidate_map))
+
+
+def _profile_vocabulary_for_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
+    return profile_vocabulary(_profile_id_for_scaffold(scaffold))
+
+
+def _vocabulary_marker_list(vocabulary: dict[str, Any] | None, key: str) -> list[str]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, [])
+    if not isinstance(value, list):
+        return []
+    return [str(item).lower() for item in value if str(item).strip()]
+
+
+def _vocabulary_string_list(vocabulary: dict[str, Any] | None, key: str) -> list[str]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, [])
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
+
+
+def _vocabulary_marker_map(vocabulary: dict[str, Any] | None, key: str) -> dict[str, list[str]]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, {})
+    if not isinstance(value, dict):
+        return {}
+    marker_map: dict[str, list[str]] = {}
+    for name, markers in value.items():
+        if isinstance(markers, list):
+            marker_map[str(name)] = [str(marker).lower() for marker in markers if str(marker).strip()]
+    return marker_map
+
+
+def _vocabulary_string_map(vocabulary: dict[str, Any] | None, key: str) -> dict[str, list[str]]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, {})
+    if not isinstance(value, dict):
+        return {}
+    string_map: dict[str, list[str]] = {}
+    for name, items in value.items():
+        if isinstance(items, list):
+            string_map[str(name)] = [str(item) for item in items if str(item).strip()]
+    return string_map
+
+
+def _vocabulary_string_dict(vocabulary: dict[str, Any] | None, key: str) -> dict[str, str]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, {})
+    if not isinstance(value, dict):
+        return {}
+    return {str(item_key).lower(): str(item_value) for item_key, item_value in value.items() if str(item_key).strip()}
+
+
+def _vocabulary_nested_marker_map(vocabulary: dict[str, Any] | None, key: str) -> dict[str, list[list[str]]]:
+    value = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get(key, {})
+    if not isinstance(value, dict):
+        return {}
+    marker_map: dict[str, list[list[str]]] = {}
+    for name, groups in value.items():
+        if not isinstance(groups, list):
+            continue
+        normalized_groups: list[list[str]] = []
+        for group in groups:
+            if isinstance(group, list):
+                normalized_groups.append([str(marker).lower() for marker in group if str(marker).strip()])
+            elif str(group).strip():
+                normalized_groups.append([str(group).lower()])
+        marker_map[str(name)] = normalized_groups
+    return marker_map
+
+
+def _map_profile_detection_text(candidate_map: dict[str, Any]) -> str:
+    claims = " ".join(str(claim.get("claim", "")) for claim in _claims(candidate_map))
+    title = str(candidate_map.get("title", ""))
+    sources = " ".join(str(item) for item in candidate_map.get("sources", []) if isinstance(item, str))
+    return " ".join([title, claims, sources])
+
+
+def _scaffold_profile_detection_text(scaffold: dict[str, Any]) -> str:
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    claims = " ".join(str(row.get("claim", "")) for row in ledger.get("all_evidence", []) if isinstance(row, dict))
+    packets = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
+    packet_text = " ".join(
+        str(row.get("claim", ""))
+        for packet in packets.get("packets", [])
+        if isinstance(packet, dict)
+        for row in packet.get("rows", [])
+        if isinstance(row, dict)
+    )
+    crux_text = " ".join(
+        " ".join(str(item.get(key, "")) for key in ("crux", "why_it_matters", "current_read", "would_change_if"))
+        for item in scaffold.get("crux_candidates", [])
+        if isinstance(item, dict)
+    )
+    return " ".join([str(scaffold.get("question", "")), claims, packet_text, crux_text])
 
 
 def build_evidence_slot_ledger(evidence_ledger: dict[str, Any]) -> dict[str, Any]:
@@ -831,15 +930,16 @@ def build_evidence_slot_ledger(evidence_ledger: dict[str, Any]) -> dict[str, Any
 
 
 def build_option_comparison(question: str, evidence_ledger: dict[str, Any], candidate_map: dict[str, Any]) -> dict[str, Any]:
+    vocabulary = _profile_vocabulary_for_map(candidate_map)
     options = _question_options(question)
     if not options:
-        options = _infer_options_from_evidence(evidence_ledger)
+        options = _infer_options_from_evidence(evidence_ledger, vocabulary=vocabulary)
     rows = [row for row in evidence_ledger.get("all_evidence", []) if isinstance(row, dict)]
     criteria = _option_criteria_for_rows(rows)
-    option_terms_by_option = _option_terms_by_option(options)
+    option_terms_by_option = _option_terms_by_option(options, vocabulary=vocabulary)
     option_rows: list[dict[str, Any]] = []
     for option in options:
-        option_terms = option_terms_by_option.get(option, _option_terms(option))
+        option_terms = option_terms_by_option.get(option, _option_terms(option, vocabulary=vocabulary))
         criteria_rows = []
         for criterion in criteria:
             matches = [
@@ -865,7 +965,7 @@ def build_option_comparison(question: str, evidence_ledger: dict[str, Any], cand
                 "criteria": criteria_rows,
             }
         )
-    tradeoffs = _option_tradeoff_rows(options, rows, option_terms_by_option)
+    tradeoffs = _option_tradeoff_rows(options, rows, option_terms_by_option, vocabulary=vocabulary)
     return {
         "schema_id": "option_comparison_v1",
         "method": "question_option_extraction_plus_slot_weighted_evidence",
@@ -879,6 +979,7 @@ def build_option_comparison(question: str, evidence_ledger: dict[str, Any], cand
 
 def build_crux_contract(candidate_map: dict[str, Any], evidence_ledger: dict[str, Any], option_comparison: dict[str, Any]) -> dict[str, Any]:
     claim_lookup = {str(claim.get("claim_id", "")): claim for claim in _claims(candidate_map)}
+    vocabulary = _profile_vocabulary_for_map(candidate_map)
     rows: list[dict[str, Any]] = []
     for relation in _relations(candidate_map):
         rtype = str(relation.get("relation_type", ""))
@@ -894,17 +995,17 @@ def build_crux_contract(candidate_map: dict[str, Any], evidence_ledger: dict[str
                 relation.get("rationale", ""),
             )
         )
-        label = _crux_label(text, rtype)
+        label = _crux_label(text, rtype, vocabulary=vocabulary)
         rows.append(
             {
                 "crux": label,
                 "relation_type": rtype,
                 "source_claim": relation.get("source_claim"),
                 "target_claim": relation.get("target_claim"),
-                "why_it_matters": _crux_why_it_matters(label, text, relation),
-                "current_read": _crux_current_read(label, text),
-                "would_change_if": _crux_would_change_if(label, text),
-                "affected_options": _crux_affected_options(label, option_comparison),
+                "why_it_matters": _crux_why_it_matters(label, text, relation, vocabulary=vocabulary),
+                "current_read": _crux_current_read(label, text, vocabulary=vocabulary),
+                "would_change_if": _crux_would_change_if(label, text, vocabulary=vocabulary),
+                "affected_options": _crux_affected_options(label, option_comparison, vocabulary=vocabulary),
                 "evidence": [
                     _claim_contract_row(source),
                     _claim_contract_row(target),
@@ -913,7 +1014,7 @@ def build_crux_contract(candidate_map: dict[str, Any], evidence_ledger: dict[str
         )
     rows = _dedupe_crux_rows(rows)
     if len(rows) < 3:
-        rows.extend(_fallback_crux_rows_from_option_comparison(option_comparison, evidence_ledger, existing={row["crux"] for row in rows}))
+        rows.extend(_fallback_crux_rows_from_option_comparison(option_comparison, evidence_ledger, existing={row["crux"] for row in rows}, vocabulary=vocabulary))
     rows = _dedupe_crux_rows(rows)[:6]
     return {
         "schema_id": "crux_contract_v1",
@@ -1118,7 +1219,8 @@ def _compact_option_comparison_for_contract(value: Any) -> dict[str, Any]:
 
 def select_reader_memo_required_evidence(rows: list[dict[str, str]], scaffold: dict[str, Any], *, max_rows: int = 8) -> list[dict[str, str]]:
     question = str(scaffold.get("question", "")).lower()
-    ranked = sorted(rows, key=lambda row: _rewrite_required_evidence_rank(row, question))
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
+    ranked = sorted(rows, key=lambda row: _rewrite_required_evidence_rank(row, question, vocabulary))
     selected: list[dict[str, str]] = []
     seen_claims: set[str] = set()
     seen_slots: dict[str, int] = {}
@@ -1129,7 +1231,7 @@ def select_reader_memo_required_evidence(rows: list[dict[str, str]], scaffold: d
         claim_key = " ".join(_content_terms(claim)[:12])
         if claim_key in seen_claims:
             continue
-        if _rewrite_row_is_secondary_alternative(row, question):
+        if _rewrite_row_is_secondary_alternative(row, question, vocabulary):
             continue
         slot = str(row.get("slot", ""))
         if seen_slots.get(slot, 0) >= 2 and len(selected) >= 5:
@@ -1141,57 +1243,58 @@ def select_reader_memo_required_evidence(rows: list[dict[str, str]], scaffold: d
             break
     if len(selected) < min(4, len(rows)):
         for row in rows:
-            if row not in selected and not _rewrite_row_is_secondary_alternative(row, question):
+            if row not in selected and not _rewrite_row_is_secondary_alternative(row, question, vocabulary):
                 selected.append(row)
             if len(selected) >= min(4, len(rows)):
                 break
     return selected[:max_rows]
 
 
-def _rewrite_required_evidence_rank(row: dict[str, str], question: str) -> tuple[int, int, int, str]:
+def _rewrite_required_evidence_rank(row: dict[str, str], question: str, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, str]:
     claim = str(row.get("claim", "")).lower()
     slot = str(row.get("slot", ""))
     score = 0
     if _has_quantitative_specificity(claim):
         score += 4
-    if any(marker in claim for marker in ("cadr", "room size", "ozone", "unsafe", "not safe")):
+    rank_markers = [str(marker).lower() for marker in (vocabulary or {}).get("rewrite_rank_markers", []) if str(marker).strip()]
+    if any(marker in claim for marker in rank_markers):
         score += 4
-    if "portable air cleaners" in claim and "supplemental" in claim:
-        score += 4
-    if "hepa-treated" in claim or "hepa filters" in claim:
-        score += 3
-    if "hvac" in claim and ("outdoor ventilation" in claim or "operating" in claim):
-        score += 3
     if slot in {"Main support", "Implementation constraints", "Safety and downside risk", "Scope and boundary conditions"}:
         score += 2
-    if _rewrite_row_is_secondary_alternative(row, question):
+    if _rewrite_row_is_secondary_alternative(row, question, vocabulary):
         score -= 6
-    if claim.startswith("good ventilation is a step"):
-        score -= 3
     return (-score, len(claim), 0 if slot == "Main support" else 1, claim)
 
 
-def _rewrite_row_is_secondary_alternative(row: dict[str, str], question: str) -> bool:
+def _rewrite_row_is_secondary_alternative(row: dict[str, str], question: str, vocabulary: dict[str, Any] | None = None) -> bool:
     claim = str(row.get("claim", "")).lower()
-    if claim.startswith("good ventilation is a step"):
-        return True
-    if "germicidal ultraviolet" in claim or " guv " in f" {claim} ":
-        return "guv" not in question and "ultraviolet" not in question
+    markers = [str(marker).lower() for marker in (vocabulary or {}).get("secondary_alternative_markers", []) if str(marker).strip()]
+    if any(marker.strip() in f" {claim} " for marker in markers):
+        marker_terms = set(_content_terms(" ".join(markers)))
+        question_terms = set(_content_terms(question))
+        return not bool(marker_terms & question_terms)
     return False
 
 
 def build_reader_memo_answer_frame(scaffold: dict[str, Any], required_rows: list[dict[str, str]]) -> dict[str, Any]:
     question = str(scaffold.get("question", "")).strip()
     lowered = f" {question.lower()} "
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
     comparator = _question_comparator_phrase(question)
     main_support = _first_required_claim(required_rows, slots=("Main support",))
     implementation = _first_required_claim(required_rows, slots=("Implementation constraints", "Scope and boundary conditions"))
     safety = _first_required_claim(required_rows, slots=("Safety and downside risk",))
     answer = "Give a direct, conditional recommendation using only the supplied evidence."
-    if "prioritize" in lowered and "hepa" in lowered:
-        answer = "Prioritize portable HEPA air cleaners for near-term targeted risk reduction, but describe them as supplemental rather than a substitute for ventilation/source-control work."
-    elif "should" in lowered and comparator:
-        answer = f"Answer whether the first option should be preferred {comparator}, then state the conditions that could reverse that preference."
+    for rule in vocabulary.get("answer_frame_rules", []) if isinstance(vocabulary.get("answer_frame_rules"), list) else []:
+        if not isinstance(rule, dict):
+            continue
+        required_terms = [str(term).lower() for term in rule.get("required_question_terms", []) if str(term).strip()]
+        if required_terms and all(term in lowered for term in required_terms):
+            answer = str(rule.get("direct_answer", answer)).strip() or answer
+            break
+    else:
+        if "should" in lowered and comparator:
+            answer = f"Answer whether the first option should be preferred {comparator}, then state the conditions that could reverse that preference."
     return {
         "direct_answer": answer,
         "comparator_sentence_required": bool(comparator),
@@ -1229,14 +1332,14 @@ def _first_required_claim(required_rows: list[dict[str, str]], *, slots: tuple[s
 def build_reader_memo_practical_actions(scaffold: dict[str, Any], required_rows: list[dict[str, str]]) -> list[str]:
     actions: list[str] = []
     claims = " ".join(row.get("claim", "") for row in required_rows).lower()
-    if "cadr" in claims or "room size" in claims:
-        actions.append("Verify that each portable unit's CADR is appropriate for the room size.")
-    if "limited airflow" in claims or "targeted filtration" in claims or "sick individuals" in claims:
-        actions.append("Deploy portable units first in rooms with limited airflow, targeted filtration needs, or higher-risk occupancy.")
-    if "outdoor ventilation" in claims or "source control" in claims or "adequate ventilation" in claims:
-        actions.append("Continue HVAC operation, source control, and outdoor-air ventilation rather than treating portable filtration as a replacement.")
-    if "ozone" in claims or "unsafe" in claims:
-        actions.append("Exclude ozone-generating air cleaners from occupied spaces.")
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
+    for rule in vocabulary.get("practical_action_rules", []) if isinstance(vocabulary.get("practical_action_rules"), list) else []:
+        if not isinstance(rule, dict):
+            continue
+        markers = [str(marker).lower() for marker in rule.get("markers", []) if str(marker).strip()]
+        action = str(rule.get("action", "")).strip()
+        if markers and action and any(marker in claims for marker in markers):
+            actions.append(action)
     if not actions:
         for row in required_rows[:4]:
             claim = str(row.get("claim", "")).strip()
@@ -1277,29 +1380,18 @@ def _rewrite_crux_contract_rows(scaffold: dict[str, Any]) -> list[dict[str, str]
             {
                 "crux": crux,
                 "why_it_matters": _clean_reader_relation_placeholders(str(item.get("why_it_matters", "")).strip()),
-                "current_read": _human_current_read_for_crux(crux, item),
-                "would_change_if": _human_would_change_if_for_crux(crux, item),
+                "current_read": _human_current_read_for_crux(crux, item, scaffold=scaffold),
+                "would_change_if": _human_would_change_if_for_crux(crux, item, scaffold=scaffold),
             }
         )
     return [row for row in rows if row.get("crux")]
 
 
-def _human_current_read_for_crux(crux: str, item: dict[str, Any]) -> str:
+def _human_current_read_for_crux(crux: str, item: dict[str, Any], scaffold: dict[str, Any] | None = None) -> str:
     text = f" {crux.lower()} "
-    if "air cleaning alone may not be sufficient" in text or "source control" in text:
-        return "Portable filtration is a supplement, not a standalone replacement for source control and ventilation."
-    if "health benefits" in text or "translate" in text or "pm levels" in text:
-        return "Measured PM reductions are relevant, but health-outcome translation remains uncertain."
-    if "cadr" in text or "room size" in text or "technical capacity" in text:
-        return "Room-size/CADR fit gates whether portable units can deliver the intended filtration."
-    if "site" in text or "constraint" in text or "right-of-way" in text or "geometry" in text:
-        return "Local geometry, access needs, and operating constraints determine how far the default recommendation travels."
-    if "maintenance" in text or "maintain" in text or "sweeping" in text or "snow" in text:
-        return "The recommendation holds only where the city can keep the intervention usable after installation."
-    if "volume" in text or "exposure" in text or "rider" in text:
-        return "Exposure changes matter because a safety signal is stronger if it is not explained by fewer users."
-    if "attribution" in text or "randomized" in text or "confounding" in text or "regression" in text:
-        return "The observed result is decision-relevant, but it should be read as a package effect rather than a clean single-cause estimate."
+    matched = _profile_crux_template(text, scaffold)
+    if matched and str(matched.get("current_read", "")).strip():
+        return str(matched["current_read"]).strip()
     current = _clean_reader_relation_placeholders(str(item.get("current_read", "")).strip())
     if not current or _contains_banned_editorial_phrase(current):
         relation_type = str(item.get("relation_type", "")).replace("_", " ").strip()
@@ -1310,27 +1402,27 @@ def _human_current_read_for_crux(crux: str, item: dict[str, Any]) -> str:
     return current
 
 
-def _human_would_change_if_for_crux(crux: str, item: dict[str, Any]) -> str:
+def _human_would_change_if_for_crux(crux: str, item: dict[str, Any], scaffold: dict[str, Any] | None = None) -> str:
     text = f" {crux.lower()} "
-    if "air cleaning alone may not be sufficient" in text or "source control" in text:
-        return "Portable filtration alone was shown to achieve the relevant respiratory-risk reduction without source control or ventilation."
-    if "health benefits" in text or "translate" in text or "pm levels" in text:
-        return "Direct student or teacher health outcomes improved at the observed PM-reduction levels."
-    if "cadr" in text or "room size" in text or "technical capacity" in text:
-        return "Portable units worked reliably without room-size/CADR matching."
-    if "site" in text or "constraint" in text or "right-of-way" in text or "geometry" in text:
-        return "The target corridors were shown to have workable geometry and manageable access conflicts."
-    if "maintenance" in text or "maintain" in text or "sweeping" in text or "snow" in text:
-        return "The city lacked the staff, equipment, or budget to keep the intervention usable."
-    if "volume" in text or "exposure" in text or "rider" in text:
-        return "The apparent safety gain was explained by reduced exposure or suppressed use."
-    if "attribution" in text or "randomized" in text or "confounding" in text or "regression" in text:
-        return "Better evaluation separated the intervention effect from concurrent street-safety changes."
+    matched = _profile_crux_template(text, scaffold)
+    if matched and str(matched.get("would_change_if", "")).strip():
+        return str(matched["would_change_if"]).strip()
     value = str(item.get("would_change_if", "")).strip()
     if value and not _contains_banned_editorial_phrase(value) and "weakened or reversed" not in value.lower():
         return value
     crux_label = _short_claim_fragment(crux, max_chars=90).rstrip(".")
     return f"New evidence showed that {crux_label.lower()} did not materially affect the decision."
+
+
+def _profile_crux_template(text: str, scaffold: dict[str, Any] | None) -> dict[str, Any]:
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold or {})
+    for template in vocabulary.get("crux_templates", []) if isinstance(vocabulary.get("crux_templates"), list) else []:
+        if not isinstance(template, dict):
+            continue
+        markers = [str(marker).lower() for marker in template.get("markers", []) if str(marker).strip()]
+        if markers and any(marker in text for marker in markers):
+            return template
+    return {}
 
 
 def build_reader_memo_rewrite_prompt(memo: str, contract: dict[str, Any]) -> str:
@@ -1730,10 +1822,11 @@ def _first_non_heading_paragraph(markdown: str) -> str:
 
 
 def _rewrite_introduces_domain_leakage(text: str, scaffold: dict[str, Any]) -> bool:
-    if _looks_like_nutrition_case(scaffold):
+    if _uses_nutrition_memo_profile(scaffold):
         return False
     lowered = text.lower()
-    return any(marker in lowered for marker in (" egg", " eggs", " dietary", " cholesterol", " apob", " saturated fat", " replacement foods"))
+    nutrition_terms = profile_vocabulary("biomedical_nutrition_case").get("domain_leakage_terms", [])
+    return any(str(marker).lower() in lowered for marker in nutrition_terms if str(marker).strip())
 
 
 def _rewrite_has_raw_identifiers(text: str) -> bool:
@@ -1824,6 +1917,7 @@ def _sentence_fingerprints(text: str) -> list[str]:
 
 def build_curated_evidence_packets(scaffold: dict[str, Any], *, rows_per_packet: int = 3) -> dict[str, Any]:
     source_counts: dict[str, int] = {}
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
     packets_in = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
     curated_packets: list[dict[str, Any]] = []
     excluded: list[dict[str, str]] = []
@@ -1835,7 +1929,7 @@ def build_curated_evidence_packets(scaffold: dict[str, Any], *, rows_per_packet:
         for row in packet.get("rows", []) if isinstance(packet.get("rows"), list) else []:
             if not isinstance(row, dict):
                 continue
-            quality = _reader_evidence_row_quality(row)
+            quality = _reader_evidence_row_quality(row, vocabulary=vocabulary)
             clean_row = _reader_clean_evidence_row(row)
             if not quality["usable"]:
                 excluded.append(
@@ -1889,9 +1983,10 @@ def build_curated_evidence_packets(scaffold: dict[str, Any], *, rows_per_packet:
 
 def build_decision_memo_slots(scaffold: dict[str, Any], *, rendered: str = "") -> dict[str, Any]:
     slots: list[dict[str, Any]] = []
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
     for spec in _decision_memo_slot_specs(scaffold):
-        rows = _candidate_rows_for_memo_slot(scaffold, spec)
-        selected = sorted(rows, key=lambda row: _memo_slot_row_rank(row, spec))[: int(spec.get("max_rows", 2))]
+        rows = _candidate_rows_for_memo_slot(scaffold, spec, vocabulary=vocabulary)
+        selected = sorted(rows, key=lambda row: _memo_slot_row_rank(row, spec, vocabulary=vocabulary))[: int(spec.get("max_rows", 2))]
         slots.append(
             {
                 "slot_id": spec["slot_id"],
@@ -1919,7 +2014,7 @@ def build_decision_memo_slots(scaffold: dict[str, Any], *, rendered: str = "") -
 
 def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any], ...]:
     """Build reader-memo obligations from the question and observed map concepts."""
-    if _looks_like_nutrition_case(scaffold):
+    if _uses_nutrition_memo_profile(scaffold):
         return _NUTRITION_DECISION_MEMO_SLOT_SPECS
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     profile = sufficiency.get("question_profile", {}) if isinstance(sufficiency.get("question_profile"), dict) else {}
@@ -2008,25 +2103,8 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
     )
 
 
-def _looks_like_nutrition_case(scaffold: dict[str, Any]) -> bool:
-    question = str(scaffold.get("question", "")).lower()
-    if any(marker in question for marker in ("egg", "diet", "nutrition", "cholesterol", "cardiovascular")):
-        return True
-    packets = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
-    packet_text = " ".join(
-        str(row.get("claim", ""))
-        for packet in packets.get("packets", [])
-        if isinstance(packet, dict)
-        for row in packet.get("rows", [])
-        if isinstance(row, dict)
-    ).lower()
-    packet_markers = ("egg", "dietary", "ldl", "apob", "cholesterol", "saturated fat")
-    if sum(1 for marker in packet_markers if marker in packet_text) >= 2:
-        return True
-    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
-    text = " ".join(str(row.get("claim", "")) for row in ledger.get("all_evidence", []) if isinstance(row, dict)).lower()
-    markers = ("egg", "dietary", "ldl", "apob", "cholesterol", "saturated fat")
-    return sum(1 for marker in markers if marker in text) >= 2
+def _uses_nutrition_memo_profile(scaffold: dict[str, Any]) -> bool:
+    return _profile_id_for_scaffold(scaffold) == "biomedical_nutrition_case"
 
 
 _NUTRITION_DECISION_MEMO_SLOT_SPECS = (
@@ -2113,7 +2191,7 @@ _NUTRITION_DECISION_MEMO_SLOT_SPECS = (
 )
 
 
-def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     concepts = tuple(str(item) for item in spec.get("concepts", ()))
     sections = tuple(str(item) for item in spec.get("sections", ()))
     curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
@@ -2129,7 +2207,7 @@ def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]
                 continue
             if sections and str(row.get("section", "")) not in sections:
                 continue
-            if not _row_matches_memo_slot_direction(row, spec):
+            if not _row_matches_memo_slot_direction(row, spec, vocabulary=vocabulary):
                 continue
             key = f"{row.get('source')}::{row.get('claim')}"
             if key in seen:
@@ -2138,13 +2216,13 @@ def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]
             rows.append(row)
     if rows:
         return rows
-    option_rows = _option_rows_for_memo_slot(scaffold, spec)
+    option_rows = _option_rows_for_memo_slot(scaffold, spec, vocabulary=vocabulary)
     if option_rows:
         return option_rows
-    return _fallback_rows_for_memo_slot(scaffold, spec)
+    return _fallback_rows_for_memo_slot(scaffold, spec, vocabulary=vocabulary)
 
 
-def _fallback_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+def _fallback_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     concepts = set(str(item) for item in spec.get("concepts", ()))
     sections = set(str(item) for item in spec.get("sections", ()))
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
@@ -2158,14 +2236,14 @@ def _fallback_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any])
         if sections and str(row.get("section", "")) not in sections:
             continue
         clean = _reader_clean_evidence_row(row)
-        quality = _reader_evidence_row_quality(row)
-        if quality["usable"] and _row_matches_memo_slot_direction(clean, spec):
+        quality = _reader_evidence_row_quality(row, vocabulary=vocabulary)
+        if quality["usable"] and _row_matches_memo_slot_direction(clean, spec, vocabulary=vocabulary):
             clean["reader_score"] = int(row.get("score", 0)) + int(quality["score"])
             rows.append(clean)
     return rows
 
 
-def _option_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+def _option_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     slot_id = str(spec.get("slot_id", ""))
     if slot_id not in {"alternatives_or_comparators", "comparator_substitution"}:
         return []
@@ -2193,13 +2271,16 @@ def _option_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -
                 "criterion": tradeoff.get("criterion"),
             }
         )
-    return sorted(rows, key=lambda row: _memo_slot_row_rank(row, spec))[:1]
+    return sorted(rows, key=lambda row: _memo_slot_row_rank(row, spec, vocabulary=vocabulary))[:1]
 
 
-def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any]) -> bool:
+def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> bool:
     slot_id = str(spec.get("slot_id", ""))
     claim = str(row.get("claim", ""))
     lowered = f" {claim.lower()} "
+    reject_markers = _vocabulary_nested_marker_map(vocabulary, "memo_slot_reject_markers").get(slot_id, [])
+    if any(group and all(marker in lowered for marker in group) for group in reject_markers):
+        return False
     if slot_id in {
         "main_support",
         "counterevidence_or_tension",
@@ -2209,73 +2290,27 @@ def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any]) 
         "safety_or_risk",
     }:
         return True
-    if slot_id == "alternatives_or_comparators":
-        return any(
-            marker in lowered
-            for marker in (
-                " compared",
-                " versus",
-                " vs ",
-                " over ",
-                " rather than ",
-                " instead of",
-                " alternative",
-                " supplemental",
-                " replacement",
-                " replace",
-                " substitut",
-            )
-        )
+    marker_map = _vocabulary_marker_map(vocabulary, "memo_slot_direction_markers")
+    if slot_id in marker_map:
+        return any(marker in lowered for marker in marker_map[slot_id])
     if slot_id == "hard_outcome_support":
-        return _looks_like_support_evidence(claim) and not _looks_like_concern_evidence(claim)
+        return _looks_like_support_evidence(claim, vocabulary=vocabulary) and not _looks_like_concern_evidence(claim, vocabulary=vocabulary)
     if slot_id == "hard_outcome_counter":
-        return _looks_like_concern_evidence(claim)
-    if slot_id == "high_risk_subgroup":
-        if "free of" in lowered and "baseline" in lowered:
-            return False
-        return any(
-            marker in lowered
-            for marker in (
-                " diabetes",
-                " type 2",
-                " t2d",
-                " prediabetes",
-                " familial",
-                " hyper",
-                " high ldl",
-                " high apob",
-                " kidney",
-                " vascular disease",
-            )
-        )
-    if slot_id == "comparator_substitution":
-        return any(marker in lowered for marker in (" replace", " replacing", " substitut", " instead of", " compared with", " versus", " egg white", " plant protein"))
-    if slot_id == "mechanism_surrogate":
-        return any(marker in lowered for marker in (" ldl", " apob", " hdl", " cholesterol", " saturated fat", " biomarker", " tmao", " triglyceride"))
+        return _looks_like_concern_evidence(claim, vocabulary=vocabulary)
     return True
 
 
-def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any]) -> tuple[int, int, int, int, str]:
+def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
     lowered = claim.lower()
     quantitative_bonus = 2 if _has_quantitative_specificity(claim) else 0
     direct_bonus = 0
     slot_id = str(spec.get("slot_id", ""))
-    if slot_id.startswith("hard_outcome") and any(marker in lowered for marker in ("mortality", "cardiovascular", "cvd", "stroke", "myocardial infarction")):
-        direct_bonus += 2
-    if slot_id == "mechanism_surrogate" and any(marker in lowered for marker in ("ldl", "apob", "hdl", "cholesterol", "saturated fat", "biomarker")):
-        direct_bonus += 2
-    if slot_id == "comparator_substitution" and any(marker in lowered for marker in ("replace", "replacing", "substitut", "instead of", "compared with")):
-        direct_bonus += 2
-    if slot_id == "high_risk_subgroup" and any(marker in lowered for marker in ("diabetes", "familial", "hyper", "high ldl", "kidney", "vascular")):
-        direct_bonus += 2
-    if slot_id == "alternatives_or_comparators" and any(marker in lowered for marker in ("compared", "versus", "rather than", "instead of", "alternative", "supplemental")):
-        direct_bonus += 2
-    if slot_id in {"scope_conditions", "implementation_constraints"} and any(
-        marker in lowered for marker in ("depends", "requires", "feasible", "capacity", "size", "setting", "maintenance", "standard", "should")
-    ):
-        direct_bonus += 2
-    if slot_id == "safety_or_risk" and any(marker in lowered for marker in ("unsafe", "risk", "harm", "adverse", "ozone", "failure")):
+    rank_markers = _vocabulary_marker_map(vocabulary, "memo_slot_rank_markers")
+    slot_markers = list(rank_markers.get(slot_id, []))
+    if slot_id.startswith("hard_outcome"):
+        slot_markers.extend(rank_markers.get("hard_outcome", []))
+    if any(marker in lowered for marker in slot_markers):
         direct_bonus += 2
     score = int(row.get("reader_score", 0)) + quantitative_bonus + direct_bonus
     return (-score, len(claim), -len(set(_content_terms(claim))), str(row.get("source", "")), str(row.get("claim", "")))
@@ -2451,7 +2486,7 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
 
 
 def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    if _looks_like_nutrition_case(scaffold):
+    if _uses_nutrition_memo_profile(scaffold):
         return {
             "why_this_read": {
                 "slot_ids": ("default_population", "dose_boundary", "hard_outcome_support"),
@@ -2586,7 +2621,7 @@ def _reader_clean_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _reader_evidence_row_quality(row: dict[str, Any]) -> dict[str, Any]:
+def _reader_evidence_row_quality(row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
     raw_claim = str(row.get("claim", "")).strip()
     cleaned = _reader_clean_evidence_row(row)
     claim = str(cleaned.get("claim", "")).strip()
@@ -2610,35 +2645,7 @@ def _reader_evidence_row_quality(row: dict[str, Any]) -> dict[str, Any]:
         reasons.append("boilerplate")
     if claim and claim[-1] in ".!?":
         score += 2
-    if any(
-        marker in lowered
-        for marker in (
-            "risk",
-            "mortality",
-            "cardiovascular",
-            "ldl",
-            "apob",
-            "diabetes",
-            "replace",
-            "substitut",
-            "compared",
-            "versus",
-            "rather than",
-            "supplemental",
-            "per day",
-            "per week",
-            "hepa",
-            "hvac",
-            "cadr",
-            "merv",
-            "ventilation",
-            "filtration",
-            "pm2.5",
-            "pm 2.5",
-            "unsafe",
-            "ozone",
-        )
-    ):
+    if any(marker in lowered for marker in _vocabulary_marker_list(vocabulary, "reader_quality_bonus_markers")):
         score += 2
     if str(row.get("weight", "")) == "high":
         score += 2
@@ -2777,14 +2784,8 @@ def clean_reader_memo_text(text: str) -> str:
 
 
 def _normalize_technical_acronyms(text: str) -> str:
-    replacements = {
-        "hepa": "HEPA",
-        "hvac": "HVAC",
-        "cadr": "CADR",
-        "merv": "MERV",
-        "guv": "GUV",
-        "covid": "COVID",
-    }
+    vocabulary = profile_vocabulary(infer_profile_id_from_text(text, fallback_profile_id=DEFAULT_PROFILE_ID))
+    replacements = _vocabulary_string_dict(vocabulary, "display_acronyms")
     cleaned = text
     for lower, upper in replacements.items():
         cleaned = re.sub(rf"\b{lower}\b", upper, cleaned, flags=re.IGNORECASE)
@@ -3336,16 +3337,26 @@ def _duplicate_sentence_count(markdown: str) -> int:
 
 def _coverage_snapshot_rows(table: dict[str, Any], *, max_rows: int = 12) -> list[dict[str, str]]:
     rows = [row for row in table.get("rows", []) if isinstance(row, dict)]
+    table_profile_id = str(table.get("profile_id", "")).strip()
+    if not table_profile_id:
+        table_profile_id = infer_profile_id_from_text(
+            " ".join(
+                " ".join([str(row.get("claim", "")), " ".join(str(item) for item in row.get("concepts", []) if isinstance(item, str))])
+                for row in rows
+            ),
+            fallback_profile_id=DEFAULT_PROFILE_ID,
+        )
+    vocabulary = profile_vocabulary(table_profile_id)
     selected: list[dict[str, str]] = []
     concept_order = sorted(
         _obligatory_coverage_concepts(_ordered_concepts(rows)),
         key=lambda concept: _COVERAGE_CONCEPT_PRIORITY.get(concept, 50),
     )
     for concept in concept_order:
-        candidates = [row for row in rows if concept in row.get("concepts", []) and _coverage_concept_visible(concept, row)]
+        candidates = [row for row in rows if concept in row.get("concepts", []) and _coverage_concept_visible(concept, row, vocabulary=vocabulary)]
         if not candidates:
             continue
-        row = sorted(candidates, key=lambda item: _coverage_concept_row_rank(concept, item))[0]
+        row = sorted(candidates, key=lambda item: _coverage_concept_row_rank(concept, item, vocabulary=vocabulary))[0]
         source = str(row.get("source", "")).strip()
         claim = _coverage_current_read(concept, row)
         current_read = _short_claim_fragment(claim + (f" ({source})" if source else ""), max_chars=210)
@@ -3365,11 +3376,11 @@ def _obligatory_coverage_concepts(concepts: list[str]) -> list[str]:
     return [concept for concept in concepts if concept not in _NON_OBLIGATORY_COVERAGE_CONCEPTS]
 
 
-def _coverage_concept_visible(concept: str, row: dict[str, Any]) -> bool:
+def _coverage_concept_visible(concept: str, row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> bool:
     text = _coverage_text_for_row(row)
     if concept == "hard_outcome_endpoint" and _looks_like_baseline_population_criterion(text):
         return False
-    markers = _COVERAGE_VISIBLE_MARKERS.get(concept, ())
+    markers = _vocabulary_marker_map(vocabulary, "coverage_visible_markers").get(concept, [])
     return any(marker in text for marker in markers)
 
 
@@ -3438,18 +3449,18 @@ def _coverage_snapshot_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
     return (concept_priority, -int(row.get("score", 0)), len(str(row.get("claim", ""))), str(row.get("claim_id", "")))
 
 
-def _coverage_concept_row_rank(concept: str, row: dict[str, Any]) -> tuple[int, int, int, str]:
+def _coverage_concept_row_rank(concept: str, row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, str]:
     return (
-        _coverage_concept_specificity(concept, row),
+        _coverage_concept_specificity(concept, row, vocabulary=vocabulary),
         -int(row.get("score", 0)),
         len(str(row.get("claim", ""))),
         str(row.get("claim_id", "")),
     )
 
 
-def _coverage_concept_specificity(concept: str, row: dict[str, Any]) -> int:
+def _coverage_concept_specificity(concept: str, row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> int:
     text = _coverage_text_for_row(row)
-    preferred_markers = _COVERAGE_PREFERRED_MARKERS.get(concept, ())
+    preferred_markers = _vocabulary_nested_marker_map(vocabulary, "coverage_preferred_markers").get(concept, [])
     for index, markers in enumerate(preferred_markers):
         if any(marker in text for marker in markers):
             return index
@@ -3524,42 +3535,6 @@ _COVERAGE_CONCEPT_SLOT = {
 }
 
 
-_COVERAGE_VISIBLE_MARKERS = {
-    "default_population": ("generally healthy", "healthy adults", "general population", "free of", "without", "free-living"),
-    "dose_or_threshold": ("per day", "per week", "up to", "moderate", "high intake", "low intake", "≥", "≤", "<", ">"),
-    "hard_outcome_endpoint": ("mortality", "cvd", "cardiovascular", "stroke", "myocardial infarction", "coronary", "incident"),
-    "surrogate_or_biomarker_endpoint": ("biomarker", "surrogate", "proxy", "pm2.5", "pm 2.5", "particulate", "particle", "ldl", "hdl", "apob", "cholesterol", "lipid"),
-    "mechanism_or_causal_path": ("mechanism", "causal", "pathway", "mediated", "exposure", "transmission", "filtration", "ventilation", "source control"),
-    "mechanism_ldl_apob": ("ldl", "apob", "cholesterol", "atherosclerosis", "tmao", "trimethylamine", "metabolite"),
-    "dietary_context_or_saturated_fat": ("saturated fat", "dietary pattern", "dietary cholesterol", "red meat", "processed meat", "overnutrition"),
-    "substitution_or_comparator": ("replace", "replacing", "substitut", "compared with", "versus", "instead of", "egg white", "plant protein"),
-    "alternative_or_comparator": ("compared with", "compared to", "versus", " vs ", "rather than", "instead of", "alternative", "supplemental", "over "),
-    "subgroup_diabetes_or_metabolic_risk": ("type 2 diabetes", "diabetes", "t2d", "prediabetes", "metabolic", "renal", "kidney"),
-    "subgroup_fh_hyper_responder": ("familial", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"),
-    "study_design_rct": ("randomized", "randomised", "rct", "trial", "crossover", "intervention"),
-    "study_design_cohort": ("cohort", "prospective", "follow-up", "observational", "participants"),
-    "guideline_or_policy": ("guideline", "advisory", "recommendation", "dietary guidance", "clinicians", "consumers", "should"),
-    "technical_performance_or_capacity": ("cadr", "merv", "hvac", "hepa", "airflow", "ventilation", "filtration", "room size", "capacity", "pm2.5", "pm 2.5"),
-    "implementation_constraint": ("feasible", "not feasible", "maintenance", "operate", "operated", "serviced", "upgrade", "standard", "cost", "noise", "capacity", "room size"),
-    "safety_or_adverse_effect": ("unsafe", "ozone", "adverse", "harm", "risk", "hazard", "not safe", "failure"),
-    "setting_or_context": ("classroom", "school", "district", "building", "home", "workplace", "setting", "county", "region", "site"),
-}
-
-
-_COVERAGE_PREFERRED_MARKERS = {
-    "mechanism_ldl_apob": (("apob", "apo b"), ("ldl", "ldl-c"), ("cholesterol",)),
-    "surrogate_or_biomarker_endpoint": (("apob", "apo b"), ("ldl", "hdl", "lipid", "particle"), ("cholesterol", "biomarker")),
-    "dietary_context_or_saturated_fat": (("saturated fat",), ("dietary pattern", "diet quality"), ("dietary cholesterol", "red meat", "processed meat", "overnutrition")),
-    "substitution_or_comparator": (("plant protein", "egg white"), ("replace", "replacing", "substitut"), ("compared with", "versus", "instead of")),
-    "alternative_or_comparator": (("compared with", "compared to", "versus"), ("rather than", "instead of", "over "), ("alternative", "supplemental")),
-    "guideline_or_policy": (("guideline", "dietary guidance"), ("recommendation", "advisory"), ("clinicians", "consumers", "should")),
-    "technical_performance_or_capacity": (("cadr", "merv", "hvac", "hepa"), ("ventilation", "filtration", "airflow"), ("room size", "capacity")),
-    "implementation_constraint": (("not feasible", "feasible"), ("maintenance", "serviced", "operate", "operated"), ("cost", "noise", "capacity")),
-    "safety_or_adverse_effect": (("unsafe", "not safe", "ozone"), ("adverse", "harm", "risk"), ("failure", "hazard")),
-    "setting_or_context": (("classroom", "school", "district"), ("building", "home", "workplace"), ("setting", "site", "region")),
-}
-
-
 def _markdown_table_cell(value: str) -> str:
     return re.sub(r"\s+", " ", value).replace("|", "\\|").strip()
 
@@ -3574,14 +3549,14 @@ def _extract_json_string_field_local(text: str, field: str) -> str:
         return match.group(1).replace(r"\"", '"').replace(r"\n", "\n")
 
 
-def build_briefing_contract(partition: dict[str, Any], quality_report: dict[str, Any]) -> dict[str, Any]:
+def build_briefing_contract(partition: dict[str, Any], quality_report: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
     evidence_roles = partition.get("evidence_roles", {})
     support = _string_list(evidence_roles.get("main_support"))
     conflict = _string_list(evidence_roles.get("conflicting_evidence"))
     scope = _string_list(evidence_roles.get("scope_limits"))
     method = _string_list(evidence_roles.get("method_limits"))
-    support_profile = _support_signal_profile(support)
-    scope_ledger = _scope_ledger([*scope, *method, *conflict])
+    support_profile = _support_signal_profile(support, vocabulary=vocabulary)
+    scope_ledger = _scope_ledger([*scope, *method, *conflict], vocabulary=vocabulary)
     active_lints = _active_overstatement_lints(
         support_profile=support_profile,
         conflict=conflict,
@@ -3619,18 +3594,20 @@ def build_evidence_weighting_ledger(
     source_lookup: dict[str, str],
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
+    profile_id = _profile_id_for_map(candidate_map)
+    vocabulary = _profile_vocabulary_for_map(candidate_map)
     for claim in _claims(candidate_map):
         section = _claim_evidence_section(claim)
-        score, modifiers = _claim_evidence_weight_score(claim, section, quality_report, source_lookup)
-        concepts = _claim_concepts(claim)
+        score, modifiers = _claim_evidence_weight_score(claim, section, quality_report, source_lookup, vocabulary=vocabulary)
+        concepts = _claim_concepts(claim, vocabulary=vocabulary)
         noise = _claim_noise_profile(claim)
         rows.append(
             {
                 "claim_id": str(claim.get("claim_id", "")),
                 "section": section,
-                "evidence_family": _evidence_family_for_claim(claim, section, source_lookup),
-                "decision_slots": _decision_slots_for_claim(claim),
-                "evidence_slots": _evidence_slots_for_claim(claim),
+                "evidence_family": _evidence_family_for_claim(claim, section, source_lookup, vocabulary=vocabulary),
+                "decision_slots": _decision_slots_for_claim(claim, vocabulary=vocabulary),
+                "evidence_slots": _evidence_slots_for_claim(claim, vocabulary=vocabulary),
                 "decision_concepts": concepts,
                 "noise": noise,
                 "weight": _weight_label(score),
@@ -3653,6 +3630,7 @@ def build_evidence_weighting_ledger(
     return {
         "schema_id": "evidence_weighting_ledger_v1",
         "method": "generic_entailment_source_directness_support_role_scoring",
+        "profile_id": profile_id,
         "quality_status": quality_report.get("status"),
         "all_evidence": rows,
         "family_counts": _counts(row["evidence_family"] for row in rows),
@@ -3676,6 +3654,7 @@ def build_evidence_compression_table(
     source_lookup: dict[str, str],
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
+    vocabulary = _profile_vocabulary_for_map(candidate_map)
     claim_lookup = {str(claim.get("claim_id", "")): claim for claim in _claims(candidate_map)}
     for row in evidence_ledger.get("all_evidence", []):
         if not isinstance(row, dict):
@@ -3699,18 +3678,19 @@ def build_evidence_compression_table(
                 "concepts": concepts,
                 "evidence_slots": [str(item) for item in row.get("evidence_slots", []) if isinstance(item, str)],
                 "evidence_family": row.get("evidence_family", "general_evidence"),
-                "slot_values": _compression_slot_values(str(row.get("claim", "")), row.get("decision_slots", [])),
+                "slot_values": _compression_slot_values(str(row.get("claim", "")), row.get("decision_slots", []), vocabulary=vocabulary),
                 "claim": _compressed_claim_text(str(row.get("claim", "")), noise),
                 "why_it_matters": _compression_why_it_matters(row),
                 "noise_kind": noise.get("kind", "none"),
             }
         )
-    selected = _select_compression_rows(rows, max_rows=36)
+    selected = _select_compression_rows(rows, max_rows=36, vocabulary=vocabulary)
     present_obligatory = _obligatory_coverage_concepts(_ordered_concepts(rows))
     selected_obligatory = _obligatory_coverage_concepts(_ordered_concepts(selected))
     return {
         "schema_id": "evidence_compression_table_v1",
         "method": "concept_coverage_then_weighted_evidence_with_noise_suppression",
+        "profile_id": _profile_id_for_map(candidate_map),
         "coverage": {
             "present_concepts": _ordered_concepts(rows),
             "selected_concepts": _ordered_concepts(selected),
@@ -3723,6 +3703,7 @@ def build_evidence_compression_table(
 
 
 def build_concept_evidence_packets(evidence_ledger: dict[str, Any], *, max_packets: int = 10, rows_per_packet: int = 4) -> dict[str, Any]:
+    vocabulary = profile_vocabulary(str(evidence_ledger.get("profile_id", DEFAULT_PROFILE_ID)))
     rows = [
         _concept_packet_row(row)
         for row in evidence_ledger.get("all_evidence", [])
@@ -3734,13 +3715,13 @@ def build_concept_evidence_packets(evidence_ledger: dict[str, Any], *, max_packe
         candidates = [row for row in rows if concept in row.get("concepts", [])]
         if not candidates:
             continue
-        selected = sorted(candidates, key=lambda row: _concept_packet_row_rank(concept, row))[:rows_per_packet]
+        selected = sorted(candidates, key=lambda row: _concept_packet_row_rank(concept, row, vocabulary=vocabulary))[:rows_per_packet]
         packets.append(
             {
                 "concept": concept,
                 "label": _concept_label(concept),
                 "synthesis_job": _concept_packet_synthesis_job(concept),
-                "must_surface_terms": _concept_packet_surface_terms(concept, selected),
+                "must_surface_terms": _concept_packet_surface_terms(concept, selected, vocabulary=vocabulary),
                 "rows": selected,
             }
         )
@@ -3773,9 +3754,9 @@ def _concept_packet_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _concept_packet_row_rank(concept: str, row: dict[str, Any]) -> tuple[int, int, int, str]:
+def _concept_packet_row_rank(concept: str, row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, str]:
     return (
-        _coverage_concept_specificity(concept, row),
+        _coverage_concept_specificity(concept, row, vocabulary=vocabulary),
         -int(row.get("score", 0)),
         len(str(row.get("claim", ""))),
         str(row.get("claim_id", "")),
@@ -3805,22 +3786,26 @@ def _concept_packet_synthesis_job(concept: str) -> str:
     }.get(concept, "State the decision-relevant contribution and caveat for this evidence family.")
 
 
-def _concept_packet_surface_terms(concept: str, rows: list[dict[str, Any]]) -> list[str]:
+def _concept_packet_surface_terms(concept: str, rows: list[dict[str, Any]], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     text = " ".join(str(row.get("claim", "")) for row in rows).lower()
-    preferred = [marker for tier in _COVERAGE_PREFERRED_MARKERS.get(concept, ()) for marker in tier]
+    preferred = [marker for tier in _vocabulary_nested_marker_map(vocabulary, "coverage_preferred_markers").get(concept, []) for marker in tier]
     visible = [marker for marker in preferred if marker in text and len(marker) >= 4]
     if visible:
         return _dedupe(visible)[:5]
-    markers = [marker for marker in _COVERAGE_VISIBLE_MARKERS.get(concept, ()) if marker in text and len(marker) >= 4]
+    markers = [
+        marker
+        for marker in _vocabulary_marker_map(vocabulary, "coverage_visible_markers").get(concept, [])
+        if marker in text and len(marker) >= 4
+    ]
     return _dedupe(markers)[:5]
 
 
-def _compression_slot_values(claim: str, slots: Any) -> dict[str, str]:
+def _compression_slot_values(claim: str, slots: Any, *, vocabulary: dict[str, Any] | None = None) -> dict[str, str]:
     values: dict[str, str] = {}
     for slot in slots if isinstance(slots, list) else []:
         if not isinstance(slot, str):
             continue
-        value = _slot_value(slot, claim)
+        value = _slot_value(slot, claim, vocabulary=vocabulary)
         if value:
             values[slot] = value
     return values
@@ -3869,7 +3854,7 @@ def _compression_why_it_matters(row: dict[str, Any]) -> str:
     return "This is part of the decision-relevant evidence base."
 
 
-def _select_compression_rows(rows: list[dict[str, Any]], *, max_rows: int) -> list[dict[str, Any]]:
+def _select_compression_rows(rows: list[dict[str, Any]], *, max_rows: int, vocabulary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     for concept in _ordered_concepts(rows):
@@ -4048,6 +4033,7 @@ def build_decision_model(
 
 
 def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    vocabulary = profile_vocabulary(str(evidence_ledger.get("profile_id", DEFAULT_PROFILE_ID)))
     slots = {
         "default_population": [],
         "dose_or_intensity_threshold": [],
@@ -4068,7 +4054,7 @@ def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict
         for slot in row.get("decision_slots", []):
             if slot not in slots:
                 continue
-            value = _slot_value(slot, claim)
+            value = _slot_value(slot, claim, vocabulary=vocabulary)
             if not value:
                 continue
             entry = {
@@ -4093,7 +4079,7 @@ def build_map_sufficiency_report(
 ) -> dict[str, Any]:
     slots = decision_model.get("decision_slots", {}) if isinstance(decision_model.get("decision_slots"), dict) else {}
     families = evidence_ledger.get("family_counts", {}) if isinstance(evidence_ledger.get("family_counts"), dict) else {}
-    expected_slots = _expected_slots_for_question(question, evidence_ledger)
+    expected_slots = _expected_slots_for_question(question, evidence_ledger, vocabulary=_profile_vocabulary_for_map(candidate_map))
     expected_families = _expected_families_for_question(question)
     present_slots = sorted(slot for slot, entries in slots.items() if isinstance(entries, list) and entries)
     missing_expected_slots = [slot for slot in expected_slots if slot not in present_slots]
@@ -4132,32 +4118,10 @@ def build_map_sufficiency_report(
     }
 
 
-def _expected_slots_for_question(question: str, evidence_ledger: dict[str, Any]) -> list[str]:
+def _expected_slots_for_question(question: str, evidence_ledger: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     normalized = f" {re.sub(r'\\s+', ' ', question.lower())} "
     expected = ["endpoint_type", "study_design"]
-    marker_map = {
-        "default_population": (" for ", " among ", " in ", " adults", " people", " patients", " population", " users"),
-        "dose_or_intensity_threshold": (
-            " consumption",
-            " intake",
-            " dose",
-            " threshold",
-            " exposure",
-            " use",
-            " using",
-            " intervention",
-            " treatment",
-            " treated",
-        ),
-        "high_risk_subgroup": (" subgroup", " especially", " high-risk", " higher-risk", " people with", " patients with", " adults with"),
-        "mechanism": (" why ", " mechanism", " causal", " pathway", " mediated", " biomarker"),
-        "substitution_or_comparator": (" compared", " versus", " vs ", " replace", " instead of", " rather than ", " alternative", " relative to", " over "),
-        "technical_or_capacity": (" capacity", " technical", " performance", " cadr", " merv", " hvac", " hepa", " filtration", " ventilation"),
-        "implementation_constraint": (" feasible", " implementation", " maintenance", " cost", " noise", " upgrade", " operate", " serviced"),
-        "safety_or_risk": (" safety", " unsafe", " adverse", " harm", " risk", " ozone", " failure"),
-        "setting_or_context": (" school", " classroom", " district", " building", " setting", " site"),
-        "practical_recommendation": (" should ", " prioritize", " recommend", " guidance", " advice", " decision", " policy", " treat ", " use "),
-    }
+    marker_map = _vocabulary_marker_map(vocabulary, "expected_slot_question_markers")
     for slot, markers in marker_map.items():
         if any(marker in normalized for marker in markers):
             expected.append(slot)
@@ -4325,31 +4289,14 @@ def _missing_decision_slots(evidence_ledger: dict[str, Any]) -> list[str]:
     return [slot for slot in required if int(counts.get(slot, 0)) == 0]
 
 
-def _slot_value(slot: str, claim: str) -> str:
-    if slot == "dose_or_intensity_threshold":
-        return _extract_threshold_phrase(claim)
-    if slot == "high_risk_subgroup":
-        return _extract_subgroup_phrase(claim)
-    if slot == "mechanism":
-        return _extract_mechanism_phrase(claim)
-    if slot == "substitution_or_comparator":
-        return _extract_comparator_phrase(claim)
-    if slot == "study_design":
-        return _extract_design_phrase(claim)
-    if slot == "endpoint_type":
-        return _extract_endpoint_phrase(claim)
+def _slot_value(slot: str, claim: str, *, vocabulary: dict[str, Any] | None = None) -> str:
+    patterns = _vocabulary_string_map(vocabulary, "slot_value_patterns").get(slot, [])
+    if patterns:
+        value = _first_pattern(claim, patterns)
+        if value:
+            return value
     if slot == "practical_recommendation":
         return _short_claim_fragment(claim)
-    if slot == "technical_or_capacity":
-        return _extract_technical_capacity_phrase(claim)
-    if slot == "implementation_constraint":
-        return _extract_implementation_phrase(claim)
-    if slot == "safety_or_risk":
-        return _extract_safety_phrase(claim)
-    if slot == "setting_or_context":
-        return _extract_setting_phrase(claim)
-    if slot == "default_population":
-        return _extract_population_phrase(claim)
     return _short_claim_fragment(claim)
 
 
@@ -4369,97 +4316,7 @@ def _normalize_slot_value(value: str) -> str:
     return normalized
 
 
-def _extract_threshold_phrase(text: str) -> str:
-    number = r"(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)"
-    patterns = (
-        rf"(?:up to|less than|more than|at least|at most|around|approximately|about)?\s*[<≥≤>]?\s*{number}\s*(?:eggs?|egg)?\s*(?:per|/)\s*(?:day|week|month)",
-        rf"\b{number}\s*(?:eggs?|egg)/(?:day|week|month)\b",
-        r"\b(?:high|moderate|low)[-\s]?(?:egg|intake|consumption|use)[A-Za-z0-9/ <≥≤.,-]{0,60}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_subgroup_phrase(text: str) -> str:
-    patterns = (
-        r"(?:people|patients|adults|individuals|participants) with type 2 diabetes",
-        r"(?:people|patients|adults|individuals|participants) with impaired (?:kidney|renal) function(?:, including the elderly)?",
-        r"\b(?:type 2 diabetes|diabetes|t2d|impaired kidney function|impaired renal function|elderly|familial hypercholesterolemia|high LDL|high ApoB|hyper-responders?)\b(?:, including the elderly)?",
-        r"(?:people|patients|adults|individuals|participants) with [A-Za-z0-9 /\-]{3,80}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_mechanism_phrase(text: str) -> str:
-    patterns = (
-        r"\b(?:LDL|HDL|ApoB|cholesterol|homeostasis|metabolites?|microbiome|particle)[A-Za-z0-9 ,/\-]{0,90}",
-        r"[A-Za-z0-9 ,/\-]{0,70}\b(?:mechanism|causal|driven by|influenced by)\b[A-Za-z0-9 ,/\-]{0,70}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_comparator_phrase(text: str) -> str:
-    patterns = (
-        r"[A-Za-z0-9 ,/\-]{0,80}\b(?:replace|replacing|substitut(?:e|ing|ion)|compared with|versus|instead of)\b[A-Za-z0-9 ,/\-]{0,90}",
-        r"[A-Za-z0-9 ,/\-]{0,80}\b(?:compared to|rather than|alternative to|supplement(?:al|ary)? to|over)\b[A-Za-z0-9 ,/\-]{0,90}",
-        r"\b(?:egg whites?|plant protein|animal protein|red meat|processed meat|low-egg diet|high-egg diet)[A-Za-z0-9 ,/\-]{0,90}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_technical_capacity_phrase(text: str) -> str:
-    patterns = (
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:CADR|MERV|HEPA|HVAC|airflow|filtration|ventilation|room size|capacity|PM\s?2\.5)\b[A-Za-z0-9 .,%/\-]{0,100}",
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:clean air delivery rate|particulate matter|outdoor air|filter)\b[A-Za-z0-9 .,%/\-]{0,100}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_implementation_phrase(text: str) -> str:
-    patterns = (
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:feasible|not feasible|maintenance|operate|operated|serviced|upgrade|standard|cost|noise|capacity|room size)\b[A-Za-z0-9 .,%/\-]{0,100}",
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:should|recommend|guidance|policy|implementation|practical)\b[A-Za-z0-9 .,%/\-]{0,100}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_safety_phrase(text: str) -> str:
-    patterns = (
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:unsafe|not safe|ozone|adverse|harm|risk|hazard|failure)\b[A-Za-z0-9 .,%/\-]{0,100}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_setting_phrase(text: str) -> str:
-    patterns = (
-        r"[A-Za-z0-9 .,%/\-]{0,80}\b(?:classroom|school|district|building|home|workplace|setting|county|region|site)\b[A-Za-z0-9 .,%/\-]{0,100}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_design_phrase(text: str) -> str:
-    patterns = (
-        r"\b(?:prospective cohort|cohort study|randomized controlled trial|randomised controlled trial|RCT|trial|meta-analysis|systematic review|pooled analysis|observational)[A-Za-z0-9 ,/\-]{0,70}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_endpoint_phrase(text: str) -> str:
-    patterns = (
-        r"\b(?:mortality|all-cause mortality|CVD|cardiovascular disease|cardiovascular risk|stroke|myocardial infarction|LDL|HDL|ApoB|biomarker|endpoint)[A-Za-z0-9 ,/\-]{0,70}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _extract_population_phrase(text: str) -> str:
-    patterns = (
-        r"\b(?:generally healthy adults|healthy adults|general population|free-living individuals|participants without [A-Za-z0-9 ,/\-]{3,80})",
-        r"\b(?:participants|adults|individuals|people) (?:free of|without|with no history of) [A-Za-z0-9 ,/\-]{3,90}",
-        r"\bfree of (?:cardiovascular disease|type 2 diabetes|cancer|chronic disease)[A-Za-z0-9 ,/\-]{0,90}",
-    )
-    return _first_pattern(text, patterns)
-
-
-def _first_pattern(text: str, patterns: tuple[str, ...]) -> str:
+def _first_pattern(text: str, patterns: list[str] | tuple[str, ...]) -> str:
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
@@ -4545,6 +4402,8 @@ def _claim_evidence_weight_score(
     section: str,
     quality_report: dict[str, Any],
     source_lookup: dict[str, str],
+    *,
+    vocabulary: dict[str, Any] | None = None,
 ) -> tuple[int, list[str]]:
     score = 2
     modifiers: list[str] = ["base_source_grounded_claim"]
@@ -4585,15 +4444,15 @@ def _claim_evidence_weight_score(
     if _looks_like_method_or_source_limit(text):
         score -= 1
         modifiers.append("method_or_source_limit")
-    if _looks_like_scope_or_subgroup(text):
+    if _looks_like_scope_or_subgroup(text, vocabulary=vocabulary):
         modifiers.append("scope_specific")
-    if _contains_hard_outcome_signal(text):
+    if _contains_hard_outcome_signal(text, vocabulary=vocabulary):
         score += 1
         modifiers.append("hard_outcome_signal")
-    if _contains_surrogate_signal(text):
+    if _contains_surrogate_signal(text, vocabulary=vocabulary):
         score -= 1
         modifiers.append("surrogate_or_biomarker_signal")
-    concepts = _claim_concepts(claim)
+    concepts = _claim_concepts(claim, vocabulary=vocabulary)
     if concepts:
         score += min(2, max(1, len(concepts) // 2))
         modifiers.append(f"decision_concept_count:{len(concepts)}")
@@ -4602,7 +4461,7 @@ def _claim_evidence_weight_score(
         score -= int(noise.get("penalty", 0))
         modifiers.append(f"noise:{noise.get('kind')}")
     if section in {"main_support", "conflicting_evidence"} and (
-        _looks_like_support_evidence(text) or _looks_like_concern_evidence(text)
+        _looks_like_support_evidence(text, vocabulary=vocabulary) or _looks_like_concern_evidence(text, vocabulary=vocabulary)
     ):
         score += 1
         modifiers.append("directional_decision_signal")
@@ -4611,55 +4470,32 @@ def _claim_evidence_weight_score(
     return max(0, min(score, 8)), modifiers
 
 
-def _claim_concepts(claim: dict[str, Any]) -> list[str]:
+def _claim_concepts(claim: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     text = _claim_text_bundle(claim)
-    concept_markers = {
-        "default_population": ("generally healthy", "healthy adults", "general population", "free of cardiovascular", "without cardiovascular", "free-living"),
-        "dose_or_threshold": ("per day", "per week", "egg/day", "eggs/wk", "up to one", "up to 1", "moderate", "high intake", "threshold", "dose", "intensity", "%", "<", ">", "≥", "≤"),
-        "hard_outcome_endpoint": ("mortality", "all-cause", "cvd", "cardiovascular disease", "stroke", "myocardial infarction", "coronary heart disease", "incident"),
-        "surrogate_or_biomarker_endpoint": ("biomarker", "surrogate", "proxy", "pm2.5", "pm 2.5", "particulate", "particle", "ldl", "hdl", "apob", "cholesterol", "lipid", "tmao", "trimethylamine"),
-        "mechanism_or_causal_path": ("mechanism", "causal", "pathway", "mediated", "exposure", "transmission", "filtration", "ventilation", "source control"),
-        "mechanism_ldl_apob": ("ldl", "apob", "atherosclerosis", "cholesterol homeostasis", "tmao", "trimethylamine", "metabolite", "microbiome"),
-        "dietary_context_or_saturated_fat": ("saturated fat", "dietary pattern", "red meat", "processed meat", "bacon", "sausage", "co-consum", "dietary cholesterol"),
-        "substitution_or_comparator": ("replace", "replacing", "substitut", "compared with", "versus", "vs ", "instead of", "egg white", "plant protein", "low-egg", "high-egg"),
-        "alternative_or_comparator": ("compared with", "compared to", "versus", "vs ", "rather than", "instead of", "alternative", "supplemental", "over "),
-        "subgroup_diabetes_or_metabolic_risk": ("type 2 diabetes", "diabetes", "t2d", "prediabetes", "metabolic", "impaired kidney", "renal", "vascular disease"),
-        "subgroup_fh_hyper_responder": ("familial hypercholesterolemia", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"),
-        "technical_performance_or_capacity": ("cadr", "merv", "hvac", "hepa", "airflow", "ventilation", "filtration", "room size", "capacity", "pm2.5", "pm 2.5"),
-        "implementation_constraint": ("feasible", "not feasible", "maintenance", "operate", "operated", "serviced", "upgrade", "standard", "cost", "noise", "capacity", "room size"),
-        "safety_or_adverse_effect": ("unsafe", "ozone", "adverse", "harm", "risk", "hazard", "not safe", "failure"),
-        "setting_or_context": ("classroom", "school", "district", "building", "home", "workplace", "setting", "county", "region", "site"),
-        "study_design_rct": ("randomized", "randomised", " rct", "trial", "crossover", "intervention"),
-        "study_design_cohort": ("cohort", "prospective", "follow-up", "observational", "participants"),
-        "guideline_or_policy": ("guideline", "advisory", "recommendation", "dietary guidance", "clinicians", "consumers", "policy", "should"),
-        "source_quality_or_incentive": ("funding", "conflict of interest", "disclosure", "industry", "consultant", "grant", "abstract", "full text"),
-    }
+    concept_markers = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get("claim_concept_markers", {})
+    if not isinstance(concept_markers, dict):
+        concept_markers = {}
     concepts: list[str] = []
     for concept, markers in concept_markers.items():
-        if any(marker in text for marker in markers):
-            concepts.append(concept)
-    return _filter_claim_concepts_by_visible_text(concepts, text)
+        marker_list = [str(marker).lower() for marker in markers] if isinstance(markers, list) else []
+        if any(marker in text for marker in marker_list):
+            concepts.append(str(concept))
+    return _filter_claim_concepts_by_visible_text(concepts, text, vocabulary=vocabulary)
 
 
-def _filter_claim_concepts_by_visible_text(concepts: list[str], text: str) -> list[str]:
-    if "mechanism_ldl_apob" in concepts and not _contains_lipid_marker(text):
-        concepts = [concept for concept in concepts if concept != "mechanism_ldl_apob"]
-    if "dietary_context_or_saturated_fat" in concepts and not any(
-        marker in text
-        for marker in ("dietary", "diet ", "saturated fat", "red meat", "processed meat", "bacon", "sausage", "cholesterol")
-    ):
-        concepts = [concept for concept in concepts if concept != "dietary_context_or_saturated_fat"]
-    return concepts
-
-
-def _contains_lipid_marker(text: str) -> bool:
-    return bool(
-        re.search(
-            r"\b(?:ldl(?:-c)?|apo\s?b|apob|cholesterol|atherosclerosis|tmao|trimethylamine|lipids?)\b",
-            text,
-            flags=re.IGNORECASE,
-        )
-    )
+def _filter_claim_concepts_by_visible_text(
+    concepts: list[str],
+    text: str,
+    *,
+    vocabulary: dict[str, Any] | None = None,
+) -> list[str]:
+    required_markers = _vocabulary_nested_marker_map(vocabulary, "concept_visible_required_markers")
+    filtered = list(concepts)
+    for concept in concepts:
+        marker_groups = required_markers.get(concept, [])
+        if marker_groups and not any(any(marker in text for marker in group) for group in marker_groups):
+            filtered = [item for item in filtered if item != concept]
+    return filtered
 
 
 def _claim_noise_profile(claim: dict[str, Any]) -> dict[str, Any]:
@@ -4717,7 +4553,13 @@ def _looks_like_statistical_method_trivia(text: str) -> bool:
     return any(marker in text for marker in markers) and not _contains_hard_outcome_signal(text)
 
 
-def _evidence_family_for_claim(claim: dict[str, Any], section: str, source_lookup: dict[str, str]) -> str:
+def _evidence_family_for_claim(
+    claim: dict[str, Any],
+    section: str,
+    source_lookup: dict[str, str],
+    *,
+    vocabulary: dict[str, Any] | None = None,
+) -> str:
     text = " ".join(
         str(part or "")
         for part in (
@@ -4729,201 +4571,39 @@ def _evidence_family_for_claim(claim: dict[str, Any], section: str, source_looku
             source_lookup.get(str(claim.get("source_id", "")), ""),
         )
     ).lower()
-    if any(marker in text for marker in ("guideline", "advisory", "recommendation", "dietary guidance", "policy", "should", "cdc", "epa")):
-        return "guideline_or_recommendation"
-    if any(marker in text for marker in ("meta-analysis", "systematic review", "pooled relative risk", "pooled rr")):
-        return "evidence_synthesis"
-    if any(marker in text for marker in ("randomized", "randomised", " rct", "trial", "crossover", "intervention")):
-        return "rct_or_intervention"
-    if any(marker in text for marker in ("cohort", "prospective", "pooled analysis", "observational", "participants", "follow-up")):
-        return "cohort_or_observational"
-    if any(marker in text for marker in ("replace", "substitut", "instead of", "compared with", "compared to", "versus", "vs ", "rather than", "alternative", "supplemental", "over ")):
-        return "substitution_or_comparator"
-    if any(marker in text for marker in ("cadr", "merv", "hvac", "hepa", "airflow", "ventilation", "filtration", "room size", "capacity", "pm2.5", "pm 2.5")):
-        return "technical_or_performance"
-    if any(marker in text for marker in ("unsafe", "ozone", "adverse", "harm", "hazard", "not safe")):
-        return "safety_or_risk"
-    if any(marker in text for marker in ("mechanism", "metabolite", "homeostasis", "ldl", "apob", "biomarker", "cholesterol", "microbiome", "causal", "pathway", "transmission", "source control")):
-        return "mechanism_or_biomarker"
-    if section == "scope_limits" or _looks_like_scope_or_subgroup(text):
+    for family, markers in _vocabulary_marker_map(vocabulary, "evidence_family_markers").items():
+        if any(marker in text for marker in markers):
+            return family
+    if section == "scope_limits" or _looks_like_scope_or_subgroup(text, vocabulary=vocabulary):
         return "subgroup_or_scope"
     if section == "method_limits" or _looks_like_method_or_source_limit(text):
         return "method_or_validity"
     return "general_evidence"
 
 
-def _decision_slots_for_claim(claim: dict[str, Any]) -> list[str]:
+def _decision_slots_for_claim(claim: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     text = _claim_text_bundle(claim)
     slots: list[str] = []
-    slot_markers = {
-        "default_population": ("healthy adults", "generally healthy", "general population", "free-living", "without history", "free of cardiovascular", "free of type 2 diabetes", "free of cancer"),
-        "dose_or_intensity_threshold": ("per day", "per week", "egg/day", "eggs/wk", "high intake", "moderate", "up to", "<", ">", "≥", "≤"),
-        "high_risk_subgroup": ("diabetes", "t2d", "impaired kidney", "renal", "elderly", "familial", "high ldl", "high apob", "high-risk", "hyper-responder"),
-        "mechanism": ("ldl", "apob", "cholesterol", "homeostasis", "metabolite", "microbiome", "mechanism", "particle"),
-        "substitution_or_comparator": ("replace", "substitut", "compared with", "compared to", "versus", "vs ", "instead of", "rather than", "alternative", "supplemental", "over ", "low-egg", "high-egg", "egg white", "plant protein"),
-        "endpoint_type": ("mortality", "cvd", "cardiovascular", "stroke", "myocardial", "biomarker", "endpoint", "ldl", "hdl", "apob", "pm2.5", "pm 2.5", "particulate", "exposure", "infection", "transmission"),
-        "study_design": ("cohort", "trial", "rct", "meta-analysis", "systematic review", "pooled", "prospective", "observational"),
-        "practical_recommendation": ("guidance", "recommend", "should", "limit", "focus", "dietary pattern", "mediterranean", "dash", "prioritize", "use", "consider"),
-        "technical_or_capacity": ("cadr", "merv", "hvac", "hepa", "airflow", "ventilation", "filtration", "room size", "capacity", "pm2.5", "pm 2.5"),
-        "implementation_constraint": ("feasible", "not feasible", "maintenance", "operate", "operated", "serviced", "upgrade", "standard", "cost", "noise", "capacity", "room size"),
-        "safety_or_risk": ("unsafe", "ozone", "adverse", "harm", "risk", "hazard", "not safe", "failure"),
-        "setting_or_context": ("classroom", "school", "district", "building", "home", "workplace", "setting", "county", "region", "site"),
-    }
+    slot_markers = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get("decision_slot_markers", {})
+    if not isinstance(slot_markers, dict):
+        slot_markers = {}
     for slot, markers in slot_markers.items():
-        if any(marker in text for marker in markers):
-            slots.append(slot)
+        marker_list = [str(marker).lower() for marker in markers] if isinstance(markers, list) else []
+        if any(marker in text for marker in marker_list):
+            slots.append(str(slot))
     return slots or ["unspecified"]
 
 
-def _evidence_slots_for_claim(claim: dict[str, Any]) -> list[str]:
+def _evidence_slots_for_claim(claim: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     text = _claim_text_bundle(claim)
     slots: list[str] = []
-    markers = {
-        "population_scope": (
-            "generally healthy",
-            "healthy adults",
-            "participants",
-            "patients",
-            "people with",
-            "students",
-            "teachers",
-            "riders",
-            "arterial",
-            "school",
-            "site",
-            "corridor",
-            "setting",
-        ),
-        "intervention_or_option": (
-            "intervention",
-            "protected",
-            "painted",
-            "hepa",
-            "hvac",
-            "filtration",
-            "program",
-            "policy",
-            "lane",
-            "separator",
-            "quick-build",
-        ),
-        "comparator": (
-            "compared with",
-            "compared to",
-            "versus",
-            "rather than",
-            "instead of",
-            "over ",
-            "painted",
-            "protected",
-            "alternative",
-            "substitut",
-            "replace",
-        ),
-        "outcome_or_endpoint": (
-            "mortality",
-            "injury",
-            "crash",
-            "risk",
-            "endpoint",
-            "biomarker",
-            "infection",
-            "exposure",
-            "pm2.5",
-            "pm 2.5",
-            "comfort",
-            "safety",
-        ),
-        "evidence_design": (
-            "randomized",
-            "trial",
-            "cohort",
-            "observational",
-            "before-after",
-            "before after",
-            "evaluation",
-            "systematic review",
-            "meta-analysis",
-            "guidance",
-            "memo",
-        ),
-        "causal_identification": (
-            "not randomized",
-            "confounding",
-            "regression to the mean",
-            "cannot be attributed",
-            "causal",
-            "package",
-            "alongside",
-            "concurrent",
-            "mechanism",
-        ),
-        "implementation_condition": (
-            "maintenance",
-            "maintain",
-            "operate",
-            "implementation",
-            "feasible",
-            "capacity",
-            "intersection",
-            "turning",
-            "loading",
-            "bus",
-            "drainage",
-            "snow",
-            "sweeping",
-            "access",
-        ),
-        "harm_or_failure_mode": (
-            "harm",
-            "hazard",
-            "unsafe",
-            "failure",
-            "blocked",
-            "conflict",
-            "risk",
-            "degradation",
-            "unusable",
-            "encroachment",
-            "close passing",
-        ),
-        "cost_or_feasibility": (
-            "cost",
-            "budget",
-            "staff",
-            "capital",
-            "cheap",
-            "inexpensive",
-            "quick",
-            "faster",
-            "right-of-way",
-            "limited resources",
-            "construction",
-        ),
-        "equity_or_distribution": (
-            "equity",
-            "distribution",
-            "high-injury",
-            "lower car ownership",
-            "transit dependence",
-            "access",
-            "neighborhood",
-            "subgroup",
-            "higher-risk",
-        ),
-        "missing_evidence_gap": (
-            "not randomized",
-            "limitations",
-            "cannot be assigned",
-            "not assessed",
-            "missing",
-            "uncertain",
-            "not establish",
-        ),
-    }
+    markers = (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get("evidence_slot_markers", {})
+    if not isinstance(markers, dict):
+        markers = {}
     for slot, slot_markers in markers.items():
-        if any(marker in text for marker in slot_markers):
-            slots.append(slot)
+        marker_list = [str(marker).lower() for marker in slot_markers] if isinstance(slot_markers, list) else []
+        if any(marker in text for marker in marker_list):
+            slots.append(str(slot))
     return _dedupe(slots) or ["other_evidence"]
 
 
@@ -4967,37 +4647,33 @@ def _clean_option_text(text: str) -> str:
     return text.strip(" ,.;:")
 
 
-def _infer_options_from_evidence(evidence_ledger: dict[str, Any]) -> list[str]:
+def _infer_options_from_evidence(evidence_ledger: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     text = " ".join(str(row.get("claim", "")) for row in evidence_ledger.get("all_evidence", []) if isinstance(row, dict)).lower()
     candidates: list[str] = []
-    if "protected" in text:
-        candidates.append("protected option")
-    if "painted" in text:
-        candidates.append("painted option")
-    if "hepa" in text:
-        candidates.append("portable HEPA filtration")
-    if "hvac" in text:
-        candidates.append("HVAC or ventilation upgrade")
+    markers_by_option = (vocabulary or {}).get("option_inference_markers", {})
+    if isinstance(markers_by_option, dict):
+        for option, markers in markers_by_option.items():
+            marker_list = [str(marker).lower() for marker in markers] if isinstance(markers, list) else []
+            if marker_list and any(marker in text for marker in marker_list):
+                candidates.append(str(option))
     return _dedupe(candidates)[:3]
 
 
-def _option_terms(option: str) -> list[str]:
+def _option_terms(option: str, *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     terms = [term for term in _content_terms(option) if len(term) >= 4]
-    aliases = {
-        "curb": ["protected", "separator", "separated"],
-        "protected": ["curb", "separated", "separator", "physical"],
-        "painted": ["paint", "striping", "paint-only"],
-        "hepa": ["portable", "filtration", "filter"],
-        "hvac": ["ventilation", "outdoor", "upgrade"],
-    }
+    aliases = (vocabulary or {}).get("option_aliases", {})
+    if not isinstance(aliases, dict):
+        aliases = {}
     expanded = list(terms)
     for term in terms:
-        expanded.extend(aliases.get(term, []))
+        values = aliases.get(term, [])
+        if isinstance(values, list):
+            expanded.extend(str(value) for value in values)
     return _dedupe(expanded)
 
 
-def _option_terms_by_option(options: list[str]) -> dict[str, list[str]]:
-    raw = {option: _option_terms(option) for option in options}
+def _option_terms_by_option(options: list[str], *, vocabulary: dict[str, Any] | None = None) -> dict[str, list[str]]:
+    raw = {option: _option_terms(option, vocabulary=vocabulary) for option in options}
     term_counts: Counter[str] = Counter(term for terms in raw.values() for term in terms)
     resolved: dict[str, list[str]] = {}
     for option, terms in raw.items():
@@ -5086,13 +4762,14 @@ def _option_tradeoff_rows(
     options: list[str],
     rows: list[dict[str, Any]],
     option_terms_by_option: dict[str, list[str]] | None = None,
+    vocabulary: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     tradeoffs: list[dict[str, Any]] = []
-    option_terms_by_option = option_terms_by_option or _option_terms_by_option(options)
+    option_terms_by_option = option_terms_by_option or _option_terms_by_option(options, vocabulary=vocabulary)
     for criterion in _option_criteria_for_rows(rows):
         evidence_by_option = {}
         for option in options:
-            option_terms = option_terms_by_option.get(option, _option_terms(option))
+            option_terms = option_terms_by_option.get(option, _option_terms(option, vocabulary=vocabulary))
             matches = [
                 row
                 for row in rows
@@ -5138,20 +4815,11 @@ def _claim_contract_row(claim: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def _crux_label(text: str, relation_type: str) -> str:
+def _crux_label(text: str, relation_type: str, *, vocabulary: dict[str, Any] | None = None) -> str:
     lowered = text.lower()
-    if any(marker in lowered for marker in ("maintenance", "snow", "sweeping", "drainage", "staff", "capacity")):
-        return "Maintenance and operating capacity"
-    if any(marker in lowered for marker in ("intersection", "turning", "signal", "access", "driveway", "parking")):
-        return "Intersection and access-point design"
-    if any(marker in lowered for marker in ("cost", "budget", "capital", "cheap", "inexpensive", "quick", "staff")):
-        return "Budget and implementation feasibility"
-    if any(marker in lowered for marker in ("paint", "painted", "protected", "separation", "quick-build")):
-        return "Protected-lane priority versus paint-only scope"
-    if any(marker in lowered for marker in ("not randomized", "regression", "confounding", "cannot be attributed", "package")):
-        return "Causal attribution of the observed effect"
-    if any(marker in lowered for marker in ("equity", "high-injury", "lower car ownership", "transit")):
-        return "Equity and high-injury targeting"
+    rule = _crux_label_rule(lowered, vocabulary)
+    if rule:
+        return str(rule.get("label", "")).strip() or "Decision-changing condition"
     if relation_type == "in_tension_with":
         return "Tradeoff between competing evidence"
     if relation_type == "depends_on":
@@ -5159,43 +4827,42 @@ def _crux_label(text: str, relation_type: str) -> str:
     return "Decision-changing condition"
 
 
-def _crux_why_it_matters(label: str, text: str, relation: dict[str, Any]) -> str:
+def _crux_why_it_matters(label: str, text: str, relation: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> str:
     rationale = str(relation.get("rationale", "")).strip()
     if rationale:
         return _short_claim_fragment(rationale, max_chars=260)
-    return {
-        "Maintenance and operating capacity": "The preferred option can fail if it cannot be kept usable after installation.",
-        "Intersection and access-point design": "Safety benefits can be dominated by turning, signal, driveway, and access conflicts.",
-        "Budget and implementation feasibility": "A lower-impact option can become preferable if the higher-impact option is not feasible this year.",
-        "Protected-lane priority versus paint-only scope": "The answer depends on when paint is enough and when physical separation is needed.",
-        "Causal attribution of the observed effect": "The observed effect may be a corridor-package effect rather than the lane type alone.",
-        "Equity and high-injury targeting": "A broad mileage program can miss the places where safety gains matter most.",
-    }.get(label, "Changing this condition would materially alter the recommendation.")
+    rule = _crux_label_rule_for_label(label, vocabulary)
+    return str(rule.get("why_it_matters", "")).strip() or "Changing this condition would materially alter the recommendation."
 
 
-def _crux_current_read(label: str, text: str) -> str:
-    return {
-        "Maintenance and operating capacity": "Protected options remain attractive only where the city can maintain them.",
-        "Intersection and access-point design": "Physical separation should be paired with intersection and access-point treatments.",
-        "Budget and implementation feasibility": "Feasibility constraints bound how much protected infrastructure can be built this year.",
-        "Protected-lane priority versus paint-only scope": "Paint is a secondary tool for lower-stress or interim corridors, not the default for high-stress arterials.",
-        "Causal attribution of the observed effect": "The before-after evidence is decision-relevant but should be read as a corridor-package signal.",
-        "Equity and high-injury targeting": "Safety value is strongest when protection targets high-injury or underserved corridors.",
-    }.get(label, "The current packet treats this condition as relevant to the recommendation.")
+def _crux_current_read(label: str, text: str, *, vocabulary: dict[str, Any] | None = None) -> str:
+    rule = _crux_label_rule_for_label(label, vocabulary)
+    return str(rule.get("current_read", "")).strip() or "The current packet treats this condition as relevant to the recommendation."
 
 
-def _crux_would_change_if(label: str, text: str) -> str:
-    return {
-        "Maintenance and operating capacity": "The city lacked the staffing, equipment, or budget to keep protected lanes usable.",
-        "Intersection and access-point design": "Intersection conflicts could not be mitigated in the target corridors.",
-        "Budget and implementation feasibility": "Only paint could be delivered at meaningful scale this year.",
-        "Protected-lane priority versus paint-only scope": "Paint-only lanes were shown to reduce the relevant arterial safety risk.",
-        "Causal attribution of the observed effect": "Better evidence showed the benefit came entirely from non-lane-type changes.",
-        "Equity and high-injury targeting": "Protected projects could not be targeted to high-injury or underserved corridors.",
-    }.get(label, "New evidence showed the condition did not materially affect the decision.")
+def _crux_would_change_if(label: str, text: str, *, vocabulary: dict[str, Any] | None = None) -> str:
+    rule = _crux_label_rule_for_label(label, vocabulary)
+    return str(rule.get("would_change_if", "")).strip() or "New evidence showed the condition did not materially affect the decision."
 
 
-def _crux_affected_options(label: str, option_comparison: dict[str, Any]) -> list[str]:
+def _crux_label_rule(text: str, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
+    for rule in (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get("crux_label_rules", []):
+        if not isinstance(rule, dict):
+            continue
+        markers = [str(marker).lower() for marker in rule.get("markers", []) if str(marker).strip()]
+        if markers and any(marker in text for marker in markers):
+            return rule
+    return {}
+
+
+def _crux_label_rule_for_label(label: str, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
+    for rule in (vocabulary or profile_vocabulary(DEFAULT_PROFILE_ID)).get("crux_label_rules", []):
+        if isinstance(rule, dict) and str(rule.get("label", "")).strip() == label:
+            return rule
+    return {}
+
+
+def _crux_affected_options(label: str, option_comparison: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     options = [
         str(option.get("option", ""))
         for option in option_comparison.get("options", [])
@@ -5204,7 +4871,7 @@ def _crux_affected_options(label: str, option_comparison: dict[str, Any]) -> lis
     if not options:
         return []
     lowered = label.lower()
-    if any(marker in lowered for marker in ("paint", "protected", "feasibility", "maintenance", "intersection")):
+    if any(marker in lowered for marker in _vocabulary_marker_list(vocabulary, "crux_option_scope_markers")):
         return options[:2]
     return options[:1]
 
@@ -5226,14 +4893,10 @@ def _fallback_crux_rows_from_option_comparison(
     evidence_ledger: dict[str, Any],
     *,
     existing: set[str],
+    vocabulary: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    labels = (
-        "Protected-lane priority versus paint-only scope",
-        "Maintenance and operating capacity",
-        "Budget and implementation feasibility",
-        "Causal attribution of the observed effect",
-    )
+    labels = _vocabulary_string_list(vocabulary, "fallback_crux_labels")
     for label in labels:
         if label in existing:
             continue
@@ -5241,10 +4904,10 @@ def _fallback_crux_rows_from_option_comparison(
             {
                 "crux": label,
                 "relation_type": "crux_for",
-                "why_it_matters": _crux_why_it_matters(label, "", {}),
-                "current_read": _crux_current_read(label, ""),
-                "would_change_if": _crux_would_change_if(label, ""),
-                "affected_options": _crux_affected_options(label, option_comparison),
+                "why_it_matters": _crux_why_it_matters(label, "", {}, vocabulary=vocabulary),
+                "current_read": _crux_current_read(label, "", vocabulary=vocabulary),
+                "would_change_if": _crux_would_change_if(label, "", vocabulary=vocabulary),
+                "affected_options": _crux_affected_options(label, option_comparison, vocabulary=vocabulary),
                 "evidence": [],
             }
         )
@@ -5296,38 +4959,14 @@ def _claim_supporting_sources_for_briefing(claim: dict[str, Any]) -> list[str]:
     return sorted({source_id for source_id in sources if source_id})
 
 
-def _contains_hard_outcome_signal(text: str) -> bool:
+def _contains_hard_outcome_signal(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    return any(
-        marker in normalized
-        for marker in (
-            " mortality ",
-            " death ",
-            " cardiovascular event ",
-            " cvd ",
-            " hospitalization ",
-            " incident ",
-            " stroke ",
-            " disease risk ",
-            " all-cause ",
-        )
-    )
+    return any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "hard_outcome_signal_markers"))
 
 
-def _contains_surrogate_signal(text: str) -> bool:
+def _contains_surrogate_signal(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    return any(
-        marker in normalized
-        for marker in (
-            " biomarker",
-            " surrogate",
-            " ldl",
-            " hdl",
-            " apob",
-            " marker",
-            " intermediate endpoint",
-        )
-    )
+    return any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "surrogate_signal_markers"))
 
 
 def _counts(items: Any) -> dict[str, int]:
@@ -5708,32 +5347,12 @@ def partition_map_evidence(
     }
 
 
-def _support_signal_profile(support_items: list[str]) -> dict[str, Any]:
+def _support_signal_profile(support_items: list[str], *, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
     joined = " ".join(support_items).lower()
-    absence_markers = (
-        "not associated",
-        "no association",
-        "no significant",
-        "no adverse",
-        "did not have adverse",
-        "did not result in adverse",
-        "not independently associated",
-    )
-    direct_benefit_markers = (
-        "reduced mortality",
-        "reduced risk",
-        "lower risk",
-        "improved hard outcome",
-        "improved survival",
-        "beneficial effect",
-    )
-    surrogate_benefit_markers = (
-        "lowered ldl",
-        "lowers ldl",
-        "reduced biomarker",
-        "improved biomarker",
-        "improved lipid",
-    )
+    marker_map = _vocabulary_marker_map(vocabulary, "support_signal_profile_markers")
+    absence_markers = marker_map.get("absence_of_harm_or_null", [])
+    direct_benefit_markers = marker_map.get("direct_benefit", [])
+    surrogate_benefit_markers = marker_map.get("surrogate_benefit", [])
     return {
         "absence_of_harm_or_null_count": sum(joined.count(marker) for marker in absence_markers),
         "direct_benefit_count": sum(joined.count(marker) for marker in direct_benefit_markers),
@@ -5758,7 +5377,7 @@ def _default_stance_instruction(support_profile: dict[str, Any], conflict: list[
     return "Phrase the default stance no stronger than the direct evidence in supports_default_stance."
 
 
-def _scope_ledger(items: list[str]) -> dict[str, list[str]]:
+def _scope_ledger(items: list[str], *, vocabulary: dict[str, Any] | None = None) -> dict[str, list[str]]:
     ledger = {
         "population_or_actor": [],
         "dose_intensity_or_scale": [],
@@ -5770,102 +5389,15 @@ def _scope_ledger(items: list[str]) -> dict[str, list[str]]:
         "adversarial_or_incentive_concern": [],
     }
     for item in items:
-        for dimension in _scope_dimensions_for_text(item):
+        for dimension in _scope_dimensions_for_text(item, vocabulary=vocabulary):
             ledger[dimension].append(item)
     return {key: _dedupe(value)[:5] for key, value in ledger.items()}
 
 
-def _scope_dimensions_for_text(text: str) -> list[str]:
+def _scope_dimensions_for_text(text: str, *, vocabulary: dict[str, Any] | None = None) -> list[str]:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
     dimensions: list[str] = []
-    marker_map = {
-        "population_or_actor": (
-            " subgroup",
-            " patients",
-            " adults",
-            " children",
-            " workers",
-            " diabetes",
-            " t2d",
-            " high risk",
-            " higher-risk",
-            " familial",
-            " prior cardiovascular",
-            " actor",
-        ),
-        "dose_intensity_or_scale": (
-            " dose",
-            " intake",
-            " per day",
-            " per week",
-            " high-",
-            " low-",
-            " moderate",
-            " scale",
-            " intensity",
-            " ≥",
-            " >",
-            " <",
-        ),
-        "time_horizon": (
-            " months",
-            " years",
-            " follow-up",
-            " short-term",
-            " long-term",
-            " over ",
-            " duration",
-        ),
-        "geography_jurisdiction_or_setting": (
-            " asian",
-            " china",
-            " us ",
-            " european",
-            " setting",
-            " jurisdiction",
-            " country",
-            " region",
-        ),
-        "implementation_context": (
-            " guideline",
-            " clinicians",
-            " consumers",
-            " implement",
-            " practical",
-            " feasible",
-            " compliance",
-            " dietary pattern",
-        ),
-        "measurement_endpoint": (
-            " biomarker",
-            " endpoint",
-            " ldl",
-            " hdl",
-            " apob",
-            " mortality",
-            " event",
-            " surrogate",
-            " measured",
-        ),
-        "source_completeness": (
-            " abstract",
-            " pubmed",
-            " metadata",
-            " full text",
-            " source document",
-            " not necessarily",
-            " unavailable",
-        ),
-        "adversarial_or_incentive_concern": (
-            " industry",
-            " funded",
-            " incentive",
-            " conflict of interest",
-            " misleading",
-            " advocacy",
-            " adversarial",
-        ),
-    }
+    marker_map = _vocabulary_marker_map(vocabulary, "scope_dimension_markers")
     for dimension, markers in marker_map.items():
         if any(marker in normalized for marker in markers):
             dimensions.append(dimension)
@@ -6388,13 +5920,15 @@ def build_source_display_lookup(
 
 def display_source_name(source_id: str) -> str:
     words = re.split(r"[_\-\s]+", source_id.strip())
+    vocabulary = profile_vocabulary(infer_profile_id_from_text(str(source_id), fallback_profile_id=DEFAULT_PROFILE_ID))
+    acronyms = _vocabulary_string_dict(vocabulary, "display_acronyms")
     titled = []
     for word in words:
         lower = word.lower()
         if not word:
             continue
-        if lower in DISPLAY_ACRONYMS:
-            titled.append(DISPLAY_ACRONYMS[lower])
+        if lower in acronyms:
+            titled.append(acronyms[lower])
         elif re.fullmatch(r"\d{2,4}", word):
             titled.append(word)
         else:
@@ -6406,21 +5940,13 @@ def polish_source_display_name(title: str) -> str:
     words = str(title).split()
     if not words:
         return str(title)
+    vocabulary = profile_vocabulary(infer_profile_id_from_text(str(title), fallback_profile_id=DEFAULT_PROFILE_ID))
+    acronyms = _vocabulary_string_dict(vocabulary, "display_acronyms")
     polished = []
     for word in words:
         stripped = word.strip()
         lower = re.sub(r"[^A-Za-z0-9.]", "", stripped).lower()
-        replacement = {
-            **DISPLAY_ACRONYMS,
-            "epa": "EPA",
-            "cdc": "CDC",
-            "hepa": "HEPA",
-            "hvac": "HVAC",
-            "ashrae": "ASHRAE",
-            "cadr": "CADR",
-            "merv": "MERV",
-            "pm": "PM",
-        }.get(lower)
+        replacement = acronyms.get(lower)
         if replacement:
             polished.append(re.sub(re.escape(stripped), replacement, word))
         else:
@@ -6701,124 +6227,28 @@ def _claim_text_bundle(claim: dict[str, Any]) -> str:
     ).lower()
 
 
-def _looks_like_concern_evidence(text: str) -> bool:
+def _looks_like_concern_evidence(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    negated_low_concern = (
-        " not associated ",
-        " no association ",
-        " no increase ",
-        " no increased ",
-        " no significant association ",
-        " no significant difference ",
-        " no adverse ",
-        " did not have adverse ",
-        " did not result in adverse ",
-        " not independently associated ",
-        " not statistically significant ",
-        " lower risk ",
-        " lowers ldl ",
-        " lowered ldl ",
-    )
+    negated_low_concern = _vocabulary_marker_list(vocabulary, "concern_negated_markers")
     if any(marker in normalized for marker in negated_low_concern):
-        if not any(marker in normalized for marker in (" however ", " although ", " but ", " whereas ")):
+        if not any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "concern_contrast_markers")):
             return False
-    concern_markers = (
-        " higher risk ",
-        " increased risk ",
-        " increase in risk ",
-        " elevated risk ",
-        " positive association ",
-        " dose-response positive ",
-        " associated with higher ",
-        " associated with increased ",
-        " all-cause mortality ",
-        " cvd mortality ",
-        " cardiovascular harm ",
-        " harmful ",
-        " adverse effect ",
-        " adverse effects ",
-        " raises ldl ",
-        " raised ldl ",
-        " should limit ",
-        " avoid ",
-        " caution ",
-        " concern ",
-        " risk of cvd ",
-        " risk of cardiovascular diseases ",
-        " not for patients at risk ",
-    )
-    return any(marker in normalized for marker in concern_markers)
+    return any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "concern_markers"))
 
 
-def _looks_like_support_evidence(text: str) -> bool:
+def _looks_like_support_evidence(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    markers = (
-        " not associated ",
-        " no association ",
-        " no increase ",
-        " no increased ",
-        " no significant association ",
-        " no significant difference ",
-        " no adverse ",
-        " did not have adverse ",
-        " did not result in adverse ",
-        " not independently associated ",
-        " lower risk ",
-        " reduced risk ",
-        " lowers ldl ",
-        " lowered ldl ",
-        " lower cvd ",
-        " neutral ",
-    )
-    return any(marker in normalized for marker in markers)
+    return any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "support_markers"))
 
 
-def _looks_like_scope_or_subgroup(text: str) -> bool:
+def _looks_like_scope_or_subgroup(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    markers = (
-        " subgroup",
-        " diabetes",
-        " t2d",
-        " prediabetes",
-        " familial hypercholesterolemia",
-        " high ldl",
-        " high baseline",
-        " higher-risk",
-        " prior cardiovascular event",
-        " adults aged",
-        " population",
-        " cohort",
-        " duration",
-        " follow-up",
-        " high intake",
-        " moderate intake",
-        " up to one egg",
-        " over 4 months",
-        " not necessarily full text",
-    )
-    return any(marker in normalized for marker in markers)
+    return any(marker in normalized for marker in _vocabulary_marker_list(vocabulary, "scope_or_subgroup_markers"))
 
 
 def _looks_like_method_or_source_limit(text: str) -> bool:
     normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    markers = (
-        " abstract",
-        " pubmed metadata",
-        " full text",
-        " source document contains",
-        " measurement",
-        " biomarker",
-        " surrogate",
-        " guideline",
-        " advisory",
-        " challenging for clinicians",
-        " dietary patterns",
-        " implementation",
-        " method",
-        " not powered",
-        " not necessarily",
-    )
-    return any(marker in normalized for marker in markers)
+    return any(marker in normalized for marker in _vocabulary_marker_list(None, "method_or_source_limit_markers"))
 
 
 def _clean_payload_reader_language(value: Any) -> Any:

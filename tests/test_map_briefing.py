@@ -559,7 +559,7 @@ Prefer protected lanes where the city can maintain them (Nacto Protected_Protect
     assert "Nacto Protected Bikeways" in repaired
     assert "This condition changes how strongly" not in repaired
     assert "named condition no longer affected" not in repaired
-    assert "package effect" in repaired
+    assert "causal-attribution limits" in repaired
     assert "keep the intervention usable" in repaired
 
 
