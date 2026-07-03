@@ -64,6 +64,12 @@ Return only JSON:
   "target_claim": "claim_id or null",
   "relation_type": "one allowed relation type or none",
   "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+  "relation_confidence": "low|medium|high",
+  "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
+  "source_anchor_a": "short phrase from Claim A excerpt that supports the edge",
+  "source_anchor_b": "short phrase from Claim B excerpt that supports the edge",
+  "why_decision_relevant": "what this edge changes for the decision question",
+  "failure_condition": "what would make this edge invalid or much weaker",
   "crux_candidates": ["crux text naming claim IDs"],
   "similar_but_not_identical": ["distinction text naming claim IDs"]
 }}
@@ -74,6 +80,7 @@ Rules:
 - Use only allowed relation types, or use relation_type "none".
 - Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
 - Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
+- Fill the relation evidence contract. The anchors should quote or paraphrase visible excerpt phrases, not introduce new facts.
 {profile_rules}
 - Use similar_to only when the claims are redundant enough that a reviewer could merge them.
 - Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
@@ -117,6 +124,12 @@ Return only JSON:
       "target_claim": "claim_id or null",
       "relation_type": "one allowed relation type or none",
       "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+      "relation_confidence": "low|medium|high",
+      "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
+      "source_anchor_a": "short phrase from first excerpt that supports the edge",
+      "source_anchor_b": "short phrase from second excerpt that supports the edge",
+      "why_decision_relevant": "what this edge changes for the decision question",
+      "failure_condition": "what would make this edge invalid or much weaker",
       "crux_candidates": ["crux text naming claim IDs"],
       "similar_but_not_identical": ["distinction text naming claim IDs"]
     }}
@@ -130,6 +143,7 @@ Rules:
 - Use only allowed relation types, or use relation_type "none".
 - Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
 - Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
+- Fill the relation evidence contract for every non-none relation. The anchors should quote or paraphrase visible excerpt phrases, not introduce new facts.
 {profile_rules}
 - Use similar_to only when the claims are redundant enough that a reviewer could merge them.
 - Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
@@ -152,7 +166,10 @@ Claim B:
 - claim: {right['claim']}
 - source_id: {right['source_id']}
 - role: {right['role']}
-- excerpt: {right['excerpt']}"""
+- excerpt: {right['excerpt']}
+
+Candidate-pair reason: {packet.get('candidate_reason', 'not recorded')}
+Candidate-pair score: {packet.get('candidate_score', 'not recorded')}"""
 
 def _normalize_claim_proposal(
     proposal: Any,
@@ -277,6 +294,8 @@ def _normalize_relation_proposal(
         return None, "unknown_relation_type"
     if not rationale:
         return None, "missing_rationale"
+    contract = _relation_contract(proposal, packet, rationale)
+    confidence = _relation_confidence(proposal, contract)
     return (
         {
             "relation_id": "",
@@ -284,24 +303,37 @@ def _normalize_relation_proposal(
             "target_claim": target_claim,
             "relation_type": relation_type,
             "rationale": rationale,
+            "relation_confidence": confidence,
+            "relation_provenance": "model_classified",
+            "requires_review": confidence == "low",
+            "relation_contract": contract,
+            "candidate_pair": _candidate_pair_metadata(packet),
         },
         "",
     )
 
 def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> list[dict[str, Any]]:
-    scored: list[tuple[int, int, int, dict[str, Any], dict[str, Any]]] = []
+    scored: list[tuple[int, int, int, dict[str, Any], dict[str, Any], str]] = []
     for left_index, left in enumerate(claims):
         for right_index, right in enumerate(claims):
             if left_index >= right_index:
                 continue
-            score = _pair_score(left, right)
+            score, reason = _pair_score(left, right)
             if score <= 0:
                 continue
-            scored.append((score, left_index, right_index, left, right))
+            scored.append((score, left_index, right_index, left, right, reason))
     scored.sort(key=lambda item: (-item[0], item[1], item[2]))
     packets = []
-    for index, (_score, _left_index, _right_index, left, right) in enumerate(scored[:max_pairs], start=1):
-        packets.append({"pair_id": f"pair_{index:03d}", "left": left, "right": right})
+    for index, (score, _left_index, _right_index, left, right, reason) in enumerate(scored[:max_pairs], start=1):
+        packets.append(
+            {
+                "pair_id": f"pair_{index:03d}",
+                "left": left,
+                "right": right,
+                "candidate_score": score,
+                "candidate_reason": reason,
+            }
+        )
     return packets
 
 def _fallback_relation(pair_packets: list[dict[str, Any]], permitted_types: set[str]) -> dict[str, Any] | None:
@@ -323,6 +355,11 @@ def _fallback_relation(pair_packets: list[dict[str, Any]], permitted_types: set[
             "reasoning dependency after model relation classification produced no accepted edge. Human review "
             "should confirm the exact relation type before treating it as substantive."
         ),
+        "relation_confidence": "low",
+        "relation_provenance": "deterministic_fallback",
+        "requires_review": True,
+        "relation_contract": _fallback_relation_contract(left, right),
+        "candidate_pair": _candidate_pair_metadata(packet),
         "extraction_method": "deterministic_fallback_pair",
     }
 
@@ -352,29 +389,127 @@ def _fallback_relation_type(left: dict[str, Any], right: dict[str, Any], permitt
     return next(iter(sorted(permitted_types)), None)
 
 def _looks_like_tension(left_text: str, right_text: str) -> bool:
-    lab_markers = ("lab leak", "research-related accident", "accidental lab")
-    zoonosis_markers = ("zoonosis", "zoonotic", "natural")
-    lab_left = any(marker in left_text for marker in lab_markers)
-    lab_right = any(marker in right_text for marker in lab_markers)
-    zoonosis_left = any(marker in left_text for marker in zoonosis_markers)
-    zoonosis_right = any(marker in right_text for marker in zoonosis_markers)
-    return (lab_left and zoonosis_right) or (lab_right and zoonosis_left)
+    return (
+        _has_support_signal(left_text) and _has_limit_or_challenge_signal(right_text)
+    ) or (
+        _has_support_signal(right_text) and _has_limit_or_challenge_signal(left_text)
+    )
 
-def _pair_score(left: dict[str, Any], right: dict[str, Any]) -> int:
+def _pair_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, str]:
     score = 0
+    reasons: list[str] = []
     if left.get("source_id") != right.get("source_id"):
         score += 3
+        reasons.append("cross_source")
     left_role = str(left.get("role", ""))
     right_role = str(right.get("role", ""))
+    role_reason, role_score = _role_pair_priority(left_role, right_role)
+    if role_score:
+        score += role_score
+        reasons.append(role_reason)
     if "crux" in {left_role, right_role}:
         score += 4
+        reasons.append("crux_pair")
     if {left_role, right_role} & {"scope_limit", "implementation_constraint"}:
         score += 3
+        reasons.append("scope_or_implementation_pair")
     if {left_role, right_role} & {"conclusion_support"}:
         score += 2
+        reasons.append("support_pair")
+    left_text = _normalize_text(f"{left.get('claim', '')} {left.get('excerpt', '')}")
+    right_text = _normalize_text(f"{right.get('claim', '')} {right.get('excerpt', '')}")
+    if _looks_like_tension(left_text, right_text):
+        score += 6
+        reasons.append("support_limit_tension")
     shared_terms = _content_terms(str(left.get("claim", ""))) & _content_terms(str(right.get("claim", "")))
-    score += min(3, len(shared_terms))
-    return score
+    if shared_terms:
+        score += min(3, len(shared_terms))
+        reasons.append("shared_terms")
+    return score, "+".join(reasons) or "low_signal"
+
+def _role_pair_priority(left_role: str, right_role: str) -> tuple[str, int]:
+    roles = {left_role, right_role}
+    if "scope_limit" in roles and roles & {"conclusion_support", "crux"}:
+        return "scope_limit_bounds_decision_claim", 8
+    if "implementation_constraint" in roles and roles & {"conclusion_support", "crux"}:
+        return "implementation_constraint_conditions_decision_claim", 8
+    if "measurement_validity" in roles and roles & {"conclusion_support", "crux"}:
+        return "measurement_limit_bears_on_decision_claim", 7
+    if "external_validity" in roles and roles & {"conclusion_support", "crux"}:
+        return "external_validity_bounds_decision_claim", 7
+    if "crux" in roles and roles - {"background", "other"}:
+        return "crux_connected_to_substantive_claim", 7
+    return "", 0
+
+def _relation_contract(proposal: dict[str, Any], packet: dict[str, Any], rationale: str) -> dict[str, str]:
+    left = packet["left"]
+    right = packet["right"]
+    return {
+        "edge_basis": _contract_text(proposal.get("edge_basis"), default="source_inferred"),
+        "source_anchor_a": _contract_text(proposal.get("source_anchor_a"), default=_short_anchor(left)),
+        "source_anchor_b": _contract_text(proposal.get("source_anchor_b"), default=_short_anchor(right)),
+        "why_decision_relevant": _contract_text(proposal.get("why_decision_relevant"), default=rationale),
+        "failure_condition": _contract_text(
+            proposal.get("failure_condition"),
+            default="The edge weakens if the two claims address different decisions, populations, mechanisms, or evidence standards.",
+        ),
+    }
+
+def _fallback_relation_contract(left: dict[str, Any], right: dict[str, Any]) -> dict[str, str]:
+    return {
+        "edge_basis": "role_template",
+        "source_anchor_a": _short_anchor(left),
+        "source_anchor_b": _short_anchor(right),
+        "why_decision_relevant": "The paired claim roles indicate a possible decision-relevant dependency that needs review.",
+        "failure_condition": "A reviewer should reject the edge if the excerpts do not bear on the same decision-relevant proposition.",
+    }
+
+def _relation_confidence(proposal: dict[str, Any], contract: dict[str, str]) -> str:
+    value = str(proposal.get("relation_confidence", "")).strip().lower()
+    if value in {"low", "medium", "high"}:
+        return value
+    if contract["edge_basis"] == "source_explicit":
+        return "high"
+    if contract["source_anchor_a"] and contract["source_anchor_b"]:
+        return "medium"
+    return "low"
+
+def _candidate_pair_metadata(packet: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "pair_id": str(packet.get("pair_id", "")),
+        "score": packet.get("candidate_score"),
+        "reason": str(packet.get("candidate_reason", "")),
+    }
+
+def _short_anchor(claim: dict[str, Any]) -> str:
+    text = str(claim.get("excerpt") or claim.get("claim") or "").strip()
+    return re.sub(r"\s+", " ", text)[:220]
+
+def _contract_text(value: Any, *, default: str) -> str:
+    text = str(value or "").strip()
+    return re.sub(r"\s+", " ", text) if text else default
+
+def _has_support_signal(text: str) -> bool:
+    return any(marker in text for marker in ("support", "benefit", "improve", "reduce", "favor", "works", "effective", "associated with"))
+
+def _has_limit_or_challenge_signal(text: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "limit",
+            "uncertain",
+            "not",
+            "cannot",
+            "does not",
+            "failed",
+            "risk",
+            "challenge",
+            "weaken",
+            "scope",
+            "only when",
+            "depends",
+        )
+    )
 
 def _content_terms(text: str) -> set[str]:
     stopwords = {

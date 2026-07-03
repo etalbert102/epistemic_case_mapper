@@ -19,6 +19,7 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     consolidate_claims_for_map,
     evaluate_staged_map_quality,
     _coverage_backfill_claims,
+    _candidate_relation_pairs,
     _sharpen_relations,
 )
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
@@ -242,6 +243,11 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert generated["claims"][0]["excerpt"] == "Alpha line."
     assert generated["relations"][0]["relation_id"] == "demo_case_r001"
     assert generated["relations"][0]["source_claim"] == "demo_case_c002"
+    assert generated["relations"][0]["relation_confidence"] == "medium"
+    assert generated["relations"][0]["relation_provenance"] == "model_classified"
+    assert generated["relations"][0]["relation_contract"]["source_anchor_a"] == "Alpha line."
+    assert generated["relations"][0]["relation_contract"]["failure_condition"]
+    assert "crux" in generated["relations"][0]["candidate_pair"]["reason"]
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
     assert summary["rejected_relations"] == []
@@ -251,6 +257,8 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert quality_report["schema_id"] == "staged_map_quality_report_v1"
     assert quality_report["source_claim_counts"] == {"demo_case_doc_a": 1, "demo_case_doc_b": 1}
     assert "conclusion_support" in quality_report["claim_role_counts"]
+    assert quality_report["summary"]["relation_contract_count"] == 1
+    assert quality_report["relation_confidence_counts"]["medium"] == 1
     assert quality_report["scaffold"]["required_sources"] == ["demo_case_doc_a", "demo_case_doc_b"]
     claim_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_chunks/demo_case_doc_a_lines_1_2_prompt.txt").read_text(encoding="utf-8")
     assert "Deterministic map-quality scaffold" in claim_prompt
@@ -258,6 +266,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     relation_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_pairs/pair_001_prompt.txt").read_text(encoding="utf-8")
     assert "Deterministic map-quality scaffold" in relation_prompt
     assert "relation_goals" in relation_prompt
+    assert "relation evidence contract" in relation_prompt
     repair_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_prompt.txt").read_text(encoding="utf-8")
     assert "Deterministic quality report" in repair_prompt
     assert "Candidate map:" in repair_prompt
@@ -308,10 +317,16 @@ def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tm
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
     assert generated["claims"][0]["extraction_method"] == "deterministic_fallback_span"
     assert generated["relations"][0]["extraction_method"] == "deterministic_fallback_pair"
+    assert generated["relations"][0]["relation_confidence"] == "low"
+    assert generated["relations"][0]["requires_review"] is True
+    assert generated["relations"][0]["relation_contract"]["edge_basis"] == "role_template"
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["backend_retries"] == 0
     assert summary["rejected_claims"][0]["reason"] == "backend_error_used_deterministic_fallback"
     assert summary["rejected_relations"][-1]["reason"] == "model_under_related_used_deterministic_fallback"
+    quality_report = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_report.json").read_text(encoding="utf-8"))
+    issue_types = {issue["issue_type"] for issue in quality_report["issues"]}
+    assert "fallback_relation_needs_review" in issue_types
 
 
 def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Path) -> None:
@@ -775,6 +790,37 @@ def test_relation_sharpening_retags_generic_edges_when_roles_support_it() -> Non
     assert sharpened[0]["relation_type"] == "in_tension_with"
     assert sharpened[1]["relation_type"] == "depends_on"
     assert sharpened[0]["deterministic_sharpening"]["from"] == "refines"
+
+
+def test_candidate_relation_pairs_prioritize_decision_role_templates_without_shared_terms() -> None:
+    claims = [
+        {
+            "claim_id": "demo_c001",
+            "claim": "Portable filtration improves classroom respiratory outcomes.",
+            "source_id": "doc_a",
+            "excerpt": "The intervention improved outcomes in monitored classrooms.",
+            "role": "conclusion_support",
+        },
+        {
+            "claim_id": "demo_c002",
+            "claim": "Benefits only apply where devices are maintained and correctly sized.",
+            "source_id": "doc_b",
+            "excerpt": "Effects depend on maintenance and correct sizing.",
+            "role": "scope_limit",
+        },
+        {
+            "claim_id": "demo_c003",
+            "claim": "The appendix lists procurement dates.",
+            "source_id": "doc_c",
+            "excerpt": "Procurement dates were archived.",
+            "role": "background",
+        },
+    ]
+
+    pairs = _candidate_relation_pairs(claims, max_pairs=1)
+
+    assert [(pairs[0]["left"]["claim_id"], pairs[0]["right"]["claim_id"])] == [("demo_c001", "demo_c002")]
+    assert "scope_limit_bounds_decision_claim" in pairs[0]["candidate_reason"]
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

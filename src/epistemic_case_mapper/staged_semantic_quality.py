@@ -248,6 +248,9 @@ def evaluate_staged_map_quality(
     consolidated_claim_count = sum(1 for claim in claims if claim.get("supporting_claim_ids"))
     role_counts = _counts(str(claim.get("role", "other")) for claim in claims)
     relation_type_counts = _counts(str(relation.get("relation_type", "")) for relation in relations)
+    relation_confidence_counts = _counts(str(relation.get("relation_confidence", "unknown")) for relation in relations)
+    relation_contract_count = sum(1 for relation in relations if _relation_has_contract(relation))
+    fallback_relation_count = sum(1 for relation in relations if relation.get("relation_provenance") == "deterministic_fallback")
     issues = _quality_issues(
         manifest=manifest,
         region=region,
@@ -257,6 +260,9 @@ def evaluate_staged_map_quality(
         source_claim_counts=source_claim_counts,
         role_counts=role_counts,
         relation_type_counts=relation_type_counts,
+        relation_confidence_counts=relation_confidence_counts,
+        relation_contract_count=relation_contract_count,
+        fallback_relation_count=fallback_relation_count,
         rejected_claims=rejected_claims,
         rejected_relations=rejected_relations,
         skipped_chunks=skipped_chunks,
@@ -271,6 +277,8 @@ def evaluate_staged_map_quality(
             "claim_count": len(claims),
             "relation_count": len(relations),
             "relation_type_count": len([key for key in relation_type_counts if key]),
+            "relation_contract_count": relation_contract_count,
+            "fallback_relation_count": fallback_relation_count,
             "required_source_count": len(required_sources),
             "sources_with_claims": sum(1 for count in source_claim_counts.values() if count > 0),
             "all_chunk_count": len(all_chunks),
@@ -284,9 +292,90 @@ def evaluate_staged_map_quality(
         "source_claim_counts": source_claim_counts,
         "claim_role_counts": role_counts,
         "relation_type_counts": relation_type_counts,
+        "relation_confidence_counts": relation_confidence_counts,
         "issues": issues,
         "scaffold": _map_quality_scaffold(manifest, region, case_manifest),
     }
+
+
+def _relation_quality_issues(
+    *,
+    region: WorkedRegion,
+    claim_count: int,
+    relations: list[dict[str, Any]],
+    relation_type_counts: dict[str, int],
+    relation_confidence_counts: dict[str, int],
+    relation_contract_count: int,
+    fallback_relation_count: int,
+) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    if claim_count >= 2 and not relations:
+        issues.append(_quality_issue("fail", "missing_relations", "At least two claims exist but no accepted relations were produced."))
+    if relations and relation_contract_count < len(relations):
+        missing_count = len(relations) - relation_contract_count
+        issues.append(
+            _quality_issue(
+                "risk",
+                "missing_relation_contracts",
+                f"{missing_count} accepted relation(s) lack source anchors, decision relevance, or failure conditions.",
+            )
+        )
+    if relations and relation_confidence_counts.get("low", 0) / len(relations) > 0.5:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "low_confidence_relation_ratio",
+                "More than half of accepted relations are low confidence and should be treated as review candidates.",
+            )
+        )
+    if fallback_relation_count:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "fallback_relation_needs_review",
+                f"{fallback_relation_count} accepted relation(s) came from deterministic fallback rather than model classification.",
+            )
+        )
+    issues.extend(_relation_rationale_and_type_issues(region, relations, relation_type_counts))
+    return issues
+
+
+def _relation_rationale_and_type_issues(
+    region: WorkedRegion,
+    relations: list[dict[str, Any]],
+    relation_type_counts: dict[str, int],
+) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    weak_relation_ids = _weak_relation_rationale_ids(relations)
+    if weak_relation_ids:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "weak_relation_rationales",
+                "Relations with vague or low-information rationales: " + ", ".join(weak_relation_ids[:8]),
+            )
+        )
+    if len(relation_type_counts) < region.thresholds.min_relation_types:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "low_relation_type_diversity",
+                f"Accepted {len(relation_type_counts)} relation types; region target is at least {region.thresholds.min_relation_types}.",
+            )
+        )
+    relation_types = set(relation_type_counts)
+    if relation_types.isdisjoint({"crux_for", "in_tension_with", "challenges"}):
+        issues.append(_quality_issue("risk", "missing_crux_or_tension_relation", "No accepted crux/tension/challenge relation."))
+    generic_relation_count = sum(relation_type_counts.get(kind, 0) for kind in ("similar_to", "refines", "supports"))
+    if relations and len(relations) >= 4 and generic_relation_count / len(relations) > 0.7:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "generic_relation_type_overuse",
+                "Most accepted relations use generic supports/refines/similar_to types rather than crux, tension, challenge, or dependency edges.",
+            )
+        )
+    return issues
 
 def _quality_issues(
     *,
@@ -298,6 +387,9 @@ def _quality_issues(
     source_claim_counts: dict[str, int],
     role_counts: dict[str, int],
     relation_type_counts: dict[str, int],
+    relation_confidence_counts: dict[str, int],
+    relation_contract_count: int,
+    fallback_relation_count: int,
     rejected_claims: list[dict[str, Any]],
     rejected_relations: list[dict[str, Any]],
     skipped_chunks: list[dict[str, Any]],
@@ -340,37 +432,17 @@ def _quality_issues(
     for role in ("conclusion_support", "crux", "scope_limit"):
         if role_counts.get(role, 0) == 0:
             issues.append(_quality_issue("risk", "missing_claim_role", f"No accepted claim with role {role}."))
-    if len(claims) >= 2 and not relations:
-        issues.append(_quality_issue("fail", "missing_relations", "At least two claims exist but no accepted relations were produced."))
-    weak_relation_ids = _weak_relation_rationale_ids(relations)
-    if weak_relation_ids:
-        issues.append(
-            _quality_issue(
-                "risk",
-                "weak_relation_rationales",
-                "Relations with vague or low-information rationales: " + ", ".join(weak_relation_ids[:8]),
-            )
+    issues.extend(
+        _relation_quality_issues(
+            region=region,
+            claim_count=len(claims),
+            relations=relations,
+            relation_type_counts=relation_type_counts,
+            relation_confidence_counts=relation_confidence_counts,
+            relation_contract_count=relation_contract_count,
+            fallback_relation_count=fallback_relation_count,
         )
-    if len(relation_type_counts) < region.thresholds.min_relation_types:
-        issues.append(
-            _quality_issue(
-                "risk",
-                "low_relation_type_diversity",
-                f"Accepted {len(relation_type_counts)} relation types; region target is at least {region.thresholds.min_relation_types}.",
-            )
-        )
-    relation_types = set(relation_type_counts)
-    if relation_types.isdisjoint({"crux_for", "in_tension_with", "challenges"}):
-        issues.append(_quality_issue("risk", "missing_crux_or_tension_relation", "No accepted crux/tension/challenge relation."))
-    generic_relation_count = sum(relation_type_counts.get(kind, 0) for kind in ("similar_to", "refines", "supports"))
-    if relations and len(relations) >= 4 and generic_relation_count / len(relations) > 0.7:
-        issues.append(
-            _quality_issue(
-                "risk",
-                "generic_relation_type_overuse",
-                "Most accepted relations use generic supports/refines/similar_to types rather than crux, tension, challenge, or dependency edges.",
-            )
-        )
+    )
     duplicate_pairs = _near_duplicate_claim_pairs(claims)
     if duplicate_pairs:
         issues.append(
@@ -453,6 +525,13 @@ def _weak_relation_rationale_ids(relations: list[dict[str, Any]]) -> list[str]:
         if len(terms) < 4 or any(pattern in normalized for pattern in vague_patterns):
             weak_ids.append(str(relation.get("relation_id", "")) or "<missing_id>")
     return weak_ids
+
+def _relation_has_contract(relation: dict[str, Any]) -> bool:
+    contract = relation.get("relation_contract")
+    if not isinstance(contract, dict):
+        return False
+    required = ("edge_basis", "source_anchor_a", "source_anchor_b", "why_decision_relevant", "failure_condition")
+    return all(str(contract.get(key, "")).strip() for key in required)
 
 def _quality_score(issues: list[dict[str, str]]) -> int:
     score = 100

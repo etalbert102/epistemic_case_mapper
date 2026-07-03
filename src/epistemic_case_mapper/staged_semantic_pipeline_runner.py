@@ -21,9 +21,9 @@ from epistemic_case_mapper.submission_manifest import SubmissionManifest, Worked
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
 
-RELATION_PROMPT_VERSION = "staged_relation_prompt_v1_json"
+RELATION_PROMPT_VERSION = "staged_relation_prompt_v2_contract_json"
 
-RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v1_json"
+RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v2_contract_json"
 
 VALID_CLAIM_ROLES = {
     "conclusion_support",
