@@ -1,0 +1,76 @@
+version = 1
+
+[thresholds]
+max_source_file_lines = 900
+max_test_file_lines = 900
+max_script_file_lines = 900
+max_function_lines = 140
+max_branch_nodes = 30
+
+[allowlist]
+long_files = [
+  "src/epistemic_case_mapper/cli.py",
+  "src/epistemic_case_mapper/config_profiles.py",
+  "src/epistemic_case_mapper/map_briefing.py",
+  "src/epistemic_case_mapper/staged_semantic_pipeline.py",
+  "scripts/run_synthesis_uplift_eval.py",
+  "tests/test_case_init_and_model_backends.py",
+  "tests/test_map_briefing.py",
+]
+long_functions = [
+  "src/epistemic_case_mapper/cli.py::main",
+  "src/epistemic_case_mapper/cli.py::_run_decision_packet",
+  "src/epistemic_case_mapper/config_profiles.py::_technical_safety_case",
+  "src/epistemic_case_mapper/config_profiles.py::_biomedical_nutrition_case",
+  "src/epistemic_case_mapper/llm_stress_eval.py::run_llm_stress_eval",
+  "src/epistemic_case_mapper/map_briefing.py::run_map_briefing",
+  "src/epistemic_case_mapper/staged_semantic_pipeline.py::run_staged_map",
+  "src/epistemic_case_mapper/staged_semantic_pipeline.py::_extract_relations",
+  "src/epistemic_case_mapper/staged_semantic_pipeline.py::_quality_issues",
+  "scripts/build_case_map.py::render_audit",
+  "scripts/stress_staged_mapper.py::_run_one",
+  "tests/test_submission_manifest_generalization.py::_manifest_text",
+]
+branchy_functions = [
+  "src/epistemic_case_mapper/cli.py::main",
+  "scripts/validate_case_artifact.py::_validate_case_map",
+]
+
+[validation]
+python_package = "epistemic_case_mapper"
+source_roots = ["src/epistemic_case_mapper"]
+test_roots = ["tests"]
+script_roots = ["scripts"]
+
+[domain_vocabulary]
+protected_roots = [
+  "src/epistemic_case_mapper",
+]
+allowed_paths = [
+  "src/epistemic_case_mapper/config_profiles.py",
+]
+terms = [
+  "hepa",
+  "hvac",
+  "cadr",
+  "merv",
+  "pm2.5",
+  "pm 2.5",
+  "egg",
+  "eggs",
+  "ldl",
+  "apob",
+  "cholesterol",
+  "saturated fat",
+  "painted",
+  "protected lane",
+  "bike lane",
+]
+allowed_literals = [
+  "LDL/ApoB mechanism",
+  "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible.",
+  "Explain the LDL/ApoB mechanism and whether it changes the bottom-line read.",
+  "State how diet composition or saturated fat modifies the exposure read.",
+  "Saturated fat or dietary context",
+  "ApoB-containing",
+]

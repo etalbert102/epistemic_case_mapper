@@ -1364,7 +1364,12 @@ def _rewrite_anchor_terms(claim: str) -> list[str]:
         term for term in terms
         if len(term) >= 4 and term not in {"should", "with", "from", "that", "this", "into", "than", "when", "where"}
     ]
-    number_terms = re.findall(r"\b\d+(?:\.\d+)?%?\b|PM\s?2\.5|MERV\s?\d+|CADR", claim, flags=re.IGNORECASE)
+    vocabulary = profile_vocabulary(infer_profile_id_from_text(claim, fallback_profile_id=DEFAULT_PROFILE_ID))
+    number_terms = [
+        match
+        for pattern in _vocabulary_string_list(vocabulary, "anchor_term_patterns")
+        for match in re.findall(pattern, claim, flags=re.IGNORECASE)
+    ]
     return _dedupe([*number_terms, *important])[:6]
 
 
@@ -2789,7 +2794,13 @@ def _normalize_technical_acronyms(text: str) -> str:
     cleaned = text
     for lower, upper in replacements.items():
         cleaned = re.sub(rf"\b{lower}\b", upper, cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"\bpm\s*2\.5\b", "PM 2.5", cleaned, flags=re.IGNORECASE)
+    for replacement in vocabulary.get("display_regex_replacements", []):
+        if not isinstance(replacement, dict):
+            continue
+        pattern = str(replacement.get("pattern", ""))
+        value = str(replacement.get("replacement", ""))
+        if pattern and value:
+            cleaned = re.sub(pattern, value, cleaned, flags=re.IGNORECASE)
     return cleaned
 
 

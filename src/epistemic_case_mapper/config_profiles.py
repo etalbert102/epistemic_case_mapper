@@ -37,6 +37,10 @@ _BASE_PROFILE_VOCABULARY: dict[str, Any] = {
         "rct": "RCT",
         "who": "WHO",
     },
+    "display_regex_replacements": [],
+    "anchor_term_patterns": [
+        r"\b\d+(?:\.\d+)?%?\b",
+    ],
     "reader_quality_bonus_markers": [
         "risk",
         "mortality",
@@ -924,6 +928,14 @@ def _technical_safety_case() -> EpistemicConfigProfile:
                 "hvac": "HVAC",
                 "merv": "MERV",
             },
+            "display_regex_replacements": [
+                {"pattern": r"\bpm\s*2\.5\b", "replacement": "PM 2.5"},
+            ],
+            "anchor_term_patterns": [
+                r"\bPM\s?2\.5\b",
+                r"\bMERV\s?\d+\b",
+                r"\bCADR\b",
+            ],
             "rewrite_rank_markers": ["cadr", "room size", "ozone", "unsafe", "not safe", "hazard", "failure", "residual risk", "monitoring"],
             "secondary_alternative_markers": ["germicidal ultraviolet", " guv "],
             "reader_quality_bonus_markers": ["hepa", "hvac", "cadr", "merv", "ventilation", "filtration", "pm2.5", "pm 2.5", "unsafe", "ozone"],
