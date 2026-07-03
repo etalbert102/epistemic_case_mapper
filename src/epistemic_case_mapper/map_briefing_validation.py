@@ -400,3 +400,10 @@ def _rel(repo_root: Path, path: Path) -> str:
         return path.relative_to(repo_root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import _slot_label
+from epistemic_case_mapper.map_briefing_map_utils import _claims, _relations
+from epistemic_case_mapper.map_briefing_pipeline import CONFIDENCE_ORDER

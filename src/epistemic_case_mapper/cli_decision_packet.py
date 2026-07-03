@@ -141,20 +141,24 @@ def _run_decision_packet(
     print(f"Summary: {_display_path(repo_root, summary_path)}")
     return 0
 def _decision_packet_helpers() -> dict[str, Any]:
-    from run_synthesis_uplift_eval import (  # noqa: PLC0415
+    from epistemic_case_mapper.synthesis_uplift_packet import (
         _clean_reader_packet_metadata,
-        _compile_rewrite_requirements,
-        _deterministic_patch_synthesis,
         _deterministic_requirement_coverage,
         _needs_repair,
-        _parse_losses,
         _read,
         _read_map_payload,
-        _repair_synthesis_prompt,
         _requirement_dict,
-        _requirements_markdown,
         _run_synthesis_backend,
+    )
+    from epistemic_case_mapper.synthesis_uplift_requirements import (
+        _compile_rewrite_requirements,
+        _parse_losses,
         _synthesis_prompt,
+    )
+    from epistemic_case_mapper.synthesis_uplift_repair import (
+        _deterministic_patch_synthesis,
+        _repair_synthesis_prompt,
+        _requirements_markdown,
     )
 
     return locals()
@@ -191,4 +195,3 @@ def _decision_packet_summary(
         "repair_ran": repair_ran,
         "deterministic_patch_ran": deterministic_patch_ran,
     }
-

@@ -164,6 +164,33 @@ def domain_vocabulary_isolation_check(root: Path, policy: dict[str, Any]) -> Gat
     return GateCheck("domain_vocabulary_isolation", not findings, details, findings)
 
 
+def design_debt_check(root: Path, policy: dict[str, Any]) -> GateCheck:
+    findings: list[GateFinding] = []
+    for path in _source_python_files(root, policy):
+        relative = _rel(root, path)
+        if re.search(r"_impl_\d+\.py$", path.name):
+            findings.append(
+                GateFinding(
+                    "numbered_implementation_shard",
+                    relative,
+                    1,
+                    f"{relative} uses a numbered shard name instead of a domain-owned module name",
+                )
+            )
+        text = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError as exc:
+            findings.append(GateFinding("syntax_error", relative, int(exc.lineno or 1), str(exc)))
+            continue
+        findings.extend(_script_boundary_findings(relative, tree))
+        findings.extend(_dynamic_namespace_findings(relative, tree))
+    details = [finding.detail for finding in findings[:30]] or [
+        "package modules use named files, explicit imports, and no script-boundary imports"
+    ]
+    return GateCheck("design_debt", not findings, details, findings)
+
+
 def _domain_literal_allowed(literal: str, allowed_literals: set[str]) -> bool:
     if literal in allowed_literals:
         return True
@@ -190,6 +217,93 @@ def _domain_scan_files(root: Path, policy: dict[str, Any]) -> list[Path]:
         elif full_root.is_dir():
             files.extend(full_root.rglob("*.py"))
     return _filter_python_files(files)
+
+
+def _source_python_files(root: Path, policy: dict[str, Any]) -> list[Path]:
+    files: list[Path] = []
+    for path_root in policy["validation"].get("source_roots", []):
+        full_root = root / str(path_root)
+        if full_root.is_file() and full_root.suffix == ".py":
+            files.append(full_root)
+        elif full_root.is_dir():
+            files.extend(full_root.rglob("*.py"))
+    return _filter_python_files(files)
+
+
+def _script_boundary_findings(relative: str, tree: ast.AST) -> list[GateFinding]:
+    findings: list[GateFinding] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == "scripts" or module.startswith("scripts.") or module.startswith("run_"):
+                findings.append(
+                    GateFinding(
+                        "package_imports_script",
+                        relative,
+                        int(node.lineno),
+                        f"{relative}:{node.lineno} imports executable script module {module!r}",
+                    )
+                )
+        if isinstance(node, ast.Call) and _is_sys_path_insert_call(node):
+            findings.append(
+                GateFinding(
+                    "package_mutates_sys_path",
+                    relative,
+                    int(getattr(node, "lineno", 1)),
+                    f"{relative}:{getattr(node, 'lineno', 1)} mutates sys.path inside package code",
+                )
+            )
+    return findings
+
+
+def _is_sys_path_insert_call(node: ast.Call) -> bool:
+    func = node.func
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr in {"insert", "append"}
+        and isinstance(func.value, ast.Attribute)
+        and func.value.attr == "path"
+        and isinstance(func.value.value, ast.Name)
+        and func.value.value.id == "sys"
+    )
+
+
+def _dynamic_namespace_findings(relative: str, tree: ast.AST) -> list[GateFinding]:
+    findings: list[GateFinding] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "importlib":
+            imported = {alias.name for alias in node.names}
+            if "import_module" in imported:
+                findings.append(
+                    GateFinding(
+                        "dynamic_module_facade",
+                        relative,
+                        int(node.lineno),
+                        f"{relative}:{node.lineno} imports import_module; use explicit package imports instead",
+                    )
+                )
+        if isinstance(node, ast.Call) and _is_namespace_update_call(node):
+            findings.append(
+                GateFinding(
+                    "dynamic_namespace_update",
+                    relative,
+                    int(getattr(node, "lineno", 1)),
+                    f"{relative}:{getattr(node, 'lineno', 1)} updates globals/module namespaces dynamically",
+                )
+            )
+    return findings
+
+
+def _is_namespace_update_call(node: ast.Call) -> bool:
+    func = node.func
+    if not isinstance(func, ast.Attribute) or func.attr != "update":
+        return False
+    if isinstance(func.value, ast.Call) and isinstance(func.value.func, ast.Name) and func.value.func.id == "globals":
+        return True
+    return (
+        isinstance(func.value, ast.Attribute)
+        and func.value.attr == "__dict__"
+    )
 
 
 def _python_files(root: Path, policy: dict[str, Any]) -> list[Path]:
@@ -288,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
         import_sweep_check(root, policy),
         static_maintainability_check(root, policy),
         domain_vocabulary_isolation_check(root, policy),
+        design_debt_check(root, policy),
     ]
     if not args.skip_tests:
         checks.append(pytest_check(root))

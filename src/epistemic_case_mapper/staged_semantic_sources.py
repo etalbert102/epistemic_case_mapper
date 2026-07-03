@@ -622,3 +622,15 @@ def _safe_filename(value: str) -> str:
 
 def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().lower()
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.staged_semantic_pipeline_runner import (
+    RELATION_BATCH_PROMPT_VERSION,
+    RELATION_PROMPT_VERSION,
+    SourceChunk,
+    SourceSpan,
+    VALID_CLAIM_ROLES,
+)
+from epistemic_case_mapper.staged_semantic_quality import _map_quality_scaffold, _profile_relation_rule_text

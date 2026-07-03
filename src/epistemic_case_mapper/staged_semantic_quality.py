@@ -740,3 +740,16 @@ Rules:
 - If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
 - If the chunk has no useful claim, return {{"claims": []}}.
 """
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.staged_semantic_pipeline_runner import CLAIM_EXTRACTION_PROMPT_VERSION, SourceChunk
+from epistemic_case_mapper.staged_semantic_sources import (
+    _content_terms,
+    _normalize_relation_proposal,
+    _parse_model_json,
+    _relation_pair_prompt,
+    _relation_proposals,
+    _required_sources,
+)

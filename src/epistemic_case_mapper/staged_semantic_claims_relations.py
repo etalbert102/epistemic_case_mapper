@@ -751,3 +751,33 @@ def _extract_relations(
             )
     write_json(artifact_dir / "accepted_relations.json", {"relations": accepted, "rejected": rejected})
     return accepted, payloads, rejected
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.staged_semantic_pipeline_runner import (
+    CONSOLIDATION_OVERLAP_THRESHOLD,
+    CONSOLIDATION_SIMILARITY_THRESHOLD,
+    SourceChunk,
+    SourceSpan,
+)
+from epistemic_case_mapper.staged_semantic_quality import (
+    _classify_singleton_relations,
+    _map_quality_repair_prompt,
+    _quality_markdown,
+    _text_overlap_ratio,
+    evaluate_staged_map_quality,
+)
+from epistemic_case_mapper.staged_semantic_sources import (
+    _batches,
+    _candidate_relation_pairs,
+    _fallback_relation,
+    _normalize_relation_proposal,
+    _normalize_text,
+    _parse_model_json,
+    _relation_batch_prompt,
+    _relation_pair_prompt,
+    _relation_proposals,
+    _relative,
+    _span_signal_score,
+)

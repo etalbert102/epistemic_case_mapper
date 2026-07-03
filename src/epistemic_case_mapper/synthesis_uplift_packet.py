@@ -785,4 +785,3 @@ def _rel(repo_root: Path, path: Path) -> str:
         return path.relative_to(repo_root).as_posix()
     except ValueError:
         return path.as_posix()
-

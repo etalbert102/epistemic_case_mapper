@@ -21,6 +21,7 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 
 def append_evidence_by_decision_lever(rendered: str, scaffold: dict[str, Any]) -> str:
     if "## Evidence by Decision Lever" in rendered:
@@ -788,3 +789,64 @@ def ensure_rewrite_confidence_visible(markdown: str, confidence: str) -> str:
     if "## Practical Read" in markdown:
         return markdown.replace("## Practical Read", f"**Confidence:** {confidence}\n\n## Practical Read", 1)
     return markdown.rstrip() + f"\n\n**Confidence:** {confidence}\n"
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import (
+    _decision_slots_for_claim,
+    _evidence_slot_why_it_matters,
+    _evidence_slots_for_claim,
+    _infer_options_from_evidence,
+    _option_criteria_for_rows,
+    _option_terms,
+    _option_terms_by_option,
+    _question_options,
+    _row_matches_option,
+    _row_matches_option_criterion,
+    _short_claim_fragment,
+)
+from epistemic_case_mapper.map_briefing_evidence_partition import (
+    _claim_contract_row,
+    _crux_affected_options,
+    _crux_current_read,
+    _crux_label,
+    _crux_why_it_matters,
+    _crux_would_change_if,
+    _dedupe_crux_rows,
+    _fallback_crux_rows_from_option_comparison,
+    _option_comparison_summary,
+    _option_criterion_label,
+    _option_current_read,
+    _option_evidence_row,
+    _option_tradeoff_rows,
+)
+from epistemic_case_mapper.map_briefing_evidence_tables import _concept_label, _extract_confidence, _markdown_table_cell
+from epistemic_case_mapper.map_briefing_map_utils import _claims, _relations
+from epistemic_case_mapper.map_briefing_memo_slots import (
+    _contains_banned_editorial_phrase,
+    _drop_duplicate_reader_sentences,
+    _repair_generic_crux_table_cells,
+    _repair_overclaim_strength_language,
+    _repair_reader_source_label_noise,
+    _replace_internal_reader_phrases,
+    build_curated_evidence_packets,
+    build_decision_memo_slots,
+    reader_memo_rewrite_issues,
+)
+from epistemic_case_mapper.map_briefing_pipeline import _deterministic_top_cruxes, _sufficiency_implications
+from epistemic_case_mapper.map_briefing_reader_polish import (
+    _build_final_evidence_appendix,
+    _build_final_reader_memo,
+    _build_polished_evidence_appendix,
+    _build_polished_executive_brief,
+    _has_quantitative_specificity,
+    clean_reader_briefing_text,
+    clean_reader_memo_text,
+)
+from epistemic_case_mapper.map_briefing_validation import (
+    _clean_reader_relation_placeholders,
+    _content_terms,
+    _dedupe,
+    _replace_confidence_line,
+)

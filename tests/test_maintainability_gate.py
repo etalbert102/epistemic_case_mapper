@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.maintainability_gate import (  # noqa: E402
     _branch_node_count,
+    design_debt_check,
     domain_vocabulary_isolation_check,
     load_policy,
     static_maintainability_check,
@@ -36,6 +37,36 @@ def test_domain_vocabulary_isolation_gate_passes_current_policy() -> None:
     result = domain_vocabulary_isolation_check(ROOT, policy)
 
     assert result.ok is True
+
+
+def test_design_debt_gate_passes_current_policy() -> None:
+    policy = load_policy(ROOT)
+    result = design_debt_check(ROOT, policy)
+
+    assert result.ok is True
+
+
+def test_design_debt_gate_flags_dynamic_shard_facade(tmp_path: Path) -> None:
+    module = tmp_path / "src" / "epistemic_case_mapper" / "example_impl_1.py"
+    module.parent.mkdir(parents=True)
+    module.write_text(
+        "from importlib import import_module\n"
+        "_SHARDS = [import_module('x')]\n"
+        "globals().update({'x': 1})\n",
+        encoding="utf-8",
+    )
+    policy = {
+        "validation": {"source_roots": ["src/epistemic_case_mapper"], "test_roots": [], "script_roots": []},
+    }
+
+    result = design_debt_check(tmp_path, policy)
+
+    assert result.ok is False
+    assert {finding.issue for finding in result.findings or []} >= {
+        "numbered_implementation_shard",
+        "dynamic_module_facade",
+        "dynamic_namespace_update",
+    }
 
 
 def test_domain_vocabulary_isolation_flags_generic_domain_literal(tmp_path: Path) -> None:

@@ -801,3 +801,44 @@ def _ordered_concepts(rows: list[dict[str, Any]]) -> list[str]:
             if concept not in present:
                 present.append(concept)
     return present
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import (
+    _claim_concepts,
+    _claim_evidence_weight_score,
+    _claim_noise_profile,
+    _decision_slots_for_claim,
+    _evidence_family_for_claim,
+    _evidence_slots_for_claim,
+    _short_claim_fragment,
+    _slot_value,
+)
+from epistemic_case_mapper.map_briefing_evidence_partition import (
+    _active_overstatement_lints,
+    _claim_supporting_sources_for_briefing,
+    _counts,
+    _decision_slot_counts,
+    _default_stance_instruction,
+    _limiting_scope_items,
+    _positive_scope_items,
+    _scope_ledger,
+    _support_signal_profile,
+    _weight_label,
+    quality_report_issue_text,
+)
+from epistemic_case_mapper.map_briefing_map_utils import (
+    _claim_evidence_section,
+    _claims,
+    confidence_cap,
+    display_source_name,
+    polish_source_display_name,
+)
+from epistemic_case_mapper.map_briefing_reader_contracts import (
+    _profile_id_for_map,
+    _profile_vocabulary_for_map,
+    _vocabulary_marker_map,
+    _vocabulary_nested_marker_map,
+)
+from epistemic_case_mapper.map_briefing_validation import _content_terms, _dedupe, _string_list

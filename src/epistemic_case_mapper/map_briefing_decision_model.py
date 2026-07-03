@@ -786,3 +786,48 @@ def _row_matches_option_criterion(row: dict[str, Any], criterion: str) -> bool:
     if criterion == "harm_or_failure_mode" and (section == "conflicting_evidence" or "safety_or_adverse_effect" in concepts):
         return True
     return False
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_evidence_partition import (
+    _attach_cluster_tensions,
+    _claim_stance,
+    _claim_supporting_sources_for_briefing,
+    _classification_instruction,
+    _cluster_direction,
+    _cluster_proposition,
+    _cluster_proposition_rows,
+    _cluster_scope_items,
+    _cluster_weight_label,
+    _contains_hard_outcome_signal,
+    _contains_surrogate_signal,
+    _decision_classification,
+    _decision_frame_reason,
+    _decision_model_prose_requirements,
+    _ledger_claim_texts,
+    _practical_recommendations,
+    _proposition_cluster_key,
+    _scope_dimensions_for_text,
+    _tension_resolution_rows,
+    _what_would_change_answer,
+    quality_report_issue_text,
+)
+from epistemic_case_mapper.map_briefing_map_utils import (
+    _claim_text_bundle,
+    _claims,
+    _looks_like_concern_evidence,
+    _looks_like_method_or_source_limit,
+    _looks_like_scope_or_subgroup,
+    _looks_like_support_evidence,
+    _relations,
+    confidence_cap,
+    display_source_name,
+)
+from epistemic_case_mapper.map_briefing_reader_contracts import (
+    _profile_vocabulary_for_map,
+    _vocabulary_marker_map,
+    _vocabulary_nested_marker_map,
+    _vocabulary_string_map,
+)
+from epistemic_case_mapper.map_briefing_validation import _content_terms, _dedupe, _string_list

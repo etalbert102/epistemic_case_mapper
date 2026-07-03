@@ -783,3 +783,39 @@ def _compact_crux_table(rendered: str, scaffold: dict[str, Any]) -> str:
             + " |"
         )
     return "\n".join(lines)
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import _looks_like_boilerplate_disclosure, _looks_like_publisher_or_license_boilerplate
+from epistemic_case_mapper.map_briefing_evidence_partition import _option_criterion_label
+from epistemic_case_mapper.map_briefing_evidence_tables import (
+    _clean_appendix_section,
+    _clean_reader_briefing_line,
+    _concept_label,
+    _contains_truncated_fragment,
+    _deterministic_appendix_from_scaffold,
+    _duplicate_sentence_count,
+    _executive_markdown,
+    _extract_confidence,
+    _first_complete_sentences,
+    _generic_cluster_proposition,
+    _join_polished_sentences,
+    _markdown_section,
+    _markdown_section_with_heading,
+    _markdown_table_cell,
+    _markdown_table_count,
+    _polish_reader_sentence_block,
+    _reader_source_name,
+    _source_suffix,
+    _trim_executive_sections,
+)
+from epistemic_case_mapper.map_briefing_memo_slots import _uses_nutrition_memo_profile
+from epistemic_case_mapper.map_briefing_pipeline import (
+    _deterministic_decision_brief,
+    _deterministic_decision_implications,
+    _deterministic_top_cruxes,
+    _sufficiency_implications,
+)
+from epistemic_case_mapper.map_briefing_reader_contracts import _vocabulary_marker_list, _vocabulary_marker_map, _vocabulary_string_dict
+from epistemic_case_mapper.map_briefing_validation import _content_terms, _dedupe, _rendered_mentions_any_surface_term, _string_list

@@ -790,3 +790,49 @@ def _backfill_compact_payload_sections(payload: dict[str, Any], scaffold: dict[s
     if not _string_list(repaired.get("stress_caveats")):
         repaired["stress_caveats"] = _deterministic_stress_caveats(scaffold)
     return repaired
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import (
+    _option_criteria_for_rows,
+    _option_terms,
+    _option_terms_by_option,
+    _row_matches_option,
+    _row_matches_option_criterion,
+    _short_claim_fragment,
+    build_decision_slots,
+)
+from epistemic_case_mapper.map_briefing_map_utils import (
+    _apply_briefing_contract_lint,
+    _apply_decision_model_lint,
+    _claim_evidence_section,
+    _claim_reader_text,
+    _claim_text_bundle,
+    _claims,
+    _clean_payload_reader_language,
+    _expand_payload_reader_references,
+    _looks_like_concern_evidence,
+    _looks_like_method_or_source_limit,
+    _looks_like_scope_or_subgroup,
+    _relation_crux_reason,
+    _relation_evidence_section,
+    _relation_reader_text,
+    _relations,
+    _sanitize_evidence_role_sections,
+)
+from epistemic_case_mapper.map_briefing_pipeline import (
+    _deterministic_decision_implications,
+    _deterministic_stress_caveats,
+    _deterministic_top_cruxes,
+    _sufficiency_implications,
+)
+from epistemic_case_mapper.map_briefing_reader_contracts import _vocabulary_marker_list, _vocabulary_marker_map, _vocabulary_string_list
+from epistemic_case_mapper.map_briefing_validation import (
+    _content_terms,
+    _dedupe,
+    _dedupe_dicts,
+    _is_substantive_evidence_statement,
+    _similar_text_exists,
+    _string_list,
+)

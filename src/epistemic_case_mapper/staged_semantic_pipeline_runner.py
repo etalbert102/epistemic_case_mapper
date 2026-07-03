@@ -774,3 +774,40 @@ def _coverage_backfill_claims(
         "concept_gap_backfill": concept_report,
     }
     return backfilled, report
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.staged_semantic_claims_relations import (
+    _concept_gap_backfill_claims,
+    _extract_relations,
+    _next_claim_index,
+    _run_quality_repair,
+    _summary_repair_info,
+    consolidate_claims_for_map,
+)
+from epistemic_case_mapper.staged_semantic_quality import (
+    _assemble_map,
+    _case_config_profile,
+    _claim_prompt,
+    _configured_claim_roles,
+    _map_quality_repair_prompt,
+    _quality_markdown,
+    _relation_sharpening_summary,
+    _sharpen_relations,
+    evaluate_staged_map_quality,
+)
+from epistemic_case_mapper.staged_semantic_sources import (
+    _artifact_dir,
+    _budget_chunks,
+    _chunk_signal_score,
+    _chunk_summary,
+    _fallback_claim_for_chunk,
+    _load_context,
+    _normalize_claim_proposal,
+    _normalize_text,
+    _parse_model_json,
+    _relation_batch_count,
+    _relative,
+    _source_chunks,
+)

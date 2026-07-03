@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from epistemic_case_mapper.blinded_baselines import _configs_from_manifest, build_prompt
 from epistemic_case_mapper.case_initializer import init_case_package
 from epistemic_case_mapper.config_profiles import (
     profile_for_id,
@@ -38,11 +39,7 @@ from epistemic_case_mapper.unseen_quality import (
 )
 
 ENGINE_ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS_DIR = ENGINE_ROOT / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
 
-from run_blinded_baselines import _configs_from_manifest, build_prompt  # noqa: E402
 from epistemic_case_mapper.cli_parsers import build_parser
 from epistemic_case_mapper.cli_decision_packet import _run_decision_packet
 from epistemic_case_mapper.cli_semantic import (

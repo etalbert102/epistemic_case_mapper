@@ -795,3 +795,31 @@ def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any], 
     if slot_id == "hard_outcome_counter":
         return _looks_like_concern_evidence(claim, vocabulary=vocabulary)
     return True
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_evidence_tables import (
+    _concept_label,
+    _markdown_section_with_heading,
+    _markdown_table_cell,
+    _reader_source_name,
+)
+from epistemic_case_mapper.map_briefing_map_utils import _looks_like_concern_evidence, _looks_like_support_evidence
+from epistemic_case_mapper.map_briefing_reader_contracts import (
+    _human_current_read_for_crux,
+    _human_would_change_if_for_crux,
+    _profile_id_for_scaffold,
+    _profile_vocabulary_for_scaffold,
+    _vocabulary_marker_map,
+    _vocabulary_nested_marker_map,
+)
+from epistemic_case_mapper.map_briefing_reader_polish import (
+    _compact_crux_table,
+    _memo_slot_row_rank,
+    _option_tradeoff_slot_claim,
+    _option_tradeoff_slot_score,
+    _reader_clean_evidence_row,
+    _reader_evidence_row_quality,
+)
+from epistemic_case_mapper.map_briefing_validation import _content_terms, _string_list, validate_briefing_against_scaffold

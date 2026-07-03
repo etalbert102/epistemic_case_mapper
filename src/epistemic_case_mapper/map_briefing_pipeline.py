@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 from collections import Counter
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -21,14 +20,7 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
-
-ENGINE_ROOT = Path(__file__).resolve().parents[2]
-
-SCRIPTS_DIR = ENGINE_ROOT / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-
-from run_synthesis_uplift_eval import (  # noqa: E402
+from epistemic_case_mapper.synthesis_uplift_packet import (
     _clean_reader_packet_metadata,
     _parse_json,
     _render_synthesis_packet,
@@ -770,3 +762,69 @@ def append_map_coverage_snapshot(rendered: str, scaffold: dict[str, Any]) -> str
             + " |"
         )
     return "\n".join(lines)
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import (
+    _slot_label,
+    build_briefing_plan,
+    build_decision_model,
+    build_map_sufficiency_report,
+    build_proposition_clusters,
+)
+from epistemic_case_mapper.map_briefing_evidence_partition import (
+    _crux_current_read,
+    _crux_would_change_if,
+    partition_map_evidence,
+    repair_briefing_payload,
+)
+from epistemic_case_mapper.map_briefing_evidence_tables import (
+    _compressed_claim_text,
+    _coverage_snapshot_rows,
+    _extract_json_string_field_local,
+    _markdown_table_cell,
+    build_briefing_contract,
+    build_concept_evidence_packets,
+    build_evidence_compression_table,
+    build_evidence_weighting_ledger,
+)
+from epistemic_case_mapper.map_briefing_map_utils import (
+    _claims,
+    _expand_payload_reader_references,
+    _quality_brief,
+    _relations,
+    _resolve,
+    adaptive_briefing_claim_budget,
+    build_source_display_lookup,
+    calibrate_confidence,
+    confidence_cap,
+    expand_reader_map_references,
+    generated_map_erosion_audit,
+    prioritize_map_for_briefing,
+    replace_source_ids,
+)
+from epistemic_case_mapper.map_briefing_reader_contracts import (
+    _profile_vocabulary_for_map,
+    annotate_map_with_evidence_slots,
+    append_evidence_by_decision_lever,
+    build_crux_contract,
+    build_evidence_slot_ledger,
+    build_option_comparison,
+    compose_final_reader_memo_package,
+    polish_briefing_for_reader,
+    rewrite_reader_memo_with_contract,
+)
+from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
+from epistemic_case_mapper.map_briefing_validation import (
+    _confidence_label,
+    _dedupe,
+    _dedupe_dicts,
+    _ensure_confidence_visible,
+    _looks_like_structured_attempt,
+    _normalize_reader_punctuation,
+    _rel,
+    _string_list,
+    model_parse_diagnostics,
+    validate_briefing_against_scaffold,
+)

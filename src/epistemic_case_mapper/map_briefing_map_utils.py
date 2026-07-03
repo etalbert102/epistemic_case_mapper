@@ -799,3 +799,23 @@ def _lint_neutral_default_benefit_framing(text: str) -> str:
         flags=re.IGNORECASE,
     )
     return cleaned
+
+
+
+# Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_decision_model import (
+    _claim_concepts,
+    _claim_noise_profile,
+    _evidence_family_for_claim,
+    _short_claim_fragment,
+)
+from epistemic_case_mapper.map_briefing_evidence_tables import _obligatory_coverage_concepts, _ordered_concepts
+from epistemic_case_mapper.map_briefing_pipeline import CONFIDENCE_ORDER, ROLE_PRIORITY
+from epistemic_case_mapper.map_briefing_reader_contracts import _vocabulary_marker_list, _vocabulary_string_dict
+from epistemic_case_mapper.map_briefing_validation import (
+    _clean_reader_relation_placeholders,
+    _content_terms,
+    _dedupe,
+    _lint_reader_overstatements,
+    _string_list,
+)
