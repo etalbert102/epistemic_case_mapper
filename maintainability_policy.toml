@@ -9,12 +9,8 @@ max_branch_nodes = 30
 
 [allowlist]
 long_files = [
-  "src/epistemic_case_mapper/cli.py",
-  "src/epistemic_case_mapper/config_profiles.py",
   "src/epistemic_case_mapper/map_briefing.py",
   "src/epistemic_case_mapper/staged_semantic_pipeline.py",
-  "scripts/run_synthesis_uplift_eval.py",
-  "tests/test_map_briefing.py",
 ]
 long_functions = []
 branchy_functions = []
@@ -31,6 +27,7 @@ protected_roots = [
 ]
 allowed_paths = [
   "src/epistemic_case_mapper/config_profiles.py",
+  "src/epistemic_case_mapper/config_profile_vocabularies.py",
 ]
 terms = [
   "hepa",
