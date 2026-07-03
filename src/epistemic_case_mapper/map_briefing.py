@@ -71,10 +71,8 @@ def run_map_briefing(
     question: str,
     backend: str,
     output_dir: str | Path | None = None,
-    backend_timeout: int | None = 120,
-    backend_retries: int = 0,
-    source_titles: dict[str, str] | None = None,
-    max_claims: int | None = 0,
+    backend_timeout: int | None = 120, backend_retries: int = 0,
+    source_titles: dict[str, str] | None = None, max_claims: int | None = 0,
 ) -> MapBriefingResult:
     if backend_retries < 0:
         raise ValueError("backend_retries must be nonnegative")
@@ -124,126 +122,72 @@ def run_map_briefing(
     result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
     raw_path = artifacts / "map_briefing_raw.txt"
     write_markdown(raw_path, result.text)
-    parse_diagnostics = model_parse_diagnostics(result.text, parse_ok=False)
-    if result.prompt_only:
-        rendered = prompt
-        model_confidence = "not specified"
-        calibrated = calibrate_confidence(model_confidence, quality_report)["calibrated_confidence"]
-        parse_ok = False
-    else:
-        payload = _parse_json(result.text)
-        parse_ok = isinstance(payload, dict)
-        parse_diagnostics = model_parse_diagnostics(result.text, parse_ok=parse_ok)
-        if payload is not None:
-            model_confidence = _confidence_label(payload.get("confidence"))
-            calibration = calibrate_confidence(model_confidence, quality_report)
-            calibrated = calibration["calibrated_confidence"]
-            payload = repair_briefing_payload(payload, scaffold, source_lookup, prioritized_map)
-            payload["confidence"] = calibrated
-            rendered = _render_synthesis_packet(payload, map_payload=prioritized_map, requirements=())
-        elif _looks_like_structured_attempt(result.text):
-            model_confidence = "not specified"
-            calibration = calibrate_confidence(model_confidence, quality_report)
-            calibrated = calibration["calibrated_confidence"]
-            payload = deterministic_briefing_payload(
-                scaffold,
-                extracted_brief=_extract_json_string_field_local(result.text, "decision_brief"),
-                parse_failure=True,
-            )
-            payload = repair_briefing_payload(payload, scaffold, source_lookup, prioritized_map)
-            payload["confidence"] = calibrated
-            rendered = _render_synthesis_packet(payload, map_payload=prioritized_map, requirements=())
-        else:
-            model_confidence = "not specified"
-            calibration = calibrate_confidence(model_confidence, quality_report)
-            calibrated = calibration["calibrated_confidence"]
-            rendered = result.text.strip()
-    if not result.prompt_only:
-        calibration = calibrate_confidence(model_confidence, quality_report)
+    render_state = _render_model_briefing_output(
+        result=result,
+        prompt=prompt,
+        quality_report=quality_report,
+        scaffold=scaffold,
+        source_lookup=source_lookup,
+        prioritized_map=prioritized_map,
+    )
+    rendered = str(render_state["rendered"])
+    model_confidence = str(render_state["model_confidence"])
+    calibrated = str(render_state["calibrated"])
+    calibration = render_state["calibration"]
+    parse_ok = bool(render_state["parse_ok"])
+    parse_diagnostics = render_state["parse_diagnostics"]
     rendered = _ensure_confidence_visible(rendered, calibrated)
     rendered = append_evidence_by_decision_lever(rendered, scaffold)
     rendered = append_map_coverage_snapshot(rendered, scaffold)
     rendered = _normalize_reader_punctuation(expand_reader_map_references(rendered, prioritized_map))
     rendered = _clean_reader_packet_metadata(replace_source_ids(rendered, source_lookup))
     rendered = polish_briefing_for_reader(rendered, scaffold)
-    memo_package = compose_final_reader_memo_package(rendered, scaffold)
-    deterministic_reader_memo = str(memo_package["memo"])
-    evidence_appendix = str(memo_package["appendix"])
-    rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
-    rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
-    rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
-    rewrite_result = rewrite_reader_memo_with_contract(
-        deterministic_reader_memo,
-        evidence_appendix,
-        memo_package["scaffold"],
-        prioritized_map,
+    final_outputs = _write_final_reader_outputs(
+        rendered=rendered,
+        scaffold=scaffold,
+        prioritized_map=prioritized_map,
+        artifacts=artifacts,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
-    reader_memo = rewrite_result["memo"]
-    if rewrite_result.get("prompt"):
-        write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
-    if rewrite_result.get("raw"):
-        write_markdown(rewrite_raw_path, str(rewrite_result.get("raw", "")))
-    combined_for_validation = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
-    polish_report = briefing_reader_polish_report(combined_for_validation, memo_package["scaffold"])
-    briefing_validation = validate_briefing_against_scaffold(combined_for_validation, memo_package["scaffold"], prioritized_map)
-    briefing_path = artifacts / "BRIEFING.md"
-    evidence_appendix_path = artifacts / "EVIDENCE_APPENDIX.md"
+    briefing_path = final_outputs["briefing_path"]
+    evidence_appendix_path = final_outputs["evidence_appendix_path"]
     summary_path = artifacts / "briefing_summary.json"
-    polish_report_path = artifacts / "briefing_polish_report.json"
-    curation_report_path = artifacts / "evidence_curation_report.json"
-    write_markdown(briefing_path, reader_memo.rstrip() + "\n")
-    write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
-    write_json(briefing_validation_path, briefing_validation)
-    write_json(polish_report_path, polish_report)
-    write_json(curation_report_path, memo_package["curation_report"])
-    write_json(rewrite_report_path, rewrite_result["report"])
     write_json(
         summary_path,
-        {
-            "schema_id": "map_briefing_v1",
-            "backend": result.backend,
-            "parse_ok": parse_ok,
-            "parse_diagnostics": parse_diagnostics,
-            "question": question,
-            "paths": {
-                "briefing": _rel(repo_root, briefing_path),
-                "evidence_appendix": _rel(repo_root, evidence_appendix_path),
-                "prompt": _rel(repo_root, prompt_path),
-                "raw": _rel(repo_root, raw_path),
-                "prioritized_map": _rel(repo_root, prioritized_map_path),
-                "prioritization_report": _rel(repo_root, prioritization_report_path),
-                "generated_map_erosion_audit": _rel(repo_root, erosion_audit_path),
-                "map_sufficiency_report": _rel(repo_root, sufficiency_report_path),
-                "briefing_validation_report": _rel(repo_root, briefing_validation_path),
-                "briefing_polish_report": _rel(repo_root, polish_report_path),
-                "evidence_curation_report": _rel(repo_root, curation_report_path),
-                "reader_memo_rewrite_report": _rel(repo_root, rewrite_report_path),
-                "reader_memo_rewrite_prompt": _rel(repo_root, rewrite_prompt_path) if rewrite_result.get("prompt") else None,
-                "reader_memo_rewrite_raw": _rel(repo_root, rewrite_raw_path) if rewrite_result.get("raw") else None,
+        _map_briefing_summary_payload(
+            repo_root=repo_root,
+            result_backend=result.backend,
+            parse_ok=parse_ok,
+            parse_diagnostics=parse_diagnostics,
+            question=question,
+            paths={
+                "briefing": briefing_path,
+                "evidence_appendix": evidence_appendix_path,
+                "prompt": prompt_path,
+                "raw": raw_path,
+                "prioritized_map": prioritized_map_path,
+                "prioritization_report": prioritization_report_path,
+                "generated_map_erosion_audit": erosion_audit_path,
+                "map_sufficiency_report": sufficiency_report_path,
+                **final_outputs["summary_paths"],
             },
-            "source_display_names": source_lookup,
-            "map_quality_status": str(quality_report.get("status", "unknown")),
-            "map_quality_score": quality_report.get("score"),
-            "model_confidence": model_confidence,
-            "calibrated_confidence": calibrated,
-            "confidence_reasons": calibration["reasons"],
-            "claim_count": len(_claims(candidate_map)),
-            "prioritized_claim_count": len(_claims(prioritized_map)),
-            "requested_max_claims": max_claims,
-            "effective_max_claims": effective_max_claims,
-            "relation_count": len(_relations(candidate_map)),
-            "prioritized_relation_count": len(_relations(prioritized_map)),
-            "audit_item_count": len(erosion_audit.get("items", [])),
-            "map_sufficiency_status": scaffold.get("map_sufficiency_report", {}).get("status"),
-            "briefing_validation_status": briefing_validation.get("status"),
-            "briefing_validation_score": briefing_validation.get("score"),
-            "briefing_polish_status": polish_report.get("status"),
-            "briefing_polish_score": polish_report.get("score"),
-            "reader_memo_rewrite_status": rewrite_result["report"].get("status"),
-        },
+            source_lookup=source_lookup,
+            quality_report=quality_report,
+            model_confidence=model_confidence,
+            calibrated=calibrated,
+            calibration=calibration,
+            candidate_map=candidate_map,
+            prioritized_map=prioritized_map,
+            max_claims=max_claims,
+            effective_max_claims=effective_max_claims,
+            erosion_audit=erosion_audit,
+            scaffold=scaffold,
+            briefing_validation=final_outputs["briefing_validation"],
+            polish_report=final_outputs["polish_report"],
+            rewrite_result=final_outputs["rewrite_result"],
+        ),
     )
     return MapBriefingResult(
         briefing_path=briefing_path,
@@ -259,6 +203,166 @@ def run_map_briefing(
         calibrated_confidence=calibrated,
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
+
+
+def _write_final_reader_outputs(
+    *,
+    rendered: str,
+    scaffold: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    artifacts: Path,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    memo_package = compose_final_reader_memo_package(rendered, scaffold)
+    evidence_appendix = str(memo_package["appendix"])
+    rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
+    rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
+    rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
+    rewrite_result = rewrite_reader_memo_with_contract(
+        str(memo_package["memo"]),
+        evidence_appendix,
+        memo_package["scaffold"],
+        prioritized_map,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if rewrite_result.get("prompt"):
+        write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
+    if rewrite_result.get("raw"):
+        write_markdown(rewrite_raw_path, str(rewrite_result.get("raw", "")))
+    reader_memo = str(rewrite_result["memo"])
+    combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
+    polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
+    validation = validate_briefing_against_scaffold(combined, memo_package["scaffold"], prioritized_map)
+    briefing_path = artifacts / "BRIEFING.md"
+    evidence_appendix_path = artifacts / "EVIDENCE_APPENDIX.md"
+    polish_report_path = artifacts / "briefing_polish_report.json"
+    curation_report_path = artifacts / "evidence_curation_report.json"
+    briefing_validation_path = artifacts / "briefing_validation_report.json"
+    write_markdown(briefing_path, reader_memo.rstrip() + "\n")
+    write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
+    write_json(briefing_validation_path, validation)
+    write_json(polish_report_path, polish_report)
+    write_json(curation_report_path, memo_package["curation_report"])
+    write_json(rewrite_report_path, rewrite_result["report"])
+    return {
+        "briefing_path": briefing_path,
+        "evidence_appendix_path": evidence_appendix_path,
+        "briefing_validation": validation,
+        "polish_report": polish_report,
+        "rewrite_result": rewrite_result,
+        "summary_paths": {
+            "briefing_validation_report": briefing_validation_path,
+            "briefing_polish_report": polish_report_path,
+            "evidence_curation_report": curation_report_path,
+            "reader_memo_rewrite_report": rewrite_report_path,
+            "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
+            "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,
+        },
+    }
+
+
+def _render_model_briefing_output(
+    *,
+    result: Any,
+    prompt: str,
+    quality_report: dict[str, Any],
+    scaffold: dict[str, Any],
+    source_lookup: dict[str, str],
+    prioritized_map: dict[str, Any],
+) -> dict[str, Any]:
+    if result.prompt_only:
+        model_confidence = "not specified"
+        calibration = calibrate_confidence(model_confidence, quality_report)
+        return {
+            "rendered": prompt,
+            "model_confidence": model_confidence,
+            "calibrated": calibration["calibrated_confidence"],
+            "calibration": calibration,
+            "parse_ok": False,
+            "parse_diagnostics": model_parse_diagnostics(result.text, parse_ok=False),
+        }
+    payload = _parse_json(result.text)
+    parse_ok = isinstance(payload, dict)
+    parse_diagnostics = model_parse_diagnostics(result.text, parse_ok=parse_ok)
+    model_confidence = _confidence_label(payload.get("confidence")) if payload is not None else "not specified"
+    calibration = calibrate_confidence(model_confidence, quality_report)
+    calibrated = calibration["calibrated_confidence"]
+    if payload is None and _looks_like_structured_attempt(result.text):
+        payload = deterministic_briefing_payload(
+            scaffold,
+            extracted_brief=_extract_json_string_field_local(result.text, "decision_brief"),
+            parse_failure=True,
+        )
+    if payload is not None:
+        payload = repair_briefing_payload(payload, scaffold, source_lookup, prioritized_map)
+        payload["confidence"] = calibrated
+        rendered = _render_synthesis_packet(payload, map_payload=prioritized_map, requirements=())
+    else:
+        rendered = result.text.strip()
+    return {
+        "rendered": rendered,
+        "model_confidence": model_confidence,
+        "calibrated": calibrated,
+        "calibration": calibration,
+        "parse_ok": parse_ok,
+        "parse_diagnostics": parse_diagnostics,
+    }
+
+
+def _map_briefing_summary_payload(
+    *,
+    repo_root: Path,
+    result_backend: str,
+    parse_ok: bool,
+    parse_diagnostics: dict[str, Any],
+    question: str,
+    paths: dict[str, Path | None],
+    source_lookup: dict[str, str],
+    quality_report: dict[str, Any],
+    model_confidence: str,
+    calibrated: str,
+    calibration: dict[str, Any],
+    candidate_map: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    max_claims: int | None,
+    effective_max_claims: int,
+    erosion_audit: dict[str, Any],
+    scaffold: dict[str, Any],
+    briefing_validation: dict[str, Any],
+    polish_report: dict[str, Any],
+    rewrite_result: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema_id": "map_briefing_v1",
+        "backend": result_backend,
+        "parse_ok": parse_ok,
+        "parse_diagnostics": parse_diagnostics,
+        "question": question,
+        "paths": {key: _rel(repo_root, value) if value else None for key, value in paths.items()},
+        "source_display_names": source_lookup,
+        "map_quality_status": str(quality_report.get("status", "unknown")),
+        "map_quality_score": quality_report.get("score"),
+        "model_confidence": model_confidence,
+        "calibrated_confidence": calibrated,
+        "confidence_reasons": calibration["reasons"],
+        "claim_count": len(_claims(candidate_map)),
+        "prioritized_claim_count": len(_claims(prioritized_map)),
+        "requested_max_claims": max_claims,
+        "effective_max_claims": effective_max_claims,
+        "relation_count": len(_relations(candidate_map)),
+        "prioritized_relation_count": len(_relations(prioritized_map)),
+        "audit_item_count": len(erosion_audit.get("items", [])),
+        "map_sufficiency_status": scaffold.get("map_sufficiency_report", {}).get("status"),
+        "briefing_validation_status": briefing_validation.get("status"),
+        "briefing_validation_score": briefing_validation.get("score"),
+        "briefing_polish_status": polish_report.get("status"),
+        "briefing_polish_score": polish_report.get("score"),
+        "reader_memo_rewrite_status": rewrite_result["report"].get("status"),
+    }
 
 
 def build_map_briefing_prompt(

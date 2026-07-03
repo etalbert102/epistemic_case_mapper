@@ -77,7 +77,13 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
 
     source_ids = {source.source_id for source in case_map.sources}
     claim_ids = {claim.claim_id for claim in case_map.claims}
+    _validate_sources(case_map, failures)
+    _validate_claims(case_map, source_ids, failures)
+    _validate_relations(case_map, claim_ids, failures)
+    _validate_open_questions(case_map, failures)
 
+
+def _validate_sources(case_map: CaseMap, failures: list[str]) -> None:
     for source in case_map.sources:
         if not source.title:
             failures.append(f"missing_source_title source={source.source_id}")
@@ -89,6 +95,8 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
             if not (source.excerpt or source.text or source.path):
                 failures.append(f"missing_source_excerpt source={source.source_id}")
 
+
+def _validate_claims(case_map: CaseMap, source_ids: set[str], failures: list[str]) -> None:
     for claim in case_map.claims:
         if claim.source_id not in source_ids:
             failures.append(f"unknown_claim_source claim={claim.claim_id} source={claim.source_id}")
@@ -115,6 +123,8 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
         if not claim.confidence:
             failures.append(f"missing_claim_confidence claim={claim.claim_id}")
 
+
+def _validate_relations(case_map: CaseMap, claim_ids: set[str], failures: list[str]) -> None:
     for relation in case_map.relations:
         if relation.source_claim_id not in claim_ids:
             failures.append(f"unknown_relation_source relation={relation.relation_id} claim={relation.source_claim_id}")
@@ -123,6 +133,8 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
         if not relation.rationale:
             failures.append(f"missing_relation_rationale relation={relation.relation_id}")
 
+
+def _validate_open_questions(case_map: CaseMap, failures: list[str]) -> None:
     for question in case_map.open_questions:
         if not question.text:
             failures.append(f"missing_open_question_text question={question.question_id}")

@@ -19,12 +19,9 @@ long_files = [
 ]
 long_functions = [
   "src/epistemic_case_mapper/cli.py::main",
-  "src/epistemic_case_mapper/cli.py::_run_decision_packet",
   "src/epistemic_case_mapper/config_profiles.py::_technical_safety_case",
   "src/epistemic_case_mapper/config_profiles.py::_biomedical_nutrition_case",
   "src/epistemic_case_mapper/llm_stress_eval.py::run_llm_stress_eval",
-  "src/epistemic_case_mapper/map_briefing.py::run_map_briefing",
-  "src/epistemic_case_mapper/staged_semantic_pipeline.py::run_staged_map",
   "src/epistemic_case_mapper/staged_semantic_pipeline.py::_extract_relations",
   "src/epistemic_case_mapper/staged_semantic_pipeline.py::_quality_issues",
   "scripts/build_case_map.py::render_audit",
@@ -33,7 +30,6 @@ long_functions = [
 ]
 branchy_functions = [
   "src/epistemic_case_mapper/cli.py::main",
-  "scripts/validate_case_artifact.py::_validate_case_map",
 ]
 
 [validation]
