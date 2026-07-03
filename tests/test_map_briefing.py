@@ -40,6 +40,7 @@ from epistemic_case_mapper.map_briefing import (
     reader_memo_rewrite_issues,
     run_map_briefing,
     validate_briefing_against_scaffold,
+    _rewrite_mentions_anchor_row,
 )
 from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 
@@ -700,6 +701,78 @@ The structured evidence trail is in `EVIDENCE_APPENDIX.md`.
 
     assert "rewrite crux table contains non-human current-read language" in issues
     assert repaired_issues == []
+
+
+def test_rewrite_accepts_synthetic_option_comparison_without_internal_source_label() -> None:
+    row = {
+        "slot": "Alternatives and comparators",
+        "claim": (
+            "Compared option alpha versus option beta on outcome effect: "
+            "option alpha reduced failures by 34%; option beta left high-risk sites unchanged."
+        ),
+        "source": "structured option comparison",
+        "anchor_terms": ["34", "compared", "option", "alpha", "versus", "beta"],
+    }
+    rewrite = (
+        "Option alpha should be preferred over option beta because option alpha reduced failures by 34%, "
+        "while option beta left high-risk sites unchanged."
+    )
+
+    assert _rewrite_mentions_anchor_row(rewrite, row)
+
+
+def test_rewrite_still_requires_real_source_labels_for_source_backed_rows() -> None:
+    row = {
+        "slot": "Main support",
+        "claim": "Option alpha reduced failures by 34% in the evaluation.",
+        "source": "Evaluation Report",
+        "anchor_terms": ["34", "option", "alpha", "reduced", "failures"],
+    }
+
+    assert not _rewrite_mentions_anchor_row("Option alpha reduced failures by 34%.", row)
+    assert _rewrite_mentions_anchor_row("Option alpha reduced failures by 34% (Evaluation Report).", row)
+
+
+def test_rewrite_repair_tones_down_generic_overclaim_language() -> None:
+    rewrite = """## Decision Brief
+
+The intervention has significant safety benefits, significantly reduced failures, and is proven safe.
+
+**Confidence:** medium
+
+## Why This Read
+
+- **Proven Safety Impact:** The mapped evaluation reported fewer failures.
+- **Proven Outcome:** The source reported a change.
+"""
+
+    repaired = repair_reader_memo_rewrite_candidate(rewrite, {}, {"confidence": "medium"})
+
+    assert "significant safety benefits" not in repaired
+    assert "proven safe" not in repaired.lower()
+    assert "Proven Safety Impact" not in repaired
+    assert "Proven Outcome" not in repaired
+    assert "significantly reduced" not in repaired
+    assert "source-supported safety benefits" in repaired
+    assert "Mapped Safety Signal" in repaired
+    assert "Mapped Outcome" in repaired
+
+
+def test_rewrite_repair_fixes_near_miss_parenthetical_source_labels() -> None:
+    rewrite = "The decision turns on access risk and timing issues (Method Separated Guidance)."
+    contract = {
+        "confidence": "medium",
+        "required_evidence": [
+            {
+                "source": "Method Separation Guidance",
+                "claim": "Access risk and timing issues affect the intervention.",
+            }
+        ],
+    }
+
+    repaired = repair_reader_memo_rewrite_candidate(rewrite, {}, contract)
+
+    assert "(Method Separation Guidance)" in repaired
 
 
 def test_curated_evidence_packets_drop_reference_debris() -> None:

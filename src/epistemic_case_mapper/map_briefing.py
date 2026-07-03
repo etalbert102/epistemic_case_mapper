@@ -5,6 +5,7 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -969,26 +970,21 @@ def rewrite_reader_memo_with_contract(
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     rewritten = str(payload.get("memo_markdown", "")).strip()
     rewritten = ensure_rewrite_confidence_visible(rewritten, str(contract.get("confidence") or "medium"))
-    issues = reader_memo_rewrite_issues(rewritten, memo, evidence_appendix, scaffold, candidate_map, contract)
     repaired = repair_reader_memo_rewrite_candidate(rewritten, scaffold, contract)
-    repair_issues: list[str] = []
-    if issues and repaired != rewritten:
-        repair_issues = reader_memo_rewrite_issues(repaired, memo, evidence_appendix, scaffold, candidate_map, contract)
+    candidate = repaired if repaired != rewritten else rewritten
+    issues = reader_memo_rewrite_issues(candidate, memo, evidence_appendix, scaffold, candidate_map, contract)
     report["issues"] = issues
     report["raw_word_count"] = len(rewritten.split())
     report["deterministic_word_count"] = len(memo.split())
+    if repaired != rewritten:
+        report["repair_issues"] = issues
+        report["repaired_word_count"] = len(repaired.split())
     if issues:
-        report["repair_issues"] = repair_issues
-        report["repaired_word_count"] = len(repaired.split()) if repaired != rewritten else None
-        if repaired != rewritten and not repair_issues:
-            report["status"] = "accepted_after_repair"
-            report["accepted"] = True
-            return {"memo": clean_reader_memo_text(repaired), "prompt": prompt, "raw": raw, "report": report}
         report["status"] = "rejected_fallback"
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    report["status"] = "accepted"
+    report["status"] = "accepted_after_repair" if repaired != rewritten else "accepted"
     report["accepted"] = True
-    return {"memo": clean_reader_memo_text(rewritten), "prompt": prompt, "raw": raw, "report": report}
+    return {"memo": clean_reader_memo_text(candidate), "prompt": prompt, "raw": raw, "report": report}
 
 
 def repair_reader_memo_rewrite_candidate(markdown: str, scaffold: dict[str, Any], contract: dict[str, Any]) -> str:
@@ -1002,6 +998,7 @@ def repair_reader_memo_rewrite_candidate(markdown: str, scaffold: dict[str, Any]
     repaired = clean_reader_memo_text(markdown)
     repaired = _repair_reader_source_label_noise(repaired, scaffold, contract)
     repaired = _replace_internal_reader_phrases(repaired)
+    repaired = _repair_overclaim_strength_language(repaired)
     repaired = _repair_generic_crux_table_cells(repaired, contract)
     repaired = _drop_duplicate_reader_sentences(repaired)
     repaired = ensure_rewrite_confidence_visible(repaired, str(contract.get("confidence") or "medium"))
@@ -1515,6 +1512,29 @@ def _replace_internal_reader_phrases(text: str) -> str:
     return cleaned
 
 
+def _repair_overclaim_strength_language(text: str) -> str:
+    replacements = {
+        "Proven Safety Impact": "Mapped Safety Signal",
+        "Proven Outcome": "Mapped Outcome",
+        "proven safety impact": "mapped safety signal",
+        "proven outcome": "mapped outcome",
+        "significant safety benefits": "source-supported safety benefits",
+        "significant benefit": "source-supported benefit",
+        "significantly reduce": "reduce",
+        "significantly reduced": "reduced",
+        "significant reduction": "mapped reduction",
+        "proven benefit": "source-supported benefit",
+        "proven effective": "supported in the mapped evidence",
+        "proven safe": "not established as risk-free by this packet",
+        "no risk": "no established risk-free finding",
+        "clearly safe": "not established as risk-free by this packet",
+    }
+    cleaned = text
+    for phrase, replacement in replacements.items():
+        cleaned = re.sub(re.escape(phrase), replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
 def _repair_reader_source_label_noise(text: str, scaffold: dict[str, Any], contract: dict[str, Any]) -> str:
     source_names = set()
     source_lookup = scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}
@@ -1532,6 +1552,7 @@ def _repair_reader_source_label_noise(text: str, scaffold: dict[str, Any], contr
         for variant in variants:
             if variant and variant != source:
                 cleaned = re.sub(rf"\b{re.escape(variant)}\b", source, cleaned)
+    cleaned = _repair_near_miss_parenthetical_sources(cleaned, {_reader_source_name(source) for source in source_names})
     cleaned = re.sub(r"\(([^()\n]*_[^()\n]*)\)", lambda match: "(" + _dedupe_adjacent_words(match.group(1).replace("_", " ")) + ")", cleaned)
     return cleaned
 
@@ -1545,6 +1566,53 @@ def _source_label_noise_variants(source: str) -> list[str]:
             variants.add(" ".join(duplicated))
             variants.add("_".join(duplicated))
     return sorted(variants, key=len, reverse=True)
+
+
+def _repair_near_miss_parenthetical_sources(text: str, source_names: set[str]) -> str:
+    sources = [source for source in source_names if source]
+    if not sources:
+        return text
+
+    def replace(match: re.Match[str]) -> str:
+        label = match.group(1).strip()
+        if not label or ";" in label or "," in label:
+            return match.group(0)
+        repaired = _nearest_source_label(label, sources)
+        if not repaired:
+            return match.group(0)
+        return f"({repaired})"
+
+    return re.sub(r"\(([^()\n]{4,90})\)", replace, text)
+
+
+def _nearest_source_label(label: str, sources: list[str]) -> str:
+    normalized_label = _normalize_source_label(label)
+    best_source = ""
+    best_score = 0.0
+    for source in sources:
+        normalized_source = _normalize_source_label(source)
+        if normalized_label == normalized_source:
+            return source
+        token_overlap = _source_label_token_overlap(normalized_label, normalized_source)
+        if token_overlap < 0.6:
+            continue
+        score = SequenceMatcher(None, normalized_label, normalized_source).ratio()
+        if score > best_score:
+            best_score = score
+            best_source = source
+    return best_source if best_score >= 0.84 else ""
+
+
+def _normalize_source_label(label: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", label.lower())).strip()
+
+
+def _source_label_token_overlap(left: str, right: str) -> float:
+    left_terms = set(left.split())
+    right_terms = set(right.split())
+    if not left_terms or not right_terms:
+        return 0.0
+    return len(left_terms & right_terms) / max(1, min(len(left_terms), len(right_terms)))
 
 
 def _dedupe_adjacent_words(text: str) -> str:
@@ -1683,13 +1751,56 @@ def _rewrite_has_raw_identifiers(text: str) -> bool:
 def _rewrite_mentions_anchor_row(text: str, row: dict[str, Any]) -> bool:
     lowered = text.lower()
     source = str(row.get("source", "")).strip().lower()
-    source_ok = not source or source in lowered
     terms = [str(term).lower() for term in row.get("anchor_terms", []) if isinstance(term, str)]
+    if _is_synthetic_rewrite_source(source):
+        return _rewrite_mentions_synthetic_anchor_row(lowered, row, terms)
+    source_ok = not source or source in lowered
     if not terms:
         return source_ok
     hits = sum(1 for term in terms if term.lower() in lowered)
     required = 1 if len(terms) <= 2 else 2
     return source_ok and hits >= required
+
+
+def _is_synthetic_rewrite_source(source: str) -> bool:
+    return source in {"structured option comparison"}
+
+
+def _rewrite_mentions_synthetic_anchor_row(lowered_text: str, row: dict[str, Any], terms: list[str]) -> bool:
+    if not terms:
+        return True
+    hits = sum(1 for term in terms if term in lowered_text)
+    required = min(3, max(2, len(terms) // 2))
+    if hits < required:
+        return False
+    claim = str(row.get("claim", "")).lower()
+    if "compared " in claim or " versus " in claim or " vs " in claim:
+        return _rewrite_mentions_comparison_sides(lowered_text, claim)
+    return True
+
+
+def _rewrite_mentions_comparison_sides(lowered_text: str, claim: str) -> bool:
+    match = re.search(
+        r"\bcompared\s+(?P<a>.+?)\s+(?:versus|vs\.?|over|rather than|instead of)\s+(?P<b>.+?)\s+on\b",
+        claim,
+    )
+    if not match:
+        return True
+    side_a = _comparison_side_terms(match.group("a"))
+    side_b = _comparison_side_terms(match.group("b"))
+    return _mentions_any_term(lowered_text, side_a) and _mentions_any_term(lowered_text, side_b)
+
+
+def _comparison_side_terms(text: str) -> list[str]:
+    return [
+        term
+        for term in _content_terms(text)
+        if len(term) >= 4 and term not in {"compared", "versus", "rather", "instead", "with", "over"}
+    ][:4]
+
+
+def _mentions_any_term(lowered_text: str, terms: list[str]) -> bool:
+    return bool(terms) and any(term in lowered_text for term in terms)
 
 
 def _rewrite_mentions_gap(text: str, gap: str) -> bool:
