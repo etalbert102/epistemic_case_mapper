@@ -183,6 +183,41 @@ sources:
 
 
 def _manifest_text() -> str:
+    return (
+        _manifest_header_text()
+        + _manifest_markdown_region_text(
+            region_id="demo_region",
+            map_path="examples/demo/worked_map.md",
+            audit_path="examples/demo/audit.md",
+            baseline_path="examples/demo/baseline.md",
+            best_path="examples/demo/BEST_REGIONS.md",
+            output_json_path="examples/demo/worked_map.json",
+            claim_base=1,
+            relation_base=1,
+            loss_base=1,
+            baseline_title="Demo Blinded Baseline",
+            baseline_question="Can the first demo region be synthesized from spans?",
+            baseline_output_path="examples/demo/blinded_flat_synthesis_baseline_gemma4.md",
+        )
+        + _manifest_markdown_region_text(
+            region_id="demo_region_followup",
+            map_path="examples/demo/worked_map_followup.md",
+            audit_path="examples/demo/audit_followup.md",
+            baseline_path="examples/demo/baseline_followup.md",
+            best_path="examples/demo/BEST_REGIONS_FOLLOWUP.md",
+            output_json_path="examples/demo/worked_map_followup.json",
+            claim_base=101,
+            relation_base=101,
+            loss_base=101,
+            baseline_title="Demo Followup Blinded Baseline",
+            baseline_question="Can the second demo region be synthesized from spans?",
+            baseline_output_path="examples/demo/blinded_followup_flat_synthesis_baseline_gemma4.md",
+        )
+        + _manifest_json_region_text()
+    )
+
+
+def _manifest_header_text() -> str:
     return """schema_version: 1
 package_id: demo_package
 package_label: Demo Package
@@ -228,16 +263,34 @@ cases:
       include: true
       label: Demo Transfer Case
     worked_regions:
-      - case_key: demo
+"""
+
+
+def _manifest_markdown_region_text(
+    *,
+    region_id: str,
+    map_path: str,
+    audit_path: str,
+    baseline_path: str,
+    best_path: str,
+    output_json_path: str,
+    claim_base: int,
+    relation_base: int,
+    loss_base: int,
+    baseline_title: str,
+    baseline_question: str,
+    baseline_output_path: str,
+) -> str:
+    return f"""      - case_key: demo
         case_label: Demo Transfer Case
-        region_id: demo_region
+        region_id: {region_id}
         id_prefix: demo
         definition_path: docs/worked_regions/demo_region.md
-        map_path: examples/demo/worked_map.md
-        audit_path: examples/demo/audit.md
-        baseline_path: examples/demo/baseline.md
-        best_path: examples/demo/BEST_REGIONS.md
-        output_json_path: examples/demo/worked_map.json
+        map_path: {map_path}
+        audit_path: {audit_path}
+        baseline_path: {baseline_path}
+        best_path: {best_path}
+        output_json_path: {output_json_path}
         required_sources:
           - demo_source_1
           - demo_source_2
@@ -251,14 +304,14 @@ cases:
           min_surviving_checks: 1
           min_baseline_words: 10
         review:
-          worked_region_id: demo_region
-          claim_ids: ["claim:demo:001", "claim:demo:002"]
-          relation_ids: ["rel:demo:001"]
-          loss_ids: ["loss:demo:001"]
+          worked_region_id: {region_id}
+          claim_ids: ["claim:demo:{claim_base:03d}", "claim:demo:{claim_base + 1:03d}"]
+          relation_ids: ["rel:demo:{relation_base:03d}"]
+          loss_ids: ["loss:demo:{loss_base:03d}"]
         blinded_baseline:
-          title: Demo Blinded Baseline
-          question: Can the first demo region be synthesized from spans?
-          output_path: examples/demo/blinded_flat_synthesis_baseline_gemma4.md
+          title: {baseline_title}
+          question: {baseline_question}
+          output_path: {baseline_output_path}
           required_sources: [demo_source_1, demo_source_2]
           spans:
             - source_id: demo_source_1
@@ -268,47 +321,11 @@ cases:
               path: data/cases/demo/sources/text/source_2.txt
               ranges: [[1, 2]]
           min_words: 10
-      - case_key: demo
-        case_label: Demo Transfer Case
-        region_id: demo_region_followup
-        id_prefix: demo
-        definition_path: docs/worked_regions/demo_region.md
-        map_path: examples/demo/worked_map_followup.md
-        audit_path: examples/demo/audit_followup.md
-        baseline_path: examples/demo/baseline_followup.md
-        best_path: examples/demo/BEST_REGIONS_FOLLOWUP.md
-        output_json_path: examples/demo/worked_map_followup.json
-        required_sources:
-          - demo_source_1
-          - demo_source_2
-        thresholds:
-          min_claims: 3
-          max_claims: 8
-          min_relation_types: 2
-          min_crux_mentions: 1
-          min_evidence_rows: 2
-          min_losses: 1
-          min_surviving_checks: 1
-          min_baseline_words: 10
-        review:
-          worked_region_id: demo_region_followup
-          claim_ids: ["claim:demo:101", "claim:demo:102"]
-          relation_ids: ["rel:demo:101"]
-          loss_ids: ["loss:demo:101"]
-        blinded_baseline:
-          title: Demo Followup Blinded Baseline
-          question: Can the second demo region be synthesized from spans?
-          output_path: examples/demo/blinded_followup_flat_synthesis_baseline_gemma4.md
-          required_sources: [demo_source_1, demo_source_2]
-          spans:
-            - source_id: demo_source_1
-              path: data/cases/demo/sources/text/source_1.txt
-              ranges: [[1, 2]]
-            - source_id: demo_source_2
-              path: data/cases/demo/sources/text/source_2.txt
-              ranges: [[1, 2]]
-          min_words: 10
-      - case_key: demo
+"""
+
+
+def _manifest_json_region_text() -> str:
+    return """      - case_key: demo
         case_label: Demo Transfer Case
         region_id: demo_region_json
         id_prefix: demo

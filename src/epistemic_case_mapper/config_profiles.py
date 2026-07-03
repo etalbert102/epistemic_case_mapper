@@ -843,7 +843,12 @@ def _empirical_policy_decision() -> EpistemicConfigProfile:
             "Look for measurement-validity and external-validity claims before treating effect evidence as decisive.",
             "Represent implementation and cost conditions as depends_on or in_tension_with edges.",
         ],
-        vocabulary={
+        vocabulary=_empirical_policy_vocabulary(),
+    )
+
+
+def _empirical_policy_vocabulary() -> dict[str, Any]:
+    return {
             "profile_detection_markers": ["policy", "program", "implementation", "evaluation", "guideline", "city", "county", "district", "corridor", "public"],
             "profile_detection_threshold": 2,
             "crux_templates": [
@@ -888,8 +893,7 @@ def _empirical_policy_decision() -> EpistemicConfigProfile:
                 "Causal attribution of the observed effect",
             ],
             "crux_option_scope_markers": ["paint", "protected", "feasibility", "maintenance", "intersection"],
-        },
-    )
+    }
 
 
 def _technical_safety_case() -> EpistemicConfigProfile:
@@ -918,7 +922,12 @@ def _technical_safety_case() -> EpistemicConfigProfile:
             "Map mitigations to the failure modes they address and residual risks they leave.",
             "Use depends_on for controls that only work under operational assumptions.",
         ],
-        vocabulary={
+        vocabulary=_technical_safety_vocabulary(),
+    )
+
+
+def _technical_safety_vocabulary() -> dict[str, Any]:
+    return {
             "profile_detection_markers": ["safety", "hazard", "failure", "mitigation", "control", "monitoring", "ventilation", "filtration", "hvac", "hepa", "cadr", "merv"],
             "profile_detection_threshold": 2,
             "display_acronyms": {
@@ -1046,8 +1055,7 @@ def _technical_safety_case() -> EpistemicConfigProfile:
                     "would_change_if": "The intervention worked reliably without matching capacity to room or setting size.",
                 },
             ],
-        },
-    )
+    }
 
 
 def _biomedical_nutrition_case() -> EpistemicConfigProfile:
@@ -1077,7 +1085,12 @@ def _biomedical_nutrition_case() -> EpistemicConfigProfile:
             "Do not collapse direct health outcomes, biomarkers, mechanisms, and guideline advice into one evidence type.",
             "Represent dose, population, and substitution context as explicit scope or depends_on relations.",
         ],
-        vocabulary={
+        vocabulary=_biomedical_nutrition_vocabulary(),
+    )
+
+
+def _biomedical_nutrition_vocabulary() -> dict[str, Any]:
+    return {
             "profile_detection_markers": ["egg", "eggs", "diet", "dietary", "nutrition", "cholesterol", "ldl", "apob", "saturated fat", "cardiovascular"],
             "profile_detection_threshold": 2,
             "domain_leakage_terms": [" egg", " eggs", " dietary", " cholesterol", " apob", " saturated fat", " replacement foods"],
@@ -1190,63 +1203,68 @@ def _biomedical_nutrition_case() -> EpistemicConfigProfile:
                 "population_scope": ["healthy adults", "generally healthy", "free-living", "people with diabetes"],
                 "comparator": ["egg white", "plant protein", "replacement", "substitution"],
             },
-            "claim_concept_markers": {
-                "default_population": ["generally healthy", "healthy adults", "free of cardiovascular", "free-living"],
-                "dose_or_threshold": ["egg/day", "eggs/wk", "up to one", "up to 1", "moderate", "high intake"],
-                "hard_outcome_endpoint": ["cvd", "cardiovascular disease", "stroke", "myocardial infarction", "coronary heart disease"],
-                "surrogate_or_biomarker_endpoint": ["ldl", "hdl", "apob", "cholesterol", "lipid", "tmao", "trimethylamine"],
-                "mechanism_or_causal_path": ["homeostasis", "metabolite", "microbiome"],
-                "mechanism_ldl_apob": ["ldl", "apob", "atherosclerosis", "cholesterol homeostasis", "tmao", "trimethylamine", "metabolite", "microbiome"],
-                "dietary_context_or_saturated_fat": ["saturated fat", "dietary pattern", "red meat", "processed meat", "bacon", "sausage", "co-consum", "dietary cholesterol"],
-                "substitution_or_comparator": ["egg white", "plant protein", "low-egg", "high-egg"],
-                "subgroup_diabetes_or_metabolic_risk": ["type 2 diabetes", "diabetes", "t2d", "prediabetes", "impaired kidney", "renal", "vascular disease"],
-                "subgroup_fh_hyper_responder": ["familial hypercholesterolemia", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"],
-            },
-            "concept_visible_required_markers": {
-                "mechanism_ldl_apob": [["ldl", "ldl-c"], ["apo b", "apob"], ["cholesterol"], ["atherosclerosis"], ["tmao"], ["trimethylamine"], ["lipid"]],
-                "dietary_context_or_saturated_fat": [["dietary"], ["diet "], ["saturated fat"], ["red meat"], ["processed meat"], ["bacon"], ["sausage"], ["cholesterol"]],
-            },
-            "coverage_preferred_markers": {
-                "mechanism_ldl_apob": [["apob", "apo b"], ["ldl", "ldl-c"], ["cholesterol"]],
-                "surrogate_or_biomarker_endpoint": [["apob", "apo b"], ["ldl", "hdl", "lipid", "particle"], ["cholesterol", "biomarker"]],
-                "dietary_context_or_saturated_fat": [["saturated fat"], ["dietary pattern", "diet quality"], ["dietary cholesterol", "red meat", "processed meat", "overnutrition"]],
-                "substitution_or_comparator": [["plant protein", "egg white"], ["replace", "replacing", "substitut"], ["compared with", "versus", "instead of"]],
-                "guideline_or_policy": [["guideline", "dietary guidance"], ["recommendation", "advisory"], ["clinicians", "consumers", "should"]],
-            },
-            "coverage_visible_markers": {
-                "hard_outcome_endpoint": ["cvd", "cardiovascular", "stroke", "myocardial infarction", "coronary"],
-                "surrogate_or_biomarker_endpoint": ["ldl", "hdl", "apob", "cholesterol", "lipid"],
-                "mechanism_ldl_apob": ["ldl", "apob", "cholesterol", "atherosclerosis", "tmao", "trimethylamine", "metabolite"],
-                "dietary_context_or_saturated_fat": ["saturated fat", "dietary pattern", "dietary cholesterol", "red meat", "processed meat", "overnutrition"],
-                "substitution_or_comparator": ["egg white", "plant protein"],
-                "subgroup_diabetes_or_metabolic_risk": ["type 2 diabetes", "diabetes", "t2d", "prediabetes", "metabolic", "renal", "kidney"],
-                "subgroup_fh_hyper_responder": ["familial", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"],
-                "guideline_or_policy": ["dietary guidance"],
-            },
-            "evidence_family_markers": {
-                "guideline_or_recommendation": ["dietary guidance"],
-                "mechanism_or_biomarker": ["metabolite", "homeostasis", "ldl", "apob", "cholesterol", "microbiome"],
-            },
-            "concept_family_markers": {
-                "comparator_or_substitution": [["plant protein", "plant-based", "plant‐based", "plant based", "egg white", "protein source"]],
-                "mechanism_or_biomarker": [
-                    ["biomarker", "mechanism", "pathway", "mediated", "homeostasis"],
-                    ["ldl", "hdl", "apob", "apo b", "cholesterol", "lipid", "particle", "tmao", "metabolite", "microbiome"],
-                ],
-                "dietary_context": [
-                    ["saturated fat", "dietary pattern", "diet quality", "overall diet", "overnutrition"],
-                    ["red meat", "processed meat", "animal protein", "dietary cholesterol"],
-                ],
-                "subgroup_or_scope": [["diabetes", "t2d", "prediabetes", "kidney", "renal", "elderly", "familial", "hyper-responder", "hyper responder"]],
-                "endpoint_or_outcome": [["cardiovascular disease", "cvd", "stroke", "myocardial infarction", "coronary", "incident"]],
-            },
-            "concept_family_strong_markers": {
-                "comparator_or_substitution": ["plant protein", "plant-based", "plant‐based", "plant based", "replacement", "substitut", "instead of"],
-                "mechanism_or_biomarker": ["apob", "apo b", "ldl", "biomarker"],
-                "dietary_context": ["saturated fat", "dietary pattern", "diet quality"],
-            },
+            **_biomedical_nutrition_concept_vocabulary(),
+    }
+
+
+def _biomedical_nutrition_concept_vocabulary() -> dict[str, Any]:
+    return {
+        "claim_concept_markers": {
+            "default_population": ["generally healthy", "healthy adults", "free of cardiovascular", "free-living"],
+            "dose_or_threshold": ["egg/day", "eggs/wk", "up to one", "up to 1", "moderate", "high intake"],
+            "hard_outcome_endpoint": ["cvd", "cardiovascular disease", "stroke", "myocardial infarction", "coronary heart disease"],
+            "surrogate_or_biomarker_endpoint": ["ldl", "hdl", "apob", "cholesterol", "lipid", "tmao", "trimethylamine"],
+            "mechanism_or_causal_path": ["homeostasis", "metabolite", "microbiome"],
+            "mechanism_ldl_apob": ["ldl", "apob", "atherosclerosis", "cholesterol homeostasis", "tmao", "trimethylamine", "metabolite", "microbiome"],
+            "dietary_context_or_saturated_fat": ["saturated fat", "dietary pattern", "red meat", "processed meat", "bacon", "sausage", "co-consum", "dietary cholesterol"],
+            "substitution_or_comparator": ["egg white", "plant protein", "low-egg", "high-egg"],
+            "subgroup_diabetes_or_metabolic_risk": ["type 2 diabetes", "diabetes", "t2d", "prediabetes", "impaired kidney", "renal", "vascular disease"],
+            "subgroup_fh_hyper_responder": ["familial hypercholesterolemia", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"],
         },
-    )
+        "concept_visible_required_markers": {
+            "mechanism_ldl_apob": [["ldl", "ldl-c"], ["apo b", "apob"], ["cholesterol"], ["atherosclerosis"], ["tmao"], ["trimethylamine"], ["lipid"]],
+            "dietary_context_or_saturated_fat": [["dietary"], ["diet "], ["saturated fat"], ["red meat"], ["processed meat"], ["bacon"], ["sausage"], ["cholesterol"]],
+        },
+        "coverage_preferred_markers": {
+            "mechanism_ldl_apob": [["apob", "apo b"], ["ldl", "ldl-c"], ["cholesterol"]],
+            "surrogate_or_biomarker_endpoint": [["apob", "apo b"], ["ldl", "hdl", "lipid", "particle"], ["cholesterol", "biomarker"]],
+            "dietary_context_or_saturated_fat": [["saturated fat"], ["dietary pattern", "diet quality"], ["dietary cholesterol", "red meat", "processed meat", "overnutrition"]],
+            "substitution_or_comparator": [["plant protein", "egg white"], ["replace", "replacing", "substitut"], ["compared with", "versus", "instead of"]],
+            "guideline_or_policy": [["guideline", "dietary guidance"], ["recommendation", "advisory"], ["clinicians", "consumers", "should"]],
+        },
+        "coverage_visible_markers": {
+            "hard_outcome_endpoint": ["cvd", "cardiovascular", "stroke", "myocardial infarction", "coronary"],
+            "surrogate_or_biomarker_endpoint": ["ldl", "hdl", "apob", "cholesterol", "lipid"],
+            "mechanism_ldl_apob": ["ldl", "apob", "cholesterol", "atherosclerosis", "tmao", "trimethylamine", "metabolite"],
+            "dietary_context_or_saturated_fat": ["saturated fat", "dietary pattern", "dietary cholesterol", "red meat", "processed meat", "overnutrition"],
+            "substitution_or_comparator": ["egg white", "plant protein"],
+            "subgroup_diabetes_or_metabolic_risk": ["type 2 diabetes", "diabetes", "t2d", "prediabetes", "metabolic", "renal", "kidney"],
+            "subgroup_fh_hyper_responder": ["familial", "hyper-responder", "hyper responder", "high ldl", "high apob", "elevated ldl", "elevated apob"],
+            "guideline_or_policy": ["dietary guidance"],
+        },
+        "evidence_family_markers": {
+            "guideline_or_recommendation": ["dietary guidance"],
+            "mechanism_or_biomarker": ["metabolite", "homeostasis", "ldl", "apob", "cholesterol", "microbiome"],
+        },
+        "concept_family_markers": {
+            "comparator_or_substitution": [["plant protein", "plant-based", "plant‐based", "plant based", "egg white", "protein source"]],
+            "mechanism_or_biomarker": [
+                ["biomarker", "mechanism", "pathway", "mediated", "homeostasis"],
+                ["ldl", "hdl", "apob", "apo b", "cholesterol", "lipid", "particle", "tmao", "metabolite", "microbiome"],
+            ],
+            "dietary_context": [
+                ["saturated fat", "dietary pattern", "diet quality", "overall diet", "overnutrition"],
+                ["red meat", "processed meat", "animal protein", "dietary cholesterol"],
+            ],
+            "subgroup_or_scope": [["diabetes", "t2d", "prediabetes", "kidney", "renal", "elderly", "familial", "hyper-responder", "hyper responder"]],
+            "endpoint_or_outcome": [["cardiovascular disease", "cvd", "stroke", "myocardial infarction", "coronary", "incident"]],
+        },
+        "concept_family_strong_markers": {
+            "comparator_or_substitution": ["plant protein", "plant-based", "plant‐based", "plant based", "replacement", "substitut", "instead of"],
+            "mechanism_or_biomarker": ["apob", "apo b", "ldl", "biomarker"],
+            "dietary_context": ["saturated fat", "dietary pattern", "diet quality"],
+        },
+    }
 
 
 def _legal_regulatory_case() -> EpistemicConfigProfile:
