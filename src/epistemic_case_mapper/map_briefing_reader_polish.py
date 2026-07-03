@@ -9,6 +9,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_reader_graph_seed import reader_graph_seed_decision_brief
+
 from epistemic_case_mapper.classical_ml import (
     relation_edge_weight,
     tfidf_near_duplicate_pairs,
@@ -22,6 +24,7 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
+from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
@@ -277,7 +280,7 @@ def _slot_practical_implications(slot_model: dict[str, Any], *, scaffold: dict[s
             items.append(message)
     if not items:
         items = fallback_items
-    return _dedupe([_polish_reader_sentence_block(item, max_chars=240) for item in items if item])[:5]
+    return reader_facing_practical_items(_dedupe([_polish_reader_sentence_block(item, max_chars=240) for item in items if item]))[:5]
 
 def _build_final_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -> str:
     curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
@@ -699,6 +702,12 @@ def _executive_decision_brief(rendered: str, scaffold: dict[str, Any]) -> str:
     body = re.sub(r"\*\*Confidence:\*\*[^\n]+", "", body).strip()
     paragraphs = [paragraph.strip() for paragraph in re.split(r"\n\s*\n", body) if paragraph.strip()]
     if paragraphs and _procedural_or_generic_opening(paragraphs[0]):
+        graph_seed = reader_graph_seed_decision_brief(scaffold)
+        if graph_seed:
+            return graph_seed
+        deterministic = _deterministic_decision_brief(scaffold)
+        if deterministic and not _procedural_or_generic_opening(deterministic):
+            return _polish_reader_sentence_block(deterministic, max_chars=900)
         direct = str(frame.get("direct_answer", "")).strip()
         if direct:
             return _polish_reader_sentence_block(direct, max_chars=850)
@@ -711,7 +720,7 @@ def _executive_decision_brief(rendered: str, scaffold: dict[str, Any]) -> str:
 
 def _procedural_or_generic_opening(text: str) -> bool:
     lowered = text.lower().strip()
-    return lowered.startswith("state ") or "do not frame" in lowered or "evidence supports the default answer under stated conditions" in lowered
+    return lowered.startswith(("state ", "use this source packet as")) or "do not frame" in lowered or "evidence supports the default answer under stated conditions" in lowered
 
 def _executive_implications(rendered: str, scaffold: dict[str, Any]) -> list[str]:
     body = _markdown_section(rendered, "Decision Implications")
@@ -838,7 +847,6 @@ def _practical_implication_rules() -> tuple[tuple[str, str], ...]:
         ("high_risk_subgroup", "Do not automatically generalize the default answer to higher-risk subgroups; treat those as separate scope decisions."),
     )
 
-
 def _crux_rows_to_table(cruxes: list[dict[str, Any]], *, max_chars: int) -> str:
     lines = ["| Crux | Current read | Would change if |", "|---|---|---|"]
     for row in cruxes:
@@ -868,33 +876,8 @@ def _synthesis_evidence_sentences(synthesis: dict[str, Any], *, roles: tuple[str
 # Explicit cross-module dependencies for compatibility facade removal.
 from epistemic_case_mapper.map_briefing_decision_model import _looks_like_boilerplate_disclosure, _looks_like_publisher_or_license_boilerplate
 from epistemic_case_mapper.map_briefing_evidence_partition import _option_criterion_label
-from epistemic_case_mapper.map_briefing_evidence_tables import (
-    _clean_appendix_section,
-    _clean_reader_briefing_line,
-    _concept_label,
-    _contains_truncated_fragment,
-    _deterministic_appendix_from_scaffold,
-    _duplicate_sentence_count,
-    _executive_markdown,
-    _extract_confidence,
-    _first_complete_sentences,
-    _generic_cluster_proposition,
-    _join_polished_sentences,
-    _markdown_section,
-    _markdown_section_with_heading,
-    _markdown_table_cell,
-    _markdown_table_count,
-    _polish_reader_sentence_block,
-    _reader_source_name,
-    _source_suffix,
-    _trim_executive_sections,
-)
+from epistemic_case_mapper.map_briefing_evidence_tables import _clean_appendix_section, _clean_reader_briefing_line, _concept_label, _contains_truncated_fragment, _deterministic_appendix_from_scaffold, _duplicate_sentence_count, _executive_markdown, _extract_confidence, _first_complete_sentences, _generic_cluster_proposition, _join_polished_sentences, _markdown_section, _markdown_section_with_heading, _markdown_table_cell, _markdown_table_count, _polish_reader_sentence_block, _reader_source_name, _source_suffix, _trim_executive_sections
 from epistemic_case_mapper.map_briefing_memo_slots import _uses_nutrition_memo_profile
-from epistemic_case_mapper.map_briefing_pipeline import (
-    _deterministic_decision_brief,
-    _deterministic_decision_implications,
-    _deterministic_top_cruxes,
-    _sufficiency_implications,
-)
+from epistemic_case_mapper.map_briefing_pipeline import _deterministic_decision_brief, _deterministic_decision_implications, _deterministic_top_cruxes, _sufficiency_implications
 from epistemic_case_mapper.map_briefing_reader_contracts import _vocabulary_marker_list, _vocabulary_marker_map, _vocabulary_string_dict
 from epistemic_case_mapper.map_briefing_validation import _content_terms, _dedupe, _rendered_mentions_any_surface_term, _string_list

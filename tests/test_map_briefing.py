@@ -544,6 +544,31 @@ Moderate intake is acceptable within the stated scope.
     assert "Moderate intake is acceptable" in updated
 
 
+def test_reader_memo_metadata_applies_final_internal_phrase_cleanup() -> None:
+    memo = """## Decision Brief
+
+Participants WHO were enrolled met the scope condition.
+Participants from three cohorts WHO were eligible also met the scope condition.
+
+**Confidence:** medium
+
+## Limits
+
+- First limit.\\n* Second limit.
+Trailing escaped newline.\\n
+"""
+
+    updated = ensure_reader_memo_metadata(memo, {"source_display_names": {"study": "Study"}})
+
+    assert "Participants who were enrolled" in updated
+    assert "Participants from three cohorts who were eligible" in updated
+    assert "WHO were" not in updated
+    assert "\\n" not in updated
+    assert "Second limit." in updated
+    assert "Trailing escaped newline." in updated
+    assert "## Sources\n\n- Study" in updated
+
+
 def test_rewrite_candidate_repair_salvages_generic_crux_and_source_label_noise() -> None:
     scaffold = {
         "confidence_cap": "medium",

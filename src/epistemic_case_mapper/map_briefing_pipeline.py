@@ -34,6 +34,8 @@ from epistemic_case_mapper.decision_frame import (
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_run_summary, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
+from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
+from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 
 ROLE_PRIORITY = {
     "crux": 0,
@@ -116,16 +118,12 @@ def run_map_briefing(
     )
     briefing_validation_path = artifacts / "briefing_validation_report.json"
 
-    result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
     raw_path = artifacts / "map_briefing_raw.txt"
-    write_markdown(raw_path, result.text)
-    render_state = _render_model_briefing_output(
-        result=result,
+    write_markdown(raw_path, _section_first_generation_note(backend))
+    render_state = _section_first_render_state(
         prompt=prompt,
         quality_report=quality_report,
         scaffold=scaffold,
-        source_lookup=source_lookup,
-        prioritized_map=prioritized_map,
     )
     model_confidence = str(render_state["model_confidence"])
     calibrated = str(render_state["calibrated"])
@@ -166,7 +164,7 @@ def run_map_briefing(
     summary_path = write_run_summary(
         artifacts=artifacts,
         repo_root=repo_root,
-        backend=result.backend,
+        backend=backend,
         parse_ok=parse_ok,
         parse_diagnostics=parse_diagnostics,
         question=question,
@@ -198,7 +196,7 @@ def run_map_briefing(
         sufficiency_report_path=scaffold_paths["sufficiency_report"],
         briefing_validation_path=briefing_validation_path,
         gap_diagnosis_path=telemetry_paths["gap_diagnosis"],
-        backend=result.backend,
+        backend=backend,
         model_confidence=model_confidence,
         calibrated_confidence=calibrated,
         map_quality_status=str(quality_report.get("status", "unknown")),
@@ -308,52 +306,35 @@ def _write_final_reader_outputs(
         },
     }
 
-def _render_model_briefing_output(
+
+def _section_first_generation_note(backend: str) -> str:
+    return (
+        "Whole-memo synthesis skipped.\n\n"
+        "The pipeline built a deterministic source-grounded memo scaffold, then used model-backed section synthesis for each eligible section. "
+        f"Section synthesis backend: {backend}.\n"
+    )
+
+
+def _section_first_render_state(
     *,
-    result: Any,
     prompt: str,
     quality_report: dict[str, Any],
     scaffold: dict[str, Any],
-    source_lookup: dict[str, str],
-    prioritized_map: dict[str, Any],
 ) -> dict[str, Any]:
-    if result.prompt_only:
-        model_confidence = "not specified"
-        calibration = calibrate_confidence(model_confidence, quality_report)
-        return {
-            "rendered": prompt,
-            "model_confidence": model_confidence,
-            "calibrated": calibration["calibrated_confidence"],
-            "calibration": calibration,
-            "parse_ok": False,
-            "parse_diagnostics": model_parse_diagnostics(result.text, parse_ok=False),
-        }
-    payload = _parse_json(result.text)
-    parse_ok = isinstance(payload, dict)
-    parse_diagnostics = model_parse_diagnostics(result.text, parse_ok=parse_ok)
-    model_confidence = _confidence_label(payload.get("confidence")) if payload is not None else "not specified"
+    model_confidence = "not specified"
     calibration = calibrate_confidence(model_confidence, quality_report)
-    calibrated = calibration["calibrated_confidence"]
-    if payload is None and _looks_like_structured_attempt(result.text):
-        payload = deterministic_briefing_payload(
-            scaffold,
-            extracted_brief=_extract_json_string_field_local(result.text, "decision_brief"),
-            parse_failure=True,
-        )
-    if payload is not None:
-        payload = repair_briefing_payload(payload, scaffold, source_lookup, prioritized_map)
-        payload["confidence"] = calibrated
-        rendered = _render_synthesis_packet(payload, map_payload=prioritized_map, requirements=())
-    else:
-        rendered = result.text.strip()
+    payload = deterministic_briefing_payload(scaffold)
+    payload["confidence"] = calibration["calibrated_confidence"]
+    rendered = _render_synthesis_packet(payload, map_payload={}, requirements=())
     return {
         "rendered": rendered,
         "model_confidence": model_confidence,
-        "calibrated": calibrated,
+        "calibrated": calibration["calibrated_confidence"],
         "calibration": calibration,
-        "parse_ok": parse_ok,
-        "parse_diagnostics": parse_diagnostics,
+        "parse_ok": False,
+        "parse_diagnostics": model_parse_diagnostics(prompt, parse_ok=False),
     }
+
 
 def build_map_briefing_prompt(
     *,
@@ -386,6 +367,9 @@ def build_map_briefing_prompt(
             "- Use `decision_model.decision_slots` to include practical thresholds, high-risk subgroups, mechanisms, comparators, endpoint types, study designs, and recommendations when present.",
             "- If `decision_model.missing_decision_slots` names a slot that matters for the question, say the map did not expose it rather than inventing it.",
             "- Use `decision_model.evidence_families` to avoid dropping whole families such as RCTs, cohorts, guidelines, mechanisms, subgroups, comparators, or method limits.",
+            "- Use `graph_synthesis_packet` before raw evidence tables: draft from issue clusters, load-bearing claims, bridge claims, and central tensions.",
+            "- Each main section should correspond to a graph issue cluster or a cross-cluster tension; do not merely list isolated claims.",
+            "- Use graph orphan claims only as caveats or appendix material unless they are high-weight scope boundaries.",
             "- Use `decision_synthesis_model` as the controlling decision-support structure: preserve its evidence lines, central tensions, scope boundaries, exceptions, recommendations, and cruxes.",
             "- Treat `map_sufficiency_report.output_obligations` as the prose contract: satisfy present-slot obligations and explicitly acknowledge decision-relevant missing slots.",
             "- If `map_sufficiency_report.status` is limited or thin, make that limitation visible in caveats or audit trail.",
@@ -452,6 +436,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "briefing_contract": scaffold.get("briefing_contract"),
         "decision_frame": scaffold.get("decision_frame"),
         "decision_model": compact_decision_model,
+        "graph_synthesis_packet": scaffold.get("graph_synthesis_packet"),
         "decision_synthesis_model": scaffold.get("decision_synthesis_model"),
         "evidence_compression_table": scaffold.get("evidence_compression_table"),
         "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
@@ -539,6 +524,7 @@ def briefing_scaffold(
     proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
     evidence_compression_table = build_evidence_compression_table(candidate_map, evidence_ledger, source_lookup)
     concept_evidence_packets = build_concept_evidence_packets(evidence_ledger)
+    graph_synthesis_packet = build_graph_synthesis_packet(candidate_map, evidence_ledger, source_lookup)
     option_comparison = build_option_comparison(question, evidence_ledger, candidate_map)
     crux_contract = build_crux_contract(candidate_map, evidence_ledger, option_comparison)
     refined_cruxes = refine_crux_contract(crux_contract, candidate_map)
@@ -558,6 +544,7 @@ def briefing_scaffold(
             audit_trail.append(str(item["reader_anchor"]))
     scaffold = {
         "question": question,
+        "seed_claims": _claims(candidate_map)[:10],
         "quality_status": quality_report.get("status"),
         "quality_score": quality_report.get("score"),
         "confidence_cap": confidence_cap(quality_report),
@@ -568,6 +555,7 @@ def briefing_scaffold(
         "evidence_slot_ledger": build_evidence_slot_ledger(evidence_ledger),
         "proposition_clusters": proposition_clusters,
         "decision_model": decision_model,
+        "graph_synthesis_packet": graph_synthesis_packet,
         "evidence_compression_table": evidence_compression_table,
         "concept_evidence_packets": concept_evidence_packets,
         "option_comparison": option_comparison,
@@ -643,12 +631,20 @@ def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: 
     instruction = str(default_answer.get("plain_language_instruction", "")).strip()
     main_reasons = [row for row in decision_model.get("main_reasons", []) if isinstance(row, dict)]
     counters = [row for row in decision_model.get("strongest_counterarguments", []) if isinstance(row, dict)]
+    graph_claims = deterministic_graph_claim_sentences(scaffold)
+    if instruction.lower().startswith(("state ", "do not ", "phrase ")):
+        instruction = f"The current map supports a {classification} answer frame."
     parts = [instruction or f"The map supports a {classification} answer."]
     if main_reasons:
         parts.append(f"The main support is: {main_reasons[0].get('proposition', '')}")
+    elif graph_claims:
+        parts.append(f"The most load-bearing evidence is: {graph_claims[0]}")
     if counters:
         parts.append(f"The strongest counterposition is: {counters[0].get('proposition', '')}")
+    elif len(graph_claims) > 1:
+        parts.append(f"A second important evidence line is: {graph_claims[1]}")
     return " ".join(part.strip() for part in parts if part and str(part).strip())
+
 
 def _deterministic_decision_implications(decision_model: dict[str, Any]) -> list[str]:
     items: list[str] = []

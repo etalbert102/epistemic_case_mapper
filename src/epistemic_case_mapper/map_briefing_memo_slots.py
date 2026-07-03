@@ -21,6 +21,7 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 
 def reader_memo_rewrite_issues(
     rewritten: str,
@@ -118,20 +119,7 @@ def _contains_banned_editorial_phrase(text: str) -> bool:
     return any(phrase in lowered for phrase in _banned_editorial_phrases())
 
 def _replace_internal_reader_phrases(text: str) -> str:
-    replacements = {
-        "mapped support": "available evidence",
-        "map-backed read": "evidence-based read",
-        "map-backed default": "best-supported default",
-        "decision role": "function in the decision",
-        "load-bearing map distinction": "important distinction",
-        "preserved as a load-bearing map distinction": "important for interpreting the recommendation",
-        "not specified": "not established by this packet",
-        "full map-backed detail": "full source-grounded detail",
-    }
-    cleaned = text
-    for phrase, replacement in replacements.items():
-        cleaned = re.sub(re.escape(phrase), replacement, cleaned, flags=re.IGNORECASE)
-    return cleaned
+    return replace_internal_reader_phrases(text)
 
 def _repair_overclaim_strength_language(text: str) -> str:
     replacements = {

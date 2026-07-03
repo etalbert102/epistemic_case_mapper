@@ -11,7 +11,6 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     _deterministic_top_cruxes,
     _model_briefing_scaffold,
     _model_concept_evidence_packets,
-    _render_model_briefing_output,
     _sufficiency_implications,
     _write_final_reader_outputs,
     append_map_coverage_snapshot,
@@ -20,6 +19,7 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     deterministic_briefing_payload,
     run_map_briefing,
 )
+from epistemic_case_mapper.map_briefing_model_render import render_model_briefing_output as _render_model_briefing_output
 
 from epistemic_case_mapper.map_briefing_artifacts import map_briefing_summary_payload as _map_briefing_summary_payload
 
@@ -32,6 +32,7 @@ from epistemic_case_mapper.decision_model_slice import (
 )
 
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
+from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_telemetry import build_gap_diagnosis, render_gap_diagnosis_markdown
 
 from epistemic_case_mapper.map_briefing_reader_contracts import (
@@ -699,6 +700,7 @@ __all__ = [
     "briefing_scaffold",
     "build_compact_decision_model",
     "build_decision_synthesis_model",
+    "build_graph_synthesis_packet",
     "build_briefing_contract",
     "build_briefing_plan",
     "build_concept_evidence_packets",

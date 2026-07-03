@@ -23,6 +23,7 @@ def write_scaffold_artifacts(
         "erosion_audit": artifacts / "generated_map_erosion_audit.json",
         "sufficiency_report": artifacts / "map_sufficiency_report.json",
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
+        "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
     }
     write_markdown(paths["prompt"], prompt)
     write_json(paths["prioritized_map"], prioritized_map)
@@ -30,6 +31,7 @@ def write_scaffold_artifacts(
     write_json(paths["erosion_audit"], erosion_audit)
     write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
+    write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
     return paths
 
 
@@ -129,6 +131,7 @@ def write_run_summary(
             "generated_map_erosion_audit": scaffold_paths["erosion_audit"],
             "map_sufficiency_report": scaffold_paths["sufficiency_report"],
             "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
+            "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             **telemetry_paths,
             **final_outputs["summary_paths"],
         },
@@ -205,6 +208,8 @@ def map_briefing_summary_payload(
     rewrite_result: dict[str, Any],
     decision_synthesis_model: dict[str, Any],
 ) -> dict[str, Any]:
+    graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
+    graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
         "backend": result_backend,
@@ -234,6 +239,10 @@ def map_briefing_summary_payload(
         "decision_synthesis_evidence_line_count": len(decision_synthesis_model.get("evidence_lines", [])),
         "decision_synthesis_tension_count": len(decision_synthesis_model.get("central_tensions", [])),
         "decision_synthesis_recommendation_count": len(decision_synthesis_model.get("recommendations", [])),
+        "graph_issue_cluster_count": graph_summary.get("issue_cluster_count"),
+        "graph_tension_edge_count": graph_summary.get("tension_edge_count"),
+        "graph_load_bearing_claim_count": len(graph_packet.get("load_bearing_claims", [])),
+        "graph_bridge_claim_count": len(graph_packet.get("bridge_claims", [])),
     }
 
 

@@ -5,7 +5,9 @@ import json
 from epistemic_case_mapper.map_briefing import (
     annotate_map_with_evidence_slots,
     briefing_scaffold,
+    build_graph_synthesis_packet,
     build_decision_synthesis_model,
+    build_map_briefing_prompt,
     polish_briefing_for_reader,
 )
 
@@ -62,6 +64,8 @@ def test_generic_decision_synthesis_model_shapes_non_egg_brief() -> None:
     assert synthesis["scope_boundaries"] or synthesis["recommendations"]
     assert synthesis["cruxes"]
     assert "relation marks" not in json.dumps(synthesis).lower()
+    assert scaffold["graph_synthesis_packet"]["schema_id"] == "graph_synthesis_packet_v1"
+    assert scaffold["decision_synthesis_model"]["graph_summary"]["issue_cluster_count"] >= 1
 
 
 def test_decision_synthesis_filters_fragmented_generic_slot_values() -> None:
@@ -165,3 +169,107 @@ Prefer protected lanes where feasible.
 
     assert "Whether the stated concern changes the interpretation" in polished
     assert "relation marks" not in polished
+
+
+def test_graph_synthesis_packet_extracts_generic_network_structure() -> None:
+    candidate_map = {
+        "claims": [
+            _claim("c001", "Protected lanes reduce severe crashes on high-speed corridors.", "safety", "conclusion_support"),
+            _claim("c002", "Painted lanes can be installed faster and at lower upfront cost.", "cost", "cost_feasibility"),
+            _claim("c003", "Protected lanes need reliable maintenance after snow or debris.", "ops", "implementation_constraint"),
+            _claim("c004", "Crash reduction benefits depend on keeping the protected lane usable.", "ops", "scope_limit"),
+        ],
+        "relations": [
+            _relation("r001", "c004", "c001", "depends_on"),
+            _relation("r002", "c002", "c001", "in_tension_with"),
+            _relation("r003", "c003", "c004", "supports"),
+        ],
+    }
+    evidence_ledger = {
+        "all_evidence": [
+            _row("c001", "Protected lanes reduce severe crashes on high-speed corridors.", "high", "cohort_or_observational"),
+            _row("c002", "Painted lanes can be installed faster and at lower upfront cost.", "medium", "implementation"),
+            _row("c003", "Protected lanes need reliable maintenance after snow or debris.", "medium", "implementation"),
+            _row("c004", "Crash reduction benefits depend on keeping the protected lane usable.", "high", "method_or_validity"),
+        ]
+    }
+
+    packet = build_graph_synthesis_packet(candidate_map, evidence_ledger, {"safety": "Safety Study", "cost": "Cost Memo", "ops": "Ops Memo"})
+    serialized = json.dumps(packet).lower()
+
+    assert packet["schema_id"] == "graph_synthesis_packet_v1"
+    assert packet["graph_summary"]["tension_edge_count"] == 1
+    assert packet["issue_clusters"]
+    assert packet["central_tensions"]
+    assert packet["load_bearing_claims"]
+    assert packet["central_tensions"][0]["left"]["claim_id"].startswith("c")
+    assert packet["central_tensions"][0]["relation_id"].startswith("r")
+    assert "protected lanes" in serialized
+    assert "relation marks" not in serialized
+
+
+def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:
+    candidate_map = annotate_map_with_evidence_slots(
+        {
+            "claims": [
+                _claim("c001", "Protected lanes reduce severe crashes on high-speed corridors.", "safety", "conclusion_support"),
+                _claim("c002", "Painted lanes can be installed faster and at lower upfront cost.", "cost", "cost_feasibility"),
+            ],
+            "relations": [_relation("r001", "c002", "c001", "in_tension_with")],
+        }
+    )
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 90, "issues": []},
+        {"safety": "Safety Study", "cost": "Cost Memo"},
+        {"items": []},
+        question="Should the city prioritize protected bike lanes over painted lanes?",
+    )
+
+    prompt = build_map_briefing_prompt(
+        candidate_map=candidate_map,
+        quality_report={"status": "usable_with_review", "score": 90, "issues": []},
+        question="Should the city prioritize protected bike lanes over painted lanes?",
+        source_lookup={"safety": "Safety Study", "cost": "Cost Memo"},
+        erosion_audit={"items": []},
+        scaffold=scaffold,
+    )
+
+    assert "graph_synthesis_packet" in prompt
+    assert "issue_clusters" in prompt
+    assert "load-bearing claims" in prompt
+
+
+def _claim(claim_id: str, claim: str, source_id: str, role: str) -> dict[str, str]:
+    return {
+        "claim_id": claim_id,
+        "claim": claim,
+        "source_id": source_id,
+        "role": role,
+        "entailed_by_excerpt": "yes",
+    }
+
+
+def _relation(relation_id: str, source_claim: str, target_claim: str, relation_type: str) -> dict[str, str]:
+    return {
+        "relation_id": relation_id,
+        "source_claim": source_claim,
+        "target_claim": target_claim,
+        "relation_type": relation_type,
+        "rationale": "The claims affect the same decision under different conditions.",
+    }
+
+
+def _row(claim_id: str, claim: str, weight: str, evidence_family: str) -> dict[str, object]:
+    return {
+        "claim_id": claim_id,
+        "claim": claim,
+        "weight": weight,
+        "score": 80 if weight == "high" else 50,
+        "source": "Generic Source",
+        "section": "main_support",
+        "evidence_family": evidence_family,
+        "decision_concepts": ["implementation_condition"] if evidence_family == "implementation" else ["hard_outcome_endpoint"],
+        "decision_slots": [],
+        "evidence_slots": [],
+    }

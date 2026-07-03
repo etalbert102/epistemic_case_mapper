@@ -78,6 +78,21 @@ def test_decision_frame_detects_process_evaluation_without_domain_specific_case_
     assert "neutral adjudication" in frame["direct_answer"].lower()
 
 
+def test_decision_frame_treats_should_questions_as_action_decisions_before_adjudication() -> None:
+    candidate_map = {
+        "claims": [
+            {"claim_id": "c1", "claim": "The evidence is mixed but supports a conditional practical answer."},
+        ]
+    }
+    question = "Given the provided evidence, should generally healthy adults treat moderate exposure as acceptable?"
+
+    frame = build_decision_frame(candidate_map, {"all_evidence": []}, {"status": "usable_with_review"}, question=question)
+
+    assert frame["frame_type"] == "action_or_policy_decision"
+    assert "implementation constraints" in frame["direct_answer"]
+    assert "scoped contribution to the adjudication" not in frame["direct_answer"]
+
+
 def test_refined_cruxes_replace_generic_placeholders_and_ellipsis() -> None:
     candidate_map = {
         "claims": [

@@ -7,9 +7,11 @@ from typing import Any
 def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
     rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
-    evidence_lines = _evidence_lines(rows)
-    central_tensions = _central_tensions(decision_model, evidence_lines, rows)
+    evidence_lines = _graph_evidence_lines(graph_packet) + _evidence_lines(rows)
+    evidence_lines = _dedupe_dicts(evidence_lines)[:9]
+    central_tensions = _graph_central_tensions(graph_packet) or _central_tensions(decision_model, evidence_lines, rows)
     scope_boundaries = _scope_boundaries(decision_model)
     exceptions = _exceptions(decision_model, evidence_lines)
     recommendations = _recommendations(decision_model, scaffold, scope_boundaries, exceptions)
@@ -19,6 +21,7 @@ def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
         "method": "generic_decision_support_slots_from_weighted_evidence",
         "question": str(scaffold.get("question", "")).strip(),
         "bottom_line": _bottom_line(decision_model),
+        "graph_summary": graph_packet.get("graph_summary", {}),
         "evidence_lines": evidence_lines,
         "central_tensions": central_tensions,
         "scope_boundaries": scope_boundaries,
@@ -28,6 +31,90 @@ def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
         "quantitative_anchors": _quantitative_anchors(rows),
         "limits": _limits(scaffold),
     }
+
+
+def _graph_evidence_lines(graph_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    lines: list[dict[str, Any]] = []
+    for cluster in graph_packet.get("issue_clusters", []) if isinstance(graph_packet.get("issue_clusters"), list) else []:
+        if not isinstance(cluster, dict):
+            continue
+        representatives = [item for item in cluster.get("representative_claims", []) if isinstance(item, dict)]
+        if not representatives:
+            continue
+        label = str(cluster.get("label", "Issue cluster"))
+        lines.append(
+            {
+                "role": "graph_issue_cluster",
+                "label": label,
+                "current_read": _graph_cluster_read(label, representatives),
+                "support_direction": "graph_structures_synthesis",
+                "source_claims": [_graph_source_claim(row) for row in representatives[:3]],
+            }
+        )
+    return lines[:4]
+
+
+def _graph_cluster_read(label: str, representatives: list[dict[str, Any]]) -> str:
+    first = representatives[0]
+    claim = _sentence(str(first.get("claim", "")))
+    source = str(first.get("source", "")).strip()
+    return f"{label}: {claim}" + (f" ({source})." if source and source not in claim else ".")
+
+
+def _graph_source_claim(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "claim_id": row.get("claim_id"),
+        "claim": _sentence(str(row.get("claim", ""))),
+        "source": row.get("source", ""),
+        "weight": row.get("weight", "medium"),
+        "evidence_family": row.get("evidence_family", "general_evidence"),
+    }
+
+
+def _graph_central_tensions(graph_packet: dict[str, Any]) -> list[dict[str, str]]:
+    tensions: list[dict[str, str]] = []
+    for item in graph_packet.get("central_tensions", []) if isinstance(graph_packet.get("central_tensions"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        left = item.get("left", {}) if isinstance(item.get("left"), dict) else {}
+        right = item.get("right", {}) if isinstance(item.get("right"), dict) else {}
+        left_claim = _sentence(str(left.get("claim", "")))
+        right_claim = _sentence(str(right.get("claim", "")))
+        if not left_claim or not right_claim:
+            continue
+        tensions.append(
+            {
+                "tension": _tension_label(left_claim, right_claim),
+                "why_reasonable_people_disagree": _graph_tension_why(item, left_claim, right_claim),
+                "current_resolution": _graph_tension_resolution(item),
+                "would_change_if": str(item.get("failure_condition") or "Stronger evidence showed one side does not apply to the decision-relevant population, comparator, endpoint, or scope.").strip(),
+            }
+        )
+    return _dedupe_dicts(tensions)[:4]
+
+
+def _tension_label(left_claim: str, right_claim: str) -> str:
+    return f"{_short_phrase(left_claim)} versus {_short_phrase(right_claim)}"
+
+
+def _graph_tension_why(item: dict[str, Any], left_claim: str, right_claim: str) -> str:
+    why = str(item.get("why_it_matters", "")).strip()
+    if why and not _artifact_language(why):
+        return why
+    relation_type = str(item.get("relation_type", "in_tension_with")).replace("_", " ")
+    return f"The graph marks a {relation_type} edge between two decision-relevant claims: {left_claim}; {right_claim}."
+
+
+def _graph_tension_resolution(item: dict[str, Any]) -> str:
+    rationale = str(item.get("rationale", "")).strip()
+    if rationale and not _artifact_language(rationale):
+        return rationale
+    return "Keep both claims visible and treat the bottom line as conditional until the tension is resolved."
+
+
+def _short_phrase(text: str) -> str:
+    words = text.split()
+    return " ".join(words[:11]).rstrip(" ,.;") + ("..." if len(words) > 11 else "")
 
 
 def _bottom_line(decision_model: dict[str, Any]) -> dict[str, str]:

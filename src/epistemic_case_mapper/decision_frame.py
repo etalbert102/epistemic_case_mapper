@@ -187,12 +187,12 @@ def _frame_type(text: str, question: str) -> str:
         return "representation_decision"
     if any(marker in lowered for marker in (" debate", " debater", " judge", "postmortem", "process critique", "methodology", "bayesian", "argument")):
         return "process_or_method_evaluation"
-    if any(marker in lowered for marker in (" adjudicat", " origins", " cause ", "causal", "which explanation")):
-        return "evidence_adjudication"
     if any(marker in lowered for marker in (" should ", "adopt", "implement", "policy", "recommend", "pilot")):
         return "action_or_policy_decision"
     if any(marker in lowered for marker in (" versus ", " vs ", " compared", " rather than ", " over ")):
         return "comparative_option_decision"
+    if any(marker in lowered for marker in (" adjudicat", " origins", " cause ", "causal", "which explanation")):
+        return "evidence_adjudication"
     return "general_evidence_use"
 
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
+
 
 def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
     memo = markdown.strip()
@@ -14,10 +16,10 @@ def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
         if question_lines:
             metadata = "\n" + "\n".join(question_lines) + "\n"
             memo = re.sub(r"^(## Decision Brief\s*)", lambda match: match.group(1) + metadata, memo, count=1)
-    if "\n## Sources\n" not in memo:
-        source_lines = source_list_lines(scaffold)
-        if source_lines:
-            memo = memo.rstrip() + "\n" + "\n".join(source_lines)
+    source_lines = source_list_lines(scaffold)
+    if source_lines:
+        memo = _replace_sources_section(memo, source_lines)
+    memo = replace_internal_reader_phrases(memo)
     return _clean_memo_text(memo)
 
 
@@ -57,7 +59,16 @@ def source_list_lines(scaffold: dict[str, Any]) -> list[str]:
     return ["", "## Sources", "", *rows] if rows else []
 
 
+def _replace_sources_section(markdown: str, source_lines: list[str]) -> str:
+    source_block = "\n".join(source_lines).strip()
+    pattern = re.compile(r"\n## Sources\n.*\Z", flags=re.DOTALL)
+    if pattern.search(markdown):
+        return pattern.sub("\n" + source_block, markdown.rstrip())
+    return markdown.rstrip() + "\n" + source_block
+
+
 def _clean_memo_text(text: str) -> str:
+    text = text.replace("\\n", "\n")
     lines = [line.rstrip() for line in text.strip().splitlines()]
     collapsed: list[str] = []
     blank = False

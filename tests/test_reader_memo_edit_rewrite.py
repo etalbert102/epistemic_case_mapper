@@ -9,6 +9,8 @@ from epistemic_case_mapper.map_briefing import (
     parse_reader_memo_rewrite_payload,
     rewrite_reader_memo_with_contract,
 )
+from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
+from epistemic_case_mapper.map_briefing_memo_slots import _replace_internal_reader_phrases
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -128,6 +130,29 @@ def test_whole_memo_rewrite_rejects_legacy_full_memo_payload(monkeypatch) -> Non
     assert parse_reader_memo_rewrite_payload(json.dumps({"memo_markdown": memo}))["edits"]
     assert result["report"]["status"] == "no_safe_edits_fallback"
     assert result["memo"] == memo
+
+
+def test_practical_items_are_reader_facing_and_conservative_about_boundaries() -> None:
+    items = reader_facing_practical_items(
+        [
+            "State the default as neutral or low-concern under the stated conditions; do not frame the default as beneficial",
+            "Preserve this dose/intensity boundary in practical guidance: up to one unit per day",
+            "Preserve this dose/intensity boundary in practical guidance: at least one unit per day",
+            "Name this subgroup separately from the default case: higher-risk participants",
+        ]
+    )
+
+    assert items == [
+        "The default practical read is neutral or low-concern under the stated conditions; it should not be treated as beneficial.",
+        "The practical boundary to keep visible is up to one unit per day.",
+        "Treat higher-risk participants as a separate subgroup rather than folding that group into the default case.",
+    ]
+
+
+def test_internal_phrase_cleanup_repairs_relative_pronoun_casing() -> None:
+    text = "The study enrolled participants WHO were free of the condition."
+
+    assert _replace_internal_reader_phrases(text) == "The study enrolled participants who were free of the condition."
 
 
 def _long_memo() -> str:

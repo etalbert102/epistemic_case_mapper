@@ -37,6 +37,7 @@ def rewrite_reader_memo_by_section(
 ) -> dict[str, Any]:
     """Rewrite memo sections independently, accepting only locally valid sections."""
     contract = build_reader_memo_rewrite_contract(memo, scaffold)
+    contract["_section_synthesis_scaffold"] = scaffold
     report: dict[str, Any] = {
         "schema_id": "section_rewrite_report_v1",
         "status": "not_run",
@@ -133,14 +134,16 @@ def _rewrite_one_section(
 
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
     return (
-        "You are a controlled prose editor for one section of a decision-support memo.\n"
-        "Rewrite only the supplied section. Smooth the prose and make transitions natural, but do not add facts.\n"
+        "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
+        "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
+        "Use the section synthesis packet as the primary structure: issue clusters, load-bearing claims, bridge claims, and tensions should become coherent prose.\n"
         "Preserve every required local evidence anchor, gap, confidence line, and crux item in the section contract.\n"
         "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
         "Section contract:\n"
         f"{json.dumps(contract, indent=2, ensure_ascii=False)}\n\n"
+        "The section below is the deterministic draft to improve using the section synthesis packet.\n"
         "Section to rewrite:\n"
         f"{section['markdown'].strip()}\n"
     )
@@ -212,6 +215,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "required_gaps": required_gaps,
         "required_cruxes": required_cruxes if isinstance(required_cruxes, list) else [],
         "practical_actions": practical_actions if isinstance(practical_actions, list) else [],
+        "section_synthesis_packet": _section_synthesis_packet(title, full_contract),
         "decision_frame": frame,
         "section_job": section_jobs.get(title, "Smooth this section while preserving its local evidence obligations."),
         "has_obligations": bool(required_evidence or required_gaps or required_cruxes or practical_actions),
@@ -224,11 +228,185 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     }
 
 
+def _section_synthesis_packet(title: str, full_contract: dict[str, Any]) -> dict[str, Any]:
+    scaffold = (
+        full_contract.get("_section_synthesis_scaffold", {})
+        if isinstance(full_contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    title_key = title.lower()
+    packet = {
+        "section_goal": _section_goal(title_key),
+        "graph_summary": graph_packet.get("graph_summary", {}),
+        "issue_clusters": _section_issue_clusters(title_key, graph_packet),
+        "load_bearing_claims": _section_claims(title_key, graph_packet.get("load_bearing_claims", [])),
+        "bridge_claims": _section_claims(title_key, graph_packet.get("bridge_claims", [])),
+        "central_tensions": _section_tensions(title_key, graph_packet.get("central_tensions", [])),
+        "decision_synthesis": _section_decision_synthesis(title_key, synthesis),
+        "style_instruction": _section_style_instruction(title_key),
+    }
+    return _drop_empty_packet_values(packet)
+
+
+def _section_goal(title_key: str) -> str:
+    if "decision brief" in title_key:
+        return "State the answer frame directly, with confidence and the one or two reasons that carry the read."
+    if "practical read" in title_key:
+        return "Translate the graph into concrete practical implications and exception checks."
+    if "why this read" in title_key:
+        return "Explain the reasoning path from load-bearing claims through the central tensions."
+    if "evidence carrying" in title_key:
+        return "Group the carrying evidence by issue cluster rather than listing isolated claims."
+    if "scope" in title_key or "exception" in title_key:
+        return "Separate the default case from boundaries, exceptions, and bridge conditions."
+    if "crux" in title_key:
+        return "Convert central graph tensions and bridge claims into human-readable cruxes."
+    if "limit" in title_key:
+        return "Name what the map does not establish and keep orphan claims out of the main answer."
+    return "Improve this section while preserving its local source-grounded obligations."
+
+
+def _section_issue_clusters(title_key: str, graph_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    clusters = [item for item in graph_packet.get("issue_clusters", []) if isinstance(item, dict)]
+    if "decision brief" in title_key or "practical read" in title_key:
+        return _compact_issue_clusters(clusters[:3])
+    if "evidence carrying" in title_key or "why this read" in title_key:
+        return _compact_issue_clusters(clusters[:5])
+    if "scope" in title_key or "exception" in title_key:
+        return _compact_issue_clusters([item for item in clusters if _cluster_has_scope_signal(item)][:4] or clusters[:3])
+    if "crux" in title_key:
+        return _compact_issue_clusters([item for item in clusters if _cluster_has_tension(item)][:4] or clusters[:3])
+    return _compact_issue_clusters(clusters[:3])
+
+
+def _compact_issue_clusters(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    compact: list[dict[str, Any]] = []
+    for cluster in clusters:
+        compact.append(
+            {
+                "label": cluster.get("label"),
+                "claim_count": cluster.get("claim_count"),
+                "relation_mix": cluster.get("relation_mix", {}),
+                "synthesis_job": cluster.get("synthesis_job"),
+                "representative_claims": _compact_claims(cluster.get("representative_claims", []), limit=3),
+            }
+        )
+    return compact
+
+
+def _section_claims(title_key: str, value: Any) -> list[dict[str, Any]]:
+    rows = [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+    if "limit" in title_key:
+        return []
+    if "crux" in title_key or "why this read" in title_key:
+        return _compact_claims(rows, limit=5)
+    return _compact_claims(rows, limit=3)
+
+
+def _section_tensions(title_key: str, value: Any) -> list[dict[str, Any]]:
+    rows = [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+    if "decision brief" in title_key:
+        return _compact_tensions(rows, limit=2)
+    if "crux" in title_key or "scope" in title_key or "why this read" in title_key:
+        return _compact_tensions(rows, limit=5)
+    if "evidence carrying" in title_key:
+        return _compact_tensions(rows, limit=3)
+    return _compact_tensions(rows, limit=2)
+
+
+def _section_decision_synthesis(title_key: str, synthesis: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(synthesis, dict):
+        return {}
+    if "decision brief" in title_key:
+        return {"bottom_line": synthesis.get("bottom_line"), "central_tensions": synthesis.get("central_tensions", [])[:2]}
+    if "practical read" in title_key:
+        return {"recommendations": synthesis.get("recommendations", [])[:4], "exceptions": synthesis.get("exceptions", [])[:3]}
+    if "scope" in title_key or "exception" in title_key:
+        return {"scope_boundaries": synthesis.get("scope_boundaries", [])[:5], "exceptions": synthesis.get("exceptions", [])[:5]}
+    if "crux" in title_key:
+        return {"cruxes": synthesis.get("cruxes", [])[:5], "central_tensions": synthesis.get("central_tensions", [])[:4]}
+    if "limit" in title_key:
+        return {"limits": synthesis.get("limits", [])[:5]}
+    return {
+        "evidence_lines": synthesis.get("evidence_lines", [])[:5],
+        "central_tensions": synthesis.get("central_tensions", [])[:3],
+    }
+
+
+def _section_style_instruction(title_key: str) -> str:
+    if "crux" in title_key:
+        return "Use concrete crux names; avoid generic relation labels and internal graph language."
+    if "evidence carrying" in title_key:
+        return "Lead with the strongest cluster-level proposition, then name the counterweight or scope boundary."
+    if "decision brief" in title_key:
+        return "Keep the opening short, direct, and calibrated."
+    return "Prefer polished human prose over internal map terminology."
+
+
+def _compact_claims(value: Any, *, limit: int) -> list[dict[str, Any]]:
+    rows = [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+    compact: list[dict[str, Any]] = []
+    for row in rows[:limit]:
+        compact.append(
+            {
+                "claim_id": row.get("claim_id"),
+                "claim": _short_text(str(row.get("claim", "")), 260),
+                "source": row.get("source"),
+                "weight": row.get("weight"),
+                "role": row.get("role"),
+                "evidence_family": row.get("evidence_family"),
+            }
+        )
+    return compact
+
+
+def _compact_tensions(value: Any, *, limit: int) -> list[dict[str, Any]]:
+    rows = [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+    compact: list[dict[str, Any]] = []
+    for row in rows[:limit]:
+        left = row.get("left", {}) if isinstance(row.get("left"), dict) else {}
+        right = row.get("right", {}) if isinstance(row.get("right"), dict) else {}
+        compact.append(
+            {
+                "relation_id": row.get("relation_id"),
+                "relation_type": row.get("relation_type"),
+                "left_claim": _short_text(str(left.get("claim", "")), 220),
+                "right_claim": _short_text(str(right.get("claim", "")), 220),
+                "why_it_matters": _short_text(str(row.get("why_it_matters") or row.get("rationale", "")), 260),
+                "failure_condition": _short_text(str(row.get("failure_condition", "")), 220),
+            }
+        )
+    return compact
+
+
+def _drop_empty_packet_values(packet: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in packet.items() if value not in ({}, [], "", None)}
+
+
+def _cluster_has_scope_signal(cluster: dict[str, Any]) -> bool:
+    text = json.dumps(cluster, ensure_ascii=False).lower()
+    return any(marker in text for marker in ("scope", "subgroup", "boundary", "implementation", "condition", "exception"))
+
+
+def _cluster_has_tension(cluster: dict[str, Any]) -> bool:
+    mix = cluster.get("relation_mix", {}) if isinstance(cluster.get("relation_mix"), dict) else {}
+    return int(mix.get("negative", 0)) > 0
+
+
+def _short_text(text: str, max_chars: int) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
+
+
 def _should_rewrite_section(section: dict[str, str], contract: dict[str, Any]) -> bool:
     words = len(section["markdown"].split())
     if words < 35 and not contract["has_obligations"]:
         return False
-    if section["title"].lower() == "evidence trail":
+    if section["title"].lower() in {"evidence trail", "sources"}:
         return False
     return True
 

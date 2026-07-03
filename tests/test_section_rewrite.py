@@ -85,6 +85,32 @@ def test_section_rewrite_falls_back_for_invalid_section(monkeypatch) -> None:
     )
 
 
+def test_section_rewrite_keeps_sources_deterministic(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+    memo = memo.rstrip() + "\n\n## Sources\n\n- Source A\n- Source B\n"
+    seen_prompts: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        seen_prompts.append(prompt)
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert "## Sources\n\n- Source A\n- Source B" in result["memo"]
+    assert all("## Sources" not in prompt for prompt in seen_prompts)
+
+
 def _memo_package() -> tuple[str, str, dict, dict]:
     candidate_map = _arbitrary_candidate_map()
     quality_report = _quality_report()

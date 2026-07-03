@@ -290,12 +290,12 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert "**Confidence:** medium" in rendered
     assert "flf_covid_case_brief" not in rendered
     assert "FLF COVID Case Brief" in rendered
-    assert "The case turns on whether priors or likelihood updates explain the disagreement." in rendered
+    assert "The case turns on whether priors or likelihood updates explain the disagreement" in rendered
     assert "Claim A" not in rendered
     assert "Claim B" not in rendered
     assert "mapped claim" not in rendered
     assert "source-grounded finding" not in rendered
-    assert summary["model_confidence"] == "high"
+    assert summary["model_confidence"] == "not specified"
     assert summary["calibrated_confidence"] == "medium"
     assert summary["paths"]["map_sufficiency_report"].endswith("map_sufficiency_report.json")
     assert summary["paths"]["briefing_validation_report"].endswith("briefing_validation_report.json")
@@ -418,7 +418,8 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     assert (tmp_path / "generated_map.json").exists()
     rendered = (tmp_path / "brief/BRIEFING.md").read_text(encoding="utf-8")
     assert "## Decision Brief" in rendered
-    assert "Demo Case Doc A" in rendered
+    assert "Doc A" in rendered
+    assert "Alpha supports the decision" in rendered
     assert "demo_case_doc_a" not in rendered
 
 

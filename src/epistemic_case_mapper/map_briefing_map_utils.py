@@ -63,8 +63,22 @@ def _expand_payload_reader_references(value: Any, candidate_map: dict[str, Any])
     if isinstance(value, list):
         return [_expand_payload_reader_references(item, candidate_map) for item in value]
     if isinstance(value, dict):
-        return {key: _expand_payload_reader_references(item, candidate_map) for key, item in value.items()}
+        return {
+            key: item if key in _STRUCTURED_ID_FIELDS else _expand_payload_reader_references(item, candidate_map)
+            for key, item in value.items()
+        }
     return value
+
+
+_STRUCTURED_ID_FIELDS = {
+    "claim_id",
+    "claim_ids",
+    "relation_id",
+    "relation_ids",
+    "source_claim",
+    "target_claim",
+    "pair_id",
+}
 
 def _claim_alias_lookup(candidate_map: dict[str, Any]) -> dict[str, str]:
     lookup: dict[str, str] = {}
