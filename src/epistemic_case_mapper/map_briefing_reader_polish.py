@@ -143,7 +143,7 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
     confidence = _extract_confidence(rendered) or str(scaffold.get("confidence_cap") or "medium")
     decision_brief = _executive_decision_brief(rendered, scaffold)
     slot_model = scaffold.get("decision_memo_slots", {}) if isinstance(scaffold.get("decision_memo_slots"), dict) else {}
-    implications = _slot_practical_implications(slot_model, fallback_items=_executive_implications(rendered, scaffold))
+    implications = _slot_practical_implications(slot_model, scaffold=scaffold, fallback_items=_executive_implications(rendered, scaffold))
     paragraph_specs = _reader_memo_paragraph_specs(scaffold)
     default_paragraph = _slot_paragraph(
         slot_model,
@@ -199,6 +199,22 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
+    if frame.get("frame_type") == "process_or_method_evaluation":
+        return {
+            "why_this_read": {
+                "slot_ids": ("main_support", "counterevidence_or_tension"),
+                "lead": "The read is mainly about process and method quality: which inference practices, debate formats, or evidential shortcuts should be trusted less after seeing this packet.",
+            },
+            "evidence": {
+                "slot_ids": ("main_support", "counterevidence_or_tension", "evidence_type_limits"),
+                "lead": "The carrying evidence separates debate-process lessons from evidence about the underlying factual dispute.",
+            },
+            "practical": {
+                "slot_ids": ("alternatives_or_comparators", "implementation_constraints", "scope_conditions"),
+                "lead": "The practical scope is bounded by what this packet can diagnose about process, method, and source role.",
+            },
+        }
     if _uses_nutrition_memo_profile(scaffold):
         return {
             "why_this_read": {
@@ -229,11 +245,13 @@ def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str
         },
     }
 
-def _slot_practical_implications(slot_model: dict[str, Any], *, fallback_items: list[str]) -> list[str]:
+def _slot_practical_implications(slot_model: dict[str, Any], *, scaffold: dict[str, Any], fallback_items: list[str]) -> list[str]:
     lookup = _slot_lookup(slot_model)
-    items: list[str] = []
+    frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
+    items: list[str] = [str(item) for item in frame.get("practical_actions", []) if str(item).strip()]
     if lookup.get("main_support", {}).get("status") == "filled":
-        items.append("Use the available evidence as a provisional read, not as a claim that all versions of the intervention or option work equally well.")
+        object_name = str(frame.get("decision_object", "decision read"))
+        items.append(f"Use the available evidence as a provisional {object_name}, not as a claim that the source packet settles the whole case.")
     if lookup.get("alternatives_or_comparators", {}).get("status") == "filled":
         items.append("Frame the recommendation around the actual alternatives being compared, since the answer can change with the comparator.")
     if lookup.get("scope_conditions", {}).get("status") == "filled":
@@ -673,12 +691,24 @@ def _build_polished_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -
     return "\n\n".join(["## Evidence Appendix", *sections]).strip()
 
 def _executive_decision_brief(rendered: str, scaffold: dict[str, Any]) -> str:
+    frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
     body = _markdown_section(rendered, "Decision Brief")
     body = re.sub(r"\*\*Confidence:\*\*[^\n]+", "", body).strip()
     paragraphs = [paragraph.strip() for paragraph in re.split(r"\n\s*\n", body) if paragraph.strip()]
+    if paragraphs and _procedural_or_generic_opening(paragraphs[0]):
+        direct = str(frame.get("direct_answer", "")).strip()
+        if direct:
+            return _polish_reader_sentence_block(direct, max_chars=850)
     if paragraphs:
         return _first_complete_sentences(_polish_reader_sentence_block(paragraphs[0], max_chars=0), max_sentences=3, max_chars=850)
+    direct = str(frame.get("direct_answer", "")).strip()
+    if direct:
+        return _polish_reader_sentence_block(direct, max_chars=850)
     return _polish_reader_sentence_block(_deterministic_decision_brief(scaffold), max_chars=900)
+
+def _procedural_or_generic_opening(text: str) -> bool:
+    lowered = text.lower().strip()
+    return lowered.startswith("state ") or "do not frame" in lowered or "evidence supports the default answer under stated conditions" in lowered
 
 def _executive_implications(rendered: str, scaffold: dict[str, Any]) -> list[str]:
     body = _markdown_section(rendered, "Decision Implications")
@@ -769,7 +799,10 @@ def _compact_crux_table(rendered: str, scaffold: dict[str, Any]) -> str:
     table_lines = [line for line in section.splitlines() if line.strip().startswith("|")]
     if len(table_lines) >= 3:
         return "\n".join(table_lines[:6])
-    cruxes = _deterministic_top_cruxes(scaffold)[:3]
+    refined = scaffold.get("refined_cruxes", {}) if isinstance(scaffold.get("refined_cruxes"), dict) else {}
+    cruxes = [row for row in refined.get("cruxes", []) if isinstance(row, dict)][:3]
+    if not cruxes:
+        cruxes = _deterministic_top_cruxes(scaffold)[:3]
     if not cruxes:
         return ""
     lines = ["| Crux | Current read | Would change if |", "|---|---|---|"]

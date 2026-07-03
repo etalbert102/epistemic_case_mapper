@@ -266,7 +266,7 @@ def _coverage_snapshot_rows(table: dict[str, Any], *, max_rows: int = 12) -> lis
             continue
         row = sorted(candidates, key=lambda item: _coverage_concept_row_rank(concept, item, vocabulary=vocabulary))[0]
         source = str(row.get("source", "")).strip()
-        claim = _coverage_current_read(concept, row)
+        claim = _coverage_current_read(concept, row, vocabulary=vocabulary)
         current_read = _short_claim_fragment(claim + (f" ({source})" if source else ""), max_chars=210)
         selected.append(
             {
@@ -289,20 +289,20 @@ def _coverage_concept_visible(concept: str, row: dict[str, Any], *, vocabulary: 
     markers = _vocabulary_marker_map(vocabulary, "coverage_visible_markers").get(concept, [])
     return any(marker in text for marker in markers)
 
-def _coverage_current_read(concept: str, row: dict[str, Any]) -> str:
+def _coverage_current_read(concept: str, row: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> str:
     slot_values = row.get("slot_values", {}) if isinstance(row.get("slot_values"), dict) else {}
     concept_slot = _COVERAGE_CONCEPT_SLOT.get(concept)
     claim = str(row.get("claim", "")).strip()
     if concept_slot and str(slot_values.get(concept_slot, "")).strip():
         value = str(slot_values[concept_slot]).strip()
         min_len = 24 if concept in {"study_design_rct", "study_design_cohort"} else 12
-        if _slot_value_visibly_represents_concept(value, concept) and len(value) >= min_len:
+        if _slot_value_visibly_represents_concept(value, concept, vocabulary=vocabulary) and len(value) >= min_len:
             return value
     return claim
 
-def _slot_value_visibly_represents_concept(value: str, concept: str) -> bool:
+def _slot_value_visibly_represents_concept(value: str, concept: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     normalized = value.lower()
-    preferred = _COVERAGE_PREFERRED_MARKERS.get(concept)
+    preferred = _vocabulary_nested_marker_map(vocabulary, "coverage_preferred_markers").get(concept, [])
     if not preferred:
         return True
     first_tier = preferred[0] if preferred else ()

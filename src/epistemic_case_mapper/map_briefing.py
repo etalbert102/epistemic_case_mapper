@@ -22,6 +22,14 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     run_map_briefing,
 )
 
+from epistemic_case_mapper.decision_model_slice import (
+    DecisionModelSliceResult,
+    build_compact_decision_model,
+    evaluate_decision_model_brief,
+    render_decision_model_brief,
+    run_decision_model_slice,
+)
+
 from epistemic_case_mapper.map_briefing_reader_contracts import (
     _compact_option_comparison_for_contract,
     _compact_rewrite_contract_for_report,
@@ -378,6 +386,7 @@ from epistemic_case_mapper.map_briefing_validation import (
 
 __all__ = [
     "CONFIDENCE_ORDER",
+    "DecisionModelSliceResult",
     "MapBriefingResult",
     "ROLE_PRIORITY",
     "_COVERAGE_CONCEPT_PRIORITY",
@@ -680,6 +689,7 @@ __all__ = [
     "append_map_coverage_snapshot",
     "briefing_reader_polish_report",
     "briefing_scaffold",
+    "build_compact_decision_model",
     "build_briefing_contract",
     "build_briefing_plan",
     "build_concept_evidence_packets",
@@ -707,6 +717,7 @@ __all__ = [
     "compose_final_reader_memo_package",
     "confidence_cap",
     "deterministic_briefing_payload",
+    "evaluate_decision_model_brief",
     "display_source_name",
     "ensure_rewrite_confidence_visible",
     "expand_reader_map_references",
@@ -720,10 +731,12 @@ __all__ = [
     "quality_report_issue_text",
     "reader_memo_rewrite_issues",
     "repair_briefing_payload",
+    "render_decision_model_brief",
     "repair_reader_memo_rewrite_candidate",
     "replace_source_ids",
     "rewrite_reader_memo_with_contract",
     "run_map_briefing",
+    "run_decision_model_slice",
     "select_reader_memo_required_evidence",
     "validate_briefing_against_scaffold",
 ]

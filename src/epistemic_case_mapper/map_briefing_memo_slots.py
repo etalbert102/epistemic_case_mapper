@@ -94,6 +94,8 @@ def _rewrite_editorial_issues(rewritten: str, contract: dict[str, Any]) -> list[
             "load-bearing map",
             "this condition changes how strongly",
             "named condition no longer affected",
+            "current packet treats this condition",
+            "new evidence showed the condition did not materially affect",
         )
     ):
         issues.append("rewrite crux table contains non-human current-read language")

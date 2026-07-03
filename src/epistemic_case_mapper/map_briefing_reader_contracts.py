@@ -460,11 +460,13 @@ def build_reader_memo_rewrite_contract(memo: str, scaffold: dict[str, Any]) -> d
     answer_frame = build_reader_memo_answer_frame(scaffold, required_rows)
     practical_actions = build_reader_memo_practical_actions(scaffold, required_rows)
     option_comparison = _compact_option_comparison_for_contract(scaffold.get("option_comparison", {}))
+    decision_frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
     return {
         "schema_id": "reader_memo_rewrite_contract_v1",
         "question": str(scaffold.get("question", "")).strip(),
         "confidence": _extract_confidence(memo) or str(scaffold.get("confidence_cap") or "medium"),
         "answer_frame": answer_frame,
+        "decision_frame": decision_frame,
         "option_comparison": option_comparison,
         "practical_actions": practical_actions,
         "required_evidence": required_rows,
@@ -592,6 +594,7 @@ def build_reader_memo_answer_frame(scaffold: dict[str, Any], required_rows: list
     question = str(scaffold.get("question", "")).strip()
     lowered = f" {question.lower()} "
     vocabulary = _profile_vocabulary_for_scaffold(scaffold)
+    decision_frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
     comparator = _question_comparator_phrase(question)
     main_support = _first_required_claim(required_rows, slots=("Main support",))
     implementation = _first_required_claim(required_rows, slots=("Implementation constraints", "Scope and boundary conditions"))
@@ -607,6 +610,8 @@ def build_reader_memo_answer_frame(scaffold: dict[str, Any], required_rows: list
     else:
         if "should" in lowered and comparator:
             answer = f"Answer whether the first option should be preferred {comparator}, then state the conditions that could reverse that preference."
+    if decision_frame.get("direct_answer"):
+        answer = str(decision_frame["direct_answer"])
     return {
         "direct_answer": answer,
         "comparator_sentence_required": bool(comparator),

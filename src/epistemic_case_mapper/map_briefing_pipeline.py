@@ -25,6 +25,7 @@ from epistemic_case_mapper.synthesis_uplift_packet import (
     _parse_json,
     _render_synthesis_packet,
 )
+from epistemic_case_mapper.decision_frame import build_decision_frame, memo_quality_report, refine_crux_contract
 
 ROLE_PRIORITY = {
     "crux": 0,
@@ -206,13 +207,27 @@ def _write_final_reader_outputs(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
+    from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
+
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
     evidence_appendix = str(memo_package["appendix"])
+    section_rewrite_report_path = artifacts / "section_rewrite_report.json"
+    section_rewrite_result = rewrite_reader_memo_by_section(
+        str(memo_package["memo"]),
+        evidence_appendix,
+        memo_package["scaffold"],
+        prioritized_map,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        artifacts=artifacts,
+    )
+    section_memo = str(section_rewrite_result["memo"])
     rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
     rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
     rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
     rewrite_result = rewrite_reader_memo_with_contract(
-        str(memo_package["memo"]),
+        section_memo,
         evidence_appendix,
         memo_package["scaffold"],
         prioritized_map,
@@ -227,17 +242,21 @@ def _write_final_reader_outputs(
     reader_memo = str(rewrite_result["memo"])
     combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
     polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
+    memo_quality = memo_quality_report(combined, memo_package["scaffold"])
     validation = validate_briefing_against_scaffold(combined, memo_package["scaffold"], prioritized_map)
     briefing_path = artifacts / "BRIEFING.md"
     evidence_appendix_path = artifacts / "EVIDENCE_APPENDIX.md"
     polish_report_path = artifacts / "briefing_polish_report.json"
+    memo_quality_path = artifacts / "memo_quality_report.json"
     curation_report_path = artifacts / "evidence_curation_report.json"
     briefing_validation_path = artifacts / "briefing_validation_report.json"
     write_markdown(briefing_path, reader_memo.rstrip() + "\n")
     write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
     write_json(briefing_validation_path, validation)
     write_json(polish_report_path, polish_report)
+    write_json(memo_quality_path, memo_quality)
     write_json(curation_report_path, memo_package["curation_report"])
+    write_json(section_rewrite_report_path, section_rewrite_result["report"])
     write_json(rewrite_report_path, rewrite_result["report"])
     return {
         "briefing_path": briefing_path,
@@ -248,7 +267,9 @@ def _write_final_reader_outputs(
         "summary_paths": {
             "briefing_validation_report": briefing_validation_path,
             "briefing_polish_report": polish_report_path,
+            "memo_quality_report": memo_quality_path,
             "evidence_curation_report": curation_report_path,
+            "section_rewrite_report": section_rewrite_report_path,
             "reader_memo_rewrite_report": rewrite_report_path,
             "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
             "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,
@@ -441,6 +462,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "quality_score": scaffold.get("quality_score"),
         "confidence_cap": scaffold.get("confidence_cap"),
         "briefing_contract": scaffold.get("briefing_contract"),
+        "decision_frame": scaffold.get("decision_frame"),
         "decision_model": compact_decision_model,
         "evidence_compression_table": scaffold.get("evidence_compression_table"),
         "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
@@ -449,6 +471,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "evidence_weighting_ledger": compact_ledger,
         "evidence_roles_for_deterministic_attachment": scaffold.get("evidence_roles"),
         "crux_candidates": scaffold.get("crux_candidates"),
+        "refined_cruxes": scaffold.get("refined_cruxes"),
         "quality_issues": scaffold.get("quality_issues"),
     }
 
@@ -530,6 +553,8 @@ def briefing_scaffold(
     concept_evidence_packets = build_concept_evidence_packets(evidence_ledger)
     option_comparison = build_option_comparison(question, evidence_ledger, candidate_map)
     crux_contract = build_crux_contract(candidate_map, evidence_ledger, option_comparison)
+    refined_cruxes = refine_crux_contract(crux_contract, candidate_map)
+    decision_frame = build_decision_frame(candidate_map, evidence_ledger, quality_report, question=question)
     sufficiency_report = build_map_sufficiency_report(
         candidate_map,
         question=question,
@@ -562,6 +587,8 @@ def briefing_scaffold(
         "concept_evidence_packets": concept_evidence_packets,
         "option_comparison": option_comparison,
         "crux_contract": crux_contract,
+        "refined_cruxes": refined_cruxes,
+        "decision_frame": decision_frame,
         "map_sufficiency_report": sufficiency_report,
         "briefing_plan": briefing_plan,
         "evidence_roles": {key: _dedupe(items)[:8] for key, items in evidence_roles.items()},
@@ -663,6 +690,22 @@ def _deterministic_decision_implications(decision_model: dict[str, Any]) -> list
 def _deterministic_top_cruxes(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
     rows: list[dict[str, str]] = []
+    refined = scaffold.get("refined_cruxes", {}) if isinstance(scaffold.get("refined_cruxes"), dict) else {}
+    for item in refined.get("cruxes", [])[:5] if isinstance(refined.get("cruxes"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        crux = str(item.get("crux", "")).strip()
+        if crux:
+            rows.append(
+                {
+                    "crux": crux,
+                    "why_it_matters": str(item.get("why_it_matters", "")).strip(),
+                    "current_read": str(item.get("current_read", "")).strip(),
+                    "would_change_if": str(item.get("would_change_if", "")).strip(),
+                }
+            )
+    if rows:
+        return _dedupe_dicts(rows)[:5]
     crux_contract = scaffold.get("crux_contract", {}) if isinstance(scaffold.get("crux_contract"), dict) else {}
     for item in crux_contract.get("cruxes", [])[:5] if isinstance(crux_contract.get("cruxes"), list) else []:
         if not isinstance(item, dict):
