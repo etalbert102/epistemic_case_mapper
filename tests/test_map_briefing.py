@@ -9,7 +9,9 @@ from epistemic_case_mapper.map_briefing import (
     adaptive_briefing_claim_budget,
     append_evidence_by_decision_lever,
     append_map_coverage_snapshot,
+    annotate_map_with_evidence_slots,
     briefing_scaffold,
+    build_crux_contract,
     build_briefing_contract,
     build_map_briefing_prompt,
     build_decision_model,
@@ -17,8 +19,11 @@ from epistemic_case_mapper.map_briefing import (
     build_concept_evidence_packets,
     build_decision_memo_slots,
     build_evidence_compression_table,
+    build_evidence_slot_ledger,
     build_evidence_weighting_ledger,
     build_map_sufficiency_report,
+    build_option_comparison,
+    build_reader_memo_rewrite_contract,
     build_proposition_clusters,
     build_curated_evidence_packets,
     calibrate_confidence,
@@ -31,6 +36,8 @@ from epistemic_case_mapper.map_briefing import (
     polish_briefing_for_reader,
     prioritize_map_for_briefing,
     repair_briefing_payload,
+    repair_reader_memo_rewrite_candidate,
+    reader_memo_rewrite_issues,
     run_map_briefing,
     validate_briefing_against_scaffold,
 )
@@ -503,6 +510,196 @@ Neutral default for generally healthy adults.
     assert "copied fragment" not in package["memo"]
     assert "copied fragment" in package["appendix"]
     assert "Dehghan 2020" in package["memo"] or "Dehghan 2020" in package["appendix"]
+    lowered = package["memo"].lower()
+    assert "mapped support" not in lowered
+    assert "map-backed read" not in lowered
+    assert "decision role" not in lowered
+
+
+def test_rewrite_candidate_repair_salvages_generic_crux_and_source_label_noise() -> None:
+    scaffold = {
+        "confidence_cap": "medium",
+        "source_display_names": {"nacto": "Nacto Protected Bikeways"},
+    }
+    contract = {
+        "confidence": "medium",
+        "required_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [
+            {
+                "crux": "Maintenance capacity",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+            {
+                "crux": "Attribution of results",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+        ],
+    }
+    rewrite = """## Decision Brief
+
+Prefer protected lanes where the city can maintain them (Nacto Protected_Protected Bikeways).
+
+**Confidence:** medium
+
+## Decision Cruxes
+
+| Crux | Why it matters | Current read | Would change if |
+|---|---|---|---|
+| Maintenance capacity | Separators need upkeep. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+| Attribution of results | The before-after evaluation was not randomized. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+"""
+
+    repaired = repair_reader_memo_rewrite_candidate(rewrite, scaffold, contract)
+
+    assert "Nacto Protected_Protected Bikeways" not in repaired
+    assert "Nacto Protected Bikeways" in repaired
+    assert "This condition changes how strongly" not in repaired
+    assert "named condition no longer affected" not in repaired
+    assert "package effect" in repaired
+    assert "keep the intervention usable" in repaired
+
+
+def test_rewrite_repair_can_clear_duplicate_crux_rejection_without_fallback() -> None:
+    scaffold = {
+        "confidence_cap": "medium",
+        "source_display_names": {"nacto": "Nacto Protected Bikeways"},
+        "map_sufficiency_report": {"status": "sufficient_for_scaffolded_briefing"},
+        "decision_memo_slots": {
+            "slots": [
+                {
+                    "id": "main_support",
+                    "label": "Main support",
+                    "status": "filled",
+                    "rows": [
+                        {
+                            "claim": "Protected lanes are most relevant where traffic stress makes paint insufficient.",
+                            "source": "Nacto Protected Bikeways",
+                        }
+                    ],
+                }
+            ]
+        },
+        "crux_candidates": [
+            {
+                "crux": "Maintenance capacity",
+                "why_it_matters": "Cities should choose protection types they can maintain.",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+            {
+                "crux": "Attribution of results",
+                "why_it_matters": "The before-after evidence was not randomized.",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+            {
+                "crux": "Site constraints",
+                "why_it_matters": "Street geometry and access conflicts can change feasibility.",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+            {
+                "crux": "Rider volume changes",
+                "why_it_matters": "Exposure changes affect interpretation of injury trends.",
+                "current_read": "This condition changes how strongly the recommendation holds.",
+                "would_change_if": "The named condition no longer affected the practical recommendation.",
+            },
+        ],
+    }
+    original = """## Decision Brief
+
+The deterministic memo contains many repeated phrases and source-grounded detail.
+
+**Confidence:** medium
+
+## Practical Read
+
+- Keep the answer bounded by implementation capacity.
+
+## Evidence Carrying the Conclusion
+
+Protected lanes are most relevant where traffic stress makes paint insufficient. (Nacto Protected Bikeways)
+""" + ("Extra deterministic detail. " * 130)
+    appendix = "## Evidence Appendix\n\nProtected lanes are most relevant where traffic stress makes paint insufficient. (Nacto Protected Bikeways)"
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "Protected lanes are most relevant where traffic stress makes paint insufficient.",
+                "source_id": "nacto",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+    contract = build_reader_memo_rewrite_contract(original, scaffold)
+    contract["required_cruxes"] = [
+        {
+            "crux": "Maintenance capacity",
+            "current_read": "This condition changes how strongly the recommendation holds.",
+            "would_change_if": "The named condition no longer affected the practical recommendation.",
+        },
+        {
+            "crux": "Attribution of results",
+            "current_read": "This condition changes how strongly the recommendation holds.",
+            "would_change_if": "The named condition no longer affected the practical recommendation.",
+        },
+        {
+            "crux": "Site constraints",
+            "current_read": "This condition changes how strongly the recommendation holds.",
+            "would_change_if": "The named condition no longer affected the practical recommendation.",
+        },
+        {
+            "crux": "Rider volume changes",
+            "current_read": "This condition changes how strongly the recommendation holds.",
+            "would_change_if": "The named condition no longer affected the practical recommendation.",
+        },
+    ]
+    rewrite = """## Decision Brief
+
+The city should prefer protected lanes over paint on high-stress arterials when it can maintain the protection and handle operating constraints. Protected lanes are most relevant where traffic stress makes paint insufficient (Nacto Protected_Protected Bikeways).
+
+**Confidence:** medium
+
+## Practical Read
+
+- Select protection types that match maintenance capacity.
+- Use paint only where traffic stress is already low or protection is infeasible.
+- Treat implementation constraints as conditions on the recommendation.
+
+## Why This Read
+
+- Protected lanes are most relevant where traffic stress makes paint insufficient (Nacto Protected Bikeways).
+- Maintenance capacity determines whether physical protection remains usable after installation.
+- The observational evidence should be read as a corridor-package signal rather than a clean single-cause estimate.
+
+## Decision Cruxes
+
+| Crux | Why it matters | Current read | Would change if |
+|---|---|---|---|
+| Maintenance capacity | Cities should choose protection types they can maintain. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+| Attribution of results | The before-after evidence was not randomized. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+| Site constraints | Street geometry and access conflicts can change feasibility. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+| Rider volume changes | Exposure changes affect interpretation of injury trends. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
+
+## Limits of the Current Map
+
+The packet does not settle every local design constraint. It also does not prove that physical protection alone caused the observed before-after change, because corridor projects can include intersection treatments, signal timing changes, loading changes, and other safety work. The recommendation should therefore be read as a practical program choice: use protection as the arterial default where the street can support it, keep paint for lower-stress gaps or infeasible corridors, and require operations planning before installation. The packet is strong enough to organize the decision, but it is not a substitute for corridor-level design review.
+
+## Evidence Trail
+
+The structured evidence trail is in `EVIDENCE_APPENDIX.md`.
+"""
+
+    issues = reader_memo_rewrite_issues(rewrite, original, appendix, scaffold, candidate_map, contract)
+    repaired = repair_reader_memo_rewrite_candidate(rewrite, scaffold, contract)
+    repaired_issues = reader_memo_rewrite_issues(repaired, original, appendix, scaffold, candidate_map, contract)
+
+    assert "rewrite crux table contains non-human current-read language" in issues
+    assert repaired_issues == []
 
 
 def test_curated_evidence_packets_drop_reference_debris() -> None:
@@ -673,6 +870,135 @@ def test_slot_extraction_recognizes_population_and_comparator_without_verbs() ->
 
     assert slots["default_population"]
     assert slots["substitution_or_comparator"]
+
+
+def test_typed_evidence_slots_option_comparison_and_crux_contract_are_built() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "Protected bike lanes reduced cyclist injury crashes by 34% on high-injury arterial corridors.",
+                "source_id": "evaluation",
+                "role": "conclusion_support",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "c002",
+                "claim": "Painted lanes are quicker and cheaper to implement but may not prevent encroachment on arterial streets.",
+                "source_id": "paint",
+                "role": "implementation_constraint",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "c003",
+                "claim": "Protected lane safety benefits depend on intersection design, turning conflicts, and maintenance capacity.",
+                "source_id": "design",
+                "role": "crux",
+                "entailed_by_excerpt": "yes",
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "r001",
+                "source_claim": "c003",
+                "target_claim": "c001",
+                "relation_type": "depends_on",
+                "rationale": "The observed safety benefit depends on intersection design and maintenance capacity.",
+            },
+            {
+                "relation_id": "r002",
+                "source_claim": "c002",
+                "target_claim": "c001",
+                "relation_type": "in_tension_with",
+                "rationale": "Paint is easier to deploy, while protection has stronger safety logic on arterials.",
+            },
+        ],
+    }
+    source_lookup = {"evaluation": "Evaluation", "paint": "Paint Memo", "design": "Design Guidance"}
+
+    enriched = annotate_map_with_evidence_slots(candidate_map)
+    assert "evidence_slots" in enriched["claims"][0]
+    assert "outcome_or_endpoint" in enriched["claims"][0]["evidence_slots"]
+    assert "cost_or_feasibility" in enriched["claims"][1]["evidence_slots"]
+    assert "implementation_condition" in enriched["claims"][2]["evidence_slots"]
+
+    partition = partition_map_evidence(enriched, source_lookup)
+    ledger = build_evidence_weighting_ledger(
+        enriched,
+        partition,
+        {"status": "usable_with_review", "score": 95, "issues": []},
+        source_lookup,
+    )
+    slot_ledger = build_evidence_slot_ledger(ledger)
+    option_comparison = build_option_comparison(
+        "Should a city prioritize protected bike lanes over painted bike lanes?",
+        ledger,
+        enriched,
+    )
+    crux_contract = build_crux_contract(enriched, ledger, option_comparison)
+
+    assert slot_ledger["slot_counts"]["implementation_condition"] >= 1
+    assert [row["option"] for row in option_comparison["options"]] == ["protected bike lanes", "painted bike lanes"]
+    assert any(row["criterion"] == "cost_feasibility" for row in option_comparison["tradeoffs"])
+    cost_tradeoff = next(row for row in option_comparison["tradeoffs"] if row["criterion"] == "cost_feasibility")
+    assert cost_tradeoff["evidence_by_option"]["painted bike lanes"]
+    assert cost_tradeoff["evidence_by_option"]["protected bike lanes"] == []
+    crux_text = json.dumps(crux_contract).lower()
+    assert "maintenance" in crux_text or "intersection" in crux_text
+    assert crux_contract["crux_count"] >= 2
+
+
+def test_briefing_scaffold_exposes_option_comparison_and_crux_contract() -> None:
+    candidate_map = annotate_map_with_evidence_slots(
+        {
+            "claims": [
+                {
+                    "claim_id": "c001",
+                    "claim": "Protected lanes are most relevant where traffic stress makes paint insufficient.",
+                    "source_id": "design",
+                    "role": "conclusion_support",
+                    "entailed_by_excerpt": "yes",
+                },
+                {
+                    "claim_id": "c002",
+                    "claim": "Maintenance capacity determines whether protected lanes remain usable after installation.",
+                    "source_id": "ops",
+                    "role": "crux",
+                    "entailed_by_excerpt": "yes",
+                },
+            ],
+            "relations": [
+                {
+                    "relation_id": "r001",
+                    "source_claim": "c002",
+                    "target_claim": "c001",
+                    "relation_type": "crux_for",
+                    "rationale": "Maintenance capacity gates whether physical protection can deliver the intended effect.",
+                }
+            ],
+        }
+    )
+
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 95, "issues": []},
+        {"design": "Design Guidance", "ops": "Operations Memo"},
+        {"items": []},
+        question="Should a city prioritize protected lanes over painted lanes?",
+    )
+
+    assert scaffold["option_comparison"]["options"]
+    assert scaffold["crux_contract"]["cruxes"]
+    assert scaffold["evidence_slot_ledger"]["slot_counts"]
+    slots = build_decision_memo_slots(scaffold, rendered="## Decision Brief\n\nPrioritize protected lanes.\n")
+    assert "alternatives_or_comparators" not in slots["coverage"]["missing_required_slots"]
+    comparator_slot = next(slot for slot in slots["slots"] if slot["slot_id"] == "alternatives_or_comparators")
+    assert len(comparator_slot["rows"]) == 1
+    assert "Compared" in comparator_slot["rows"][0]["claim"]
+    assert "protected lanes versus painted lanes" in comparator_slot["rows"][0]["claim"]
+    assert "..." not in comparator_slot["rows"][0]["claim"]
+    crux_rows = scaffold["crux_contract"]["cruxes"]
+    assert any("Maintenance" in row["crux"] for row in crux_rows)
 
 
 def test_repair_briefing_payload_replaces_source_only_evidence_roles() -> None:
