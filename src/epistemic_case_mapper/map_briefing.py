@@ -173,11 +173,23 @@ def run_map_briefing(
     rendered = append_map_coverage_snapshot(rendered, scaffold)
     rendered = _normalize_reader_punctuation(expand_reader_map_references(rendered, prioritized_map))
     rendered = _clean_reader_packet_metadata(replace_source_ids(rendered, source_lookup))
-    briefing_validation = validate_briefing_against_scaffold(rendered, scaffold, prioritized_map)
+    rendered = polish_briefing_for_reader(rendered, scaffold)
+    memo_package = compose_final_reader_memo_package(rendered, scaffold)
+    reader_memo = str(memo_package["memo"])
+    evidence_appendix = str(memo_package["appendix"])
+    combined_for_validation = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
+    polish_report = briefing_reader_polish_report(combined_for_validation, memo_package["scaffold"])
+    briefing_validation = validate_briefing_against_scaffold(combined_for_validation, memo_package["scaffold"], prioritized_map)
     briefing_path = artifacts / "BRIEFING.md"
+    evidence_appendix_path = artifacts / "EVIDENCE_APPENDIX.md"
     summary_path = artifacts / "briefing_summary.json"
-    write_markdown(briefing_path, rendered.rstrip() + "\n")
+    polish_report_path = artifacts / "briefing_polish_report.json"
+    curation_report_path = artifacts / "evidence_curation_report.json"
+    write_markdown(briefing_path, reader_memo.rstrip() + "\n")
+    write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
     write_json(briefing_validation_path, briefing_validation)
+    write_json(polish_report_path, polish_report)
+    write_json(curation_report_path, memo_package["curation_report"])
     write_json(
         summary_path,
         {
@@ -188,6 +200,7 @@ def run_map_briefing(
             "question": question,
             "paths": {
                 "briefing": _rel(repo_root, briefing_path),
+                "evidence_appendix": _rel(repo_root, evidence_appendix_path),
                 "prompt": _rel(repo_root, prompt_path),
                 "raw": _rel(repo_root, raw_path),
                 "prioritized_map": _rel(repo_root, prioritized_map_path),
@@ -195,6 +208,8 @@ def run_map_briefing(
                 "generated_map_erosion_audit": _rel(repo_root, erosion_audit_path),
                 "map_sufficiency_report": _rel(repo_root, sufficiency_report_path),
                 "briefing_validation_report": _rel(repo_root, briefing_validation_path),
+                "briefing_polish_report": _rel(repo_root, polish_report_path),
+                "evidence_curation_report": _rel(repo_root, curation_report_path),
             },
             "source_display_names": source_lookup,
             "map_quality_status": str(quality_report.get("status", "unknown")),
@@ -212,6 +227,8 @@ def run_map_briefing(
             "map_sufficiency_status": scaffold.get("map_sufficiency_report", {}).get("status"),
             "briefing_validation_status": briefing_validation.get("status"),
             "briefing_validation_score": briefing_validation.get("score"),
+            "briefing_polish_status": polish_report.get("status"),
+            "briefing_polish_score": polish_report.get("score"),
         },
     )
     return MapBriefingResult(
@@ -672,6 +689,1226 @@ def append_evidence_by_decision_lever(rendered: str, scaffold: dict[str, Any]) -
             )
         lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def polish_briefing_for_reader(rendered: str, scaffold: dict[str, Any], *, executive_word_target: int = 1400) -> str:
+    """Turn the map-backed packet into a judge-readable brief plus appendix.
+
+    The polish pass may compress, reorder, and clean text, but it only uses
+    statements already present in the scaffold or rendered packet.
+    """
+    cleaned = clean_reader_briefing_text(rendered)
+    if "## Evidence Appendix" in cleaned:
+        return cleaned
+    executive = _build_polished_executive_brief(cleaned, scaffold, executive_word_target=executive_word_target)
+    appendix = _build_polished_evidence_appendix(cleaned, scaffold)
+    return clean_reader_briefing_text("\n\n".join(part for part in (executive, appendix) if part.strip()))
+
+
+def compose_final_reader_memo_package(rendered: str, scaffold: dict[str, Any]) -> dict[str, Any]:
+    curated_packets = build_curated_evidence_packets(scaffold)
+    final_scaffold = dict(scaffold)
+    final_scaffold["curated_evidence_packets"] = curated_packets
+    decision_memo_slots = build_decision_memo_slots(final_scaffold, rendered=rendered)
+    final_scaffold["decision_memo_slots"] = decision_memo_slots
+    memo = _build_final_reader_memo(rendered, final_scaffold)
+    appendix = _build_final_evidence_appendix(rendered, final_scaffold)
+    return {
+        "memo": clean_reader_memo_text(memo),
+        "appendix": clean_reader_briefing_text(appendix),
+        "curation_report": {**curated_packets.get("curation_report", {}), "decision_memo_slots": decision_memo_slots},
+        "scaffold": final_scaffold,
+    }
+
+
+def build_curated_evidence_packets(scaffold: dict[str, Any], *, rows_per_packet: int = 3) -> dict[str, Any]:
+    source_counts: dict[str, int] = {}
+    packets_in = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
+    curated_packets: list[dict[str, Any]] = []
+    excluded: list[dict[str, str]] = []
+    for packet in packets_in.get("packets", []) if isinstance(packets_in.get("packets"), list) else []:
+        if not isinstance(packet, dict):
+            continue
+        good_rows: list[dict[str, Any]] = []
+        concept = str(packet.get("concept", ""))
+        for row in packet.get("rows", []) if isinstance(packet.get("rows"), list) else []:
+            if not isinstance(row, dict):
+                continue
+            quality = _reader_evidence_row_quality(row)
+            clean_row = _reader_clean_evidence_row(row)
+            if not quality["usable"]:
+                excluded.append(
+                    {
+                        "concept": concept,
+                        "source": str(clean_row.get("source", "")),
+                        "claim": str(row.get("claim", "")),
+                        "reason": ", ".join(quality["reasons"]),
+                    }
+                )
+                continue
+            source = str(clean_row.get("source", ""))
+            source_penalty = source_counts.get(source, 0)
+            clean_row["reader_score"] = int(row.get("score", 0)) + int(quality["score"]) - source_penalty
+            good_rows.append(clean_row)
+        good_rows.sort(key=lambda item: (-int(item.get("reader_score", 0)), str(item.get("source", "")), str(item.get("claim", ""))))
+        selected: list[dict[str, Any]] = []
+        packet_sources: set[str] = set()
+        for row in good_rows:
+            source = str(row.get("source", ""))
+            if source in packet_sources and len(good_rows) > rows_per_packet:
+                continue
+            selected.append(row)
+            packet_sources.add(source)
+            source_counts[source] = source_counts.get(source, 0) + 1
+            if len(selected) >= rows_per_packet:
+                break
+        if selected:
+            curated_packets.append(
+                {
+                    "concept": concept,
+                    "label": str(packet.get("label") or _concept_label(concept)),
+                    "synthesis_job": str(packet.get("synthesis_job", "")),
+                    "must_surface_terms": packet.get("must_surface_terms", []),
+                    "rows": selected,
+                }
+            )
+    return {
+        "schema_id": "curated_evidence_packets_v1",
+        "method": "readability_directness_source_diversity_filter",
+        "packets": curated_packets,
+        "curation_report": {
+            "schema_id": "evidence_curation_report_v1",
+            "packet_count": len(curated_packets),
+            "selected_row_count": sum(len(packet.get("rows", [])) for packet in curated_packets),
+            "excluded_row_count": len(excluded),
+            "excluded_rows": excluded[:40],
+        },
+    }
+
+
+def build_decision_memo_slots(scaffold: dict[str, Any], *, rendered: str = "") -> dict[str, Any]:
+    slots: list[dict[str, Any]] = []
+    for spec in _DECISION_MEMO_SLOT_SPECS:
+        rows = _candidate_rows_for_memo_slot(scaffold, spec)
+        selected = sorted(rows, key=lambda row: _memo_slot_row_rank(row, spec))[: int(spec.get("max_rows", 2))]
+        slots.append(
+            {
+                "slot_id": spec["slot_id"],
+                "label": spec["label"],
+                "job": spec["job"],
+                "required": bool(spec.get("required", True)),
+                "status": "filled" if selected else "missing",
+                "missing_message": spec.get("missing_message", "The map does not expose clean evidence for this slot."),
+                "rows": selected,
+            }
+        )
+    crux_table = _compact_crux_table(rendered, scaffold)
+    return {
+        "schema_id": "decision_memo_slots_v1",
+        "method": "required_decision_slot_coverage_from_curated_evidence",
+        "slots": slots,
+        "coverage": {
+            "required_slot_count": sum(1 for slot in slots if slot.get("required")),
+            "filled_required_slot_count": sum(1 for slot in slots if slot.get("required") and slot.get("status") == "filled"),
+            "missing_required_slots": [slot["slot_id"] for slot in slots if slot.get("required") and slot.get("status") != "filled"],
+            "has_crux_table": bool(crux_table),
+        },
+    }
+
+
+_DECISION_MEMO_SLOT_SPECS = (
+    {
+        "slot_id": "default_population",
+        "label": "Default population",
+        "job": "State who inherits the default answer.",
+        "concepts": ("default_population",),
+        "sections": ("scope_limits", "main_support"),
+        "max_rows": 1,
+        "required": True,
+        "missing_message": "The map does not expose a clean default-population boundary.",
+    },
+    {
+        "slot_id": "dose_boundary",
+        "label": "Dose boundary",
+        "job": "State the intake level or threshold the answer applies to.",
+        "concepts": ("dose_or_threshold",),
+        "sections": ("main_support", "scope_limits"),
+        "max_rows": 1,
+        "required": True,
+        "missing_message": "The map does not expose a clean dose or intensity boundary.",
+    },
+    {
+        "slot_id": "hard_outcome_support",
+        "label": "Hard-outcome support",
+        "job": "Surface direct outcome evidence that supports the default answer.",
+        "concepts": ("hard_outcome_endpoint", "study_design_cohort"),
+        "sections": ("main_support",),
+        "max_rows": 2,
+        "required": True,
+        "missing_message": "The map lacks clean hard-outcome support for the default answer.",
+    },
+    {
+        "slot_id": "hard_outcome_counter",
+        "label": "Hard-outcome counterevidence",
+        "job": "Surface outcome evidence that pushes against the default answer.",
+        "concepts": ("hard_outcome_endpoint", "study_design_cohort"),
+        "sections": ("conflicting_evidence",),
+        "max_rows": 2,
+        "required": True,
+        "missing_message": "The map lacks clean hard-outcome counterevidence.",
+    },
+    {
+        "slot_id": "mechanism_surrogate",
+        "label": "Mechanism and surrogate evidence",
+        "job": "Explain biomarkers or mechanisms and what they cannot settle.",
+        "concepts": ("mechanism_ldl_apob", "surrogate_or_biomarker_endpoint", "dietary_context_or_saturated_fat"),
+        "sections": ("main_support", "conflicting_evidence", "method_limits", "scope_limits"),
+        "max_rows": 3,
+        "required": True,
+        "missing_message": "The map lacks clean mechanism or surrogate-endpoint evidence.",
+    },
+    {
+        "slot_id": "comparator_substitution",
+        "label": "Comparator or substitution",
+        "job": "State how replacement foods or comparators change the practical advice.",
+        "concepts": ("substitution_or_comparator",),
+        "sections": ("main_support", "conflicting_evidence", "method_limits", "scope_limits"),
+        "max_rows": 2,
+        "required": True,
+        "missing_message": "The map lacks clean comparator or substitution evidence.",
+    },
+    {
+        "slot_id": "high_risk_subgroup",
+        "label": "High-risk subgroup",
+        "job": "State who should not inherit the default answer without extra caution.",
+        "concepts": ("subgroup_diabetes_or_metabolic_risk", "subgroup_fh_hyper_responder"),
+        "sections": ("scope_limits", "conflicting_evidence", "method_limits", "main_support"),
+        "max_rows": 2,
+        "required": True,
+        "missing_message": "The map lacks clean high-risk subgroup evidence.",
+    },
+    {
+        "slot_id": "study_design_limits",
+        "label": "Study-design limits",
+        "job": "Distinguish hard outcomes from RCT/intervention or biomarker evidence.",
+        "concepts": ("study_design_rct", "study_design_cohort"),
+        "sections": ("method_limits", "main_support", "scope_limits"),
+        "max_rows": 2,
+        "required": False,
+        "missing_message": "The map does not expose clean study-design limitations.",
+    },
+)
+
+
+def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+    concepts = tuple(str(item) for item in spec.get("concepts", ()))
+    sections = tuple(str(item) for item in spec.get("sections", ()))
+    curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for packet in curated.get("packets", []) if isinstance(curated.get("packets"), list) else []:
+        if not isinstance(packet, dict) or str(packet.get("concept", "")) not in concepts:
+            continue
+        for row in packet.get("rows", []) if isinstance(packet.get("rows"), list) else []:
+            if not isinstance(row, dict):
+                continue
+            if sections and str(row.get("section", "")) not in sections:
+                continue
+            if not _row_matches_memo_slot_direction(row, spec):
+                continue
+            key = f"{row.get('source')}::{row.get('claim')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+    if rows:
+        return rows
+    return _fallback_rows_for_memo_slot(scaffold, spec)
+
+
+def _fallback_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+    concepts = set(str(item) for item in spec.get("concepts", ()))
+    sections = set(str(item) for item in spec.get("sections", ()))
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    for row in ledger.get("all_evidence", []) if isinstance(ledger.get("all_evidence"), list) else []:
+        if not isinstance(row, dict):
+            continue
+        row_concepts = set(str(item) for item in row.get("decision_concepts", []) if isinstance(item, str))
+        if concepts and not row_concepts.intersection(concepts):
+            continue
+        if sections and str(row.get("section", "")) not in sections:
+            continue
+        clean = _reader_clean_evidence_row(row)
+        quality = _reader_evidence_row_quality(row)
+        if quality["usable"] and _row_matches_memo_slot_direction(clean, spec):
+            clean["reader_score"] = int(row.get("score", 0)) + int(quality["score"])
+            rows.append(clean)
+    return rows
+
+
+def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any]) -> bool:
+    slot_id = str(spec.get("slot_id", ""))
+    claim = str(row.get("claim", ""))
+    lowered = f" {claim.lower()} "
+    if slot_id == "hard_outcome_support":
+        return _looks_like_support_evidence(claim) and not _looks_like_concern_evidence(claim)
+    if slot_id == "hard_outcome_counter":
+        return _looks_like_concern_evidence(claim)
+    if slot_id == "high_risk_subgroup":
+        if "free of" in lowered and "baseline" in lowered:
+            return False
+        return any(
+            marker in lowered
+            for marker in (
+                " diabetes",
+                " type 2",
+                " t2d",
+                " prediabetes",
+                " familial",
+                " hyper",
+                " high ldl",
+                " high apob",
+                " kidney",
+                " vascular disease",
+            )
+        )
+    if slot_id == "comparator_substitution":
+        return any(marker in lowered for marker in (" replace", " replacing", " substitut", " instead of", " compared with", " versus", " egg white", " plant protein"))
+    if slot_id == "mechanism_surrogate":
+        return any(marker in lowered for marker in (" ldl", " apob", " hdl", " cholesterol", " saturated fat", " biomarker", " tmao", " triglyceride"))
+    return True
+
+
+def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any]) -> tuple[int, int, int, int, str]:
+    claim = str(row.get("claim", ""))
+    lowered = claim.lower()
+    quantitative_bonus = 2 if _has_quantitative_specificity(claim) else 0
+    direct_bonus = 0
+    slot_id = str(spec.get("slot_id", ""))
+    if slot_id.startswith("hard_outcome") and any(marker in lowered for marker in ("mortality", "cardiovascular", "cvd", "stroke", "myocardial infarction")):
+        direct_bonus += 2
+    if slot_id == "mechanism_surrogate" and any(marker in lowered for marker in ("ldl", "apob", "hdl", "cholesterol", "saturated fat", "biomarker")):
+        direct_bonus += 2
+    if slot_id == "comparator_substitution" and any(marker in lowered for marker in ("replace", "replacing", "substitut", "instead of", "compared with")):
+        direct_bonus += 2
+    if slot_id == "high_risk_subgroup" and any(marker in lowered for marker in ("diabetes", "familial", "hyper", "high ldl", "kidney", "vascular")):
+        direct_bonus += 2
+    score = int(row.get("reader_score", 0)) + quantitative_bonus + direct_bonus
+    return (-score, len(claim), -len(set(_content_terms(claim))), str(row.get("source", "")), str(row.get("claim", "")))
+
+
+def _has_quantitative_specificity(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?:\bHR\b|\bRR\b|\bCI\b|\bP\s*[<=>]|%|mg/dL|mmol/L|participants?|events?|n\s*=|≥|≤|<|>\s*)",
+            text,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def _slot_lookup(slot_model: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(slot.get("slot_id", "")): slot
+        for slot in slot_model.get("slots", []) if isinstance(slot, dict)
+    }
+
+
+def _slot_paragraph(
+    slot_model: dict[str, Any],
+    slot_ids: tuple[str, ...],
+    *,
+    lead: str,
+    fallback_items: list[str],
+    max_sentences: int,
+) -> str:
+    lookup = _slot_lookup(slot_model)
+    sentences = [lead]
+    for slot_id in slot_ids:
+        slot = lookup.get(slot_id)
+        if not slot:
+            continue
+        if slot.get("status") == "missing":
+            if slot.get("required"):
+                sentences.append(str(slot.get("missing_message", "The map does not expose this evidence slot.")))
+            continue
+        slot_sentence = _memo_slot_sentence(slot)
+        if slot_sentence:
+            sentences.append(slot_sentence)
+    if len(sentences) == 1:
+        sentences.extend(fallback_items[: max_sentences - 1])
+    return _join_polished_sentences(sentences, max_sentences=max_sentences)
+
+
+def _memo_slot_sentence(slot: dict[str, Any]) -> str:
+    rows = [row for row in slot.get("rows", []) if isinstance(row, dict)]
+    if not rows:
+        return ""
+    label = str(slot.get("label", "Evidence"))
+    clauses = []
+    for row in rows[:3]:
+        claim = str(row.get("claim", "")).strip().rstrip(".")
+        source = str(row.get("source", "")).strip()
+        if not claim:
+            continue
+        clauses.append(claim + (f" ({source})" if source and source not in claim else ""))
+    if not clauses:
+        return ""
+    if len(clauses) == 1:
+        return f"{label}: {clauses[0]}."
+    return f"{label}: " + "; ".join(clauses[:-1]) + "; and " + clauses[-1] + "."
+
+
+def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
+    confidence = _extract_confidence(rendered) or str(scaffold.get("confidence_cap") or "medium")
+    decision_brief = _executive_decision_brief(rendered, scaffold)
+    slot_model = scaffold.get("decision_memo_slots", {}) if isinstance(scaffold.get("decision_memo_slots"), dict) else {}
+    implications = _slot_practical_implications(slot_model, fallback_items=_executive_implications(rendered, scaffold))
+    default_paragraph = _slot_paragraph(
+        slot_model,
+        ("default_population", "dose_boundary", "hard_outcome_support"),
+        lead="The cleanest map-backed default is cautious neutrality at moderate intake, not a broad claim that eggs are beneficial or harmless at any dose.",
+        fallback_items=_executive_default_reasons(scaffold),
+        max_sentences=5,
+    )
+    evidence_paragraph = _slot_paragraph(
+        slot_model,
+        ("hard_outcome_support", "hard_outcome_counter", "mechanism_surrogate", "study_design_limits"),
+        lead="The evidence mix matters: hard-outcome cohorts, short-term intervention or biomarker evidence, and mechanism evidence answer different parts of the decision.",
+        fallback_items=_executive_carrying_evidence(scaffold),
+        max_sentences=6,
+    )
+    practical_paragraph = _slot_paragraph(
+        slot_model,
+        ("comparator_substitution", "high_risk_subgroup"),
+        lead="The recommendation changes most when replacement foods or higher-risk subgroups enter the decision.",
+        fallback_items=_executive_counter_reasons(scaffold),
+        max_sentences=5,
+    )
+    weak_paragraph = _humanized_limitations_paragraph(scaffold)
+    crux_table = _compact_crux_table(rendered, scaffold)
+    lines = [
+        "## Decision Brief",
+        "",
+        decision_brief,
+        "",
+        f"**Confidence:** {confidence}",
+        "",
+        "## Practical Read",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in implications[:4])
+    lines.extend(["", "## Why This Read", "", default_paragraph])
+    lines.extend(["", "## Evidence Carrying the Conclusion", "", evidence_paragraph])
+    lines.extend(["", "## Practical Scope and Exceptions", "", practical_paragraph])
+    if crux_table:
+        lines.extend(["", "## Decision Cruxes", "", crux_table])
+    lines.extend(
+        [
+            "",
+            "## Limits of the Current Map",
+            "",
+            weak_paragraph,
+            "",
+            "## Evidence Trail",
+            "",
+            "The structured evidence trail, decision-lever tables, coverage snapshot, and excluded extraction artifacts are in `EVIDENCE_APPENDIX.md`.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _slot_practical_implications(slot_model: dict[str, Any], *, fallback_items: list[str]) -> list[str]:
+    lookup = _slot_lookup(slot_model)
+    items: list[str] = []
+    if lookup.get("dose_boundary", {}).get("status") == "filled":
+        items.append("Treat the default answer as scoped to the mapped moderate-intake boundary, not to unlimited egg intake.")
+    if lookup.get("hard_outcome_support", {}).get("status") == "filled":
+        items.append("For the mapped default population, the evidence supports neutral or low-concern advice rather than a meaningful-harm conclusion.")
+    if lookup.get("mechanism_surrogate", {}).get("status") == "filled":
+        items.append("Keep LDL/ApoB, saturated fat, and other biomarker context visible because surrogate evidence can bound but not settle hard-outcome risk.")
+    if lookup.get("comparator_substitution", {}).get("status") == "filled":
+        items.append("Frame practical advice around what eggs replace or accompany, since substitution evidence can change the recommendation.")
+    if lookup.get("high_risk_subgroup", {}).get("status") == "filled":
+        items.append("Do not automatically generalize the default answer to higher-risk subgroups; treat those as separate scope decisions.")
+    if not items:
+        items = fallback_items
+    return _dedupe([_polish_reader_sentence_block(item, max_chars=240) for item in items if item])[:5]
+
+
+def _build_final_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -> str:
+    curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
+    lines = [
+        "## Evidence Appendix",
+        "",
+        "This appendix keeps the machinery inspectable while the main brief remains reader-facing.",
+        "",
+        "## Evidence Roles",
+        "",
+    ]
+    for section, label in (
+        ("main_support", "Main Support"),
+        ("conflicting_evidence", "Conflicting Evidence"),
+        ("scope_limits", "Scope Limits"),
+        ("method_limits", "Method Limits"),
+    ):
+        rows = _curated_rows_for_sections(scaffold, (section,))
+        if not rows:
+            continue
+        lines.extend([f"### {label}", ""])
+        for row in rows[:5]:
+            claim = str(row.get("claim", "")).strip()
+            source = str(row.get("source", "")).strip()
+            if claim:
+                lines.append(f"- {claim}" + (f" ({source})" if source and source not in claim else ""))
+        lines.append("")
+    lines.extend(
+        [
+        "## Evidence by Decision Lever",
+        "",
+        ]
+    )
+    for packet in curated.get("packets", []) if isinstance(curated.get("packets"), list) else []:
+        if not isinstance(packet, dict):
+            continue
+        rows = [row for row in packet.get("rows", []) if isinstance(row, dict)]
+        if not rows:
+            continue
+        lines.extend(
+            [
+                f"### {packet.get('label') or _concept_label(str(packet.get('concept', '')))}",
+                "",
+                str(packet.get("synthesis_job", "")).strip() or "Decision-relevant evidence packet.",
+                "",
+                "| Evidence | Source | Role |",
+                "|---|---|---|",
+            ]
+        )
+        for row in rows:
+            lines.append(
+                "| "
+                + " | ".join(
+                    _markdown_table_cell(str(value))
+                    for value in (row.get("claim", ""), row.get("source", ""), row.get("why_it_matters", ""))
+                )
+                + " |"
+            )
+        lines.append("")
+    coverage = _markdown_section_with_heading(rendered, "Map Coverage Snapshot")
+    if coverage:
+        lines.extend([coverage, ""])
+    lines.extend(_excluded_artifacts_section(curated))
+    return "\n".join(lines).strip()
+
+
+def _reader_clean_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **row,
+        "claim": _first_complete_sentences(_polish_reader_sentence_block(str(row.get("claim", "")), max_chars=0), max_sentences=1, max_chars=360),
+        "source": _reader_source_name(str(row.get("source", ""))),
+        "why_it_matters": _polish_reader_sentence_block(str(row.get("why_it_matters", "")), max_chars=220),
+    }
+
+
+def _reader_evidence_row_quality(row: dict[str, Any]) -> dict[str, Any]:
+    raw_claim = str(row.get("claim", "")).strip()
+    cleaned = _reader_clean_evidence_row(row)
+    claim = str(cleaned.get("claim", "")).strip()
+    lowered = claim.lower()
+    reasons: list[str] = []
+    score = 0
+    if len(_content_terms(claim)) < 5:
+        reasons.append("too_short")
+    if (
+        "..." in raw_claim
+        or "..." in claim
+        or _contains_truncated_fragment(raw_claim)
+        or _contains_truncated_fragment(claim)
+        or raw_claim.startswith(("...", ".", "(", "-"))
+        or claim.startswith(("...", ".", "(", "-"))
+    ):
+        reasons.append("fragmentary_extraction")
+    if _looks_like_reference_or_citation_line(raw_claim) or _looks_like_reference_or_citation_line(claim):
+        reasons.append("reference_or_citation_line")
+    if _looks_like_boilerplate_disclosure(lowered) or _looks_like_publisher_or_license_boilerplate(lowered):
+        reasons.append("boilerplate")
+    if claim and claim[-1] in ".!?":
+        score += 2
+    if any(marker in lowered for marker in ("risk", "mortality", "cardiovascular", "ldl", "apob", "diabetes", "replace", "substitut", "per day", "per week")):
+        score += 2
+    if str(row.get("weight", "")) == "high":
+        score += 2
+    elif str(row.get("weight", "")) == "medium":
+        score += 1
+    return {"usable": not reasons, "reasons": reasons, "score": score}
+
+
+def _looks_like_reference_or_citation_line(text: str) -> bool:
+    lowered = text.lower()
+    return bool(re.search(r"\bpmid:\d+|\bet al\.\s+[a-z].*\b\d{4};\d+|^\s*[A-Z][A-Za-z]+ [A-Z],", text)) or (
+        lowered.count(" et al") >= 1 and bool(re.search(r"\b\d{4};\d+", lowered))
+    )
+
+
+def _curated_rows_for_concepts(scaffold: dict[str, Any], concepts: tuple[str, ...]) -> list[dict[str, Any]]:
+    curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    for concept in concepts:
+        for packet in curated.get("packets", []) if isinstance(curated.get("packets"), list) else []:
+            if isinstance(packet, dict) and packet.get("concept") == concept:
+                rows.extend([row for row in packet.get("rows", []) if isinstance(row, dict)])
+    return rows
+
+
+def _curated_rows_for_sections(scaffold: dict[str, Any], sections: tuple[str, ...]) -> list[dict[str, Any]]:
+    curated = scaffold.get("curated_evidence_packets", {}) if isinstance(scaffold.get("curated_evidence_packets"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for packet in curated.get("packets", []) if isinstance(curated.get("packets"), list) else []:
+        if not isinstance(packet, dict):
+            continue
+        for row in packet.get("rows", []) if isinstance(packet.get("rows"), list) else []:
+            if not isinstance(row, dict) or str(row.get("section", "")) not in sections:
+                continue
+            key = f"{row.get('source')}::{row.get('claim')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+    return rows
+
+
+def _synthesis_paragraph(rows: list[dict[str, Any]], *, fallback_items: list[str], lead: str, max_items: int) -> str:
+    sentences = [lead]
+    seen_sources: set[str] = set()
+    for row in rows:
+        claim = str(row.get("claim", "")).strip()
+        source = str(row.get("source", "")).strip()
+        if not claim:
+            continue
+        if source in seen_sources and len(sentences) > 2:
+            continue
+        seen_sources.add(source)
+        source_suffix = f" ({source})" if source and source not in claim else ""
+        sentences.append(claim.rstrip(".") + source_suffix + ".")
+        if len(sentences) >= max_items + 1:
+            break
+    if len(sentences) == 1:
+        sentences.extend(fallback_items[:max_items])
+    return _join_polished_sentences(sentences, max_sentences=max_items + 1)
+
+
+def _humanized_limitations_paragraph(scaffold: dict[str, Any]) -> str:
+    issues = _string_list(scaffold.get("quality_issues"))
+    readable: list[str] = []
+    for issue in issues:
+        lowered = issue.lower()
+        if "high_claim_count" in lowered:
+            readable.append("The map is dense, so the output should be read as a structured decision aid rather than as a final literature review.")
+        elif "near_duplicate" in lowered:
+            readable.append("The extractor produced near-duplicate claims, which can overweight repeated formulations unless curated.")
+        elif "missing" in lowered:
+            readable.append(_polish_reader_sentence_block(issue, max_chars=260))
+    sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
+    if sufficiency.get("status"):
+        readable.append(f"The map sufficiency status is {str(sufficiency.get('status')).replace('_', ' ')}, so absent slots should be treated as named gaps.")
+    if not readable:
+        readable = _executive_weak_points(scaffold)
+    return _join_polished_sentences(_dedupe(readable), max_sentences=4)
+
+
+def _excluded_artifacts_section(curated: dict[str, Any]) -> list[str]:
+    report = curated.get("curation_report", {}) if isinstance(curated.get("curation_report"), dict) else {}
+    excluded = [row for row in report.get("excluded_rows", []) if isinstance(row, dict)]
+    if not excluded:
+        return ["## Extraction Artifacts Excluded From Reader Brief", "", "No evidence rows were excluded by the reader-facing curation pass."]
+    lines = [
+        "## Extraction Artifacts Excluded From Reader Brief",
+        "",
+        "These rows remain auditable but are kept out of the main memo because they are fragmentary, boilerplate-like, or citation/reference debris.",
+        "",
+        "| Reason | Source | Excluded text |",
+        "|---|---|---|",
+    ]
+    for row in excluded[:12]:
+        lines.append(
+            "| "
+            + " | ".join(
+                _markdown_table_cell(str(value))
+                for value in (row.get("reason", ""), row.get("source", ""), row.get("claim", ""))
+            )
+            + " |"
+        )
+    return lines
+
+
+def clean_reader_briefing_text(text: str) -> str:
+    lines = [_clean_reader_briefing_line(line) for line in text.splitlines()]
+    cleaned = "\n".join(lines)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
+    cleaned = re.sub(r"\.{4,}", "...", cleaned)
+    return cleaned.strip()
+
+
+def clean_reader_memo_text(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        if not line.strip():
+            lines.append("")
+            continue
+        if line.lstrip().startswith("|"):
+            cells = [_clean_memo_table_cell(cell) for cell in line.split("|")]
+            lines.append("|".join(cells))
+        else:
+            lines.append(_drop_ellipsis_sentences(_polish_reader_sentence_block(line, max_chars=0)))
+    cleaned = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+    cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def _clean_memo_table_cell(cell: str) -> str:
+    if not cell.strip() or set(cell.strip()) <= {"-", ":"}:
+        return cell
+    cleaned = _drop_ellipsis_sentences(cell)
+    cleaned = _normalize_reader_source_labels(cleaned)
+    return f" {cleaned.strip()} "
+
+
+def _drop_ellipsis_sentences(text: str) -> str:
+    if "..." not in text:
+        return _normalize_reader_source_labels(text)
+    pieces = re.findall(r".*?(?:[.!?](?=\s+[A-Z0-9(]|\s*$)|$)", text)
+    kept = [piece.strip() for piece in pieces if piece.strip() and "..." not in piece]
+    if kept:
+        return _normalize_reader_source_labels(" ".join(kept))
+    prefix = _normalize_reader_source_labels(text.split("...", 1)[0].rstrip(" ,;:."))
+    if not prefix or not prefix.endswith((".", "?", "!")):
+        return "See appendix for full map-backed detail."
+    return prefix
+
+
+def _normalize_reader_source_labels(text: str) -> str:
+    pattern = r"\b((?:[A-Z][A-Za-z]+|AHA|AJCN|BMJ|EAS|JAHA|JAMA|PLOS|PURE)(?:\s+(?:[A-Z][A-Za-z]+|AHA|AJCN|BMJ|EAS|JAHA|JAMA|PLOS|PURE))*\s+(?:19|20)\d{2})\s+(?:Fullish|Full|Abstract|Metadata|Pubmed|PMC)\b"
+    return re.sub(pattern, lambda match: _reader_source_name(match.group(0)), text)
+
+
+def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> dict[str, Any]:
+    word_count = len(re.findall(r"\b\w+\b", rendered))
+    executive = _executive_markdown(rendered)
+    appendix_present = "## Evidence Appendix" in rendered
+    issues: list[dict[str, str]] = []
+    if _contains_truncated_fragment(rendered):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "truncated_fragment",
+                "message": "The briefing still appears to contain an extraction fragment.",
+            }
+        )
+    if "..." in executive:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "executive_contains_ellipsis",
+                "message": "The reader memo contains ellipsis-truncated prose.",
+            }
+        )
+    if not appendix_present:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "missing_evidence_appendix",
+                "message": "The briefing does not separate executive prose from the detailed evidence appendix.",
+            }
+        )
+    if _markdown_table_count(executive) > 1:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "executive_table_overload",
+                "message": "The executive brief contains too many tables for a reader-first artifact.",
+            }
+        )
+    if len(re.findall(r"\b\w+\b", executive)) > int(executive_word_target := 1500):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "executive_brief_too_long",
+                "message": f"The executive brief exceeds the {executive_word_target}-word readability target.",
+            }
+        )
+    duplicate_sentence_count = _duplicate_sentence_count(executive)
+    if duplicate_sentence_count > 2:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "duplicate_sentence_overload",
+                "message": "The briefing repeats too many full sentences.",
+            }
+        )
+    if "## Evidence Roles" not in rendered or "## Evidence by Decision Lever" not in rendered:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "missing_structured_evidence_section",
+                "message": "The detailed evidence structure is not visible in the appendix.",
+            }
+        )
+    decision_slots = scaffold.get("decision_memo_slots", {}) if isinstance(scaffold.get("decision_memo_slots"), dict) else {}
+    slot_coverage = decision_slots.get("coverage", {}) if isinstance(decision_slots.get("coverage"), dict) else {}
+    missing_memo_slots = _string_list(slot_coverage.get("missing_required_slots"))
+    if missing_memo_slots:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "missing_decision_memo_slots",
+                "message": "The reader memo lacks required decision slots: " + ", ".join(missing_memo_slots) + ".",
+            }
+        )
+    concept_packets = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
+    visible_packets = 0
+    for packet in concept_packets.get("packets", []) if isinstance(concept_packets.get("packets"), list) else []:
+        if isinstance(packet, dict) and _rendered_mentions_any_surface_term(rendered, _string_list(packet.get("must_surface_terms"))):
+            visible_packets += 1
+    packet_count = len(concept_packets.get("packets", [])) if isinstance(concept_packets.get("packets"), list) else 0
+    if packet_count and visible_packets < max(1, packet_count // 2):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "thin_decision_lever_visibility",
+                "message": "Fewer than half of retained decision-lever packets are visibly surfaced.",
+            }
+        )
+    score = max(0, 100 - 10 * len(issues))
+    return {
+        "schema_id": "briefing_reader_polish_report_v1",
+        "method": "deterministic_readability_lints_for_two_tier_briefings",
+        "status": "polished" if not issues else "polished_with_warnings" if score >= 70 else "needs_reader_edit",
+        "score": score,
+        "word_count": word_count,
+        "executive_word_count": len(re.findall(r"\b\w+\b", executive)),
+        "table_count": _markdown_table_count(rendered),
+        "executive_table_count": _markdown_table_count(executive),
+        "duplicate_sentence_count": duplicate_sentence_count,
+        "decision_lever_packets_visible": visible_packets,
+        "decision_lever_packet_count": packet_count,
+        "decision_memo_required_slot_count": slot_coverage.get("required_slot_count"),
+        "decision_memo_filled_required_slot_count": slot_coverage.get("filled_required_slot_count"),
+        "decision_memo_missing_required_slots": missing_memo_slots,
+        "issues": issues,
+    }
+
+
+def _build_polished_executive_brief(rendered: str, scaffold: dict[str, Any], *, executive_word_target: int) -> str:
+    decision_brief = _executive_decision_brief(rendered, scaffold)
+    confidence = _extract_confidence(rendered) or str(scaffold.get("confidence_cap") or "medium")
+    implications = _executive_implications(rendered, scaffold)
+    default_reasons = _executive_default_reasons(scaffold)
+    counter_reasons = _executive_counter_reasons(scaffold)
+    carrying_evidence = _executive_carrying_evidence(scaffold)
+    weak_points = _executive_weak_points(scaffold)
+    crux_table = _compact_crux_table(rendered, scaffold)
+    lines = [
+        "## Decision Brief",
+        "",
+        decision_brief,
+        "",
+        f"**Confidence:** {confidence}",
+        "",
+        "## Decision Implications",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in implications[:5])
+    lines.extend(["", "## Why This Is the Right Default", ""])
+    lines.append(_join_polished_sentences(default_reasons, max_sentences=5))
+    lines.extend(["", "## What Could Make This Wrong", ""])
+    lines.append(_join_polished_sentences(counter_reasons, max_sentences=5))
+    if crux_table:
+        lines.extend(["", "## What Could Change the Decision", "", crux_table])
+    lines.extend(["", "## Evidence Carrying the Conclusion", ""])
+    lines.append(_join_polished_sentences(carrying_evidence, max_sentences=6))
+    lines.extend(["", "## Where the Map Is Weak", ""])
+    lines.append(_join_polished_sentences(weak_points, max_sentences=5))
+    executive = "\n".join(lines)
+    if len(re.findall(r"\b\w+\b", executive)) <= executive_word_target:
+        return executive
+    return _trim_executive_sections(executive, target_words=executive_word_target)
+
+
+def _build_polished_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -> str:
+    sections = []
+    for title in ("Evidence Roles", "Evidence by Decision Lever", "Map Coverage Snapshot", "Audit Trail"):
+        section = _markdown_section_with_heading(rendered, title)
+        if section:
+            sections.append(_clean_appendix_section(section))
+    if not sections:
+        sections = [_deterministic_appendix_from_scaffold(scaffold)]
+    return "\n\n".join(["## Evidence Appendix", *sections]).strip()
+
+
+def _executive_decision_brief(rendered: str, scaffold: dict[str, Any]) -> str:
+    body = _markdown_section(rendered, "Decision Brief")
+    body = re.sub(r"\*\*Confidence:\*\*[^\n]+", "", body).strip()
+    paragraphs = [paragraph.strip() for paragraph in re.split(r"\n\s*\n", body) if paragraph.strip()]
+    if paragraphs:
+        return _first_complete_sentences(_polish_reader_sentence_block(paragraphs[0], max_chars=0), max_sentences=3, max_chars=850)
+    return _polish_reader_sentence_block(_deterministic_decision_brief(scaffold), max_chars=900)
+
+
+def _executive_implications(rendered: str, scaffold: dict[str, Any]) -> list[str]:
+    body = _markdown_section(rendered, "Decision Implications")
+    bullets = re.findall(r"^\s*[-*]\s+(.+)$", body, flags=re.MULTILINE)
+    if not bullets:
+        decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+        bullets = _deterministic_decision_implications(decision_model)
+    return _dedupe([_polish_reader_sentence_block(item, max_chars=220) for item in bullets if item.strip()])[:6]
+
+
+def _executive_default_reasons(scaffold: dict[str, Any]) -> list[str]:
+    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    reasons = []
+    default = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
+    if default.get("why_this_frame"):
+        reasons.append(str(default["why_this_frame"]))
+    reasons.extend(_concept_packet_sentences(scaffold, preferred=("dose_or_threshold", "default_population", "hard_outcome_endpoint")))
+    for row in decision_model.get("main_reasons", []) if isinstance(decision_model.get("main_reasons"), list) else []:
+        if isinstance(row, dict):
+            if _generic_cluster_proposition(str(row.get("proposition", ""))):
+                continue
+            source = _source_suffix(row.get("sources"))
+            reasons.append(str(row.get("proposition", "")).strip() + source)
+    return _dedupe([_polish_reader_sentence_block(item, max_chars=320) for item in reasons if item])
+
+
+def _executive_counter_reasons(scaffold: dict[str, Any]) -> list[str]:
+    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    reasons = []
+    reasons.extend(_concept_packet_sentences(scaffold, preferred=("subgroup_diabetes_or_metabolic_risk", "dietary_context_or_saturated_fat", "substitution_or_comparator")))
+    for row in decision_model.get("strongest_counterarguments", []) if isinstance(decision_model.get("strongest_counterarguments"), list) else []:
+        if isinstance(row, dict):
+            if _generic_cluster_proposition(str(row.get("proposition", ""))):
+                continue
+            source = _source_suffix(row.get("sources"))
+            reasons.append(str(row.get("proposition", "")).strip() + source)
+    reasons.extend(_string_list(decision_model.get("what_would_change_answer"))[:3])
+    return _dedupe([_polish_reader_sentence_block(item, max_chars=320) for item in reasons if item])
+
+
+def _executive_carrying_evidence(scaffold: dict[str, Any]) -> list[str]:
+    sentences = []
+    sentences.extend(_concept_packet_sentences(scaffold, preferred=("study_design_cohort", "study_design_rct", "mechanism_ldl_apob", "surrogate_or_biomarker_endpoint")))
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    by_section = ledger.get("top_evidence_by_section", {}) if isinstance(ledger.get("top_evidence_by_section"), dict) else {}
+    for section in ("main_support", "conflicting_evidence"):
+        for row in by_section.get(section, [])[:2] if isinstance(by_section.get(section), list) else []:
+            if isinstance(row, dict):
+                claim = _first_complete_sentences(_polish_reader_sentence_block(str(row.get("claim", "")), max_chars=0), max_sentences=1, max_chars=320)
+                source = str(row.get("source", "")).strip()
+                if claim:
+                    sentences.append(claim + (f" ({source})." if source and source not in claim else ""))
+    return _dedupe(sentences)
+
+
+def _executive_weak_points(scaffold: dict[str, Any]) -> list[str]:
+    quality_status = str(scaffold.get("quality_status", "")).strip()
+    items = []
+    sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
+    if sufficiency.get("status"):
+        items.append(f"The map sufficiency status is {str(sufficiency.get('status')).replace('_', ' ')}, so absence of a slot should be read as a mapped gap rather than as negative evidence.")
+    if quality_status and quality_status != "unknown":
+        items.append(f"The map quality status is {quality_status.replace('_', ' ')}, which caps confidence and argues against a stronger bottom line.")
+    items.extend(_string_list(scaffold.get("quality_issues"))[:3])
+    contract = scaffold.get("briefing_contract", {}) if isinstance(scaffold.get("briefing_contract"), dict) else {}
+    answer_frame = contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {}
+    items.extend(_string_list(answer_frame.get("why_not_stronger"))[:3])
+    return _dedupe([_polish_reader_sentence_block(item, max_chars=320) for item in items if item])
+
+
+def _concept_packet_sentences(scaffold: dict[str, Any], *, preferred: tuple[str, ...]) -> list[str]:
+    packets = scaffold.get("concept_evidence_packets", {}) if isinstance(scaffold.get("concept_evidence_packets"), dict) else {}
+    packet_rows = [packet for packet in packets.get("packets", []) if isinstance(packet, dict)]
+    by_concept = {str(packet.get("concept", "")): packet for packet in packet_rows}
+    sentences = []
+    for concept in preferred:
+        packet = by_concept.get(concept)
+        if not packet:
+            continue
+        rows = [row for row in packet.get("rows", []) if isinstance(row, dict)]
+        if not rows:
+            continue
+        first = rows[0]
+        label = str(packet.get("label") or _concept_label(concept))
+        claim = _first_complete_sentences(_polish_reader_sentence_block(str(first.get("claim", "")), max_chars=0), max_sentences=1, max_chars=340)
+        source = str(first.get("source", "")).strip()
+        if claim:
+            sentences.append(f"{label}: {claim}" + (f" ({source})." if source and source not in claim else ""))
+    return sentences
+
+
+def _compact_crux_table(rendered: str, scaffold: dict[str, Any]) -> str:
+    section = _markdown_section(rendered, "What Could Change the Decision")
+    table_lines = [line for line in section.splitlines() if line.strip().startswith("|")]
+    if len(table_lines) >= 3:
+        return "\n".join(table_lines[:6])
+    cruxes = _deterministic_top_cruxes(scaffold)[:3]
+    if not cruxes:
+        return ""
+    lines = ["| Crux | Current read | Would change if |", "|---|---|---|"]
+    for row in cruxes:
+        lines.append(
+            "| "
+            + " | ".join(
+                _markdown_table_cell(_polish_reader_sentence_block(str(row.get(key, "")), max_chars=150))
+                for key in ("crux", "current_read", "would_change_if")
+            )
+            + " |"
+        )
+    return "\n".join(lines)
+
+
+def _deterministic_appendix_from_scaffold(scaffold: dict[str, Any]) -> str:
+    roles = scaffold.get("evidence_roles", {}) if isinstance(scaffold.get("evidence_roles"), dict) else {}
+    lines = ["## Evidence Roles", ""]
+    for key, label in (
+        ("main_support", "Main Support"),
+        ("conflicting_evidence", "Conflicting Evidence"),
+        ("scope_limits", "Scope Limits"),
+        ("method_limits", "Method Limits"),
+    ):
+        lines.extend([f"### {label}", ""])
+        lines.extend(f"- {_polish_reader_sentence_block(item, max_chars=260)}" for item in _string_list(roles.get(key))[:6])
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def _markdown_section(markdown: str, title: str) -> str:
+    match = re.search(rf"^##\s+{re.escape(title)}\s*$\n?(.*?)(?=^##\s+|\Z)", markdown, flags=re.MULTILINE | re.DOTALL)
+    return match.group(1).strip() if match else ""
+
+
+def _markdown_section_with_heading(markdown: str, title: str) -> str:
+    match = re.search(rf"^##\s+{re.escape(title)}\s*$\n?(.*?)(?=^##\s+|\Z)", markdown, flags=re.MULTILINE | re.DOTALL)
+    if not match:
+        return ""
+    return f"## {title}\n\n{match.group(1).strip()}".strip()
+
+
+def _clean_appendix_section(section: str) -> str:
+    lines = []
+    previous_content = ""
+    source_counts: dict[str, int] = {}
+    for line in section.splitlines():
+        cleaned = _clean_reader_briefing_line(line)
+        if not cleaned.strip():
+            lines.append("")
+            continue
+        content_key = re.sub(r"\([^)]{3,120}\)", "", cleaned).strip().lower()
+        if content_key and content_key == previous_content:
+            continue
+        source_match = re.search(r"\|\s*([^|]{3,120})\s*\|[^|]*\|?$", cleaned) if cleaned.startswith("|") else re.search(r"\(([^)]{3,120})\)\.?$", cleaned)
+        if source_match and not cleaned.startswith("|---"):
+            source = source_match.group(1).strip()
+            if source.lower() in {"source", "role", "why it matters"}:
+                lines.append(cleaned)
+                continue
+            source_counts[source] = source_counts.get(source, 0) + 1
+            if source_counts[source] > 5 and not cleaned.startswith("##"):
+                continue
+        lines.append(cleaned)
+        if content_key:
+            previous_content = content_key
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+def _clean_reader_briefing_line(line: str) -> str:
+    if not line.strip():
+        return ""
+    if line.lstrip().startswith("|"):
+        cells = line.split("|")
+        if len(cells) > 2 and not set(line.strip()) <= {"|", "-", " ", ":"}:
+            return "|".join(_clean_reader_table_cell(cell) for cell in cells)
+    prefix = ""
+    body = line
+    bullet = re.match(r"^(\s*[-*]\s+)(.+)$", line)
+    if bullet:
+        prefix, body = bullet.group(1), bullet.group(2)
+    return prefix + _polish_reader_sentence_block(body, max_chars=420)
+
+
+def _clean_reader_table_cell(cell: str) -> str:
+    if not cell.strip() or set(cell.strip()) <= {"-", ":"}:
+        return cell
+    return " " + _polish_reader_sentence_block(cell, max_chars=260).strip() + " "
+
+
+def _polish_reader_sentence_block(text: str, *, max_chars: int = 500) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    cleaned = _remove_extraction_fragments(cleaned)
+    cleaned = re.sub(r"\b(?:Dose/threshold|Comparator/substitution|Subgroup/scope|Method-limit) evidence:\s*", "", cleaned)
+    cleaned = re.sub(r"\b[A-Za-z]+ evidence:\s*(?=[a-z])", "", cleaned)
+    cleaned = _remove_extraction_fragments(cleaned)
+    cleaned = _polish_embedded_source_prefixes(cleaned)
+    cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
+    cleaned = re.sub(r"\.{4,}", "...", cleaned)
+    cleaned = cleaned.strip(" ")
+    if max_chars and len(cleaned) > max_chars:
+        cleaned = _short_claim_fragment(cleaned, max_chars=max_chars)
+    return cleaned
+
+
+def _remove_extraction_fragments(text: str) -> str:
+    cleaned = text
+    cleaned = re.sub(r"(^|[\s(*-])\.{2,}[a-z]{2,}\s+", r"\1", cleaned)
+    cleaned = re.sub(r"(^|[\s(])\.[a-z]{2,}\s+", r"\1", cleaned)
+    cleaned = re.sub(r"(?<=[A-Za-z])\.[a-z]{2,}\s+", " ", cleaned)
+    cleaned = re.sub(r"\b[a-z]{1,3}\.(?=[a-z]{3,})", "", cleaned)
+    cleaned = re.sub(r"\b[A-Za-z]{2,}-containi\b", "ApoB-containing", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip(" ,;")
+
+
+def _contains_truncated_fragment(text: str) -> bool:
+    return bool(re.search(r"(^|[\s(*-])\.{1,3}[a-z]{2,}\s+|(?<=[A-Za-z])\.[a-z]{2,}\s+|\b[a-z]{1,3}\.(?=[a-z]{3,})|\b[A-Za-z]{2,}-containi\b", text))
+
+
+def _join_polished_sentences(items: list[str], *, max_sentences: int) -> str:
+    polished = []
+    for item in items:
+        sentence = _first_complete_sentences(_polish_reader_sentence_block(item, max_chars=0), max_sentences=1, max_chars=380)
+        if not sentence:
+            continue
+        if not sentence.endswith((".", "?", "!")):
+            sentence += "."
+        polished.append(sentence)
+    if not polished:
+        return "The current map does not expose enough clean evidence to support a more specific synthesis for this section."
+    return " ".join(_dedupe(polished)[:max_sentences])
+
+
+def _first_complete_sentences(text: str, *, max_sentences: int, max_chars: int) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if not cleaned:
+        return ""
+    sentences = re.findall(r".*?(?:[.!?](?=\s+[A-Z0-9(]|\s*$)|$)", cleaned)
+    selected: list[str] = []
+    total = ""
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if "..." in sentence:
+            break
+        candidate = " ".join([*selected, sentence]).strip()
+        if selected and len(candidate) > max_chars:
+            break
+        selected.append(sentence)
+        total = candidate
+        if len(selected) >= max_sentences or len(total) >= max_chars:
+            break
+    if total and len(total) <= max_chars:
+        return total
+    if selected:
+        return " ".join(selected[:-1] or selected[:1]).strip()
+    return _short_claim_fragment(cleaned, max_chars=max_chars)
+
+
+def _source_suffix(value: Any) -> str:
+    if not isinstance(value, list):
+        return ""
+    sources = [_reader_source_name(str(item).strip()) for item in value if str(item).strip()]
+    if not sources:
+        return ""
+    return f" ({', '.join(sources[:2])})."
+
+
+def _generic_cluster_proposition(text: str) -> bool:
+    normalized = text.lower()
+    return (
+        normalized.count("evidence supports") >= 1
+        and any(marker in normalized for marker in ("default answer", "under stated conditions", "caution because some evidence"))
+        and len(_content_terms(normalized)) < 8
+    )
+
+
+def _reader_source_name(source: str) -> str:
+    raw = source.strip()
+    if "_sources_" in raw.lower():
+        raw = re.split(r"_sources_", raw, maxsplit=1, flags=re.IGNORECASE)[1]
+    title = display_source_name(raw)
+    title = re.sub(r"^.*\bSources\s+", "", title)
+    title = polish_source_display_name(title)
+    title = re.sub(r"\b(?:Fullish|Full|Abstract|Metadata|Pubmed|PMC)\b", "", title)
+    title = re.sub(r"\s+", " ", title).strip()
+    return _compact_citation_label(title)
+
+
+def _compact_citation_label(title: str) -> str:
+    words = title.split()
+    year_index = next((index for index, word in enumerate(words) if re.fullmatch(r"(?:19|20)\d{2}", word)), -1)
+    if year_index <= 0:
+        return title
+    author_words = [
+        word
+        for word in words[:year_index]
+        if word.lower() not in {"aha", "ajcn", "bmj", "eas", "jaha", "jama", "plos", "pure"}
+    ]
+    if not author_words:
+        author_words = words[:year_index]
+    return f"{' '.join(author_words[:2])} {words[year_index]}".strip()
+
+
+def _polish_embedded_source_prefixes(text: str) -> str:
+    cleaned = re.sub(
+        r"\b[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*_sources_([A-Za-z0-9_]+)",
+        lambda match: _reader_source_name(match.group(0)),
+        text,
+    )
+    cleaned = re.sub(r"\b[A-Z][A-Za-z0-9 ]{3,80}\b Sources ([A-Z][A-Za-z0-9 ,&/().-]+)", r"\1", cleaned)
+    return cleaned
+
+
+def _executive_markdown(rendered: str) -> str:
+    return rendered.split("\n## Evidence Appendix", 1)[0].strip()
+
+
+def _extract_confidence(markdown: str) -> str:
+    match = re.search(r"\*\*Confidence:\*\*\s*([A-Za-z_\- ]+)", markdown)
+    return match.group(1).strip() if match else ""
+
+
+def _trim_executive_sections(markdown: str, *, target_words: int) -> str:
+    if len(re.findall(r"\b\w+\b", markdown)) <= target_words:
+        return markdown
+    lines = markdown.splitlines()
+    trimmed = []
+    for line in lines:
+        if line.startswith("|") and len(trimmed) > 0:
+            continue
+        trimmed.append(line)
+        if len(re.findall(r"\b\w+\b", "\n".join(trimmed))) >= target_words:
+            break
+    return "\n".join(trimmed).rstrip()
+
+
+def _markdown_table_count(markdown: str) -> int:
+    return len(re.findall(r"^\|[-:| ]+\|$", markdown, flags=re.MULTILINE))
+
+
+def _duplicate_sentence_count(markdown: str) -> int:
+    seen: set[str] = set()
+    duplicates = 0
+    for sentence in re.split(r"(?<=[.!?])\s+", re.sub(r"\s+", " ", markdown)):
+        key = sentence.strip().lower()
+        if len(key) < 80:
+            continue
+        if key in seen:
+            duplicates += 1
+        else:
+            seen.add(key)
+    return duplicates
 
 
 def _coverage_snapshot_rows(table: dict[str, Any], *, max_rows: int = 12) -> list[dict[str, str]]:
@@ -1677,7 +2914,11 @@ def _short_claim_fragment(text: str, max_chars: int = 140) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip()
     if len(cleaned) <= max_chars:
         return cleaned
-    return cleaned[: max_chars - 1].rstrip(" ,.;") + "..."
+    candidate = cleaned[: max_chars - 3].rstrip(" ,.;")
+    last_space = candidate.rfind(" ")
+    if last_space >= max(24, int(max_chars * 0.6)):
+        candidate = candidate[:last_space].rstrip(" ,.;")
+    return candidate + "..."
 
 
 def build_briefing_plan(
@@ -3397,6 +4638,8 @@ def _looks_like_concern_evidence(text: str) -> bool:
     negated_low_concern = (
         " not associated ",
         " no association ",
+        " no increase ",
+        " no increased ",
         " no significant association ",
         " no significant difference ",
         " no adverse ",
@@ -3444,6 +4687,8 @@ def _looks_like_support_evidence(text: str) -> bool:
     markers = (
         " not associated ",
         " no association ",
+        " no increase ",
+        " no increased ",
         " no significant association ",
         " no significant difference ",
         " no adverse ",
@@ -3833,7 +5078,7 @@ def _ensure_confidence_visible(markdown: str, confidence: str) -> str:
 
 
 def _normalize_reader_punctuation(text: str) -> str:
-    cleaned = re.sub(r"\.{2,}", ".", text)
+    cleaned = re.sub(r"\.{4,}", "...", text)
     cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
     return cleaned
 

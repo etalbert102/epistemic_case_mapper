@@ -15,14 +15,20 @@ from epistemic_case_mapper.map_briefing import (
     build_decision_model,
     build_decision_slots,
     build_concept_evidence_packets,
+    build_decision_memo_slots,
     build_evidence_compression_table,
     build_evidence_weighting_ledger,
     build_map_sufficiency_report,
     build_proposition_clusters,
+    build_curated_evidence_packets,
     calibrate_confidence,
+    briefing_reader_polish_report,
+    clean_reader_briefing_text,
+    compose_final_reader_memo_package,
     expand_reader_map_references,
     model_parse_diagnostics,
     partition_map_evidence,
+    polish_briefing_for_reader,
     prioritize_map_for_briefing,
     repair_briefing_payload,
     run_map_briefing,
@@ -318,6 +324,323 @@ def test_concept_evidence_packets_render_decision_lever_section() -> None:
     assert "plant protein" in rendered
     assert "LDL/ApoB mechanism" in rendered
     assert validation["status"] == "passes_contract"
+
+
+def test_reader_polish_creates_executive_brief_and_appendix() -> None:
+    scaffold = {
+        "quality_status": "usable_with_review",
+        "confidence_cap": "medium",
+        "decision_model": {
+            "default_answer": {
+                "why_this_frame": "The mapped evidence supports a neutral default rather than a strong benefit or harm claim.",
+            },
+            "main_reasons": [
+                {
+                    "proposition": "Moderate use is not associated with worse hard outcomes in the mapped cohort evidence.",
+                    "sources": ["Cohort Study"],
+                }
+            ],
+            "strongest_counterarguments": [
+                {
+                    "proposition": "Higher-risk metabolic subgroups may not follow the default-population read.",
+                    "sources": ["Subgroup Study"],
+                }
+            ],
+            "what_would_change_answer": ["A direct trial showing worse hard outcomes at moderate use would change the decision."],
+        },
+        "concept_evidence_packets": {
+            "packets": [
+                {
+                    "concept": "substitution_or_comparator",
+                    "label": "Comparator or substitution",
+                    "must_surface_terms": ["plant protein"],
+                    "rows": [
+                        {
+                            "claim": "Replacing eggs with plant protein is associated with lower cardiovascular risk.",
+                            "source": "Comparator Study",
+                        }
+                    ],
+                }
+            ]
+        },
+        "map_sufficiency_report": {"status": "usable_with_named_gaps"},
+        "evidence_roles": {
+            "main_support": ["Moderate use was neutral in the mapped cohort evidence. (Cohort Study)"],
+            "conflicting_evidence": ["Metabolic-risk subgroups may require separate treatment. (Subgroup Study)"],
+            "scope_limits": [],
+            "method_limits": [],
+        },
+    }
+    rendered = """## Decision Brief
+
+Neutral default. Dose/threshold evidence:.utations that should not survive the reader pass.
+
+**Confidence:** medium
+
+## Decision Implications
+
+- Keep the default answer scoped to moderate use.
+
+## Evidence Roles
+
+### Main Support
+
+- Moderate use was neutral in the mapped cohort evidence. (Cohort Study)
+
+## Evidence by Decision Lever
+
+### Comparator or substitution
+
+| Evidence | Source | Role |
+|---|---|---|
+| Replacing eggs with plant protein is associated with lower cardiovascular risk. | Comparator Study | Comparator evidence affects the practical recommendation. |
+"""
+
+    polished = polish_briefing_for_reader(rendered, scaffold)
+    report = briefing_reader_polish_report(polished, scaffold)
+
+    assert "## Evidence Appendix" in polished
+    assert "## Why This Is the Right Default" in polished
+    assert "## Evidence Roles" in polished
+    assert "## Evidence by Decision Lever" in polished
+    assert "plant protein" in polished
+    assert ".utations" not in polished
+    assert report["status"] == "polished"
+
+
+def test_clean_reader_briefing_text_removes_extraction_fragments() -> None:
+    cleaned = clean_reader_briefing_text(
+        "Dose/threshold evidence:.utations that cause confusion. Subgroup/scope evidence:.ommon in the elderly."
+    )
+
+    assert ".utations" not in cleaned
+    assert ".ommon" not in cleaned
+    assert "Dose/threshold evidence" not in cleaned
+
+
+def test_final_reader_memo_separates_beautiful_brief_from_appendix() -> None:
+    scaffold = {
+        "quality_status": "usable_with_review",
+        "confidence_cap": "medium",
+        "quality_issues": ["risk: high_claim_count - Accepted many claims."],
+        "map_sufficiency_report": {"status": "usable_with_named_gaps"},
+        "concept_evidence_packets": {
+            "packets": [
+                {
+                    "concept": "dose_or_threshold",
+                    "label": "Dose or threshold",
+                    "synthesis_job": "State the dose boundary.",
+                    "must_surface_terms": ["per day"],
+                    "rows": [
+                        {
+                            "claim": "Moderate intake up to one egg per day was not associated with worse cardiovascular outcomes.",
+                            "source": "demo_sources_dehghan_2020_full",
+                            "section": "main_support",
+                            "weight": "high",
+                            "score": 8,
+                            "why_it_matters": "Dose boundaries prevent overgeneralization.",
+                        },
+                        {
+                            "claim": "...utations that cause reduced LDL receptor function are a copied fragment.",
+                            "source": "fragment",
+                            "section": "main_support",
+                            "weight": "medium",
+                            "score": 6,
+                            "why_it_matters": "Fragment.",
+                        },
+                    ],
+                },
+                {
+                    "concept": "subgroup_diabetes_or_metabolic_risk",
+                    "label": "Metabolic-risk subgroup",
+                    "synthesis_job": "State subgroup limits.",
+                    "must_surface_terms": ["diabetes"],
+                    "rows": [
+                        {
+                            "claim": "People with type 2 diabetes may require separate advice because subgroup evidence can diverge from the default-population read.",
+                            "source": "demo_sources_subgroup_2021_full",
+                            "section": "scope_limits",
+                            "weight": "high",
+                            "score": 8,
+                            "why_it_matters": "Subgroup evidence narrows the default answer.",
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+    rendered = """## Decision Brief
+
+Neutral default for generally healthy adults.
+
+**Confidence:** medium
+
+## Decision Implications
+
+- Keep the answer scoped to moderate intake.
+
+## Evidence Roles
+
+### Main Support
+
+- Moderate intake up to one egg per day was not associated with worse cardiovascular outcomes. (Dehghan 2020)
+
+## Evidence by Decision Lever
+
+### Dose or threshold
+
+| Evidence | Source | Role |
+|---|---|---|
+| Moderate intake up to one egg per day was not associated with worse cardiovascular outcomes. | Dehghan 2020 | Dose boundaries prevent overgeneralization. |
+"""
+
+    package = compose_final_reader_memo_package(rendered, scaffold)
+
+    assert "## Evidence Trail" in package["memo"]
+    assert "## Evidence Appendix" not in package["memo"]
+    assert "## Evidence by Decision Lever" in package["appendix"]
+    assert "Extraction Artifacts Excluded From Reader Brief" in package["appendix"]
+    assert "copied fragment" not in package["memo"]
+    assert "copied fragment" in package["appendix"]
+    assert "Dehghan 2020" in package["memo"] or "Dehghan 2020" in package["appendix"]
+
+
+def test_curated_evidence_packets_drop_reference_debris() -> None:
+    scaffold = {
+        "concept_evidence_packets": {
+            "packets": [
+                {
+                    "concept": "study_design_cohort",
+                    "rows": [
+                        {
+                            "claim": "Nakamura K, Barzi F, Huxley R, et al. Heart. 2009;95(11):909-16. pmid:19196734",
+                            "source": "reference",
+                            "section": "scope_limits",
+                            "weight": "medium",
+                            "score": 5,
+                        },
+                        {
+                            "claim": "A prospective cohort followed participants for cardiovascular outcomes over time.",
+                            "source": "cohort_source",
+                            "section": "main_support",
+                            "weight": "high",
+                            "score": 8,
+                        },
+                    ],
+                }
+            ]
+        }
+    }
+
+    curated = build_curated_evidence_packets(scaffold)
+
+    selected_text = json.dumps(curated["packets"])
+    excluded_text = json.dumps(curated["curation_report"]["excluded_rows"])
+    assert "prospective cohort" in selected_text
+    assert "pmid" not in selected_text.lower()
+    assert "pmid" in excluded_text.lower()
+
+
+def test_decision_memo_slots_force_core_evidence_into_memo() -> None:
+    scaffold = {
+        "confidence_cap": "medium",
+        "quality_status": "usable_with_review",
+        "map_sufficiency_report": {"status": "sufficient_for_scaffolded_briefing"},
+        "concept_evidence_packets": {
+            "packets": [
+                {
+                    "concept": "default_population",
+                    "rows": [
+                        {
+                            "claim": "The study included generally healthy adults without cardiovascular disease at baseline.",
+                            "source": "demo_sources_population_2020_full",
+                            "section": "scope_limits",
+                            "weight": "high",
+                            "score": 8,
+                        }
+                    ],
+                },
+                {
+                    "concept": "dose_or_threshold",
+                    "rows": [
+                        {
+                            "claim": "Moderate intake up to one egg per day was the mapped dose boundary.",
+                            "source": "demo_sources_dose_2020_full",
+                            "section": "main_support",
+                            "weight": "high",
+                            "score": 8,
+                        }
+                    ],
+                },
+                {
+                    "concept": "hard_outcome_endpoint",
+                    "rows": [
+                        {
+                            "claim": "A cohort study found no increase in cardiovascular mortality at moderate intake.",
+                            "source": "demo_sources_outcome_2020_full",
+                            "section": "main_support",
+                            "weight": "high",
+                            "score": 8,
+                        },
+                        {
+                            "claim": "A pooled cohort found higher all-cause mortality at higher egg intake.",
+                            "source": "demo_sources_counter_2019_full",
+                            "section": "conflicting_evidence",
+                            "weight": "high",
+                            "score": 8,
+                        },
+                    ],
+                },
+                {
+                    "concept": "mechanism_ldl_apob",
+                    "rows": [
+                        {
+                            "claim": "LDL and ApoB biomarkers determine whether the neutral outcome read is biologically plausible.",
+                            "source": "demo_sources_lipid_2025_full",
+                            "section": "method_limits",
+                            "weight": "high",
+                            "score": 8,
+                        }
+                    ],
+                },
+                {
+                    "concept": "substitution_or_comparator",
+                    "rows": [
+                        {
+                            "claim": "Replacing whole eggs with egg whites or other protein sources can change practical dietary advice.",
+                            "source": "demo_sources_substitution_2021_full",
+                            "section": "main_support",
+                            "weight": "high",
+                            "score": 8,
+                        }
+                    ],
+                },
+                {
+                    "concept": "subgroup_diabetes_or_metabolic_risk",
+                    "rows": [
+                        {
+                            "claim": "People with type 2 diabetes may not inherit the default-population answer.",
+                            "source": "demo_sources_diabetes_2020_full",
+                            "section": "scope_limits",
+                            "weight": "high",
+                            "score": 8,
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+    rendered = "## Decision Brief\n\nNeutral at moderate intake.\n\n**Confidence:** medium\n"
+
+    package = compose_final_reader_memo_package(rendered, scaffold)
+    slots = build_decision_memo_slots(package["scaffold"], rendered=rendered)
+    memo = package["memo"]
+
+    assert slots["coverage"]["missing_required_slots"] == []
+    assert "LDL and ApoB" in memo
+    assert "Replacing whole eggs" in memo
+    assert "type 2 diabetes" in memo
+    assert "higher all-cause mortality" in memo
 
 
 def test_slot_extraction_recognizes_population_and_comparator_without_verbs() -> None:
