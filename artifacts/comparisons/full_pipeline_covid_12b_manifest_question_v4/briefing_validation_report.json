@@ -1,0 +1,28 @@
+{
+  "claim_count": 26,
+  "issues": [],
+  "method": "sufficiency_obligation_text_checks_plus_reader_contract_lints",
+  "relation_count": 12,
+  "satisfied_obligation_ids": [
+    "present_mechanism",
+    "present_substitution_or_comparator",
+    "present_endpoint_type",
+    "present_practical_recommendation",
+    "present_safety_or_risk",
+    "present_setting_or_context",
+    "missing_study_design",
+    "missing_family_cohort_or_observational",
+    "missing_family_evidence_synthesis",
+    "concept_default_population",
+    "concept_hard_outcome_endpoint",
+    "concept_safety_or_adverse_effect",
+    "concept_setting_or_context",
+    "concept_substitution_or_comparator",
+    "concept_alternative_or_comparator",
+    "concept_guideline_or_policy"
+  ],
+  "schema_id": "briefing_validation_report_v1",
+  "score": 100,
+  "status": "passes_contract",
+  "unsatisfied_obligation_count": 0
+}

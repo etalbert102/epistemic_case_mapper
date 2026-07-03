@@ -1,0 +1,14 @@
+{
+  "accepted": false,
+  "deterministic_word_count": 60,
+  "issues": [
+    "section dropped confidence line",
+    "section dropped required gap: The current source packet does not establish a decision-relevant study design; do not fill"
+  ],
+  "raw_word_count": 132,
+  "required_crux_count": 0,
+  "required_evidence_count": 0,
+  "required_gap_count": 1,
+  "status": "rejected_fallback",
+  "title": "Decision Brief"
+}

@@ -1,0 +1,102 @@
+{
+  "accepted_section_count": 5,
+  "schema_id": "section_rewrite_report_v1",
+  "section_count": 8,
+  "sections": [
+    {
+      "accepted": false,
+      "deterministic_word_count": 60,
+      "issues": [
+        "section dropped confidence line",
+        "section dropped required gap: The current source packet does not establish a decision-relevant study design; do not fill"
+      ],
+      "raw_word_count": 132,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 1,
+      "status": "rejected_fallback",
+      "title": "Decision Brief"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 72,
+      "issues": [],
+      "raw_word_count": 142,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Practical Read"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 213,
+      "issues": [],
+      "raw_word_count": 154,
+      "required_crux_count": 0,
+      "required_evidence_count": 4,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Why This Read"
+    },
+    {
+      "accepted": false,
+      "deterministic_word_count": 217,
+      "issues": [
+        "section dropped required evidence: Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and",
+        "section dropped required evidence: Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian "
+      ],
+      "raw_word_count": 147,
+      "required_crux_count": 0,
+      "required_evidence_count": 4,
+      "required_gap_count": 0,
+      "status": "rejected_fallback",
+      "title": "Evidence Carrying the Conclusion"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 285,
+      "issues": [],
+      "raw_word_count": 269,
+      "required_crux_count": 0,
+      "required_evidence_count": 6,
+      "required_gap_count": 0,
+      "status": "accepted",
+      "title": "Practical Scope and Exceptions"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 139,
+      "issues": [],
+      "raw_word_count": 154,
+      "required_crux_count": 2,
+      "required_evidence_count": 0,
+      "required_gap_count": 1,
+      "status": "accepted",
+      "title": "Decision Cruxes"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 97,
+      "issues": [],
+      "raw_word_count": 90,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 3,
+      "status": "accepted",
+      "title": "Limits of the Current Map"
+    },
+    {
+      "accepted": false,
+      "issues": [],
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "skipped_low_value_section",
+      "title": "Evidence Trail"
+    }
+  ],
+  "status": "accepted_partial",
+  "whole_validation_issues": [],
+  "whole_validation_status": "passes_contract"
+}

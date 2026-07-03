@@ -25,7 +25,13 @@ from epistemic_case_mapper.synthesis_uplift_packet import (
     _parse_json,
     _render_synthesis_packet,
 )
-from epistemic_case_mapper.decision_frame import build_decision_frame, memo_quality_report, refine_crux_contract
+from epistemic_case_mapper.decision_frame import (
+    build_decision_frame,
+    memo_quality_report,
+    question_quality_report,
+    refine_crux_contract,
+)
+from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 
 ROLE_PRIORITY = {
     "crux": 0,
@@ -71,6 +77,7 @@ def run_map_briefing(
         raise ValueError("backend_retries must be nonnegative")
     if backend_timeout is not None and backend_timeout < 1:
         raise ValueError("backend_timeout must be positive")
+    _require_concrete_question(question)
     map_file = _resolve(repo_root, map_path)
     quality_file = _resolve(repo_root, quality_report_path)
     candidate_map = json.loads(map_file.read_text(encoding="utf-8"))
@@ -78,7 +85,6 @@ def run_map_briefing(
     quality_report = json.loads(quality_file.read_text(encoding="utf-8"))
     artifacts = _resolve(repo_root, output_dir or Path("artifacts") / "map_briefings" / map_file.stem)
     artifacts.mkdir(parents=True, exist_ok=True)
-
     source_lookup = build_source_display_lookup(candidate_map, source_titles=source_titles)
     effective_max_claims = adaptive_briefing_claim_budget(candidate_map, quality_report, requested_max_claims=max_claims)
     prioritized_map, prioritization_report = prioritize_map_for_briefing(
@@ -414,10 +420,8 @@ def build_map_briefing_prompt(
             "- Use `briefing_plan` as the prose outline: bottom line first, then weighted reasons, then counterposition, then scope/method limits.",
             "- Use `evidence_weighting_ledger`; lead with high/medium weight direct evidence and identify low-weight evidence as limited, indirect, deterministic backfill, or source-incomplete.",
             "- Apply `briefing_contract.overstatement_lint` before returning: soften any sentence that violates an active lint rule.",
-            "- `main_support` means evidence for the bottom-line answer or low-concern/default recommendation; do not put concern evidence there.",
-            "- `conflicting_evidence` means evidence for harm, contrary findings, or tension with the bottom line.",
-            "- `scope_limits` means subgroup, dose, population, endpoint, transfer, and conditional limits.",
-            "- `method_limits` means measurement validity, source limitations, guideline/practical implementation limits, and abstract-only/full-text limitations.",
+            "- Use `section_policy` for the meanings of main_support, conflicting_evidence, scope_limits, and method_limits.",
+            "- Do not put concern, counterposition, or scope-boundary evidence in main_support unless the section_policy explicitly says it supports the requested answer frame.",
             "- Preserve tensions, scope limits, and method limits; do not flatten them into a single confident answer.",
             "- Write section prose in human terms; do not say `Claim A`, `Claim B`, raw claim IDs, or raw relation IDs.",
             "- Use source display names, not raw source IDs, claim IDs, or relation IDs, in reader-facing fields.",
@@ -426,11 +430,19 @@ def build_map_briefing_prompt(
             "- Do not invent facts beyond the map, quality report, or erosion audit.",
             "- Calibrate uncertainty to the quality report. A map marked review_recommended or needs_repair cannot support high confidence.",
             "- Keep the briefing concise and readable for a human judge.",
+            "- Do not replace the decision question with source-use advice. Source-use advice belongs in scope caveats unless the question itself asks how to use sources.",
             f"Decision question: {question}",
             "Deterministic briefing scaffold:\n" + json.dumps(_model_briefing_scaffold(scaffold), indent=2),
             "Map quality report:\n" + json.dumps(_quality_brief(quality_report), indent=2),
         )
     )
+
+
+def _require_concrete_question(question: str) -> None:
+    report = question_quality_report(question)
+    if report["status"] == "blocked":
+        issues = "; ".join(str(issue.get("message", issue.get("issue_type", "question issue"))) for issue in report.get("issues", []))
+        raise ValueError(f"run_map_briefing requires a concrete decision question: {issues}")
 
 def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
@@ -548,13 +560,14 @@ def briefing_scaffold(
     contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
     evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
     proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
-    decision_model = build_decision_model(proposition_clusters, contract, quality_report, evidence_ledger)
     evidence_compression_table = build_evidence_compression_table(candidate_map, evidence_ledger, source_lookup)
     concept_evidence_packets = build_concept_evidence_packets(evidence_ledger)
     option_comparison = build_option_comparison(question, evidence_ledger, candidate_map)
     crux_contract = build_crux_contract(candidate_map, evidence_ledger, option_comparison)
     refined_cruxes = refine_crux_contract(crux_contract, candidate_map)
     decision_frame = build_decision_frame(candidate_map, evidence_ledger, quality_report, question=question)
+    decision_model = build_decision_model(proposition_clusters, contract, quality_report, evidence_ledger)
+    decision_model = adapt_decision_model_to_frame(decision_model, decision_frame)
     sufficiency_report = build_map_sufficiency_report(
         candidate_map,
         question=question,
@@ -572,12 +585,7 @@ def briefing_scaffold(
         "quality_score": quality_report.get("score"),
         "confidence_cap": confidence_cap(quality_report),
         "epistemic_config": candidate_map.get("epistemic_config", {}),
-        "section_policy": {
-            "main_support": "Evidence supporting the bottom-line answer or low-concern/default recommendation.",
-            "conflicting_evidence": "Evidence for harm, contrary findings, or tensions with the bottom line.",
-            "scope_limits": "Subgroup, dose, population, endpoint, transfer, and conditional limits.",
-            "method_limits": "Measurement validity, source limitations, guideline/practical implementation limits, and abstract-only/full-text limits.",
-        },
+        "section_policy": section_policy_for_frame(decision_frame),
         "briefing_contract": contract,
         "evidence_weighting_ledger": evidence_ledger,
         "evidence_slot_ledger": build_evidence_slot_ledger(evidence_ledger),

@@ -91,7 +91,7 @@ def _add_baseline_synthesize_review_parsers(subparsers: Any) -> None:
     )
     map_briefing.add_argument("--map", required=True, help="Generated map JSON path.")
     map_briefing.add_argument("--quality-report", required=True, help="Map quality report JSON path.")
-    map_briefing.add_argument("--question", required=True, help="Decision-relevant question to brief.")
+    map_briefing.add_argument("--question", help="Decision-relevant question to brief. Defaults to the case manifest question when --region is supplied.")
     map_briefing.add_argument("--backend", help="Backend for briefing generation. Defaults to manifest default_model_backend.")
     map_briefing.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/map_briefings/<map-stem>.")
     map_briefing.add_argument("--region", help="Optional region ID used only to load source display names.")
@@ -208,4 +208,3 @@ def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_map_validate.add_argument("--path", required=True)
     semantic_critique_validate = semantic_validate_subparsers.add_parser("critique", help="Validate a candidate JSON critique.")
     semantic_critique_validate.add_argument("--path", required=True)
-

@@ -1,0 +1,564 @@
+{
+  "claims": [
+    {
+      "claim": "The 2024 Rootclaim debate involved a public dispute over epidemiology, viral genetics, Bayesian inference, and institutional analysis regarding COVID origins.",
+      "claim_id": "covid_c001",
+      "decision_slots": [
+        "substitution_or_comparator"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "comparator"
+      ],
+      "excerpt": "The contest brief presents COVID origins as one of three challenge cases for AI-assisted epistemic workflows. It describes the 2024 Rootclaim debate as a public dispute involving epidemiology, viral genetics, Bayesian inference, and institutional analysis.",
+      "role": "background",
+      "source_id": "flf_covid_case_brief",
+      "source_span": "lines 6-6"
+    },
+    {
+      "claim": "While two expert judges ruled for zoonosis, six independent Bayesian analyses of the same evidence spanned 23 orders of magnitude.",
+      "claim_id": "covid_c002",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "The brief says two expert judges ruled decisively for zoonosis, while six independent Bayesian analyses of the same evidence spanned 23 orders of magnitude. It emphasizes that the record is hard to navigate, requires significant expertise, and continues to evolve after the debate.",
+      "role": "crux",
+      "source_id": "flf_covid_case_brief",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The source is a scope-setting brief for an epistemic case study, not an independent scientific authority on COVID origins.",
+      "claim_id": "covid_c003",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "population_scope"
+      ],
+      "excerpt": "Use in worked region: scope-setting source, not an independent scientific authority on COVID origins.",
+      "role": "scope_limit",
+      "source_id": "flf_covid_case_brief",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "Rootclaim applies explicit Bayesian reasoning to fuzzy real-world disputes regarding COVID origins.",
+      "claim_id": "covid_c004",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Scott Alexander frames Rootclaim as an attempt to apply explicit Bayesian reasoning to fuzzy real-world disputes. He describes Rootclaim's COVID origins position as favoring lab leak and Peter Miller as someone who came to think the lab-leak hypothesis was very likely false.",
+      "role": "crux",
+      "source_id": "acx_rootclaim_review",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The Huanan market could have been a plausible superspreading location even if the initial infection occurred elsewhere.",
+      "claim_id": "covid_c005",
+      "decision_slots": [
+        "endpoint_type"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "outcome_or_endpoint"
+      ],
+      "excerpt": "The writeup presents the Huanan market argument, including the idea that a busy, poorly ventilated market could be a plausible superspreading location even if the first infection happened elsewhere.",
+      "role": "background",
+      "source_id": "acx_rootclaim_review",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The source is a public synthesis and debate-context review, not a primary epidemiological analysis.",
+      "claim_id": "covid_c006",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Use in worked region: public synthesis and debate-context source, not a primary epidemiological analysis.",
+      "role": "scope_limit",
+      "source_id": "acx_rootclaim_review",
+      "source_span": "lines 14-14"
+    },
+    {
+      "claim": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+      "claim_id": "covid_c007",
+      "decision_slots": [
+        "endpoint_type",
+        "safety_or_risk"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "intervention_or_option",
+        "outcome_or_endpoint",
+        "implementation_condition",
+        "harm_or_failure_mode"
+      ],
+      "excerpt": "Scott also distinguishes the value of a public debate from the risk that \"nobody accepted my challenge\" rhetoric can be mistaken for evidence.",
+      "role": "implementation_constraint",
+      "source_id": "acx_rootclaim_review",
+      "source_span": "lines 12-12"
+    },
+    {
+      "claim": "Rootclaim's updated analysis increased the likelihood of a lab leak origin following the debate.",
+      "claim_id": "covid_c008",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Rootclaim states that Peter Miller won the debate and congratulates him. It still says Rootclaim believes lab leak remains the most likely explanation and that its updated analysis increased that likelihood after the debate.",
+      "role": "conclusion_support",
+      "source_id": "rootclaim_debate_results",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The live format of the debate advantaged debaters with more memorized detail, suggesting an offline text format for future debates.",
+      "claim_id": "covid_c009",
+      "decision_slots": [
+        "practical_recommendation"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "intervention_or_option",
+        "evidence_design",
+        "implementation_condition"
+      ],
+      "excerpt": "Rootclaim argues that the live format advantaged the debater with more memorized detail and that future debates should use an offline text format. It also says Rootclaim failed to get ongoing judge feedback and that the judges' probabilistic inference assigned unrealistic numbers to evidence.",
+      "role": "implementation_constraint",
+      "source_id": "rootclaim_debate_results",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback.",
+      "claim_id": "covid_c010",
+      "decision_slots": [
+        "practical_recommendation"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "evidence_design"
+      ],
+      "excerpt": "Rootclaim argues that the live format advantaged the debater with more memorized detail and that future debates should use an offline text format. It also says Rootclaim failed to get ongoing judge feedback and that the judges' probabilistic inference assigned unrealistic numbers to evidence.",
+      "role": "scope_limit",
+      "source_id": "rootclaim_debate_results",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+      "claim_id": "covid_c011",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Use in worked region: participant postmortem and process critique, not a neutral adjudication.",
+      "role": "scope_limit",
+      "source_id": "rootclaim_debate_results",
+      "source_span": "lines 12-12"
+    },
+    {
+      "claim": "Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that disagreement persisted among forecasters.",
+      "claim_id": "covid_c012",
+      "decision_slots": [
+        "practical_recommendation"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Good Judgment reports that professional Superforecasters assessed natural zoonosis as the most likely cause at 74%, with biomedical research-related accident second at 25%. The report also says disagreement persisted and that 10 of 54 forecasters saw a biomedical research-related accident as most likely.",
+      "role": "conclusion_support",
+      "source_id": "good_judgment_superforecasting",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The assessment of COVID-19 origins is based on themes including base rates, scientific evidence, geopolitical context, and methodological critiques.",
+      "claim_id": "covid_c013",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "The report identifies themes including base rates, scientific evidence, geopolitical context, transparency concerns, trust in intelligence, and methodological critiques. It notes that forecasters would update on evidence such as an identified ancestor virus, definitive animal host, or strong lab-leak evidence.",
+      "role": "background",
+      "source_id": "good_judgment_superforecasting",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "Forecasters would update their assessments based on specific evidence such as an identified ancestor virus, a definitive animal host, or strong lab-leak evidence.",
+      "claim_id": "covid_c014",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "intervention_or_option",
+        "implementation_condition"
+      ],
+      "excerpt": "The report identifies themes including base rates, scientific evidence, geopolitical context, transparency concerns, trust in intelligence, and methodological critiques. It notes that forecasters would update on evidence such as an identified ancestor virus, definitive animal host, or strong lab-leak evidence.",
+      "role": "implementation_constraint",
+      "source_id": "good_judgment_superforecasting",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The source provides an independent probabilistic assessment and a structure for representing disagreement.",
+      "claim_id": "covid_c015",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Use in worked region: independent probabilistic assessment and disagreement-structure source.",
+      "role": "scope_limit",
+      "source_id": "good_judgment_superforecasting",
+      "source_span": "lines 12-12"
+    },
+    {
+      "claim": "Debarre and Worobey argue that Weissman's conclusion regarding proximity ascertainment bias rests on a flawed premise.",
+      "claim_id": "covid_c016",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Debarre and Worobey reply to Weissman's claim about proximity ascertainment bias. They say his conclusion rests on a flawed premise and that there is no internal evidence of major bias.",
+      "role": "crux",
+      "source_id": "debarre_worobey_reply",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The observed pattern of early cases can be explained by non-residential infection locations and stochasticity without requiring major ascertainment bias.",
+      "claim_id": "covid_c017",
+      "decision_slots": [
+        "endpoint_type",
+        "practical_recommendation"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "outcome_or_endpoint",
+        "equity_or_distribution"
+      ],
+      "excerpt": "They argue that the observed pattern can be explained if infection locations were not limited to residential neighborhoods and if stochasticity is considered, without requiring major ascertainment bias.",
+      "role": "conclusion_support",
+      "source_id": "debarre_worobey_reply",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The source provides a methodological challenge to one lab-leak-favoring interpretation of early case geography.",
+      "claim_id": "covid_c018",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Use in worked region: methodological challenge to one lab-leak-favoring interpretation of early case geography.",
+      "role": "scope_limit",
+      "source_id": "debarre_worobey_reply",
+      "source_span": "lines 12-12"
+    },
+    {
+      "claim": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data.",
+      "claim_id": "covid_c019",
+      "decision_slots": [
+        "mechanism",
+        "substitution_or_comparator"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "comparator"
+      ],
+      "excerpt": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data. It decomposes the Bayes factor into four components: PRC location, Wuhan location given PRC, non-market early-case pattern, and Huanan vendor-case pattern.",
+      "role": "background",
+      "source_id": "levin_2025_bayesian_assessment",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The analysis reports an overall odds ratio of 14,900:1 favoring accidental lab leak based on decomposed Bayes factors.",
+      "claim_id": "covid_c020",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "The paper reports conditional Bayes factors of 2.3:1, 20:1, 27:1, and 12:1, and an overall odds ratio of 14,900:1 favoring accidental lab leak. It also states that NBER working papers are circulated for discussion and have not been peer reviewed by the NBER board.",
+      "role": "conclusion_support",
+      "source_id": "levin_2025_bayesian_assessment",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The NBER working paper has not been peer reviewed by the NBER board.",
+      "claim_id": "covid_c021",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "The paper reports conditional Bayes factors of 2.3:1, 20:1, 27:1, and 12:1, and an overall odds ratio of 14,900:1 favoring accidental lab leak. It also states that NBER working papers are circulated for discussion and have not been peer reviewed by the NBER board.",
+      "role": "scope_limit",
+      "source_id": "levin_2025_bayesian_assessment",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "The analysis uses a formal Bayesian framework with specific decomposition choices to evaluate the lab-leak hypothesis.",
+      "claim_id": "covid_c022",
+      "decision_slots": [
+        "practical_recommendation",
+        "setting_or_context"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "intervention_or_option",
+        "implementation_condition"
+      ],
+      "excerpt": "Use in worked region: example of a formal Bayesian analysis with a very strong lab-leak-favoring result and explicit decomposition choices.",
+      "role": "implementation_constraint",
+      "source_id": "levin_2025_bayesian_assessment",
+      "source_span": "lines 12-12"
+    },
+    {
+      "claim": "Weissman argues that a 2022 Science article on multiple zoonotic origins contained a Bayesian reasoning error.",
+      "claim_id": "covid_c023",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Weissman argues that a 2022 Science article on multiple zoonotic origins contained a Bayesian reasoning error. He says correcting the error makes the results imply larger likelihood for a single introduction than for two introductions.",
+      "role": "crux",
+      "source_id": "weissman_2026_phylogeny_comment",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "Correcting the identified Bayesian error suggests a higher likelihood for a single introduction than for two introductions.",
+      "claim_id": "covid_c024",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "Weissman argues that a 2022 Science article on multiple zoonotic origins contained a Bayesian reasoning error. He says correcting the error makes the results imply larger likelihood for a single introduction than for two introductions.",
+      "role": "conclusion_support",
+      "source_id": "weissman_2026_phylogeny_comment",
+      "source_span": "lines 8-8"
+    },
+    {
+      "claim": "The correction reduces the compatibility of the data with a wet-market zoonosis account.",
+      "claim_id": "covid_c025",
+      "decision_slots": [
+        "unspecified"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "other_evidence"
+      ],
+      "excerpt": "He also says this correction reduces compatibility with the wet-market zoonosis account. This source is about the phylogenetic/multiple-introduction subissue, not the whole origins question.",
+      "role": "conclusion_support",
+      "source_id": "weissman_2026_phylogeny_comment",
+      "source_span": "lines 10-10"
+    },
+    {
+      "claim": "This source addresses a specific phylogenetic/multiple-introduction subissue rather than the entire origins question.",
+      "claim_id": "covid_c026",
+      "decision_slots": [
+        "substitution_or_comparator"
+      ],
+      "entailed_by_excerpt": "yes",
+      "evidence_slots": [
+        "comparator"
+      ],
+      "excerpt": "He also says this correction reduces compatibility with the wet-market zoonosis account. This source is about the phylogenetic/multiple-introduction subissue, not the whole origins question.",
+      "role": "scope_limit",
+      "source_id": "weissman_2026_phylogeny_comment",
+      "source_span": "lines 10-10"
+    }
+  ],
+  "crux_candidates": [
+    "covid_c002",
+    "covid_c004",
+    "covid_c002",
+    "covid_c002",
+    "covid_c002",
+    "covid_c002",
+    "covid_c023",
+    "covid_c004",
+    "covid_c004",
+    "covid_c004",
+    "covid_c023",
+    "covid_c004",
+    "covid_c002",
+    "covid_c002"
+  ],
+  "evidence_check": [
+    [
+      "Does covid_c001 quote exact source text?",
+      "Survives",
+      "flf_covid_case_brief lines 6-6: The contest brief presents COVID origins as one of three challenge cases for AI-assisted epistemic workflows. It describes the 2024 Rootclaim debate as a public dispute involving epidemiology, viral genetics, Bayesian inference, and institutional analysis."
+    ],
+    [
+      "Does covid_c002 quote exact source text?",
+      "Survives",
+      "flf_covid_case_brief lines 8-8: The brief says two expert judges ruled decisively for zoonosis, while six independent Bayesian analyses of the same evidence spanned 23 orders of magnitude. It emphasizes that the record is hard to navigate, requires significant expertise, and continues to evolve after the debate."
+    ],
+    [
+      "Does covid_c003 quote exact source text?",
+      "Survives",
+      "flf_covid_case_brief lines 10-10: Use in worked region: scope-setting source, not an independent scientific authority on COVID origins."
+    ],
+    [
+      "Does covid_c004 quote exact source text?",
+      "Survives",
+      "acx_rootclaim_review lines 8-8: Scott Alexander frames Rootclaim as an attempt to apply explicit Bayesian reasoning to fuzzy real-world disputes. He describes Rootclaim's COVID origins position as favoring lab leak and Peter Miller as someone who came to think the lab-leak hypothesis was very likely false."
+    ]
+  ],
+  "evidence_mode": "source_grounded",
+  "pipeline": "staged_chunked_mapper_v1",
+  "prompt_procedure": "source_mapping_prompt_v2_json",
+  "relations": [
+    {
+      "rationale": "Claim B (the scope limit) explicitly critiques the methodology of the judges' probabilistic inference mentioned in Claim A, highlighting a failure to obtain ongoing feedback and an assignment of unrealistic numbers.",
+      "relation_id": "covid_r001",
+      "relation_type": "challenges",
+      "source_claim": "covid_c010",
+      "target_claim": "covid_c002"
+    },
+    {
+      "rationale": "Claim A sets the scope by clarifying that the source is an epistemic case study rather than a scientific authority, which refines the interpretation of Claim B's description of Rootclaim as applying Bayesian reasoning to fuzzy disputes.",
+      "relation_id": "covid_r002",
+      "relation_type": "refines",
+      "source_claim": "covid_c003",
+      "target_claim": "covid_c004"
+    },
+    {
+      "rationale": "Claim B provides a cautionary constraint on the value of public debate (the context of Claim A), highlighting the risk of confusing 'unaccepted challenges' with actual evidence, which creates a tension regarding how to interpret the 23 orders of magnitude difference.",
+      "relation_id": "covid_r003",
+      "relation_type": "in_tension_with",
+      "source_claim": "covid_c007",
+      "target_claim": "covid_c002"
+    },
+    {
+      "rationale": "Claim B provides a broader consensus/expert view (Superforecasters) that aligns with the existence of significant disagreement and varying interpretations mentioned in Claim A, though it offers a different specific distribution of probability.",
+      "relation_id": "covid_r004",
+      "relation_type": "supports",
+      "source_claim": "covid_c012",
+      "target_claim": "covid_c002"
+    },
+    {
+      "rationale": "Claim B (the source) provides the structural framework for representing disagreement, which is directly exemplified by Claim A's description of the 23 orders of magnitude variance in Bayesian analysis.",
+      "relation_id": "covid_r005",
+      "relation_type": "supports",
+      "source_claim": "covid_c015",
+      "target_claim": "covid_c002"
+    },
+    {
+      "rationale": "Both claims describe Bayesian analyses of the same evidence (the COVID origin record), but they represent different results: Claim A highlights a massive spread in probability, while Claim B describes a specific formal decomposition favoring lab-leak.",
+      "relation_id": "covid_r006",
+      "relation_type": "similar_to",
+      "source_claim": "covid_c002",
+      "target_claim": "covid_c022"
+    },
+    {
+      "rationale": "Claim A describes the methodology of applying Bayesian reasoning to fuzzy disputes, while Claim B identifies specific failures in that application (unrealistic numbers and lack of feedback). This preserves the tension between the intended methodological goal and the actual execution results.",
+      "relation_id": "covid_r007",
+      "relation_type": "in_tension_with",
+      "source_claim": "covid_c004",
+      "target_claim": "covid_c010"
+    },
+    {
+      "rationale": "Both claims describe the application of Bayesian reasoning to COVID origins. Claim A is a broader description of Rootclaim's approach, while Claim B specifies the formal framework and decomposition choices used in a specific analysis.",
+      "relation_id": "covid_r008",
+      "relation_type": "similar_to",
+      "source_claim": "covid_c004",
+      "target_claim": "covid_c022"
+    },
+    {
+      "rationale": "Claim B (Weissman) identifies a specific Bayesian reasoning error in a 2022 Science article, which provides a more granular critique of the types of formal Bayesian frameworks and decomposition choices mentioned in Claim A.",
+      "relation_id": "covid_r009",
+      "relation_type": "refines",
+      "source_claim": "covid_c022",
+      "target_claim": "covid_c023"
+    },
+    {
+      "rationale": "Claim 001 provides the broad context of the Rootclaim debate (epidemiology, genetics, etc.), while Claim 004 specifies the methodology (Bayesian reasoning) and specific positions within that framework.",
+      "relation_id": "covid_r010",
+      "relation_type": "refines",
+      "source_claim": "covid_c001",
+      "target_claim": "covid_c004"
+    },
+    {
+      "rationale": "Claim 006 acts as a scope limit, clarifying that the data in Claim 002 (the Bayesian analysis) comes from a public synthesis/debate context rather than primary epidemiological research.",
+      "relation_id": "covid_r011",
+      "relation_type": "refines",
+      "source_claim": "covid_c006",
+      "target_claim": "covid_c002"
+    },
+    {
+      "rationale": "Claim 011 provides a scope limit for the source of Claim 002, specifying that it should be used for process critique rather than as a neutral adjudication.",
+      "relation_id": "covid_r012",
+      "relation_type": "refines",
+      "source_claim": "covid_c011",
+      "target_claim": "covid_c002"
+    }
+  ],
+  "similar_but_not_identical": [
+    "covid_c010 describes procedural/methodological failures in the judging process",
+    "covid_c003 defines the epistemic boundaries of the source",
+    "covid_c007 is an implementation constraint on interpreting debate results",
+    "covid_c012 provides external professional forecaster data",
+    "covid_c015 provides the methodology; covid_c002 provides the specific data point.",
+    "covid_c002 emphasizes the breadth of disagreement; covid_c022 focuses on a specific formal result.",
+    "The first claim describes the theoretical framework, while the second identifies specific procedural/evaluative limitations of that framework.",
+    "Claim A is a general characterization of the project; Claim B describes the technical implementation details (decomposition) of a specific result.",
+    "Claim A covers the whole origins question; Claim B is explicitly limited to a phylogenetic sub-issue.",
+    "Claim A describes the existence of a formal framework; Claim B identifies a specific error within such a reasoning process.",
+    "covid_c001 provides the broad scope of the debate, whereas covid_c004 focuses on the Bayesian methodology used.",
+    "covid_c006 defines the source type, while covid_c002 describes the content of that source.",
+    "covid_c011 defines the intended use/scope of the source, while covid_c002 describes the specific findings within that source."
+  ],
+  "sources": [
+    "flf_covid_case_brief",
+    "acx_rootclaim_review",
+    "rootclaim_debate_results",
+    "good_judgment_superforecasting",
+    "debarre_worobey_reply",
+    "levin_2025_bayesian_assessment",
+    "weissman_2026_phylogeny_comment"
+  ],
+  "status": "human-review-needed",
+  "title": "COVID Origins Debate Slice Staged Map"
+}

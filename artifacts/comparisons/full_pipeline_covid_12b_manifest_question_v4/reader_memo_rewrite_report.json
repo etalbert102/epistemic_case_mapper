@@ -1,0 +1,26 @@
+{
+  "accepted": false,
+  "contract": {
+    "confidence": "medium",
+    "option_count": 0,
+    "practical_action_count": 4,
+    "required_crux_count": 2,
+    "required_evidence_count": 7,
+    "required_gap_count": 3,
+    "schema_id": "reader_memo_rewrite_contract_v1",
+    "tradeoff_count": 0
+  },
+  "deterministic_word_count": 1104,
+  "issues": [
+    "rewrite dropped required evidence: The live format of the debate advantaged debaters with more memorized detail, suggesting a",
+    "rewrite dropped required evidence: Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian "
+  ],
+  "raw_word_count": 602,
+  "repair_issues": [
+    "rewrite dropped required evidence: The live format of the debate advantaged debaters with more memorized detail, suggesting a",
+    "rewrite dropped required evidence: Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian "
+  ],
+  "repaired_word_count": 599,
+  "schema_id": "reader_memo_rewrite_report_v1",
+  "status": "rejected_fallback"
+}

@@ -1,0 +1,5 @@
+```json
+{
+  "section_markdown": "## Limits of the Current Map\n\nThis representation is a structured decision aid rather than a final literature review. Because the map's sufficiency status is usable with named gaps, any absent slots must be treated as explicit gaps in the evidence. Specifically, the current source packet does not establish a decision-relevant study design; this gap should not be filled by inference. Furthermore, the source packet does not establish cohort or observational evidence, nor does it establish evidence synthesis evidence; neither of these areas were assessed and should not be implied."
+}
+```

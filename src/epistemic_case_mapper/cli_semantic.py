@@ -175,7 +175,7 @@ def _run_map_briefing(
     package: str,
     map_path: str,
     quality_report_path: str,
-    question: str,
+    question: str | None,
     backend: str | None,
     output_dir: str | None,
     region_id: str | None,
@@ -198,11 +198,14 @@ def _run_map_briefing(
             print("map_briefing_failed backend_required_without_manifest", file=sys.stderr)
             return 1
         selected_backend = backend or manifest.default_model_backend
+        selected_question = question
+        if not selected_question and manifest and region_id:
+            selected_question = _case_question_for_region(repo_root, manifest, manifest.region_for_id(region_id))
         result = run_map_briefing(
             repo_root=repo_root,
             map_path=map_path,
             quality_report_path=quality_report_path,
-            question=question,
+            question=selected_question or "",
             backend=selected_backend,
             output_dir=output_dir,
             backend_timeout=backend_timeout,
@@ -385,4 +388,3 @@ def _validate_semantic_critique(path: str) -> int:
         return 1
     print(f"Validated semantic critique candidate path={path}")
     return 0
-

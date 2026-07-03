@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_map_utils import (
 from epistemic_case_mapper.map_briefing_pipeline import briefing_scaffold, deterministic_briefing_payload
 from epistemic_case_mapper.map_briefing_pipeline import _write_final_reader_outputs
 from epistemic_case_mapper.model_schemas import CompactDecisionModelOutput, DecisionModelItem
+from epistemic_case_mapper.decision_frame import question_quality_report
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ def build_compact_decision_model(
     source_titles: dict[str, str] | None = None,
     scaffold: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    _require_concrete_question(question)
     source_lookup = build_source_display_lookup(candidate_map, source_titles=source_titles)
     scaffold = scaffold or briefing_scaffold(
         candidate_map,
@@ -165,6 +167,7 @@ def run_decision_model_slice(
         raise ValueError("backend_retries must be nonnegative")
     if backend_timeout is not None and backend_timeout < 1:
         raise ValueError("backend_timeout must be positive")
+    _require_concrete_question(question)
     map_file = _resolve(repo_root, map_path)
     quality_file = _resolve(repo_root, quality_report_path)
     candidate_map = json.loads(map_file.read_text(encoding="utf-8"))
@@ -226,6 +229,13 @@ def run_decision_model_slice(
         synthesized_appendix_path=synthesized_paths["appendix"],
         synthesis_report_path=synthesized_paths["report"],
     )
+
+
+def _require_concrete_question(question: str) -> None:
+    report = question_quality_report(question)
+    if report["status"] == "blocked":
+        issues = "; ".join(str(issue.get("message", issue.get("issue_type", "question issue"))) for issue in report.get("issues", []))
+        raise ValueError(f"decision model slice requires a concrete decision question: {issues}")
 
 
 def _current_read(decision_model: dict[str, Any], deterministic_payload: dict[str, Any]) -> str:

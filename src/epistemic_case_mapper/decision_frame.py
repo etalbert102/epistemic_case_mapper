@@ -12,6 +12,55 @@ GENERIC_TERMS = (
     "adoption",
 )
 
+GENERIC_QUESTION_PATTERNS = (
+    "what decision-relevant read does the evidence map support",
+    "what decision relevant read does the evidence map support",
+    "what decision-relevant read does the evidence support",
+    "what decision relevant read does the evidence support",
+    "what should we conclude from this evidence map",
+    "what does this evidence map show",
+)
+
+
+def question_quality_report(question: str) -> dict[str, Any]:
+    normalized = _normalize_question(question)
+    issues: list[dict[str, str]] = []
+    if not normalized:
+        issues.append(
+            {
+                "severity": "error",
+                "issue_type": "missing_question",
+                "message": "A concrete decision question is required before producing a briefing memo.",
+            }
+        )
+    elif _is_generic_question(normalized):
+        issues.append(
+            {
+                "severity": "error",
+                "issue_type": "generic_placeholder_question",
+                "message": "The question is a placeholder, so the memo cannot be checked against the underlying decision need.",
+            }
+        )
+    elif len(re.findall(r"[a-zA-Z]{3,}", normalized)) < 4:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "underspecified_question",
+                "message": "The question is very short; the memo may need extra context to answer it directly.",
+            }
+        )
+    return {
+        "schema_id": "question_quality_report_v1",
+        "method": "deterministic_missing_placeholder_question_lint",
+        "status": "blocked" if any(issue["severity"] == "error" for issue in issues) else "usable",
+        "normalized_question": normalized,
+        "issues": issues,
+    }
+
+
+def question_is_missing_or_generic(question: str) -> bool:
+    return question_quality_report(question)["status"] == "blocked"
+
 
 def build_decision_frame(
     candidate_map: dict[str, Any],
@@ -20,13 +69,15 @@ def build_decision_frame(
     *,
     question: str,
 ) -> dict[str, Any]:
+    question_report = question_quality_report(question)
     text = _case_text(candidate_map, evidence_ledger, question)
     frame_type = _frame_type(text, question)
     source_role = _source_role(text)
-    direct_answer = _direct_answer(frame_type, source_role)
+    direct_answer = _direct_answer(frame_type, source_role, question)
     return {
         "schema_id": "decision_frame_v1",
         "method": "deterministic_question_and_evidence_role_inference",
+        "question_quality": question_report,
         "frame_type": frame_type,
         "source_role": source_role,
         "decision_object": _decision_object(frame_type),
@@ -64,6 +115,25 @@ def refine_crux_contract(crux_contract: dict[str, Any], candidate_map: dict[str,
 def memo_quality_report(markdown: str, scaffold: dict[str, Any]) -> dict[str, Any]:
     frame = _frame(scaffold)
     issues: list[dict[str, str]] = []
+    question_report = frame.get("question_quality", {}) if isinstance(frame.get("question_quality"), dict) else {}
+    for issue in question_report.get("issues", []) if isinstance(question_report.get("issues"), list) else []:
+        if isinstance(issue, dict) and issue.get("severity") == "error":
+            issues.append(
+                {
+                    "severity": "risk",
+                    "issue_type": str(issue.get("issue_type", "question_quality")),
+                    "message": str(issue.get("message", "The briefing question is not usable.")),
+                }
+            )
+    question = str(scaffold.get("question", ""))
+    if question and _opening_ignores_representation_question(markdown, question):
+        issues.append(
+            {
+                "severity": "risk",
+                "issue_type": "opening_does_not_answer_question",
+                "message": "Opening discusses source use but does not answer the representation question.",
+            }
+        )
     generic_hits = _generic_term_hits(markdown, frame)
     for term in generic_hits:
         issues.append({"severity": "warning", "issue_type": "generic_template_language", "message": f"Generic term remains visible: {term}"})
@@ -113,6 +183,8 @@ def _refine_crux_row(row: dict[str, Any], source: dict[str, Any], target: dict[s
 
 def _frame_type(text: str, question: str) -> str:
     lowered = f" {text.lower()} {question.lower()} "
+    if re.search(r"\bhow\s+should\b.+\b(be\s+)?represent", question.lower()):
+        return "representation_decision"
     if any(marker in lowered for marker in (" debate", " debater", " judge", "postmortem", "process critique", "methodology", "bayesian", "argument")):
         return "process_or_method_evaluation"
     if any(marker in lowered for marker in (" adjudicat", " origins", " cause ", "causal", "which explanation")):
@@ -133,7 +205,13 @@ def _source_role(text: str) -> str:
     return "source packet"
 
 
-def _direct_answer(frame_type: str, source_role: str) -> str:
+def _direct_answer(frame_type: str, source_role: str, question: str) -> str:
+    if frame_type == "representation_decision":
+        represented = _represented_object(question)
+        constraint = _without_constraint(question)
+        if represented and constraint:
+            return f"Represent {represented} as a scoped evidence map that preserves {constraint}, rather than collapsing the packet into a single undifferentiated bottom line."
+        return f"Represent the source packet as a scoped evidence map that keeps decision-relevant distinctions visible."
     if frame_type == "process_or_method_evaluation":
         return f"Use this {source_role} to evaluate process and method failure modes, not as a neutral adjudication of the underlying dispute."
     if frame_type == "evidence_adjudication":
@@ -146,12 +224,16 @@ def _direct_answer(frame_type: str, source_role: str) -> str:
 
 
 def _allowed_use(frame_type: str, source_role: str) -> str:
+    if frame_type == "representation_decision":
+        return f"Use the {source_role} to preserve the distinctions needed to answer the representation question."
     if frame_type == "process_or_method_evaluation":
         return f"Diagnose process, method, and interpretation failure modes using the {source_role}."
     return f"Use the {source_role} to support a scoped, uncertainty-aware decision read."
 
 
 def _not_deciding(frame_type: str) -> str:
+    if frame_type == "representation_decision":
+        return "The memo is not deciding the underlying dispute beyond the scope of the mapped evidence."
     if frame_type == "process_or_method_evaluation":
         return "The memo is not deciding the underlying scientific or factual dispute on its own."
     return "The memo is not claiming the current source packet exhausts the evidence base."
@@ -159,6 +241,7 @@ def _not_deciding(frame_type: str) -> str:
 
 def _decision_object(frame_type: str) -> str:
     return {
+        "representation_decision": "representation read",
         "process_or_method_evaluation": "process and method read",
         "evidence_adjudication": "evidence adjudication read",
         "action_or_policy_decision": "action read",
@@ -167,6 +250,14 @@ def _decision_object(frame_type: str) -> str:
 
 
 def _section_jobs(frame_type: str) -> dict[str, str]:
+    if frame_type == "representation_decision":
+        return {
+            "Decision Brief": "Answer how the evidence should be represented and name the main distinction that must not be flattened.",
+            "Practical Read": "Name concrete uses for the representation, including what a reviewer can inspect next.",
+            "Why This Read": "Explain which support, tensions, and scope limits make this representation necessary.",
+            "Decision Cruxes": "Name conditions that would change how the evidence should be represented.",
+            "Limits of the Current Map": "Separate source-scope limits from unresolved factual disputes.",
+        }
     if frame_type == "process_or_method_evaluation":
         return {
             "Decision Brief": "State what the packet is useful for and what it should not be used to adjudicate.",
@@ -196,6 +287,8 @@ def _practical_actions(frame_type: str) -> list[str]:
 
 
 def _preferred_terms(frame_type: str) -> list[str]:
+    if frame_type == "representation_decision":
+        return ["source packet", "evidence map", "representation", "distinction", "scope", "uncertainty"]
     if frame_type == "process_or_method_evaluation":
         return ["source packet", "process critique", "method", "debate", "adjudication", "evidence"]
     return ["source packet", "evidence", "decision read", "scope", "uncertainty"]
@@ -300,3 +393,40 @@ def _confidence_cap(quality_report: dict[str, Any]) -> str:
     if "review" in status or "warning" in status:
         return "medium"
     return "high"
+
+
+def _normalize_question(question: str) -> str:
+    return re.sub(r"\s+", " ", str(question or "")).strip().rstrip("?")
+
+
+def _is_generic_question(normalized_question: str) -> bool:
+    lowered = re.sub(r"[^a-z0-9]+", " ", normalized_question.lower()).strip()
+    return lowered in {re.sub(r"[^a-z0-9]+", " ", pattern.lower()).strip() for pattern in GENERIC_QUESTION_PATTERNS}
+
+
+def _represented_object(question: str) -> str:
+    match = re.search(r"\bhow\s+should\s+(.+?)\s+be\s+represented\b", question, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    return re.sub(r"\s+", " ", match.group(1)).strip()
+
+
+def _without_constraint(question: str) -> str:
+    match = re.search(r"\bwithout\s+(.+?)(?:\?|$)", question, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    constraint = re.sub(r"\s+", " ", match.group(1)).strip().rstrip(".")
+    stripped = re.sub(r"^(?:losing|flattening|collapsing)\s+", "", constraint, flags=re.IGNORECASE).strip()
+    if stripped and stripped != constraint:
+        return stripped
+    return f"the constraint that {constraint}"
+
+
+def _opening_ignores_representation_question(markdown: str, question: str) -> bool:
+    if not re.search(r"\bhow\s+should\b.+\b(be\s+)?represent", question.lower()):
+        return False
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", markdown) if part.strip() and not part.strip().startswith("#")]
+    if not paragraphs:
+        return True
+    opening = paragraphs[0].lower()
+    return "represent" not in opening and "map" not in opening

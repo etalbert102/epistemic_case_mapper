@@ -1,0 +1,435 @@
+{
+  "decision_memo_slots": {
+    "coverage": {
+      "filled_required_slot_count": 5,
+      "has_crux_table": true,
+      "missing_required_slots": [],
+      "required_slot_count": 5
+    },
+    "method": "required_decision_slot_coverage_from_curated_evidence",
+    "schema_id": "decision_memo_slots_v1",
+    "slots": [
+      {
+        "job": "Surface the evidence that most directly supports the current read.",
+        "label": "Main support",
+        "missing_message": "The current source packet does not establish clean evidence supporting a default answer.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "claim_id": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "concepts": [
+              "setting_or_context",
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "Setting evidence controls whether the mapped result transfers to the decision context."
+          },
+          {
+            "claim": "Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that disagreement persisted among forecasters.",
+            "claim_id": "Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that disagreement persisted among forecasters.",
+            "concepts": [
+              "dose_or_threshold"
+            ],
+            "evidence_family": "general_evidence",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "Superforecasting The Origins Of The COVID 19 Pandemic",
+            "weight": "high",
+            "why_it_matters": "This is part of the decision-relevant evidence base."
+          },
+          {
+            "claim": "The observed pattern of early cases can be explained by non-residential infection locations and stochasticity without requiring major ascertainment bias.",
+            "claim_id": "The observed pattern of early cases can be explained by non-residential infection locations and stochasticity without requiring major ascertainment bias.",
+            "concepts": [
+              "default_population"
+            ],
+            "evidence_family": "general_evidence",
+            "evidence_slots": [
+              "outcome_or_endpoint",
+              "equity_or_distribution"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "No Evidence Of Systematic Proximity Ascertainment Bias In Early COVID 19 Cases In Wuhan",
+            "weight": "high",
+            "why_it_matters": "This is part of the decision-relevant evidence base."
+          }
+        ],
+        "slot_id": "main_support",
+        "status": "filled"
+      },
+      {
+        "job": "Surface contrary evidence, tensions, or the strongest live counterposition.",
+        "label": "Counterevidence or tension",
+        "missing_message": "The current source packet does not establish clean counterevidence or tensions.",
+        "required": false,
+        "rows": [],
+        "slot_id": "counterevidence_or_tension",
+        "status": "missing"
+      },
+      {
+        "job": "State the setting, population, scale, intensity, or threshold where the read applies.",
+        "label": "Scope and boundary conditions",
+        "missing_message": "The current source packet does not establish clean scope, setting, or intensity boundaries.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "claim_id": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "concepts": [
+              "setting_or_context",
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "Setting evidence controls whether the mapped result transfers to the decision context."
+          },
+          {
+            "claim": "Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that disagreement persisted among forecasters.",
+            "claim_id": "Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that disagreement persisted among forecasters.",
+            "concepts": [
+              "dose_or_threshold"
+            ],
+            "evidence_family": "general_evidence",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "Superforecasting The Origins Of The COVID 19 Pandemic",
+            "weight": "high",
+            "why_it_matters": "This is part of the decision-relevant evidence base."
+          },
+          {
+            "claim": "The source is a scope-setting brief for an epistemic case study, not an independent scientific authority on COVID origins.",
+            "claim_id": "The source is a scope-setting brief for an epistemic case study, not an independent scientific authority on COVID origins.",
+            "concepts": [
+              "setting_or_context"
+            ],
+            "evidence_family": "subgroup_or_scope",
+            "evidence_slots": [
+              "population_scope"
+            ],
+            "noise_kind": "none",
+            "reader_score": 10,
+            "score": 6,
+            "section": "scope_limits",
+            "source": "FLF Epistemic Case Study Competition COVID Brief",
+            "weight": "high",
+            "why_it_matters": "Setting evidence controls whether the mapped result transfers to the decision context."
+          }
+        ],
+        "slot_id": "scope_conditions",
+        "status": "filled"
+      },
+      {
+        "job": "State how the read changes across the options being compared.",
+        "label": "Alternatives and comparators",
+        "missing_message": "The current source packet does not establish clean comparator evidence for the named alternatives.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "This source addresses a specific phylogenetic/multiple-introduction subissue rather than the entire origins question.",
+            "claim_id": "This source addresses a specific phylogenetic/multiple-introduction subissue rather than the entire origins question.",
+            "concepts": [
+              "alternative_or_comparator"
+            ],
+            "evidence_family": "substitution_or_comparator",
+            "evidence_slots": [
+              "comparator"
+            ],
+            "noise_kind": "none",
+            "reader_score": 12,
+            "score": 6,
+            "section": "scope_limits",
+            "source": "An Article In Science On COVID Origins Contains A Fundamental Error",
+            "weight": "high",
+            "why_it_matters": "Comparator evidence affects the practical recommendation because the alternative matters."
+          },
+          {
+            "claim": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data.",
+            "claim_id": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data.",
+            "concepts": [
+              "mechanism_or_causal_path",
+              "substitution_or_comparator",
+              "alternative_or_comparator"
+            ],
+            "evidence_family": "substitution_or_comparator",
+            "evidence_slots": [
+              "comparator"
+            ],
+            "noise_kind": "none",
+            "reader_score": 8,
+            "score": 4,
+            "section": "method_limits",
+            "source": "A Bayesian Assessment Of The Origins Of COVID 19 Using Spatiotemporal And Zoonotic Data",
+            "weight": "medium",
+            "why_it_matters": "Mechanism evidence helps explain transfer but should not be treated as direct outcome evidence."
+          },
+          {
+            "claim": "The 2024 Rootclaim debate involved a public dispute over epidemiology, viral genetics, Bayesian inference, and institutional analysis regarding COVID origins.",
+            "claim_id": "The 2024 Rootclaim debate involved a public dispute over epidemiology, viral genetics, Bayesian inference, and institutional analysis regarding COVID origins.",
+            "concepts": [
+              "alternative_or_comparator"
+            ],
+            "evidence_family": "substitution_or_comparator",
+            "evidence_slots": [
+              "comparator"
+            ],
+            "noise_kind": "none",
+            "reader_score": 7,
+            "score": 5,
+            "section": "method_limits",
+            "source": "FLF Epistemic Case Study Competition COVID Brief",
+            "weight": "medium",
+            "why_it_matters": "Comparator evidence affects the practical recommendation because the alternative matters."
+          }
+        ],
+        "slot_id": "alternatives_or_comparators",
+        "status": "filled"
+      },
+      {
+        "job": "Surface feasibility, safety, operational, policy, or technical conditions that gate action.",
+        "label": "Implementation constraints",
+        "missing_message": "The current source packet does not establish clean implementation constraints.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "claim_id": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "concepts": [
+              "setting_or_context",
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 10,
+            "score": 7,
+            "section": "main_support",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "Setting evidence controls whether the mapped result transfers to the decision context."
+          },
+          {
+            "claim": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "claim_id": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "concepts": [
+              "hard_outcome_endpoint",
+              "safety_or_adverse_effect"
+            ],
+            "evidence_family": "method_or_validity",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "implementation_condition",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 9,
+            "score": 5,
+            "section": "method_limits",
+            "source": "Practically A Book Review: Rootclaim $100,000 Lab Leak Debate",
+            "weight": "medium",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          },
+          {
+            "claim": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback.",
+            "claim_id": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback.",
+            "concepts": [
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "evidence_design"
+            ],
+            "noise_kind": "none",
+            "reader_score": 9,
+            "score": 6,
+            "section": "scope_limits",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "This is part of the decision-relevant evidence base."
+          },
+          {
+            "claim": "The live format of the debate advantaged debaters with more memorized detail, suggesting an offline text format for future debates.",
+            "claim_id": "The live format of the debate advantaged debaters with more memorized detail, suggesting an offline text format for future debates.",
+            "concepts": [
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "intervention_or_option",
+              "evidence_design",
+              "implementation_condition"
+            ],
+            "noise_kind": "none",
+            "reader_score": 7,
+            "score": 5,
+            "section": "method_limits",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "medium",
+            "why_it_matters": "This evidence affects how strongly the mapped findings should be read."
+          }
+        ],
+        "slot_id": "implementation_constraints",
+        "status": "filled"
+      },
+      {
+        "job": "Separate direct outcomes from proxies, mechanisms, intervention results, guidance, and method limits.",
+        "label": "Evidence type and outcome limits",
+        "missing_message": "The current source packet does not establish clean evidence-type or outcome limitations.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "claim_id": "This source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+            "concepts": [
+              "setting_or_context",
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "other_evidence"
+            ],
+            "noise_kind": "none",
+            "reader_score": 10,
+            "score": 7,
+            "section": "main_support",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "Setting evidence controls whether the mapped result transfers to the decision context."
+          },
+          {
+            "claim": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "claim_id": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "concepts": [
+              "hard_outcome_endpoint",
+              "safety_or_adverse_effect"
+            ],
+            "evidence_family": "method_or_validity",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "implementation_condition",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 10,
+            "score": 5,
+            "section": "method_limits",
+            "source": "Practically A Book Review: Rootclaim $100,000 Lab Leak Debate",
+            "weight": "medium",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          },
+          {
+            "claim": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data.",
+            "claim_id": "Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data.",
+            "concepts": [
+              "mechanism_or_causal_path",
+              "substitution_or_comparator",
+              "alternative_or_comparator"
+            ],
+            "evidence_family": "substitution_or_comparator",
+            "evidence_slots": [
+              "comparator"
+            ],
+            "noise_kind": "none",
+            "reader_score": 9,
+            "score": 4,
+            "section": "method_limits",
+            "source": "A Bayesian Assessment Of The Origins Of COVID 19 Using Spatiotemporal And Zoonotic Data",
+            "weight": "medium",
+            "why_it_matters": "Mechanism evidence helps explain transfer but should not be treated as direct outcome evidence."
+          },
+          {
+            "claim": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback.",
+            "claim_id": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback.",
+            "concepts": [
+              "guideline_or_policy"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "evidence_design"
+            ],
+            "noise_kind": "none",
+            "reader_score": 9,
+            "score": 6,
+            "section": "scope_limits",
+            "source": "Rootclaim's COVID 19 Origins Debate Results",
+            "weight": "high",
+            "why_it_matters": "This is part of the decision-relevant evidence base."
+          }
+        ],
+        "slot_id": "evidence_type_limits",
+        "status": "filled"
+      },
+      {
+        "job": "Surface risks, harms, or failure modes that could change the practical recommendation.",
+        "label": "Safety and downside risk",
+        "missing_message": "The current source packet does not establish clean downside-risk evidence.",
+        "required": false,
+        "rows": [
+          {
+            "claim": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "claim_id": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence.",
+            "concepts": [
+              "hard_outcome_endpoint",
+              "safety_or_adverse_effect"
+            ],
+            "evidence_family": "method_or_validity",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "implementation_condition",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 10,
+            "score": 5,
+            "section": "method_limits",
+            "source": "Practically A Book Review: Rootclaim $100,000 Lab Leak Debate",
+            "weight": "medium",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          }
+        ],
+        "slot_id": "safety_or_risk",
+        "status": "filled"
+      }
+    ]
+  },
+  "excluded_row_count": 0,
+  "excluded_rows": [],
+  "packet_count": 9,
+  "schema_id": "evidence_curation_report_v1",
+  "selected_row_count": 15
+}

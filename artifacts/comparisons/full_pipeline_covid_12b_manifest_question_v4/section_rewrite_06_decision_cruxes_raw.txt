@@ -1,0 +1,5 @@
+```json
+{
+  "section_markdown": "## Decision Cruxes\n\nThe following conditions represent critical pivots that could alter how the evidence should be represented:\n\n| Crux | Why it matters | Current read | Would change if |\n|---|---|---|---|\n| Whether judge feedback and probability calibration change the interpretation | This challenges relation marks a condition that can change the interpretation of the evidence. | The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback | New evidence showed that this concern is false or immaterial to the interpretation. |\n| Whether public-debate rhetoric should count as evidence | This in tension with relation marks a condition that can change the interpretation of the evidence. | The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence | New evidence showed that this concern is false or immaterial to the interpretation. |"
+}
+```

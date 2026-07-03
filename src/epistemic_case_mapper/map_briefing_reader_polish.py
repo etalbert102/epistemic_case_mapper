@@ -200,6 +200,21 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
 
 def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:
     frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
+    if frame.get("frame_type") == "representation_decision":
+        return {
+            "why_this_read": {
+                "slot_ids": ("main_support", "counterevidence_or_tension", "scope_conditions"),
+                "lead": "The representation should preserve the live disagreement, the source roles, and the scope boundaries that make a flat bottom line misleading.",
+            },
+            "evidence": {
+                "slot_ids": ("main_support", "counterevidence_or_tension", "evidence_type_limits"),
+                "lead": "The evidence should be read by function: what supports the representation, what creates tension, and what limits the scope of the mapped slice.",
+            },
+            "practical": {
+                "slot_ids": ("alternatives_or_comparators", "implementation_constraints", "scope_conditions"),
+                "lead": "The practical use of this map is to show what a reviewer can inspect without treating the slice as a full adjudication.",
+            },
+        }
     if frame.get("frame_type") == "process_or_method_evaluation":
         return {
             "why_this_read": {

@@ -1,0 +1,30 @@
+{
+  "decision_brief": "Represent a narrow slice of COVID origins evidence as a scoped evidence map that preserves Bayesian disagreement, rather than collapsing the packet into a single undifferentiated bottom line. The strongest counterposition is that the judges' probabilistic inference assigned unrealistic numbers to evidence and failed to obtain ongoing feedback (Rootclaim's COVID-19 Origins debate results; high weight). While professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), they noted that disagreement persisted among forecasters (Superforecasting the Origins of the COVID-19 Pandemic; high weight).",
+  "confidence": "medium",
+  "decision_implications": [
+    "Use the source for participant postmortem and process critique, not as a neutral adjudication of the debate.",
+    "Identify that the observed pattern of early cases can be explained by non-residential infection locations and stochasticity without requiring major ascertainment bias.",
+    "Recognize that this source is a scope-setting brief for an epistemic case study, not an independent scientific authority on COVID origins.",
+    "Acknowledge that the map does not establish specific study designs or provide cohort/observational evidence."
+  ],
+  "top_cruxes": [
+    {
+      "crux": "Whether judge feedback and probability calibration change the interpretation",
+      "why_it_matters": "This challenges relation marks a condition that can change the interpretation of the evidence.",
+      "current_read": "The judges' probabilistic inference assigned unrealistic numbers to evidence, and Rootclaim failed to obtain ongoing judge feedback",
+      "would_change_if": "New evidence showed that this concern is false or immaterial to the interpretation."
+    },
+    {
+      "crux": "Whether public-debate rhetoric should count as evidence",
+      "why_it_matters": "This in tension with relation marks a condition that can change the interpretation of the evidence.",
+      "current_read": "The value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence",
+      "would_change_if": "New evidence showed that this concern is false or immaterial to the interpretation."
+    }
+  ],
+  "stress_caveats": [
+    "The source is a public synthesis and debate-context review, not a primary epidemiological analysis.",
+    "The map lacks cohort or observational evidence families.",
+    "The map does not establish specific study designs.",
+    "Confidence is capped at medium due to the 'usable_with_review' status of the map."
+  ]
+}
