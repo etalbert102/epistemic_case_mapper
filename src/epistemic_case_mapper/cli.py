@@ -129,7 +129,7 @@ def main() -> int:
     map_briefing.add_argument("--backend", help="Backend for briefing generation. Defaults to manifest default_model_backend.")
     map_briefing.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/map_briefings/<map-stem>.")
     map_briefing.add_argument("--region", help="Optional region ID used only to load source display names.")
-    map_briefing.add_argument("--max-claims", type=int, default=18, help="Briefing map claim budget after source-preserving prioritization.")
+    map_briefing.add_argument("--max-claims", type=int, default=0, help="Briefing map claim budget after source-preserving prioritization. Use 0 for adaptive.")
     map_briefing.add_argument("--backend-timeout", type=int, default=120)
     map_briefing.add_argument("--backend-retries", type=int, default=0)
 
@@ -229,7 +229,7 @@ def main() -> int:
     semantic_staged_brief.add_argument("--max-claims-per-chunk", type=int, default=4)
     semantic_staged_brief.add_argument("--max-relation-pairs", type=int, default=12)
     semantic_staged_brief.add_argument("--relation-batch-size", type=int, default=4)
-    semantic_staged_brief.add_argument("--briefing-max-claims", type=int, default=18)
+    semantic_staged_brief.add_argument("--briefing-max-claims", type=int, default=0, help="Briefing map claim budget. Use 0 for adaptive.")
     semantic_staged_brief.add_argument("--backend-timeout", type=int, default=90, help="Seconds allowed for each backend call.")
     semantic_staged_brief.add_argument("--backend-retries", type=int, default=1, help="Retries for transient backend failures.")
     semantic_staged_brief.add_argument("--repair-quality", action="store_true", default=True, help="Run quality repair before briefing.")
@@ -742,8 +742,8 @@ def _run_map_briefing(
     backend_timeout: int,
     backend_retries: int,
 ) -> int:
-    if max_claims < 1:
-        print("map_briefing_failed max_claims_must_be_positive", file=sys.stderr)
+    if max_claims < 0:
+        print("map_briefing_failed max_claims_must_be_nonnegative", file=sys.stderr)
         return 1
     if backend_timeout < 1:
         print("map_briefing_failed backend_timeout_must_be_positive", file=sys.stderr)
@@ -827,8 +827,8 @@ def _run_staged_semantic_brief(
     if relation_batch_size < 1:
         print("semantic_staged_brief_failed relation_batch_size_must_be_positive", file=sys.stderr)
         return 1
-    if briefing_max_claims < 1:
-        print("semantic_staged_brief_failed briefing_max_claims_must_be_positive", file=sys.stderr)
+    if briefing_max_claims < 0:
+        print("semantic_staged_brief_failed briefing_max_claims_must_be_nonnegative", file=sys.stderr)
         return 1
     if backend_timeout < 1:
         print("semantic_staged_brief_failed backend_timeout_must_be_positive", file=sys.stderr)

@@ -14,8 +14,11 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     CLAIM_EXTRACTION_PROMPT_VERSION,
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,
+    SourceChunk,
+    SourceSpan,
     consolidate_claims_for_map,
     evaluate_staged_map_quality,
+    _coverage_backfill_claims,
     _sharpen_relations,
 )
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
@@ -484,6 +487,49 @@ def test_claim_consolidation_preserves_supporting_sources() -> None:
     assert set(merged["supporting_sources"]) == {"doc_a", "doc_b"}
     assert set(merged["supporting_claim_ids"]) == {"demo_c001", "demo_c002"}
     assert any(claim["claim_id"] == "demo_c003" for claim in consolidated)
+
+
+def test_concept_gap_backfill_adds_selected_chunk_missed_specific_evidence() -> None:
+    span = SourceSpan(
+        span_id="doc_s001",
+        source_id="doc",
+        source_span="lines 1-1",
+        text="Substituting plant protein for egg protein reduced mortality risk in the cohort.",
+    )
+    chunk = SourceChunk(
+        chunk_id="doc_chunk_001",
+        source_id="doc",
+        title="Doc",
+        start_line=1,
+        end_line=1,
+        ordinal=1,
+        numbered_text="[doc_s001] Substituting plant protein for egg protein reduced mortality risk in the cohort.",
+        plain_text=span.text,
+        spans=(span,),
+    )
+    existing_claims = [
+        {
+            "claim_id": "demo_c001",
+            "claim": "Generic replacement analyses matter for interpretation.",
+            "source_id": "doc",
+            "source_span": "lines 2-2",
+            "excerpt": "Generic replacement analyses matter for interpretation.",
+            "entailed_by_excerpt": "yes",
+            "role": "implementation_constraint",
+        }
+    ]
+
+    backfilled, report = _coverage_backfill_claims(
+        all_chunks=[chunk],
+        selected_chunks=[chunk],
+        existing_claims=existing_claims,
+        id_prefix="demo",
+    )
+
+    assert report["skipped_chunk_backfilled_claim_count"] == 0
+    assert report["concept_gap_backfilled_claim_count"] >= 1
+    assert any("plant protein" in claim["claim"].lower() for claim in backfilled)
+    assert backfilled[0]["extraction_method"] == "deterministic_concept_gap_backfill"
 
 
 def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path) -> None:

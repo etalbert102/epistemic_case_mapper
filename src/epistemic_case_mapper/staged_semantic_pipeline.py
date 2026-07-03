@@ -426,18 +426,317 @@ def _coverage_backfill_claims(
             "line_range": f"{chunk.start_line}-{chunk.end_line}",
         }
         backfilled.append(fallback)
+    concept_backfilled, concept_report, next_index = _concept_gap_backfill_claims(
+        all_chunks=all_chunks,
+        existing_claims=[*existing_claims, *backfilled],
+        existing_keys=existing_keys,
+        id_prefix=id_prefix,
+        next_index=next_index,
+    )
+    backfilled.extend(concept_backfilled)
     report = {
         "schema_id": "coverage_backfill_v1",
-        "method": "deterministic_best_span_for_budget_skipped_chunks",
+        "method": "deterministic_best_span_for_budget_skipped_chunks_plus_source_concept_gap_backfill",
         "skipped_chunk_count": len(skipped_chunk_ids),
         "backfilled_claim_count": len(backfilled),
+        "skipped_chunk_backfilled_claim_count": len(backfilled) - len(concept_backfilled),
+        "concept_gap_backfilled_claim_count": len(concept_backfilled),
         "duplicate_chunk_count": len(duplicate_chunk_ids),
         "no_signal_chunk_count": len(no_signal_chunk_ids),
         "backfilled_claim_ids": [claim["claim_id"] for claim in backfilled],
         "duplicate_chunk_ids": duplicate_chunk_ids[:50],
         "no_signal_chunk_ids": no_signal_chunk_ids[:50],
+        "concept_gap_backfill": concept_report,
     }
     return backfilled, report
+
+
+def _concept_gap_backfill_claims(
+    *,
+    all_chunks: list[SourceChunk],
+    existing_claims: list[dict[str, Any]],
+    existing_keys: set[tuple[str, str, str]],
+    id_prefix: str,
+    next_index: int,
+    max_total: int = 18,
+    max_per_family: int = 2,
+) -> tuple[list[dict[str, Any]], dict[str, Any], int]:
+    existing_text = "\n".join(
+        str(claim.get("claim", "")) + "\n" + str(claim.get("excerpt", ""))
+        for claim in existing_claims
+    ).lower()
+    candidates = _concept_gap_candidates(all_chunks, existing_text)
+    backfilled: list[dict[str, Any]] = []
+    family_counts: dict[str, int] = {}
+    duplicate_span_ids: list[str] = []
+    selected_rows: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if len(backfilled) >= max_total:
+            break
+        family = str(candidate["family"])
+        if family_counts.get(family, 0) >= max_per_family:
+            continue
+        span = candidate["span"]
+        claim = _concept_backfill_claim(span, family, candidate["matched_markers"])
+        key = (
+            claim["source_id"],
+            _normalize_text(claim["excerpt"]),
+            _normalize_text(claim["claim"]),
+        )
+        excerpt_key_exists = any(
+            source_id == claim["source_id"] and excerpt == _normalize_text(claim["excerpt"])
+            for source_id, excerpt, _claim_text in existing_keys
+        )
+        if key in existing_keys or excerpt_key_exists:
+            duplicate_span_ids.append(span.span_id)
+            continue
+        claim["claim_id"] = f"{id_prefix}_c{next_index:03d}"
+        next_index += 1
+        existing_keys.add(key)
+        family_counts[family] = family_counts.get(family, 0) + 1
+        backfilled.append(claim)
+        selected_rows.append(
+            {
+                "claim_id": claim["claim_id"],
+                "family": family,
+                "source_id": span.source_id,
+                "span_id": span.span_id,
+                "source_span": span.source_span,
+                "score": candidate["score"],
+                "matched_markers": candidate["matched_markers"],
+            }
+        )
+    report = {
+        "schema_id": "source_concept_gap_backfill_v1",
+        "method": "concept_family_sentence_retrieval_with_quote_first_claims",
+        "candidate_count": len(candidates),
+        "backfilled_claim_count": len(backfilled),
+        "family_counts": family_counts,
+        "selected": selected_rows,
+        "duplicate_span_ids": duplicate_span_ids[:50],
+    }
+    return backfilled, report, next_index
+
+
+def _concept_gap_candidates(all_chunks: list[SourceChunk], existing_text: str) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for chunk in all_chunks:
+        for span in chunk.spans:
+            for family, matched in _source_concept_families(span.text).items():
+                if _existing_text_covers_concept(existing_text, family, matched):
+                    continue
+                score = _concept_span_score(span.text, family, matched)
+                if score <= 0:
+                    continue
+                candidates.append(
+                    {
+                        "family": family,
+                        "span": span,
+                        "score": score,
+                        "matched_markers": matched,
+                    }
+                )
+    candidates.sort(key=lambda row: (-int(row["score"]), _CONCEPT_FAMILY_PRIORITY.get(str(row["family"]), 99), row["span"].span_id))
+    return candidates
+
+
+def _source_concept_families(text: str) -> dict[str, list[str]]:
+    lowered = text.lower()
+    matched: dict[str, list[str]] = {}
+    for family, marker_groups in _CONCEPT_FAMILY_MARKERS.items():
+        hits: list[str] = []
+        for markers in marker_groups:
+            group_hits = [marker for marker in markers if marker in lowered]
+            hits.extend(group_hits)
+        if hits:
+            matched[family] = _dedupe_strings(hits)
+    return matched
+
+
+def _existing_text_covers_concept(existing_text: str, family: str, matched_markers: list[str]) -> bool:
+    strong_markers = tuple(marker for marker in _CONCEPT_FAMILY_STRONG_MARKERS.get(family, ()) if marker in matched_markers)
+    if strong_markers:
+        return any(marker in existing_text for marker in strong_markers)
+    return any(marker in existing_text for marker in matched_markers if len(marker) >= 5)
+
+
+def _concept_span_score(text: str, family: str, matched_markers: list[str]) -> int:
+    lowered = text.lower()
+    score = 2 + 2 * len(set(matched_markers))
+    for marker in _CONCEPT_FAMILY_STRONG_MARKERS.get(family, ()):
+        if marker in lowered:
+            score += 4
+    for marker in ("associated", "risk", "mortality", "cardiovascular", "outcome", "guideline", "recommend", "randomized", "cohort"):
+        if marker in lowered:
+            score += 1
+    if len(text) < 40:
+        score -= 3
+    if _looks_like_reference_or_boilerplate(text):
+        score -= 8
+    return score
+
+
+def _concept_backfill_claim(span: SourceSpan, family: str, matched_markers: list[str]) -> dict[str, Any]:
+    excerpt = re.sub(r"\s+", " ", span.text).strip()
+    return {
+        "claim_id": "",
+        "claim": _quote_first_claim_text(excerpt, family, matched_markers),
+        "source_id": span.source_id,
+        "source_span": span.source_span,
+        "excerpt": excerpt,
+        "entailed_by_excerpt": "yes",
+        "role": _concept_family_role(family, excerpt),
+        "span_id": span.span_id,
+        "extraction_method": "deterministic_concept_gap_backfill",
+        "concept_gap_backfill": {
+            "family": family,
+            "matched_markers": matched_markers,
+        },
+    }
+
+
+def _quote_first_claim_text(excerpt: str, family: str, matched_markers: list[str]) -> str:
+    prefix = {
+        "comparator_or_substitution": "Comparator/substitution evidence: ",
+        "mechanism_or_biomarker": "Mechanism/biomarker evidence: ",
+        "dietary_context": "Context/modifier evidence: ",
+        "subgroup_or_scope": "Subgroup/scope evidence: ",
+        "guideline_or_recommendation": "Guidance/recommendation evidence: ",
+        "study_design": "Study-design evidence: ",
+        "endpoint_or_outcome": "Endpoint/outcome evidence: ",
+        "dose_or_threshold": "Dose/threshold evidence: ",
+        "method_limit": "Method-limit evidence: ",
+    }.get(family, "Source evidence: ")
+    strong_markers = [marker for marker in _CONCEPT_FAMILY_STRONG_MARKERS.get(family, ()) if marker in matched_markers]
+    ordered_markers = [*strong_markers, *(marker for marker in matched_markers if marker not in strong_markers)]
+    return prefix + _focused_excerpt(excerpt, ordered_markers, max_chars=260)
+
+
+def _concept_family_role(family: str, text: str) -> str:
+    lowered = text.lower()
+    if family in {"subgroup_or_scope", "method_limit", "dietary_context"}:
+        return "scope_limit"
+    if family in {"comparator_or_substitution", "guideline_or_recommendation", "dose_or_threshold"}:
+        return "implementation_constraint"
+    if any(marker in lowered for marker in ("not associated", "higher risk", "lower risk", "reduced risk", "increased risk")):
+        return "conclusion_support"
+    return "background"
+
+
+def _looks_like_reference_or_boilerplate(text: str) -> bool:
+    lowered = text.lower()
+    if re.search(r"\bdoi\b|\bpmid\b|\bgoogle scholar\b|\bcrossref\b", lowered):
+        return True
+    if lowered.count("received ") >= 2 and len(lowered) > 400:
+        return True
+    return False
+
+
+def _shorten_excerpt(text: str, max_chars: int = 220) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[: max_chars - 1].rstrip(" ,.;") + "..."
+
+
+def _focused_excerpt(text: str, markers: list[str], max_chars: int = 220) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    lowered = cleaned.lower()
+    marker_positions = [
+        (lowered.find(marker), marker)
+        for marker in sorted(markers, key=len, reverse=True)
+        if marker and lowered.find(marker) >= 0
+    ]
+    if not marker_positions:
+        return _shorten_excerpt(cleaned, max_chars=max_chars)
+    position, marker = marker_positions[0]
+    marker_end = position + len(marker)
+    window_start = max(0, position - max_chars // 3)
+    window_end = min(len(cleaned), max(marker_end + max_chars // 2, window_start + max_chars))
+    if window_end - window_start < max_chars:
+        window_start = max(0, window_end - max_chars)
+    snippet = cleaned[window_start:window_end].strip(" ,.;")
+    if window_start > 0:
+        snippet = "..." + snippet
+    if window_end < len(cleaned):
+        snippet = snippet.rstrip(" ,.;") + "..."
+    return snippet
+
+
+def _dedupe_strings(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+_CONCEPT_FAMILY_PRIORITY = {
+    "comparator_or_substitution": 0,
+    "mechanism_or_biomarker": 1,
+    "dietary_context": 2,
+    "subgroup_or_scope": 3,
+    "guideline_or_recommendation": 4,
+    "study_design": 5,
+    "endpoint_or_outcome": 6,
+    "dose_or_threshold": 7,
+    "method_limit": 8,
+}
+
+
+_CONCEPT_FAMILY_MARKERS = {
+    "comparator_or_substitution": (
+        ("replace", "replacing", "replacement", "substitut", "instead of", "compared with", "versus", "vs "),
+        ("alternative", "counterfactual", "comparator"),
+        ("plant protein", "plant-based", "plant‐based", "plant based", "egg white", "protein source"),
+    ),
+    "mechanism_or_biomarker": (
+        ("biomarker", "mechanism", "pathway", "mediated", "homeostasis"),
+        ("ldl", "hdl", "apob", "apo b", "cholesterol", "lipid", "particle", "tmao", "metabolite", "microbiome"),
+    ),
+    "dietary_context": (
+        ("saturated fat", "dietary pattern", "diet quality", "overall diet", "overnutrition"),
+        ("red meat", "processed meat", "animal protein", "dietary cholesterol"),
+    ),
+    "subgroup_or_scope": (
+        ("subgroup", "population", "participants with", "patients with", "people with"),
+        ("diabetes", "t2d", "prediabetes", "kidney", "renal", "elderly", "familial", "hyper-responder", "hyper responder"),
+    ),
+    "guideline_or_recommendation": (
+        ("guideline", "recommendation", "recommended", "advisory", "guidance"),
+        ("clinicians", "consumers", "policy", "should", "limit"),
+    ),
+    "study_design": (
+        ("randomized", "randomised", "rct", "trial", "crossover", "intervention"),
+        ("cohort", "prospective", "observational", "meta-analysis", "systematic review", "pooled"),
+    ),
+    "endpoint_or_outcome": (
+        ("mortality", "cardiovascular disease", "cvd", "stroke", "myocardial infarction", "coronary", "incident"),
+        ("hard outcome", "endpoint", "events"),
+    ),
+    "dose_or_threshold": (
+        ("per day", "per week", "dose", "threshold", "intake", "consumption"),
+        ("high intake", "moderate intake", "low intake", "up to"),
+    ),
+    "method_limit": (
+        ("limitation", "residual confounding", "self-report", "misclassification", "measurement error"),
+        ("adjusted for", "sensitivity analysis", "not significant after adjusting"),
+    ),
+}
+
+
+_CONCEPT_FAMILY_STRONG_MARKERS = {
+    "comparator_or_substitution": ("plant protein", "plant-based", "plant‐based", "plant based", "replacement", "substitut", "instead of"),
+    "mechanism_or_biomarker": ("apob", "apo b", "ldl", "biomarker"),
+    "dietary_context": ("saturated fat", "dietary pattern", "diet quality"),
+    "guideline_or_recommendation": ("guideline", "recommendation", "recommended"),
+    "study_design": ("randomized", "rct", "cohort", "meta-analysis"),
+}
 
 
 def _next_claim_index(claims: list[dict[str, Any]], id_prefix: str) -> int:
