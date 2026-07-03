@@ -8,10 +8,7 @@ max_function_lines = 140
 max_branch_nodes = 30
 
 [allowlist]
-long_files = [
-  "src/epistemic_case_mapper/map_briefing.py",
-  "src/epistemic_case_mapper/staged_semantic_pipeline.py",
-]
+long_files = []
 long_functions = []
 branchy_functions = []
 
