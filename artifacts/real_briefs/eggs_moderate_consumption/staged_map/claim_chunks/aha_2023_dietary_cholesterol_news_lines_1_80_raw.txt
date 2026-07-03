@@ -1,0 +1,30 @@
+```json
+{
+  "claims": [
+    {
+      "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0052",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "Healthy people can include up to a whole egg or the equivalent in their diets each day; older people with healthy cholesterol levels can have two.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0064",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0066",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit"
+    },
+    {
+      "claim": "Research has shown that you really cannot isolate dietary cholesterol from that total fat intake.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0056",
+      "entailed_by_excerpt": "yes",
+      "role": "crux"
+    }
+  ]
+}
+```

@@ -1,0 +1,30 @@
+```json
+{
+  "claims": [
+    {
+      "claim": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.",
+      "span_id": "bmj_2020_egg_consumption_cvd_s0043",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "Moderate egg consumption (up to one egg per day) is associated with potentially lower cardiovascular disease risk in Asian populations.",
+      "span_id": "bmj_2020_egg_consumption_cvd_s0043",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors.",
+      "span_id": "bmj_2020_egg_consumption_cvd_s0041",
+      "entailed_by_excerpt": "yes",
+      "role": "crux"
+    },
+    {
+      "claim": "The study population included participants from three large US cohorts (NHS, NHS II, and HPFS) who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.",
+      "span_id": "bmj_2020_egg_consumption_cvd_s0037",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit"
+    }
+  ]
+}
+```

@@ -1,0 +1,525 @@
+You are selecting source-grounded claim candidates from one bounded source-span catalog.
+
+Prompt version: staged_claim_extraction_prompt_v1_json
+Region ID: eggs_observational_vs_rct
+Case question: What should an investigator believe about the health effects of eating eggs?
+Source ID: bmj_2020_egg_consumption_cvd
+Source title: Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis
+Line range: 1-80
+
+Source span catalog:
+- span_id: bmj_2020_egg_consumption_cvd_s0001
+  source_span: lines 1-1
+  text: Skip to main content
+- span_id: bmj_2020_egg_consumption_cvd_s0003
+  source_span: lines 3-3
+  text: An official website of the United States government
+- span_id: bmj_2020_egg_consumption_cvd_s0004
+  source_span: lines 4-4
+  text: Here's how you know
+- span_id: bmj_2020_egg_consumption_cvd_s0008
+  source_span: lines 8-8
+  text: Search
+- span_id: bmj_2020_egg_consumption_cvd_s0010
+  source_span: lines 10-10
+  text: Log in
+- span_id: bmj_2020_egg_consumption_cvd_s0011
+  source_span: lines 11-11
+  text: Primary site navigation
+- span_id: bmj_2020_egg_consumption_cvd_s0013
+  source_span: lines 13-13
+  text: Search PMC Full-Text Archive
+- span_id: bmj_2020_egg_consumption_cvd_s0015
+  source_span: lines 15-15
+  text: Search in PMC
+- span_id: bmj_2020_egg_consumption_cvd_s0016
+  source_span: lines 16-16
+  text: •	Journal List
+- span_id: bmj_2020_egg_consumption_cvd_s0017
+  source_span: lines 17-17
+  text: •	User Guide
+- span_id: bmj_2020_egg_consumption_cvd_s0018
+  source_span: lines 18-18
+  text: As a library, NLM provides access to scientific literature. Inclusion in an NLM database does not imply endorsement of, or agreement with, the contents by NLM or the National Institutes of Health.
+- span_id: bmj_2020_egg_consumption_cvd_s0019
+  source_span: lines 19-19
+  text: Learn more: PMC Disclaimer | PMC Copyright Notice
+- span_id: bmj_2020_egg_consumption_cvd_s0021
+  source_span: lines 21-21
+  text: BMJ. 2020 Mar 4;368:m513. doi: 10.1136/bmj.m513
+- span_id: bmj_2020_egg_consumption_cvd_s0022
+  source_span: lines 22-22
+  text: Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis
+- span_id: bmj_2020_egg_consumption_cvd_s0023
+  source_span: lines 23-23
+  text: Jean-Philippe Drouin-Chartier 1,✉, Siyu Chen 1, Yanping Li 1, Amanda L Schwab 1, Meir J Stampfer 1 ,2 ,3, Frank M Sacks 1 ,3, Bernard Rosner 1 ,3 ,4, Walter C Willett 1 ,2 ,3, Frank B Hu 1 ,2 ,3, Shilpa N Bhupathiraju 1 ,3
+- span_id: bmj_2020_egg_consumption_cvd_s0024
+  source_span: lines 24-24
+  text: •	Author information
+- span_id: bmj_2020_egg_consumption_cvd_s0025
+  source_span: lines 25-25
+  text: •	Article notes
+- span_id: bmj_2020_egg_consumption_cvd_s0026
+  source_span: lines 26-26
+  text: •	Copyright and License information
+- span_id: bmj_2020_egg_consumption_cvd_s0028
+  source_span: lines 28-28
+  text: PMCID: PMC7190072  PMID: 32132002
+- span_id: bmj_2020_egg_consumption_cvd_s0029
+  source_span: lines 29-29
+  text: Abstract
+- span_id: bmj_2020_egg_consumption_cvd_s0030
+  source_span: lines 30-30
+  text: Objective
+- span_id: bmj_2020_egg_consumption_cvd_s0031
+  source_span: lines 31-31
+  text: To evaluate the association between egg intake and cardiovascular disease risk among women and men in the United States, and to conduct a meta-analysis of prospective cohort studies.
+- span_id: bmj_2020_egg_consumption_cvd_s0032
+  source_span: lines 32-32
+  text: Design
+- span_id: bmj_2020_egg_consumption_cvd_s0033
+  source_span: lines 33-33
+  text: Prospective cohort study, and a systematic review and meta-analysis of prospective cohort studies.
+- span_id: bmj_2020_egg_consumption_cvd_s0034
+  source_span: lines 34-34
+  text: Setting
+- span_id: bmj_2020_egg_consumption_cvd_s0035
+  source_span: lines 35-35
+  text: Nurses’ Health Study (NHS, 1980-2012), NHS II (1991-2013), Health Professionals’ Follow-Up Study (HPFS, 1986-2012).
+- span_id: bmj_2020_egg_consumption_cvd_s0036
+  source_span: lines 36-36
+  text: Participants
+- span_id: bmj_2020_egg_consumption_cvd_s0037
+  source_span: lines 37-37
+  text: Cohort analyses included 83 349 women from NHS, 90 214 women from NHS II, and 42 055 men from HPFS who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.
+- span_id: bmj_2020_egg_consumption_cvd_s0038
+  source_span: lines 38-38
+  text: Main outcome measures
+- span_id: bmj_2020_egg_consumption_cvd_s0039
+  source_span: lines 39-39
+  text: Incident cardiovascular disease, which included non-fatal myocardial infarction, fatal coronary heart disease, and stroke.
+- span_id: bmj_2020_egg_consumption_cvd_s0040
+  source_span: lines 40-40
+  text: Results
+- span_id: bmj_2020_egg_consumption_cvd_s0041
+  source_span: lines 41-41
+  text: Over up to 32 years of follow-up (>5.54 million person years), 14 806 participants with incident cardiovascular disease were identified in the three cohorts. Participants with a higher egg intake had a higher body mass index, were less likely to be treated with statins, and consumed more red meats. Most people consumed between one and less than five eggs per week. In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05). In the updated meta-analysis of prospective cohort studies (33 risk estimates, 1 720 108 participants, 139 195 cardiovascular disease events), an increase of one egg per day was not associated with cardiovascular disease risk (pooled relative risk 0.98, 95% confidence interval 0.93 to 1.03, I2=62.3%). Results were similar for coronary heart disease (21 risk estimates, 1 411 261 participants, 59 713 coronary heart disease events; 0.96, 0.91 to 1.03, I2=38.2%), and stroke (22 risk estimates, 1 059 315 participants, 53 617 stroke events; 0.99, 0.91 to 1.07, I2=71.5%). In analyses stratified by geographical location (P for interaction=0.07), no association was found between egg consumption and cardiovascular disease risk among US cohorts (1.01, 0.96 to 1.06, I2=30.8%) or European cohorts (1.05, 0.92 to 1.19, I2=64.7%), but an inverse association was seen in Asian cohorts (0.92, 0.85 to 0.99, I2=44.8%).
+- span_id: bmj_2020_egg_consumption_cvd_s0042
+  source_span: lines 42-42
+  text: Conclusions
+- span_id: bmj_2020_egg_consumption_cvd_s0043
+  source_span: lines 43-43
+  text: Results from the three cohorts and from the updated meta-analysis show that moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall, and is associated with potentially lower cardiovascular disease risk in Asian populations.
+- span_id: bmj_2020_egg_consumption_cvd_s0044
+  source_span: lines 44-44
+  text: Systematic review registration
+- span_id: bmj_2020_egg_consumption_cvd_s0045
+  source_span: lines 45-45
+  text: PROSPERO CRD42019129650.
+- span_id: bmj_2020_egg_consumption_cvd_s0046
+  source_span: lines 46-46
+  text: Introduction
+- span_id: bmj_2020_egg_consumption_cvd_s0047
+  source_span: lines 47-47
+  text: In the United States, cardiovascular disease is the leading cause of death in men and women.1 Diet and lifestyle undisputedly play a major part in the development of cardiovascular disease.2 In the past, limiting dietary cholesterol intake to 300 mg per day was widely recommended to prevent cardiovascular disease.2 However, because of the weak association between dietary cholesterol and blood cholesterol, and considering that dietary cholesterol is no longer a nutrient of concern for overconsumption, the most recent 2015 dietary guidelines for Americans did not carry forward this recommendation.3
+- span_id: bmj_2020_egg_consumption_cvd_s0048
+  source_span: lines 48-48
+  text: Eggs are a major source of dietary cholesterol, but they are also an affordable source of high quality protein, iron, unsaturated fatty acids, phospholipids, and carotenoids.4 However, because of the cholesterol content in eggs, the association between egg intake and cardiovascular disease risk has been a topic of intense debate in the past decade. Many prospective studies on the association between egg intake and cardiovascular disease risk have provided conflicting findings. Some studies have reported no association between egg intake and risk of cardiovascular disease,5 6 7 some have reported a higher risk,8 9 and others have reported an inverse association with cardiovascular disease events10 11 or subclinical measures.12 Even meta-analyses of prospective studies on egg consumption and cardiovascular disease risk did not provide consistent results and created further confusion.13 14 15 16 17
+- span_id: bmj_2020_egg_consumption_cvd_s0049
+  source_span: lines 49-49
+  text: To evaluate the association between egg intake and cardiovascular disease risk, it is desirable to have repeated measures of diet and lifestyle. Such measures account for random variation in intake, provide a measure of long term or usual diet, and sufficiently account for confounding owing to lifestyle factors because atherosclerosis develops over many decades. Additionally, to inform dietary guidelines while also considering sustainability challenges associated with food production, it is critical to estimate the effects on cardiovascular disease risk of eggs compared with other animal and plant based foods.18 In our study, we examined the association between egg intake and incident cardiovascular disease by using repeated measures of diet over up to 32 years of follow-up with detailed control of dietary and other potential confounders. Our analyses included men and women from three large US cohorts: the Nurses’ Health Study (NHS), NHS II, and the Health Professionals’ Follow-Up Study (HPFS). Our study is an updated analysis of the study published in 1999 by Hu and colleagues7 and includes up to 24 additional years of follow-up, more than 10 times the number of events, and extends the analysis to the younger cohort of NHS II. We also used these data to statistically estimate how replacing eggs with other foods is associated with cardiovascular disease risk. Finally, we conducted an updated systematic review of the literature and meta-analysis of egg consumption and cardiovascular disease risk that include these new results.
+- span_id: bmj_2020_egg_consumption_cvd_s0050
+  source_span: lines 50-50
+  text: Methods
+- span_id: bmj_2020_egg_consumption_cvd_s0051
+  source_span: lines 51-51
+  text: Cohort analyses
+- span_id: bmj_2020_egg_consumption_cvd_s0052
+  source_span: lines 52-52
+  text: Study population
+- span_id: bmj_2020_egg_consumption_cvd_s0053
+  source_span: lines 53-53
+  text: NHS, NHS II, and HPFS are prospective cohort studies of US health professionals. In 1976, NHS enrolled 121 701 female registered nurses between the ages of 30 and 55 years to investigate the long term health effects of various contraceptive methods in women.19 20 NHS II includes 116 430 female registered nurses between the ages of 25 and 44 years and began in 1989 with the goal of investigating oral contraceptives, diet, and lifestyle factors in a population younger than NHS.20 HPFS is the male counterpart to NHS and NHS II, and included 51 529 male health professionals between the ages of 40 and 75 years at study inception in 1986. In all three cohorts, participants completed validated questionnaires every two years that captured information on disease diagnosis, disease risk factors, drug use, and lifestyle characteristics, with follow-up rates exceeding 90%. For the current analysis, baseline was defined as the year when diet was first assessed in the cohorts: 1980 in NHS, 1986 in HPFS, and 1991 in NHS II. Of the participants who completed a baseline food frequency questionnaire (NHS, n=98 047; NHS II, n=97 813; HPFS, n=51 529), we excluded those who reported a diagnosis of cardiovascular disease, cancer, or type 2 diabetes, or had coronary artery surgery before completion of the baseline; these diagnoses could result in changes in diet.21 We also excluded participants with missing age at baseline and those who reported implausible energy intake on the food frequency questionnaire (<500 or >3500 kcal/day for women and <800 or >4200 kcal/day for men). Additionally, we excluded participants who left more than 70 items blank on the food frequency questionnaire, and those who had missing information on baseline egg intake. The final sample included 83 349 participants in NHS, 90 214 participants in NHS II, and 42 055 participants in HPFS. Supplemental figure 1 shows the flow chart of participants.
+- span_id: bmj_2020_egg_consumption_cvd_s0054
+  source_span: lines 54-54
+  text: The institutional review board at the Brigham and Women’s Hospital and Harvard T.H. Chan School of Public Health approved the study protocol, with informed consent indicated by the return of the baseline questionnaire.
+- span_id: bmj_2020_egg_consumption_cvd_s0055
+  source_span: lines 55-55
+  text: Assessment of egg intake
+- span_id: bmj_2020_egg_consumption_cvd_s0056
+  source_span: lines 56-56
+  text: Whole egg intake was reported every two to four years, beginning in 1980, 1991, and 1986 for NHS, NHS II, and HPFS, respectively, by using a validated semiquantitative food frequency questionnaire. The questionnaire had 61 items in 1980 and 126-131 items in subsequent versions.22 23 24 Participants were asked how often on average they consumed whole eggs with yolk in the past year. Reported intake excluded eggs in baked goods (eg, cake), liquid eggs, and egg whites. Among 173 women in NHS, food frequency questionnaires were validated against four seven day weighed diet records. The deattenuated correlation coefficient between the food frequency questionnaire and the weighed food record for whole egg intake was 0.77.25 A similar validation study conducted among 127 men in HPFS showed a high correlation between whole egg intake reported from food frequency questionnaires and weighed food records (deattenuated correlation coefficient=0.80).26 Consumption of liquid eggs and egg whites was not assessed in the questionnaire. However, we computed intake of eggs included in baked goods such as cakes, cookies, pancakes, muffins, sweet rolls, and donuts.
+- span_id: bmj_2020_egg_consumption_cvd_s0057
+  source_span: lines 57-57
+  text: In the main analyses, we used whole egg intake as the exposure. In a sensitivity analysis, we used total egg consumption (consumption of whole eggs plus eggs in baked goods) as the exposure.
+- span_id: bmj_2020_egg_consumption_cvd_s0058
+  source_span: lines 58-58
+  text: Assessment of incident cardiovascular disease
+- span_id: bmj_2020_egg_consumption_cvd_s0059
+  source_span: lines 59-59
+  text: The primary endpoint for this study was incident cardiovascular disease, which we defined as non-fatal myocardial infarction, fatal coronary heart disease, and fatal and non-fatal stroke that occurred after baseline. Participants (or next of kin for deceased) who reported a primary endpoint were asked for permission to have their medical records reviewed by study physicians who were blinded to the participants’ exposure and risk factor status. We used World Health Organization criteria of typical symptoms plus either elevated enzymes (including troponin) or diagnostic electrocardiographic findings to diagnose myocardial infarction.27 Stroke was confirmed using criteria from the National Survey of Stroke, which required evidence of a neurological deficit with sudden or rapid onset that persisted for more than 24 hours or until death.28 A physician reviewed stroke events and classified them by stroke subtype or cause using the Perth Community Stroke Study criteria (subarachnoid hemorrhage, intraparenchymal hemorrhage, ischemic stroke (thrombotic or embolic), or stroke of unknown causes).29
+- span_id: bmj_2020_egg_consumption_cvd_s0060
+  source_span: lines 60-60
+  text: Deaths were identified by reports from next of kin, the US postal service, state vital statistics departments, and systematic searches of the National Death Index. Follow-up for deaths was more than 98%.30 Myocardial infarction deaths were confirmed by autopsy or electrocardiographic findings and enzyme changes characteristic of myocardial infarction before death according to medical records. We did not include sudden deaths of unknown cause in our analyses. Participants with confirmed fatal coronary heart disease included those in whom the underlying cause of death was listed as coronary heart disease on the death certificate and evidence indicated a history of coronary heart disease.30 31 When medical records were not available but confirmation was provided through interview or letter, participants were considered to have probable cardiovascular disease. For the current analysis, we included participants with confirmed and probable cardiovascular disease. Analyses that included only participants with confirmed cardiovascular disease produced virtually identical results.
+- span_id: bmj_2020_egg_consumption_cvd_s0061
+  source_span: lines 61-61
+  text: Assessment of covariates
+- span_id: bmj_2020_egg_consumption_cvd_s0062
+  source_span: lines 62-62
+  text: We used the main biennial follow-up questionnaires to collect and update information on age, ethnicity (assessed once in 1992 in NHS, 1989 in NHS II, 1986 in HPFS), family history of myocardial infarction, body weight, cigarette smoking, physical activity, and multivitamin use. We also gathered information on menopausal status (NHS and NHS II), use of postmenopausal hormones (NHS and NHS II), oral contraceptive use (NHS II only), and history of hypercholesterolemia and hypertension. We considered participants to have hypercholesterolemia or hypertension when they reported these conditions on the biennial questionnaire or when they reported use of lipid or blood pressure lowering drugs. We determined alcohol intake through food frequency questionnaires. Detailed descriptions of the validity and reproducibility of self-reported body weight, physical activity, and alcohol consumption have been published elsewhere.32 33 34
+- span_id: bmj_2020_egg_consumption_cvd_s0063
+  source_span: lines 63-63
+  text: Statistical methods
+- span_id: bmj_2020_egg_consumption_cvd_s0064
+  source_span: lines 64-64
+  text: We calculated person time from the return of the baseline questionnaire (1980 for NHS, 1991 for NHS II, and 1986 for HPFS) to the diagnosis of cardiovascular disease, death, or the end of follow-up (30 June 2012 for NHS, 30 June 2013 for NHS II, and 31 January 2012 for HPFS), whichever occurred first. We did not censor participants lost to active follow-up because fatal events were included in the outcomes. When we restricted the analyses to non-fatal events and censored participants because of loss to follow-up we had similar results (data not shown).
+- span_id: bmj_2020_egg_consumption_cvd_s0065
+  source_span: lines 65-65
+  text: We computed cumulative averages of dietary variables, including egg intake, to reduce within person variation and to represent long term diet.21 For instance, for the 1999-2001 risk set in NHS II, dietary variables in 1991, 1995, and 1999 were averaged to predict subsequent cardiovascular disease risk. Within each cohort, we divided participants into predefined categories of egg intake (less than one egg per month, one to less than four eggs per month, one to less than three eggs per week, three to less than five eggs per week, five to less than seven eggs per week, and at least one egg per day). The group that consumed less than one egg per month served as the reference group. We used Cox proportional hazard models to examine the association between categories of egg intake and cardiovascular disease. In the main analyses, we used whole egg intake as the exposure. Analyses were first conducted within each cohort separately, and then by pooling data from the three cohorts.
+- span_id: bmj_2020_egg_consumption_cvd_s0066
+  source_span: lines 66-66
+  text: The regression model included age in months as the time scale, stratified by calendar time in two year intervals, and allowed for possible interaction between calendar time and age in the baseline hazards to be accounted for non-parametrically (model 1). In the pooled analysis, we also stratified by cohort, which allowed concomitant stratification for sex. In model 2, we additionally adjusted for race or ethnicity (white, other), family history of myocardial infarction (yes, no), baseline history of hypertension (yes, no), and baseline history of hypercholesterolemia (yes, no). Model 2 also included the following time varying covariates updated every two years: body mass index (<21.0, 21.0-22.9, 23.0-24.9, 25.0-26.9, 27.0-29.9, 30.0-34.9, ≥35.0); smoking status (never, former, current); physical activity (<3.0, 3.0-8.9, 9.0-17.9, 18.0-26.9, ≥27.0 metabolic equivalent of task hours per week); alcohol consumption (g/day in fifths); multivitamin use (yes, no); postmenopausal status and postmenopausal hormone use (premenopausal, never, former, current, NHS and NHS II only); and use of oral contraceptives (never, former, current, NHS II only).
+- span_id: bmj_2020_egg_consumption_cvd_s0067
+  source_span: lines 67-67
+  text: In our final model (model 3), we additionally adjusted for total energy intake and consumption of foods associated with egg intake in the US (eg, red meat, bacon, other processed meat, refined grains, potatoes and French fries, fruits, vegetables, full fat milk, fruit juices, sugar-sweetened beverages, and coffee). As with egg intake, we used a cumulative average update for all dietary variables. We tested for a possible linear trend in the hazard ratios across categories of egg consumption by using the median of each category of egg intake as the dose of egg consumption.35 Total cardiovascular disease was analyzed separately from coronary heart disease and stroke.
+- span_id: bmj_2020_egg_consumption_cvd_s0068
+  source_span: lines 68-68
+  text: We used statistical models to estimate the effect on risk of total cardiovascular disease of replacing one whole egg per day with one serving of other foods that are common alternatives (unprocessed red meat, processed red meat, poultry, fish, legumes, nuts, refined grains, whole grains, potatoes, low fat cheese, high fat cheese, reduced fat milk, full fat milk, and yogurt; information on yogurt fat content was not collected in our food frequency questionnaires). The covariates in model 3 were used, and eggs and the alternative foods were included as continuous variables in the same multivariable model. We computed the differences between the β coefficients, variance, and the covariance of eggs and the alternative food to estimate hazard ratios and 95% confidence intervals for the replacement effect.36 In these analyses, we assumed that total consumption of different foods is constrained to a certain level for each person (the amount of food is held constant); that the association of egg intake with cardiovascular disease risk is independent of the association with the alternative food intake; and that the intake of other foods in the diet remains constant.37
+- span_id: bmj_2020_egg_consumption_cvd_s0069
+  source_span: lines 69-69
+  text: We performed stratified analyses defined a priori by updated body mass index, physical activity, self-reported hypertension (including use of antihypertensive drug treatment), self-reported hypercholesterolemia (including use of lipid lowering drug treatment), family history of myocardial infarction, statin use, smoking status, age, Alternative Healthy Eating Index score,38 and self-reported prevalent type 2 diabetes. For each of these variables, we tested for potential effect modification by using likelihood ratio tests for interactions.
+- span_id: bmj_2020_egg_consumption_cvd_s0070
+  source_span: lines 70-70
+  text: We performed several sensitivity analyses. We examined the association of egg intake with cardiovascular disease risk by estimating the risk of incident cardiovascular disease across seven categories of egg intake; at least two eggs per day was the highest category of intake. The risk of cardiovascular disease was also estimated for total egg intake (that is, consumption of whole eggs plus eggs in baked goods). Additionally, we modeled egg intake by using baseline diet only and by using the most recent diet. Because diagnosis of an intermediate endpoint of cardiovascular disease could result in changes in diet or in diet reporting, we evaluated associations when diet updating was stopped: after diagnosis of type 2 diabetes, hypertension, hypercholesterolemia, or angina; also after coronary artery bypass graft, or the start of statin treatment.39
+- span_id: bmj_2020_egg_consumption_cvd_s0071
+  source_span: lines 71-71
+  text: We repeated the main analysis by replacing foods associated with egg intake (red meat, bacon, other processed meat, refined grains, fruits, vegetables, potatoes and French fries, fruit juices, full fat milk, sugar-sweetened beverages, and coffee) with the Alternative Healthy Eating Index score in the multivariable model. Instead of pooling the data, we used fixed effect meta-analysis to estimate the overall association of egg intake and cardiovascular disease risk among the three cohorts. Finally, we calculated E values to determine the minimum strength of association on the risk ratio scale that an unmeasured confounder would need to have with egg consumption and cardiovascular disease risk to fully shift the observed association toward a significant association.40 All P values are two sided and statistical significance was considered at P values less than 0.05. Statistical analyses were performed using SAS version 9.4 (SAS Institute, Cary, NC).
+- span_id: bmj_2020_egg_consumption_cvd_s0072
+  source_span: lines 72-72
+  text: Systematic review and meta-analysis of egg consumption and incident cardiovascular disease
+- span_id: bmj_2020_egg_consumption_cvd_s0073
+  source_span: lines 73-73
+  text: We conducted a systematic review and updated meta-analysis based on the current study and previous prospective cohort studies that evaluated the association between egg consumption and cardiovascular disease risk in the general population and among people with type 2 diabetes. The report was conducted using the preferred reporting items for systematic reviews and meta-analyses (PRISMA) guidelines.41 We registered the protocol on the international prospective register of systematic reviews (PROSPERO CRD42019129650). Supplemental table 1 presents the strategy used to search PubMed, Embase, and Web of Science up to 6 August 2019. We screened the reference lists of selected studies to identify additional relevant studies. Studies were included if they were of prospective design; if they assessed the association between egg consumption and incidence of cardiovascular disease (total cardiovascular disease; total, fatal, and non-fatal coronary heart disease; and total, ischemic, hemorrhagic, fatal and non-fatal stroke); and if they provided risk estimates for three or more levels of egg consumption or a dose-response estimate.
+- span_id: bmj_2020_egg_consumption_cvd_s0074
+  source_span: lines 74-74
+  text: Extracted data included first author name, publication year, cohort name, country where the study was conducted, follow-up duration, number of participants, sex, age range at baseline, method used to assess diet, and method used to identify events. Additionally, we obtained data about cardiovascular disease endpoints, number of events, categories of egg consumption, risk estimates (95% confidence intervals) from the multivariable model, and covariates in the maximally adjusted model. Study authors were contacted by email if information was missing. We used the Newcastle-Ottawa scale to assess the risk of bias in included studies.42 Age, sex, body mass index, smoking status, physical activity, alcohol intake, and energy intake were considered primary confounders of the association between egg consumption and cardiovascular disease risk. Hypertension, dyslipidemia, and red meat intake were considered secondary confounders. Two authors (JPDC and SC) independently screened the literature (title and abstract, then full article), extracted the data, and conducted the risk of bias assessment in individual studies. Disagreement and discordance were resolved by consensus between the two authors.
+- span_id: bmj_2020_egg_consumption_cvd_s0075
+  source_span: lines 75-75
+  text: We used 50 g as the standard weight for one egg. Relative risks were used as the common measure of association across studies and hazard ratios were considered equivalent to relative risks. We used the median of each egg intake category if available, or the midpoint between the upper and lower bound, to determine the amount of egg consumption. When the highest category was open (eg, at least one egg per day), we multiplied the lower bound of the highest category by 1.75. One study used the highest category of egg intake as the reference category, and so we back calculated risk estimates and confidence intervals to set the lowest category of intake as the reference group.43 In studies without dose-response estimates, we calculated the relative risk for an increase of one egg per day by using the trend for the log relative risk, which accounted for correlated estimates.35 44 In studies with only dose-response estimates, we calculated the relative risk for one egg per day and used this estimate in the meta-analysis of high versus low egg consumption. For studies that did not publish person years for each category of egg intake,6 8 9 45 46 47 48 we imputed person years based on available data.
+- span_id: bmj_2020_egg_consumption_cvd_s0076
+  source_span: lines 76-76
+  text: We used random effects models to compute the pooled relative risk for cardiovascular disease for the highest category of egg intake compared with the lowest category, and for one egg per day increase. We preferentially used the risk estimate for total cardiovascular disease when available. When studies reported risk estimates for coronary heart disease and stroke, but not for total cardiovascular disease events, risk estimates for coronary heart disease and stroke were pooled byusing fixed effect meta-analysis. We used the pooled estimate in the cardiovascular disease meta-analysis. For stroke, we preferentially used the risk estimate for total stroke when available. When studies reported risk estimates for ischemic stroke and hemorrhagic stroke, but not for total stroke, risk estimates for ischemic stroke and hemorrhagic stroke were pooled using fixed effect meta-analysis. We used the pooled estimate in the stroke meta-analysis. Lastly, we computed the pooled relative risk for the composite of cardiovascular disease, which included only risk estimates for total cardiovascular disease events from studies that reported such estimates.
+- span_id: bmj_2020_egg_consumption_cvd_s0077
+  source_span: lines 77-77
+  text: Heterogeneity was assessed with the I2 statistic and interpreted according to the Cochrane Handbook thresholds (0-40%, might not be important; 30-60%, might represent moderate heterogeneity; 50-90%, might represent substantial heterogeneity; 75-100%, considerable heterogeneity).49 We conducted an influence analysis by systematically removing each study from the meta-analysis and calculating the relative risk to evaluate if any single study caused the heterogeneity. We also conducted univariate meta-regressions by using study level data to explore potential sources of heterogeneity. Geographical location, sex, follow-up duration, number of participants, number of events, risk of bias, and dietary assessment method were identified a priori as potential sources of heterogeneity. We tested for publication bias by using Begg’s test and Egger’s test, and visual appreciation of a funnel plot. Statistical analyses for the meta-analysis were preformed using Stata version 15.1 (StataCorp, College Station, TX).
+- span_id: bmj_2020_egg_consumption_cvd_s0078
+  source_span: lines 78-78
+  text: Patient and public involvement
+- span_id: bmj_2020_egg_consumption_cvd_s0079
+  source_span: lines 79-79
+  text: No patients were involved in setting the research question or the outcome measures, nor were they involved in the design and implementation of the study.
+- span_id: bmj_2020_egg_consumption_cvd_s0080
+  source_span: lines 80-80
+  text: Results
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ],
+  "current_chunk": {
+    "chunk_id": "bmj_2020_egg_consumption_cvd_lines_1_80",
+    "source_id": "bmj_2020_egg_consumption_cvd",
+    "line_range": "1-80",
+    "source_role": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  }
+}
+
+Return only JSON:
+{
+  "claims": [
+    {
+      "claim": "one concise claim supported by the excerpt",
+      "span_id": "one span_id from the catalog",
+      "entailed_by_excerpt": "yes|no|uncertain",
+      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+    }
+  ]
+}
+
+Rules:
+- Return at most 4 claims.
+- Do not include claim_id. Deterministic code assigns IDs later.
+- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
+- Use only span IDs shown in the catalog.
+- Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
+- If the chunk has no useful claim, return {"claims": []}.

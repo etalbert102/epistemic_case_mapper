@@ -1,0 +1,525 @@
+You are selecting source-grounded claim candidates from one bounded source-span catalog.
+
+Prompt version: staged_claim_extraction_prompt_v1_json
+Region ID: eggs_observational_vs_rct
+Case question: What should an investigator believe about the health effects of eating eggs?
+Source ID: aha_2023_dietary_cholesterol_news
+Source title: Here's the latest on dietary cholesterol and how it fits in with a healthy diet
+Line range: 71-150
+
+Source span catalog:
+- span_id: aha_2023_dietary_cholesterol_news_s0071
+  source_span: lines 71-71
+  text: Scientists learn stuff.
+- span_id: aha_2023_dietary_cholesterol_news_s0072
+  source_span: lines 72-72
+  text: Decades ago, nutrition research was focused on an isolated nutrient or a specific food, Van Horn said. "Nutrition research has shifted that focus to the broader totality of eating patterns and food frequency," she said. "Since nobody eats a nutrient or a food in isolation, the overall dietary intake over the day, the week or the year influences biological factors. These include blood cholesterol, blood pressure, blood glucose – all the risk factors that are examined, evaluated and studied to prevent heart disease."
+- span_id: aha_2023_dietary_cholesterol_news_s0073
+  source_span: lines 73-73
+  text: While dietary cholesterol remains important to researchers, it's of less concern now, Van Horn said. That's because the average American's blood cholesterol level has gone down in recent decades, and some of that is thanks to statin medications and a better understanding of diet, she said.
+- span_id: aha_2023_dietary_cholesterol_news_s0074
+  source_span: lines 74-74
+  text: "Now, the resounding benefit of a diet higher in plant-based foods continues," she said. "Typically, those are not high sources of dietary cholesterol."
+- span_id: aha_2023_dietary_cholesterol_news_s0075
+  source_span: lines 75-75
+  text: Put another way, the foods once shunned due to their high dietary cholesterol content only come from animal products, and they should still not be the focus of your diet.
+- span_id: aha_2023_dietary_cholesterol_news_s0076
+  source_span: lines 76-76
+  text: But it's settled now, right?
+- span_id: aha_2023_dietary_cholesterol_news_s0077
+  source_span: lines 77-77
+  text: Diet and dietary cholesterol remain important topics of nutrition research. Van Horn pointed out that the National Institutes of Health is currently funding the Nutrition for Precision Health study. It promises to unlock relationships between what we eat, the microbiome inside our bodies and biomarkers for assessing health status that have "never before been studied as comprehensively and systematically as they are now," Van Horn said.
+- span_id: aha_2023_dietary_cholesterol_news_s0078
+  source_span: lines 78-78
+  text: The study's overarching goal is to identify preventive ways to tailor nutrition recommendations to each person's genetic, lifestyle and environmental needs to achieve better health over the life span.
+- span_id: aha_2023_dietary_cholesterol_news_s0079
+  source_span: lines 79-79
+  text: "So stay tuned," she said.
+- span_id: aha_2023_dietary_cholesterol_news_s0080
+  source_span: lines 80-80
+  text: Editor's note: This story was updated on Sept. 5 and Aug. 31, 2023, to clarify the reference to dietary cholesterol limits, and to include eggs alongside shellfish as a food high in dietary cholesterol but not in saturated fat.
+- span_id: aha_2023_dietary_cholesterol_news_s0084
+  source_span: lines 84-84
+  text: American Heart Association News Stories
+- span_id: aha_2023_dietary_cholesterol_news_s0085
+  source_span: lines 85-85
+  text: American Heart Association News covers heart disease, stroke and related health issues. Not all views expressed in American Heart Association News stories reflect the official position of the American Heart Association. Statements, conclusions, accuracy and reliability of studies published in American Heart Association scientific journals or presented at American Heart Association scientific meetings are solely those of the study authors and do not necessarily reflect the American Heart Association’s official guidance, policies or positions.
+- span_id: aha_2023_dietary_cholesterol_news_s0086
+  source_span: lines 86-86
+  text: Copyright is owned or held by the American Heart Association, Inc., and all rights are reserved. Permission is granted, at no cost and without need for further request, for individuals, media outlets, and non-commercial education and awareness efforts to link to, quote, excerpt from or reprint these stories in any medium as long as no text is altered and proper attribution is made to American Heart Association News.
+- span_id: aha_2023_dietary_cholesterol_news_s0087
+  source_span: lines 87-87
+  text: Other uses, including educational products or services sold for profit, must comply with the American Heart Association’s Copyright Permission Guidelines. See full terms of use. These stories may not be used to promote or endorse a commercial product or service.
+- span_id: aha_2023_dietary_cholesterol_news_s0088
+  source_span: lines 88-88
+  text: HEALTH CARE DISCLAIMER: This site and its services do not constitute the practice of medical advice, diagnosis or treatment. Always talk to your health care provider for diagnosis and treatment, including your specific medical needs. If you have or suspect that you have a medical problem or condition, please contact a qualified health care professional immediately. If you are in the United States and experiencing a medical emergency, call 911 or call for emergency medical help immediately.
+- span_id: aha_2023_dietary_cholesterol_news_s0089
+  source_span: lines 89-89
+  text: Related Articles
+- span_id: aha_2023_dietary_cholesterol_news_s0091
+  source_span: lines 91-91
+  text: Are eggs good for you or not?
+- span_id: aha_2023_dietary_cholesterol_news_s0093
+  source_span: lines 93-93
+  text: Eating too many sulfur amino acids may boost cardiovascular disease and death risk
+- span_id: aha_2023_dietary_cholesterol_news_s0095
+  source_span: lines 95-95
+  text: Southwestern Quinoa and Egg Breakfast Bowl
+- span_id: aha_2023_dietary_cholesterol_news_s0096
+  source_span: lines 96-96
+  text: Donate today to help end heart disease and stroke for everyone.
+- span_id: aha_2023_dietary_cholesterol_news_s0097
+  source_span: lines 97-97
+  text: Donate Now
+- span_id: aha_2023_dietary_cholesterol_news_s0099
+  source_span: lines 99-99
+  text: *All health/medical information on this website has been reviewed and approved by the American Heart Association, based on scientific research and American Heart Association guidelines. Find more information on our content editorial process.
+- span_id: aha_2023_dietary_cholesterol_news_s0101
+  source_span: lines 101-101
+  text: Contact Us
+- span_id: aha_2023_dietary_cholesterol_news_s0102
+  source_span: lines 102-102
+  text: National Center
+- span_id: aha_2023_dietary_cholesterol_news_s0103
+  source_span: lines 103-103
+  text: 7272 Greenville Ave.
+- span_id: aha_2023_dietary_cholesterol_news_s0104
+  source_span: lines 104-104
+  text: Dallas, TX 75231
+- span_id: aha_2023_dietary_cholesterol_news_s0105
+  source_span: lines 105-105
+  text: Customer Service
+- span_id: aha_2023_dietary_cholesterol_news_s0106
+  source_span: lines 106-106
+  text: 1-800-242-8721
+- span_id: aha_2023_dietary_cholesterol_news_s0107
+  source_span: lines 107-107
+  text: Contact Us
+- span_id: aha_2023_dietary_cholesterol_news_s0109
+  source_span: lines 109-109
+  text: Hours
+- span_id: aha_2023_dietary_cholesterol_news_s0110
+  source_span: lines 110-110
+  text: Monday - Friday: 7 a.m. – 7 p.m. CT
+- span_id: aha_2023_dietary_cholesterol_news_s0111
+  source_span: lines 111-111
+  text: Saturday: 9 a.m. - 5 p.m. CT
+- span_id: aha_2023_dietary_cholesterol_news_s0112
+  source_span: lines 112-112
+  text: Closed on Sundays
+- span_id: aha_2023_dietary_cholesterol_news_s0113
+  source_span: lines 113-113
+  text: Tax Identification Number
+- span_id: aha_2023_dietary_cholesterol_news_s0114
+  source_span: lines 114-114
+  text: 13-5613797
+- span_id: aha_2023_dietary_cholesterol_news_s0115
+  source_span: lines 115-115
+  text: About Us
+- span_id: aha_2023_dietary_cholesterol_news_s0116
+  source_span: lines 116-116
+  text: About Us
+- span_id: aha_2023_dietary_cholesterol_news_s0117
+  source_span: lines 117-117
+  text: •	About the American Heart Association
+- span_id: aha_2023_dietary_cholesterol_news_s0118
+  source_span: lines 118-118
+  text: •	Our Impact
+- span_id: aha_2023_dietary_cholesterol_news_s0119
+  source_span: lines 119-119
+  text: •	Annual Report
+- span_id: aha_2023_dietary_cholesterol_news_s0120
+  source_span: lines 120-120
+  text: •	Financial Information
+- span_id: aha_2023_dietary_cholesterol_news_s0121
+  source_span: lines 121-121
+  text: •	International Programs
+- span_id: aha_2023_dietary_cholesterol_news_s0122
+  source_span: lines 122-122
+  text: •	Latest Heart and Stroke News
+- span_id: aha_2023_dietary_cholesterol_news_s0123
+  source_span: lines 123-123
+  text: •	Media Newsroom
+- span_id: aha_2023_dietary_cholesterol_news_s0124
+  source_span: lines 124-124
+  text: •	Careers
+- span_id: aha_2023_dietary_cholesterol_news_s0125
+  source_span: lines 125-125
+  text: Get Involved
+- span_id: aha_2023_dietary_cholesterol_news_s0126
+  source_span: lines 126-126
+  text: Get Involved
+- span_id: aha_2023_dietary_cholesterol_news_s0127
+  source_span: lines 127-127
+  text: •	Donate Now
+- span_id: aha_2023_dietary_cholesterol_news_s0128
+  source_span: lines 128-128
+  text: •	Make a Memorial Gift
+- span_id: aha_2023_dietary_cholesterol_news_s0129
+  source_span: lines 129-129
+  text: •	Ways to Give
+- span_id: aha_2023_dietary_cholesterol_news_s0130
+  source_span: lines 130-130
+  text: •	Advocate
+- span_id: aha_2023_dietary_cholesterol_news_s0131
+  source_span: lines 131-131
+  text: •	Volunteer
+- span_id: aha_2023_dietary_cholesterol_news_s0132
+  source_span: lines 132-132
+  text: •	Go Red for Women
+- span_id: aha_2023_dietary_cholesterol_news_s0133
+  source_span: lines 133-133
+  text: •	ShopHeart
+- span_id: aha_2023_dietary_cholesterol_news_s0134
+  source_span: lines 134-134
+  text: •	ShopCPR
+- span_id: aha_2023_dietary_cholesterol_news_s0135
+  source_span: lines 135-135
+  text: Our Sites
+- span_id: aha_2023_dietary_cholesterol_news_s0136
+  source_span: lines 136-136
+  text: Our Sites
+- span_id: aha_2023_dietary_cholesterol_news_s0137
+  source_span: lines 137-137
+  text: •	American Heart Association
+- span_id: aha_2023_dietary_cholesterol_news_s0138
+  source_span: lines 138-138
+  text: •	American Stroke Association
+- span_id: aha_2023_dietary_cholesterol_news_s0139
+  source_span: lines 139-139
+  text: •	CPR & ECC
+- span_id: aha_2023_dietary_cholesterol_news_s0140
+  source_span: lines 140-140
+  text: •	Professional Heart Daily
+- span_id: aha_2023_dietary_cholesterol_news_s0141
+  source_span: lines 141-141
+  text: •	More Sites
+- span_id: aha_2023_dietary_cholesterol_news_s0142
+  source_span: lines 142-142
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0143
+  source_span: lines 143-143
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0144
+  source_span: lines 144-144
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0145
+  source_span: lines 145-145
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0146
+  source_span: lines 146-146
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0147
+  source_span: lines 147-147
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0148
+  source_span: lines 148-148
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0149
+  source_span: lines 149-149
+  text: •
+- span_id: aha_2023_dietary_cholesterol_news_s0150
+  source_span: lines 150-150
+  text: •
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ],
+  "current_chunk": {
+    "chunk_id": "aha_2023_dietary_cholesterol_news_lines_71_150",
+    "source_id": "aha_2023_dietary_cholesterol_news",
+    "line_range": "71-150",
+    "source_role": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  }
+}
+
+Return only JSON:
+{
+  "claims": [
+    {
+      "claim": "one concise claim supported by the excerpt",
+      "span_id": "one span_id from the catalog",
+      "entailed_by_excerpt": "yes|no|uncertain",
+      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+    }
+  ]
+}
+
+Rules:
+- Return at most 4 claims.
+- Do not include claim_id. Deterministic code assigns IDs later.
+- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
+- Use only span IDs shown in the catalog.
+- Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
+- If the chunk has no useful claim, return {"claims": []}.

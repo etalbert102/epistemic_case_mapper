@@ -1,0 +1,30 @@
+```json
+{
+  "claims": [
+    {
+      "claim": "Higher consumption of dietary cholesterol or eggs was significantly associated with a higher risk of incident cardiovascular disease (CVD) and all-cause mortality in a dose-response manner among US adults.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0477",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "The association between egg consumption and incident CVD was stronger in women than in men.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0435",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "The association between egg consumption and incident CVD was fully accounted for by the cholesterol content in eggs.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0479",
+      "entailed_by_excerpt": "yes",
+      "role": "crux"
+    },
+    {
+      "claim": "The study findings are observational and cannot establish causality.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0482",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit"
+    }
+  ]
+}
+```

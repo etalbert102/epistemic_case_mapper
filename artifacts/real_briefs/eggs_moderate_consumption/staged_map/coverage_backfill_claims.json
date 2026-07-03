@@ -1,0 +1,198 @@
+{
+  "backfilled_claim_count": 42,
+  "backfilled_claim_ids": [
+    "eggs_c053",
+    "eggs_c054",
+    "eggs_c055",
+    "eggs_c056",
+    "eggs_c057",
+    "eggs_c058",
+    "eggs_c059",
+    "eggs_c060",
+    "eggs_c061",
+    "eggs_c062",
+    "eggs_c063",
+    "eggs_c064",
+    "eggs_c065",
+    "eggs_c066",
+    "eggs_c067",
+    "eggs_c068",
+    "eggs_c069",
+    "eggs_c070",
+    "eggs_c071",
+    "eggs_c072",
+    "eggs_c073",
+    "eggs_c074",
+    "eggs_c075",
+    "eggs_c076",
+    "eggs_c077",
+    "eggs_c078",
+    "eggs_c079",
+    "eggs_c080",
+    "eggs_c081",
+    "eggs_c082",
+    "eggs_c083",
+    "eggs_c084",
+    "eggs_c085",
+    "eggs_c086",
+    "eggs_c087",
+    "eggs_c088",
+    "eggs_c089",
+    "eggs_c090",
+    "eggs_c091",
+    "eggs_c092",
+    "eggs_c093",
+    "eggs_c094"
+  ],
+  "concept_gap_backfill": {
+    "backfilled_claim_count": 10,
+    "candidate_count": 177,
+    "duplicate_span_ids": [
+      "bmj_2020_egg_consumption_cvd_s0071",
+      "aha_2019_dietary_cholesterol_pubmed_s0125",
+      "bmj_2020_egg_consumption_cvd_s0043",
+      "bmj_2020_egg_consumption_cvd_s0071",
+      "bmj_2020_egg_consumption_cvd_s0071",
+      "bmj_2020_egg_consumption_cvd_s0073",
+      "nnr_2023_eggs_scoping_review_s0133",
+      "bmj_2020_egg_consumption_cvd_s0239",
+      "bmj_2020_egg_consumption_cvd_s0077"
+    ],
+    "family_counts": {
+      "comparator_or_substitution": 2,
+      "dose_or_threshold": 2,
+      "endpoint_or_outcome": 2,
+      "guideline_or_recommendation": 2,
+      "method_limit": 2
+    },
+    "method": "concept_family_sentence_retrieval_with_quote_first_claims",
+    "schema_id": "source_concept_gap_backfill_v1",
+    "selected": [
+      {
+        "claim_id": "eggs_c085",
+        "family": "comparator_or_substitution",
+        "matched_markers": [
+          "replacing",
+          "instead of",
+          "alternative"
+        ],
+        "score": 16,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 71-71",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0071"
+      },
+      {
+        "claim_id": "eggs_c086",
+        "family": "comparator_or_substitution",
+        "matched_markers": [
+          "instead of",
+          "compared with",
+          "alternative"
+        ],
+        "score": 15,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 239-239",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0239"
+      },
+      {
+        "claim_id": "eggs_c087",
+        "family": "method_limit",
+        "matched_markers": [
+          "adjusted for"
+        ],
+        "score": 9,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 70-70",
+        "span_id": "jama_2019_dietary_cholesterol_eggs_s0070"
+      },
+      {
+        "claim_id": "eggs_c088",
+        "family": "endpoint_or_outcome",
+        "matched_markers": [
+          "risk"
+        ],
+        "score": 8,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 73-73",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0073"
+      },
+      {
+        "claim_id": "eggs_c089",
+        "family": "endpoint_or_outcome",
+        "matched_markers": [
+          "risk"
+        ],
+        "score": 8,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 84-84",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0084"
+      },
+      {
+        "claim_id": "eggs_c090",
+        "family": "method_limit",
+        "matched_markers": [
+          "adjusted for"
+        ],
+        "score": 6,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 67-67",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0067"
+      },
+      {
+        "claim_id": "eggs_c091",
+        "family": "dose_or_threshold",
+        "matched_markers": [
+          "threshold"
+        ],
+        "score": 5,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 77-77",
+        "span_id": "bmj_2020_egg_consumption_cvd_s0077"
+      },
+      {
+        "claim_id": "eggs_c092",
+        "family": "dose_or_threshold",
+        "matched_markers": [
+          "dose"
+        ],
+        "score": 4,
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_span": "lines 129-129",
+        "span_id": "nnr_2023_eggs_scoping_review_s0129"
+      },
+      {
+        "claim_id": "eggs_c093",
+        "family": "guideline_or_recommendation",
+        "matched_markers": [
+          "policy"
+        ],
+        "score": 1,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 140-140",
+        "span_id": "aha_2019_dietary_cholesterol_pubmed_s0140"
+      },
+      {
+        "claim_id": "eggs_c094",
+        "family": "guideline_or_recommendation",
+        "matched_markers": [
+          "policy"
+        ],
+        "score": 1,
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 154-154",
+        "span_id": "aha_2023_dietary_cholesterol_news_s0154"
+      }
+    ]
+  },
+  "concept_gap_backfilled_claim_count": 10,
+  "duplicate_chunk_count": 0,
+  "duplicate_chunk_ids": [],
+  "method": "deterministic_best_span_for_budget_skipped_chunks_plus_source_concept_gap_backfill",
+  "no_signal_chunk_count": 1,
+  "no_signal_chunk_ids": [
+    "nnr_2023_eggs_scoping_review_lines_701_701"
+  ],
+  "schema_id": "coverage_backfill_v1",
+  "skipped_chunk_backfilled_claim_count": 32,
+  "skipped_chunk_count": 33
+}

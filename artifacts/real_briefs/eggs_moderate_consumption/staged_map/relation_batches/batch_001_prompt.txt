@@ -1,0 +1,598 @@
+You are classifying possible relations between already-validated claim cards.
+
+Prompt version: staged_relation_batch_prompt_v2_contract_json
+Region ID: eggs_observational_vs_rct
+Batch ID: batch_001
+Case question: What should an investigator believe about the health effects of eating eggs?
+
+Allowed relation types:
+challenges, crux_for, depends_on, in_tension_with, refines, similar_to, supports
+
+Pairs to classify:
+Pair ID: pair_001
+Claim A:
+- claim_id: eggs_c001
+- claim: Adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods.
+- source_id: dga_2020_2025_pmc_summary
+- role: conclusion_support
+- excerpt: The Committee encouraged exclusive breastfeeding, ideally for the first 6 months of life, with continued breastfeeding through the first year of life or longer as desired by the mother and infant. On the basis of the evidence reviewed, the Committee concluded that complementary foods and beverages (CFB) should not be introduced before 4 months old. The Committee found that introduction at 4 to 5 months old as compared with 6 months old does not offer long-term advantages or disadvantages. It recommended that CFB include foods that are rich in iron and zinc, either intrinsically (eg, meats) or due to fortification (eg, iron-fortified infant cereal), particularly from the age of 6 to 12 months among breastfed infants. Complementary foods and beverages should also contain adequate amounts of polyunsaturated fatty acids. The Committee concluded that, once CFB are introduced, adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods. The Committee found no evidence that avoiding other potentially allergenic foods (fish, shellfish, cow milk products, tree nuts, seeds, wheat, and soy) in the first year of life is beneficial with regard to preventing food allergies or other atopic diseases.
+
+Claim B:
+- claim_id: eggs_c044
+- claim: The intervention duration of the included studies were all within a year, so results for longer intervention times cannot be concluded.
+- source_id: li_2020_egg_cholesterol_rct_meta
+- role: scope_limit
+- excerpt: There were some limitations to this study because of potential biases in the synthesis. The intervention duration of the included studies were all within a year. We could not conclude results for longer intervention times. Next, we could not determine the foods accompanying the eggs in every included study. Different background diets may have influenced the results. However, we excluded the intervention that may influence the cholesterol level, we could not tell whether there is other factors due to insufficient information [26]. Then, due to the variation between included studies, MEC group have different amount of egg consumption. However, we used subgroup analysis to explain the result, ≥ three-egg group still had variation. Finally, the LDL-c/HDL-c ratio was the main estimation used to assess the risk of cardiovascular diseases [12]. Not every included study reported the LDL-c/HDL-c value. Thus, we had to estimate the LDL-c/HDL-c value in several studies.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+scope_or_implementation_pair+support_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 23.25
+
+Pair ID: pair_002
+Claim A:
+- claim_id: eggs_c002
+- claim: For toddlers 12 to 24 months old whose diets do not include meat, poultry, or seafood, the Committee advised providing eggs and dairy products on a regular basis.
+- source_id: dga_2020_2025_pmc_summary
+- role: conclusion_support
+- excerpt: The Committee conducted food pattern modeling to determine whether USDA food patterns could be established for infants and toddlers ages 6 to 24 months.5 A food pattern for infants 6 to 12 months old could not be established because of challenges with uncertainty about nutrient requirements and difficulty in meeting the Recommended Dietary Allowance for iron through CFB. However, combinations of CFB were described by the Committee that meet most nutrient requirements while infants are still consuming different proportions of human milk or infant formula. The Committee recommended providing infants and toddlers with a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy), fruits and vegetables, nuts and seeds, and whole-grain products, beginning at 6 to 12 months old and continuing thereafter. For toddlers 12 to 24 months old whose diets do not include meat, poultry, or seafood, the Committee advised providing eggs and dairy products on a regular basis, along with soy products and nuts or seeds, fruits, vegetables, grains, and oils. The Committee also recommended not providing foods and beverages with added sugars, such as sugar-sweetened beverages, to children younger than 2 months because energy from added sugars is likely to displace energy from nutrient-dense foods and because some evidence suggests a relationship with subsequent risk of child overweight. In addition, because food preferences begin at an early age, it is important to encourage regular consumption of nutrient-dense foods and beverages.
+
+Claim B:
+- claim_id: eggs_c085
+- claim: Comparator/substitution evidence: ...h fries, fruit juices, full fat milk, sugar-sweetened beverages, and coffee) with the Alternative Healthy Eating Index score in the multivariable model. Instead of pooling the data, we used fixed effect meta-analysis to estimate the overall association of egg...
+- source_id: bmj_2020_egg_consumption_cvd
+- role: implementation_constraint
+- excerpt: We repeated the main analysis by replacing foods associated with egg intake (red meat, bacon, other processed meat, refined grains, fruits, vegetables, potatoes and French fries, fruit juices, full fat milk, sugar-sweetened beverages, and coffee) with the Alternative Healthy Eating Index score in the multivariable model. Instead of pooling the data, we used fixed effect meta-analysis to estimate the overall association of egg intake and cardiovascular disease risk among the three cohorts. Finally, we calculated E values to determine the minimum strength of association on the risk ratio scale that an unmeasured confounder would need to have with egg consumption and cardiovascular disease risk to fully shift the observed association toward a significant association.40 All P values are two sided and statistical significance was considered at P values less than 0.05. Statistical analyses were performed using SAS version 9.4 (SAS Institute, Cary, NC).
+
+Candidate-pair reason: cross_source+implementation_constraint_conditions_decision_claim+scope_or_implementation_pair+support_pair+support_limit_tension+tfidf_semantic_similarity
+Candidate-pair score: 22.2655
+
+Pair ID: pair_003
+Claim A:
+- claim_id: eggs_c004
+- claim: The Dietary Guidelines for Americans, 2020–2025 is grounded in the current body of scientific evidence on diet and health outcomes.
+- source_id: dga_2020_2025_pmc_summary
+- role: background
+- excerpt: The Dietary Guidelines for Americans, 2020–2025 was issued jointly by the US Departments of Agriculture and of Health and Human Services in December 2020. It is the ninth edition of the Dietary Guidelines and is the first to provide recommendations by life stage, from birth to older adulthood. The Dietary Guidelines is grounded in the current body of scientific evidence on diet and health outcomes and aims to promote health and prevent chronic diseases. The process to develop the Dietary Guidelines involved 4 steps: (1) identifying the topics and supporting scientific questions, (2) appointing a Dietary Guidelines Advisory Committee (Committee) to review current scientific evidence, (3) developing the new edition of the Dietary Guidelines, and (4) implementing the Dietary Guidelines. The 2020-2025 edition provides 4 overarching guidelines and supporting key recommendations that encourage healthy dietary patterns across the life span. The foods and beverages that people consume have a profound impact on health, and it is never too late or too early to eat healthfully.
+
+Claim B:
+- claim_id: eggs_c060
+- claim: Pooled relative risk (95% CI)
+- source_id: bmj_2020_egg_consumption_cvd
+- role: scope_limit
+- excerpt: Pooled relative risk (95% CI)
+
+Candidate-pair reason: cross_source+scope_or_implementation_pair+support_limit_tension
+Candidate-pair score: 12.0
+
+Pair ID: pair_004
+Claim A:
+- claim_id: eggs_c005
+- claim: The Dietary Guidelines recommend providing infants and toddlers with a variety of animal-source foods, including eggs, beginning at 6 to 12 months old.
+- source_id: dga_2020_2025_pmc_summary
+- role: conclusion_support
+- excerpt: The Committee conducted food pattern modeling to determine whether USDA food patterns could be established for infants and toddlers ages 6 to 24 months.5 A food pattern for infants 6 to 12 months old could not be established because of challenges with uncertainty about nutrient requirements and difficulty in meeting the Recommended Dietary Allowance for iron through CFB. However, combinations of CFB were described by the Committee that meet most nutrient requirements while infants are still consuming different proportions of human milk or infant formula. The Committee recommended providing infants and toddlers with a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy), fruits and vegetables, nuts and seeds, and whole-grain products, beginning at 6 to 12 months old and continuing thereafter. For toddlers 12 to 24 months old whose diets do not include meat, poultry, or seafood, the Committee advised providing eggs and dairy products on a regular basis, along with soy products and nuts or seeds, fruits, vegetables, grains, and oils. The Committee also recommended not providing foods and beverages with added sugars, such as sugar-sweetened beverages, to children younger than 2 months because energy from added sugars is likely to displace energy from nutrient-dense foods and because some evidence suggests a relationship with subsequent risk of child overweight. In addition, because food preferences begin at an early age, it is important to encourage regular consumption of nutrient-dense foods and beverages.
+
+Claim B:
+- claim_id: eggs_c080
+- claim: For intakes of <3 and ≥3 eggs/week, OR = 1.14 (95% CI 1.07–1.22) and OR = 1.25 (95% CI 1.14–1.38), respectively. For intakes of <3, 3–5, and ≥5 eggs/week, OR = 1.13 (95% CI 1.06–1.21), OR = 1.14 (95% CI 1.01–1.29), and OR = 1.19 (95% CI 1.01–1.39), respectively. In site-specific analyses, egg intake was associated mainly with risk of cancers of the stomach, colon, and colorectum. Increased risk was found only in case–control studies. No associations were found in European studies.
+- source_id: nnr_2023_eggs_scoping_review
+- role: scope_limit
+- excerpt: For intakes of <3 and ≥3 eggs/week, OR = 1.14 (95% CI 1.07–1.22) and OR = 1.25 (95% CI 1.14–1.38), respectively. For intakes of <3, 3–5, and ≥5 eggs/week, OR = 1.13 (95% CI 1.06–1.21), OR = 1.14 (95% CI 1.01–1.29), and OR = 1.19 (95% CI 1.01–1.39), respectively. In site-specific analyses, egg intake was associated mainly with risk of cancers of the stomach, colon, and colorectum. Increased risk was found only in case–control studies. No associations were found in European studies.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+scope_or_implementation_pair+support_pair+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 17.047
+
+Pair ID: pair_005
+Claim A:
+- claim_id: eggs_c006
+- claim: Regular intake of eggs that contain omega-3 fatty acids is appropriate for individuals who do not consume seafood.
+- source_id: dga_2020_2025_pmc_summary
+- role: conclusion_support
+- excerpt: On the basis of its review of the evidence for a relationship between types of dietary fats consumed and cardiovascular disease risk, the Committee advised limiting intake of saturated fats to less than 10% of energy per day by replacing them with unsaturated fats and keeping dietary cholesterol intake as low as possible. The Committee also recommended 2 or more servings of cooked seafood per week for individuals 2 years and older to ensure intake of key nutrients and as part of an overall healthy dietary pattern. Serving sizes vary based on age and seafood choices should emphasize species higher in omega-3 fatty acids and low in methylmercury, following federal and local fish and seafood advisories.6 For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.
+
+Claim B:
+- claim_id: eggs_c082
+- claim: Higher egg intake was associated with a modestly increased risk of breast cancer (RR 1.04, 95% CI 1.01–1.08)
+- source_id: nnr_2023_eggs_scoping_review
+- role: scope_limit
+- excerpt: Higher egg intake was associated with a modestly increased risk of breast cancer (RR 1.04, 95% CI 1.01–1.08)
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+scope_or_implementation_pair+support_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 23.1095
+
+Pair ID: pair_006
+Claim A:
+- claim_id: eggs_c007
+- claim: The Dietary Guidelines for Americans are developed for the American public but are written for a professional audience, meaning their translation into actionable consumer messages is crucial.
+- source_id: dga_2020_2025_pmc_summary
+- role: implementation_constraint
+- excerpt: The Dietary Guidelines for Americans is developed for the American public but is written for a professional audience. Therefore, its translation into actionable consumer messages and resources is crucial to help individuals, families, and communities achieve healthy dietary patterns.
+
+Claim B:
+- claim_id: eggs_c019
+- claim: Foods once shunned due to high dietary cholesterol content only come from animal products and should not be the focus of a diet.
+- source_id: aha_2023_dietary_cholesterol_news
+- role: conclusion_support
+- excerpt: Put another way, the foods once shunned due to their high dietary cholesterol content only come from animal products, and they should still not be the focus of your diet.
+
+Candidate-pair reason: cross_source+implementation_constraint_conditions_decision_claim+scope_or_implementation_pair+support_pair+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 17.0565
+
+Pair ID: pair_007
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c011
+- claim: Guidance focused on dietary patterns is more likely to improve diet quality and promote cardiovascular health than specific dietary cholesterol targets.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: implementation_constraint
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Candidate-pair reason: implementation_constraint_conditions_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 26.0
+
+Pair ID: pair_008
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c017
+- claim: The average American's blood cholesterol level has gone down in recent decades due to statin medications and a better understanding of diet.
+- source_id: aha_2023_dietary_cholesterol_news
+- role: background
+- excerpt: While dietary cholesterol remains important to researchers, it's of less concern now, Van Horn said. That's because the average American's blood cholesterol level has gone down in recent decades, and some of that is thanks to statin medications and a better understanding of diet, she said.
+
+Candidate-pair reason: cross_source+crux_connected_to_substantive_claim+crux_pair+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 16.357
+
+Pair ID: pair_009
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c044
+- claim: The intervention duration of the included studies were all within a year, so results for longer intervention times cannot be concluded.
+- source_id: li_2020_egg_cholesterol_rct_meta
+- role: scope_limit
+- excerpt: There were some limitations to this study because of potential biases in the synthesis. The intervention duration of the included studies were all within a year. We could not conclude results for longer intervention times. Next, we could not determine the foods accompanying the eggs in every included study. Different background diets may have influenced the results. However, we excluded the intervention that may influence the cholesterol level, we could not tell whether there is other factors due to insufficient information [26]. Then, due to the variation between included studies, MEC group have different amount of egg consumption. However, we used subgroup analysis to explain the result, ≥ three-egg group still had variation. Finally, the LDL-c/HDL-c ratio was the main estimation used to assess the risk of cardiovascular diseases [12]. Not every included study reported the LDL-c/HDL-c value. Thus, we had to estimate the LDL-c/HDL-c value in several studies.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 26.261
+
+Pair ID: pair_010
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c062
+- claim: •	48. Virtanen JK, Mursu J, Virtanen HE, et al. Associations of egg and cholesterol intakes with carotid intima-media thickness and risk of incident coronary artery disease according to apolipoprotein E phenotype in men: the Kuopio Ischaemic Heart Disease Risk Factor Study. Am J Clin Nutr 2016;103:895-901. 10.3945/ajcn.115.122317    [DOI] [PubMed] [Google Scholar]
+- source_id: bmj_2020_egg_consumption_cvd
+- role: scope_limit
+- excerpt: •	48. Virtanen JK, Mursu J, Virtanen HE, et al. Associations of egg and cholesterol intakes with carotid intima-media thickness and risk of incident coronary artery disease according to apolipoprotein E phenotype in men: the Kuopio Ischaemic Heart Disease Risk Factor Study. Am J Clin Nutr 2016;103:895-901. 10.3945/ajcn.115.122317    [DOI] [PubMed] [Google Scholar]
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 26.2135
+
+Pair ID: pair_011
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c065
+- claim: This study included 29 615 participants with 524 376 person-years of follow-up data (Table). Mean (SD) age was 51.6 (13.5) years at baseline, 9204 (31.1%) were black, 13 299 (44.9%) were men. The 6 cohorts differed considerably in terms of sample size, age, sex, race/ethnicity, education level, BMI, and behavioral and clinical CVD risk factors, as well as incident CVD and all-cause mortality rates. Overall median dietary cholesterol consumption was 241 mg per day (interquartile range [IQR], 164-350) and the overall mean (SD) was 285 (184) mg per day. Overall median egg consumption was 0.14 per day (IQR, 0.07-0.43) and the overall mean (SD) was 0.34 (0.46) per day. Participants’ characteristics, according to 5 levels of dietary cholesterol or egg consumption are shown in eTables 1 and 2 in the Supplement. The unadjusted incidence per 1000 person-years was 10.9 (95% CI, 10.6-11.2) for incident CVD and 11.7 (95% CI, 11.4-12.0) for all-cause mortality (eTable3 in the Supplement). The energy-adjusted Pearson correlations between dietary cholesterol or egg consumption and a range of dietary factors are shown in eTable 4 in the Supplement.
+- source_id: jama_2019_dietary_cholesterol_eggs
+- role: scope_limit
+- excerpt: This study included 29 615 participants with 524 376 person-years of follow-up data (Table). Mean (SD) age was 51.6 (13.5) years at baseline, 9204 (31.1%) were black, 13 299 (44.9%) were men. The 6 cohorts differed considerably in terms of sample size, age, sex, race/ethnicity, education level, BMI, and behavioral and clinical CVD risk factors, as well as incident CVD and all-cause mortality rates. Overall median dietary cholesterol consumption was 241 mg per day (interquartile range [IQR], 164-350) and the overall mean (SD) was 285 (184) mg per day. Overall median egg consumption was 0.14 per day (IQR, 0.07-0.43) and the overall mean (SD) was 0.34 (0.46) per day. Participants’ characteristics, according to 5 levels of dietary cholesterol or egg consumption are shown in eTables 1 and 2 in the Supplement. The unadjusted incidence per 1000 person-years was 10.9 (95% CI, 10.6-11.2) for incident CVD and 11.7 (95% CI, 11.4-12.0) for all-cause mortality (eTable3 in the Supplement). The energy-adjusted Pearson correlations between dietary cholesterol or egg consumption and a range of dietary factors are shown in eTable 4 in the Supplement.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 26.2655
+
+Pair ID: pair_012
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c068
+- claim: Abbreviations: aHEI, alternate Healthy Eating Index; ARIC, Atherosclerosis Risk in Communities; BMI, body mass index; CARDIA, Coronary Artery Risk Development in Young Adults; CVD, cardiovascular disease; FHS, Framingham Heart Study; FOS, Framingham Offspring Study; HDL-C, high density lipoprotein cholesterol; IQR, interquartile range; JHS, Jackson Heart Study; MESA, Multi-Ethnic Study of Atherosclerosis; SBP, systolic blood pressure.
+- source_id: jama_2019_dietary_cholesterol_eggs
+- role: scope_limit
+- excerpt: Abbreviations: aHEI, alternate Healthy Eating Index; ARIC, Atherosclerosis Risk in Communities; BMI, body mass index; CARDIA, Coronary Artery Risk Development in Young Adults; CVD, cardiovascular disease; FHS, Framingham Heart Study; FOS, Framingham Offspring Study; HDL-C, high density lipoprotein cholesterol; IQR, interquartile range; JHS, Jackson Heart Study; MESA, Multi-Ethnic Study of Atherosclerosis; SBP, systolic blood pressure.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 27.314
+
+Pair ID: pair_013
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c069
+- claim: •	8.Xu L, Lam TH, Jiang CQ, et al. Egg consumption and the risk of cardiovascular disease and all-cause mortality: Guangzhou Biobank Cohort Study and meta-analyses [published online April 21, 2018]. Eur J Nutr. doi: 10.1007/s00394-018-1692-3 [DOI] [PubMed] [Google Scholar]
+- source_id: jama_2019_dietary_cholesterol_eggs
+- role: scope_limit
+- excerpt: •	8.Xu L, Lam TH, Jiang CQ, et al. Egg consumption and the risk of cardiovascular disease and all-cause mortality: Guangzhou Biobank Cohort Study and meta-analyses [published online April 21, 2018]. Eur J Nutr. doi: 10.1007/s00394-018-1692-3 [DOI] [PubMed] [Google Scholar]
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 26.1825
+
+Pair ID: pair_014
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c072
+- claim: Hyperlipidemia is a phenomenon of increased levels of lipids or triglycerides [20]. It can be classified as hypercholesterolemia, hypertriglyceridemia and elevation of both cholesterol and triglycerides [21]. Higher amounts of LDL-c result in higher risks of cardiovascular diseases. There are more than 100 million people in the United States with elevated LDL-c concentrations, so they have higher risks of cardiovascular diseases [22]. The global prevalence of elevated total cholesterol among adults are 39% [23]. The intake of dietary cholesterol is associated with increased LDL-c concentration [11]. However, this is an oversimplification since the response of serum cholesterol to dietary cholesterol intake is quite complicated. Humans can endogenously produce cholesterol, and most of the cholesterol in the body comes from biosynthesis [24]. Due to this controversy, several studies have examined the relationship between egg consumption and cholesterol levels. Some used different doses of egg consumption while others combined different diets [25,26].
+- source_id: li_2020_egg_cholesterol_rct_meta
+- role: scope_limit
+- excerpt: Hyperlipidemia is a phenomenon of increased levels of lipids or triglycerides [20]. It can be classified as hypercholesterolemia, hypertriglyceridemia and elevation of both cholesterol and triglycerides [21]. Higher amounts of LDL-c result in higher risks of cardiovascular diseases. There are more than 100 million people in the United States with elevated LDL-c concentrations, so they have higher risks of cardiovascular diseases [22]. The global prevalence of elevated total cholesterol among adults are 39% [23]. The intake of dietary cholesterol is associated with increased LDL-c concentration [11]. However, this is an oversimplification since the response of serum cholesterol to dietary cholesterol intake is quite complicated. Humans can endogenously produce cholesterol, and most of the cholesterol in the body comes from biosynthesis [24]. Due to this controversy, several studies have examined the relationship between egg consumption and cholesterol levels. Some used different doses of egg consumption while others combined different diets [25,26].
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 27.712
+
+Pair ID: pair_015
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c077
+- claim: Cardiovascular diseases (CVD), type 2 diabetes (T2D), and cancer are a significant public health burden in the Nordic and Baltic countries. High intake of eggs, mainly due to its high cholesterol content, has been suggested to have adverse health effects. The purpose of this scoping review is to describe the evidence related to the impact of egg intake on health. A literature search identified 38 systematic reviews and meta-analyses on egg consumption in relation to health outcomes published between 2011 and 30 April 2022. Overall, current evidence from systematic reviews of randomized clinical trials indicates that higher egg intake may increase serum total cholesterol concentration and the ratio of low-density lipoprotein to high-density lipoprotein cholesterol, but with substantial heterogeneity in the response. However, recent evidence from observational studies does not provide strong support for a detrimental role of moderate egg consumption (up to one egg/day) on the risk of CVD, especially in the European studies. The overall evidence from observational studies indicates that egg consumption is not associated with increased risk of mortality or T2D in European study populations. There is also little support for a role of egg consumption in cancer development, although a weak association with higher risk of certain cancers has been found in some studies, mainly case–control studies. Again, no associations with cancer risk have been observed in European studies. Systematic reviews and meta-analyses of egg consumption in relation to other health-related outcomes are scarce. There are also limited data available on the associations between the consumption of more than one egg/day and risk of diseases. Based on the available evidence, one egg/day is unlikely to adversely affect overall disease risk.
+- source_id: nnr_2023_eggs_scoping_review
+- role: scope_limit
+- excerpt: Cardiovascular diseases (CVD), type 2 diabetes (T2D), and cancer are a significant public health burden in the Nordic and Baltic countries. High intake of eggs, mainly due to its high cholesterol content, has been suggested to have adverse health effects. The purpose of this scoping review is to describe the evidence related to the impact of egg intake on health. A literature search identified 38 systematic reviews and meta-analyses on egg consumption in relation to health outcomes published between 2011 and 30 April 2022. Overall, current evidence from systematic reviews of randomized clinical trials indicates that higher egg intake may increase serum total cholesterol concentration and the ratio of low-density lipoprotein to high-density lipoprotein cholesterol, but with substantial heterogeneity in the response. However, recent evidence from observational studies does not provide strong support for a detrimental role of moderate egg consumption (up to one egg/day) on the risk of CVD, especially in the European studies. The overall evidence from observational studies indicates that egg consumption is not associated with increased risk of mortality or T2D in European study populations. There is also little support for a role of egg consumption in cancer development, although a weak association with higher risk of certain cancers has been found in some studies, mainly case–control studies. Again, no associations with cancer risk have been observed in European studies. Systematic reviews and meta-analyses of egg consumption in relation to other health-related outcomes are scarce. There are also limited data available on the associations between the consumption of more than one egg/day and risk of diseases. Based on the available evidence, one egg/day is unlikely to adversely affect overall disease risk.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 27.691
+
+Pair ID: pair_016
+Claim A:
+- claim_id: eggs_c009
+- claim: Most meta-analyses of intervention studies associate cholesterol intakes exceeding current average levels with elevated total or low-density lipoprotein cholesterol concentrations.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: crux
+- excerpt: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+
+Claim B:
+- claim_id: eggs_c080
+- claim: For intakes of <3 and ≥3 eggs/week, OR = 1.14 (95% CI 1.07–1.22) and OR = 1.25 (95% CI 1.14–1.38), respectively. For intakes of <3, 3–5, and ≥5 eggs/week, OR = 1.13 (95% CI 1.06–1.21), OR = 1.14 (95% CI 1.01–1.29), and OR = 1.19 (95% CI 1.01–1.39), respectively. In site-specific analyses, egg intake was associated mainly with risk of cancers of the stomach, colon, and colorectum. Increased risk was found only in case–control studies. No associations were found in European studies.
+- source_id: nnr_2023_eggs_scoping_review
+- role: scope_limit
+- excerpt: For intakes of <3 and ≥3 eggs/week, OR = 1.14 (95% CI 1.07–1.22) and OR = 1.25 (95% CI 1.14–1.38), respectively. For intakes of <3, 3–5, and ≥5 eggs/week, OR = 1.13 (95% CI 1.06–1.21), OR = 1.14 (95% CI 1.01–1.29), and OR = 1.19 (95% CI 1.01–1.39), respectively. In site-specific analyses, egg intake was associated mainly with risk of cancers of the stomach, colon, and colorectum. Increased risk was found only in case–control studies. No associations were found in European studies.
+
+Candidate-pair reason: cross_source+scope_limit_bounds_decision_claim+crux_pair+scope_or_implementation_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms
+Candidate-pair score: 27.192
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ]
+}
+
+Return only JSON:
+{
+  "relations": [
+    {
+      "pair_id": "one of: pair_001, pair_002, pair_003, pair_004, pair_005, pair_006, pair_007, pair_008, pair_009, pair_010, pair_011, pair_012, pair_013, pair_014, pair_015, pair_016",
+      "source_claim": "claim_id or null",
+      "target_claim": "claim_id or null",
+      "relation_type": "one allowed relation type or none",
+      "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+      "relation_confidence": "low|medium|high",
+      "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
+      "source_anchor_a": "short phrase from first excerpt that supports the edge",
+      "source_anchor_b": "short phrase from second excerpt that supports the edge",
+      "why_decision_relevant": "what this edge changes for the decision question",
+      "failure_condition": "what would make this edge invalid or much weaker",
+      "crux_candidates": ["crux text naming claim IDs"],
+      "similar_but_not_identical": ["distinction text naming claim IDs"]
+    }
+  ]
+}
+
+Rules:
+- Return exactly one object for each pair ID in this batch.
+- Do not include relation_id. Deterministic code assigns IDs later.
+- Use only the two claim IDs shown for each pair.
+- Use only allowed relation types, or use relation_type "none".
+- Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
+- Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
+- Fill the relation evidence contract for every non-none relation. The anchors should quote or paraphrase visible excerpt phrases, not introduce new facts.
+- Profile guidance: Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.
+- Profile guidance: Use similar_to only when the claims are redundant enough to merge.
+- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
+- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
+- If no defensible relation exists for a pair, set source_claim and target_claim to null and relation_type to "none".

@@ -1,0 +1,5 @@
+```json
+{
+  "section_markdown": "## Decision Brief\n\nBased on the provided source packet, moderate egg consumption (up to one egg per day) is generally acceptable for healthy adults, as it does not appear to increase overall cardiovascular disease risk. However, this decision read carries a degree of uncertainty because the evidence suggests that high consumption may be associated with increased risks in specific populations, such as those with type 2 diabetes.\n\n**Confidence:** medium"
+}
+```

@@ -1,0 +1,453 @@
+{
+  "decision_memo_slots": {
+    "coverage": {
+      "filled_required_slot_count": 7,
+      "has_crux_table": true,
+      "missing_required_slots": [],
+      "required_slot_count": 7
+    },
+    "method": "required_decision_slot_coverage_from_curated_evidence",
+    "schema_id": "decision_memo_slots_v1",
+    "slots": [
+      {
+        "job": "State who inherits the default answer.",
+        "label": "Default population",
+        "missing_message": "The current source packet does not establish a clean default-population boundary.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "The study population included participants from three large US cohorts (NHS, NHS II, and HPFS) who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.",
+            "claim_id": "The study population included participants from three large US cohorts (NHS, NHS II, and HPFS) who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.",
+            "decision_concepts": [
+              "default_population",
+              "hard_outcome_endpoint",
+              "subgroup_diabetes_or_metabolic_risk",
+              "study_design_cohort"
+            ],
+            "decision_slots": [
+              "default_population",
+              "high_risk_subgroup",
+              "endpoint_type",
+              "study_design",
+              "practical_recommendation"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "population_scope",
+              "outcome_or_endpoint",
+              "evidence_design"
+            ],
+            "modifiers": [
+              "base_source_grounded_claim",
+              "entailed_by_excerpt",
+              "boundary_role:scope_limit",
+              "scope_specific",
+              "decision_concept_count:4",
+              "quality_risk_context"
+            ],
+            "noise": {
+              "kind": "none",
+              "penalty": 0
+            },
+            "reader_score": 13,
+            "score": 7,
+            "section": "scope_limits",
+            "source": "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis",
+            "supporting_source_count": 1,
+            "weight": "high",
+            "why_it_matters": ""
+          }
+        ],
+        "slot_id": "default_population",
+        "status": "filled"
+      },
+      {
+        "job": "State the intake level or threshold the answer applies to.",
+        "label": "Dose boundary",
+        "missing_message": "The current source packet does not establish a clean dose or intensity boundary.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "Egg consumption is associated with a risk of cardiovascular disease, including coronary heart disease and stroke.",
+            "claim_id": "Egg consumption is associated with a risk of cardiovascular disease, including coronary heart disease and stroke.",
+            "concepts": [
+              "dose_or_threshold",
+              "hard_outcome_endpoint",
+              "subgroup_diabetes_or_metabolic_risk",
+              "safety_or_adverse_effect",
+              "study_design_cohort"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 14,
+            "score": 8,
+            "section": "main_support",
+            "source": "Eggs A 2023",
+            "weight": "high",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          }
+        ],
+        "slot_id": "dose_boundary",
+        "status": "filled"
+      },
+      {
+        "job": "Surface direct outcome evidence that supports the default answer.",
+        "label": "Hard-outcome support",
+        "missing_message": "The map lacks clean hard-outcome support for the default answer.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.",
+            "claim_id": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.",
+            "concepts": [
+              "dose_or_threshold",
+              "hard_outcome_endpoint",
+              "subgroup_diabetes_or_metabolic_risk",
+              "safety_or_adverse_effect",
+              "study_design_cohort"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 12,
+            "score": 8,
+            "section": "main_support",
+            "source": "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis",
+            "weight": "high",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          }
+        ],
+        "slot_id": "hard_outcome_support",
+        "status": "filled"
+      },
+      {
+        "job": "Surface outcome evidence that pushes against the default answer.",
+        "label": "Hard-outcome counterevidence",
+        "missing_message": "The map lacks clean hard-outcome counterevidence.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "Egg consumption is associated with an increased risk of ovarian cancer.",
+            "claim_id": "Egg consumption is associated with an increased risk of ovarian cancer.",
+            "concepts": [
+              "hard_outcome_endpoint",
+              "safety_or_adverse_effect",
+              "study_design_cohort"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 13,
+            "score": 8,
+            "section": "conflicting_evidence",
+            "source": "Eggs A 2023",
+            "weight": "high",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          }
+        ],
+        "slot_id": "hard_outcome_counter",
+        "status": "filled"
+      },
+      {
+        "job": "Explain biomarkers or mechanisms and what they cannot settle.",
+        "label": "Mechanism and surrogate evidence",
+        "missing_message": "The map lacks clean mechanism or surrogate-endpoint evidence.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "Egg consumption significantly increases LDL-c levels and the LDL-c/HDL-c ratio.",
+            "claim_id": "Egg consumption significantly increases LDL-c levels and the LDL-c/HDL-c ratio.",
+            "concepts": [
+              "surrogate_or_biomarker_endpoint",
+              "alternative_or_comparator",
+              "subgroup_diabetes_or_metabolic_risk",
+              "study_design_rct",
+              "mechanism_ldl_apob"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "intervention_or_option",
+              "comparator",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "equity_or_distribution"
+            ],
+            "noise_kind": "none",
+            "reader_score": 13,
+            "score": 7,
+            "section": "main_support",
+            "source": "Association Between Egg Consumption And Cholesterol Concentration: A Systematic Review And Meta Analysis Of Randomized Controlled Trials",
+            "weight": "high",
+            "why_it_matters": "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible."
+          },
+          {
+            "claim": "Egg consumption did not effectively increase HDL-c levels.",
+            "claim_id": "Egg consumption did not effectively increase HDL-c levels.",
+            "concepts": [
+              "surrogate_or_biomarker_endpoint",
+              "alternative_or_comparator",
+              "subgroup_diabetes_or_metabolic_risk",
+              "study_design_rct",
+              "mechanism_ldl_apob"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "intervention_or_option",
+              "comparator",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "equity_or_distribution"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "Association Between Egg Consumption And Cholesterol Concentration: A Systematic Review And Meta Analysis Of Randomized Controlled Trials",
+            "weight": "high",
+            "why_it_matters": "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible."
+          },
+          {
+            "claim": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol.",
+            "claim_id": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol.",
+            "concepts": [
+              "default_population",
+              "hard_outcome_endpoint",
+              "surrogate_or_biomarker_endpoint",
+              "safety_or_adverse_effect",
+              "guideline_or_policy",
+              "mechanism_ldl_apob",
+              "dietary_context_or_saturated_fat",
+              "subgroup_fh_hyper_responder"
+            ],
+            "evidence_family": "guideline_or_recommendation",
+            "evidence_slots": [
+              "population_scope",
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 11,
+            "score": 7,
+            "section": "conflicting_evidence",
+            "source": "Here's The Latest On Dietary Cholesterol And How It Fits In With A Healthy Diet",
+            "weight": "high",
+            "why_it_matters": "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible."
+          }
+        ],
+        "slot_id": "mechanism_surrogate",
+        "status": "filled"
+      },
+      {
+        "job": "State how replacement foods or comparators change the practical advice.",
+        "label": "Comparator or substitution",
+        "missing_message": "The map lacks clean comparator or substitution evidence.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "Compared whole-food exposure versus replacement or substitution option on outcome effect: whole-food exposure: no clean mapped evidence for this criterion; replacement or substitution option: Comparator/substitution evidence: ...ssociated with cardiovascular disease risk (hazard ratio for at least one egg per day.",
+            "criterion": "outcome_effect",
+            "decision_concepts": [
+              "alternative_or_comparator",
+              "substitution_or_comparator"
+            ],
+            "evidence_slots": [
+              "intervention_or_option",
+              "comparator",
+              "missing_evidence_gap"
+            ],
+            "reader_score": 11,
+            "score": 7,
+            "section": "main_support",
+            "source": "structured option comparison",
+            "weight": "medium"
+          }
+        ],
+        "slot_id": "comparator_substitution",
+        "status": "filled"
+      },
+      {
+        "job": "State who should not inherit the default answer without extra caution.",
+        "label": "High-risk subgroup",
+        "missing_message": "The map lacks clean high-risk subgroup evidence.",
+        "required": true,
+        "rows": [
+          {
+            "claim": "High egg consumption was associated with a higher risk of cardiovascular disease in people with type 2 diabetes.",
+            "claim_id": "High egg consumption was associated with a higher risk of cardiovascular disease in people with type 2 diabetes.",
+            "concepts": [
+              "default_population",
+              "dose_or_threshold",
+              "hard_outcome_endpoint",
+              "substitution_or_comparator",
+              "alternative_or_comparator",
+              "subgroup_diabetes_or_metabolic_risk",
+              "safety_or_adverse_effect"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "population_scope",
+              "intervention_or_option",
+              "comparator",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "harm_or_failure_mode"
+            ],
+            "noise_kind": "none",
+            "reader_score": 8,
+            "score": 8,
+            "section": "conflicting_evidence",
+            "source": "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis",
+            "weight": "high",
+            "why_it_matters": "Downside-risk evidence can change the recommendation even when the main effect is favorable."
+          }
+        ],
+        "slot_id": "high_risk_subgroup",
+        "status": "filled"
+      },
+      {
+        "job": "Distinguish hard outcomes from RCT/intervention or biomarker evidence.",
+        "label": "Study-design limits",
+        "missing_message": "The current source packet does not establish clean study-design limitations.",
+        "required": false,
+        "rows": [
+          {
+            "claim": "The study population included participants from three large US cohorts (NHS, NHS II, and HPFS) who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.",
+            "claim_id": "The study population included participants from three large US cohorts (NHS, NHS II, and HPFS) who were free of cardiovascular disease, type 2 diabetes, and cancer at baseline.",
+            "decision_concepts": [
+              "default_population",
+              "hard_outcome_endpoint",
+              "subgroup_diabetes_or_metabolic_risk",
+              "study_design_cohort"
+            ],
+            "decision_slots": [
+              "default_population",
+              "high_risk_subgroup",
+              "endpoint_type",
+              "study_design",
+              "practical_recommendation"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "population_scope",
+              "outcome_or_endpoint",
+              "evidence_design"
+            ],
+            "modifiers": [
+              "base_source_grounded_claim",
+              "entailed_by_excerpt",
+              "boundary_role:scope_limit",
+              "scope_specific",
+              "decision_concept_count:4",
+              "quality_risk_context"
+            ],
+            "noise": {
+              "kind": "none",
+              "penalty": 0
+            },
+            "reader_score": 13,
+            "score": 7,
+            "section": "scope_limits",
+            "source": "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis",
+            "supporting_source_count": 1,
+            "weight": "high",
+            "why_it_matters": ""
+          },
+          {
+            "claim": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.",
+            "claim_id": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall.",
+            "decision_concepts": [
+              "dose_or_threshold",
+              "hard_outcome_endpoint",
+              "subgroup_diabetes_or_metabolic_risk",
+              "safety_or_adverse_effect",
+              "study_design_cohort"
+            ],
+            "decision_slots": [
+              "dose_or_intensity_threshold",
+              "endpoint_type",
+              "study_design",
+              "safety_or_risk"
+            ],
+            "evidence_family": "evidence_synthesis",
+            "evidence_slots": [
+              "intervention_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "harm_or_failure_mode"
+            ],
+            "modifiers": [
+              "base_source_grounded_claim",
+              "entailed_by_excerpt",
+              "decision_role:conclusion_support",
+              "scope_specific",
+              "hard_outcome_signal",
+              "decision_concept_count:5",
+              "directional_decision_signal",
+              "quality_risk_context"
+            ],
+            "noise": {
+              "kind": "none",
+              "penalty": 0
+            },
+            "reader_score": 14,
+            "score": 8,
+            "section": "main_support",
+            "source": "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis",
+            "supporting_source_count": 1,
+            "weight": "high",
+            "why_it_matters": ""
+          }
+        ],
+        "slot_id": "study_design_limits",
+        "status": "filled"
+      }
+    ]
+  },
+  "excluded_row_count": 4,
+  "excluded_rows": [
+    {
+      "claim": "\u2022 49.Herron K.L., Vega-Lopez S., Conde K., Ramjiganesh T., Roy S., Shachter N.S., Fernandez M.L. Pre-menopausal women, classified as hypo- or hyperresponders, do not alter their ldl/hdl ratio following a high dietary cholesterol challenge. J. Am. Coll...",
+      "concept": "surrogate_or_biomarker_endpoint",
+      "reason": "fragmentary_extraction",
+      "source": "Association Between Egg Consumption And Cholesterol Concentration: A Systematic Review And Meta Analysis Of Randomized Controlled Trials"
+    },
+    {
+      "claim": "\u2022 49.Herron K.L., Vega-Lopez S., Conde K., Ramjiganesh T., Roy S., Shachter N.S., Fernandez M.L. Pre-menopausal women, classified as hypo- or hyperresponders, do not alter their ldl/hdl ratio following a high dietary cholesterol challenge. J. Am. Coll...",
+      "concept": "mechanism_ldl_apob",
+      "reason": "fragmentary_extraction",
+      "source": "Association Between Egg Consumption And Cholesterol Concentration: A Systematic Review And Meta Analysis Of Randomized Controlled Trials"
+    },
+    {
+      "claim": "Compared to no consumption, \u22647 eggs/week associated with lower non-fatal CVD incidence; \u22643 eggs/week with lower non-fatal CHD incidence. No associations with higher intakes or with risk of fatal or non-fatal stroke or with CVD or CHD mortality. Compared...",
+      "concept": "alternative_or_comparator",
+      "reason": "fragmentary_extraction",
+      "source": "Eggs A 2023"
+    },
+    {
+      "claim": "Total stroke: RR = 0.92 (95% CI 0.84\u20131.01). In dose-response analysis, 1\u20134 eggs/week was associated with lower risk and over 10 eggs/week with increased risk. Stroke mortality: RR = 0.84 (95% CI 0.71\u20131.00).",
+      "concept": "alternative_or_comparator",
+      "reason": "too_short",
+      "source": "Eggs A 2023"
+    }
+  ],
+  "packet_count": 10,
+  "schema_id": "evidence_curation_report_v1",
+  "selected_row_count": 22
+}

@@ -1,0 +1,28 @@
+{
+  "claims": [
+    {
+      "claim": "The authors of the scoping review received no funding or benefits from industry to conduct this study.",
+      "entailed_by_excerpt": "yes",
+      "role": "background",
+      "span_id": "nnr_2023_eggs_scoping_review_s0562"
+    },
+    {
+      "claim": "Egg consumption is associated with a risk of cardiovascular disease, including coronary heart disease and stroke.",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support",
+      "span_id": "nnr_2023_eggs_scoping_review_s0590"
+    },
+    {
+      "claim": "Egg consumption is associated with an increased risk of ovarian cancer.",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support",
+      "span_id": "nnr_2023_eggs_scoping_review_s0594"
+    },
+    {
+      "claim": "The review conclusions depend on the quality of included studies and specific inclusion criteria.",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit",
+      "span_id": "nnr_2023_eggs_scoping_review_s0561"
+    }
+  ]
+}

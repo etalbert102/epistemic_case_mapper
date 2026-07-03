@@ -1,0 +1,426 @@
+You are selecting source-grounded claim candidates from one bounded source-span catalog.
+
+Prompt version: staged_claim_extraction_prompt_v1_json
+Region ID: eggs_observational_vs_rct
+Case question: What should an investigator believe about the health effects of eating eggs?
+Source ID: aha_2019_dietary_cholesterol_pubmed
+Source title: Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association
+Line range: 141-192
+
+Source span catalog:
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0141
+  source_span: lines 141-141
+  text: •	Recommended Dietary Allowances*
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0142
+  source_span: lines 142-142
+  text: Substances
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0143
+  source_span: lines 143-143
+  text: •	Cholesterol, Dietary
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0145
+  source_span: lines 145-145
+  text: LinkOut - more resources
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0146
+  source_span: lines 146-146
+  text: •	Full Text Sources
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0147
+  source_span: lines 147-147
+  text: •	Atypon
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0148
+  source_span: lines 148-148
+  text: •	Ingenta plc
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0149
+  source_span: lines 149-149
+  text: •	Ovid Technologies, Inc.
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0150
+  source_span: lines 150-150
+  text: FULL TEXT LINKS
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0151
+  source_span: lines 151-151
+  text: [x]
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0153
+  source_span: lines 153-153
+  text: [x]
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0154
+  source_span: lines 154-154
+  text: cite
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0156
+  source_span: lines 156-156
+  text: Copy
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0158
+  source_span: lines 158-158
+  text: Download .nbib
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0159
+  source_span: lines 159-159
+  text: Format:
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0161
+  source_span: lines 161-161
+  text: AMA
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0163
+  source_span: lines 163-163
+  text: APA
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0165
+  source_span: lines 165-165
+  text: MLA
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0167
+  source_span: lines 167-167
+  text: NLM
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0171
+  source_span: lines 171-171
+  text: NCBI Literature Resources MeSH PMC Bookshelf Disclaimer The PubMed wordmark and PubMed logo are registered trademarks of the U.S. Department of Health and Human Services (HHS). Unauthorized use of these marks is strictly prohibited.
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0172
+  source_span: lines 172-172
+  text: FOLLOW NCBI
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0176
+  source_span: lines 176-176
+  text: .cls-11, .cls-12 { fill: #737373; } .cls-11 { fill-rule: evenodd; }
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0177
+  source_span: lines 177-177
+  text: .cls-1{fill:#737373;}
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0178
+  source_span: lines 178-178
+  text: Connect with NLM
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0179
+  source_span: lines 179-179
+  text: •	.st10 { fill: #FFFFFF; } .st110 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st4 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st5 { fill: #FFFFFF; }
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0180
+  source_span: lines 180-180
+  text: National Library of Medicine
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0181
+  source_span: lines 181-181
+  text: 8600 Rockville Pike
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0182
+  source_span: lines 182-182
+  text: Bethesda, MD 20894
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0183
+  source_span: lines 183-183
+  text: Web Policies
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0184
+  source_span: lines 184-184
+  text: FOIA
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0185
+  source_span: lines 185-185
+  text: HHS Vulnerability Disclosure
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0186
+  source_span: lines 186-186
+  text: Help
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0187
+  source_span: lines 187-187
+  text: Accessibility
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0188
+  source_span: lines 188-188
+  text: Careers
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0189
+  source_span: lines 189-189
+  text: •	NLM
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0190
+  source_span: lines 190-190
+  text: •	NIH
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0191
+  source_span: lines 191-191
+  text: •	HHS
+- span_id: aha_2019_dietary_cholesterol_pubmed_s0192
+  source_span: lines 192-192
+  text: •	USA.gov
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ],
+  "current_chunk": {
+    "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_141_192",
+    "source_id": "aha_2019_dietary_cholesterol_pubmed",
+    "line_range": "141-192",
+    "source_role": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  }
+}
+
+Return only JSON:
+{
+  "claims": [
+    {
+      "claim": "one concise claim supported by the excerpt",
+      "span_id": "one span_id from the catalog",
+      "entailed_by_excerpt": "yes|no|uncertain",
+      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+    }
+  ]
+}
+
+Rules:
+- Return at most 4 claims.
+- Do not include claim_id. Deterministic code assigns IDs later.
+- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
+- Use only span IDs shown in the catalog.
+- Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
+- If the chunk has no useful claim, return {"claims": []}.

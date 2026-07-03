@@ -1,0 +1,15 @@
+{
+  "crux_candidates": [],
+  "edge_basis": "uncertain",
+  "failure_condition": "The claims are from different studies and address different primary outcomes (CVD vs. T2D risk).",
+  "pair_id": "pair_065",
+  "rationale": "Claim B is a citation of a study on egg consumption and risk of type 2 diabetes, but it does not provide specific findings or bounds that relate to the cardiovascular disease (CVD) risk in Claim A.",
+  "relation_confidence": "high",
+  "relation_type": "none",
+  "similar_but_not_identical": [],
+  "source_anchor_a": null,
+  "source_anchor_b": null,
+  "source_claim": "eggs_c026",
+  "target_claim": "eggs_c070",
+  "why_decision_relevant": null
+}

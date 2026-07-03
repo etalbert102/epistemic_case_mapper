@@ -1,0 +1,546 @@
+You are selecting source-grounded claim candidates from one bounded source-span catalog.
+
+Prompt version: staged_claim_extraction_prompt_v1_json
+Region ID: eggs_observational_vs_rct
+Case question: What should an investigator believe about the health effects of eating eggs?
+Source ID: jama_2019_dietary_cholesterol_eggs
+Source title: Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality
+Line range: 421-500
+
+Source span catalog:
+- span_id: jama_2019_dietary_cholesterol_eggs_s0421
+  source_span: lines 421-421
+  text: Open in a new tab
+- span_id: jama_2019_dietary_cholesterol_eggs_s0422
+  source_span: lines 422-422
+  text: Adjustment covariates included age, sex, race/ethnicity (white, black, Hispanic, Chinese), education (<high school, high school, ≥some college), total energy, smoking status (current, former, never), smoking pack-years (0, 0.1-4.9, 5.0-9.9, 10-19.9, 20-29.9, 30-39.9, ≥40), cohort-specific physical activity z score, alcohol consumption (gram), and use of hormone therapy (y/n), where relevant. Mean dietary cholesterol consumption in the United States was 293 mg/d, based on the National Health and Nutrition Examination Survey 2013-2014 data.27 The results can be interpreted using the following sex-specific estimates as an example: in men, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with a higher relative risk (RR) of all-cause mortality (adjusted hazard ratio [HR], 1.14 [95% CI, 1.06-1.22]) and a higher absolute risk of all-cause mortality (adjusted absolute risk difference [ARD], 3.28% [95% CI, 0.80%-5.77%]) over a follow-up of 30 years. In women, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with a higher RR of all-cause mortality (adjusted HR, 1.28 [95% CI, 1.17-1.41]) and a higher absolute risk of all-cause mortality (adjusted ARD, 7.51% [95% CI, 4.20%-10.83%]) over a follow-up of 30 years. The association was stronger in women than in men (P value for interaction = .02).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0423
+  source_span: lines 423-423
+  text: aAbsolute risk difference was estimated using 3 R packages: riskRegression,33 survival,34 and pec,35 and 95% CIs were derived from 100 bootstrap samples. A follow-up time of 30 years (not all subgroups had the maximum follow-up of 31.3 years), mean of the included covariates, and a difference of 300 mg per day in dietary cholesterol consumption were used.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0424
+  source_span: lines 424-424
+  text: bCohort-stratified standard proportional hazard models were used for all-cause mortality.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0425
+  source_span: lines 425-425
+  text: cThe maximum follow-up time for the older group was 22.8 years. All other subgroups used 30 years as specified in footnote “a.”
+- span_id: jama_2019_dietary_cholesterol_eggs_s0426
+  source_span: lines 426-426
+  text: dHispanic and Chinese participants were combined with white participants (all categorized as other) due to small sample size.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0427
+  source_span: lines 427-427
+  text: eBody mass index was calculated as weight in kilograms divided by height in meters squared.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0428
+  source_span: lines 428-428
+  text: fFasting glucose (≥126 mg/dL) or HbA1c (≥6.5%) or taking glucose-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0429
+  source_span: lines 429-429
+  text: gBlood pressure (≥140/90 mm Hg) or taking antihypertensive medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0430
+  source_span: lines 430-430
+  text: hTotal cholesterol (≥240 mg/dL) or taking lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0431
+  source_span: lines 431-431
+  text: iLow-density lipoprotein cholesterol (<70 mg/dL) or non–high density lipoprotein cholesterol (<100 mg/dL) among those who did not take lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0432
+  source_span: lines 432-432
+  text: jAlternate Healthy Eating Index (aHEI) 2010 score in the highest quartile (≥51.5). The original version of the aHEI-2010 score has a range of 0 to 110 points, but the score in this study had a range of 0 to 100 points due to the removal of the meat item.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0433
+  source_span: lines 433-433
+  text: kPercent of energy consumed from saturated fat in the highest quartile (≥13.8%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0434
+  source_span: lines 434-434
+  text: lPercent of energy consumed from saturated fat (<7%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0435
+  source_span: lines 435-435
+  text: The association between egg consumption (per half an egg/day) and incident CVD was stronger in women (adjusted HR, 1.13 [95% CI, 1.07-1.20]) than in men (adjusted HR, 1.03 [95% CI, 0.99-1.08]) (P value for interaction, .009; Figure 7) and stronger in participants without low lipid levels (adjusted HR, 1.07 [95% CI, 1.04-1.11]) than in participants with low lipid levels (adjusted HR, 0.93 [95% CI, 0.81-1.07]) (P value for interaction, .04). The association between egg consumption and all-cause mortality was stronger in women (adjusted HR, 1.16 [95% CI, 1.10-1.23]) than in men (adjusted HR, 1.04 [95% CI, 1.01-1.08]) (P value for interaction, .001) (Figure 8) and stronger in participants without low lipid levels (adjusted HR, 1.09 [95% CI, 1.05-1.12] than in participants with low lipid levels (adjusted HR, 0.95 [95% CI, 0.86-1.05]) (P value for interaction, .007).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0436
+  source_span: lines 436-436
+  text: Figure 7. Association Between Each Additional Half an Egg Consumed per Day and Incident CVD Among Different Subgroups.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0438
+  source_span: lines 438-438
+  text: Open in a new tab
+- span_id: jama_2019_dietary_cholesterol_eggs_s0439
+  source_span: lines 439-439
+  text: See the Figure 1 footnote for conditions included in the incident cardiovascular disease (CVD) definition. Adjustment covariates included age, sex, race/ethnicity (white, black, Hispanic, Chinese), education (<high school, high school, ≥some college), total energy, smoking status (current, former, never), smoking pack-years (0, 0.1-4.9, 5.0-9.9, 10-19.9, 20-29.9, 30-39.9, ≥40), cohort-specific physical activity z score, alcohol consumption (gram), and use of hormone therapy (y/n), where relevant. Mean egg consumption in the United States was approximately half an egg per day, based on the National Health and Nutrition Examination Survey 2011-2012 data.28 The results can be interpreted using the following sex-specific estimates as an example: in men, each additional half an egg consumed per day was not significantly associated with a higher relative risk (RR) of incident CVD (adjusted hazard ratio [HR], 1.03 [95% CI, 0.99-1.08]) and a higher absolute risk of incident CVD (adjusted absolute risk difference [ARD], 1.02% [95% CI, −0.34% to 2.38%]) over a follow-up of 30 years. In women, each additional half an egg consumed per day was significantly associated with a higher RR of incident CVD (adjusted HR, 1.13 [95% CI, 1.07-1.20]) and a higher absolute risk of incident CVD (adjusted ARD, 1.86% [95% CI, 0.62%-3.10%]) over a follow-up of 30 years. The association was stronger in women than in men (P value for interaction = .009).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0440
+  source_span: lines 440-440
+  text: aAbsolute risk difference was estimated using 3 R packages: riskRegression,33 survival,34 and pec,35 and 95% CIs were derived from 100 bootstrap samples. A follow-up time of 30 years (not all subgroups had the maximum follow-up of 31.3 years), mean of the included covariates, and a difference of half an egg per day consumed were used.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0441
+  source_span: lines 441-441
+  text: bCohort-stratified cause-specific hazard models were used for incident CVD.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0442
+  source_span: lines 442-442
+  text: cThe maximum follow-up time for the older group was 22.8 years. All other subgroups used 30 years as specified in footnote “a.”
+- span_id: jama_2019_dietary_cholesterol_eggs_s0443
+  source_span: lines 443-443
+  text: dHispanic and Chinese participants were combined with white participants (all categorized as other) due to small sample size.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0444
+  source_span: lines 444-444
+  text: eBody mass index was calculated as weight in kilograms divided by height in meters squared.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0445
+  source_span: lines 445-445
+  text: fFasting glucose (≥126 mg/dL) or HbA1c (≥6.5%) or taking glucose-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0446
+  source_span: lines 446-446
+  text: gBlood pressure (≥140/90 mm Hg) or taking antihypertensive medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0447
+  source_span: lines 447-447
+  text: hTotal cholesterol (≥240 mg/dL) or taking lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0448
+  source_span: lines 448-448
+  text: iLow-density lipoprotein cholesterol (<70 mg/dL) or non-high density lipoprotein cholesterol (<100 mg/dL) among those who did not take lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0449
+  source_span: lines 449-449
+  text: jAlternate Healthy Eating Index (aHEI) 2010 score in the highest quartile (≥51.5). The original version of the aHEI-2010 score has a range of 0 to 110 points, but the score in this study had a range of 0 to 100 points due to the removal of the meat item.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0450
+  source_span: lines 450-450
+  text: kPercent of energy consumed from saturated fat in the highest quartile (≥13.8%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0451
+  source_span: lines 451-451
+  text: lPercent of energy consumed from saturated fat (<7%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0452
+  source_span: lines 452-452
+  text: Figure 8. Association Between Each Additional Half an Egg Consumed per Day and All-Cause Mortality Among Different Subgroups.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0454
+  source_span: lines 454-454
+  text: Open in a new tab
+- span_id: jama_2019_dietary_cholesterol_eggs_s0455
+  source_span: lines 455-455
+  text: Adjustment covariates included age, sex, race/ethnicity (white, black, Hispanic, Chinese), education (<high school, high school, ≥some college), total energy, smoking status (current, former, never), smoking pack-years (0, 0.1-4.9, 5.0-9.9, 10-19.9, 20-29.9, 30-39.9, ≥40), cohort-specific physical activity z score, alcohol consumption (gram), and use of hormone therapy (y/n), where relevant. Mean egg consumption in the United States was approximately half an egg per day, based on the National Health and Nutrition Examination Survey 2011-2012 data.28 The results can be interpreted using the following sex-specific estimates as an example: in men, each additional half an egg consumed per day was significantly associated with a higher relative risk (RR) of all-cause mortality (adjusted hazard ratio [HR], 1.04 [95% CI, 1.01-1.08]) and a higher absolute risk of all-cause mortality (adjusted absolute risk difference [ARD], 1.35% [95% CI, 0.28%-2.42%]) over a follow-up of 30 years. In women, each additional half an egg consumed per day was significantly associated with a higher RR of all-cause mortality (adjusted HR, 1.16 [95% CI, 1.10-1.23]) and a higher absolute risk of all-cause mortality (adjusted ARD, 3.61% [95% CI, 2.12%-5.10%]) over a follow-up of 30 years. The association was stronger in women than in men (P value for interaction = .001).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0456
+  source_span: lines 456-456
+  text: aAbsolute risk difference was estimated using 3 R packages: riskRegression,33 survival,34 and pec,35 and 95% CIs were derived from 100 bootstrap samples. A follow-up time of 30 years (not all subgroups had the maximum follow-up of 31.3 years), mean of the included covariates, and a difference of half an egg per day consumed were used.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0457
+  source_span: lines 457-457
+  text: bCohort- and sex-stratified standard proportional hazard models were used for all-cause mortality.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0458
+  source_span: lines 458-458
+  text: cThe maximum follow-up time for the older group was 22.8 years. All other subgroups used 30 years as specified in footnote “a.”
+- span_id: jama_2019_dietary_cholesterol_eggs_s0459
+  source_span: lines 459-459
+  text: dHispanic and Chinese participants were combined with white participants (all categorized as other) due to small sample size.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0460
+  source_span: lines 460-460
+  text: eBody mass index was calculated as weight in kilograms divided by height in meters squared.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0461
+  source_span: lines 461-461
+  text: fFasting glucose (≥126 mg/dL) or HbA1c (≥6.5%) or taking glucose-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0462
+  source_span: lines 462-462
+  text: gBlood pressure (≥140/90 mm Hg) or taking antihypertensive medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0463
+  source_span: lines 463-463
+  text: hTotal cholesterol (≥240 mg/dL) or taking lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0464
+  source_span: lines 464-464
+  text: iLow-density lipoprotein cholesterol (<70 mg/dL) or non–high density lipoprotein cholesterol (<100 mg/dL) among those who did not take lipid-lowering medications.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0465
+  source_span: lines 465-465
+  text: jAlternate Healthy Eating Index (aHEI) 2010 score in the highest quartile (≥51.5). The original version of the aHEI-2010 score has a range of 0 to 110 points, but the score in this study had a range of 0 to 100 points due to the removal of the meat item.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0466
+  source_span: lines 466-466
+  text: kPercent of energy consumed from saturated fat in the highest quartile (≥13.8%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0467
+  source_span: lines 467-467
+  text: lPercent of energy consumed from saturated fat (<7%).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0468
+  source_span: lines 468-468
+  text: Secondary Outcomes: CVD Subtypes and Cause-Specific Mortality
+- span_id: jama_2019_dietary_cholesterol_eggs_s0469
+  source_span: lines 469-469
+  text: The associations of dietary cholesterol or egg consumption with CVD subtypes and cause-specific mortality were monotonic (P value for quadratic terms >0.1).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0470
+  source_span: lines 470-470
+  text: CVD Subtypes
+- span_id: jama_2019_dietary_cholesterol_eggs_s0471
+  source_span: lines 471-471
+  text: Dietary cholesterol (per 300 mg/day; adjusted HR, 1.10 [95% CI, 0.98-1.23]) or egg consumption (per half an egg/day; adjusted HR, 1.05 [95% CI, 0.99-1.11]) was not significantly associated with CHD in model 2 (eFigure 1 and eFigure 6 in the Supplement). Dietary cholesterol consumption was significantly associated with stroke (adjusted HR, 1.26 [95% CI, 1.09-1.46]; eFigure 2 in the Supplement). This association was no longer significant after adjusting for egg consumption alone (adjusted HR, 1.19 [95% CI, 0.91-1.57]) or consumption of eggs, unprocessed red meat, and processed meat together (adjusted HR, 1.02 [95% CI, 0.75-1.38]). Dietary cholesterol consumption was significantly associated with heart failure (adjusted HR, 1.14 [95% CI, 1.05-1.24]; eFigure 3 in the Supplement). This association was no longer significant after adjusting for CVD risk factors (adjusted HR, 1.11 [95% CI, 0.98-1.27]) or animal protein consumption (adjusted HR, 1.06 [95% CI, 0.91-1.23]). Egg consumption was significantly associated with stroke (adjusted HR, 1.11 [95% CI, 1.03-1.18]; eFigure 7 in the Supplement), but not heart failure (adjusted HR, 1.06 [95% CI, 0.996-1.12]; eFigure 8 in the Supplement). The association between egg consumption and stroke was no longer significant after adjusting for dietary cholesterol consumption (adjusted HR, 1.03 [95% CI, 0.91-1.17]).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0472
+  source_span: lines 472-472
+  text: Cause-Specific Mortality
+- span_id: jama_2019_dietary_cholesterol_eggs_s0473
+  source_span: lines 473-473
+  text: Dietary cholesterol consumption was significantly associated with CVD mortality (adjusted HR, 1.22 [95% CI, 1.07-1.39]; eFigure 4 in the Supplement). This association was no longer significant after adjusting for animal protein consumption (adjusted HR, 1.07 [95% CI, 0.91-1.25]), egg consumption (adjusted HR, 1.23 [95% CI, 0.95-1.59]), or consumption of eggs, unprocessed red meat, and processed meat (adjusted HR, 1.13 [95% CI, 0.85-1.50]). Dietary cholesterol consumption was significantly associated with non-CVD mortality (adjusted HR, 1.16 [95% CI, 1.08-1.26]; eFigure 5 in the Supplement). This association was no longer significant after adjusting for egg consumption (adjusted HR, 1.10 [95% CI, 0.95-1.26]) or consumption of eggs, unprocessed red meat, and processed meat (adjusted HR, 1.03 [95% CI, 0.88-1.21]). Egg consumption was significantly associated with CVD mortality (adjusted HR, 1.08 [95% CI, 1.01-1.15]; eFigure 9 in the Supplement) and non-CVD mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; eFigure 10 in the Supplement), but these associations were no longer significant after adjusting for dietary cholesterol consumption for CVD mortality (adjusted HR, 0.99 [95% CI, 0.88-1.12]) and non-CVD mortality (adjusted HR, 1.04 [95% CI, 0.97-1.11]), as well as adjusting for animal protein consumption for CVD mortality (adjusted HR, 1.05 [95% CI, 0.99-1.12])
+- span_id: jama_2019_dietary_cholesterol_eggs_s0474
+  source_span: lines 474-474
+  text: Sensitivity Analyses
+- span_id: jama_2019_dietary_cholesterol_eggs_s0475
+  source_span: lines 475-475
+  text: Excluding events within the first 2 and 5 years or censoring participants at 10- and 20-year follow-up did not materially alter the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality (Figure 2; Figure 4). Compared with the included participants (N = 29 615), participants who were excluded (n = 4882) were older (54.4 vs 51.6 years), more likely to be black (42.5% vs 31.1%), and less likely to have an education of some college or more (43.6% vs 54.7%) (eTable 7 in the Supplement). The adjusted HRs (95% CIs) were similar between complete case analyses and multiple imputation-based analyses (eTable 8 in the Supplement). Dropping any 1 of the 6 cohorts did not considerably alter the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality (eTable 9 in the Supplement). These significant associations were similar when the exposure variables were divided into quintiles or by other convenient cutoffs (eTables 10-13 in the Supplement). The adjusted HRs (95% CIs) obtained from subdistribution hazard models were similar to those obtained from cause-specific hazard models (eTable 14 in the Supplement).
+- span_id: jama_2019_dietary_cholesterol_eggs_s0476
+  source_span: lines 476-476
+  text: Discussion
+- span_id: jama_2019_dietary_cholesterol_eggs_s0477
+  source_span: lines 477-477
+  text: Among 29 615 adults pooled from 6 prospective cohort studies in the United States with a median follow-up of 17.5 years, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality, in a dose-response manner.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0478
+  source_span: lines 478-478
+  text: A recent meta-analysis did not report a conclusive association between dietary cholesterol consumption and CVD, primarily due to the heterogeneity of the available studies and sparse data.1 As a major source of dietary cholesterol, egg consumption has been differentially associated with CHD, stroke, heart failure, and mortality. Recent meta-analyses showed that frequent egg consumption (generally ≥1 per day), as compared with infrequent consumption (generally <1 per week or never), was associated with significantly higher risk of heart failure,10 significantly lower risk of stroke,6,8 or no significant association with stroke or stroke mortality,5,7 and higher risk of all-cause mortality (pooled HR 1.09, 95% CI [0.997-1.20]).8 No significant association with CHD was reported.5,6,7,8 Another meta-analysis, which analyzed all CVD subtypes together, reported a significant positive dose-response association between egg consumption and CVD.9 As highlighted by these meta-analyses,1,5,6,7,8,9,10 residual confounding was a potential reason for inconsistent results. For example, egg consumption was commonly correlated with unhealthy behaviors such as low physical activity, current smoking, and unhealthy dietary patterns.38 Also, cholesterol-containing foods are usually rich in saturated fat and animal protein.2 Failure to consider these factors and others could lead to differential conclusions. In contrast, the current study included comprehensive assessment of these factors. Also, the current study had longer follow-up than the majority of the previous studies and may have provided more power to detect associations.1,5,6,7,8,9,10
+- span_id: jama_2019_dietary_cholesterol_eggs_s0479
+  source_span: lines 479-479
+  text: The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet. These findings are consistent with the evidence that a reduction of dietary cholesterol intake, in addition to isocaloric replacement of saturated fat by unsaturated fat, was significantly associated with reduced total cholesterol (primarily LDL cholesterol) concentration.39 Further, the significant association between egg consumption and incident CVD was fully accounted for by the cholesterol content in eggs, which also largely explained the significant association between egg consumption and all-cause mortality, offering additional support for the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality. Although the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were no longer significant after accounting for egg, unprocessed red meat, and processed meat consumption, it remains unclear if cholesterol from these foods is more harmful than other cholesterol-containing foods. Statistically, the remaining variation in dietary cholesterol consumption from other foods may not be sufficient to materially modify the associations. Egg consumption contributed 25% to the total dietary cholesterol consumption and meat consumption contributed 42%.27 Mechanistically, eggs and processed or unprocessed red meat are rich in other nutrients such as choline, iron, carnitine, and added sodium (for processed meat) that have been implicated in CVD risk via different pathways. Further, the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were similar between participants who consumed a higher-quality diet and those who did not, suggesting that people may need to minimize dietary cholesterol and egg yolk intake when consuming a healthier eating pattern, as recommended by the Institute of Medicine.40
+- span_id: jama_2019_dietary_cholesterol_eggs_s0480
+  source_span: lines 480-480
+  text: The magnitudes of the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were modest but consistent across event subtypes including stroke, heart failure (except for egg consumption: adjusted HR 1.06, 95% CI [0.996-1.12]), CVD mortality, and non-CVD mortality, as well as for subgroups according to age, race/ethnicity, smoking status, CVD risk factors (ie, diabetes, hypertension, and hyperlipidemia), and diet quality. The nonsignificant association for CHD was consistent with the literature.5,6,7,8 US mean dietary cholesterol consumption of approximately 290 mg per day is higher than the global average of 228 mg per day,41 and was relatively stable from 2001-2002 to 2013-2014.27 Egg consumption has been relatively low in the United States, but overall per capita egg consumption increased by 11% from 23.0 g per day in 2001-2002 to 25.5 g per day in 2011-2012.28 The recommendations for dietary cholesterol and egg consumption from the 2015-2020 Dietary Guidelines, if carried forward in subsequent versions of Dietary Guidelines, might lead to further increases in egg and dietary cholesterol consumption in the United States, which could be harmful for prevention of CVD and premature death. Findings of the current study suggest that cholesterol from egg yolk may be harmful in the context of the current US diet, in which overnutrition and overweight/obesity are more common than malnutrition and underweight. This is consistent with the evidence that frequent egg consumption has been significantly associated with diabetes risk only in US studies.42
+- span_id: jama_2019_dietary_cholesterol_eggs_s0481
+  source_span: lines 481-481
+  text: Limitations
+- span_id: jama_2019_dietary_cholesterol_eggs_s0482
+  source_span: lines 482-482
+  text: This study has several limitations. First, appropriate interpretation of the study findings requires consideration of measurement error for self-reported diet data. Further, this study relied on single measurement of egg and dietary cholesterol consumption. Exposure misclassification may be of concern, but results were similar when censoring participants at different time points. Second, all cohorts used different dietary assessment tools except 2 Framingham cohorts, which created heterogeneities for data analyses. This was addressed by the following: (1) implementing a rigorous methodology to harmonize diet data; (2) performing cohort-stratified analyses; and (3) conducting several sensitivity analyses. Third, residual confounding was likely, although a number of covariates were adjusted. Fourth, data were not available for investigating subtypes of CHD, stroke, and heart failure, as well as more detailed cause-specific mortality such as cancer mortality. Fifth, generalizing our results to non-US populations requires caution due to different nutrition and food environments and chronic disease epidemiology. Sixth, the study findings are observational and cannot establish causality.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0483
+  source_span: lines 483-483
+  text: Conclusions
+- span_id: jama_2019_dietary_cholesterol_eggs_s0484
+  source_span: lines 484-484
+  text: Among US adults, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner. These results should be considered in the development of dietary guidelines and updates.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0485
+  source_span: lines 485-485
+  text: Supplement.
+- span_id: jama_2019_dietary_cholesterol_eggs_s0486
+  source_span: lines 486-486
+  text: eAppendix. Description of Diet Data Harmonization Methodology
+- span_id: jama_2019_dietary_cholesterol_eggs_s0487
+  source_span: lines 487-487
+  text: Harmonization eTable 1. Characteristics of Dietary Intake Assessment in 6 LRPP Cohorts
+- span_id: jama_2019_dietary_cholesterol_eggs_s0488
+  source_span: lines 488-488
+  text: Harmonization eTable 2. Correlation Coefficients of Selected Nutrients From the Published Validation Studies
+- span_id: jama_2019_dietary_cholesterol_eggs_s0489
+  source_span: lines 489-489
+  text: Harmonization eTable 3. Food Grouping Rationale in the LRPP
+- span_id: jama_2019_dietary_cholesterol_eggs_s0490
+  source_span: lines 490-490
+  text: Harmonization eTable 4. Key Nutrients in the LRPP
+- span_id: jama_2019_dietary_cholesterol_eggs_s0491
+  source_span: lines 491-491
+  text: Harmonization eTable 5. One Serving Size Reference and Conversion Table
+- span_id: jama_2019_dietary_cholesterol_eggs_s0492
+  source_span: lines 492-492
+  text: Harmonization eTable 6. An Example for Conversion Between Reported Consumption Frequencies and Daily Amount for Data Analysis
+- span_id: jama_2019_dietary_cholesterol_eggs_s0493
+  source_span: lines 493-493
+  text: Harmonization eReferences. References for Harmonization Methodology Description
+- span_id: jama_2019_dietary_cholesterol_eggs_s0494
+  source_span: lines 494-494
+  text: eTable 1. Characteristics of the Study Participants According to Different Levels of Dietary Cholesterol Consumption (mg/day)
+- span_id: jama_2019_dietary_cholesterol_eggs_s0495
+  source_span: lines 495-495
+  text: eTable 2. Characteristics of the Study Participants According to Different Levels of Egg Consumption (number/day)
+- span_id: jama_2019_dietary_cholesterol_eggs_s0496
+  source_span: lines 496-496
+  text: eTable 3. Unadjusted Incidence Rate of Events Overall and by Subtype
+- span_id: jama_2019_dietary_cholesterol_eggs_s0497
+  source_span: lines 497-497
+  text: eTable 4. Energy-Adjusted Pearson Correlation Between Dietary Cholsterol or Egg Consuption With Other Dietary Factors
+- span_id: jama_2019_dietary_cholesterol_eggs_s0498
+  source_span: lines 498-498
+  text: eTable 5. Associations Between Dietary Cholesterol Consumption and Incident CVD and All-Cause Mortality, Based on Various Increment Units for Dietary Cholesterol Consumption
+- span_id: jama_2019_dietary_cholesterol_eggs_s0499
+  source_span: lines 499-499
+  text: eTable 6. Associations Between Egg Consumption and Incident CVD and All-Cause Mortality, Based on Various Increment Units for Egg Consumption
+- span_id: jama_2019_dietary_cholesterol_eggs_s0500
+  source_span: lines 500-500
+  text: eTable 7. Key Characteristics Between the Included and Excluded Participants
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ],
+  "current_chunk": {
+    "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_421_500",
+    "source_id": "jama_2019_dietary_cholesterol_eggs",
+    "line_range": "421-500",
+    "source_role": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  }
+}
+
+Return only JSON:
+{
+  "claims": [
+    {
+      "claim": "one concise claim supported by the excerpt",
+      "span_id": "one span_id from the catalog",
+      "entailed_by_excerpt": "yes|no|uncertain",
+      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+    }
+  ]
+}
+
+Rules:
+- Return at most 4 claims.
+- Do not include claim_id. Deterministic code assigns IDs later.
+- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
+- Use only span IDs shown in the catalog.
+- Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
+- If the chunk has no useful claim, return {"claims": []}.

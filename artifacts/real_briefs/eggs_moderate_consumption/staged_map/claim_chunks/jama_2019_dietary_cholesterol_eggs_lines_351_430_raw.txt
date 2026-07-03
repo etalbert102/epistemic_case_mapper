@@ -1,0 +1,30 @@
+```json
+{
+  "claims": [
+    {
+      "claim": "Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with a higher relative risk and absolute risk of incident CVD and all-cause mortality.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0375",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support"
+    },
+    {
+      "claim": "The associations between egg consumption and incident CVD or all-cause mortality were no longer significant after adjusting for dietary cholesterol consumption.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0383",
+      "entailed_by_excerpt": "yes",
+      "role": "crux"
+    },
+    {
+      "claim": "The association between dietary cholesterol consumption and incident CVD was stronger in participants with a BMI lower than 25 than in overweight or obese participants.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0402",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit"
+    },
+    {
+      "claim": "The association between dietary cholesterol consumption and all-cause mortality was stronger in women than in men.",
+      "span_id": "jama_2019_dietary_cholesterol_eggs_s0402",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit"
+    }
+  ]
+}
+```

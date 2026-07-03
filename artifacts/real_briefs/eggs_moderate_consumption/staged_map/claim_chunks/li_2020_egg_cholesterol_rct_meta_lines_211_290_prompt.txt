@@ -1,0 +1,540 @@
+You are selecting source-grounded claim candidates from one bounded source-span catalog.
+
+Prompt version: staged_claim_extraction_prompt_v1_json
+Region ID: eggs_observational_vs_rct
+Case question: What should an investigator believe about the health effects of eating eggs?
+Source ID: li_2020_egg_cholesterol_rct_meta
+Source title: Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials
+Line range: 211-290
+
+Source span catalog:
+- span_id: li_2020_egg_cholesterol_rct_meta_s0215
+  source_span: lines 215-215
+  text: Subgroup
+- span_id: li_2020_egg_cholesterol_rct_meta_s0216
+  source_span: lines 216-216
+  text: Studies
+- span_id: li_2020_egg_cholesterol_rct_meta_s0217
+  source_span: lines 217-217
+  text: Patients
+- span_id: li_2020_egg_cholesterol_rct_meta_s0218
+  source_span: lines 218-218
+  text: MD
+- span_id: li_2020_egg_cholesterol_rct_meta_s0219
+  source_span: lines 219-219
+  text: 95% CI
+- span_id: li_2020_egg_cholesterol_rct_meta_s0220
+  source_span: lines 220-220
+  text: I-Square
+- span_id: li_2020_egg_cholesterol_rct_meta_s0221
+  source_span: lines 221-221
+  text: LDL-c/HDL-c ratio
+- span_id: li_2020_egg_cholesterol_rct_meta_s0222
+  source_span: lines 222-222
+  text: 1 egg
+- span_id: li_2020_egg_cholesterol_rct_meta_s0223
+  source_span: lines 223-223
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0224
+  source_span: lines 224-224
+  text: 226
+- span_id: li_2020_egg_cholesterol_rct_meta_s0225
+  source_span: lines 225-225
+  text: 0.20
+- span_id: li_2020_egg_cholesterol_rct_meta_s0226
+  source_span: lines 226-226
+  text: −0.01–0.42
+- span_id: li_2020_egg_cholesterol_rct_meta_s0227
+  source_span: lines 227-227
+  text: 59%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0228
+  source_span: lines 228-228
+  text: 2 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0229
+  source_span: lines 229-229
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0230
+  source_span: lines 230-230
+  text: 320
+- span_id: li_2020_egg_cholesterol_rct_meta_s0231
+  source_span: lines 231-231
+  text: 0.13
+- span_id: li_2020_egg_cholesterol_rct_meta_s0232
+  source_span: lines 232-232
+  text: 0.01–0.26
+- span_id: li_2020_egg_cholesterol_rct_meta_s0233
+  source_span: lines 233-233
+  text: 13%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0234
+  source_span: lines 234-234
+  text: ≥ 3 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0235
+  source_span: lines 235-235
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0236
+  source_span: lines 236-236
+  text: 339
+- span_id: li_2020_egg_cholesterol_rct_meta_s0237
+  source_span: lines 237-237
+  text: 0.09
+- span_id: li_2020_egg_cholesterol_rct_meta_s0238
+  source_span: lines 238-238
+  text: −0.02–0.20
+- span_id: li_2020_egg_cholesterol_rct_meta_s0239
+  source_span: lines 239-239
+  text: 0%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0240
+  source_span: lines 240-240
+  text: LDL-c
+- span_id: li_2020_egg_cholesterol_rct_meta_s0241
+  source_span: lines 241-241
+  text: 1 egg
+- span_id: li_2020_egg_cholesterol_rct_meta_s0242
+  source_span: lines 242-242
+  text: 6
+- span_id: li_2020_egg_cholesterol_rct_meta_s0243
+  source_span: lines 243-243
+  text: 266
+- span_id: li_2020_egg_cholesterol_rct_meta_s0244
+  source_span: lines 244-244
+  text: 8.37
+- span_id: li_2020_egg_cholesterol_rct_meta_s0245
+  source_span: lines 245-245
+  text: 1.06–15.69
+- span_id: li_2020_egg_cholesterol_rct_meta_s0246
+  source_span: lines 246-246
+  text: 22%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0247
+  source_span: lines 247-247
+  text: 2 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0248
+  source_span: lines 248-248
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0249
+  source_span: lines 249-249
+  text: 320
+- span_id: li_2020_egg_cholesterol_rct_meta_s0250
+  source_span: lines 250-250
+  text: 7.32
+- span_id: li_2020_egg_cholesterol_rct_meta_s0251
+  source_span: lines 251-251
+  text: 2.20–12.44
+- span_id: li_2020_egg_cholesterol_rct_meta_s0252
+  source_span: lines 252-252
+  text: 0%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0253
+  source_span: lines 253-253
+  text: ≥ 3 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0254
+  source_span: lines 254-254
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0255
+  source_span: lines 255-255
+  text: 339
+- span_id: li_2020_egg_cholesterol_rct_meta_s0256
+  source_span: lines 256-256
+  text: 9.87
+- span_id: li_2020_egg_cholesterol_rct_meta_s0257
+  source_span: lines 257-257
+  text: 2.09–17.65
+- span_id: li_2020_egg_cholesterol_rct_meta_s0258
+  source_span: lines 258-258
+  text: 42%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0259
+  source_span: lines 259-259
+  text: HDL-c
+- span_id: li_2020_egg_cholesterol_rct_meta_s0260
+  source_span: lines 260-260
+  text: 1 egg
+- span_id: li_2020_egg_cholesterol_rct_meta_s0261
+  source_span: lines 261-261
+  text: 6
+- span_id: li_2020_egg_cholesterol_rct_meta_s0262
+  source_span: lines 262-262
+  text: 276
+- span_id: li_2020_egg_cholesterol_rct_meta_s0263
+  source_span: lines 263-263
+  text: 0.28
+- span_id: li_2020_egg_cholesterol_rct_meta_s0264
+  source_span: lines 264-264
+  text: −2.85–3.42
+- span_id: li_2020_egg_cholesterol_rct_meta_s0265
+  source_span: lines 265-265
+  text: 0%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0266
+  source_span: lines 266-266
+  text: 2 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0267
+  source_span: lines 267-267
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0268
+  source_span: lines 268-268
+  text: 320
+- span_id: li_2020_egg_cholesterol_rct_meta_s0269
+  source_span: lines 269-269
+  text: 0.35
+- span_id: li_2020_egg_cholesterol_rct_meta_s0270
+  source_span: lines 270-270
+  text: −2.35–3.04
+- span_id: li_2020_egg_cholesterol_rct_meta_s0271
+  source_span: lines 271-271
+  text: 0%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0272
+  source_span: lines 272-272
+  text: ≥ 3 eggs
+- span_id: li_2020_egg_cholesterol_rct_meta_s0273
+  source_span: lines 273-273
+  text: 5
+- span_id: li_2020_egg_cholesterol_rct_meta_s0274
+  source_span: lines 274-274
+  text: 339
+- span_id: li_2020_egg_cholesterol_rct_meta_s0275
+  source_span: lines 275-275
+  text: 2.55
+- span_id: li_2020_egg_cholesterol_rct_meta_s0276
+  source_span: lines 276-276
+  text: 0.16–4.94
+- span_id: li_2020_egg_cholesterol_rct_meta_s0277
+  source_span: lines 277-277
+  text: 0%
+- span_id: li_2020_egg_cholesterol_rct_meta_s0278
+  source_span: lines 278-278
+  text: Open in a new tab
+- span_id: li_2020_egg_cholesterol_rct_meta_s0279
+  source_span: lines 279-279
+  text: In the subgroup analysis for LDL-c, one-egg group (MD = 8.37; 95% CI: 1.06 to 15.69; I2 = 22%), two-egg group (MD = 7.32; 95% CI: 2.20 to 12.44; I2 = 0%) and three-or-more-eggs group (MD = 9.87; 95% CI: 2.09 to 17.65; I2 = 42%) resulted in significantly higher LDL-c than control group.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0280
+  source_span: lines 280-280
+  text: About the subgroup analysis for HDL-c, one-egg (MD = 0.28; 95% CI: −2.85 to 3.42; I2 = 0%) and two-eggs (MD = 0.35; 95% CI: −2.35 to 3.04; I2 = 0%) showed no significant lower elevations than control group. Interestingly, in the subgroup of three-or-more-eggs, MEC had higher HDL-c than control group (MD = 2.55 mg/dL; 95% CI: 0.16 to 4.94; I2 = 0%). Therefore, egg consumption only slightly influenced the HDL-c.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0281
+  source_span: lines 281-281
+  text: 4. Discussion
+- span_id: li_2020_egg_cholesterol_rct_meta_s0282
+  source_span: lines 282-282
+  text: 4.1. Summary of Main Results
+- span_id: li_2020_egg_cholesterol_rct_meta_s0283
+  source_span: lines 283-283
+  text: Our study provides strong evidence on the topic of the impact of egg consumption on lipid profiles through synthesizing more than 10 trials. Compared to Rouhani et al. [9], we included studies that were published before 2000. The results indicated that egg consumption significantly increases the LDL-c/HDL-c ratio and LDL-c levels, especially with a longer intervention duration. Yet, egg consumption did not effectively increase the HDL-c level. Our pooled results revealed some significant findings among subgroups of egg-consumption levels, but the results did not show a clear trend of increment with the egg-consumption level.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0284
+  source_span: lines 284-284
+  text: 4.2. Overall, Completeness and Applicability of the Evidence
+- span_id: li_2020_egg_cholesterol_rct_meta_s0285
+  source_span: lines 285-285
+  text: As to the primary outcome, pooled results of the LDL-c/HDL-c ratio, we found significantly higher value in the MEC group than in the control group (MD = 0.14). For the primary prevention of cardiovascular diseases, the target value of LDL-c/HDL-c for men is < 3.0, while for women it is < 2.5. The risk level for men is > 3.5, while for women it is > 3.0 [12]. Moreover, LDL-c/HDL-c ratio is associated with increased risk of sudden cardiac death and cardiovascular diseases, which includes coronary artery disease, cerebrovascular disease, peripheral artery disease and aortic atherosclerosis [12,58,59]. Thus, those with a borderline LDL-c/HDL-c ratio should restrict their egg consumption because higher egg consumption increased LDL-c/HDL-c ratio by 0.14. According to our evidence, we found potential reasoning for this phenomenon from the pooled estimates of differences in LDL-c and HDL-c concentrations. Results showed that egg consumption did not increase HDL-c, but increased LDL-c. Therefore, egg consumption affects the LDL-c/HDL-c ratio.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0286
+  source_span: lines 286-286
+  text: HDL-c plays an important role in reverse cholesterol transport. HDL-c takes cholesterol from peripheral tissue and transports to liver for excretion into the feces [60]. For HDL-c, our evidence only showed a very little effect size with non-significance, especially in the subgroup with over two months of treatment. LDL-c is a fat that circulates in vessels, moving to the tissue that is needed for cell repair. It also accumulates inside of arterial wall [19]. The target value of LDL-c is less than 100 mg/dL. When the concentration reaches 130 mg/dL to 159 mg/dL, it means borderline high [61]. For LDL-c, a non-extreme short-term intervention (16 weeks) of daily cholesterol consumption led to increased LDL-c. This result was consistent with another study [30]. Thus, people with borderline high LDL-c level should restrict their egg consumption. A further study revealed that MEC resulted in increased LDL-c and HDL-c concentrations more than oatmeal breakfast and breakfast [52]. Egg white had an effect of decreasing total cholesterol and increasing HDL-c compared to tofu and cheese [62]. Moreover, different cooking methods resulted in different amounts of cholesterol. For example, there are three common types of egg products in China. All of them are cooked eggs, but with different amounts of cholesterol per 100 g [63]. As to egg consumption with additional food or drinks, one of the included studies indicated that consuming eggs with buttermilk caused increases in LDL-c and total cholesterol to become statistically insignificant [40]. When consuming choline bitartrate supplement as control group, the study revealed that LDL-c/HDL-c ratio did not show significant elevation in MEC group while our results showed a slight elevation in LDL-c/HDL-c ratio with significance. Therefore, we consider choline bitartrate supplement to be a factor that slightly increase LDL-c/HDL-c ratio, making the elevation of LDL-c/HDL-c ratio in MEC group become insignificance [26]. When it comes to different amount of egg consumption, our study cannot determine dose effect. Most of our findings echo to a study by Dimarco et al., in which the effects of different amount of egg consumption on cholesterol level were evaluated [25]. Increasing dose of egg intake seems to associate with higher HDL-c level. However, it is still unclear in association of increasing dose of egg consumption and LDL-c or LDL-c/HDL-c ratio. On the basis of previous synthesis, we also notice that the results of LDL-c and LDL-c /HDL-c ratio may be driven by responders [9]. However, random-effects model was applied for all of our analyses. In the statistical model, variances of samples among trials are taken in to consideration; and thus, the results are close to the effects in the entire population in the synthesis. The results may not be seriously biased by the responders.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0287
+  source_span: lines 287-287
+  text: 4.3. Comparison to Previous Syntheses
+- span_id: li_2020_egg_cholesterol_rct_meta_s0288
+  source_span: lines 288-288
+  text: Before our synthesis, there were three important meta-analyses on the topic of egg consumption and lipoprotein levels [9,10,11]. Most meta-analyses indicated that egg consumption will increase LDL-c and HDL-c [9,10,11]. An earlier one in 2001 used limited studies and mainly analyzed LDL-c and HDL-c [11]. The other two previous syntheses had insufficient evidence for identifying the impact of egg consumption on the LDL-c/HDL-c ratio, although they found significant findings in separate pooled LDL-c and HDL-c concentrations [9,10]. One of the recent syntheses included 27 references on this topic, but only pooled seven of them from six RCTs in the meta-analysis of LDL-c/HDL-c ratio. Then, they found highly heterogenous estimate even in some subgroup analysis [9]. Another one synthesis by Wang et al. in 2019 focused on middle-age and older population and analyzed LDL-c/HDL-c ratio only two RCTs [10]. Those syntheses noted the importance of the LDL-c/HDL-c ratio with some significant findings in some subgroup analyses, while they were prevented from making a perfect quantitative synthesis because of statistical techniques. Our study overcame the statistical barrier of estimating the LDL-c/HDL-c ratio according to a relevant formula [32,33]. That is to say, our evidence provides more-powerful results for understanding the impact of egg consumption on the LDL-c/HDL-c ratio.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0289
+  source_span: lines 289-289
+  text: In the previous syntheses, moreover, they mixed health subjects and patients. On the contrary, our study tried to avoid bias from conceptual heterogeneity by focusing on healthy subjects. For instance, the best synthesis in recent years included trials by Bautista et al. [30] and Schwab et al. [64], but we did not include those trials because they recruited patients with diabetes or hypercholesterolemia [9]. Thus, pooled results in the present study may be more precise and our findings may be more appropriate for healthy population. Furthermore, we carefully reviewed all trials to avoid overestimating. For example, in a previous meta-analysis, the synthesis double-counted results from the same trial by the study team of Herron et al. [38,39,48,49,50]. Similarly, a trial by the study team of Greene et al. was also double-counted [6,46,57]. The double-counted results may have resulted in overestimates and inaccuracies. That is why our pooled results of HDL-c differed from previous syntheses because of the differences in conceptual heterogeneities and data sources between our synthesis and previous meta-analyses as described in this paragraph.
+- span_id: li_2020_egg_cholesterol_rct_meta_s0290
+  source_span: lines 290-290
+  text: 4.4. Limitations
+
+Deterministic map-quality scaffold:
+{
+  "case_question": "What should an investigator believe about the health effects of eating eggs?",
+  "epistemic_config_profile": {
+    "profile_id": "general_decision_support",
+    "label": "General Decision Support",
+    "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+  },
+  "required_sources": [
+    "dga_2020_2025_pmc_summary",
+    "aha_2019_dietary_cholesterol_pubmed",
+    "aha_2023_dietary_cholesterol_news",
+    "bmj_2020_egg_consumption_cvd",
+    "jama_2019_dietary_cholesterol_eggs",
+    "li_2020_egg_cholesterol_rct_meta",
+    "nnr_2023_eggs_scoping_review"
+  ],
+  "source_roles": {
+    "dga_2020_2025_pmc_summary": {
+      "display_title": "Dietary Guidelines for Americans, 2020-2025",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2019_dietary_cholesterol_pubmed": {
+      "display_title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "aha_2023_dietary_cholesterol_news": {
+      "display_title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet",
+      "evidence_role": "policy or guidance",
+      "provenance_level": "official_guidance",
+      "limitations": [
+        "Guidance may combine evidence with policy judgment and may lag new evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "bmj_2020_egg_consumption_cvd": {
+      "display_title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "jama_2019_dietary_cholesterol_eggs": {
+      "display_title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "li_2020_egg_cholesterol_rct_meta": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    },
+    "nnr_2023_eggs_scoping_review": {
+      "display_title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023",
+      "evidence_role": "evidence synthesis",
+      "provenance_level": "secondary_summary",
+      "limitations": [
+        "Review conclusions depend on included-study quality and inclusion criteria."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  },
+  "source_role_taxonomy": [
+    {
+      "role_id": "source_document",
+      "description": "Provided source whose role is not yet known.",
+      "keyword_markers": [],
+      "limitations": [
+        "Source role may need review."
+      ]
+    }
+  ],
+  "target_claim_roles": [
+    {
+      "role_id": "conclusion_support",
+      "description": "Evidence or reasoning that supports a candidate answer.",
+      "use_when": "A claim bears directly on the likely answer."
+    },
+    {
+      "role_id": "crux",
+      "description": "A claim whose truth would materially change the answer.",
+      "use_when": "The decision turns on this uncertainty."
+    },
+    {
+      "role_id": "scope_limit",
+      "description": "A boundary on where a claim applies.",
+      "use_when": "Population, context, timing, or evidence limits matter."
+    },
+    {
+      "role_id": "implementation_constraint",
+      "description": "A practical condition for applying a recommendation.",
+      "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+    },
+    {
+      "role_id": "background",
+      "description": "Context needed to interpret the evidence.",
+      "use_when": "Useful context that is not itself load-bearing."
+    },
+    {
+      "role_id": "other",
+      "description": "A useful claim that does not fit the other roles.",
+      "use_when": "Use sparingly when no sharper role fits."
+    }
+  ],
+  "relation_goals": [
+    "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+    "Use similar_to only when the claims are redundant enough to merge.",
+    "connect at least one crux/scope-limit claim to a conclusion-support claim",
+    "preserve tensions instead of flattening them",
+    "use source limitations to bound claim strength",
+    "prefer cross-source relations when they clarify disagreement or scope"
+  ],
+  "profile_evidence_sections": [
+    {
+      "section_id": "answer_drivers",
+      "title": "Answer Drivers",
+      "description": "Load-bearing evidence and cruxes.",
+      "claim_roles": [
+        "conclusion_support",
+        "crux"
+      ],
+      "relation_types": [
+        "supports",
+        "crux_for"
+      ]
+    },
+    {
+      "section_id": "bounds_and_tensions",
+      "title": "Bounds and Tensions",
+      "description": "Limits, disagreements, and dependencies.",
+      "claim_roles": [
+        "scope_limit",
+        "implementation_constraint"
+      ],
+      "relation_types": [
+        "depends_on",
+        "in_tension_with",
+        "challenges"
+      ]
+    }
+  ],
+  "profile_relation_types": [
+    {
+      "relation_type": "supports",
+      "description": "One claim increases support for another without being the decisive dependency.",
+      "use_when": "Use for direct evidence or argument support.",
+      "sharpness_markers": [
+        "supports",
+        "consistent with",
+        "evidence for"
+      ]
+    },
+    {
+      "relation_type": "challenges",
+      "description": "One claim undercuts or contradicts another.",
+      "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+      "sharpness_markers": [
+        "contradicts",
+        "undercuts",
+        "casts doubt"
+      ]
+    },
+    {
+      "relation_type": "refines",
+      "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+      "use_when": "Use when the boundary being refined is explicit.",
+      "sharpness_markers": [
+        "only for",
+        "specifically",
+        "boundary",
+        "population",
+        "endpoint"
+      ]
+    },
+    {
+      "relation_type": "similar_to",
+      "description": "Claims are close enough that a reviewer may consider merging them.",
+      "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+      "sharpness_markers": [
+        "same as",
+        "duplicates",
+        "substantially overlaps"
+      ]
+    },
+    {
+      "relation_type": "depends_on",
+      "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+      "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+      "sharpness_markers": [
+        "depends",
+        "requires",
+        "only if",
+        "unless",
+        "condition"
+      ]
+    },
+    {
+      "relation_type": "crux_for",
+      "description": "One claim is a decision crux for another or for the question.",
+      "use_when": "Use when changing belief in one claim would materially change the decision read.",
+      "sharpness_markers": [
+        "crux",
+        "decisive",
+        "would change",
+        "key uncertainty"
+      ]
+    },
+    {
+      "relation_type": "in_tension_with",
+      "description": "Claims can both be partly true but pull the decision in different directions.",
+      "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+      "sharpness_markers": [
+        "however",
+        "tradeoff",
+        "tension",
+        "limited",
+        "unclear"
+      ]
+    }
+  ],
+  "allowed_relation_types": [
+    "challenges",
+    "crux_for",
+    "depends_on",
+    "in_tension_with",
+    "refines",
+    "similar_to",
+    "supports"
+  ],
+  "quality_checks": [
+    "every required source should contribute at least one useful claim unless genuinely irrelevant",
+    "claims must be entailed by exact excerpts",
+    "relations must use only accepted claim IDs and ontology relation types",
+    "the final map should expose cruxes, scope limits, and source-role boundaries",
+    "near-duplicate claims should be merged or given distinct roles"
+  ],
+  "current_chunk": {
+    "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_211_290",
+    "source_id": "li_2020_egg_cholesterol_rct_meta",
+    "line_range": "211-290",
+    "source_role": {
+      "display_title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials",
+      "evidence_role": "empirical study",
+      "provenance_level": "peer_reviewed",
+      "limitations": [
+        "Check population, endpoint, and design limits before treating as direct decision evidence."
+      ],
+      "needs_upgrade": true,
+      "inferred": true
+    }
+  }
+}
+
+Return only JSON:
+{
+  "claims": [
+    {
+      "claim": "one concise claim supported by the excerpt",
+      "span_id": "one span_id from the catalog",
+      "entailed_by_excerpt": "yes|no|uncertain",
+      "role": "conclusion_support|crux|scope_limit|implementation_constraint|background|other"
+    }
+  ]
+}
+
+Rules:
+- Return at most 4 claims.
+- Do not include claim_id. Deterministic code assigns IDs later.
+- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
+- Use only span IDs shown in the catalog.
+- Prefer claims that affect the case question, not bibliographic metadata.
+- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
+- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
+- If the chunk has no useful claim, return {"claims": []}.

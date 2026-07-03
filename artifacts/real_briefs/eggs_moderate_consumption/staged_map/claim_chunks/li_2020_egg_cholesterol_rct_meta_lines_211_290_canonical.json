@@ -1,0 +1,28 @@
+{
+  "claims": [
+    {
+      "claim": "Egg consumption significantly increases LDL-c levels and the LDL-c/HDL-c ratio.",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support",
+      "span_id": "li_2020_egg_cholesterol_rct_meta_s0283"
+    },
+    {
+      "claim": "Egg consumption did not effectively increase HDL-c levels.",
+      "entailed_by_excerpt": "yes",
+      "role": "conclusion_support",
+      "span_id": "li_2020_egg_cholesterol_rct_meta_s0283"
+    },
+    {
+      "claim": "The study focused on healthy subjects to avoid bias from conceptual heterogeneity.",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit",
+      "span_id": "li_2020_egg_cholesterol_rct_meta_s0289"
+    },
+    {
+      "claim": "The study cannot determine a dose effect for egg consumption.",
+      "entailed_by_excerpt": "yes",
+      "role": "scope_limit",
+      "span_id": "li_2020_egg_cholesterol_rct_meta_s0286"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "changed": true,
+  "duplicate_pairs": [
+    {
+      "left": "eggs_c003",
+      "right": "eggs_c006",
+      "score": 0.75
+    },
+    {
+      "left": "eggs_c021",
+      "right": "eggs_c025",
+      "score": 1.0
+    },
+    {
+      "left": "eggs_c037",
+      "right": "eggs_c041",
+      "score": 0.7228
+    },
+    {
+      "left": "eggs_c038",
+      "right": "eggs_c042",
+      "score": 0.8058
+    },
+    {
+      "left": "eggs_c039",
+      "right": "eggs_c043",
+      "score": 0.8064
+    },
+    {
+      "left": "eggs_c062",
+      "right": "eggs_c084",
+      "score": 0.8722
+    },
+    {
+      "left": "eggs_c071",
+      "right": "eggs_c076",
+      "score": 1.0
+    },
+    {
+      "left": "eggs_c008",
+      "right": "eggs_c013",
+      "score": 0.8889
+    },
+    {
+      "left": "eggs_c021",
+      "right": "eggs_c022",
+      "score": 0.8571
+    },
+    {
+      "left": "eggs_c022",
+      "right": "eggs_c025",
+      "score": 0.8571
+    },
+    {
+      "left": "eggs_c027",
+      "right": "eggs_c059",
+      "score": 0.8333
+    },
+    {
+      "left": "eggs_c047",
+      "right": "eggs_c061",
+      "score": 1.0
+    },
+    {
+      "left": "eggs_c056",
+      "right": "eggs_c061",
+      "score": 1.0
+    },
+    {
+      "left": "eggs_c059",
+      "right": "eggs_c061",
+      "score": 1.0
+    }
+  ],
+  "input_claim_count": 94,
+  "merged_groups": [
+    {
+      "canonical_claim_id": "eggs_c021",
+      "merged_claim_ids": [
+        "eggs_c021",
+        "eggs_c022",
+        "eggs_c025"
+      ],
+      "supporting_sources": [
+        "bmj_2020_egg_consumption_cvd"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c013",
+      "merged_claim_ids": [
+        "eggs_c008",
+        "eggs_c013"
+      ],
+      "supporting_sources": [
+        "aha_2019_dietary_cholesterol_pubmed",
+        "aha_2023_dietary_cholesterol_news"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c071",
+      "merged_claim_ids": [
+        "eggs_c071",
+        "eggs_c076"
+      ],
+      "supporting_sources": [
+        "jama_2019_dietary_cholesterol_eggs",
+        "li_2020_egg_cholesterol_rct_meta"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c039",
+      "merged_claim_ids": [
+        "eggs_c039",
+        "eggs_c043"
+      ],
+      "supporting_sources": [
+        "li_2020_egg_cholesterol_rct_meta"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c062",
+      "merged_claim_ids": [
+        "eggs_c062",
+        "eggs_c084"
+      ],
+      "supporting_sources": [
+        "bmj_2020_egg_consumption_cvd",
+        "nnr_2023_eggs_scoping_review"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c038",
+      "merged_claim_ids": [
+        "eggs_c038",
+        "eggs_c042"
+      ],
+      "supporting_sources": [
+        "li_2020_egg_cholesterol_rct_meta"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c027",
+      "merged_claim_ids": [
+        "eggs_c027",
+        "eggs_c047",
+        "eggs_c056",
+        "eggs_c059",
+        "eggs_c061"
+      ],
+      "supporting_sources": [
+        "bmj_2020_egg_consumption_cvd",
+        "nnr_2023_eggs_scoping_review"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c037",
+      "merged_claim_ids": [
+        "eggs_c037",
+        "eggs_c041"
+      ],
+      "supporting_sources": [
+        "li_2020_egg_cholesterol_rct_meta"
+      ]
+    },
+    {
+      "canonical_claim_id": "eggs_c006",
+      "merged_claim_ids": [
+        "eggs_c003",
+        "eggs_c006"
+      ],
+      "supporting_sources": [
+        "dga_2020_2025_pmc_summary"
+      ]
+    }
+  ],
+  "method": "tfidf_overlap_polarity_guarded_components",
+  "output_claim_count": 81,
+  "schema_id": "claim_consolidation_report_v1"
+}

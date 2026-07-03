@@ -1,0 +1,15 @@
+{
+  "crux_candidates": [],
+  "edge_basis": "uncertain",
+  "failure_condition": "none",
+  "pair_id": "pair_097",
+  "rationale": "Claim A identifies cholesterol as the driver of CVD risk, while Claim B provides a general definition and context for hyperlipidemia. There is no direct logical dependency or tension between these specific claims.",
+  "relation_confidence": "high",
+  "relation_type": "none",
+  "similar_but_not_identical": [],
+  "source_anchor_a": null,
+  "source_anchor_b": null,
+  "source_claim": "eggs_c035",
+  "target_claim": "eggs_c072",
+  "why_decision_relevant": "none"
+}

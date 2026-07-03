@@ -1,0 +1,96 @@
+{
+  "accepted_section_count": 7,
+  "schema_id": "section_rewrite_report_v1",
+  "section_count": 8,
+  "sections": [
+    {
+      "accepted": true,
+      "deterministic_word_count": 64,
+      "issues": [],
+      "raw_word_count": 69,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "accepted",
+      "title": "Decision Brief"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 71,
+      "issues": [],
+      "raw_word_count": 95,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Practical Read"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 128,
+      "issues": [],
+      "raw_word_count": 214,
+      "required_crux_count": 0,
+      "required_evidence_count": 5,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Why This Read"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 253,
+      "issues": [],
+      "raw_word_count": 257,
+      "required_crux_count": 0,
+      "required_evidence_count": 7,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Evidence Carrying the Conclusion"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 98,
+      "issues": [],
+      "raw_word_count": 140,
+      "required_crux_count": 0,
+      "required_evidence_count": 4,
+      "required_gap_count": 0,
+      "status": "accepted_after_repair",
+      "title": "Practical Scope and Exceptions"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 146,
+      "issues": [],
+      "raw_word_count": 165,
+      "required_crux_count": 2,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "accepted",
+      "title": "Decision Cruxes"
+    },
+    {
+      "accepted": true,
+      "deterministic_word_count": 58,
+      "issues": [],
+      "raw_word_count": 57,
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "accepted",
+      "title": "Limits of the Current Map"
+    },
+    {
+      "accepted": false,
+      "issues": [],
+      "required_crux_count": 0,
+      "required_evidence_count": 0,
+      "required_gap_count": 0,
+      "status": "skipped_low_value_section",
+      "title": "Evidence Trail"
+    }
+  ],
+  "status": "accepted_partial",
+  "whole_validation_issues": [],
+  "whole_validation_status": "passes_contract"
+}
