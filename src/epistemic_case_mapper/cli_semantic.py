@@ -179,6 +179,7 @@ def _run_map_briefing(
     backend: str | None,
     output_dir: str | None,
     region_id: str | None,
+    baseline_path: str | None,
     max_claims: int,
     backend_timeout: int,
     backend_retries: int,
@@ -212,6 +213,7 @@ def _run_map_briefing(
             backend_retries=backend_retries,
             source_titles=_source_titles_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
             max_claims=max_claims,
+            baseline_path=baseline_path,
         )
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
         print(f"map_briefing_failed error={exc}", file=sys.stderr)
@@ -224,6 +226,7 @@ def _run_map_briefing(
         f"confidence={result.model_confidence}->{result.calibrated_confidence}"
     )
     print(f"Summary: {_display_path(repo_root, result.summary_path)}")
+    print(f"Gap telemetry: {_display_path(repo_root, result.gap_diagnosis_path)}")
     print(f"Prompt: {_display_path(repo_root, result.prompt_path)}")
     return 0
 def _run_staged_semantic_brief(

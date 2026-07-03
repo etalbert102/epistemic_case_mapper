@@ -62,8 +62,6 @@ def reader_memo_rewrite_issues(
     rewritten_sentences = _sentence_fingerprints(_markdown_without_tables(rewritten))
     if rewritten_sentences and len(set(rewritten_sentences)) < max(3, len(rewritten_sentences) - 3):
         issues.append("rewrite still has duplicate sentence overload")
-    if len(rewritten.split()) > int(len(original_memo.split()) * 0.95):
-        issues.append("rewrite did not compress the deterministic memo")
     return issues
 
 def _markdown_without_tables(markdown: str) -> str:

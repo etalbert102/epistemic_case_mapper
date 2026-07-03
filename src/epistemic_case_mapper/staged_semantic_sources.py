@@ -41,18 +41,10 @@ Allowed relation types:
 {relation_types}
 
 Claim A:
-- claim_id: {left['claim_id']}
-- claim: {left['claim']}
-- source_id: {left['source_id']}
-- role: {left['role']}
-- excerpt: {left['excerpt']}
+{_relation_claim_card(left, "A")}
 
 Claim B:
-- claim_id: {right['claim_id']}
-- claim: {right['claim']}
-- source_id: {right['source_id']}
-- role: {right['role']}
-- excerpt: {right['excerpt']}
+{_relation_claim_card(right, "B")}
 
 Deterministic map-quality scaffold:
 {scaffold}
@@ -155,21 +147,39 @@ def _relation_pair_block(packet: dict[str, Any]) -> str:
     right = packet["right"]
     return f"""Pair ID: {packet['pair_id']}
 Claim A:
-- claim_id: {left['claim_id']}
-- claim: {left['claim']}
-- source_id: {left['source_id']}
-- role: {left['role']}
-- excerpt: {left['excerpt']}
+{_relation_claim_card(left, "A")}
 
 Claim B:
-- claim_id: {right['claim_id']}
-- claim: {right['claim']}
-- source_id: {right['source_id']}
-- role: {right['role']}
-- excerpt: {right['excerpt']}
+{_relation_claim_card(right, "B")}
 
 Candidate-pair reason: {packet.get('candidate_reason', 'not recorded')}
 Candidate-pair score: {packet.get('candidate_score', 'not recorded')}"""
+
+def _relation_claim_card(claim: dict[str, Any], label: str) -> str:
+    return "\n".join(
+        [
+            f"- claim_id: {claim.get('claim_id')}",
+            f"- claim: {_compact_relation_text(str(claim.get('claim', '')), max_chars=300)}",
+            f"- source_id: {claim.get('source_id')}",
+            f"- role: {claim.get('role')}",
+            f"- excerpt_{label}: {_compact_relation_text(str(claim.get('excerpt', '')), max_chars=360)}",
+        ]
+    )
+
+def _compact_relation_text(text: str, *, max_chars: int) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    sentences = re.split(r"(?<=[.!?])\s+", cleaned)
+    kept: list[str] = []
+    for sentence in sentences:
+        candidate = " ".join([*kept, sentence]).strip()
+        if len(candidate) > max_chars:
+            break
+        kept.append(sentence)
+        if len(kept) >= 3:
+            break
+    return " ".join(kept) if kept else cleaned[: max_chars - 1].rstrip(" ,.;") + "..."
 
 def _normalize_claim_proposal(
     proposal: Any,
@@ -313,12 +323,15 @@ def _normalize_relation_proposal(
     )
 
 def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> list[dict[str, Any]]:
-    claim_lookup = {str(claim.get("claim_id", "")): claim for claim in claims if claim.get("claim_id")}
+    usable_claims = [claim for claim in claims if _usable_relation_claim(claim)]
+    if len(usable_claims) < 2:
+        usable_claims = claims
+    claim_lookup = {str(claim.get("claim_id", "")): claim for claim in usable_claims if claim.get("claim_id")}
     claim_order = {str(claim.get("claim_id", "")): index for index, claim in enumerate(claims)}
-    tfidf_scores = _claim_tfidf_scores(claims)
+    tfidf_scores = _claim_tfidf_scores(usable_claims)
     scored: list[tuple[str, str, float, str]] = []
-    for left_index, left in enumerate(claims):
-        for right_index, right in enumerate(claims):
+    for left_index, left in enumerate(usable_claims):
+        for right_index, right in enumerate(usable_claims):
             if left_index >= right_index:
                 continue
             score, reason = _pair_score(left, right, tfidf_scores)
@@ -343,6 +356,30 @@ def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> l
             }
         )
     return packets
+
+def _usable_relation_claim(claim: dict[str, Any]) -> bool:
+    text = re.sub(r"\s+", " ", str(claim.get("claim", "") or claim.get("excerpt", ""))).strip()
+    lowered = text.lower()
+    role = str(claim.get("role", ""))
+    if len(text) < 18 and role not in {"crux", "conclusion_support", "scope_limit", "implementation_constraint"}:
+        return False
+    if _looks_like_relation_reference_or_boilerplate(text):
+        return False
+    if any(marker in lowered for marker in ("[google scholar]", "privacy policy", "nutrition policy", "no. (%)", "pmcid:", "copyright")):
+        return False
+    if re.fullmatch(r"[\w\s,./()%+-]+", text) and len(_content_terms(text)) <= 3:
+        return False
+    if re.fullmatch(r"(?:pooled\s+)?(?:relative\s+)?risk\s*\(?95%?\s*ci\)?", lowered):
+        return False
+    return True
+
+def _looks_like_relation_reference_or_boilerplate(text: str) -> bool:
+    lowered = text.lower()
+    if re.search(r"\bdoi\b|\bpmid\b|\bgoogle scholar\b|\bcrossref\b", lowered):
+        return True
+    if lowered.count("received ") >= 2 and len(lowered) > 400:
+        return True
+    return False
 
 def _fallback_relation(pair_packets: list[dict[str, Any]], permitted_types: set[str]) -> dict[str, Any] | None:
     if not pair_packets:
@@ -712,6 +749,34 @@ def _parse_model_json(text: str) -> dict[str, Any] | list[Any] | None:
     except json.JSONDecodeError:
         return None
 
+def _parse_relation_model_json(text: str) -> dict[str, Any] | None:
+    parsed = _parse_model_json(text)
+    salvaged = _salvage_relation_array_objects(text)
+    if salvaged and (not isinstance(parsed, dict) or "relations" not in parsed):
+        return {"relations": salvaged, "parse_recovery": "truncated_relations_array"}
+    return parsed if isinstance(parsed, dict) else None
+
+def _salvage_relation_array_objects(text: str) -> list[dict[str, Any]]:
+    match = re.search(r'"relations"\s*:\s*\[', text)
+    if not match:
+        return []
+    decoder = json.JSONDecoder()
+    objects: list[dict[str, Any]] = []
+    index = match.end()
+    while index < len(text):
+        next_object = text.find("{", index)
+        next_array_end = text.find("]", index)
+        if next_object < 0 or (0 <= next_array_end < next_object):
+            break
+        try:
+            value, end = decoder.raw_decode(text[next_object:])
+        except json.JSONDecodeError:
+            break
+        if isinstance(value, dict):
+            objects.append(value)
+        index = next_object + end
+    return objects
+
 def _relation_proposals(payload: dict[str, Any]) -> list[dict[str, Any]]:
     if "pair_id" in payload:
         return [payload]
@@ -721,7 +786,8 @@ def _relation_proposals(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 def _batches(items: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
-    return [items[index : index + batch_size] for index in range(0, len(items), batch_size)]
+    safe_batch_size = min(batch_size, 4)
+    return [items[index : index + safe_batch_size] for index in range(0, len(items), safe_batch_size)]
 
 def _relation_batch_count(max_relation_pairs: int, relation_batch_size: int, claims: list[dict[str, Any]]) -> int:
     if len(claims) < 2:
@@ -729,7 +795,8 @@ def _relation_batch_count(max_relation_pairs: int, relation_batch_size: int, cla
     pair_count = len(_candidate_relation_pairs(claims, max_relation_pairs))
     if pair_count == 0:
         return 0
-    return (pair_count + relation_batch_size - 1) // relation_batch_size
+    safe_batch_size = min(relation_batch_size, 4)
+    return (pair_count + safe_batch_size - 1) // safe_batch_size
 
 def _line_span_for_excerpt(chunk: SourceChunk, excerpt: str) -> str:
     chunk_lines = chunk.plain_text.splitlines()

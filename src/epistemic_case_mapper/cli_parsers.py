@@ -95,6 +95,7 @@ def _add_baseline_synthesize_review_parsers(subparsers: Any) -> None:
     map_briefing.add_argument("--backend", help="Backend for briefing generation. Defaults to manifest default_model_backend.")
     map_briefing.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/map_briefings/<map-stem>.")
     map_briefing.add_argument("--region", help="Optional region ID used only to load source display names.")
+    map_briefing.add_argument("--baseline", help="Optional baseline memo path for deterministic gap telemetry.")
     map_briefing.add_argument("--max-claims", type=int, default=0, help="Briefing map claim budget after source-preserving prioritization. Use 0 for adaptive.")
     map_briefing.add_argument("--backend-timeout", type=int, default=120)
     map_briefing.add_argument("--backend-retries", type=int, default=0)

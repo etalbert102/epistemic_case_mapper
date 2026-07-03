@@ -42,6 +42,7 @@ from epistemic_case_mapper.map_briefing import (
     validate_briefing_against_scaffold,
     _rewrite_mentions_anchor_row,
 )
+from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
 from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 
 
@@ -522,6 +523,25 @@ Neutral default for generally healthy adults.
     assert "mapped support" not in lowered
     assert "map-backed read" not in lowered
     assert "decision role" not in lowered
+
+
+def test_reader_memo_metadata_removes_duplicate_question_paragraph() -> None:
+    question = "Should generally healthy adults treat moderate egg intake as acceptable?"
+    memo = f"""## Decision Brief
+
+{question}
+
+Moderate intake is acceptable within the stated scope.
+
+**Confidence:** medium
+"""
+
+    updated = ensure_reader_memo_metadata(memo, {"question": question})
+
+    assert updated.count("**Decision question:**") == 1
+    assert updated.count(question) == 1
+    assert f"**Decision question:** {question}\n\nModerate intake" in updated
+    assert "Moderate intake is acceptable" in updated
 
 
 def test_rewrite_candidate_repair_salvages_generic_crux_and_source_label_noise() -> None:

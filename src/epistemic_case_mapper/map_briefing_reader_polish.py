@@ -266,30 +266,15 @@ def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str
 def _slot_practical_implications(slot_model: dict[str, Any], *, scaffold: dict[str, Any], fallback_items: list[str]) -> list[str]:
     lookup = _slot_lookup(slot_model)
     frame = scaffold.get("decision_frame", {}) if isinstance(scaffold.get("decision_frame"), dict) else {}
-    items: list[str] = [str(item) for item in frame.get("practical_actions", []) if str(item).strip()]
+    synthesis = _decision_synthesis_model(scaffold)
+    items = [str(row.get("recommendation", "")).strip() for row in synthesis.get("recommendations", []) if isinstance(row, dict) and str(row.get("recommendation", "")).strip()]
+    items.extend(str(item) for item in frame.get("practical_actions", []) if str(item).strip())
     if lookup.get("main_support", {}).get("status") == "filled":
         object_name = str(frame.get("decision_object", "decision read"))
         items.append(f"Use the available evidence as a provisional {object_name}, not as a claim that the source packet settles the whole case.")
-    if lookup.get("alternatives_or_comparators", {}).get("status") == "filled":
-        items.append("Frame the recommendation around the actual alternatives being compared, since the answer can change with the comparator.")
-    if lookup.get("scope_conditions", {}).get("status") == "filled":
-        items.append("Keep the setting, scale, population, and intensity boundaries attached to the recommendation.")
-    if lookup.get("implementation_constraints", {}).get("status") == "filled":
-        items.append("Treat feasibility, safety, maintenance, and technical-fit constraints as part of the decision, not as afterthoughts.")
-    if lookup.get("evidence_type_limits", {}).get("status") == "filled":
-        items.append("Separate direct outcome evidence from proxy, mechanism, guidance, and implementation evidence when setting confidence.")
-    if lookup.get("safety_or_risk", {}).get("status") == "filled":
-        items.append("Make downside risks and failure modes visible before converting the evidence into action.")
-    if lookup.get("dose_boundary", {}).get("status") == "filled":
-        items.append("Treat the default answer as scoped to the mapped intensity or threshold, not to all possible exposure levels.")
-    if lookup.get("hard_outcome_support", {}).get("status") == "filled":
-        items.append("For the mapped default population, let direct outcome evidence carry more weight than indirect evidence.")
-    if lookup.get("mechanism_surrogate", {}).get("status") == "filled":
-        items.append("Keep mechanism and surrogate evidence visible because it can bound confidence without settling direct outcomes by itself.")
-    if lookup.get("comparator_substitution", {}).get("status") == "filled":
-        items.append("Frame practical advice around the relevant alternatives, since comparator evidence can change the recommendation.")
-    if lookup.get("high_risk_subgroup", {}).get("status") == "filled":
-        items.append("Do not automatically generalize the default answer to higher-risk subgroups; treat those as separate scope decisions.")
+    for slot_id, message in _practical_implication_rules():
+        if lookup.get(slot_id, {}).get("status") == "filled":
+            items.append(message)
     if not items:
         items = fallback_items
     return _dedupe([_polish_reader_sentence_block(item, max_chars=240) for item in items if item])[:5]
@@ -738,10 +723,13 @@ def _executive_implications(rendered: str, scaffold: dict[str, Any]) -> list[str
 
 def _executive_default_reasons(scaffold: dict[str, Any]) -> list[str]:
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    synthesis = _decision_synthesis_model(scaffold)
     reasons = []
     default = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
     if default.get("why_this_frame"):
         reasons.append(str(default["why_this_frame"]))
+    reasons.extend(_synthesis_evidence_sentences(synthesis, roles=("direct_outcome", "guidance_or_practical_advice", "subgroup_or_scope"))[:3])
+    reasons.extend(str(item.get("current_resolution", "")) for item in synthesis.get("central_tensions", [])[:1] if isinstance(item, dict))
     reasons.extend(_concept_packet_sentences(scaffold, preferred=("dose_or_threshold", "default_population", "hard_outcome_endpoint")))
     for row in decision_model.get("main_reasons", []) if isinstance(decision_model.get("main_reasons"), list) else []:
         if isinstance(row, dict):
@@ -753,7 +741,10 @@ def _executive_default_reasons(scaffold: dict[str, Any]) -> list[str]:
 
 def _executive_counter_reasons(scaffold: dict[str, Any]) -> list[str]:
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    synthesis = _decision_synthesis_model(scaffold)
     reasons = []
+    reasons.extend(str(row.get("current_read", "")) for row in synthesis.get("exceptions", [])[:3] if isinstance(row, dict) and str(row.get("current_read", "")).strip())
+    reasons.extend(str(row.get("why_reasonable_people_disagree", "")) for row in synthesis.get("central_tensions", [])[:2] if isinstance(row, dict) and str(row.get("why_reasonable_people_disagree", "")).strip())
     reasons.extend(_concept_packet_sentences(scaffold, preferred=("subgroup_diabetes_or_metabolic_risk", "dietary_context_or_saturated_fat", "substitution_or_comparator")))
     for row in decision_model.get("strongest_counterarguments", []) if isinstance(decision_model.get("strongest_counterarguments"), list) else []:
         if isinstance(row, dict):
@@ -765,7 +756,9 @@ def _executive_counter_reasons(scaffold: dict[str, Any]) -> list[str]:
     return _dedupe([_polish_reader_sentence_block(item, max_chars=320) for item in reasons if item])
 
 def _executive_carrying_evidence(scaffold: dict[str, Any]) -> list[str]:
+    synthesis = _decision_synthesis_model(scaffold)
     sentences = []
+    sentences.extend(_synthesis_evidence_sentences(synthesis, roles=("direct_outcome", "counterevidence_or_risk", "mechanism_or_proxy", "comparator_or_substitution"))[:5])
     sentences.extend(_concept_packet_sentences(scaffold, preferred=("study_design_cohort", "study_design_rct", "mechanism_ldl_apob", "surrogate_or_biomarker_endpoint")))
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
     by_section = ledger.get("top_evidence_by_section", {}) if isinstance(ledger.get("top_evidence_by_section"), dict) else {}
@@ -780,7 +773,9 @@ def _executive_carrying_evidence(scaffold: dict[str, Any]) -> list[str]:
 
 def _executive_weak_points(scaffold: dict[str, Any]) -> list[str]:
     quality_status = str(scaffold.get("quality_status", "")).strip()
+    synthesis = _decision_synthesis_model(scaffold)
     items = []
+    items.extend(str(item) for item in synthesis.get("limits", [])[:3] if str(item).strip())
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     if sufficiency.get("status"):
         items.append(f"The map sufficiency status is {str(sufficiency.get('status')).replace('_', ' ')}, so absence of a slot should be read as a mapped gap rather than as negative evidence.")
@@ -816,26 +811,59 @@ def _compact_crux_table(rendered: str, scaffold: dict[str, Any]) -> str:
     section = _markdown_section(rendered, "What Could Change the Decision")
     table_lines = [line for line in section.splitlines() if line.strip().startswith("|")]
     if len(table_lines) >= 3:
-        return "\n".join(table_lines[:6])
+        return _clean_crux_table("\n".join(table_lines[:6]))
+    synthesis = _decision_synthesis_model(scaffold)
+    cruxes = [row for row in synthesis.get("cruxes", []) if isinstance(row, dict)][:3]
+    if cruxes:
+        return _crux_rows_to_table(cruxes, max_chars=170)
     refined = scaffold.get("refined_cruxes", {}) if isinstance(scaffold.get("refined_cruxes"), dict) else {}
     cruxes = [row for row in refined.get("cruxes", []) if isinstance(row, dict)][:3]
     if not cruxes:
         cruxes = _deterministic_top_cruxes(scaffold)[:3]
     if not cruxes:
         return ""
+    return _crux_rows_to_table(cruxes, max_chars=150)
+
+def _practical_implication_rules() -> tuple[tuple[str, str], ...]:
+    return (
+        ("alternatives_or_comparators", "Frame the recommendation around the actual alternatives being compared, since the answer can change with the comparator."),
+        ("scope_conditions", "Keep the setting, scale, population, and intensity boundaries attached to the recommendation."),
+        ("implementation_constraints", "Treat feasibility, safety, maintenance, and technical-fit constraints as part of the decision, not as afterthoughts."),
+        ("evidence_type_limits", "Separate direct outcome evidence from proxy, mechanism, guidance, and implementation evidence when setting confidence."),
+        ("safety_or_risk", "Make downside risks and failure modes visible before converting the evidence into action."),
+        ("dose_boundary", "Treat the default answer as scoped to the mapped intensity or threshold, not to all possible exposure levels."),
+        ("hard_outcome_support", "For the mapped default population, let direct outcome evidence carry more weight than indirect evidence."),
+        ("mechanism_surrogate", "Keep mechanism and surrogate evidence visible because it can bound confidence without settling direct outcomes by itself."),
+        ("comparator_substitution", "Frame practical advice around the relevant alternatives, since comparator evidence can change the recommendation."),
+        ("high_risk_subgroup", "Do not automatically generalize the default answer to higher-risk subgroups; treat those as separate scope decisions."),
+    )
+
+
+def _crux_rows_to_table(cruxes: list[dict[str, Any]], *, max_chars: int) -> str:
     lines = ["| Crux | Current read | Would change if |", "|---|---|---|"]
     for row in cruxes:
-        lines.append(
-            "| "
-            + " | ".join(
-                _markdown_table_cell(_polish_reader_sentence_block(str(row.get(key, "")), max_chars=150))
-                for key in ("crux", "current_read", "would_change_if")
-            )
-            + " |"
-        )
-    return "\n".join(lines)
+        cells = (_markdown_table_cell(_polish_reader_sentence_block(str(row.get(key, "")), max_chars=max_chars)) for key in ("crux", "current_read", "would_change_if"))
+        lines.append("| " + " | ".join(cells) + " |")
+    return _clean_crux_table("\n".join(lines))
 
+def _clean_crux_table(table: str) -> str:
+    return table.replace("This challenges relation marks a condition that can change the interpretation of the evidence.", "This condition could change how the evidence should be interpreted.").replace("This in tension with relation marks a condition that can change the interpretation of the evidence.", "This tension could change how the evidence should be interpreted.").replace("relation marks", "indicates")
 
+def _decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
+    value = scaffold.get("decision_synthesis_model", {})
+    return value if isinstance(value, dict) else {}
+
+def _synthesis_evidence_sentences(synthesis: dict[str, Any], *, roles: tuple[str, ...]) -> list[str]:
+    lines = [line for line in synthesis.get("evidence_lines", []) if isinstance(line, dict)]
+    sentences: list[str] = []
+    for role in roles:
+        for line in lines:
+            if line.get("role") != role:
+                continue
+            current = str(line.get("current_read", "")).strip()
+            if current:
+                sentences.append(current)
+    return sentences
 
 # Explicit cross-module dependencies for compatibility facade removal.
 from epistemic_case_mapper.map_briefing_decision_model import _looks_like_boilerplate_disclosure, _looks_like_publisher_or_license_boilerplate

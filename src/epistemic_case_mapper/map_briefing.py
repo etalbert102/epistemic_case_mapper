@@ -9,7 +9,6 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     _deterministic_decision_implications,
     _deterministic_stress_caveats,
     _deterministic_top_cruxes,
-    _map_briefing_summary_payload,
     _model_briefing_scaffold,
     _model_concept_evidence_packets,
     _render_model_briefing_output,
@@ -22,6 +21,8 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     run_map_briefing,
 )
 
+from epistemic_case_mapper.map_briefing_artifacts import map_briefing_summary_payload as _map_briefing_summary_payload
+
 from epistemic_case_mapper.decision_model_slice import (
     DecisionModelSliceResult,
     build_compact_decision_model,
@@ -29,6 +30,9 @@ from epistemic_case_mapper.decision_model_slice import (
     render_decision_model_brief,
     run_decision_model_slice,
 )
+
+from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
+from epistemic_case_mapper.map_briefing_telemetry import build_gap_diagnosis, render_gap_diagnosis_markdown
 
 from epistemic_case_mapper.map_briefing_reader_contracts import (
     _compact_option_comparison_for_contract,
@@ -74,6 +78,8 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
     rewrite_reader_memo_with_contract,
     select_reader_memo_required_evidence,
 )
+
+from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
 
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _NUTRITION_DECISION_MEMO_SLOT_SPECS,
@@ -688,9 +694,11 @@ __all__ = [
     "annotate_map_with_evidence_slots",
     "append_evidence_by_decision_lever",
     "append_map_coverage_snapshot",
+    "apply_reader_memo_edit_suggestions",
     "briefing_reader_polish_report",
     "briefing_scaffold",
     "build_compact_decision_model",
+    "build_decision_synthesis_model",
     "build_briefing_contract",
     "build_briefing_plan",
     "build_concept_evidence_packets",
@@ -702,6 +710,7 @@ __all__ = [
     "build_evidence_compression_table",
     "build_evidence_slot_ledger",
     "build_evidence_weighting_ledger",
+    "build_gap_diagnosis",
     "build_map_briefing_prompt",
     "build_map_sufficiency_report",
     "build_option_comparison",
@@ -733,6 +742,7 @@ __all__ = [
     "reader_memo_rewrite_issues",
     "repair_briefing_payload",
     "render_decision_model_brief",
+    "render_gap_diagnosis_markdown",
     "repair_reader_memo_rewrite_candidate",
     "replace_source_ids",
     "rewrite_reader_memo_with_contract",

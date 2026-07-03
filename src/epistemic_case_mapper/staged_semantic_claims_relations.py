@@ -679,7 +679,7 @@ def _extract_relations(
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
             continue
         write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_raw.txt", raw)
-        payload = _parse_model_json(raw)
+        payload = _parse_relation_model_json(raw)
         write_json(artifact_dir / artifact_subdir / f"{artifact_stem}_canonical.json", payload or {})
         if not isinstance(payload, dict):
             if len(batch) > 1:
@@ -775,6 +775,7 @@ from epistemic_case_mapper.staged_semantic_sources import (
     _normalize_relation_proposal,
     _normalize_text,
     _parse_model_json,
+    _parse_relation_model_json,
     _relation_batch_prompt,
     _relation_pair_prompt,
     _relation_proposals,

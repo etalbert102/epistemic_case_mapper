@@ -265,6 +265,11 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
         "}))\n",
         encoding="utf-8",
     )
+    baseline_path = tmp_path / "deep_research_baseline.md"
+    baseline_path.write_text(
+        "A polished baseline also discusses PROSPERITY trial evidence, Carter 2025, and DIABEGG.",
+        encoding="utf-8",
+    )
 
     result = run_map_briefing(
         repo_root=tmp_path,
@@ -274,12 +279,14 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
         backend=f"command:{sys.executable} {fake_model}",
         output_dir=tmp_path / "briefing",
         source_titles={"flf_covid_case_brief": "FLF COVID Case Brief"},
+        baseline_path=baseline_path,
     )
 
     rendered = result.briefing_path.read_text(encoding="utf-8")
     summary = json.loads(result.summary_path.read_text(encoding="utf-8"))
     sufficiency = json.loads(result.sufficiency_report_path.read_text(encoding="utf-8"))
     validation = json.loads(result.briefing_validation_path.read_text(encoding="utf-8"))
+    telemetry = json.loads(result.gap_diagnosis_path.read_text(encoding="utf-8"))
     assert "**Confidence:** medium" in rendered
     assert "flf_covid_case_brief" not in rendered
     assert "FLF COVID Case Brief" in rendered
@@ -292,9 +299,14 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["calibrated_confidence"] == "medium"
     assert summary["paths"]["map_sufficiency_report"].endswith("map_sufficiency_report.json")
     assert summary["paths"]["briefing_validation_report"].endswith("briefing_validation_report.json")
+    assert summary["paths"]["gap_diagnosis"].endswith("telemetry/gap_diagnosis.json")
     assert sufficiency["schema_id"] == "map_sufficiency_report_v1"
     assert validation["schema_id"] == "briefing_validation_report_v1"
     assert summary["briefing_validation_status"] == validation["status"]
+    assert telemetry["schema_id"] == "map_briefing_gap_telemetry_v1"
+    assert telemetry["baseline_gap_attribution"]["baseline_available"] is True
+    assert telemetry["largest_gap_drivers"]
+    assert any("PROSPERITY" in term for term in telemetry["baseline_gap_attribution"]["salient_baseline_terms_absent"])
 
 
 def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:

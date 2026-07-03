@@ -22,6 +22,7 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
+from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
 
 def append_evidence_by_decision_lever(rendered: str, scaffold: dict[str, Any]) -> str:
     if "## Evidence by Decision Lever" in rendered:
@@ -354,7 +355,7 @@ def rewrite_reader_memo_with_contract(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
-    """Use the model as a constrained prose compiler, accepting only validated rewrites."""
+    """Use the model as a constrained edit suggester, accepting only validated exact edits."""
     if backend.strip() == "prompt":
         return {
             "memo": memo,
@@ -389,21 +390,34 @@ def rewrite_reader_memo_with_contract(
     if not isinstance(payload, dict):
         report.update({"status": "parse_failed_fallback", "issues": ["rewrite response was not a JSON object"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    rewritten = str(payload.get("memo_markdown", "")).strip()
-    rewritten = ensure_rewrite_confidence_visible(rewritten, str(contract.get("confidence") or "medium"))
-    repaired = repair_reader_memo_rewrite_candidate(rewritten, scaffold, contract)
-    candidate = repaired if repaired != rewritten else rewritten
+    edit_result = apply_reader_memo_edit_suggestions(memo, payload)
+    if not edit_result["applied_edits"]:
+        report.update(
+            {
+                "status": "no_safe_edits_fallback",
+                "issues": edit_result["issues"],
+                "raw_edit_count": edit_result["raw_edit_count"],
+                "applied_edit_count": 0,
+            }
+        )
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    edited = ensure_rewrite_confidence_visible(str(edit_result["memo"]), str(contract.get("confidence") or "medium"))
+    repaired = repair_reader_memo_rewrite_candidate(edited, scaffold, contract)
+    candidate = repaired if repaired != edited else edited
     issues = reader_memo_rewrite_issues(candidate, memo, evidence_appendix, scaffold, candidate_map, contract)
     report["issues"] = issues
-    report["raw_word_count"] = len(rewritten.split())
+    report["raw_edit_count"] = edit_result["raw_edit_count"]
+    report["applied_edit_count"] = len(edit_result["applied_edits"])
+    report["skipped_edits"] = edit_result["skipped_edits"]
+    report["raw_word_count"] = len(edited.split())
     report["deterministic_word_count"] = len(memo.split())
-    if repaired != rewritten:
+    if repaired != edited:
         report["repair_issues"] = issues
         report["repaired_word_count"] = len(repaired.split())
     if issues:
         report["status"] = "rejected_fallback"
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    report["status"] = "accepted_after_repair" if repaired != rewritten else "accepted"
+    report["status"] = "accepted_after_repair" if repaired != edited else "accepted"
     report["accepted"] = True
     return {"memo": clean_reader_memo_text(candidate), "prompt": prompt, "raw": raw, "report": report}
 
@@ -739,41 +753,39 @@ def _profile_crux_template(text: str, scaffold: dict[str, Any] | None) -> dict[s
 
 def build_reader_memo_rewrite_prompt(memo: str, contract: dict[str, Any]) -> str:
     return (
-        "You are a controlled prose compiler for a decision-support memo.\n"
-        "Rewrite the supplied deterministic memo into clearer, less repetitive prose.\n"
+        "You are a controlled prose editor for a decision-support memo.\n"
+        "Do not rewrite the memo. Identify only local places where the language is awkward, repetitive, or unclear.\n"
+        "Return exact JSON edit suggestions. The deterministic engine will apply only safe exact replacements.\n"
         "You must obey the evidence contract exactly. Do not add outside facts.\n\n"
         "Return only valid JSON with this schema:\n"
         "{\n"
-        '  "memo_markdown": "A polished Markdown memo. No evidence appendix."\n'
+        '  "edits": [\n'
+        '    {"target": "exact original text to replace", "replacement": "cleaner replacement text", "reason": "brief reason"}\n'
+        "  ]\n"
         "}\n\n"
-        "Style requirements:\n"
-        "- Start with a direct decision read that follows `answer_frame.direct_answer`; do not start with 'mixed or context-dependent'.\n"
-        "- If `answer_frame.comparator_sentence_required` is true, include one plain sentence comparing the named alternatives.\n"
-        "- In Practical Read, use the `practical_actions` as concrete action/check bullets; avoid abstract process bullets.\n"
-        "- Use `option_comparison` to make the compared options explicit; do not hide the comparator in generic evidence prose.\n"
-        "- Merge repeated evidence; each substantive fact should appear once unless needed in the crux table.\n"
-        "- Keep source labels in parentheses for substantive evidence claims.\n"
-        "- Preserve every required gap and crux.\n"
-        "- In crux table `Current read` cells, use concrete human wording from `required_cruxes.current_read`; never write 'Not specified' or 'Preserved as...'.\n"
-        "- Keep the memo under 900 words when possible.\n"
-        "- Use this section shape: Decision Brief: 2 short paragraphs; Practical Read: 3-5 concrete bullets; Why This Read: 3 short bullets; Decision Cruxes: 3 rows; Limits: short named gaps.\n"
-        "- Use the same top-level headings as the deterministic memo.\n\n"
+        "Edit requirements:\n"
+        "- Each `target` must be copied exactly from the deterministic memo and appear only once.\n"
+        "- Keep edits local: replace one sentence, bullet, table cell, or short paragraph at a time.\n"
+        "- Do not edit top-level headings, confidence labels, source labels in parentheses, evidence numbers, crux names, or required gap wording.\n"
+        "- Do not remove any required evidence, source label, gap, confidence line, or crux item.\n"
+        "- Prefer fewer high-value edits; return at most 8 edits.\n"
+        "- If no safe local edit would improve the memo, return {\"edits\": []}.\n\n"
         "Evidence contract:\n"
         f"{json.dumps(contract, indent=2, ensure_ascii=False)}\n\n"
-        "Deterministic memo to rewrite:\n"
+        "Deterministic memo to inspect:\n"
         f"{memo.strip()}\n"
     )
 
 def parse_reader_memo_rewrite_payload(raw: str) -> dict[str, Any] | None:
     payload = _parse_json(raw)
-    if isinstance(payload, dict) and isinstance(payload.get("memo_markdown"), str):
+    if isinstance(payload, dict) and isinstance(payload.get("edits"), list):
         return payload
+    if isinstance(payload, dict) and isinstance(payload.get("memo_markdown"), str):
+        return {"edits": [{"target": "", "replacement": "", "reason": "legacy full rewrite payload rejected"}]}
     match = re.search(r'"memo_markdown"\s*:\s*"(?P<value>.*)"\s*}\s*(?:```)?\s*$', raw.strip(), flags=re.DOTALL)
     if not match:
         return None
-    value = match.group("value")
-    value = _decode_tolerant_json_string(value)
-    return {"memo_markdown": value}
+    return {"edits": [{"target": "", "replacement": "", "reason": "legacy full rewrite payload rejected"}]}
 
 def _decode_tolerant_json_string(value: str) -> str:
     value = re.sub(r"\\(?![\"\\/bfnrtu])", r"\\\\", value)

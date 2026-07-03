@@ -31,6 +31,8 @@ from epistemic_case_mapper.decision_frame import (
     question_quality_report,
     refine_crux_contract,
 )
+from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_run_summary, write_scaffold_artifacts
+from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 
 ROLE_PRIORITY = {
@@ -57,6 +59,7 @@ class MapBriefingResult:
     erosion_audit_path: Path
     sufficiency_report_path: Path
     briefing_validation_path: Path
+    gap_diagnosis_path: Path
     backend: str
     model_confidence: str
     calibrated_confidence: str
@@ -72,12 +75,9 @@ def run_map_briefing(
     output_dir: str | Path | None = None,
     backend_timeout: int | None = 120, backend_retries: int = 0,
     source_titles: dict[str, str] | None = None, max_claims: int | None = 0,
+    baseline_path: str | Path | None = None,
 ) -> MapBriefingResult:
-    if backend_retries < 0:
-        raise ValueError("backend_retries must be nonnegative")
-    if backend_timeout is not None and backend_timeout < 1:
-        raise ValueError("backend_timeout must be positive")
-    _require_concrete_question(question)
+    _validate_run_args(question, backend_timeout, backend_retries)
     map_file = _resolve(repo_root, map_path)
     quality_file = _resolve(repo_root, quality_report_path)
     candidate_map = json.loads(map_file.read_text(encoding="utf-8"))
@@ -106,17 +106,15 @@ def run_map_briefing(
         scaffold=scaffold,
     )
 
-    prompt_path = artifacts / "map_briefing_prompt.txt"
-    prioritized_map_path = artifacts / "prioritized_map.json"
-    prioritization_report_path = artifacts / "map_prioritization_report.json"
-    erosion_audit_path = artifacts / "generated_map_erosion_audit.json"
-    sufficiency_report_path = artifacts / "map_sufficiency_report.json"
+    scaffold_paths = write_scaffold_artifacts(
+        artifacts=artifacts,
+        prompt=prompt,
+        prioritized_map=prioritized_map,
+        prioritization_report=prioritization_report,
+        erosion_audit=erosion_audit,
+        scaffold=scaffold,
+    )
     briefing_validation_path = artifacts / "briefing_validation_report.json"
-    write_markdown(prompt_path, prompt)
-    write_json(prioritized_map_path, prioritized_map)
-    write_json(prioritization_report_path, prioritization_report)
-    write_json(erosion_audit_path, erosion_audit)
-    write_json(sufficiency_report_path, scaffold.get("map_sufficiency_report", {}))
 
     result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
     raw_path = artifacts / "map_briefing_raw.txt"
@@ -129,18 +127,18 @@ def run_map_briefing(
         source_lookup=source_lookup,
         prioritized_map=prioritized_map,
     )
-    rendered = str(render_state["rendered"])
     model_confidence = str(render_state["model_confidence"])
     calibrated = str(render_state["calibrated"])
     calibration = render_state["calibration"]
     parse_ok = bool(render_state["parse_ok"])
     parse_diagnostics = render_state["parse_diagnostics"]
-    rendered = _ensure_confidence_visible(rendered, calibrated)
-    rendered = append_evidence_by_decision_lever(rendered, scaffold)
-    rendered = append_map_coverage_snapshot(rendered, scaffold)
-    rendered = _normalize_reader_punctuation(expand_reader_map_references(rendered, prioritized_map))
-    rendered = _clean_reader_packet_metadata(replace_source_ids(rendered, source_lookup))
-    rendered = polish_briefing_for_reader(rendered, scaffold)
+    rendered = _prepare_rendered_reader_packet(
+        str(render_state["rendered"]),
+        calibrated=calibrated,
+        scaffold=scaffold,
+        prioritized_map=prioritized_map,
+        source_lookup=source_lookup,
+    )
     final_outputs = _write_final_reader_outputs(
         rendered=rendered,
         scaffold=scaffold,
@@ -152,56 +150,84 @@ def run_map_briefing(
     )
     briefing_path = final_outputs["briefing_path"]
     evidence_appendix_path = final_outputs["evidence_appendix_path"]
-    summary_path = artifacts / "briefing_summary.json"
-    write_json(
-        summary_path,
-        _map_briefing_summary_payload(
-            repo_root=repo_root,
-            result_backend=result.backend,
-            parse_ok=parse_ok,
-            parse_diagnostics=parse_diagnostics,
-            question=question,
-            paths={
-                "briefing": briefing_path,
-                "evidence_appendix": evidence_appendix_path,
-                "prompt": prompt_path,
-                "raw": raw_path,
-                "prioritized_map": prioritized_map_path,
-                "prioritization_report": prioritization_report_path,
-                "generated_map_erosion_audit": erosion_audit_path,
-                "map_sufficiency_report": sufficiency_report_path,
-                **final_outputs["summary_paths"],
-            },
-            source_lookup=source_lookup,
-            quality_report=quality_report,
-            model_confidence=model_confidence,
-            calibrated=calibrated,
-            calibration=calibration,
-            candidate_map=candidate_map,
-            prioritized_map=prioritized_map,
-            max_claims=max_claims,
-            effective_max_claims=effective_max_claims,
-            erosion_audit=erosion_audit,
-            scaffold=scaffold,
-            briefing_validation=final_outputs["briefing_validation"],
-            polish_report=final_outputs["polish_report"],
-            rewrite_result=final_outputs["rewrite_result"],
-        ),
+    telemetry_paths = write_gap_telemetry_outputs(
+        artifacts=artifacts,
+        repo_root=repo_root,
+        question=question,
+        candidate_map=candidate_map,
+        prioritized_map=prioritized_map,
+        quality_report=quality_report,
+        prioritization_report=prioritization_report,
+        scaffold=scaffold,
+        briefing_path=briefing_path,
+        final_outputs=final_outputs,
+        baseline_path=baseline_path,
+    )
+    summary_path = write_run_summary(
+        artifacts=artifacts,
+        repo_root=repo_root,
+        backend=result.backend,
+        parse_ok=parse_ok,
+        parse_diagnostics=parse_diagnostics,
+        question=question,
+        briefing_path=briefing_path,
+        evidence_appendix_path=evidence_appendix_path,
+        raw_path=raw_path,
+        scaffold_paths=scaffold_paths,
+        telemetry_paths=telemetry_paths,
+        final_outputs=final_outputs,
+        source_lookup=source_lookup,
+        quality_report=quality_report,
+        model_confidence=model_confidence,
+        calibrated=calibrated,
+        calibration=calibration,
+        candidate_map=candidate_map,
+        prioritized_map=prioritized_map,
+        max_claims=max_claims,
+        effective_max_claims=effective_max_claims,
+        erosion_audit=erosion_audit,
+        scaffold=scaffold,
     )
     return MapBriefingResult(
         briefing_path=briefing_path,
         summary_path=summary_path,
-        prompt_path=prompt_path,
-        prioritized_map_path=prioritized_map_path,
-        prioritization_report_path=prioritization_report_path,
-        erosion_audit_path=erosion_audit_path,
-        sufficiency_report_path=sufficiency_report_path,
+        prompt_path=scaffold_paths["prompt"],
+        prioritized_map_path=scaffold_paths["prioritized_map"],
+        prioritization_report_path=scaffold_paths["prioritization_report"],
+        erosion_audit_path=scaffold_paths["erosion_audit"],
+        sufficiency_report_path=scaffold_paths["sufficiency_report"],
         briefing_validation_path=briefing_validation_path,
+        gap_diagnosis_path=telemetry_paths["gap_diagnosis"],
         backend=result.backend,
         model_confidence=model_confidence,
         calibrated_confidence=calibrated,
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
+
+
+def _validate_run_args(question: str, backend_timeout: int | None, backend_retries: int) -> None:
+    if backend_retries < 0:
+        raise ValueError("backend_retries must be nonnegative")
+    if backend_timeout is not None and backend_timeout < 1:
+        raise ValueError("backend_timeout must be positive")
+    _require_concrete_question(question)
+
+
+def _prepare_rendered_reader_packet(
+    rendered: str,
+    *,
+    calibrated: str,
+    scaffold: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    source_lookup: dict[str, str],
+) -> str:
+    rendered = _ensure_confidence_visible(rendered, calibrated)
+    rendered = append_evidence_by_decision_lever(rendered, scaffold)
+    rendered = append_map_coverage_snapshot(rendered, scaffold)
+    rendered = _normalize_reader_punctuation(expand_reader_map_references(rendered, prioritized_map))
+    rendered = _clean_reader_packet_metadata(replace_source_ids(rendered, source_lookup))
+    return polish_briefing_for_reader(rendered, scaffold)
+
 
 def _write_final_reader_outputs(
     *,
@@ -329,57 +355,6 @@ def _render_model_briefing_output(
         "parse_diagnostics": parse_diagnostics,
     }
 
-def _map_briefing_summary_payload(
-    *,
-    repo_root: Path,
-    result_backend: str,
-    parse_ok: bool,
-    parse_diagnostics: dict[str, Any],
-    question: str,
-    paths: dict[str, Path | None],
-    source_lookup: dict[str, str],
-    quality_report: dict[str, Any],
-    model_confidence: str,
-    calibrated: str,
-    calibration: dict[str, Any],
-    candidate_map: dict[str, Any],
-    prioritized_map: dict[str, Any],
-    max_claims: int | None,
-    effective_max_claims: int,
-    erosion_audit: dict[str, Any],
-    scaffold: dict[str, Any],
-    briefing_validation: dict[str, Any],
-    polish_report: dict[str, Any],
-    rewrite_result: dict[str, Any],
-) -> dict[str, Any]:
-    return {
-        "schema_id": "map_briefing_v1",
-        "backend": result_backend,
-        "parse_ok": parse_ok,
-        "parse_diagnostics": parse_diagnostics,
-        "question": question,
-        "paths": {key: _rel(repo_root, value) if value else None for key, value in paths.items()},
-        "source_display_names": source_lookup,
-        "map_quality_status": str(quality_report.get("status", "unknown")),
-        "map_quality_score": quality_report.get("score"),
-        "model_confidence": model_confidence,
-        "calibrated_confidence": calibrated,
-        "confidence_reasons": calibration["reasons"],
-        "claim_count": len(_claims(candidate_map)),
-        "prioritized_claim_count": len(_claims(prioritized_map)),
-        "requested_max_claims": max_claims,
-        "effective_max_claims": effective_max_claims,
-        "relation_count": len(_relations(candidate_map)),
-        "prioritized_relation_count": len(_relations(prioritized_map)),
-        "audit_item_count": len(erosion_audit.get("items", [])),
-        "map_sufficiency_status": scaffold.get("map_sufficiency_report", {}).get("status"),
-        "briefing_validation_status": briefing_validation.get("status"),
-        "briefing_validation_score": briefing_validation.get("score"),
-        "briefing_polish_status": polish_report.get("status"),
-        "briefing_polish_score": polish_report.get("score"),
-        "reader_memo_rewrite_status": rewrite_result["report"].get("status"),
-    }
-
 def build_map_briefing_prompt(
     *,
     candidate_map: dict[str, Any],
@@ -411,6 +386,7 @@ def build_map_briefing_prompt(
             "- Use `decision_model.decision_slots` to include practical thresholds, high-risk subgroups, mechanisms, comparators, endpoint types, study designs, and recommendations when present.",
             "- If `decision_model.missing_decision_slots` names a slot that matters for the question, say the map did not expose it rather than inventing it.",
             "- Use `decision_model.evidence_families` to avoid dropping whole families such as RCTs, cohorts, guidelines, mechanisms, subgroups, comparators, or method limits.",
+            "- Use `decision_synthesis_model` as the controlling decision-support structure: preserve its evidence lines, central tensions, scope boundaries, exceptions, recommendations, and cruxes.",
             "- Treat `map_sufficiency_report.output_obligations` as the prose contract: satisfy present-slot obligations and explicitly acknowledge decision-relevant missing slots.",
             "- If `map_sufficiency_report.status` is limited or thin, make that limitation visible in caveats or audit trail.",
             "- Use `evidence_compression_table` as the main source for compact synthesis; it is already filtered for decision relevance and noise.",
@@ -476,6 +452,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "briefing_contract": scaffold.get("briefing_contract"),
         "decision_frame": scaffold.get("decision_frame"),
         "decision_model": compact_decision_model,
+        "decision_synthesis_model": scaffold.get("decision_synthesis_model"),
         "evidence_compression_table": scaffold.get("evidence_compression_table"),
         "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
         "map_sufficiency_report": scaffold.get("map_sufficiency_report"),
@@ -609,6 +586,7 @@ def briefing_scaffold(
             if isinstance(issue, dict)
         ][:8],
     }
+    scaffold["decision_synthesis_model"] = build_decision_synthesis_model(scaffold)
     return _expand_payload_reader_references(scaffold, candidate_map)
 
 def deterministic_briefing_payload(
