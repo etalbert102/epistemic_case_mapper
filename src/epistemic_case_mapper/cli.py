@@ -47,11 +47,25 @@ from run_blinded_baselines import _configs_from_manifest, build_prompt  # noqa: 
 
 
 def main() -> int:
+    parser = _build_parser()
+    args = parser.parse_args()
+    return _dispatch_cli(parser, args)
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Epistemic Case Mapper engine CLI.")
     parser.add_argument("--repo-root", default=ENGINE_ROOT, help="Package root for relative paths.")
     parser.add_argument("--package", default="submission_manifest.yaml", help="Package manifest path.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    _add_case_parsers(subparsers)
+    _add_package_validate_export_ui_parsers(subparsers)
+    _add_baseline_synthesize_review_parsers(subparsers)
+    _add_quality_eval_parsers(subparsers)
+    _add_semantic_parsers(subparsers)
+    return parser
 
+
+def _add_case_parsers(subparsers: Any) -> None:
     case_parser = subparsers.add_parser("case", help="Initialize reusable case packages from documents.")
     case_subparsers = case_parser.add_subparsers(dest="case_target", required=True)
     case_init = case_subparsers.add_parser("init", help="Create a package skeleton from documents and a question.")
@@ -74,6 +88,8 @@ def main() -> int:
     case_config.add_argument("--backend-timeout", type=int, default=60)
     case_config.add_argument("--backend-retries", type=int, default=0)
 
+
+def _add_package_validate_export_ui_parsers(subparsers: Any) -> None:
     package_parser = subparsers.add_parser("package", help="Prepare package-facing generated assets.")
     package_subparsers = package_parser.add_subparsers(dest="package_target", required=True)
     package_subparsers.add_parser("prepare", help="Build UI data, copy UI shell, checklist, and reviewer start page.")
@@ -97,6 +113,8 @@ def main() -> int:
     ui_build = ui_subparsers.add_parser("build", help="Build UI data.")
     ui_build.add_argument("--check", action="store_true")
 
+
+def _add_baseline_synthesize_review_parsers(subparsers: Any) -> None:
     baseline_parser = subparsers.add_parser("baseline", help="Inspect or run baseline configs.")
     baseline_subparsers = baseline_parser.add_subparsers(dest="baseline_target", required=True)
     baseline_prompt = baseline_subparsers.add_parser("prompt", help="Render a blinded baseline prompt.")
@@ -139,6 +157,8 @@ def main() -> int:
     review_checklist = review_subparsers.add_parser("checklist", help="Build Tier 1 review checklist.")
     review_checklist.add_argument("--check", action="store_true")
 
+
+def _add_quality_eval_parsers(subparsers: Any) -> None:
     quality_parser = subparsers.add_parser("quality", help="Initialize and check unseen-case quality reviews.")
     quality_subparsers = quality_parser.add_subparsers(dest="quality_target", required=True)
     quality_init = quality_subparsers.add_parser("init", help="Create unseen-case quality review templates.")
@@ -173,6 +193,8 @@ def main() -> int:
     llm_stress.add_argument("--backend-timeout", type=int, default=90)
     llm_stress.add_argument("--backend-retries", type=int, default=0)
 
+
+def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_parser = subparsers.add_parser("semantic", help="Build and validate model-assisted semantic work.")
     semantic_subparsers = semantic_parser.add_subparsers(dest="semantic_target", required=True)
     semantic_prompt = semantic_subparsers.add_parser("prompt", help="Render source-bounded prompts for LLM work.")
@@ -244,9 +266,30 @@ def main() -> int:
     semantic_critique_validate = semantic_validate_subparsers.add_parser("critique", help="Validate a candidate JSON critique.")
     semantic_critique_validate.add_argument("--path", required=True)
 
-    args = parser.parse_args()
-    repo_root = Path(args.repo_root).resolve()
 
+def _dispatch_cli(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    dispatchers = {
+        "case": _dispatch_case_command,
+        "package": _dispatch_package_command,
+        "validate": _dispatch_validate_command,
+        "export": _dispatch_export_command,
+        "ui": _dispatch_ui_command,
+        "baseline": _dispatch_baseline_command,
+        "synthesize": _dispatch_synthesize_command,
+        "review": _dispatch_review_command,
+        "quality": _dispatch_quality_command,
+        "eval": _dispatch_eval_command,
+        "semantic": _dispatch_semantic_command,
+    }
+    dispatcher = dispatchers.get(args.command)
+    if dispatcher:
+        return dispatcher(repo_root, args)
+    parser.error("unknown command")
+    return 2
+
+
+def _dispatch_case_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "case" and args.case_target == "init":
         return _init_case_package(
             repo_root,
@@ -273,8 +316,16 @@ def main() -> int:
             backend_timeout=args.backend_timeout,
             backend_retries=args.backend_retries,
         )
+    return _unknown_cli_target("case", args.case_target)
+
+
+def _dispatch_package_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "package" and args.package_target == "prepare":
         return _prepare_package(repo_root, args.package)
+    return _unknown_cli_target("package", args.package_target)
+
+
+def _dispatch_validate_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "validate" and args.validate_target == "package":
         return _run_many(
             repo_root,
@@ -287,6 +338,10 @@ def main() -> int:
         )
     if args.command == "validate" and args.validate_target == "region":
         return _run(repo_root, ["scripts/validate_worked_regions.py", "--region", args.region], args.package)
+    return _unknown_cli_target("validate", args.validate_target)
+
+
+def _dispatch_export_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "export" and args.export_target == "json":
         command = ["scripts/export_worked_region_json.py"]
         if args.check:
@@ -297,11 +352,19 @@ def main() -> int:
         if args.check:
             command.append("--check")
         return _run(repo_root, command, args.package)
+    return _unknown_cli_target("export", args.export_target)
+
+
+def _dispatch_ui_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "ui" and args.ui_target == "build":
         command = ["scripts/build_ui_data.py"]
         if args.check:
             command.append("--check")
         return _run(repo_root, command, args.package)
+    return _unknown_cli_target("ui", args.ui_target)
+
+
+def _dispatch_baseline_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "baseline" and args.baseline_target == "prompt":
         return _print_baseline_prompt(repo_root, args.package, args.baseline)
     if args.command == "baseline" and args.baseline_target == "run":
@@ -315,6 +378,10 @@ def main() -> int:
         if args.dry_run:
             command.append("--dry-run")
         return _run(repo_root, command, args.package)
+    return _unknown_cli_target("baseline", args.baseline_target)
+
+
+def _dispatch_synthesize_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "synthesize" and args.synthesize_target == "decision-packet":
         return _run_decision_packet(
             repo_root=repo_root,
@@ -340,53 +407,66 @@ def main() -> int:
             backend_timeout=args.backend_timeout,
             backend_retries=args.backend_retries,
         )
+    return _unknown_cli_target("synthesize", args.synthesize_target)
+
+
+def _dispatch_review_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "review" and args.review_target == "checklist":
         command = ["scripts/build_tier1_review_checklist.py"]
         if args.check:
             command.append("--check")
         return _run(repo_root, command, args.package)
+    return _unknown_cli_target("review", args.review_target)
+
+
+def _dispatch_quality_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "quality" and args.quality_target == "init":
         return _init_quality(repo_root, args.case, args.title, args.question, args.force)
     if args.command == "quality" and args.quality_target == "check":
         return _check_quality(repo_root, args.case)
     if args.command == "quality" and args.quality_target == "gate":
-        result = _run_many(
-            repo_root,
-            [
-                ["scripts/validate_submission_manifest.py"],
-                ["scripts/validate_worked_regions.py"],
-                ["scripts/validate_submission_references.py"],
-                ["scripts/export_worked_region_json.py"],
-            ],
-            args.package,
-        )
-        if result != 0:
-            return result
-        result = _check_quality(repo_root, args.case)
-        if result != 0:
-            return result
-        manifest = load_submission_manifest(repo_root, args.package)
-        result = _write_quality_tasks(repo_root, manifest, args.case)
-        if result != 0:
-            return result
-        result = _prepare_package(repo_root, args.package)
-        if result != 0:
-            return result
-        result = _run_many(
-            repo_root,
-            [
-                ["scripts/validate_submission_manifest.py"],
-                ["scripts/validate_worked_regions.py"],
-                ["scripts/validate_submission_references.py"],
-                ["scripts/export_worked_region_json.py", "--check"],
-                ["scripts/build_ui_data.py", "--check"],
-                ["scripts/build_tier1_review_checklist.py", "--check"],
-            ],
-            args.package,
-        )
-        if result != 0:
-            return result
-        return 0
+        return _run_quality_gate(repo_root, args.package, args.case)
+    return _unknown_cli_target("quality", args.quality_target)
+
+
+def _run_quality_gate(repo_root: Path, package: str, case: str) -> int:
+    result = _run_many(
+        repo_root,
+        [
+            ["scripts/validate_submission_manifest.py"],
+            ["scripts/validate_worked_regions.py"],
+            ["scripts/validate_submission_references.py"],
+            ["scripts/export_worked_region_json.py"],
+        ],
+        package,
+    )
+    if result != 0:
+        return result
+    result = _check_quality(repo_root, case)
+    if result != 0:
+        return result
+    manifest = load_submission_manifest(repo_root, package)
+    result = _write_quality_tasks(repo_root, manifest, case)
+    if result != 0:
+        return result
+    result = _prepare_package(repo_root, package)
+    if result != 0:
+        return result
+    return _run_many(
+        repo_root,
+        [
+            ["scripts/validate_submission_manifest.py"],
+            ["scripts/validate_worked_regions.py"],
+            ["scripts/validate_submission_references.py"],
+            ["scripts/export_worked_region_json.py", "--check"],
+            ["scripts/build_ui_data.py", "--check"],
+            ["scripts/build_tier1_review_checklist.py", "--check"],
+        ],
+        package,
+    )
+
+
+def _dispatch_eval_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "eval" and args.eval_target == "llm-stress":
         return _run_llm_stress_eval(
             repo_root=repo_root,
@@ -399,6 +479,10 @@ def main() -> int:
             backend_timeout=args.backend_timeout,
             backend_retries=args.backend_retries,
         )
+    return _unknown_cli_target("eval", args.eval_target)
+
+
+def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int:
     if args.command == "semantic" and args.semantic_target == "prompt" and args.semantic_prompt_target == "map":
         print(build_map_prompt(repo_root, args.package, args.region), end="")
         return 0
@@ -464,8 +548,11 @@ def main() -> int:
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "critique":
         return _validate_semantic_critique(args.path)
+    return _unknown_cli_target("semantic", args.semantic_target)
 
-    parser.error("unknown command")
+
+def _unknown_cli_target(command: str, target: object) -> int:
+    print(f"unknown_cli_target command={command} target={target}", file=sys.stderr)
     return 2
 
 

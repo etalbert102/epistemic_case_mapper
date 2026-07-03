@@ -14,15 +14,10 @@ long_files = [
   "src/epistemic_case_mapper/map_briefing.py",
   "src/epistemic_case_mapper/staged_semantic_pipeline.py",
   "scripts/run_synthesis_uplift_eval.py",
-  "tests/test_case_init_and_model_backends.py",
   "tests/test_map_briefing.py",
 ]
-long_functions = [
-  "src/epistemic_case_mapper/cli.py::main",
-]
-branchy_functions = [
-  "src/epistemic_case_mapper/cli.py::main",
-]
+long_functions = []
+branchy_functions = []
 
 [validation]
 python_package = "epistemic_case_mapper"
