@@ -336,6 +336,8 @@ def test_concept_evidence_packets_render_decision_lever_section() -> None:
 
 def test_reader_polish_creates_executive_brief_and_appendix() -> None:
     scaffold = {
+        "question": "Should generally healthy adults treat moderate egg intake as acceptable?",
+        "source_display_names": {"demo_sources_dehghan_2020_full": "Dehghan 2020"},
         "quality_status": "usable_with_review",
         "confidence_cap": "medium",
         "decision_model": {
@@ -428,6 +430,8 @@ def test_clean_reader_briefing_text_removes_extraction_fragments() -> None:
 
 def test_final_reader_memo_separates_beautiful_brief_from_appendix() -> None:
     scaffold = {
+        "question": "Should generally healthy adults treat moderate egg intake as acceptable?",
+        "source_display_names": {"demo_sources_dehghan_2020_full": "Dehghan 2020"},
         "quality_status": "usable_with_review",
         "confidence_cap": "medium",
         "quality_issues": ["risk: high_claim_count - Accepted many claims."],
@@ -505,6 +509,9 @@ Neutral default for generally healthy adults.
     package = compose_final_reader_memo_package(rendered, scaffold)
 
     assert "## Evidence Trail" in package["memo"]
+    assert "**Decision question:**" in package["memo"]
+    assert "## Sources" in package["memo"]
+    assert "Dehghan 2020" in package["memo"]
     assert "## Evidence Appendix" not in package["memo"]
     assert "## Evidence by Decision Lever" in package["appendix"]
     assert "Extraction Artifacts Excluded From Reader Brief" in package["appendix"]
@@ -809,4 +816,3 @@ def test_curated_evidence_packets_drop_reference_debris() -> None:
     assert "prospective cohort" in selected_text
     assert "pmid" not in selected_text.lower()
     assert "pmid" in excluded_text.lower()
-

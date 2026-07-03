@@ -156,6 +156,7 @@ from epistemic_case_mapper.map_briefing_reader_polish import (
     clean_reader_briefing_text,
     clean_reader_memo_text,
 )
+from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
 
 from epistemic_case_mapper.map_briefing_evidence_tables import (
     _COVERAGE_CONCEPT_PRIORITY,

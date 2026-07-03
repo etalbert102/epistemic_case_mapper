@@ -245,7 +245,7 @@ def _write_final_reader_outputs(
         write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
     if rewrite_result.get("raw"):
         write_markdown(rewrite_raw_path, str(rewrite_result.get("raw", "")))
-    reader_memo = str(rewrite_result["memo"])
+    reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
     combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
     polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
     memo_quality = memo_quality_report(combined, memo_package["scaffold"])
@@ -867,6 +867,7 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
     rewrite_reader_memo_with_contract,
 )
 from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
+from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
 from epistemic_case_mapper.map_briefing_validation import (
     _confidence_label,
     _dedupe,

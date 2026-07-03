@@ -21,6 +21,7 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
@@ -171,6 +172,7 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
     lines = [
         "## Decision Brief",
         "",
+        *decision_question_lines(scaffold),
         decision_brief,
         "",
         f"**Confidence:** {confidence}",
@@ -194,6 +196,7 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
             "## Evidence Trail",
             "",
             "The structured evidence trail, decision-lever tables, coverage snapshot, and excluded extraction artifacts are in `EVIDENCE_APPENDIX.md`.",
+            *source_list_lines(scaffold),
         ]
     )
     return "\n".join(lines)

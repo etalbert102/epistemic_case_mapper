@@ -1,5 +1,7 @@
 ## Decision Brief
 
+**Decision question:** Given the provided evidence, should generally healthy adults treat moderate egg consumption as acceptable within a healthy diet, and what caveats should change that advice?
+
 Based on the provided source packet, moderate egg consumption (up to one egg per day) is generally acceptable for healthy adults, as it does not appear to increase overall cardiovascular disease risk. However, this decision read carries a degree of uncertainty because the evidence suggests that high consumption may be associated with increased risks in specific populations, such as those with type 2 diabetes.
 
 **Confidence:** medium
@@ -49,3 +51,18 @@ This source packet serves as a structured decision aid rather than an exhaustive
 ## Evidence Trail
 
 The structured evidence trail, decision-lever tables, coverage snapshot, and excluded extraction artifacts are in `EVIDENCE_APPENDIX.md`.
+
+## Sources
+
+- Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials
+- Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality
+- Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association
+- Dietary Cholesterol and the Lack of Evidence in Cardiovascular Disease
+- Dietary Guidelines for Americans, 2020-2025
+- Egg consumption and cardiovascular risk: a dose-response meta-analysis of prospective cohort studies
+- Egg consumption and health outcomes: a global evidence mapping based on an overview of systematic reviews
+- Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis
+- Egg consumption and risk of coronary heart disease and stroke: dose-response meta-analysis of prospective cohort studies
+- Eggs - a scoping review for Nordic Nutrition Recommendations 2023
+- Eggs, dietary cholesterol, and cardiovascular disease
+- Here's the latest on dietary cholesterol and how it fits in with a healthy diet
