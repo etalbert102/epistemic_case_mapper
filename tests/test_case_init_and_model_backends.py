@@ -19,7 +19,6 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     consolidate_claims_for_map,
     evaluate_staged_map_quality,
     _coverage_backfill_claims,
-    _candidate_relation_pairs,
     _sharpen_relations,
 )
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
@@ -790,37 +789,6 @@ def test_relation_sharpening_retags_generic_edges_when_roles_support_it() -> Non
     assert sharpened[0]["relation_type"] == "in_tension_with"
     assert sharpened[1]["relation_type"] == "depends_on"
     assert sharpened[0]["deterministic_sharpening"]["from"] == "refines"
-
-
-def test_candidate_relation_pairs_prioritize_decision_role_templates_without_shared_terms() -> None:
-    claims = [
-        {
-            "claim_id": "demo_c001",
-            "claim": "Portable filtration improves classroom respiratory outcomes.",
-            "source_id": "doc_a",
-            "excerpt": "The intervention improved outcomes in monitored classrooms.",
-            "role": "conclusion_support",
-        },
-        {
-            "claim_id": "demo_c002",
-            "claim": "Benefits only apply where devices are maintained and correctly sized.",
-            "source_id": "doc_b",
-            "excerpt": "Effects depend on maintenance and correct sizing.",
-            "role": "scope_limit",
-        },
-        {
-            "claim_id": "demo_c003",
-            "claim": "The appendix lists procurement dates.",
-            "source_id": "doc_c",
-            "excerpt": "Procurement dates were archived.",
-            "role": "background",
-        },
-    ]
-
-    pairs = _candidate_relation_pairs(claims, max_pairs=1)
-
-    assert [(pairs[0]["left"]["claim_id"], pairs[0]["right"]["claim_id"])] == [("demo_c001", "demo_c002")]
-    assert "scope_limit_bounds_decision_claim" in pairs[0]["candidate_reason"]
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

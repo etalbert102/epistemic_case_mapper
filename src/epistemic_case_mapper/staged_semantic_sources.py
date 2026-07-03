@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from epistemic_case_mapper.classical_ml import tfidf_near_duplicate_pairs
+from epistemic_case_mapper.classical_ml import diverse_ranked_edges, tfidf_near_duplicate_pairs, tfidf_pair_similarities
 from epistemic_case_mapper.config_profiles import (
     EpistemicConfigProfile,
     config_profile_from_manifest_payload,
@@ -313,23 +313,31 @@ def _normalize_relation_proposal(
     )
 
 def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> list[dict[str, Any]]:
-    scored: list[tuple[int, int, int, dict[str, Any], dict[str, Any], str]] = []
+    claim_lookup = {str(claim.get("claim_id", "")): claim for claim in claims if claim.get("claim_id")}
+    claim_order = {str(claim.get("claim_id", "")): index for index, claim in enumerate(claims)}
+    tfidf_scores = _claim_tfidf_scores(claims)
+    scored: list[tuple[str, str, float, str]] = []
     for left_index, left in enumerate(claims):
         for right_index, right in enumerate(claims):
             if left_index >= right_index:
                 continue
-            score, reason = _pair_score(left, right)
+            score, reason = _pair_score(left, right, tfidf_scores)
             if score <= 0:
                 continue
-            scored.append((score, left_index, right_index, left, right, reason))
-    scored.sort(key=lambda item: (-item[0], item[1], item[2]))
+            scored.append((left["claim_id"], right["claim_id"], score, reason))
+    selected = diverse_ranked_edges(
+        [claim_id for claim_id in claim_order if claim_id],
+        scored,
+        limit=max_pairs,
+    )
     packets = []
-    for index, (score, _left_index, _right_index, left, right, reason) in enumerate(scored[:max_pairs], start=1):
+    ordered = sorted(selected, key=lambda item: (claim_order.get(item[0], 9999), claim_order.get(item[1], 9999)))
+    for index, (left_id, right_id, score, reason) in enumerate(ordered, start=1):
         packets.append(
             {
                 "pair_id": f"pair_{index:03d}",
-                "left": left,
-                "right": right,
+                "left": claim_lookup[left_id],
+                "right": claim_lookup[right_id],
                 "candidate_score": score,
                 "candidate_reason": reason,
             }
@@ -395,8 +403,23 @@ def _looks_like_tension(left_text: str, right_text: str) -> bool:
         _has_support_signal(right_text) and _has_limit_or_challenge_signal(left_text)
     )
 
-def _pair_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, str]:
-    score = 0
+def _claim_tfidf_scores(claims: list[dict[str, Any]]) -> dict[tuple[str, str], float]:
+    ids = [str(claim.get("claim_id", "")) for claim in claims]
+    texts = [_claim_pair_text(claim) for claim in claims]
+    return tfidf_pair_similarities(texts, ids)
+
+def _claim_pair_text(claim: dict[str, Any]) -> str:
+    return " ".join(
+        str(claim.get(key, ""))
+        for key in ("claim", "excerpt", "role", "source_id")
+    )
+
+def _pair_score(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    tfidf_scores: dict[tuple[str, str], float] | None = None,
+) -> tuple[float, str]:
+    score = 0.0
     reasons: list[str] = []
     if left.get("source_id") != right.get("source_id"):
         score += 3
@@ -421,11 +444,23 @@ def _pair_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, str]:
     if _looks_like_tension(left_text, right_text):
         score += 6
         reasons.append("support_limit_tension")
+    semantic_score = _semantic_pair_score(left, right, tfidf_scores or {})
+    if semantic_score > 0:
+        score += min(4.0, semantic_score * 5.0)
+        reasons.append("tfidf_semantic_similarity")
     shared_terms = _content_terms(str(left.get("claim", ""))) & _content_terms(str(right.get("claim", "")))
     if shared_terms:
         score += min(3, len(shared_terms))
         reasons.append("shared_terms")
     return score, "+".join(reasons) or "low_signal"
+
+def _semantic_pair_score(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    tfidf_scores: dict[tuple[str, str], float],
+) -> float:
+    left_id, right_id = sorted((str(left.get("claim_id", "")), str(right.get("claim_id", ""))))
+    return float(tfidf_scores.get((left_id, right_id), 0.0))
 
 def _role_pair_priority(left_role: str, right_role: str) -> tuple[str, int]:
     roles = {left_role, right_role}

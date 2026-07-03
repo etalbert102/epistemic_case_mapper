@@ -47,6 +47,96 @@ def tfidf_near_duplicate_pairs(
     return pairs
 
 
+def tfidf_pair_similarities(
+    texts: list[str],
+    ids: list[str],
+) -> dict[tuple[str, str], float]:
+    if len(texts) != len(ids):
+        raise ValueError("texts and ids must have the same length")
+    if len(texts) < 2:
+        return {}
+    vectorizer = TfidfVectorizer(
+        lowercase=True,
+        stop_words=list(STOPWORDS),
+        ngram_range=(1, 2),
+        min_df=1,
+        norm="l2",
+    )
+    try:
+        matrix = vectorizer.fit_transform(texts)
+    except ValueError:
+        return {}
+    similarities = cosine_similarity(matrix)
+    pairs: dict[tuple[str, str], float] = {}
+    for left_index in range(len(texts)):
+        for right_index in range(left_index + 1, len(texts)):
+            score = float(similarities[left_index, right_index])
+            left_id, right_id = sorted((ids[left_index], ids[right_index]))
+            pairs[(left_id, right_id)] = round(score, 4)
+    return pairs
+
+
+def diverse_ranked_edges(
+    node_ids: list[str],
+    scored_edges: list[tuple[str, str, float, str]],
+    *,
+    limit: int,
+) -> list[tuple[str, str, float, str]]:
+    if limit <= 0:
+        return []
+    ranked = sorted(scored_edges, key=lambda item: (-item[2], item[0], item[1], item[3]))
+    selected: list[tuple[str, str, float, str]] = []
+    selected_keys: set[tuple[str, str]] = set()
+    touched: set[str] = set()
+    while len(selected) < limit:
+        candidates = [edge for edge in ranked if _edge_key(edge) not in selected_keys]
+        if not candidates:
+            break
+        edge = max(candidates, key=lambda item: (_new_endpoint_count(item, touched), item[2], item[0], item[1]))
+        if _new_endpoint_count(edge, touched) == 0:
+            break
+        _append_edge(edge, selected, selected_keys, touched)
+    for edge in ranked:
+        if len(selected) >= limit:
+            break
+        if _edge_key(edge) not in selected_keys:
+            _append_edge(edge, selected, selected_keys, touched)
+    for node_id in node_ids:
+        if len(selected) >= limit:
+            break
+        if node_id in touched:
+            continue
+        for edge in ranked:
+            if node_id in edge[:2] and _edge_key(edge) not in selected_keys:
+                _append_edge(edge, selected, selected_keys, touched)
+                break
+    return selected
+
+
+def _append_edge(
+    edge: tuple[str, str, float, str],
+    selected: list[tuple[str, str, float, str]],
+    selected_keys: set[tuple[str, str]],
+    touched: set[str],
+) -> None:
+    key = _edge_key(edge)
+    if key in selected_keys:
+        return
+    selected.append(edge)
+    selected_keys.add(key)
+    touched.update(key)
+
+
+def _edge_key(edge: tuple[str, str, float, str]) -> tuple[str, str]:
+    left, right = edge[:2]
+    return tuple(sorted((left, right)))
+
+
+def _new_endpoint_count(edge: tuple[str, str, float, str], touched: set[str]) -> int:
+    left, right = edge[:2]
+    return int(left not in touched) + int(right not in touched)
+
+
 def weighted_pagerank(
     node_ids: Iterable[str],
     edges: Iterable[tuple[str, str, float]],
@@ -80,4 +170,3 @@ def relation_edge_weight(relation_type: str) -> float:
         "supports": 1.2,
         "similar_to": 0.8,
     }.get(relation_type, 1.0)
-
