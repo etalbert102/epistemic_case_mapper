@@ -129,12 +129,12 @@ Run one live backend comparison after this structural completion:
 
 ```bash
 PYTHONPATH=src python3 scripts/ecm.py synthesize map-briefing \
-  --map docs/baselines/deep_research/eggs/prototype_run_gemma4_12b_mlx_contract/prioritized_map.json \
-  --quality-report artifacts/real_briefs/eggs_moderate_consumption/staged_map/map_quality_report.json \
+  --map docs/baselines/deep_research/eggs/prototype_run_gemma4_12b_mlx_fuller_sources/prioritized_map.json \
+  --quality-report docs/baselines/deep_research/eggs/prototype_run_gemma4_12b_mlx_fuller_sources/map_quality_report.json \
   --question "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?" \
   --backend ollama:gemma4:12b-mlx \
   --output-dir artifacts/decision_model_live_quality/eggs_gemma4_12b_mlx \
-  --baseline docs/baselines/deep_research/eggs/deep_research_baseline.md \
+  --baseline docs/baselines/deep_research/deep_research_eggs_Claude_Opus4.8.md \
   --backend-timeout 120 \
   --backend-retries 1
 ```
