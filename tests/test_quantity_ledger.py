@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.map_briefing import briefing_scaffold, compose_final_reader_memo_package
-from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
+from epistemic_case_mapper.map_briefing_artifacts import write_final_review_packet, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, quantity_ledger_markdown, top_quantity_anchors
 
 
@@ -192,3 +192,69 @@ def test_scaffold_artifacts_write_argument_model(tmp_path) -> None:
     assert argument_model["schema_id"] == "argument_model_v1"
     assert argument_model["decision_question"] == "Should the intervention be used to reduce risk?"
     assert argument_model["strongest_support"]
+
+
+def test_final_review_packet_summarizes_structured_artifacts(tmp_path) -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The intervention was associated with lower risk (RR 0.82, 95% CI 0.70-0.96).",
+                "source_id": "source_a",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 85, "issues": []},
+        {"source_a": "Source A"},
+        {"items": []},
+        question="Should the intervention be used to reduce risk?",
+    )
+    scaffold_paths = write_scaffold_artifacts(
+        artifacts=tmp_path,
+        prompt="prompt",
+        prioritized_map=candidate_map,
+        prioritization_report={"changed": False},
+        erosion_audit={"items": []},
+        scaffold=scaffold,
+    )
+    briefing = tmp_path / "BRIEFING.md"
+    appendix = tmp_path / "EVIDENCE_APPENDIX.md"
+    summary = tmp_path / "briefing_summary.json"
+    section_packets = tmp_path / "section_synthesis_packets.json"
+    gap = tmp_path / "telemetry" / "gap_diagnosis.json"
+    for path in (briefing, appendix, summary, section_packets, gap):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}", encoding="utf-8")
+
+    packet_path = tmp_path / "FINAL_REVIEW_PACKET.md"
+    write_final_review_packet(
+        packet_path,
+        repo_root=tmp_path,
+        question="Should the intervention be used to reduce risk?",
+        backend="prompt",
+        summary_path=summary,
+        briefing_path=briefing,
+        evidence_appendix_path=appendix,
+        scaffold_paths=scaffold_paths,
+        telemetry_paths={"gap_diagnosis": gap},
+        final_outputs={
+            "briefing_validation": {"status": "passes_contract", "score": 100},
+            "polish_report": {"status": "polished", "score": 95},
+            "rewrite_result": {"report": {"status": "skipped_prompt_backend"}},
+            "summary_paths": {"section_synthesis_packets": section_packets},
+        },
+        quality_report={"status": "usable_with_review", "score": 85, "issues": []},
+        candidate_map=candidate_map,
+        prioritized_map=candidate_map,
+        scaffold=scaffold,
+    )
+
+    text = packet_path.read_text(encoding="utf-8")
+    assert "# Final Review Packet" in text
+    assert "Argument model" in text
+    assert "Quantitative anchors" in text
+    assert "`BRIEFING.md`" in text

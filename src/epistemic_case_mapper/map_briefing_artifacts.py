@@ -118,6 +118,7 @@ def write_run_summary(
     scaffold: dict[str, Any],
 ) -> Path:
     summary_path = artifacts / "briefing_summary.json"
+    final_review_packet_path = artifacts / "FINAL_REVIEW_PACKET.md"
     write_map_briefing_summary(
         summary_path,
         repo_root=repo_root,
@@ -138,6 +139,7 @@ def write_run_summary(
             "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
+            "final_review_packet": final_review_packet_path,
             **telemetry_paths,
             **final_outputs["summary_paths"],
         },
@@ -156,7 +158,92 @@ def write_run_summary(
         polish_report=final_outputs["polish_report"],
         rewrite_result=final_outputs["rewrite_result"],
     )
+    write_final_review_packet(
+        final_review_packet_path,
+        repo_root=repo_root,
+        question=question,
+        backend=backend,
+        summary_path=summary_path,
+        briefing_path=briefing_path,
+        evidence_appendix_path=evidence_appendix_path,
+        scaffold_paths=scaffold_paths,
+        telemetry_paths=telemetry_paths,
+        final_outputs=final_outputs,
+        quality_report=quality_report,
+        candidate_map=candidate_map,
+        prioritized_map=prioritized_map,
+        scaffold=scaffold,
+    )
     return summary_path
+
+
+def write_final_review_packet(
+    packet_path: Path,
+    *,
+    repo_root: Path,
+    question: str,
+    backend: str,
+    summary_path: Path,
+    briefing_path: Path,
+    evidence_appendix_path: Path,
+    scaffold_paths: dict[str, Path],
+    telemetry_paths: dict[str, Path],
+    final_outputs: dict[str, Any],
+    quality_report: dict[str, Any],
+    candidate_map: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    scaffold: dict[str, Any],
+) -> None:
+    argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
+    validation = final_outputs["briefing_validation"]
+    polish_report = final_outputs["polish_report"]
+    rewrite_report = final_outputs["rewrite_result"]["report"]
+    lines = [
+        "# Final Review Packet",
+        "",
+        f"Question: {question or 'not specified'}",
+        f"Backend: `{backend}`",
+        "",
+        "## Reader Artifacts",
+        "",
+        f"- Briefing: `{_rel(repo_root, briefing_path)}`",
+        f"- Evidence appendix: `{_rel(repo_root, evidence_appendix_path)}`",
+        f"- Summary JSON: `{_rel(repo_root, summary_path)}`",
+        "",
+        "## Structured Artifacts",
+        "",
+        f"- Prioritized map: `{_rel(repo_root, scaffold_paths.get('prioritized_map'))}`",
+        f"- Argument model: `{_rel(repo_root, scaffold_paths.get('argument_model'))}`",
+        f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
+        f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
+        f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
+        f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
+        f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",
+        "",
+        "## Quality Snapshot",
+        "",
+        f"- Map quality: `{quality_report.get('status', 'unknown')}` score `{quality_report.get('score', 'unknown')}`",
+        f"- Claims: `{len(_claims(candidate_map))}` raw, `{len(_claims(prioritized_map))}` prioritized",
+        f"- Relations: `{len(_relations(candidate_map))}` raw, `{len(_relations(prioritized_map))}` prioritized",
+        f"- Briefing validation: `{validation.get('status', 'unknown')}` score `{validation.get('score', 'unknown')}`",
+        f"- Reader polish: `{polish_report.get('status', 'unknown')}` score `{polish_report.get('score', 'unknown')}`",
+        f"- Rewrite status: `{rewrite_report.get('status', 'unknown')}`",
+        "",
+        "## Argument Model Coverage",
+        "",
+        f"- Support items: `{_list_count(argument_model, 'strongest_support')}`",
+        f"- Counterarguments: `{_list_count(argument_model, 'strongest_counterarguments')}`",
+        f"- Quantitative anchors: `{_list_count(argument_model, 'quantitative_anchors')}`",
+        f"- Scope boundaries: `{_list_count(argument_model, 'scope_boundaries')}`",
+        f"- Cruxes: `{_list_count(argument_model, 'cruxes')}`",
+        f"- Known failure modes: `{_list_count(argument_model, 'known_failure_modes')}`",
+        "",
+        "## Completion Notes",
+        "",
+        "- This packet is generated from the run artifacts; it is not a separate quality judgment.",
+        "- Remaining weaknesses should be read from the gap diagnosis, validation report, rewrite report, and any baseline comparison artifacts.",
+    ]
+    write_markdown(packet_path, "\n".join(lines).rstrip() + "\n")
 
 
 def write_gap_telemetry_outputs(
@@ -275,6 +362,11 @@ def _claims(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
 def _relations(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
     relations = candidate_map.get("relations", [])
     return [relation for relation in relations if isinstance(relation, dict)] if isinstance(relations, list) else []
+
+
+def _list_count(value: dict[str, Any], key: str) -> int:
+    items = value.get(key, [])
+    return len(items) if isinstance(items, list) else 0
 
 
 def _rel(repo_root: Path, path: Path | None) -> str | None:
