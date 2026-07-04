@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_ledger
 from epistemic_case_mapper.map_briefing import build_gap_diagnosis, canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_map_utils import _expand_payload_reader_references
 from epistemic_case_mapper.model_schemas import DecisionCrux
@@ -110,6 +111,121 @@ def test_gap_telemetry_flags_generic_crux_quality_even_with_relations() -> None:
     assert crux_quality["status"] == "needs_crux_work"
     assert crux_quality["generic_crux_count"] == 1
     assert any(driver["likely_stage"] == "relation_to_crux_synthesis" for driver in diagnosis["largest_gap_drivers"])
+
+
+def test_main_memo_obligation_ledger_flags_missing_quantitative_and_baseline_terms() -> None:
+    scaffold = {
+        "source_display_names": {"source_a": "Meta Analysis 2025"},
+        "argument_model": {
+            "quantitative_anchors": [
+                {
+                    "statement": "The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03 across 1,720,108 participants.",
+                    "why_it_matters": "Central quantitative anchor.",
+                    "quantities": ["RR 0.98", "95% CI 0.93 to 1.03", "1,720,108 participants"],
+                    "source_ids": ["source_a"],
+                    "claim_ids": ["c001"],
+                    "quantity_ids": ["qc0001"],
+                }
+            ],
+            "scope_boundaries": [
+                {
+                    "statement": "High-risk subgroup needs separate handling.",
+                    "source_ids": ["source_a"],
+                    "claim_ids": ["c002"],
+                }
+            ],
+        },
+        "quantity_ledger": {
+            "evidence_cards": [
+                {
+                    "card_id": "qc0001",
+                    "claim_id": "c001",
+                    "source": "Meta Analysis 2025",
+                    "claim": "The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03.",
+                    "key_quantities": ["RR 0.98", "95% CI 0.93 to 1.03"],
+                    "interpretation_hint": "Interval includes the usual null value.",
+                }
+            ]
+        },
+        "evidence_weighting_ledger": {"all_evidence": []},
+    }
+
+    ledger = build_main_memo_obligation_ledger(
+        scaffold=scaffold,
+        briefing_text="The memo says the answer is neutral for the default population.",
+        baseline_gap={
+            "baseline_available": True,
+            "salient_baseline_terms_absent": ["PROSPERITY trial", "ApoB"],
+        },
+        source_coverage={"baseline_source_like_terms_absent": ["PROSPERITY trial"]},
+    )
+
+    assert ledger["missing_from_memo_count"] >= 2
+    assert ledger["source_missing_count"] == 1
+    assert ledger["missing_by_stage"]["decision_synthesis"] >= 1
+    assert any(row["category"] == "quantitative_anchor" for row in ledger["top_missing_obligations"])
+    assert any(row["status"] == "source_missing" for row in ledger["obligations"])
+
+
+def test_gap_telemetry_includes_main_memo_obligation_summary() -> None:
+    candidate_map = {
+        "sources": ["source_a"],
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03.",
+                "source_id": "source_a",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+    scaffold = {
+        "source_display_names": {"source_a": "Meta Analysis 2025"},
+        "argument_model": {
+            "quantitative_anchors": [
+                {
+                    "statement": "The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03.",
+                    "quantities": ["RR 0.98", "95% CI 0.93 to 1.03"],
+                    "source_ids": ["source_a"],
+                    "claim_ids": ["c001"],
+                    "quantity_ids": ["qc0001"],
+                }
+            ],
+        },
+        "quantity_ledger": {"evidence_cards": []},
+        "evidence_weighting_ledger": {"all_evidence": []},
+        "decision_synthesis_model": {
+            "schema_id": "decision_synthesis_model_v1",
+            "evidence_lines": [],
+            "central_tensions": [],
+            "recommendations": [],
+            "cruxes": [],
+        },
+        "map_sufficiency_report": {},
+        "quality_issues": [],
+    }
+
+    diagnosis = build_gap_diagnosis(
+        question="Should the option be treated as neutral?",
+        candidate_map=candidate_map,
+        prioritized_map=candidate_map,
+        quality_report={"status": "usable_with_review", "issues": []},
+        prioritization_report={},
+        scaffold=scaffold,
+        briefing_text="**Decision question:** Should the option be treated as neutral?\n\nThe option is neutral.",
+        validation={"status": "passes_contract", "score": 100, "issues": []},
+        polish_report={"status": "polished", "score": 100, "duplicate_sentence_count": 0},
+        rewrite_report={"status": "accepted"},
+        baseline_path="baseline.md",
+        baseline_text="The baseline discusses Meta Analysis 2025 and ApoB.",
+    )
+
+    summary = diagnosis["main_memo_obligation_summary"]
+    assert summary["schema_id"] == "main_memo_obligation_ledger_v1"
+    assert summary["missing_from_memo_count"] >= 1
+    assert "main_memo_obligation_ledger" in diagnosis
+    assert any(driver["gap"] == "Main memo drops required decision-support obligations" for driver in diagnosis["largest_gap_drivers"])
 
 
 def test_reader_reference_expansion_preserves_decision_crux_id_fields() -> None:

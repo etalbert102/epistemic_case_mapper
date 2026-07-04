@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.main_memo_obligations import (
+    build_main_memo_obligation_ledger,
+    render_main_memo_obligation_ledger_markdown,
+)
 from epistemic_case_mapper.map_briefing_crux_telemetry import build_crux_quality_telemetry
 
 
@@ -44,9 +48,19 @@ def write_gap_telemetry(
     )
     json_path = telemetry_dir / "gap_diagnosis.json"
     md_path = telemetry_dir / "GAP_DIAGNOSIS.md"
+    obligation_path = telemetry_dir / "main_memo_obligation_ledger.json"
+    obligation_md_path = telemetry_dir / "MAIN_MEMO_OBLIGATION_LEDGER.md"
     write_json(json_path, diagnosis)
     write_markdown(md_path, render_gap_diagnosis_markdown(diagnosis))
-    return {"gap_diagnosis": json_path, "gap_diagnosis_markdown": md_path}
+    obligation_ledger = diagnosis.get("main_memo_obligation_ledger", {})
+    write_json(obligation_path, obligation_ledger)
+    write_markdown(obligation_md_path, render_main_memo_obligation_ledger_markdown(obligation_ledger))
+    return {
+        "gap_diagnosis": json_path,
+        "gap_diagnosis_markdown": md_path,
+        "main_memo_obligation_ledger": obligation_path,
+        "main_memo_obligation_ledger_markdown": obligation_md_path,
+    }
 
 
 def build_gap_diagnosis(
@@ -70,7 +84,21 @@ def build_gap_diagnosis(
     synthesis_quality = _decision_synthesis_quality(scaffold, validation, briefing_text)
     reader_quality = _reader_quality(briefing_text, polish_report, rewrite_report)
     baseline_gap = _baseline_gap(question, baseline_path, baseline_text, briefing_text, source_coverage)
-    drivers = _rank_gap_drivers(source_coverage, extraction_quality, relation_quality, synthesis_quality, reader_quality, baseline_gap)
+    obligation_ledger = build_main_memo_obligation_ledger(
+        scaffold=scaffold,
+        briefing_text=briefing_text,
+        baseline_gap=baseline_gap,
+        source_coverage=source_coverage,
+    )
+    drivers = _rank_gap_drivers(
+        source_coverage,
+        extraction_quality,
+        relation_quality,
+        synthesis_quality,
+        reader_quality,
+        baseline_gap,
+        obligation_ledger,
+    )
     return {
         "schema_id": "map_briefing_gap_telemetry_v1",
         "question": question,
@@ -81,6 +109,8 @@ def build_gap_diagnosis(
         "decision_synthesis_quality": synthesis_quality,
         "reader_prose_quality": reader_quality,
         "baseline_gap_attribution": baseline_gap,
+        "main_memo_obligation_summary": _obligation_summary(obligation_ledger),
+        "main_memo_obligation_ledger": obligation_ledger,
         "largest_gap_drivers": drivers,
     }
 
@@ -103,7 +133,14 @@ def render_gap_diagnosis_markdown(diagnosis: dict[str, Any]) -> str:
         if evidence:
             lines.append("   - Evidence: " + "; ".join(str(row) for row in evidence[:4]))
     lines.extend(["", "## Stage Metrics", ""])
-    for key in ("source_coverage", "extraction_quality", "relation_quality", "decision_synthesis_quality", "reader_prose_quality"):
+    for key in (
+        "source_coverage",
+        "extraction_quality",
+        "relation_quality",
+        "decision_synthesis_quality",
+        "reader_prose_quality",
+        "main_memo_obligation_summary",
+    ):
         section = diagnosis.get(key, {})
         lines.extend([f"### {key.replace('_', ' ').title()}", "", "```json", _compact_json(section), "```", ""])
     return "\n".join(lines).rstrip() + "\n"
@@ -258,10 +295,27 @@ def _baseline_gap(
 
 
 def _rank_gap_drivers(*sections: dict[str, Any]) -> list[dict[str, Any]]:
-    source, extraction, relation, synthesis, reader, baseline = sections
+    source, extraction, relation, synthesis, reader, baseline, obligations = sections
     candidates: list[dict[str, Any]] = []
     if baseline.get("baseline_available") and baseline.get("baseline_source_like_absent_count", source.get("baseline_source_like_absent_count", 0)):
         candidates.append(_driver(90, "Baseline uses source/context not present in the briefing packet", "source_coverage", source.get("baseline_source_like_terms_absent", [])[:6], "Either mark source collection out of scope or feed these missing sources into the mapper."))
+    if obligations.get("missing_from_memo_count", 0):
+        candidates.append(
+            _driver(
+                86,
+                "Main memo drops required decision-support obligations",
+                "decision_synthesis",
+                [
+                    f"missing_from_memo={obligations.get('missing_from_memo_count')}",
+                    *[
+                        row.get("obligation_id")
+                        for row in obligations.get("top_missing_obligations", [])
+                        if isinstance(row, dict)
+                    ][:5],
+                ],
+                "Feed the missing obligations into section synthesis as required include/reject/out-of-scope decisions before accepting the memo.",
+            )
+        )
     if baseline.get("salient_baseline_absent_count", 0) >= 6:
         candidates.append(_driver(78, "Baseline concepts are present as useful context but not synthesized into the memo", "decision_synthesis", baseline.get("salient_baseline_terms_absent", [])[:8], "Add a synthesis coverage check that forces absent high-salience baseline concepts to be accepted, rejected, or marked out of scope."))
     if reader.get("awkward_phrase_count", 0) or reader.get("malformed_parenthesis_count", 0):
@@ -284,6 +338,24 @@ def _rank_gap_drivers(*sections: dict[str, Any]) -> list[dict[str, Any]]:
         item["rank"] = index
         item.pop("_score", None)
     return ranked
+
+
+def _obligation_summary(ledger: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_id": ledger.get("schema_id"),
+        "obligation_count": ledger.get("obligation_count"),
+        "satisfied_count": ledger.get("satisfied_count"),
+        "missing_from_memo_count": ledger.get("missing_from_memo_count"),
+        "source_missing_count": ledger.get("source_missing_count"),
+        "status_counts": ledger.get("status_counts", {}),
+        "missing_by_stage": ledger.get("missing_by_stage", {}),
+        "top_missing_obligation_ids": [
+            row.get("obligation_id")
+            for row in ledger.get("top_missing_obligations", [])
+            if isinstance(row, dict)
+        ][:8],
+        "recommended_interventions": ledger.get("recommended_interventions", []),
+    }
 
 
 def _driver(score: int, gap: str, stage: str, evidence: list[Any], intervention: str) -> dict[str, Any]:
