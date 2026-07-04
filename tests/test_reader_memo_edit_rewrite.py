@@ -4,6 +4,7 @@ import json
 
 from epistemic_case_mapper.map_briefing import (
     apply_reader_memo_edit_suggestions,
+    build_reader_memo_practical_actions,
     build_reader_memo_rewrite_contract,
     build_reader_memo_rewrite_prompt,
     parse_reader_memo_rewrite_payload,
@@ -133,6 +134,80 @@ The evidence is scoped.
 
     assert "- **People with Type 2 Diabetes:**" in repaired
     assert "- **Individuals with High LDL Cholesterol:**" in repaired
+
+
+def test_reader_memo_repair_structures_practical_sections() -> None:
+    memo = """## Decision Brief
+
+The default answer is conditional.
+
+**Confidence:** medium
+
+## Practical Read
+
+However, this recommendation includes important exceptions.
+
+## Practical Scope and Exceptions
+
+The recommendation changes based on the following factors: Comparator effects matter. Exception groups matter.
+
+## Evidence Trail
+
+The structured evidence trail is in `EVIDENCE_APPENDIX.md`.
+"""
+    contract = {
+        "confidence": "medium",
+        "practical_actions": [
+            "State the default as acceptable under the stated conditions; do not frame the default as beneficial",
+            "Name this subgroup separately from the default case: higher-risk participants",
+        ],
+        "required_evidence": [
+            {"claim": "Comparator evidence changes the recommendation.", "source": "Source A"},
+            {"claim": "Higher-risk participants should be treated as a separate exception.", "source": "Source B"},
+        ],
+    }
+
+    repaired = repair_reader_memo_rewrite_candidate(memo, {"confidence_cap": "medium"}, contract)
+
+    practical = repaired.split("## Practical Read", 1)[1].split("## Practical Scope and Exceptions", 1)[0]
+    scope = repaired.split("## Practical Scope and Exceptions", 1)[1].split("## Evidence Trail", 1)[0]
+    assert not practical.strip().lower().startswith("however")
+    assert "- The default practical read is acceptable" in practical
+    assert "- **Comparator effects:**" in scope
+    assert "- **Exception groups:**" in scope
+
+
+def test_reader_memo_repair_removes_unbalanced_bold_markers() -> None:
+    memo = """## Decision Brief
+
+This guidance is conditional on the following: **People with higher risk should be handled separately.
+
+**Confidence:** medium
+
+## Practical Read
+
+- Keep the decision bounded.
+"""
+
+    repaired = repair_reader_memo_rewrite_candidate(memo, {"confidence_cap": "medium"}, {"confidence": "medium"})
+
+    assert "following: People with higher risk" in repaired
+    assert repaired.count("**") % 2 == 0
+
+
+def test_practical_actions_filter_low_relevance_downside_from_primary_read() -> None:
+    actions = build_reader_memo_practical_actions(
+        {"question": "Should the intervention be used to reduce cardiovascular disease risk?"},
+        [
+            {"slot": "Main support", "claim": "The intervention reduced cardiovascular disease risk."},
+            {"slot": "Safety and downside risk", "claim": "The intervention was associated with increased unrelated endpoint risk."},
+            {"slot": "Scope and boundary conditions", "claim": "People with higher baseline risk should be considered separately."},
+        ],
+    )
+
+    joined = " ".join(actions).lower()
+    assert "unrelated endpoint" not in joined
+    assert "higher baseline risk" in joined
 
 
 def test_whole_memo_rewrite_rejects_legacy_full_memo_payload(monkeypatch) -> None:

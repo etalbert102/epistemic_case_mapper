@@ -121,6 +121,14 @@ def _contains_banned_editorial_phrase(text: str) -> bool:
 def _replace_internal_reader_phrases(text: str) -> str:
     return replace_internal_reader_phrases(text)
 
+def _repair_unbalanced_markdown_strong(text: str) -> str:
+    repaired: list[str] = []
+    for line in text.splitlines():
+        if line.count("**") % 2:
+            line = line.replace("**", "")
+        repaired.append(line)
+    return "\n".join(repaired)
+
 def _repair_overclaim_strength_language(text: str) -> str:
     replacements = {
         "Proven Safety Impact": "Mapped Safety Signal",

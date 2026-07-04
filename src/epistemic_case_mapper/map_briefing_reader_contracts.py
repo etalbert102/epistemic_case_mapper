@@ -23,6 +23,10 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
+from epistemic_case_mapper.map_briefing_section_structure import (
+    filter_primary_practical_actions,
+    repair_reader_memo_sections,
+)
 
 def append_evidence_by_decision_lever(rendered: str, scaffold: dict[str, Any]) -> str:
     if "## Evidence by Decision Lever" in rendered:
@@ -433,8 +437,10 @@ def repair_reader_memo_rewrite_candidate(markdown: str, scaffold: dict[str, Any]
     repaired = _repair_reader_source_label_noise(repaired, scaffold, contract)
     repaired = _replace_internal_reader_phrases(repaired)
     repaired = _repair_overclaim_strength_language(repaired)
+    repaired = _repair_unbalanced_markdown_strong(repaired)
     repaired = _repair_generic_crux_table_cells(repaired, contract)
     repaired = _drop_duplicate_reader_sentences(repaired)
+    repaired = repair_reader_memo_sections(repaired, contract, scaffold)
     repaired = ensure_rewrite_confidence_visible(repaired, str(contract.get("confidence") or "medium"))
     return clean_reader_memo_text(repaired)
 
@@ -673,7 +679,7 @@ def build_reader_memo_practical_actions(scaffold: dict[str, Any], required_rows:
             claim = str(row.get("claim", "")).strip()
             if claim:
                 actions.append(_short_claim_fragment(claim, max_chars=180))
-    return _dedupe(actions)[:5]
+    return _dedupe(filter_primary_practical_actions(actions, scaffold))[:5]
 
 def _reader_memo_editorial_lints() -> list[str]:
     return [
@@ -846,6 +852,7 @@ from epistemic_case_mapper.map_briefing_memo_slots import (
     _repair_generic_crux_table_cells,
     _repair_overclaim_strength_language,
     _repair_reader_source_label_noise,
+    _repair_unbalanced_markdown_strong,
     _replace_internal_reader_phrases,
     build_curated_evidence_packets,
     build_decision_memo_slots,

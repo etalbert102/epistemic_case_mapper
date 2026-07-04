@@ -8,6 +8,7 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _replace_internal_reader_phrases,
     _repair_overclaim_strength_language,
+    _repair_unbalanced_markdown_strong,
     _rewrite_has_raw_identifiers,
     _rewrite_mentions_anchor_row,
     _rewrite_mentions_gap,
@@ -20,6 +21,11 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
     build_section_evidence_ownership,
     compact_evidence_reference,
     section_owns_evidence,
+)
+from epistemic_case_mapper.map_briefing_section_structure import (
+    repair_structured_section,
+    section_structure_issues,
+    structured_scope_and_exceptions,
 )
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.model_backends import run_model_backend
@@ -152,11 +158,18 @@ def _rewrite_one_section(
         return {"section": section["markdown"], "prompt": prompt, "raw": raw, "report": section_report}
     rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
     repaired = _repair_section(rewritten)
+    repaired = repair_structured_section(repaired, section_contract)
     issues = _section_rewrite_issues(repaired, section, section_contract)
     section_report["issues"] = issues
     section_report["raw_word_count"] = len(rewritten.split())
     section_report["deterministic_word_count"] = len(section["markdown"].split())
     if issues:
+        structured = _structured_section_fallback(section, section_contract)
+        if structured != section["markdown"] and not _section_rewrite_issues(structured, section, section_contract):
+            section_report["status"] = "accepted_structured_fallback"
+            section_report["accepted"] = True
+            section_report["structured_fallback"] = True
+            return {"section": clean_reader_memo_text(structured), "prompt": prompt, "raw": raw, "report": section_report}
         section_report["status"] = "rejected_fallback"
         return {"section": section["markdown"], "prompt": prompt, "raw": raw, "report": section_report}
     section_report["status"] = "accepted_after_repair" if repaired != rewritten else "accepted"
@@ -271,11 +284,20 @@ def _deterministic_final_decision_brief(contract: dict[str, Any], body_memo: str
 
 def _default_answer_from_body(body_memo: str) -> str:
     practical = _markdown_section_with_heading(body_memo, "Practical Read")
+    paragraphs = _paragraphs_without_heading(practical)
+    for paragraph in paragraphs:
+        if paragraph.startswith(("-", "*", "|")):
+            continue
+        if paragraph and not _exception_led_answer(paragraph):
+            return paragraph
     bullets = re.findall(r"^\s*[-*]\s+(.+)$", practical, flags=re.MULTILINE)
     if bullets:
-        lead = _clean_bullet(bullets[0])
-        lead = re.sub(r"^the default practical read is\b", "For the default case, the current read is", lead, flags=re.IGNORECASE)
-        return lead
+        for bullet in bullets:
+            lead = _clean_bullet(bullet)
+            if _exception_led_answer(lead):
+                continue
+            lead = re.sub(r"^the default practical read is\b", "For the default case, the current read is", lead, flags=re.IGNORECASE)
+            return lead
     why = _markdown_section_with_heading(body_memo, "Why This Read")
     paragraphs = _paragraphs_without_heading(why)
     return paragraphs[0] if paragraphs else ""
@@ -522,7 +544,15 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
     original_words = max(1, len(original["markdown"].split()))
     if contract["has_obligations"] and len(rewritten.split()) < max(35, int(original_words * 0.45)):
         issues.append("section rewrite is too short for its local contract")
+    issues.extend(section_structure_issues(rewritten, contract))
     return issues
+
+
+def _structured_section_fallback(section: dict[str, str], contract: dict[str, Any]) -> str:
+    title = section["title"].lower()
+    if "scope" in title and "exception" in title:
+        return structured_scope_and_exceptions(contract)
+    return section["markdown"]
 
 
 def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) -> dict[str, Any]:
@@ -805,6 +835,7 @@ def _repair_section(text: str) -> str:
     repaired = clean_reader_memo_text(text)
     repaired = _replace_internal_reader_phrases(repaired)
     repaired = _repair_overclaim_strength_language(repaired)
+    repaired = _repair_unbalanced_markdown_strong(repaired)
     return clean_reader_memo_text(repaired)
 
 

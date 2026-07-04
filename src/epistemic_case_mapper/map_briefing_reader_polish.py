@@ -25,6 +25,7 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
+from epistemic_case_mapper.map_briefing_section_structure import filter_primary_practical_actions
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
@@ -280,6 +281,7 @@ def _slot_practical_implications(slot_model: dict[str, Any], *, scaffold: dict[s
             items.append(message)
     if not items:
         items = fallback_items
+    items = filter_primary_practical_actions(items, scaffold)
     return reader_facing_practical_items(_dedupe([_polish_reader_sentence_block(item, max_chars=240) for item in items if item]))[:5]
 
 def _build_final_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -> str:

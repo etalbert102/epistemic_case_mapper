@@ -10,7 +10,7 @@ from epistemic_case_mapper.map_briefing import (
     render_decision_model_brief,
 )
 from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
-from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
+from epistemic_case_mapper.map_briefing_section_rewrite import _default_answer_from_body, rewrite_reader_memo_by_section
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
 
@@ -135,6 +135,50 @@ def test_section_rewrite_assigns_required_evidence_to_owner_sections(monkeypatch
     assert ownership["owned_row_count"] > 0
     assert ownership["owner_counts"]
     assert any(section.get("evidence_reference_count", 0) > 0 for section in sections)
+
+
+def test_section_rewrite_repairs_dangling_practical_read(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        if "## Practical Read" in prompt:
+            return ModelBackendResult(
+                text=json.dumps({"section_markdown": "## Practical Read\n\nHowever, this recommendation has exceptions."}),
+                backend=backend,
+            )
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    practical = result["memo"].split("## Practical Read", 1)[1].split("## Why This Read", 1)[0]
+    assert not practical.strip().lower().startswith("however")
+    assert "- " in practical
+
+
+def test_final_brief_fallback_prefers_practical_default_paragraph_over_exception_bullets() -> None:
+    body = """## Practical Read
+
+For the default case, the current read is acceptable under stated conditions.
+
+- **People with higher risk:** Treat this group separately.
+
+## Why This Read
+
+The evidence is scoped.
+"""
+
+    assert _default_answer_from_body(body) == "For the default case, the current read is acceptable under stated conditions."
 
 
 def test_section_rewrite_rejects_crux_section_that_drops_synthesis_cruxes(monkeypatch) -> None:
