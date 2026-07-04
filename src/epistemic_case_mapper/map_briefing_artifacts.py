@@ -4,6 +4,13 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.decision_argument_artifacts import (
+    render_argument_case_graph_markdown,
+    render_competing_reads_markdown,
+    render_decision_traceability_matrix_markdown,
+    render_evidence_to_decision_matrix_markdown,
+    render_summary_of_findings_markdown,
+)
 from epistemic_case_mapper.map_briefing_telemetry import write_gap_telemetry
 
 
@@ -26,6 +33,16 @@ def write_scaffold_artifacts(
         "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
+        "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
+        "summary_of_findings": artifacts / "summary_of_findings.json",
+        "competing_reads": artifacts / "competing_reads.json",
+        "argument_case_graph": artifacts / "argument_case_graph.json",
+        "decision_traceability_matrix": artifacts / "decision_traceability_matrix.json",
+        "evidence_to_decision_matrix_markdown": artifacts / "EVIDENCE_TO_DECISION_MATRIX.md",
+        "summary_of_findings_markdown": artifacts / "SUMMARY_OF_FINDINGS.md",
+        "competing_reads_markdown": artifacts / "COMPETING_READS.md",
+        "argument_case_graph_markdown": artifacts / "ARGUMENT_CASE_GRAPH.md",
+        "decision_traceability_matrix_markdown": artifacts / "DECISION_TRACEABILITY_MATRIX.md",
     }
     write_markdown(paths["prompt"], prompt)
     write_json(paths["prioritized_map"], prioritized_map)
@@ -36,6 +53,17 @@ def write_scaffold_artifacts(
     write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
+    argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
+    write_json(paths["evidence_to_decision_matrix"], argument_artifacts.get("evidence_to_decision_matrix", {}))
+    write_json(paths["summary_of_findings"], argument_artifacts.get("summary_of_findings", {}))
+    write_json(paths["competing_reads"], argument_artifacts.get("competing_reads", {}))
+    write_json(paths["argument_case_graph"], argument_artifacts.get("argument_case_graph", {}))
+    write_json(paths["decision_traceability_matrix"], argument_artifacts.get("decision_traceability_matrix", {}))
+    write_markdown(paths["evidence_to_decision_matrix_markdown"], render_evidence_to_decision_matrix_markdown(argument_artifacts.get("evidence_to_decision_matrix", {})))
+    write_markdown(paths["summary_of_findings_markdown"], render_summary_of_findings_markdown(argument_artifacts.get("summary_of_findings", {})))
+    write_markdown(paths["competing_reads_markdown"], render_competing_reads_markdown(argument_artifacts.get("competing_reads", {})))
+    write_markdown(paths["argument_case_graph_markdown"], render_argument_case_graph_markdown(argument_artifacts.get("argument_case_graph", {})))
+    write_markdown(paths["decision_traceability_matrix_markdown"], render_decision_traceability_matrix_markdown(argument_artifacts.get("decision_traceability_matrix", {})))
     return paths
 
 
@@ -139,6 +167,11 @@ def write_run_summary(
             "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
+            "evidence_to_decision_matrix": scaffold_paths["evidence_to_decision_matrix"],
+            "summary_of_findings": scaffold_paths["summary_of_findings"],
+            "competing_reads": scaffold_paths["competing_reads"],
+            "argument_case_graph": scaffold_paths["argument_case_graph"],
+            "decision_traceability_matrix": scaffold_paths["decision_traceability_matrix"],
             "final_review_packet": final_review_packet_path,
             **telemetry_paths,
             **final_outputs["summary_paths"],
@@ -217,6 +250,12 @@ def write_final_review_packet(
         f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
         f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
         f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
+        f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
+        f"- Summary of findings: `{_rel(repo_root, scaffold_paths.get('summary_of_findings'))}`",
+        f"- Competing reads: `{_rel(repo_root, scaffold_paths.get('competing_reads'))}`",
+        f"- Argument case graph: `{_rel(repo_root, scaffold_paths.get('argument_case_graph'))}`",
+        f"- Decision traceability matrix: `{_rel(repo_root, scaffold_paths.get('decision_traceability_matrix'))}`",
+        f"- Final traceability check: `{_rel(repo_root, final_outputs['summary_paths'].get('decision_traceability_matrix_final'))}`",
         f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
         f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",
         f"- Main memo obligation ledger: `{_rel(repo_root, telemetry_paths.get('main_memo_obligation_ledger'))}`",
@@ -306,6 +345,8 @@ def map_briefing_summary_payload(
     graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
     canonicalization = scaffold.get("claim_canonicalization_report", {}) if isinstance(scaffold.get("claim_canonicalization_report"), dict) else {}
     argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
+    argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
+    traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
         "backend": result_backend,
@@ -352,6 +393,11 @@ def map_briefing_summary_payload(
         "quantity_count": scaffold.get("quantity_ledger", {}).get("quantity_count"),
         "quantitative_card_count": scaffold.get("quantity_ledger", {}).get("quantitative_card_count"),
         "quantitative_anchor_count": len(scaffold.get("quantitative_anchors", [])) if isinstance(scaffold.get("quantitative_anchors"), list) else 0,
+        "evidence_to_decision_row_count": argument_artifacts.get("evidence_to_decision_matrix", {}).get("row_count") if isinstance(argument_artifacts.get("evidence_to_decision_matrix"), dict) else 0,
+        "summary_of_findings_count": argument_artifacts.get("summary_of_findings", {}).get("finding_count") if isinstance(argument_artifacts.get("summary_of_findings"), dict) else 0,
+        "competing_read_count": len(argument_artifacts.get("competing_reads", {}).get("reads", [])) if isinstance(argument_artifacts.get("competing_reads"), dict) and isinstance(argument_artifacts.get("competing_reads", {}).get("reads"), list) else 0,
+        "argument_case_node_count": argument_artifacts.get("argument_case_graph", {}).get("node_count") if isinstance(argument_artifacts.get("argument_case_graph"), dict) else 0,
+        "traceability_row_count": traceability.get("row_count"),
     }
 
 

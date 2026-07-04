@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_ledger
+from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_ledger, section_obligations_for_title
 from epistemic_case_mapper.map_briefing import build_gap_diagnosis, canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_map_utils import _expand_payload_reader_references
 from epistemic_case_mapper.model_schemas import DecisionCrux
@@ -165,6 +165,59 @@ def test_main_memo_obligation_ledger_flags_missing_quantitative_and_baseline_ter
     assert ledger["missing_by_stage"]["decision_synthesis"] >= 1
     assert any(row["category"] == "quantitative_anchor" for row in ledger["top_missing_obligations"])
     assert any(row["status"] == "source_missing" for row in ledger["obligations"])
+
+
+def test_decision_brief_obligations_balance_first_page_categories() -> None:
+    obligations = []
+    for index in range(1, 5):
+        obligations.append(
+            {
+                "obligation_id": f"quant_{index}",
+                "category": "quantitative_anchor",
+                "stage_owner": "decision_synthesis",
+                "priority": 100 - index,
+                "statement": f"Quantitative anchor {index}",
+                "search_terms": [f"quantity {index}"],
+            }
+        )
+    obligations.extend(
+        [
+            {
+                "obligation_id": "support_1",
+                "category": "strongest_support",
+                "stage_owner": "decision_synthesis",
+                "priority": 80,
+                "statement": "Support anchor",
+                "search_terms": ["support"],
+            },
+            {
+                "obligation_id": "counter_1",
+                "category": "strongest_counterargument",
+                "stage_owner": "decision_synthesis",
+                "priority": 79,
+                "statement": "Counter anchor",
+                "search_terms": ["counter"],
+            },
+            {
+                "obligation_id": "scope_1",
+                "category": "scope_boundary",
+                "stage_owner": "decision_synthesis",
+                "priority": 78,
+                "statement": "Scope anchor",
+                "search_terms": ["scope"],
+            },
+        ]
+    )
+
+    selected = section_obligations_for_title("Decision Brief", obligations, limit=4)
+
+    assert [row["category"] for row in selected] == [
+        "quantitative_anchor",
+        "strongest_support",
+        "strongest_counterargument",
+        "scope_boundary",
+    ]
+    assert all(row["first_page_required"] is True for row in selected)
 
 
 def test_gap_telemetry_includes_main_memo_obligation_summary() -> None:

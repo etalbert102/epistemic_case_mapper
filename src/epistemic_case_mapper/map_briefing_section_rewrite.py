@@ -10,6 +10,7 @@ from epistemic_case_mapper.main_memo_obligations import (
     obligation_issues_for_text,
     section_obligations_for_title,
 )
+from epistemic_case_mapper.decision_argument_artifacts import compact_decision_argument_artifacts
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _replace_internal_reader_phrases,
     _repair_overclaim_strength_language,
@@ -289,6 +290,7 @@ def _decision_brief_last_packet(contract: dict[str, Any], body_memo: str) -> dic
         "confidence": contract.get("confidence"),
         "answer_frame": contract.get("answer_frame"),
         "argument_model": compact_argument_model(scaffold, "decision brief"),
+        "decision_argument_artifacts": compact_decision_argument_artifacts(scaffold, "decision brief"),
         "bottom_line": synthesis.get("bottom_line"),
         "recommendations": synthesis.get("recommendations", [])[:5],
         "scope_boundaries": synthesis.get("scope_boundaries", [])[:3],
@@ -536,6 +538,7 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
         "Use the section synthesis packet as the primary structure: issue clusters, load-bearing claims, bridge claims, and tensions should become coherent prose.\n"
+        "Use decision_argument_artifacts first when present: summary_of_findings carries the evidence rows, competing_reads shows rejected alternatives, argument_case_top_claim anchors the answer, and traceability_requirements shows obligations that must not disappear.\n"
         "When quantitative_anchors include key_quantities, use one relevant card-level estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
         "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
@@ -607,6 +610,8 @@ def _post_synthesis_obligation_validation(memo: str, contract: dict[str, Any]) -
     missing: list[dict[str, Any]] = []
     plan = contract.get("_main_memo_obligation_plan", [])
     for section in sections:
+        if section["title"].lower() in {"evidence trail", "sources"}:
+            continue
         obligations = section_obligations_for_title(section["title"], plan, limit=4 if section["title"] == "Decision Brief" else 5)
         issues = obligation_issues_for_text(obligations, section["markdown"], prefix="post-synthesis section missing obligation")
         for issue in issues:

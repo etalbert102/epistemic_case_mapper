@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.decision_argument_artifacts import compact_decision_argument_artifacts
 from epistemic_case_mapper.io import write_json
 from epistemic_case_mapper.map_briefing_section_quantities import section_quantitative_anchors
 
@@ -26,6 +27,7 @@ def section_synthesis_packet(title: str, full_contract: dict[str, Any]) -> dict[
         "bridge_claims": _section_claims(title_key, graph_packet.get("bridge_claims", [])),
         "central_tensions": _section_tensions(title_key, graph_packet.get("central_tensions", [])),
         "decision_synthesis": _section_decision_synthesis(title_key, synthesis),
+        "decision_argument_artifacts": compact_decision_argument_artifacts(scaffold, title_key),
         "quantitative_anchors": section_quantitative_anchors(title_key, scaffold),
         "style_instruction": _section_style_instruction(title_key),
     }

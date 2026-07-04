@@ -18,6 +18,11 @@ from epistemic_case_mapper.config_profiles import (
     infer_profile_id_from_text,
     profile_vocabulary,
 )
+from epistemic_case_mapper.decision_argument_artifacts import (
+    build_decision_argument_artifacts,
+    evaluate_traceability_against_memo,
+    render_decision_traceability_matrix_markdown,
+)
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import (
@@ -286,8 +291,17 @@ def _write_final_reader_outputs(
     memo_quality_path = artifacts / "memo_quality_report.json"
     curation_report_path = artifacts / "evidence_curation_report.json"
     briefing_validation_path = artifacts / "briefing_validation_report.json"
+    final_traceability_path = artifacts / "decision_traceability_matrix_final.json"
+    final_traceability_md_path = artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md"
+    argument_artifacts = memo_package["scaffold"].get("decision_argument_artifacts", {})
+    traceability_matrix = evaluate_traceability_against_memo(
+        argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts, dict) else {},
+        reader_memo,
+    )
     write_markdown(briefing_path, reader_memo.rstrip() + "\n")
     write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
+    write_json(final_traceability_path, traceability_matrix)
+    write_markdown(final_traceability_md_path, render_decision_traceability_matrix_markdown(traceability_matrix))
     write_json(briefing_validation_path, validation)
     write_json(polish_report_path, polish_report)
     write_json(memo_quality_path, memo_quality)
@@ -307,6 +321,8 @@ def _write_final_reader_outputs(
             "evidence_curation_report": curation_report_path,
             "section_rewrite_report": section_rewrite_report_path,
             "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
+            "decision_traceability_matrix_final": final_traceability_path,
+            "decision_traceability_matrix_final_markdown": final_traceability_md_path,
             "reader_memo_rewrite_report": rewrite_report_path,
             "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
             "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,
@@ -379,6 +395,7 @@ def build_map_briefing_prompt(
             "- Use graph orphan claims only as caveats or appendix material unless they are high-weight scope boundaries.",
             "- Use `decision_synthesis_model` as the controlling decision-support structure: preserve its evidence lines, central tensions, scope boundaries, exceptions, recommendations, and cruxes.",
             "- Use `argument_model` to decide which support, counterarguments, scope boundaries, cruxes, quantities, and known failure modes are load-bearing for the memo.",
+            "- Use `decision_argument_artifacts`: the matrix, findings, competing reads, argument graph, and traceability rows separate evidence, alternatives, uncertainty, and requirements before prose.",
             "- Treat `map_sufficiency_report.output_obligations` as the prose contract: satisfy present-slot obligations and explicitly acknowledge decision-relevant missing slots.",
             "- If `map_sufficiency_report.status` is limited or thin, make that limitation visible in caveats or audit trail.",
             "- Use `evidence_compression_table` as the main source for compact synthesis; it is already filtered for decision relevance and noise.",
@@ -449,6 +466,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "graph_synthesis_packet": scaffold.get("graph_synthesis_packet"),
         "decision_synthesis_model": scaffold.get("decision_synthesis_model"),
         "argument_model": scaffold.get("argument_model"),
+        "decision_argument_artifacts": scaffold.get("decision_argument_artifacts"),
         "evidence_compression_table": scaffold.get("evidence_compression_table"),
         "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
         "map_sufficiency_report": scaffold.get("map_sufficiency_report"),
@@ -600,6 +618,7 @@ def briefing_scaffold(
     }
     scaffold["decision_synthesis_model"] = build_decision_synthesis_model(scaffold)
     scaffold["argument_model"] = build_argument_model(candidate_map, quality_report, scaffold, question=question)
+    scaffold["decision_argument_artifacts"] = build_decision_argument_artifacts(scaffold, candidate_map)
     return _expand_payload_reader_references(scaffold, candidate_map)
 
 def deterministic_briefing_payload(

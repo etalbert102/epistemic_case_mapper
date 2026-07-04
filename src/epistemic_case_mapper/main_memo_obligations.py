@@ -76,15 +76,16 @@ def section_obligations_for_title(
         and str(obligation.get("category", "")) in categories
         and obligation.get("status_override") != "source_missing"
     ]
-    selected = sorted(
+    ranked = sorted(
         eligible,
         key=lambda row: (
             categories.index(str(row.get("category", ""))) if str(row.get("category", "")) in categories else 99,
             -int(row.get("priority", 0)),
             str(row.get("obligation_id", "")),
         ),
-    )[:limit]
+    )
     first_page = title.strip().lower() == "decision brief"
+    selected = _balanced_first_page_obligations(ranked, categories, limit=limit) if first_page else ranked[:limit]
     return [_compact_obligation_for_section(row, first_page_required=first_page) for row in selected]
 
 
@@ -146,6 +147,22 @@ def _section_obligation_categories(title: str) -> list[str]:
     if "practical" in lowered:
         return ["strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
     return ["quantitative_anchor", "strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
+
+
+def _balanced_first_page_obligations(
+    obligations: list[dict[str, Any]],
+    categories: list[str],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    selected: list[dict[str, Any]] = []
+    for category in categories:
+        match = next((row for row in obligations if str(row.get("category", "")) == category and row not in selected), None)
+        if match is not None:
+            selected.append(match)
+        if len(selected) >= limit:
+            return selected
+    return selected or obligations[:limit]
 
 
 def _compact_obligation_for_section(obligation: dict[str, Any], *, first_page_required: bool) -> dict[str, Any]:
