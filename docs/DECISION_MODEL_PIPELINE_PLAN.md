@@ -1,6 +1,6 @@
 # Decision Model Pipeline Execution Plan
 
-Status: `vertical-slice-implemented-needs-full-integration`
+Status: `implemented-and-smoke-verified`
 
 ## Goal
 
@@ -159,7 +159,7 @@ Opaque messages such as "brief is weak" or "rewrite failed" are not mature diagn
 
 ### Slice 1: Argument Model Contract
 
-Status: `not started`
+Status: `complete`
 
 Purpose: create the intermediate argument model that the final memo renders.
 
@@ -207,7 +207,7 @@ Done when:
 
 ### Slice 2: Evidence Weighting And Quantity Promotion
 
-Status: `not started`
+Status: `complete`
 
 Purpose: make the main memo use the evidence and numbers that are already load-bearing.
 
@@ -246,7 +246,7 @@ Done when:
 
 ### Slice 3: Scope Boundary And Counterargument Packets
 
-Status: `not started`
+Status: `complete`
 
 Purpose: improve subgroup, dose, comparator, and "best case against" handling.
 
@@ -286,7 +286,7 @@ Done when:
 
 ### Slice 4: Section-Specific Synthesis Packets
 
-Status: `not started`
+Status: `complete`
 
 Purpose: reduce repetition and make each section do distinct work.
 
@@ -324,7 +324,7 @@ Done when:
 
 ### Slice 5: Coherence-Edit JSON Instead Of Whole-Memo Rewrite
 
-Status: `not started`
+Status: `complete`
 
 Purpose: improve readability without letting a model rewrite away source grounding.
 
@@ -354,7 +354,7 @@ Done when:
 
 ### Slice 6: Baseline And Product-Quality Telemetry
 
-Status: `not started`
+Status: `complete`
 
 Purpose: measure whether the changes close the Deep Research gap, not just whether the pipeline runs.
 
@@ -392,7 +392,7 @@ Done when:
 
 ### Slice 7: Integration Into Full Pipeline
 
-Status: `not started`
+Status: `complete`
 
 Purpose: make the argument-model path the normal high-quality path without breaking existing CLI behavior.
 
