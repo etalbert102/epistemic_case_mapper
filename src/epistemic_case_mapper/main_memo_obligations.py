@@ -12,13 +12,10 @@ def build_main_memo_obligation_ledger(
     baseline_gap: dict[str, Any],
     source_coverage: dict[str, Any],
 ) -> dict[str, Any]:
-    obligations = _dedupe_obligations(
-        [
-            *_argument_model_obligations(scaffold),
-            *_quantity_obligations(scaffold),
-            *_evidence_family_obligations(scaffold),
-            *_baseline_obligations(baseline_gap, source_coverage),
-        ]
+    obligations = build_main_memo_obligation_plan(
+        scaffold=scaffold,
+        baseline_gap=baseline_gap,
+        source_coverage=source_coverage,
     )
     evaluated = [_evaluate_obligation(obligation, briefing_text) for obligation in obligations]
     status_counts = Counter(str(row.get("status", "unknown")) for row in evaluated)
@@ -37,6 +34,67 @@ def build_main_memo_obligation_ledger(
         "recommended_interventions": _recommended_interventions(stage_counts, status_counts),
         "obligations": evaluated,
     }
+
+
+def build_main_memo_obligation_plan(
+    *,
+    scaffold: dict[str, Any],
+    baseline_gap: dict[str, Any] | None = None,
+    source_coverage: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Select map-derived obligations before prose is generated."""
+    return _dedupe_obligations(
+        [
+            *_argument_model_obligations(scaffold),
+            *_quantity_obligations(scaffold),
+            *_evidence_family_obligations(scaffold),
+            *_baseline_obligations(baseline_gap or {}, source_coverage or {}),
+        ]
+    )
+
+
+def obligation_satisfied_by_text(obligation: dict[str, Any], text: str) -> bool:
+    """Return whether prose carries an obligation without relying on final ledger state."""
+    if obligation.get("status_override") == "source_missing":
+        return True
+    evaluated = _evaluate_obligation(obligation, text)
+    return evaluated.get("status") == "satisfied"
+
+
+def section_obligations_for_title(
+    title: str,
+    obligations: list[dict[str, Any]],
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    categories = _section_obligation_categories(title)
+    eligible = [
+        obligation
+        for obligation in obligations
+        if isinstance(obligation, dict)
+        and str(obligation.get("stage_owner", "")) == "decision_synthesis"
+        and str(obligation.get("category", "")) in categories
+        and obligation.get("status_override") != "source_missing"
+    ]
+    selected = sorted(
+        eligible,
+        key=lambda row: (
+            categories.index(str(row.get("category", ""))) if str(row.get("category", "")) in categories else 99,
+            -int(row.get("priority", 0)),
+            str(row.get("obligation_id", "")),
+        ),
+    )[:limit]
+    first_page = title.strip().lower() == "decision brief"
+    return [_compact_obligation_for_section(row, first_page_required=first_page) for row in selected]
+
+
+def obligation_issues_for_text(obligations: list[dict[str, Any]], text: str, *, prefix: str) -> list[str]:
+    issues: list[str] = []
+    for obligation in obligations:
+        if obligation_satisfied_by_text(obligation, text):
+            continue
+        issues.append(f"{prefix}: {obligation.get('obligation_id')} {str(obligation.get('statement', ''))[:90]}")
+    return issues[:8]
 
 
 def render_main_memo_obligation_ledger_markdown(ledger: dict[str, Any]) -> str:
@@ -73,6 +131,37 @@ def render_main_memo_obligation_ledger_markdown(ledger: dict[str, Any]) -> str:
         )
     lines.extend(["", "## Status Counts", "", "```json", _compact_json(ledger.get("status_counts", {})), "```", ""])
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _section_obligation_categories(title: str) -> list[str]:
+    lowered = title.strip().lower()
+    if lowered == "decision brief":
+        return ["quantitative_anchor", "strongest_support", "strongest_counterargument", "scope_boundary"]
+    if "scope" in lowered or "exception" in lowered or "limit" in lowered:
+        return ["scope_boundary", "strongest_counterargument", "decision_crux", "evidence_family_balance"]
+    if "crux" in lowered:
+        return ["decision_crux", "strongest_counterargument", "scope_boundary"]
+    if "evidence" in lowered or "why" in lowered:
+        return ["quantitative_anchor", "quantitative_depth", "strongest_support", "strongest_counterargument", "evidence_family_balance"]
+    if "practical" in lowered:
+        return ["strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
+    return ["quantitative_anchor", "strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
+
+
+def _compact_obligation_for_section(obligation: dict[str, Any], *, first_page_required: bool) -> dict[str, Any]:
+    return {
+        "obligation_id": obligation.get("obligation_id"),
+        "category": obligation.get("category"),
+        "priority": obligation.get("priority"),
+        "statement": obligation.get("statement"),
+        "search_terms": _string_list(obligation.get("search_terms"))[:6],
+        "reason": obligation.get("reason"),
+        "first_page_required": first_page_required,
+        "source_ids": _string_list(obligation.get("source_ids"))[:4],
+        "claim_ids": _string_list(obligation.get("claim_ids"))[:4],
+        "relation_ids": _string_list(obligation.get("relation_ids"))[:4],
+        "quantity_ids": _string_list(obligation.get("quantity_ids"))[:4],
+    }
 
 
 def _argument_model_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:

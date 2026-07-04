@@ -5,6 +5,11 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.main_memo_obligations import (
+    build_main_memo_obligation_plan,
+    obligation_issues_for_text,
+    section_obligations_for_title,
+)
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _replace_internal_reader_phrases,
     _repair_overclaim_strength_language,
@@ -52,6 +57,7 @@ def rewrite_reader_memo_by_section(
     """Rewrite memo sections independently, accepting only locally valid sections."""
     contract = build_reader_memo_rewrite_contract(memo, scaffold)
     contract["_section_synthesis_scaffold"] = scaffold
+    contract["_main_memo_obligation_plan"] = build_main_memo_obligation_plan(scaffold=scaffold)
     report: dict[str, Any] = {
         "schema_id": "section_rewrite_report_v1",
         "status": "not_run",
@@ -136,6 +142,7 @@ def rewrite_reader_memo_by_section(
     validation = validate_briefing_against_scaffold(candidate.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n", scaffold, candidate_map)
     report["whole_validation_status"] = validation.get("status", "unknown")
     report["whole_validation_issues"] = validation.get("issues", [])
+    report["main_memo_obligation_validation"] = _post_synthesis_obligation_validation(candidate, contract)
     report["accepted_section_count"] = sum(1 for item in report["sections"] if item.get("accepted"))
     report["section_packet_count"] = len(section_packets)
     section_packet_path = None
@@ -169,6 +176,7 @@ def _rewrite_one_section(
         "evidence_reference_count": len(section_contract.get("evidence_references", [])),
         "required_gap_count": len(section_contract["required_gaps"]),
         "required_crux_count": len(section_contract["required_cruxes"]),
+        "required_main_memo_obligation_count": len(section_contract.get("required_main_memo_obligations", [])),
     }
     if not _should_rewrite_section(section, section_contract):
         section_report["status"] = "skipped_low_value_section"
@@ -233,6 +241,9 @@ def _rewrite_decision_brief_last(
         "required_evidence_count": 0,
         "required_gap_count": 0,
         "required_crux_count": 0,
+        "required_main_memo_obligation_count": len(
+            section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []))
+        ),
         "generated_last": True,
     }
     attempt_result = run_section_model_attempts(
@@ -285,6 +296,11 @@ def _decision_brief_last_packet(contract: dict[str, Any], body_memo: str) -> dic
         "cruxes": synthesis.get("cruxes", [])[:3],
         "body_practical_read": _markdown_section_with_heading(body_memo, "Practical Read"),
         "body_decision_cruxes": _markdown_section_with_heading(body_memo, "Decision Cruxes"),
+        "first_page_required_obligations": section_obligations_for_title(
+            "Decision Brief",
+            contract.get("_main_memo_obligation_plan", []),
+            limit=4,
+        ),
     }
 
 
@@ -418,6 +434,13 @@ def _decision_brief_last_issues(section: str, contract: dict[str, Any], body_mem
         issues.append("final brief is too long for an executive opening")
     if _rewrite_has_raw_identifiers(section):
         issues.append("final brief contains raw map identifiers")
+    issues.extend(
+        obligation_issues_for_text(
+            section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []), limit=4),
+            section,
+            prefix="final brief dropped first-page obligation",
+        )
+    )
     return issues
 
 
@@ -514,7 +537,8 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
         "Use the section synthesis packet as the primary structure: issue clusters, load-bearing claims, bridge claims, and tensions should become coherent prose.\n"
         "When quantitative_anchors include key_quantities, use one relevant card-level estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
-        "Preserve every required local evidence anchor, gap, confidence line, and crux item in the section contract.\n"
+        "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
+        "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
         "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
@@ -554,6 +578,13 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
         crux_text = str(crux.get("crux", "")).strip()
         if crux_text and _content_overlap(rewritten, crux_text) < 2:
             issues.append(f"section dropped required crux: {crux_text[:90]}")
+    issues.extend(
+        obligation_issues_for_text(
+            contract.get("required_main_memo_obligations", []),
+            rewritten,
+            prefix="section dropped required main-memo obligation",
+        )
+    )
     original_words = max(1, len(original["markdown"].split()))
     if contract["has_obligations"] and len(rewritten.split()) < max(35, int(original_words * 0.45)):
         issues.append("section rewrite is too short for its local contract")
@@ -569,6 +600,23 @@ def _validate_rewritten_section(rewritten: str, section: dict[str, str], contrac
 def _validate_final_decision_brief(rewritten: str, contract: dict[str, Any], body_memo: str) -> tuple[str, list[str]]:
     repaired = _repair_section(rewritten)
     return repaired, _decision_brief_last_issues(repaired, contract, body_memo)
+
+
+def _post_synthesis_obligation_validation(memo: str, contract: dict[str, Any]) -> dict[str, Any]:
+    _, sections = _split_sections(memo)
+    missing: list[dict[str, Any]] = []
+    plan = contract.get("_main_memo_obligation_plan", [])
+    for section in sections:
+        obligations = section_obligations_for_title(section["title"], plan, limit=4 if section["title"] == "Decision Brief" else 5)
+        issues = obligation_issues_for_text(obligations, section["markdown"], prefix="post-synthesis section missing obligation")
+        for issue in issues:
+            missing.append({"section": section["title"], "issue": issue})
+    return {
+        "schema_id": "section_obligation_validation_v1",
+        "status": "passes" if not missing else "has_missing_obligations",
+        "missing_count": len(missing),
+        "missing": missing[:20],
+    }
 
 
 def _apply_attempt_report(report: dict[str, Any], result: dict[str, Any], *, deterministic_text: str) -> None:
@@ -615,6 +663,12 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     ]
     required_cruxes = _section_required_cruxes(full_contract) if "crux" in title.lower() else []
     practical_actions = full_contract.get("practical_actions", []) if "practical" in title.lower() else []
+    main_memo_obligations = section_obligations_for_title(
+        title,
+        full_contract.get("_main_memo_obligation_plan", []),
+    )
+    synthesis_packet = section_synthesis_packet(title, full_contract)
+    synthesis_packet["required_main_memo_obligations"] = main_memo_obligations
     return {
         "heading": title,
         "confidence": full_contract.get("confidence"),
@@ -623,12 +677,13 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "evidence_references": evidence_references,
         "required_gaps": required_gaps,
         "required_cruxes": required_cruxes if isinstance(required_cruxes, list) else [],
+        "required_main_memo_obligations": main_memo_obligations,
         "practical_actions": practical_actions if isinstance(practical_actions, list) else [],
         "min_decision_changing_cruxes": min(2, len(required_cruxes)) if "crux" in title.lower() else 0,
-        "section_synthesis_packet": section_synthesis_packet(title, full_contract),
+        "section_synthesis_packet": synthesis_packet,
         "decision_frame": frame,
         "section_job": section_jobs.get(title, "Smooth this section while preserving its local evidence obligations."),
-        "has_obligations": bool(required_evidence or required_gaps or required_cruxes or practical_actions),
+        "has_obligations": bool(required_evidence or required_gaps or required_cruxes or practical_actions or main_memo_obligations),
         "style": [
             "Keep the same heading.",
             "Use concrete prose; avoid internal phrases such as mapped support, map-backed read, and decision role.",

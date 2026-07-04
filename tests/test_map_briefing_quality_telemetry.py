@@ -228,6 +228,47 @@ def test_gap_telemetry_includes_main_memo_obligation_summary() -> None:
     assert any(driver["gap"] == "Main memo drops required decision-support obligations" for driver in diagnosis["largest_gap_drivers"])
 
 
+def test_source_coverage_uses_generic_acronym_aliases_for_source_like_terms() -> None:
+    candidate_map = {
+        "sources": ["source_a"],
+        "claims": [],
+        "relations": [],
+    }
+    scaffold = {
+        "source_display_names": {"source_a": "Carter Ajcn 2025 Abstract"},
+        "argument_model": {},
+        "quantity_ledger": {"evidence_cards": []},
+        "evidence_weighting_ledger": {"all_evidence": []},
+        "decision_synthesis_model": {
+            "schema_id": "decision_synthesis_model_v1",
+            "evidence_lines": [],
+            "central_tensions": [],
+            "recommendations": [],
+            "cruxes": [],
+        },
+        "map_sufficiency_report": {},
+        "quality_issues": [],
+    }
+
+    diagnosis = build_gap_diagnosis(
+        question="Should the option be adopted?",
+        candidate_map=candidate_map,
+        prioritized_map=candidate_map,
+        quality_report={"status": "usable_with_review", "issues": []},
+        prioritization_report={},
+        scaffold=scaffold,
+        briefing_text="**Decision question:** Should the option be adopted?",
+        validation={"status": "passes_contract", "score": 100, "issues": []},
+        polish_report={"status": "polished", "score": 100, "duplicate_sentence_count": 0},
+        rewrite_report={"status": "accepted"},
+        baseline_path="baseline.md",
+        baseline_text="The baseline cites Am J Clin Nutr 2025.",
+    )
+
+    assert "Am J Clin Nutr 2025" not in diagnosis["source_coverage"]["baseline_source_like_terms_absent"]
+    assert diagnosis["source_coverage"]["baseline_source_like_absent_count"] == 0
+
+
 def test_reader_reference_expansion_preserves_decision_crux_id_fields() -> None:
     payload = {
         "cruxes": [

@@ -158,9 +158,13 @@ def _source_coverage(
     source_counts = Counter(str(row.get("source", "")).strip() for row in rows if str(row.get("source", "")).strip())
     family_counts = Counter(str(row.get("evidence_family", "general_evidence")) for row in rows)
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
-    source_names = _source_names(candidate_map)
+    source_names = [*_source_names(candidate_map), *_source_display_names(scaffold)]
     baseline_source_like = _baseline_source_like_terms(baseline_text)
-    absent_baseline_sources = [term for term in baseline_source_like if _norm(term) not in _norm(" ".join(source_names)) and _norm(term) not in _norm(briefing_text)]
+    absent_baseline_sources = [
+        term
+        for term in baseline_source_like
+        if not _source_term_present(term, source_names=source_names, briefing_text=briefing_text)
+    ]
     return {
         "candidate_source_count": len(source_names),
         "prioritized_source_count": len(_source_names(prioritized_map)),
@@ -384,6 +388,49 @@ def _source_names(candidate_map: dict[str, Any]) -> list[str]:
             if value:
                 names.append(value)
     return sorted(set(names))
+
+
+def _source_display_names(scaffold: dict[str, Any]) -> list[str]:
+    names = scaffold.get("source_display_names", {})
+    if not isinstance(names, dict):
+        return []
+    return sorted({str(value).strip() for value in names.values() if str(value).strip()})
+
+
+def _source_term_present(term: str, *, source_names: list[str], briefing_text: str) -> bool:
+    normalized_term = _norm(term)
+    if not normalized_term:
+        return True
+    searchable_text = _norm(" ".join([*source_names, briefing_text]))
+    if normalized_term in searchable_text:
+        return True
+    source_token_sets = [set(_tokens(name)) for name in source_names]
+    term_tokens = [token for token in _tokens(term) if not token.isdigit()]
+    term_years = {token for token in _tokens(term) if re.fullmatch(r"(?:19|20)\d{2}", token)}
+    term_acronyms = _term_acronyms(term)
+    for name, tokens in zip(source_names, source_token_sets):
+        name_text = _norm(name)
+        name_years = {token for token in tokens if re.fullmatch(r"(?:19|20)\d{2}", token)}
+        if term_years and name_years and not term_years.intersection(name_years):
+            continue
+        if term_acronyms.intersection(set(_tokens(name_text)) | _term_acronyms(name)):
+            return True
+        if term_tokens:
+            overlap = len(set(term_tokens).intersection(tokens)) / len(set(term_tokens))
+            if overlap >= 0.6 and (not term_years or term_years.intersection(name_years)):
+                return True
+    return False
+
+
+def _term_acronyms(text: str) -> set[str]:
+    tokens = [token for token in _tokens(text) if not token.isdigit()]
+    acronyms: set[str] = set()
+    for start in range(len(tokens)):
+        for end in range(start + 2, min(len(tokens), start + 6) + 1):
+            acronym = "".join(token[0] for token in tokens[start:end] if token)
+            if 2 <= len(acronym) <= 8:
+                acronyms.add(acronym)
+    return acronyms
 
 
 def _baseline_source_like_terms(text: str) -> list[str]:

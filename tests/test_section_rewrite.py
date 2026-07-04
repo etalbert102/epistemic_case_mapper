@@ -379,6 +379,49 @@ def test_section_rewrite_rejects_crux_section_that_drops_synthesis_cruxes(monkey
     assert any("dropped required crux" in issue for issue in crux_report["issues"])
 
 
+def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+    scaffold["argument_model"]["quantitative_anchors"] = [
+        {
+            "statement": "The tracked estimate was 42 units in the main comparison.",
+            "why_it_matters": "This estimate is the main quantitative anchor.",
+            "quantities": ["42 units"],
+            "source_ids": [],
+            "claim_ids": [],
+            "quantity_ids": [],
+        }
+    ]
+    seen_prompt = ""
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        nonlocal seen_prompt
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        if prompt.startswith("You are writing one section") and section.startswith("## Why This Read"):
+            seen_prompt = prompt
+            return ModelBackendResult(
+                text=json.dumps({"section_markdown": "## Why This Read\n\nThe answer follows from the source packet."}),
+                backend=backend,
+            )
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    why_report = next(section for section in result["report"]["sections"] if section["title"] == "Why This Read")
+    assert "required_main_memo_obligations" in seen_prompt
+    assert why_report["status"] == "rejected_fallback"
+    assert any("dropped required main-memo obligation" in issue for issue in why_report["issues"])
+
+
 def test_section_rewrite_generates_decision_brief_last_and_rejects_exception_led_opening(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
 
