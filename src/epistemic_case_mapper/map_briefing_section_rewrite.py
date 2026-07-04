@@ -60,9 +60,6 @@ def rewrite_reader_memo_by_section(
         "sections": [],
         "whole_validation_status": "not_run",
     }
-    if backend.strip() == "prompt":
-        report["status"] = "skipped_prompt_backend"
-        return {"memo": memo, "report": report}
     leading, sections = _split_sections(memo)
     report["section_count"] = len(sections)
     if not sections:
@@ -73,6 +70,15 @@ def rewrite_reader_memo_by_section(
         "owned_row_count": len(contract["_section_evidence_ownership"].get("rows", {})),
         "owner_counts": contract["_section_evidence_ownership"].get("owner_counts", {}),
     }
+    if backend.strip() == "prompt":
+        section_packets = _report_only_section_packets(sections, contract)
+        report["status"] = "skipped_prompt_backend"
+        report["section_packet_count"] = len(section_packets)
+        section_packet_path = None
+        if artifacts is not None:
+            section_packet_path = write_section_packets_artifact(artifacts, section_packets)
+            report["section_packets_path"] = str(section_packet_path)
+        return {"memo": memo, "report": report, "section_packets_path": section_packet_path}
     section_packets: list[dict[str, Any]] = []
     rewritten_sections: list[str] = []
     deferred_decision_section: dict[str, str] | None = None
@@ -180,6 +186,32 @@ def _rewrite_one_section(
         return {"section": clean_reader_memo_text(structured), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
     section_report["status"] = "rejected_fallback"
     return {"section": section["markdown"], "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+
+
+def _report_only_section_packets(sections: list[dict[str, str]], contract: dict[str, Any]) -> list[dict[str, Any]]:
+    body_memo = clean_reader_memo_text(
+        "\n\n".join(section["markdown"] for section in sections if section["title"] != "Decision Brief")
+    )
+    packets: list[dict[str, Any]] = []
+    for section in sections:
+        if section["title"] == "Decision Brief":
+            packets.append(
+                {
+                    "title": "Decision Brief",
+                    "section_job": "Write the opening answer after the body sections are accepted.",
+                    "packet": _decision_brief_last_packet(contract, body_memo),
+                }
+            )
+            continue
+        section_contract = _section_contract(section, contract)
+        packets.append(
+            {
+                "title": section["title"],
+                "section_job": section_contract.get("section_job"),
+                "packet": section_contract.get("section_synthesis_packet", {}),
+            }
+        )
+    return packets
 
 
 def _rewrite_decision_brief_last(

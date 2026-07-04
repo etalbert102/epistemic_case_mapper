@@ -257,6 +257,29 @@ def test_section_rewrite_writes_section_synthesis_packets_with_argument_model(mo
     assert any(item["packet"].get("argument_model") for item in packet["packets"])
 
 
+def test_section_rewrite_prompt_backend_still_writes_section_packets(tmp_path) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="prompt",
+        backend_timeout=30,
+        backend_retries=0,
+        artifacts=tmp_path,
+    )
+
+    packet_path = tmp_path / "section_synthesis_packets.json"
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    assert result["section_packets_path"] == packet_path
+    assert result["report"]["status"] == "skipped_prompt_backend"
+    assert result["report"]["section_packet_count"] == packet["packet_count"]
+    assert any(item["title"] == "Decision Brief" for item in packet["packets"])
+    assert any(item["packet"].get("argument_model") for item in packet["packets"])
+
+
 def test_section_rewrite_repairs_dangling_practical_read(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
 
