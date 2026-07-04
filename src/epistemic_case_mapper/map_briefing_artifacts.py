@@ -24,6 +24,7 @@ def write_scaffold_artifacts(
         "sufficiency_report": artifacts / "map_sufficiency_report.json",
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
+        "quantity_ledger": artifacts / "quantity_ledger.json",
     }
     write_markdown(paths["prompt"], prompt)
     write_json(paths["prioritized_map"], prioritized_map)
@@ -32,6 +33,7 @@ def write_scaffold_artifacts(
     write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
+    write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     return paths
 
 
@@ -132,6 +134,7 @@ def write_run_summary(
             "map_sufficiency_report": scaffold_paths["sufficiency_report"],
             "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
+            "quantity_ledger": scaffold_paths["quantity_ledger"],
             **telemetry_paths,
             **final_outputs["summary_paths"],
         },
@@ -249,6 +252,9 @@ def map_briefing_summary_payload(
         "graph_tension_edge_count": graph_summary.get("tension_edge_count"),
         "graph_load_bearing_claim_count": len(graph_packet.get("load_bearing_claims", [])),
         "graph_bridge_claim_count": len(graph_packet.get("bridge_claims", [])),
+        "quantity_count": scaffold.get("quantity_ledger", {}).get("quantity_count"),
+        "quantitative_card_count": scaffold.get("quantity_ledger", {}).get("quantitative_card_count"),
+        "quantitative_anchor_count": len(scaffold.get("quantitative_anchors", [])) if isinstance(scaffold.get("quantitative_anchors"), list) else 0,
     }
 
 

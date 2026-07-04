@@ -13,15 +13,15 @@ from epistemic_case_mapper.map_briefing_memo_slots import (
     _rewrite_mentions_anchor_row,
     _rewrite_mentions_gap,
 )
-from epistemic_case_mapper.map_briefing_reader_contracts import (
-    build_reader_memo_rewrite_contract,
-)
+from epistemic_case_mapper.map_briefing_reader_contracts import build_reader_memo_rewrite_contract
 from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
+from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_ownership import (
     build_section_evidence_ownership,
     compact_evidence_reference,
     section_owns_evidence,
 )
+from epistemic_case_mapper.map_briefing_section_quantities import section_quantitative_anchors
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
@@ -29,7 +29,6 @@ from epistemic_case_mapper.map_briefing_section_structure import (
 )
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.model_backends import run_model_backend
-from epistemic_case_mapper.model_outputs import canonical_json_output
 
 
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", flags=re.MULTILINE)
@@ -143,38 +142,19 @@ def _rewrite_one_section(
     if not _should_rewrite_section(section, section_contract):
         section_report["status"] = "skipped_low_value_section"
         return {"section": section["markdown"], "prompt": prompt, "raw": "", "report": section_report}
-    try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-    except RuntimeError as exc:
-        section_report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
-        return {"section": section["markdown"], "prompt": prompt, "raw": "", "report": section_report}
-    raw = result.text
-    if result.prompt_only:
-        section_report.update({"status": "prompt_backend_fallback", "issues": ["backend returned prompt only"]})
-        return {"section": section["markdown"], "prompt": prompt, "raw": raw, "report": section_report}
-    payload = _parse_section_payload(raw)
-    if not isinstance(payload, dict):
-        section_report.update({"status": "parse_failed_fallback", "issues": ["section response was not a JSON object"]})
-        return {"section": section["markdown"], "prompt": prompt, "raw": raw, "report": section_report}
-    rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
-    repaired = _repair_section(rewritten)
-    repaired = repair_structured_section(repaired, section_contract)
-    issues = _section_rewrite_issues(repaired, section, section_contract)
-    section_report["issues"] = issues
-    section_report["raw_word_count"] = len(rewritten.split())
-    section_report["deterministic_word_count"] = len(section["markdown"].split())
-    if issues:
-        structured = _structured_section_fallback(section, section_contract)
-        if structured != section["markdown"] and not _section_rewrite_issues(structured, section, section_contract):
-            section_report["status"] = "accepted_structured_fallback"
-            section_report["accepted"] = True
-            section_report["structured_fallback"] = True
-            return {"section": clean_reader_memo_text(structured), "prompt": prompt, "raw": raw, "report": section_report}
-        section_report["status"] = "rejected_fallback"
-        return {"section": section["markdown"], "prompt": prompt, "raw": raw, "report": section_report}
-    section_report["status"] = "accepted_after_repair" if repaired != rewritten else "accepted"
-    section_report["accepted"] = True
-    return {"section": clean_reader_memo_text(repaired), "prompt": prompt, "raw": raw, "report": section_report}
+    attempt_result = run_section_model_attempts(
+        prompt=prompt, expected_title=section["title"], backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
+        validate=lambda rewritten: _validate_rewritten_section(rewritten, section, section_contract), run_backend=run_model_backend,
+    )
+    _apply_attempt_report(section_report, attempt_result, deterministic_text=section["markdown"])
+    if attempt_result["accepted"]:
+        return {"section": clean_reader_memo_text(str(attempt_result["section"])), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+    structured = _structured_section_fallback(section, section_contract)
+    if structured != section["markdown"] and not _section_rewrite_issues(structured, section, section_contract):
+        section_report.update({"status": "accepted_structured_fallback", "accepted": True, "structured_fallback": True})
+        return {"section": clean_reader_memo_text(structured), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+    section_report["status"] = "rejected_fallback"
+    return {"section": section["markdown"], "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
 
 
 def _rewrite_decision_brief_last(
@@ -198,31 +178,17 @@ def _rewrite_decision_brief_last(
         "required_crux_count": 0,
         "generated_last": True,
     }
-    try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-    except RuntimeError as exc:
-        section_report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
-        return {"section": fallback, "prompt": prompt, "raw": "", "report": section_report}
-    raw = result.text
-    if result.prompt_only:
-        section_report.update({"status": "prompt_backend_fallback", "issues": ["backend returned prompt only"]})
-        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
-    payload = _parse_section_payload(raw)
-    if not isinstance(payload, dict):
-        section_report.update({"status": "parse_failed_fallback", "issues": ["section response was not a JSON object"]})
-        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
-    rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
-    repaired = _repair_section(rewritten)
-    issues = _decision_brief_last_issues(repaired, contract, body_memo)
-    section_report["issues"] = issues
-    section_report["raw_word_count"] = len(rewritten.split())
-    section_report["deterministic_word_count"] = len(fallback.split())
-    if issues:
-        section_report["status"] = "rejected_final_brief_fallback"
-        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
-    section_report["status"] = "accepted_final_brief_after_repair" if repaired != rewritten else "accepted_final_brief"
-    section_report["accepted"] = True
-    return {"section": clean_reader_memo_text(repaired), "prompt": prompt, "raw": raw, "report": section_report}
+    attempt_result = run_section_model_attempts(
+        prompt=prompt, expected_title="Decision Brief", backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
+        validate=lambda rewritten: _validate_final_decision_brief(rewritten, contract, body_memo), run_backend=run_model_backend,
+    )
+    _apply_attempt_report(section_report, attempt_result, deterministic_text=fallback)
+    if attempt_result["accepted"]:
+        status = "accepted_final_brief_after_repair" if attempt_result["section"] != attempt_result["rewritten"] else "accepted_final_brief"
+        section_report["status"] = status
+        return {"section": clean_reader_memo_text(str(attempt_result["section"])), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+    section_report["status"] = "rejected_final_brief_fallback"
+    return {"section": fallback, "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
 
 
 def _decision_brief_last_prompt(contract: dict[str, Any], body_memo: str, fallback: str) -> str:
@@ -489,6 +455,7 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
         "Use the section synthesis packet as the primary structure: issue clusters, load-bearing claims, bridge claims, and tensions should become coherent prose.\n"
+        "When quantitative_anchors include key_quantities, use one relevant card-level estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
         "Preserve every required local evidence anchor, gap, confidence line, and crux item in the section contract.\n"
         "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
@@ -499,18 +466,6 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "Section to rewrite:\n"
         f"{section['markdown'].strip()}\n"
     )
-
-
-def _parse_section_payload(raw: str) -> dict[str, Any] | None:
-    try:
-        payload = json.loads(canonical_json_output(raw))
-    except json.JSONDecodeError:
-        return None
-    if isinstance(payload, dict) and (
-        isinstance(payload.get("section_markdown"), str) or isinstance(payload.get("memo_markdown"), str)
-    ):
-        return payload
-    return None
 
 
 def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: dict[str, Any]) -> list[str]:
@@ -546,6 +501,29 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
         issues.append("section rewrite is too short for its local contract")
     issues.extend(section_structure_issues(rewritten, contract))
     return issues
+
+
+def _validate_rewritten_section(rewritten: str, section: dict[str, str], contract: dict[str, Any]) -> tuple[str, list[str]]:
+    repaired = repair_structured_section(_repair_section(rewritten), contract)
+    return repaired, _section_rewrite_issues(repaired, section, contract)
+
+
+def _validate_final_decision_brief(rewritten: str, contract: dict[str, Any], body_memo: str) -> tuple[str, list[str]]:
+    repaired = _repair_section(rewritten)
+    return repaired, _decision_brief_last_issues(repaired, contract, body_memo)
+
+
+def _apply_attempt_report(report: dict[str, Any], result: dict[str, Any], *, deterministic_text: str) -> None:
+    report.update({
+        "status": result["status"],
+        "accepted": bool(result["accepted"]),
+        "issues": result["issues"],
+        "attempts": result["attempts"],
+        "attempt_count": result["attempt_count"],
+    })
+    if result.get("rewritten"):
+        report["raw_word_count"] = len(str(result["rewritten"]).split())
+        report["deterministic_word_count"] = len(deterministic_text.split())
 
 
 def _structured_section_fallback(section: dict[str, str], contract: dict[str, Any]) -> str:
@@ -634,6 +612,7 @@ def _section_synthesis_packet(title: str, full_contract: dict[str, Any]) -> dict
         "bridge_claims": _section_claims(title_key, graph_packet.get("bridge_claims", [])),
         "central_tensions": _section_tensions(title_key, graph_packet.get("central_tensions", [])),
         "decision_synthesis": _section_decision_synthesis(title_key, synthesis),
+        "quantitative_anchors": section_quantitative_anchors(title_key, scaffold),
         "style_instruction": _section_style_instruction(title_key),
     }
     return _drop_empty_packet_values(packet)

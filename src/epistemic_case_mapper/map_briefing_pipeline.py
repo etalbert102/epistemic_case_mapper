@@ -36,6 +36,7 @@ from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicali
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
+from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 
 ROLE_PRIORITY = {
@@ -383,6 +384,8 @@ def build_map_briefing_prompt(
             "- Use `proposition_clusters` to synthesize claim clusters into propositions; do not narrate isolated claim fragments when a cluster-level proposition exists.",
             "- Use `briefing_plan` as the prose outline: bottom line first, then weighted reasons, then counterposition, then scope/method limits.",
             "- Use `evidence_weighting_ledger`; lead with high/medium weight direct evidence and identify low-weight evidence as limited, indirect, deterministic backfill, or source-incomplete.",
+            "- Use `quantitative_evidence_cards` first, then `quantitative_anchors`, for quantitative depth: include only decision-relevant quantities such as effect sizes, intervals, p-values, sample sizes, thresholds, durations, and biomarker changes.",
+            "- Do not dump every extracted number into prose; the full `quantity_ledger` is an appendix artifact.",
             "- Apply `briefing_contract.overstatement_lint` before returning: soften any sentence that violates an active lint rule.",
             "- Use `section_policy` for the meanings of main_support, conflicting_evidence, scope_limits, and method_limits.",
             "- Do not put concern, counterposition, or scope-boundary evidence in main_support unless the section_policy explicitly says it supports the requested answer frame.",
@@ -447,6 +450,13 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "map_sufficiency_report": scaffold.get("map_sufficiency_report"),
         "briefing_plan": scaffold.get("briefing_plan"),
         "evidence_weighting_ledger": compact_ledger,
+        "quantitative_anchors": scaffold.get("quantitative_anchors", [])[:10],
+        "quantitative_evidence_cards": scaffold.get("quantitative_evidence_cards", [])[:10],
+        "quantity_ledger_summary": {
+            "quantity_count": scaffold.get("quantity_ledger", {}).get("quantity_count"),
+            "quantitative_card_count": scaffold.get("quantity_ledger", {}).get("quantitative_card_count"),
+            "type_counts": scaffold.get("quantity_ledger", {}).get("type_counts", {}),
+        },
         "evidence_roles_for_deterministic_attachment": scaffold.get("evidence_roles"),
         "crux_candidates": scaffold.get("crux_candidates"),
         "refined_cruxes": scaffold.get("refined_cruxes"),
@@ -525,6 +535,9 @@ def briefing_scaffold(
     vocabulary = _profile_vocabulary_for_map(candidate_map)
     contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
     evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
+    quantity_ledger = build_quantity_ledger(candidate_map, source_lookup, question=question)
+    quantitative_anchors = top_quantity_anchors(quantity_ledger)
+    quantitative_evidence_cards = quantity_ledger.get("evidence_cards", []) if isinstance(quantity_ledger.get("evidence_cards"), list) else []
     proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
     evidence_compression_table = build_evidence_compression_table(candidate_map, evidence_ledger, source_lookup)
     concept_evidence_packets = build_concept_evidence_packets(evidence_ledger)
@@ -556,6 +569,9 @@ def briefing_scaffold(
         "section_policy": section_policy_for_frame(decision_frame),
         "briefing_contract": contract,
         "evidence_weighting_ledger": evidence_ledger,
+        "quantity_ledger": quantity_ledger,
+        "quantitative_anchors": quantitative_anchors,
+        "quantitative_evidence_cards": quantitative_evidence_cards,
         "evidence_slot_ledger": build_evidence_slot_ledger(evidence_ledger),
         "proposition_clusters": proposition_clusters,
         "decision_model": decision_model,

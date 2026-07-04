@@ -10,9 +10,101 @@ from epistemic_case_mapper.map_briefing import (
     render_decision_model_brief,
 )
 from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
+from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
+from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
+from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
 from epistemic_case_mapper.map_briefing_section_rewrite import _default_answer_from_body, rewrite_reader_memo_by_section
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
+
+
+def test_section_parser_accepts_raw_markdown_section() -> None:
+    payload = parse_section_payload(
+        "## Why This Read\n\nThe section was returned directly as Markdown.",
+        expected_title="Why This Read",
+    )
+
+    assert payload == {
+        "section_markdown": "## Why This Read\n\nThe section was returned directly as Markdown."
+    }
+
+
+def test_section_parser_accepts_json_section_alias() -> None:
+    raw = '''```json
+{"action": "rewrite", "section": "## Practical Scope and Exceptions
+
+A scoped section.
+- A bullet with a literal newline."}
+```'''
+
+    payload = parse_section_payload(raw, expected_title="Practical Scope and Exceptions")
+
+    assert payload == {
+        "section_markdown": "## Practical Scope and Exceptions\n\nA scoped section.\n- A bullet with a literal newline."
+    }
+
+
+def test_section_model_attempts_retry_parse_failure() -> None:
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        calls.append(prompt)
+        if len(calls) == 1:
+            return ModelBackendResult(text="not a section", backend=backend)
+        return ModelBackendResult(text="## Why This Read\n\nValid section.", backend=backend)
+
+    result = run_section_model_attempts(
+        prompt="Base prompt",
+        expected_title="Why This Read",
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        validate=lambda text: (text, []),
+        run_backend=fake_backend,
+    )
+
+    assert result["accepted"] is True
+    assert result["attempt_count"] == 2
+    assert [attempt["status"] for attempt in result["attempts"]] == ["parse_failed", "accepted"]
+    assert "Previous attempt 1 was rejected" in calls[1]
+
+
+def test_section_model_attempts_retry_validation_failure() -> None:
+    calls = 0
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        nonlocal calls
+        calls += 1
+        text = "## Decision Cruxes\n\nBad section." if calls == 1 else "## Decision Cruxes\n\nGood section."
+        return ModelBackendResult(text=text, backend=backend)
+
+    def validate(text: str):
+        return text, ["missing crux"] if "Bad" in text else []
+
+    result = run_section_model_attempts(
+        prompt="Base prompt",
+        expected_title="Decision Cruxes",
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        validate=validate,
+        run_backend=fake_backend,
+    )
+
+    assert result["accepted"] is True
+    assert result["attempt_count"] == 2
+    assert result["attempts"][0]["issues"] == ["missing crux"]
+
+
+def test_required_evidence_can_match_strong_paraphrase_without_exact_source_title() -> None:
+    row = {
+        "claim": "High egg consumption was associated with a higher risk of cardiovascular disease in people with type 2 diabetes.",
+        "source": "A Very Long Source Title That Would Be Awkward In Scope Prose",
+        "anchor_terms": ["high", "consumption", "associated", "higher", "risk", "diabetes"],
+    }
+    text = "High egg consumption was associated with a higher risk of cardiovascular disease in people with type 2 diabetes."
+
+    assert _rewrite_mentions_anchor_row(text, row)
 
 
 def test_section_rewrite_accepts_valid_local_smoothing(monkeypatch) -> None:

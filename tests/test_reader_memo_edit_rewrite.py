@@ -252,9 +252,15 @@ def test_practical_items_are_reader_facing_and_conservative_about_boundaries() -
 
 
 def test_internal_phrase_cleanup_repairs_relative_pronoun_casing() -> None:
-    text = "The study enrolled participants WHO were free of the condition."
+    text = "The study enrolled participants WHO were free of the condition. People with a risk factor WHO should adjust. Those with a marker WHO may need caution. Those WHO do not qualify should wait."
 
-    assert _replace_internal_reader_phrases(text) == "The study enrolled participants who were free of the condition."
+    assert _replace_internal_reader_phrases(text) == "The study enrolled participants who were free of the condition. People with a risk factor who should adjust. Those with a marker who may need caution. Those who do not qualify should wait."
+
+
+def test_internal_phrase_cleanup_repairs_conversational_second_person() -> None:
+    text = "The source says you really cannot isolate one input from the larger bundle."
+
+    assert _replace_internal_reader_phrases(text) == "The source says it is difficult to isolate one input from the larger bundle."
 
 
 def _long_memo() -> str:

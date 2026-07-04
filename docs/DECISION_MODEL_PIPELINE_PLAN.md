@@ -1,264 +1,491 @@
-# Decision Model Pipeline Plan
+# Decision Model Pipeline Execution Plan
 
-Status: `vertical-slice-implemented`
+Status: `vertical-slice-implemented-needs-full-integration`
 
-Purpose: make the final decision-relevant brief a rendering of an explicit decision model, not a direct prose summary of the whole map. The pipeline should combine deterministic contracts, classical ML ranking/selection, and LLM semantic judgment behind Pydantic-validated model-output schemas.
+## Goal
 
-The plan should be implemented as a narrow vertical slice first. Do not add every layer before proving that the final brief improves.
+Make the prototype produce decision-support briefings that close the quality gap with strong Deep Research-style synthesis while preserving the mapper's core advantage: inspectable evidence structure, source anchoring, crux visibility, telemetry, and reusable documents-plus-question operation.
 
-## Design Principle
+The target end state is not "prettier prose." The target is a reusable pipeline where the final memo renders an explicit argument/decision model built from source-grounded map artifacts, quantitative anchors, relation structure, scope boundaries, and counterargument analysis.
 
-- Deterministic code owns schemas, routing, validation, invariants, artifact freshness, and accept/reject decisions.
-- Classical ML owns retrieval, ranking, clustering, graph coverage, near-duplicate detection, and anomaly signals.
-- LLMs own bounded semantic judgment and prose compression into explicit schemas.
-- Pydantic validates shape, not truth. Every schema field must either be source-grounded, deterministically checked, used downstream, or removed.
+## Current Gap
 
-## Success Criterion
+The latest eggs briefing reaches the right broad answer, but it still trails the Deep Research baseline as a standalone memo because:
 
-Before broad rollout, the vertical slice must pass this acceptance test:
+- the main prose underuses quantitative anchors that already exist in the appendix;
+- evidence weight is not explicit enough in the memo itself;
+- subgroup and dose boundaries are named but not synthesized as richly as the baseline;
+- relation-derived material can still read mechanically;
+- the memo structure is inspectable but not yet a coherent argument;
+- evaluation tells us the output is valid, but not always why it is weaker than a baseline.
 
-> On one existing realistic case and one unseen small case, the decision-model brief is better than the current map-briefing output on crux clarity, scope binding, and first-page readability, without increasing unsupported claims.
-
-Minimum evaluation artifacts:
-
-- current briefing output
-- decision-model briefing output
-- source-grounding/unsupported-claim check
-- crux clarity comparison
-- scope-binding comparison
-- first-page readability comparison
-
-If the decision-model path is not better, stop and revise the layer design before adding more subproblems.
-
-## Vertical Slice First
-
-Implement this first:
-
-1. Pydantic relation output schema.
-2. Compact decision model schema.
-3. Deterministic decision model builder from existing maps and relation contracts.
-4. Brief renderer that writes from the decision model.
-5. Before/after eval against the current map briefing.
-
-Defer decision-frame extraction and claim-function enrichment until this slice shows value.
-
-Implemented vertical-slice artifacts:
+Existing vertical-slice artifacts:
 
 - `src/epistemic_case_mapper/model_schemas.py`
 - `src/epistemic_case_mapper/decision_model_slice.py`
 - `tests/test_decision_model_vertical_slice.py`
 
-The slice validates relation outputs with Pydantic, builds a compact deterministic decision model from the existing map scaffold, renders a concise decision brief, and writes a before/after eval artifact. Broader decision-frame extraction, claim-function enrichment, relation critic passes, and full baseline comparisons remain future phases.
+The vertical slice proves that Pydantic schemas and a compact decision model can work. The remaining task is to integrate that approach into the full map-briefing pipeline and make the generated memo better than the current map briefing on real and unseen cases.
 
-## Phase 1: Pydantic Relation Schema
+## Non-Goals
 
-Add `src/epistemic_case_mapper/model_schemas.py`, starting with relation outputs only.
+- Do not add source retrieval or web search. Source collection is out of scope for this prototype.
+- Do not tune specifically for eggs, HEPA, COVID, LHC, or any other named case.
+- Do not hard-code domain vocabulary, source names, section labels, or case-specific thresholds into generic code paths.
+- Do not use deterministic cleanup to silently hide unsupported or weak model reasoning.
+- Do not replace the auditable appendix with a polished flat memo.
+- Do not broaden schemas unless each new field is validated, used downstream, or included in telemetry.
+- Do not make every expensive check part of the fast default gate.
 
-Schemas:
+## Design Principles
 
-- `RelationClassificationOutput`
-- `RelationContractOutput`
-- `RelationCriticOutput`
+- Deterministic code owns schemas, routing, validation, artifact assembly, exact inclusion of question/sources, source anchoring, quantitative extraction candidates, freshness checks, and accept/reject decisions.
+- Classical ML/statistical methods own retrieval within the provided corpus, clustering, ranking, centrality, near-duplicate detection, topic diversity, and coverage/anomaly signals.
+- LLMs own bounded semantic judgment: salience, relation/crux hypotheses, evidence-weight explanations, counterargument construction, section-level synthesis, and awkward-language edit suggestions.
+- Pydantic validates shape, not truth. Truth checks must be source-grounding, quantity, relation, and unsupported-claim gates.
+- The final memo must render an explicit intermediate model. The final prose must not be the only place where the reasoning exists.
+- Every improvement must produce an artifact, diagnostic, test, or before/after comparison.
+- If a change improves eggs but cannot explain how it transfers to an unseen document set and question, it is not complete.
 
-Helpers:
+## Inventory And Dependency Map
 
-- `parse_model_output(raw, schema)` using `canonical_json_output()`
-- structured validation errors
-- repair-friendly error summaries
+Before changing code in each slice, classify touched files as:
 
-Acceptance checks:
+- `keep`: current behavior remains valid;
+- `extend`: add fields or behavior without changing ownership;
+- `rewrite`: current ownership is wrong or too diffuse;
+- `defer`: valuable but not required for this plan;
+- `forbidden`: case-specific or unrelated to this plan.
 
-- malformed model JSON produces useful validation diagnostics
-- existing relation classification can be parsed through a Pydantic schema without losing current fields
-- relation contract fields are required only when `relation_type != "none"`
-- schema validation failures are written to relation rejection logs
+Current dependency order:
 
-## Phase 2: Compact Decision Model
+1. Shared schema and parsing utilities: `model_schemas.py`, model-output parse helpers, section parse helpers.
+2. Map and evidence artifacts: generated map, quality reports, prioritized map, relation contracts, quantity ledger, graph synthesis packet.
+3. Decision/argument model builder: compact model from map artifacts, quantities, relations, and scope packets.
+4. Section packet builder: section-specific evidence ownership and prompt inputs.
+5. Section synthesis and rewrite: model calls, retry behavior, structured edit suggestions, validation.
+6. Memo assembly and appendices: deterministic question, sources, quantities, evidence trail, telemetry.
+7. Evaluation and gates: before/after comparison, baseline comparison, unseen-case quality checks, maintainability tests.
 
-Build a deterministic decision model from existing map artifacts before adding new upstream extraction layers.
+Stop and update this plan if implementation creates an unexpected dependency cascade, such as synthesis code reaching into raw parser internals or source-specific prompt logic entering generic artifact assembly.
 
-Required slots:
+## Fact Ownership
 
-- answer frame
-- top support reasons, capped at 3
-- top counterevidence or tensions, capped at 3
-- top scope boundaries, capped at 3
-- top cruxes, capped at 3
-- confidence drivers, capped at 3
-- missing evidence, capped at 3
-- decision implications, capped at 3
+Important facts must have one owning layer:
 
-LLM may fill short explanatory fields, but deterministic code selects the slots from the current map, relation contracts, and quality reports.
+| Fact | Owner | Consumers | Forbidden re-derivation |
+|---|---|---|---|
+| Decision question | CLI/case manifest/run config | memo header, argument model, evals | inferring from generated prose |
+| Source titles and source IDs | source manifest/source display utilities | memo, appendix, validation | string cleanup from prose |
+| Claim identity and source anchors | map artifacts | relation builder, decision model, appendix | matching claim text only |
+| Relation identity/orientation | relation contracts/accepted relations | graph packet, crux builder, argument model | re-inferring relation direction in memo rewrite |
+| Quantity candidates | quantity ledger | quantitative anchors, appendix, section packets | freeform number extraction inside final rewrite |
+| Evidence weight | argument model | memo sections, telemetry, eval | burying weight only in prose |
+| Scope boundaries | scope-boundary packet/argument model | practical read, exceptions, cruxes | repeating generic caveats without claim IDs |
+| Unsupported-claim status | validation reports | accept/reject, final evidence packet | assuming accepted prose is safe |
 
-Artifact:
+Prefer stable IDs over text matching. If text matching is unavoidable, the implementation must explain why no stable identity exists and add a gate that catches mismatches.
 
-- `decision_model.json`
+## Execution Protocol
 
-Guardrails:
+Maintain a plan ledger while implementing. Each slice has one status:
 
-- cap all lists to avoid artifact bloat
-- preserve source IDs and claim/relation IDs in machine-readable fields
-- keep reader-facing prose separate from audit fields
-- mark missing required slots explicitly rather than fabricating content
+- `not started`
+- `in progress`
+- `blocked`
+- `complete`
 
-## Phase 3: Brief Rendering From Decision Model
+Only one slice should be `in progress` unless two slices have disjoint files and no dependency relationship.
 
-Render the final memo from:
+Each completed slice must record:
 
-- decision model
-- selected evidence packets
-- relation contracts
-- crux contracts
+- files changed;
+- files intentionally left behind;
+- tests/gates run;
+- result of each test/gate;
+- known residual risk;
+- commit SHA when the user asks to commit or when the slice is committed.
 
-LLM output schema:
+## Stop Conditions
 
-- executive answer
-- main reasons
-- crux table
-- uncertainty and scope section
-- action implications
-- audit appendix
+Stop implementation and report instead of continuing if:
 
-Deterministic checks:
+- targeted tests fail and the failure is not understood;
+- full `python3 -m pytest -q` fails for reasons related to this plan;
+- `scripts/maintainability_gate.py` or maintainability tests fail after this plan adds/changes a gate;
+- a model-output schema field is added but not used downstream;
+- source anchoring or unsupported-claim checks regress;
+- the final memo becomes more fluent but less faithful;
+- a broad new gate is noisy and lacks stable diagnostics;
+- a subsystem is partially integrated without a deferred-work entry.
 
-- all required cruxes surfaced
-- confidence visible
-- no unsupported source IDs
-- no missing high-weight evidence
-- reader burden within limits
+## Anti-Half-Done Rule
 
-Artifact:
+If a subsystem cannot be completed in its slice, choose exactly one:
 
-- `briefing_memo.md`
-- `briefing_validation_report.json`
+- finish it in the same slice;
+- remove the partial subsystem;
+- record it in `docs/DECISION_MODEL_DEFERRED.md` with owner, reason, missing work, risk, and next action.
 
-## Phase 4: Before/After Evaluation
+Do not leave vague TODOs as completion evidence.
 
-Compare:
+## Verification Tiers And Runtime Budgets
 
-- current map briefing
-- decision-model briefing
-- flat/deep-research baseline when available
+- Focused tests: run for the slice being changed; target under 30 seconds.
+- Fast default gate: `PYTHONPATH=src python3 -m pytest -q`; target under a few minutes.
+- Maintainability gate: existing maintainability tests and `scripts/maintainability_gate.py`; run when changing architecture, prompt inventories, or generic pipeline ownership.
+- Corpus/canary gate: eggs plus at least one unseen case; run after major synthesis changes.
+- Baseline comparison gate: eggs source-held comparison against the checked-in Deep Research baseline; run after memo-quality changes.
+- Deep/adversarial gate: larger chunk-budget or multi-backend runs; report-only unless the signal is stable.
 
-Evaluation dimensions:
+Do not promote a new broad quality gate to blocking until it has run report-only, existing findings are classified, and diagnostics point to an owning stage.
 
-- first-page answer clarity
-- crux clarity
-- scope binding
-- load-bearing evidence visibility
-- unsupported-claim count
-- reader burden
-- whether the added structure changed likely decision quality
+## Diagnostic Quality Standard
 
-Artifacts:
+New reports and gates should include:
 
-- `decision_model_eval.json`
-- `DECISION_MODEL_EVAL.md`
+- stable diagnostic code;
+- failure category;
+- owning stage/module;
+- source, claim, relation, section, or quantity IDs where applicable;
+- concise excerpt or evidence row;
+- artifact path;
+- fatal vs warning severity;
+- suggested next action.
 
-## Phase 5: Relation Development Extensions
+Opaque messages such as "brief is weak" or "rewrite failed" are not mature diagnostics.
 
-Extend the current relation pipeline.
+## Slices
 
-Classical ML proposes pairs using:
+### Slice 1: Argument Model Contract
 
-- TF-IDF semantic similarity
-- graph coverage and centrality
-- role-template compatibility
-- polarity and scope signals
-- source diversity
+Status: `not started`
 
-LLM classifies only selected candidates. Pydantic validates relation outputs. Deterministic code checks endpoints, relation type, confidence, anchors, orientation, and failure conditions.
+Purpose: create the intermediate argument model that the final memo renders.
 
-Add a relation critic pass for:
+Owns:
 
-- unsupported edge
-- wrong direction
-- overly generic label
-- missing sharper relation
-- missing relation for a high-priority claim
+- `src/epistemic_case_mapper/model_schemas.py`
+- new or existing argument/decision model module
+- tests for schema validation and artifact shape
 
-Artifacts:
+Must not touch:
 
-- `candidate_relation_pairs.json`
-- `accepted_relations.json`
-- `relation_critic_report.json`
-- `relation_coverage_report.json`
+- source retrieval;
+- case-specific docs or source text;
+- final prose prompts except to consume the model in later slices.
 
-## Phase 6: Decision Frame Layer
+Changes:
 
-Add this only after the compact decision-model slice improves briefs.
+- Define `argument_model.json` schema with:
+  - decision question;
+  - answer;
+  - confidence and confidence reasons;
+  - strongest support;
+  - strongest counterargument;
+  - evidence weights and evidence types;
+  - quantitative anchors;
+  - scope boundaries;
+  - subgroup/context exceptions;
+  - cruxes;
+  - missing evidence;
+  - known failure modes.
+- Require source/claim/relation/quantity IDs where available.
+- Validate missing slots explicitly instead of fabricating content.
 
-LLM proposes:
+Verification:
 
-- decision-maker
-- options being compared
-- outcome criteria
-- time horizon
-- risk tolerance or confidence need
-- action context
-- what counts as decision-relevant evidence
+- focused schema tests;
+- malformed JSON and missing-field diagnostics;
+- no schema fields unused by downstream tests or marked as intentionally future-use.
 
-Deterministic fallback frame should be built from the user question and manifest if model output is weak. Store `frame_confidence` and `ambiguous_frame_items`.
+Done when:
 
-Artifact:
+- `argument_model.json` can be built for an existing realistic run;
+- every field has an owner and consumer;
+- focused tests pass.
 
-- `decision_frame.json`
+### Slice 2: Evidence Weighting And Quantity Promotion
 
-## Phase 7: Claim Function Layer
+Status: `not started`
 
-Add this only if evaluation shows the decision model needs more precise claim roles.
+Purpose: make the main memo use the evidence and numbers that are already load-bearing.
 
-Start with four fields:
+Owns:
 
-- `function`
-- `direction`
-- `evidence_type`
-- `decision_relevance`
+- quantity ledger selection code;
+- evidence-weighting builder;
+- tests for quantitative anchor selection.
 
-Avoid taxonomy bloat. Add fields only when evals show value.
+Changes:
 
-Artifact:
+- Tag evidence by type: RCT, cohort, meta-analysis, guideline, mechanism, expert argument, source packet summary, or other.
+- Tag endpoint type: hard outcome, biomarker, surrogate, mechanism, implementation, or context.
+- Score directness, population match, dose/exposure match, sample size/scale, replication breadth, and limitation severity.
+- Select main-memo quantitative anchors:
+  - largest relevant sample sizes;
+  - central effect estimates;
+  - confidence intervals;
+  - dose thresholds;
+  - subgroup estimates;
+  - duration/follow-up windows;
+  - key null and key adverse estimates.
+- Record why each promoted quantity was selected or rejected.
 
-- `claim_function_report.json`
+Verification:
 
-## Phase 8: Broader Quality Evaluation
+- eggs run promotes the central BMJ/meta-analysis quantities and diabetes/subgroup quantities when present;
+- unseen case promotes relevant quantities without food/nutrition-specific logic;
+- quantity appendix remains auditable.
 
-Add tests and evals for each layer:
+Done when:
 
-- schema parse failure tests
-- decision-frame completeness tests
-- claim-function coverage tests
-- relation coverage tests
-- decision-model slot coverage tests
-- final memo readability and coverage tests
-- baseline comparison tests
+- main memo packets include quantitative anchors with IDs and source paths;
+- rejected quantities have reasons;
+- tests prove selection is domain-neutral.
 
-Metrics:
+### Slice 3: Scope Boundary And Counterargument Packets
 
-- percent of high-priority claims connected by relations
-- percent of scope claims bound to target claims
-- unsupported relation-contract count
-- crux coverage in final memo
-- missing-evidence visibility
-- brief length and table burden
-- baseline-preserved distinctions recovered by the prototype
+Status: `not started`
 
-## Implementation Order
+Purpose: improve subgroup, dose, comparator, and "best case against" handling.
 
-1. Add Pydantic relation output schemas and parser helper.
-2. Build compact deterministic `decision_model.json` from current map artifacts.
-3. Render a brief from `decision_model.json`.
-4. Run before/after eval against the current briefing path.
-5. Add relation critic only for narrow checks: orientation, unsupported anchors, generic labels, missing scope binding.
-6. Add `decision_frame.json` only if evals show decision framing errors.
-7. Add claim-function enrichment only if evals show role taxonomy is too coarse.
-8. Add broader quality gates and comparison evals.
+Owns:
 
-## Risk Notes
+- scope-boundary extraction/selection;
+- counterargument packet builder;
+- crux packet builder.
 
-- Do not let schemas become decorative. Every model-output schema should be used by a parser or gate.
-- Keep deterministic repair bounded; it should mark uncertainty and review needs, not silently upgrade weak model outputs.
-- Classical ML should improve retrieval and prioritization, not replace semantic judgment.
-- LLM prompts should fill slots in existing contracts, not invent new workflow structure.
-- Avoid long intermediate artifacts. The decision model should force prioritization, not preserve every map detail.
-- Stop implementation if before/after evals show worse readability or no decision-support gain.
+Changes:
+
+- Build scope packets for:
+  - default population;
+  - caution/excluded populations;
+  - dose or intensity boundaries;
+  - comparator/substitution context;
+  - geography/setting differences;
+  - endpoint differences;
+  - time-horizon limits.
+- Build counterargument packets:
+  - strongest case for the answer;
+  - strongest case against or limiting the answer;
+  - what each side explains well;
+  - what each side fails to explain;
+  - what evidence would flip the answer.
+
+Verification:
+
+- before/after comparison shows clearer subgroup boundaries on eggs;
+- unseen case has non-empty scope packets when source evidence supports them;
+- no generic caveat is emitted without evidence ownership.
+
+Done when:
+
+- argument model includes scope and counterargument packets;
+- memo sections consume them without duplicating the same evidence everywhere.
+
+### Slice 4: Section-Specific Synthesis Packets
+
+Status: `not started`
+
+Purpose: reduce repetition and make each section do distinct work.
+
+Owns:
+
+- section packet builder;
+- memo slot ownership;
+- section rewrite inputs.
+
+Changes:
+
+- Generate section-specific packets:
+  - decision answer;
+  - practical recommendation;
+  - evidence for;
+  - evidence against/tensions;
+  - evidence weighting;
+  - scope and exceptions;
+  - cruxes;
+  - limits;
+  - source trail.
+- Assign evidence ownership so high-weight claims do not recur without purpose.
+- Add telemetry for appendix-to-main-memo leakage and repetition.
+
+Verification:
+
+- section rewrite report shows distinct evidence ownership;
+- repetition count decreases or is explicitly justified;
+- final memo still contains the decision question and source list deterministically.
+
+Done when:
+
+- section packets are visible artifacts;
+- the memo can be regenerated from packets plus deterministic assembly.
+
+### Slice 5: Coherence-Edit JSON Instead Of Whole-Memo Rewrite
+
+Status: `not started`
+
+Purpose: improve readability without letting a model rewrite away source grounding.
+
+Owns:
+
+- reader polish prompt;
+- structured edit schema;
+- edit application and validation.
+
+Changes:
+
+- Ask the model for JSON edit suggestions where language is awkward, transitions are missing, or paragraphs fail to answer the decision question.
+- Apply only local edits that preserve source anchors, quantities, section roles, and unsupported-claim checks.
+- Retry invalid JSON up to the configured attempt limit.
+- Reject edits that remove required anchors or weaken caveats.
+
+Verification:
+
+- invalid edit JSON gets useful diagnostics and retry behavior;
+- accepted edits preserve source/quantity anchors;
+- readability improves in before/after eval without unsupported-claim regression.
+
+Done when:
+
+- whole-memo rewrite is not required for normal path polish;
+- edit rejections explain the owning failure stage.
+
+### Slice 6: Baseline And Product-Quality Telemetry
+
+Status: `not started`
+
+Purpose: measure whether the changes close the Deep Research gap, not just whether the pipeline runs.
+
+Owns:
+
+- comparison reports;
+- telemetry aggregation;
+- quality review packets.
+
+Changes:
+
+- Add comparison telemetry for:
+  - answer correctness;
+  - decision usefulness;
+  - evidence coverage;
+  - quantitative depth;
+  - subgroup/scope handling;
+  - crux quality;
+  - readability;
+  - source transparency;
+  - unsupported claims;
+  - repeated claims;
+  - appendix-to-main-output leakage.
+- Produce a `FINAL_REVIEW_PACKET.md` for major runs with artifact paths, commands, results, and residual risks.
+
+Verification:
+
+- run eggs against the checked-in Deep Research baseline;
+- run one unseen case;
+- telemetry points to the next intervention rather than only reporting a score.
+
+Done when:
+
+- a reviewer can tell what improved, what regressed, and what remains weaker than baseline.
+
+### Slice 7: Integration Into Full Pipeline
+
+Status: `not started`
+
+Purpose: make the argument-model path the normal high-quality path without breaking existing CLI behavior.
+
+Owns:
+
+- `map_briefing_pipeline.py`;
+- CLI plumbing if needed;
+- artifact summary wiring;
+- documentation.
+
+Changes:
+
+- Add a feature flag or config path for argument-model-backed briefing.
+- Preserve current path until comparison shows the new path is better.
+- Include argument model, section packets, quantity anchors, telemetry, and final review packet in `briefing_summary.json`.
+- Update docs for documents-plus-question usage.
+
+Verification:
+
+- existing tests pass;
+- current CLI still works;
+- argument-model path runs on eggs and one unseen case;
+- generated artifacts are discoverable from summary JSON.
+
+Done when:
+
+- the full realistic pipeline can go from documents plus question to a briefing using the argument model;
+- fallback path and removal criteria are documented.
+
+## Acceptance Criteria
+
+The plan is complete only when all of these are true:
+
+- The full pipeline emits `argument_model.json`, section packets, quantity anchors, memo, appendix, telemetry, and final review packet.
+- The main memo includes the decision question and sources deterministically.
+- The memo uses promoted quantitative anchors in the main prose, not only the appendix.
+- Scope boundaries and counterarguments are explicit and evidence-owned.
+- Before/after eval shows the argument-model memo beats the current map-briefing output on crux clarity, scope binding, first-page readability, and quantitative depth without increasing unsupported claims.
+- Eggs comparison against the checked-in Deep Research baseline shows a narrowed gap, with remaining gaps named specifically.
+- At least one unseen case run shows the improvements are not case-specific.
+- `PYTHONPATH=src python3 -m pytest -q` passes.
+- Any added maintainability or quality gate has calibrated diagnostics and is either report-only or justified as blocking.
+
+## Red-Team Checks
+
+- Does the memo become smoother by hiding uncertainty or weakening caveats?
+- Are quantitative anchors selected because they matter, or because they are easy to parse?
+- Do scope boundaries rely on domain words from the eggs case?
+- Can a new document set with no nutrition vocabulary still produce useful scope and counterargument packets?
+- Does every model-generated field have source IDs or a clear reason why it is interpretive?
+- Are final prose edits local and auditable, or are they effectively an uncontrolled rewrite?
+- Does telemetry identify an owning stage for failures?
+
+## Generalizability Checks
+
+Run at least:
+
+- eggs / dietary cholesterol source-held comparison;
+- HEPA or another practical intervention question;
+- one unseen policy/technical decision case with different source shape;
+- one case with sparse quantities to ensure quantity promotion degrades gracefully;
+- one case with conflicting expert arguments to test counterargument packets.
+
+The implementation is overfit if:
+
+- generic code names egg, cholesterol, HEPA, COVID, LHC, or other case-specific concepts;
+- prompts assume biomedical evidence types without fallback evidence categories;
+- success criteria only mention eggs;
+- section packet selection depends on fixed source titles;
+- validation cannot run on an unseen case.
+
+## Deferred Work Policy
+
+Use `docs/DECISION_MODEL_DEFERRED.md` for anything intentionally left out. Each entry must include:
+
+- owner stage;
+- reason deferred;
+- missing work;
+- risk if ignored;
+- next action;
+- whether it blocks the acceptance criteria.
+
+## Final Evidence Packet
+
+Before declaring this plan complete, produce:
+
+- `docs/DECISION_MODEL_COMPLETION_AUDIT.md`
+- latest eggs run path;
+- latest unseen run path;
+- comparison against current map briefing;
+- comparison against Deep Research baseline;
+- tests and commands run;
+- known limitations;
+- deferred items;
+- remaining baseline advantages;
+- recommendation on whether to make the argument-model path default.

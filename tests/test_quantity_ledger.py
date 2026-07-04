@@ -1,0 +1,155 @@
+from __future__ import annotations
+
+from epistemic_case_mapper.map_briefing import briefing_scaffold, compose_final_reader_memo_package
+from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, quantity_ledger_markdown, top_quantity_anchors
+
+
+def test_quantity_ledger_extracts_effect_sizes_intervals_and_thresholds() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "A meta-analysis found RR = 0.98 (95% CI 0.93-1.03) for one serving per day.",
+                "excerpt": "The analysis included 1,720,108 participants and 139,195 events over 17.5 years.",
+                "source_id": "source_a",
+                "role": "crux",
+            }
+        ],
+        "relations": [],
+    }
+
+    ledger = build_quantity_ledger(candidate_map, {"source_a": "Source A"}, question="Should the intervention affect risk?")
+
+    quantity_text = " ".join(row["quantity_text"] for row in ledger["quantities"])
+    types = {row["quantity_type"] for row in ledger["quantities"]}
+    assert "RR = 0.98" in quantity_text
+    assert "95% CI 0.93-1.03" in quantity_text
+    assert "1,720,108 participants" in quantity_text
+    assert "effect_size" in types
+    assert "confidence_interval" in types
+    assert "sample_size" in types
+    assert ledger["top_quantitative_anchors"]
+    assert ledger["evidence_cards"]
+    assert ledger["evidence_cards"][0]["key_quantities"]
+
+
+def test_quantity_ledger_markdown_renders_auditable_table() -> None:
+    ledger = {
+        "quantities": [
+            {
+                "quantity_text": "RR 1.04",
+                "quantity_type": "effect_size",
+                "source": "Source A",
+                "context_window": "Risk was RR 1.04 in the cohort.",
+            }
+        ],
+        "evidence_cards": [
+            {
+                "evidence_use": "outcome estimate",
+                "key_quantities": ["RR 1.04", "95% CI 1.00-1.08"],
+                "source": "Source A",
+                "interpretation_hint": "RR 1.04 with 95% CI 1.00-1.08; interval includes the usual null value, so treat as uncertain.",
+            }
+        ],
+    }
+
+    markdown = "\n".join(quantity_ledger_markdown(ledger))
+
+    assert "## Quantitative Evidence Ledger" in markdown
+    assert "### Quantitative Evidence Cards" in markdown
+    assert "### Raw Extracted Quantities" in markdown
+    assert "RR 1.04" in markdown
+    assert "effect size" in markdown
+
+
+def test_quantity_cards_pair_effect_interval_and_scale() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03 for one serving per day.",
+                "excerpt": "Before the estimate, unrelated text ends. The analysis included 1,720,108 participants and 139,195 events. The pooled estimate was RR 0.98 with 95% CI 0.93 to 1.03 for one serving per day.",
+                "source_id": "source_a",
+                "role": "crux",
+            }
+        ],
+        "relations": [],
+    }
+
+    ledger = build_quantity_ledger(candidate_map, {"source_a": "Source A"}, question="Should it affect risk?")
+    card = ledger["evidence_cards"][0]
+
+    assert card["evidence_use"] in {"outcome estimate", "study scale or follow-up context"}
+    assert "RR 0.98" in card["key_quantities"]
+    assert "95% CI 0.93 to 1.03" in card["key_quantities"]
+    assert "interval includes the usual null value" in card["interpretation_hint"]
+    assert not any(str(row["context_window"]).startswith("efore") for row in ledger["quantities"])
+
+
+def test_top_quantity_anchors_preserve_rank_with_claim_diversity() -> None:
+    rows = [
+        {
+            "quantity_text": "RR 0.98",
+            "quantity_type": "effect_size",
+            "source": "Source A",
+            "claim_id": "a",
+            "relevance_score": 22,
+        },
+        {
+            "quantity_text": "RR 1.04",
+            "quantity_type": "effect_size",
+            "source": "Source B",
+            "claim_id": "b",
+            "relevance_score": 22,
+        },
+        {
+            "quantity_text": "RR 1.08",
+            "quantity_type": "effect_size",
+            "source": "Source B",
+            "claim_id": "b",
+            "relevance_score": 22,
+        },
+        {
+            "quantity_text": "RR 1.05",
+            "quantity_type": "effect_size",
+            "source": "Source B",
+            "claim_id": "b",
+            "relevance_score": 22,
+        },
+    ]
+
+    anchors = top_quantity_anchors(rows, limit=3)
+
+    assert [row["quantity_text"] for row in anchors] == ["RR 0.98", "RR 1.04", "RR 1.08"]
+
+
+def test_briefing_scaffold_exposes_quantitative_anchors_in_appendix() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The intervention was associated with lower risk (RR 0.82, 95% CI 0.70-0.96).",
+                "excerpt": "The cohort included 12,400 participants over 4 years.",
+                "source_id": "source_a",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 85, "issues": []},
+        {"source_a": "Source A"},
+        {"items": []},
+        question="Should the intervention be used to reduce risk?",
+    )
+    package = compose_final_reader_memo_package("## Decision Brief\n\nA decision.", scaffold)
+
+    assert scaffold["quantity_ledger"]["quantity_count"] >= 3
+    assert scaffold["quantity_ledger"]["quantitative_card_count"] >= 1
+    assert scaffold["quantitative_evidence_cards"]
+    assert scaffold["quantitative_anchors"]
+    assert "## Quantitative Evidence Ledger" in package["appendix"]
+    assert "### Quantitative Evidence Cards" in package["appendix"]
+    assert "RR 0.82" in package["appendix"]

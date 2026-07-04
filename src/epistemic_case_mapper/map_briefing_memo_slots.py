@@ -368,7 +368,10 @@ def _rewrite_mentions_anchor_row(text: str, row: dict[str, Any]) -> bool:
         return source_ok
     hits = sum(1 for term in terms if term.lower() in lowered)
     required = 1 if len(terms) <= 2 else 2
-    return source_ok and hits >= required
+    if source_ok and hits >= required:
+        return True
+    strong_required = min(len(terms), max(required + 2, (len(terms) + 1) // 2))
+    return hits >= strong_required
 
 def _is_synthetic_rewrite_source(source: str) -> bool:
     return source in {"structured option comparison"}

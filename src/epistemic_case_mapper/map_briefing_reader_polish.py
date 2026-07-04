@@ -25,6 +25,7 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
+from epistemic_case_mapper.map_briefing_quantities import quantity_ledger_markdown
 from epistemic_case_mapper.map_briefing_section_structure import filter_primary_practical_actions
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
@@ -345,6 +346,10 @@ def _build_final_evidence_appendix(rendered: str, scaffold: dict[str, Any]) -> s
     coverage = _markdown_section_with_heading(rendered, "Map Coverage Snapshot")
     if coverage:
         lines.extend([coverage, ""])
+    quantity_ledger = scaffold.get("quantity_ledger", {}) if isinstance(scaffold.get("quantity_ledger"), dict) else {}
+    if quantity_ledger:
+        lines.extend(quantity_ledger_markdown(quantity_ledger))
+        lines.append("")
     lines.extend(_excluded_artifacts_section(curated))
     return "\n".join(lines).strip()
 

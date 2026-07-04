@@ -775,7 +775,7 @@ def test_rewrite_accepts_synthetic_option_comparison_without_internal_source_lab
     assert _rewrite_mentions_anchor_row(rewrite, row)
 
 
-def test_rewrite_still_requires_real_source_labels_for_source_backed_rows() -> None:
+def test_rewrite_accepts_strong_source_backed_paraphrase_without_exact_source_label() -> None:
     row = {
         "slot": "Main support",
         "claim": "Option alpha reduced failures by 34% in the evaluation.",
@@ -783,7 +783,8 @@ def test_rewrite_still_requires_real_source_labels_for_source_backed_rows() -> N
         "anchor_terms": ["34", "option", "alpha", "reduced", "failures"],
     }
 
-    assert not _rewrite_mentions_anchor_row("Option alpha reduced failures by 34%.", row)
+    assert not _rewrite_mentions_anchor_row("Option alpha improved results.", row)
+    assert _rewrite_mentions_anchor_row("Option alpha reduced failures by 34%.", row)
     assert _rewrite_mentions_anchor_row("Option alpha reduced failures by 34% (Evaluation Report).", row)
 
 
