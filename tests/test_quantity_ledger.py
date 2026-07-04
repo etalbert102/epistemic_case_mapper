@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from epistemic_case_mapper.map_briefing import briefing_scaffold, compose_final_reader_memo_package
+from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, quantity_ledger_markdown, top_quantity_anchors
 
 
@@ -153,3 +156,39 @@ def test_briefing_scaffold_exposes_quantitative_anchors_in_appendix() -> None:
     assert "## Quantitative Evidence Ledger" in package["appendix"]
     assert "### Quantitative Evidence Cards" in package["appendix"]
     assert "RR 0.82" in package["appendix"]
+
+
+def test_scaffold_artifacts_write_argument_model(tmp_path) -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The intervention was associated with lower risk (RR 0.82, 95% CI 0.70-0.96).",
+                "excerpt": "The cohort included 12,400 participants over 4 years.",
+                "source_id": "source_a",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 85, "issues": []},
+        {"source_a": "Source A"},
+        {"items": []},
+        question="Should the intervention be used to reduce risk?",
+    )
+
+    paths = write_scaffold_artifacts(
+        artifacts=tmp_path,
+        prompt="prompt",
+        prioritized_map=candidate_map,
+        prioritization_report={"changed": False},
+        erosion_audit={"items": []},
+        scaffold=scaffold,
+    )
+
+    argument_model = json.loads(paths["argument_model"].read_text(encoding="utf-8"))
+    assert argument_model["schema_id"] == "argument_model_v1"
+    assert argument_model["decision_question"] == "Should the intervention be used to reduce risk?"
+    assert argument_model["strongest_support"]

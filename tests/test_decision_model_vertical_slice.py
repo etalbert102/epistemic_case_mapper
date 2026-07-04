@@ -7,12 +7,15 @@ import pytest
 from pydantic import ValidationError
 
 from epistemic_case_mapper.map_briefing import (
+    build_argument_model,
     build_compact_decision_model,
+    briefing_scaffold,
     evaluate_decision_model_brief,
     render_decision_model_brief,
     run_decision_model_slice,
 )
 from epistemic_case_mapper.model_schemas import (
+    ArgumentModelOutput,
     CompactDecisionModelOutput,
     RelationClassificationOutput,
     parse_model_output,
@@ -75,6 +78,33 @@ def test_compact_decision_model_caps_slots_and_preserves_anchors() -> None:
     assert validated.top_support[0].claim_ids
     assert validated.top_cruxes[0].relation_ids == ["r001"]
     assert validated.audit["claim_count"] == 6
+
+
+def test_argument_model_preserves_load_bearing_anchors_and_quantities() -> None:
+    candidate_map = _arbitrary_candidate_map()
+    source_lookup = {"audit": "Permit Office Audit", "survey": "Applicant Survey", "security": "Security Review"}
+    scaffold = briefing_scaffold(
+        candidate_map,
+        _quality_report(),
+        source_lookup,
+        {"items": []},
+        question="Should the city pilot remote permitting for small building projects?",
+    )
+
+    model = build_argument_model(
+        candidate_map,
+        _quality_report(),
+        scaffold,
+        question="Should the city pilot remote permitting for small building projects?",
+    )
+
+    validated = ArgumentModelOutput.model_validate(model)
+    assert validated.decision_question.startswith("Should the city")
+    assert validated.strongest_support
+    assert validated.scope_boundaries
+    assert validated.cruxes[0].relation_ids == ["r001"]
+    assert all(item.claim_ids or item.source_ids or item.relation_ids or item.quantity_ids for item in validated.strongest_support)
+    assert validated.audit["method"] == "deterministic_argument_model_from_briefing_scaffold_v1"
 
 
 def test_decision_model_brief_improves_crux_scope_visibility_without_unanchored_evidence() -> None:

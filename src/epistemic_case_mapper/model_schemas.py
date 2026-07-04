@@ -99,6 +99,55 @@ class CompactDecisionModelOutput(BaseModel):
     audit: dict[str, Any] = Field(default_factory=dict)
 
 
+class ArgumentEvidenceItem(BaseModel):
+    statement: str = Field(min_length=3)
+    why_it_matters: str = ""
+    evidence_type: str = "unspecified"
+    endpoint_type: str = "unspecified"
+    weight: Confidence = "medium"
+    source_ids: list[str] = Field(default_factory=list, max_length=10)
+    claim_ids: list[str] = Field(default_factory=list, max_length=10)
+    relation_ids: list[str] = Field(default_factory=list, max_length=10)
+    quantity_ids: list[str] = Field(default_factory=list, max_length=10)
+    quantities: list[str] = Field(default_factory=list, max_length=10)
+    limitations: list[str] = Field(default_factory=list, max_length=5)
+
+
+class ArgumentModelOutput(BaseModel):
+    schema_id: Literal["argument_model_v1"] = "argument_model_v1"
+    decision_question: str = Field(min_length=8)
+    proposed_answer: str = Field(min_length=8)
+    confidence: Confidence = "medium"
+    confidence_reasons: list[str] = Field(default_factory=list, max_length=5)
+    strongest_support: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=5)
+    strongest_counterarguments: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=5)
+    evidence_weights: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=8)
+    quantitative_anchors: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=8)
+    scope_boundaries: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=8)
+    cruxes: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=8)
+    missing_evidence: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=6)
+    known_failure_modes: list[ArgumentEvidenceItem] = Field(default_factory=list, max_length=6)
+    audit: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def require_anchor_for_load_bearing_items(self) -> "ArgumentModelOutput":
+        load_bearing = [
+            *self.strongest_support,
+            *self.strongest_counterarguments,
+            *self.quantitative_anchors,
+            *self.scope_boundaries,
+            *self.cruxes,
+        ]
+        unanchored = [
+            item.statement
+            for item in load_bearing
+            if not (item.source_ids or item.claim_ids or item.relation_ids or item.quantity_ids)
+        ]
+        if unanchored:
+            raise ValueError("load-bearing argument items missing anchors: " + "; ".join(unanchored[:3]))
+        return self
+
+
 class DecisionCrux(BaseModel):
     crux: str = Field(min_length=12)
     uncertainty: str = Field(min_length=12)

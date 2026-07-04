@@ -23,6 +23,7 @@ def write_scaffold_artifacts(
         "erosion_audit": artifacts / "generated_map_erosion_audit.json",
         "sufficiency_report": artifacts / "map_sufficiency_report.json",
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
+        "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
     }
@@ -32,6 +33,7 @@ def write_scaffold_artifacts(
     write_json(paths["erosion_audit"], erosion_audit)
     write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
+    write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     return paths
@@ -133,6 +135,7 @@ def write_run_summary(
             "generated_map_erosion_audit": scaffold_paths["erosion_audit"],
             "map_sufficiency_report": scaffold_paths["sufficiency_report"],
             "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
+            "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
             **telemetry_paths,
@@ -214,6 +217,7 @@ def map_briefing_summary_payload(
     graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
     graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
     canonicalization = scaffold.get("claim_canonicalization_report", {}) if isinstance(scaffold.get("claim_canonicalization_report"), dict) else {}
+    argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
         "backend": result_backend,
@@ -248,6 +252,11 @@ def map_briefing_summary_payload(
         "decision_synthesis_evidence_line_count": len(decision_synthesis_model.get("evidence_lines", [])),
         "decision_synthesis_tension_count": len(decision_synthesis_model.get("central_tensions", [])),
         "decision_synthesis_recommendation_count": len(decision_synthesis_model.get("recommendations", [])),
+        "argument_support_count": len(argument_model.get("strongest_support", [])) if isinstance(argument_model.get("strongest_support"), list) else 0,
+        "argument_counterargument_count": len(argument_model.get("strongest_counterarguments", [])) if isinstance(argument_model.get("strongest_counterarguments"), list) else 0,
+        "argument_quantitative_anchor_count": len(argument_model.get("quantitative_anchors", [])) if isinstance(argument_model.get("quantitative_anchors"), list) else 0,
+        "argument_scope_boundary_count": len(argument_model.get("scope_boundaries", [])) if isinstance(argument_model.get("scope_boundaries"), list) else 0,
+        "argument_crux_count": len(argument_model.get("cruxes", [])) if isinstance(argument_model.get("cruxes"), list) else 0,
         "graph_issue_cluster_count": graph_summary.get("issue_cluster_count"),
         "graph_tension_edge_count": graph_summary.get("tension_edge_count"),
         "graph_load_bearing_claim_count": len(graph_packet.get("load_bearing_claims", [])),

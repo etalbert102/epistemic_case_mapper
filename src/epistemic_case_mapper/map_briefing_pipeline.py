@@ -32,6 +32,7 @@ from epistemic_case_mapper.decision_frame import (
     refine_crux_contract,
 )
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_run_summary, write_scaffold_artifacts
+from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
 from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
@@ -376,6 +377,7 @@ def build_map_briefing_prompt(
             "- Each main section should correspond to a graph issue cluster or a cross-cluster tension; do not merely list isolated claims.",
             "- Use graph orphan claims only as caveats or appendix material unless they are high-weight scope boundaries.",
             "- Use `decision_synthesis_model` as the controlling decision-support structure: preserve its evidence lines, central tensions, scope boundaries, exceptions, recommendations, and cruxes.",
+            "- Use `argument_model` to decide which support, counterarguments, scope boundaries, cruxes, quantities, and known failure modes are load-bearing for the memo.",
             "- Treat `map_sufficiency_report.output_obligations` as the prose contract: satisfy present-slot obligations and explicitly acknowledge decision-relevant missing slots.",
             "- If `map_sufficiency_report.status` is limited or thin, make that limitation visible in caveats or audit trail.",
             "- Use `evidence_compression_table` as the main source for compact synthesis; it is already filtered for decision relevance and noise.",
@@ -445,6 +447,7 @@ def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
         "decision_model": compact_decision_model,
         "graph_synthesis_packet": scaffold.get("graph_synthesis_packet"),
         "decision_synthesis_model": scaffold.get("decision_synthesis_model"),
+        "argument_model": scaffold.get("argument_model"),
         "evidence_compression_table": scaffold.get("evidence_compression_table"),
         "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
         "map_sufficiency_report": scaffold.get("map_sufficiency_report"),
@@ -595,6 +598,7 @@ def briefing_scaffold(
         ][:8],
     }
     scaffold["decision_synthesis_model"] = build_decision_synthesis_model(scaffold)
+    scaffold["argument_model"] = build_argument_model(candidate_map, quality_report, scaffold, question=question)
     return _expand_payload_reader_references(scaffold, candidate_map)
 
 def deterministic_briefing_payload(
