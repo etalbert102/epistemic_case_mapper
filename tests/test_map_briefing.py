@@ -549,6 +549,7 @@ def test_reader_memo_metadata_applies_final_internal_phrase_cleanup() -> None:
 
 Participants WHO were enrolled met the scope condition.
 Participants from three cohorts WHO were eligible also met the scope condition.
+The study population from three cohorts WHO were eligible also met the scope condition.
 
 **Confidence:** medium
 
@@ -562,6 +563,7 @@ Trailing escaped newline.\\n
 
     assert "Participants who were enrolled" in updated
     assert "Participants from three cohorts who were eligible" in updated
+    assert "population from three cohorts who were eligible" in updated
     assert "WHO were" not in updated
     assert "\\n" not in updated
     assert "Second limit." in updated

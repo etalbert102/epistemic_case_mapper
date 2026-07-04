@@ -305,6 +305,7 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["briefing_validation_status"] == validation["status"]
     assert telemetry["schema_id"] == "map_briefing_gap_telemetry_v1"
     assert telemetry["baseline_gap_attribution"]["baseline_available"] is True
+    assert "crux_quality" in telemetry["relation_quality"]
     assert telemetry["largest_gap_drivers"]
     assert any("PROSPERITY" in term for term in telemetry["baseline_gap_attribution"]["salient_baseline_terms_absent"])
 

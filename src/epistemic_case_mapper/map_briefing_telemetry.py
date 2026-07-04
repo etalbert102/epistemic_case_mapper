@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_crux_telemetry import build_crux_quality_telemetry
 
 
 def write_gap_telemetry(
@@ -65,7 +66,7 @@ def build_gap_diagnosis(
 ) -> dict[str, Any]:
     source_coverage = _source_coverage(candidate_map, prioritized_map, scaffold, briefing_text, baseline_text)
     extraction_quality = _extraction_quality(candidate_map, prioritized_map, scaffold, prioritization_report)
-    relation_quality = _relation_quality(candidate_map, prioritized_map, quality_report)
+    relation_quality = _relation_quality(candidate_map, prioritized_map, quality_report, scaffold, briefing_text)
     synthesis_quality = _decision_synthesis_quality(scaffold, validation, briefing_text)
     reader_quality = _reader_quality(briefing_text, polish_report, rewrite_report)
     baseline_gap = _baseline_gap(question, baseline_path, baseline_text, briefing_text, source_coverage)
@@ -147,10 +148,17 @@ def _extraction_quality(
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
     rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
     duplicate_pairs = prioritization_report.get("near_duplicate_claim_pairs") or prioritization_report.get("duplicate_claim_pairs") or []
+    canonicalization = prioritization_report.get("claim_canonicalization_report", {})
+    if not isinstance(canonicalization, dict):
+        canonicalization = {}
     skipped = sum(1 for issue in scaffold.get("quality_issues", []) if "chunk_budget" in str(issue))
     return {
         "candidate_claim_count": len(claims),
         "prioritized_claim_count": len(prioritized_claims),
+        "canonical_claim_count": canonicalization.get("canonical_claim_count"),
+        "canonicalization_changed": canonicalization.get("changed", False),
+        "canonicalized_duplicate_group_count": len(canonicalization.get("merged_duplicate_groups", [])) if isinstance(canonicalization.get("merged_duplicate_groups"), list) else 0,
+        "canonicalized_fragment_drop_count": len(canonicalization.get("dropped_fragment_claim_ids", [])) if isinstance(canonicalization.get("dropped_fragment_claim_ids"), list) else 0,
         "claim_retention_ratio": _ratio(len(prioritized_claims), len(claims)),
         "near_duplicate_pair_count": len(duplicate_pairs) if isinstance(duplicate_pairs, list) else 0,
         "fragment_marker_count": _fragment_marker_count(text),
@@ -160,7 +168,13 @@ def _extraction_quality(
     }
 
 
-def _relation_quality(candidate_map: dict[str, Any], prioritized_map: dict[str, Any], quality_report: dict[str, Any]) -> dict[str, Any]:
+def _relation_quality(
+    candidate_map: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    quality_report: dict[str, Any],
+    scaffold: dict[str, Any],
+    briefing_text: str,
+) -> dict[str, Any]:
     relations = _relations(candidate_map)
     kept = _relations(prioritized_map)
     relation_types = Counter(str(row.get("relation_type", "unknown")) for row in relations)
@@ -174,6 +188,12 @@ def _relation_quality(candidate_map: dict[str, Any], prioritized_map: dict[str, 
         "relation_type_diversity": len(relation_types),
         "rejected_relation_count_observed": max(rejected_counts) if rejected_counts else None,
         "relation_quality_issues": [text for text in issues if "relation" in text.lower()][:8],
+        "crux_quality": build_crux_quality_telemetry(
+            scaffold=scaffold,
+            candidate_map=candidate_map,
+            prioritized_map=prioritized_map,
+            briefing_text=briefing_text,
+        ),
     }
 
 
@@ -248,8 +268,13 @@ def _rank_gap_drivers(*sections: dict[str, Any]) -> list[dict[str, Any]]:
         candidates.append(_driver(72, "Final prose still has mechanical or malformed reader-facing passages", "reader_prose", [f"awkward={reader.get('awkward_phrase_count')}", f"paren_delta={reader.get('malformed_parenthesis_count')}"], "Add section-specific prose telemetry and repair for comparator, subgroup, and crux sections."))
     if relation.get("candidate_relation_count", 0) < max(2, extraction.get("prioritized_claim_count", 0) // 8):
         candidates.append(_driver(64, "The map has too few accepted relations for its claim volume", "relation_construction", [f"relations={relation.get('candidate_relation_count')}", f"claims={extraction.get('candidate_claim_count')}"], "Increase relation construction passes for high-weight claims and report orphaned central claims."))
+    crux_quality = relation.get("crux_quality", {}) if isinstance(relation.get("crux_quality"), dict) else {}
+    if crux_quality.get("status") in {"needs_crux_work", "usable_with_review"}:
+        candidates.append(_driver(63, "Relations exist, but cruxes are not yet concrete decision-changing uncertainties", "relation_to_crux_synthesis", [f"crux_score={crux_quality.get('score')}", f"generic={crux_quality.get('generic_crux_count')}", f"anchored={crux_quality.get('anchored_crux_count')}"], crux_quality.get("recommended_intervention", "Regenerate cruxes from graph tensions.")))
     if extraction.get("near_duplicate_pair_count", 0) or extraction.get("fragment_marker_count", 0):
         candidates.append(_driver(58, "Extraction still leaves duplicate or fragment noise that can distort synthesis", "extraction", [f"duplicates={extraction.get('near_duplicate_pair_count')}", f"fragments={extraction.get('fragment_marker_count')}"], "Tighten claim canonicalization before relation building and before final synthesis."))
+    elif extraction.get("canonicalization_changed"):
+        candidates.append(_driver(44, "Claim canonicalization changed the map before synthesis", "extraction", [f"merged_groups={extraction.get('canonicalized_duplicate_group_count')}", f"fragment_drops={extraction.get('canonicalized_fragment_drop_count')}"], "Inspect canonicalization report to ensure no decision-relevant minority claim was merged away."))
     if synthesis.get("validation_issue_count", 0):
         candidates.append(_driver(52, "The final decision packet fails or strains its briefing contract", "decision_synthesis", [f"validation_status={synthesis.get('validation_status')}", f"issues={synthesis.get('validation_issue_count')}"], "Use validation issues as repair instructions before accepting the memo."))
     if not candidates:

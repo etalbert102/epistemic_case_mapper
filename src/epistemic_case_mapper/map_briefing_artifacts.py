@@ -210,6 +210,7 @@ def map_briefing_summary_payload(
 ) -> dict[str, Any]:
     graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
     graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
+    canonicalization = scaffold.get("claim_canonicalization_report", {}) if isinstance(scaffold.get("claim_canonicalization_report"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
         "backend": result_backend,
@@ -225,6 +226,11 @@ def map_briefing_summary_payload(
         "confidence_reasons": calibration["reasons"],
         "claim_count": len(_claims(candidate_map)),
         "prioritized_claim_count": len(_claims(prioritized_map)),
+        "canonicalization_changed": canonicalization.get("changed", False),
+        "canonical_original_claim_count": canonicalization.get("original_claim_count"),
+        "canonical_claim_count": canonicalization.get("canonical_claim_count"),
+        "canonical_duplicate_group_count": len(canonicalization.get("merged_duplicate_groups", [])) if isinstance(canonicalization.get("merged_duplicate_groups"), list) else 0,
+        "canonical_fragment_drop_count": len(canonicalization.get("dropped_fragment_claim_ids", [])) if isinstance(canonicalization.get("dropped_fragment_claim_ids"), list) else 0,
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "relation_count": len(_relations(candidate_map)),

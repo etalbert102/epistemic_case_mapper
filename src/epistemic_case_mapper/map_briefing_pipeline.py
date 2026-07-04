@@ -32,6 +32,7 @@ from epistemic_case_mapper.decision_frame import (
     refine_crux_contract,
 )
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_run_summary, write_scaffold_artifacts
+from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
@@ -87,6 +88,7 @@ def run_map_briefing(
     quality_report = json.loads(quality_file.read_text(encoding="utf-8"))
     artifacts = _resolve(repo_root, output_dir or Path("artifacts") / "map_briefings" / map_file.stem)
     artifacts.mkdir(parents=True, exist_ok=True)
+    candidate_map, canonicalization_report = canonicalize_claims_for_briefing(candidate_map)
     source_lookup = build_source_display_lookup(candidate_map, source_titles=source_titles)
     effective_max_claims = adaptive_briefing_claim_budget(candidate_map, quality_report, requested_max_claims=max_claims)
     prioritized_map, prioritization_report = prioritize_map_for_briefing(
@@ -94,11 +96,13 @@ def run_map_briefing(
         quality_report=quality_report,
         max_claims=effective_max_claims,
     )
+    prioritization_report["claim_canonicalization_report"] = canonicalization_report
     prioritization_report["requested_max_claims"] = max_claims
     prioritization_report["effective_max_claims"] = effective_max_claims
     prioritization_report["budget_policy"] = "adaptive" if not max_claims else "fixed"
     erosion_audit = generated_map_erosion_audit(prioritized_map)
     scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit, question=question)
+    scaffold["claim_canonicalization_report"] = canonicalization_report
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
