@@ -306,6 +306,7 @@ def _write_final_reader_outputs(
             "memo_quality_report": memo_quality_path,
             "evidence_curation_report": curation_report_path,
             "section_rewrite_report": section_rewrite_report_path,
+            "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
             "reader_memo_rewrite_report": rewrite_report_path,
             "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
             "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,

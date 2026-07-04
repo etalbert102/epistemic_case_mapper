@@ -229,6 +229,34 @@ def test_section_rewrite_assigns_required_evidence_to_owner_sections(monkeypatch
     assert any(section.get("evidence_reference_count", 0) > 0 for section in sections)
 
 
+def test_section_rewrite_writes_section_synthesis_packets_with_argument_model(monkeypatch, tmp_path) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        artifacts=tmp_path,
+    )
+
+    packet_path = tmp_path / "section_synthesis_packets.json"
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    assert result["section_packets_path"] == packet_path
+    assert packet["schema_id"] == "section_synthesis_packets_v1"
+    assert packet["packet_count"] == result["report"]["section_packet_count"]
+    assert any(item["packet"].get("argument_model") for item in packet["packets"])
+
+
 def test_section_rewrite_repairs_dangling_practical_read(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
 
