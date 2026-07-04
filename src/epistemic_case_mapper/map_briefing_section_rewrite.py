@@ -55,7 +55,11 @@ def rewrite_reader_memo_by_section(
         report["status"] = "no_sections"
         return {"memo": memo, "report": report}
     rewritten_sections: list[str] = []
+    deferred_decision_section: dict[str, str] | None = None
     for index, section in enumerate(sections):
+        if section["title"] == "Decision Brief":
+            deferred_decision_section = section
+            continue
         section_contract = _section_contract(section, contract)
         result = _rewrite_one_section(
             section,
@@ -70,7 +74,24 @@ def rewrite_reader_memo_by_section(
             _write_section_debug_artifacts(artifacts, index, section["title"], result)
         report["sections"].append(result["report"])
         rewritten_sections.append(str(result["section"]))
-    candidate = clean_reader_memo_text("\n\n".join(part for part in [leading.strip(), *rewritten_sections] if part.strip()))
+    body_candidate = clean_reader_memo_text("\n\n".join(part for part in rewritten_sections if part.strip()))
+    if deferred_decision_section is not None:
+        brief_result = _rewrite_decision_brief_last(
+            deferred_decision_section,
+            contract,
+            body_candidate,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+        if artifacts is not None:
+            _write_section_debug_artifacts(artifacts, 0, "Decision Brief Final", brief_result)
+        report["sections"].insert(0, brief_result["report"])
+        candidate = clean_reader_memo_text(
+            "\n\n".join(part for part in [leading.strip(), str(brief_result["section"]), body_candidate] if part.strip())
+        )
+    else:
+        candidate = clean_reader_memo_text("\n\n".join(part for part in [leading.strip(), body_candidate] if part.strip()))
     validation = validate_briefing_against_scaffold(candidate.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n", scaffold, candidate_map)
     report["whole_validation_status"] = validation.get("status", "unknown")
     report["whole_validation_issues"] = validation.get("issues", [])
@@ -130,6 +151,304 @@ def _rewrite_one_section(
     section_report["status"] = "accepted_after_repair" if repaired != rewritten else "accepted"
     section_report["accepted"] = True
     return {"section": clean_reader_memo_text(repaired), "prompt": prompt, "raw": raw, "report": section_report}
+
+
+def _rewrite_decision_brief_last(
+    original: dict[str, str],
+    contract: dict[str, Any],
+    body_memo: str,
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    fallback = _deterministic_final_decision_brief(contract, body_memo)
+    prompt = _decision_brief_last_prompt(contract, body_memo, fallback)
+    section_report: dict[str, Any] = {
+        "title": "Decision Brief",
+        "status": "not_run",
+        "accepted": False,
+        "issues": [],
+        "required_evidence_count": 0,
+        "required_gap_count": 0,
+        "required_crux_count": 0,
+        "generated_last": True,
+    }
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        section_report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
+        return {"section": fallback, "prompt": prompt, "raw": "", "report": section_report}
+    raw = result.text
+    if result.prompt_only:
+        section_report.update({"status": "prompt_backend_fallback", "issues": ["backend returned prompt only"]})
+        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
+    payload = _parse_section_payload(raw)
+    if not isinstance(payload, dict):
+        section_report.update({"status": "parse_failed_fallback", "issues": ["section response was not a JSON object"]})
+        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
+    rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
+    repaired = _repair_section(rewritten)
+    issues = _decision_brief_last_issues(repaired, contract, body_memo)
+    section_report["issues"] = issues
+    section_report["raw_word_count"] = len(rewritten.split())
+    section_report["deterministic_word_count"] = len(fallback.split())
+    if issues:
+        section_report["status"] = "rejected_final_brief_fallback"
+        return {"section": fallback, "prompt": prompt, "raw": raw, "report": section_report}
+    section_report["status"] = "accepted_final_brief_after_repair" if repaired != rewritten else "accepted_final_brief"
+    section_report["accepted"] = True
+    return {"section": clean_reader_memo_text(repaired), "prompt": prompt, "raw": raw, "report": section_report}
+
+
+def _decision_brief_last_prompt(contract: dict[str, Any], body_memo: str, fallback: str) -> str:
+    packet = _decision_brief_last_packet(contract, body_memo)
+    return (
+        "You are writing the opening Decision Brief for a decision-support memo after the body sections are already written.\n"
+        "Use the body sections as the source of truth. Do not introduce new facts, sources, numbers, or recommendations.\n"
+        "Write only the Decision Brief section. The first substantive sentence after the question must directly answer the decision question for the default case; put caveats after that answer.\n"
+        "Return only valid JSON with this schema: {\"section_markdown\": \"## Decision Brief\\n\\n**Decision question:** ...\\n\\nDirect answer...\\n\\n**Confidence:** medium\"}.\n\n"
+        "Executive answer packet:\n"
+        f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n\n"
+        "Deterministic fallback section, for structure:\n"
+        f"{fallback.strip()}\n\n"
+        "Section to rewrite:\n"
+        f"{fallback.strip()}\n\n"
+        "Accepted body sections to summarize:\n"
+        f"{_compact_body_for_prompt(body_memo)}\n"
+    )
+
+
+def _decision_brief_last_packet(contract: dict[str, Any], body_memo: str) -> dict[str, Any]:
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    return {
+        "question": contract.get("question"),
+        "confidence": contract.get("confidence"),
+        "answer_frame": contract.get("answer_frame"),
+        "bottom_line": synthesis.get("bottom_line"),
+        "recommendations": synthesis.get("recommendations", [])[:5],
+        "scope_boundaries": synthesis.get("scope_boundaries", [])[:3],
+        "exceptions": synthesis.get("exceptions", [])[:3],
+        "cruxes": synthesis.get("cruxes", [])[:3],
+        "body_practical_read": _markdown_section_with_heading(body_memo, "Practical Read"),
+        "body_decision_cruxes": _markdown_section_with_heading(body_memo, "Decision Cruxes"),
+    }
+
+
+def _deterministic_final_decision_brief(contract: dict[str, Any], body_memo: str) -> str:
+    question = str(contract.get("question", "")).strip()
+    confidence = str(contract.get("confidence") or "medium").strip()
+    answer = _default_answer_from_body(body_memo) or _default_answer_from_contract(contract)
+    caveats = _decision_caveats_from_body(body_memo) or _decision_caveats_from_contract(contract)
+    support = _support_evidence_from_contract(contract)
+    answer = _sentence(answer)
+    if caveats:
+        answer = f"{answer} Key caveats: {'; '.join(caveats[:3])}."
+    if support and support.lower() not in (answer + " " + body_memo).lower():
+        answer = f"{answer} Key supporting evidence: {_sentence(support)}"
+    lines = ["## Decision Brief", ""]
+    if question:
+        lines.extend([f"**Decision question:** {question}", ""])
+    lines.extend([answer, "", f"**Confidence:** {confidence}"])
+    return clean_reader_memo_text("\n".join(lines))
+
+
+def _default_answer_from_body(body_memo: str) -> str:
+    practical = _markdown_section_with_heading(body_memo, "Practical Read")
+    bullets = re.findall(r"^\s*[-*]\s+(.+)$", practical, flags=re.MULTILINE)
+    if bullets:
+        lead = _clean_bullet(bullets[0])
+        lead = re.sub(r"^the default practical read is\b", "For the default case, the current read is", lead, flags=re.IGNORECASE)
+        return lead
+    why = _markdown_section_with_heading(body_memo, "Why This Read")
+    paragraphs = _paragraphs_without_heading(why)
+    return paragraphs[0] if paragraphs else ""
+
+
+def _default_answer_from_contract(contract: dict[str, Any]) -> str:
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    recommendations = [row for row in synthesis.get("recommendations", []) if isinstance(row, dict)]
+    for row in recommendations:
+        text = str(row.get("recommendation", "")).strip()
+        if text and not _exception_led_answer(text):
+            return _readerize_instruction(text)
+    bottom = synthesis.get("bottom_line", {}) if isinstance(synthesis.get("bottom_line"), dict) else {}
+    current = str(bottom.get("current_read", "")).strip()
+    if current:
+        return _readerize_instruction(current)
+    answer_frame = contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {}
+    return str(answer_frame.get("direct_answer") or "Use the source packet for a conditional decision read.").strip()
+
+
+def _decision_caveats_from_body(body_memo: str) -> list[str]:
+    practical = _markdown_section_with_heading(body_memo, "Practical Read")
+    bullets = [_clean_bullet(item) for item in re.findall(r"^\s*[-*]\s+(.+)$", practical, flags=re.MULTILINE)]
+    caveats = [item for item in bullets[1:] if item]
+    if caveats:
+        return caveats[:4]
+    scope = _markdown_section_with_heading(body_memo, "Practical Scope and Exceptions")
+    return _first_sentences(scope, limit=3)
+
+
+def _decision_caveats_from_contract(contract: dict[str, Any]) -> list[str]:
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    exceptions = [row for row in synthesis.get("exceptions", []) if isinstance(row, dict)]
+    caveats = [str(row.get("current_read", "")).strip() for row in exceptions if str(row.get("current_read", "")).strip()]
+    cruxes = [row for row in synthesis.get("cruxes", []) if isinstance(row, dict)]
+    caveats.extend(str(row.get("crux", "")).strip() for row in cruxes if str(row.get("crux", "")).strip())
+    return [_sentence(_readerize_instruction(item)) for item in caveats if item][:4]
+
+
+def _support_evidence_from_contract(contract: dict[str, Any]) -> str:
+    rows = [row for row in contract.get("required_evidence", []) if isinstance(row, dict)]
+    for preferred in ("Main support", "Direct outcome evidence", "Evidence carrying the conclusion"):
+        for row in rows:
+            if str(row.get("slot", "")) == preferred and str(row.get("claim", "")).strip():
+                return _short_text(str(row["claim"]).strip(), 220)
+    for row in rows:
+        if str(row.get("claim", "")).strip():
+            return _short_text(str(row["claim"]).strip(), 220)
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    evidence_rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
+    for role in ("conclusion_support", "main_support"):
+        for row in evidence_rows:
+            if str(row.get("role", "")) == role and str(row.get("claim", "")).strip():
+                return _short_text(str(row["claim"]).strip(), 220)
+    for row in evidence_rows:
+        if str(row.get("claim", "")).strip():
+            return _short_text(str(row["claim"]).strip(), 220)
+    return ""
+
+
+def _decision_brief_last_issues(section: str, contract: dict[str, Any], body_memo: str) -> list[str]:
+    issues: list[str] = []
+    if not section.lstrip().startswith("## Decision Brief"):
+        issues.append("decision brief heading changed or dropped")
+    if str(contract.get("question", "")).strip() and "**Decision question:**" not in section:
+        issues.append("decision question missing from final brief")
+    if "**Confidence:**" not in section:
+        issues.append("confidence line missing from final brief")
+    if SECTION_RE.findall(section) != ["Decision Brief"]:
+        issues.append("final brief included extra top-level sections")
+    answer = _first_answer_paragraph(section)
+    if not answer:
+        issues.append("final brief missing answer paragraph")
+    elif _exception_led_answer(answer):
+        issues.append("final brief opens with an exception instead of the default answer")
+    if answer and _content_overlap(answer, _default_answer_from_body(body_memo) or _default_answer_from_contract(contract)) < 2:
+        issues.append("final brief does not preserve the body default answer")
+    if len(section.split()) > 190:
+        issues.append("final brief is too long for an executive opening")
+    if _rewrite_has_raw_identifiers(section):
+        issues.append("final brief contains raw map identifiers")
+    return issues
+
+
+def _markdown_section_with_heading(markdown: str, title: str) -> str:
+    leading, sections = _split_sections(markdown)
+    _ = leading
+    for section in sections:
+        if section["title"].strip().lower() == title.strip().lower():
+            return section["markdown"].strip()
+    return ""
+
+
+def _paragraphs_without_heading(markdown: str) -> list[str]:
+    text = re.sub(r"^##\s+.+?\s*$", "", markdown.strip(), count=1, flags=re.MULTILINE).strip()
+    return [paragraph.strip() for paragraph in re.split(r"\n\s*\n", text) if paragraph.strip()]
+
+
+def _first_answer_paragraph(section: str) -> str:
+    for paragraph in _paragraphs_without_heading(section):
+        if paragraph.startswith("**Decision question:**") or paragraph.startswith("**Confidence:**"):
+            continue
+        return paragraph
+    return ""
+
+
+def _compact_body_for_prompt(body_memo: str) -> str:
+    kept: list[str] = []
+    for title in (
+        "Practical Read",
+        "Why This Read",
+        "Evidence Carrying the Conclusion",
+        "Practical Scope and Exceptions",
+        "Decision Cruxes",
+        "Limits of the Current Map",
+    ):
+        section = _markdown_section_with_heading(body_memo, title)
+        if section:
+            kept.append(_short_text(section, 1800))
+    return "\n\n".join(kept)
+
+
+def _clean_bullet(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    return cleaned.rstrip(".")
+
+
+def _first_sentences(markdown: str, *, limit: int) -> list[str]:
+    text = re.sub(r"^##\s+.+?\s*$", "", markdown.strip(), count=1, flags=re.MULTILINE)
+    text = re.sub(r"^\s*#+\s+.+$", "", text, flags=re.MULTILINE)
+    sentences = re.findall(r"[^.!?]+[.!?]", re.sub(r"\s+", " ", text))
+    return [_sentence(sentence) for sentence in sentences[:limit]]
+
+
+def _sentence(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip()
+    if not cleaned:
+        return ""
+    return cleaned if cleaned.endswith((".", "!", "?")) else cleaned + "."
+
+
+def _readerize_instruction(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip().rstrip(".")
+    replacements = (
+        (r"^state the default as\b", "The default case is"),
+        (r"^preserve this dose/intensity boundary in practical guidance:\s*", "The practical boundary is "),
+        (r"^name this subgroup separately from the default case:\s*", "Treat this as a separate caveat: "),
+    )
+    for pattern, replacement in replacements:
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
+def _exception_led_answer(text: str) -> bool:
+    lowered = str(text).lower().strip()
+    if any(marker in lowered[:180] for marker in ("default", "overall", "generally", "under the stated", "for the target", "for the main")):
+        return False
+    return any(
+        marker in lowered[:180]
+        for marker in (
+            "high-risk",
+            "subgroup",
+            "exception",
+            "caveat",
+            "people with",
+            "patients with",
+            "associated with a higher risk",
+        )
+    )
 
 
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:

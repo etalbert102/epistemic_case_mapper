@@ -166,6 +166,46 @@ def test_section_rewrite_rejects_crux_section_that_drops_synthesis_cruxes(monkey
     assert any("dropped required crux" in issue for issue in crux_report["issues"])
 
 
+def test_section_rewrite_generates_decision_brief_last_and_rejects_exception_led_opening(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        if "opening Decision Brief" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "section_markdown": (
+                            "## Decision Brief\n\n"
+                            f"**Decision question:** {scaffold['question']}\n\n"
+                            "High-risk subgroup results are concerning and should lead the memo.\n\n"
+                            "**Confidence:** medium"
+                        )
+                    }
+                ),
+                backend=backend,
+            )
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    brief_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Brief")
+    first_answer = result["memo"].split("**Confidence:**", 1)[0]
+    assert brief_report["status"] == "rejected_final_brief_fallback"
+    assert "opens with an exception" in " ".join(brief_report["issues"])
+    assert "High-risk subgroup results are concerning" not in first_answer
+
+
 def _memo_package() -> tuple[str, str, dict, dict]:
     candidate_map = _arbitrary_candidate_map()
     quality_report = _quality_report()
