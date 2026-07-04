@@ -176,6 +176,9 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
         issues.append("section contains raw map identifiers")
     if "crux" in original["title"].lower() and _has_generic_crux_language(rewritten):
         issues.append("section crux table contains generic placeholder language")
+    min_decision_cruxes = int(contract.get("min_decision_changing_cruxes", 0) or 0)
+    if min_decision_cruxes and _decision_changing_crux_count(rewritten) < min_decision_cruxes:
+        issues.append("section does not preserve enough decision-changing crux conditions")
     for row in contract["required_evidence"]:
         if not _rewrite_mentions_anchor_row(rewritten, row):
             issues.append(f"section dropped required evidence: {str(row.get('claim', ''))[:90]}")
@@ -205,7 +208,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         gap for gap in _string_list(full_contract.get("required_gaps"))
         if _rewrite_mentions_gap(text, gap) or "limit" in title.lower()
     ]
-    required_cruxes = full_contract.get("required_cruxes", []) if "crux" in title.lower() else []
+    required_cruxes = _section_required_cruxes(full_contract) if "crux" in title.lower() else []
     practical_actions = full_contract.get("practical_actions", []) if "practical" in title.lower() else []
     return {
         "heading": title,
@@ -215,6 +218,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "required_gaps": required_gaps,
         "required_cruxes": required_cruxes if isinstance(required_cruxes, list) else [],
         "practical_actions": practical_actions if isinstance(practical_actions, list) else [],
+        "min_decision_changing_cruxes": min(2, len(required_cruxes)) if "crux" in title.lower() else 0,
         "section_synthesis_packet": _section_synthesis_packet(title, full_contract),
         "decision_frame": frame,
         "section_job": section_jobs.get(title, "Smooth this section while preserving its local evidence obligations."),
@@ -226,6 +230,20 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
             "Use short transition language only when it helps connect to adjacent sections.",
         ],
     }
+
+
+def _section_required_cruxes(full_contract: dict[str, Any]) -> list[dict[str, Any]]:
+    scaffold = (
+        full_contract.get("_section_synthesis_scaffold", {})
+        if isinstance(full_contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    synthesis_cruxes = [row for row in synthesis.get("cruxes", []) if isinstance(row, dict)]
+    if synthesis_cruxes:
+        return synthesis_cruxes[:3]
+    required = full_contract.get("required_cruxes", [])
+    return [row for row in required if isinstance(row, dict)] if isinstance(required, list) else []
 
 
 def _section_synthesis_packet(title: str, full_contract: dict[str, Any]) -> dict[str, Any]:
@@ -402,6 +420,23 @@ def _short_text(text: str, max_chars: int) -> str:
     return cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
 
 
+def _decision_changing_crux_count(text: str) -> int:
+    lowered = text.lower()
+    explicit = len(re.findall(r"\b(?:would|could)\s+change\s+if\b|\brecommendation\s+would\s+change\b|\badvice\s+would\s+change\b", lowered))
+    table_rows = 0
+    for line in text.splitlines():
+        if not line.strip().startswith("|"):
+            continue
+        lowered = line.lower()
+        if "crux" in lowered and "current" in lowered:
+            continue
+        if set(line.strip()) <= {"|", "-", ":", " "}:
+            continue
+        if "would change" in lowered and "if" in lowered:
+            table_rows += 1
+    return max(explicit, table_rows)
+
+
 def _should_rewrite_section(section: dict[str, str], contract: dict[str, Any]) -> bool:
     words = len(section["markdown"].split())
     if words < 35 and not contract["has_obligations"]:
@@ -450,7 +485,29 @@ def _has_generic_crux_language(text: str) -> bool:
 
 
 def _content_terms(text: str) -> list[str]:
-    stop = {"the", "and", "that", "this", "with", "from", "into", "than", "when", "where", "which", "should"}
+    stop = {
+        "the",
+        "and",
+        "that",
+        "this",
+        "with",
+        "from",
+        "into",
+        "than",
+        "when",
+        "where",
+        "which",
+        "should",
+        "whether",
+        "recommendation",
+        "change",
+        "changes",
+        "changed",
+        "changing",
+        "crux",
+        "current",
+        "would",
+    }
     return [term for term in re.findall(r"[a-z0-9]{4,}", text.lower()) if term not in stop]
 
 

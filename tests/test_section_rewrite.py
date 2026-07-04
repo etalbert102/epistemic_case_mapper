@@ -111,6 +111,61 @@ def test_section_rewrite_keeps_sources_deterministic(monkeypatch) -> None:
     assert all("## Sources" not in prompt for prompt in seen_prompts)
 
 
+def test_section_rewrite_rejects_crux_section_that_drops_synthesis_cruxes(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+    scaffold["decision_synthesis_model"] = {
+        "cruxes": [
+            {
+                "crux": "Whether biomarker evidence should change the recommendation",
+                "current_read": "Biomarker evidence is a caution, not the whole decision.",
+                "would_change_if": "The recommendation would change if direct outcome evidence showed clinically important harm.",
+            },
+            {
+                "crux": "Whether subgroup risk narrows the default recommendation",
+                "current_read": "The subgroup remains a separate exception.",
+                "would_change_if": "The recommendation would change if subgroup risk applied to the default population.",
+            },
+        ],
+        "evidence_lines": [],
+        "central_tensions": [],
+    }
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        if "## Decision Cruxes" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "section_markdown": (
+                            "## Decision Cruxes\n\n"
+                            "| Crux | Current read | Would change if |\n"
+                            "|---|---|---|\n"
+                            "| Whether cost matters | Costs are relevant. | The recommendation would change if costs were immaterial. |\n"
+                            "| Whether timing matters | Timing is relevant. | The recommendation would change if timing were immaterial. |"
+                        )
+                    }
+                ),
+                backend=backend,
+            )
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(
+        memo,
+        appendix,
+        scaffold,
+        candidate_map,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    crux_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Cruxes")
+    assert crux_report["status"] == "rejected_fallback"
+    assert any("dropped required crux" in issue for issue in crux_report["issues"])
+
+
 def _memo_package() -> tuple[str, str, dict, dict]:
     candidate_map = _arbitrary_candidate_map()
     quality_report = _quality_report()

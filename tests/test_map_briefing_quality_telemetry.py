@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing import build_gap_diagnosis, canonicalize_claims_for_briefing
+from epistemic_case_mapper.map_briefing_map_utils import _expand_payload_reader_references
 
 
 def test_claim_canonicalization_merges_duplicates_and_drops_fragments() -> None:
@@ -106,3 +107,30 @@ def test_gap_telemetry_flags_generic_crux_quality_even_with_relations() -> None:
     assert crux_quality["status"] == "needs_crux_work"
     assert crux_quality["generic_crux_count"] == 1
     assert any(driver["likely_stage"] == "relation_to_crux_synthesis" for driver in diagnosis["largest_gap_drivers"])
+
+
+def test_reader_reference_expansion_preserves_decision_crux_id_fields() -> None:
+    payload = {
+        "cruxes": [
+            {
+                "crux": "Whether the key uncertainty changes the recommendation",
+                "supporting_claim_ids": ["c001"],
+                "challenging_claim_ids": ["c002"],
+                "current_read": "Claim c001 supports the default while Claim c002 limits it.",
+            }
+        ]
+    }
+    candidate_map = {
+        "claims": [
+            {"claim_id": "c001", "claim": "Support claim text."},
+            {"claim_id": "c002", "claim": "Challenge claim text."},
+        ],
+        "relations": [],
+    }
+
+    expanded = _expand_payload_reader_references(payload, candidate_map)
+
+    crux = expanded["cruxes"][0]
+    assert crux["supporting_claim_ids"] == ["c001"]
+    assert crux["challenging_claim_ids"] == ["c002"]
+    assert "Support claim text" in crux["current_read"]

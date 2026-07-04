@@ -78,6 +78,8 @@ _STRUCTURED_ID_FIELDS = {
     "source_claim",
     "target_claim",
     "pair_id",
+    "supporting_claim_ids",
+    "challenging_claim_ids",
 }
 
 def _claim_alias_lookup(candidate_map: dict[str, Any]) -> dict[str, str]:

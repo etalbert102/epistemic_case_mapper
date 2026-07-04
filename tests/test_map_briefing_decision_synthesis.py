@@ -208,6 +208,39 @@ def test_graph_synthesis_packet_extracts_generic_network_structure() -> None:
     assert "relation marks" not in serialized
 
 
+def test_decision_synthesis_builds_decision_changing_cruxes_from_graph_tensions() -> None:
+    candidate_map = annotate_map_with_evidence_slots(
+        {
+            "claims": [
+                _claim("c001", "The intervention improves hard outcome events in the default population.", "outcomes", "conclusion_support"),
+                _claim("c002", "The intervention worsens a biomarker that may proxy long-term harm.", "biomarker", "crux"),
+                _claim("c003", "A high-risk subgroup may respond differently than the default population.", "subgroup", "scope_limit"),
+            ],
+            "relations": [
+                _relation("r001", "c002", "c001", "in_tension_with"),
+                _relation("r002", "c003", "c001", "challenges"),
+            ],
+        }
+    )
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 90, "issues": []},
+        {"outcomes": "Outcome Study", "biomarker": "Biomarker Trial", "subgroup": "Subgroup Memo"},
+        {"items": []},
+        question="Should the intervention be recommended for the default population?",
+    )
+
+    cruxes = scaffold["decision_synthesis_model"]["cruxes"]
+
+    assert len(cruxes) >= 2
+    assert all("recommendation would change if" in row["would_change_if"].lower() for row in cruxes[:2])
+    assert all(row.get("decision_effect") for row in cruxes[:2])
+    assert any("biomarker" in row["crux"].lower() for row in cruxes)
+    assert " versus " not in cruxes[0]["crux"].lower()
+    assert len({row.get("crux_type") for row in cruxes[:2]}) == 2
+    assert cruxes[0]["supporting_claim_ids"] != cruxes[0]["challenging_claim_ids"]
+
+
 def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:
     candidate_map = annotate_map_with_evidence_slots(
         {

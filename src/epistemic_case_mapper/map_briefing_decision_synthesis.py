@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
+
 
 def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
@@ -15,7 +17,12 @@ def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
     scope_boundaries = _scope_boundaries(decision_model)
     exceptions = _exceptions(decision_model, evidence_lines)
     recommendations = _recommendations(decision_model, scaffold, scope_boundaries, exceptions)
-    cruxes = _synthesis_cruxes(decision_model, central_tensions, scope_boundaries, exceptions)
+    cruxes = build_decision_cruxes(
+        scaffold=scaffold,
+        central_tensions=central_tensions,
+        scope_boundaries=scope_boundaries,
+        exceptions=exceptions,
+    ) or _synthesis_cruxes(decision_model, central_tensions, scope_boundaries, exceptions)
     return {
         "schema_id": "decision_synthesis_model_v1",
         "method": "generic_decision_support_slots_from_weighted_evidence",
