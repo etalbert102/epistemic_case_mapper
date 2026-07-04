@@ -287,6 +287,55 @@ def test_decision_crux_builder_uses_generic_subgroup_concepts_and_valid_ids() ->
     assert all("unknown" not in row.get("supporting_claim_ids", []) for row in cruxes)
 
 
+def test_scope_boundary_crux_preserves_originating_claim_id() -> None:
+    scaffold = {
+        "question": "Should the intervention be recommended in the target setting?",
+        "confidence_cap": "medium",
+        "decision_model": {
+            "default_answer": {
+                "classification": "mixed_or_context_dependent",
+                "plain_language_instruction": "Recommend only where the operating context matches the evidence.",
+                "confidence_cap": "medium",
+            },
+            "decision_slots": {
+                "setting_or_context": [
+                    {
+                        "value": "large public facilities with dedicated operations staff",
+                        "claim": "The evidence comes from large public facilities with dedicated operations staff.",
+                        "claim_id": "c010",
+                        "source": "Facilities Study",
+                    }
+                ],
+            },
+        },
+        "evidence_weighting_ledger": {
+            "all_evidence": [
+                {
+                    "claim_id": "c010",
+                    "claim": "The evidence comes from large public facilities with dedicated operations staff.",
+                    "source": "Facilities Study",
+                    "score": 80,
+                    "weight": "high",
+                    "evidence_family": "cohort_or_observational",
+                    "decision_concepts": ["setting_or_context"],
+                    "decision_slots": ["setting_or_context"],
+                    "evidence_slots": ["setting_or_context"],
+                }
+            ]
+        },
+        "graph_synthesis_packet": {},
+        "map_sufficiency_report": {},
+        "quality_issues": [],
+    }
+
+    synthesis = build_decision_synthesis_model(scaffold)
+    boundary = synthesis["scope_boundaries"][0]
+    boundary_crux = next(row for row in synthesis["cruxes"] if row["crux_type"] == "scope_boundary")
+
+    assert boundary["supporting_claim_ids"] == ["c010"]
+    assert boundary_crux["supporting_claim_ids"] == ["c010"]
+
+
 def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:
     candidate_map = annotate_map_with_evidence_slots(
         {

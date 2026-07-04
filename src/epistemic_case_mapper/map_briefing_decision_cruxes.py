@@ -34,7 +34,7 @@ def build_decision_cruxes(
     known_claim_ids = _known_claim_ids(scaffold)
     known_relation_ids = _known_relation_ids(scaffold)
     return _validated_cruxes(
-        _dedupe_cruxes([row for row in cruxes if _valid_crux(row)])[:5],
+        _dedupe_cruxes(sorted([row for row in cruxes if _valid_crux(row)], key=_crux_rank))[:5],
         known_claim_ids=known_claim_ids,
         known_relation_ids=known_relation_ids,
     )
@@ -106,7 +106,7 @@ def _crux_from_boundary(boundary: dict[str, str]) -> dict[str, Any]:
         "current_read": current,
         "decision_effect": "This determines how far the default recommendation can be generalized.",
         "would_change_if": "The recommendation would change if direct evidence showed the mapped boundary fails inside the target case or safely extends beyond it.",
-        "supporting_claim_ids": [],
+        "supporting_claim_ids": _strings(boundary.get("supporting_claim_ids")),
         "challenging_claim_ids": [],
         "relation_ids": [],
         "crux_type": pattern,
@@ -121,7 +121,7 @@ def _crux_from_exception(exception: dict[str, str]) -> dict[str, Any]:
         "current_read": current,
         "decision_effect": "This determines whether the default answer applies broadly or must be split by subgroup or risk profile.",
         "would_change_if": "The recommendation would change if direct evidence showed the exception is immaterial, applies at ordinary exposure levels, or applies to a broader target group.",
-        "supporting_claim_ids": [],
+        "supporting_claim_ids": _strings(exception.get("supporting_claim_ids")),
         "challenging_claim_ids": [],
         "relation_ids": [],
         "crux_type": "subgroup_exception",
@@ -252,6 +252,13 @@ def _valid_crux(row: dict[str, Any]) -> bool:
     if would in {"", "if"}:
         return False
     return "recommendation would change if" in would or "would change if" in would
+
+
+def _crux_rank(row: dict[str, Any]) -> tuple[int, int, str]:
+    relation_count = len(_strings(row.get("relation_ids")))
+    claim_count = len(_strings(row.get("supporting_claim_ids"))) + len(_strings(row.get("challenging_claim_ids")))
+    provenance_rank = 0 if relation_count else 1 if claim_count else 2
+    return (provenance_rank, -claim_count - relation_count, str(row.get("crux", "")))
 
 
 def _validated_cruxes(

@@ -155,6 +155,7 @@ def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict
             entry = {
                 "value": value,
                 "claim": claim,
+                "claim_id": row.get("claim_id", ""),
                 "source": row.get("source", ""),
                 "weight": row.get("weight", "medium"),
                 "evidence_family": row.get("evidence_family", "general_evidence"),

@@ -301,6 +301,7 @@ def _scope_boundaries(decision_model: dict[str, Any]) -> list[dict[str, str]]:
                     "boundary_type": boundary_type,
                     "current_read": value,
                     "source": str(entry.get("source", "")).strip(),
+                    "supporting_claim_ids": _entry_claim_ids(entry),
                 }
             )
     return _dedupe_dicts(boundaries)[:8]
@@ -315,11 +316,40 @@ def _exceptions(decision_model: dict[str, Any], evidence_lines: list[dict[str, A
                 continue
             value = _clean_slot_value(str(entry.get("value") or entry.get("claim") or ""))
             if _usable_slot_value(value, label):
-                exceptions.append({"condition": label, "current_read": value, "source": str(entry.get("source", "")).strip()})
+                exceptions.append(
+                    {
+                        "condition": label,
+                        "current_read": value,
+                        "source": str(entry.get("source", "")).strip(),
+                        "supporting_claim_ids": _entry_claim_ids(entry),
+                    }
+                )
     for line in evidence_lines:
         if line.get("role") == "counterevidence_or_risk":
-            exceptions.append({"condition": "counterevidence or risk", "current_read": str(line.get("current_read", "")), "source": ""})
+            exceptions.append(
+                {
+                    "condition": "counterevidence or risk",
+                    "current_read": str(line.get("current_read", "")),
+                    "source": "",
+                    "supporting_claim_ids": _source_claim_ids(line),
+                }
+            )
     return _dedupe_dicts(exceptions)[:6]
+
+
+def _entry_claim_ids(entry: dict[str, Any]) -> list[str]:
+    claim_id = str(entry.get("claim_id", "")).strip()
+    return [claim_id] if claim_id else []
+
+
+def _source_claim_ids(line: dict[str, Any]) -> list[str]:
+    ids: list[str] = []
+    for row in line.get("source_claims", []) if isinstance(line.get("source_claims"), list) else []:
+        if isinstance(row, dict) and str(row.get("claim_id", "")).strip():
+            claim_id = str(row["claim_id"]).strip()
+            if claim_id not in ids:
+                ids.append(claim_id)
+    return ids
 
 
 def _recommendations(
