@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing import (
     build_map_briefing_prompt,
     polish_briefing_for_reader,
 )
+from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
 
 
 def test_generic_decision_synthesis_model_shapes_non_egg_brief() -> None:
@@ -239,6 +240,51 @@ def test_decision_synthesis_builds_decision_changing_cruxes_from_graph_tensions(
     assert " versus " not in cruxes[0]["crux"].lower()
     assert len({row.get("crux_type") for row in cruxes[:2]}) == 2
     assert cruxes[0]["supporting_claim_ids"] != cruxes[0]["challenging_claim_ids"]
+
+
+def test_decision_crux_builder_uses_generic_subgroup_concepts_and_valid_ids() -> None:
+    scaffold = {
+        "question": "Should the intervention be recommended for the default population?",
+        "epistemic_config": {"profile_id": "general_decision_support"},
+        "evidence_weighting_ledger": {
+            "all_evidence": [
+                {"claim_id": "c001", "claim": "The intervention improves hard outcomes in the default setting."},
+                {"claim_id": "c002", "claim": "A high-risk operating group may respond differently."},
+            ]
+        },
+        "graph_synthesis_packet": {
+            "central_tensions": [
+                {
+                    "relation_id": "r001",
+                    "left": {
+                        "claim_id": "c002",
+                        "claim": "A high-risk operating group may respond differently.",
+                        "decision_concepts": ["custom_high_risk_group"],
+                    },
+                    "right": {
+                        "claim_id": "c001",
+                        "claim": "The intervention improves hard outcomes in the default setting.",
+                        "decision_concepts": ["hard_outcome_endpoint"],
+                    },
+                }
+            ],
+            "bridge_claims": [
+                {
+                    "claim_id": "unknown",
+                    "claim": "An untracked bridge claim should not keep an invalid ID.",
+                    "decision_concepts": ["custom_high_risk_group"],
+                }
+            ],
+        },
+    }
+
+    cruxes = build_decision_cruxes(scaffold=scaffold, central_tensions=[], scope_boundaries=[], exceptions=[])
+
+    assert cruxes[0]["crux_type"] == "subgroup_exception"
+    assert cruxes[0]["supporting_claim_ids"] == ["c002"]
+    assert cruxes[0]["challenging_claim_ids"] == ["c001"]
+    assert cruxes[0]["relation_ids"] == ["r001"]
+    assert all("unknown" not in row.get("supporting_claim_ids", []) for row in cruxes)
 
 
 def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:

@@ -3,6 +3,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from pydantic import ValidationError
+
+from epistemic_case_mapper.config_profiles import DEFAULT_PROFILE_ID, infer_profile_id_from_text, profile_vocabulary
+from epistemic_case_mapper.model_schemas import DecisionCrux
+
 
 def build_decision_cruxes(
     *,
@@ -12,26 +17,33 @@ def build_decision_cruxes(
     exceptions: list[dict[str, str]],
 ) -> list[dict[str, Any]]:
     graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
+    vocabulary = _profile_vocabulary_for_scaffold(scaffold)
     cruxes: list[dict[str, Any]] = []
     for tension in graph_packet.get("central_tensions", []) if isinstance(graph_packet.get("central_tensions"), list) else []:
         if isinstance(tension, dict):
-            cruxes.append(_crux_from_graph_tension(tension))
+            cruxes.append(_crux_from_graph_tension(tension, vocabulary=vocabulary))
     for claim in graph_packet.get("bridge_claims", []) if isinstance(graph_packet.get("bridge_claims"), list) else []:
         if isinstance(claim, dict):
-            cruxes.append(_crux_from_bridge_claim(claim))
+            cruxes.append(_crux_from_bridge_claim(claim, vocabulary=vocabulary))
     for tension in central_tensions:
-        cruxes.append(_crux_from_synthesis_tension(tension))
+        cruxes.append(_crux_from_synthesis_tension(tension, vocabulary=vocabulary))
     for boundary in scope_boundaries:
         cruxes.append(_crux_from_boundary(boundary))
     for exception in exceptions:
         cruxes.append(_crux_from_exception(exception))
-    return _dedupe_cruxes([row for row in cruxes if _valid_crux(row)])[:5]
+    known_claim_ids = _known_claim_ids(scaffold)
+    known_relation_ids = _known_relation_ids(scaffold)
+    return _validated_cruxes(
+        _dedupe_cruxes([row for row in cruxes if _valid_crux(row)])[:5],
+        known_claim_ids=known_claim_ids,
+        known_relation_ids=known_relation_ids,
+    )
 
 
-def _crux_from_graph_tension(tension: dict[str, Any]) -> dict[str, Any]:
+def _crux_from_graph_tension(tension: dict[str, Any], *, vocabulary: dict[str, Any]) -> dict[str, Any]:
     left = tension.get("left", {}) if isinstance(tension.get("left"), dict) else {}
     right = tension.get("right", {}) if isinstance(tension.get("right"), dict) else {}
-    pattern = _relation_pattern(left, right, tension)
+    pattern = _relation_pattern(left, right, tension, vocabulary=vocabulary)
     left_claim = _clean_claim(str(left.get("claim", "")))
     right_claim = _clean_claim(str(right.get("claim", "")))
     uncertainty = _uncertainty_for_pattern(pattern, left_claim, right_claim)
@@ -50,9 +62,9 @@ def _crux_from_graph_tension(tension: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _crux_from_bridge_claim(claim: dict[str, Any]) -> dict[str, Any]:
+def _crux_from_bridge_claim(claim: dict[str, Any], *, vocabulary: dict[str, Any]) -> dict[str, Any]:
     text = _clean_claim(str(claim.get("claim", "")))
-    pattern = _claim_pattern(claim)
+    pattern = _claim_pattern(claim, vocabulary=vocabulary)
     uncertainty = _uncertainty_from_claim(pattern, text)
     return {
         "crux": uncertainty,
@@ -67,9 +79,9 @@ def _crux_from_bridge_claim(claim: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _crux_from_synthesis_tension(tension: dict[str, str]) -> dict[str, Any]:
+def _crux_from_synthesis_tension(tension: dict[str, str], *, vocabulary: dict[str, Any]) -> dict[str, Any]:
     label = _clean_claim(str(tension.get("tension", "")))
-    pattern = _text_pattern(label + " " + str(tension.get("why_reasonable_people_disagree", "")))
+    pattern = _text_pattern(label + " " + str(tension.get("why_reasonable_people_disagree", "")), vocabulary=vocabulary)
     uncertainty = _uncertainty_from_claim(pattern, label)
     return {
         "crux": uncertainty,
@@ -116,12 +128,12 @@ def _crux_from_exception(exception: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def _relation_pattern(left: dict[str, Any], right: dict[str, Any], tension: dict[str, Any]) -> str:
+def _relation_pattern(left: dict[str, Any], right: dict[str, Any], tension: dict[str, Any], *, vocabulary: dict[str, Any]) -> str:
     combined = " ".join((_claim_bundle(left), _claim_bundle(right), str(tension.get("rationale", "")), str(tension.get("why_it_matters", ""))))
     concepts = set(_strings(left.get("decision_concepts"))) | set(_strings(right.get("decision_concepts")))
     if "surrogate_or_biomarker_endpoint" in concepts and "hard_outcome_endpoint" in concepts:
         return "biomarker_vs_hard_outcome"
-    if "subgroup_diabetes_or_metabolic_risk" in concepts or _has_any(combined, ("subgroup", "diabetes", "high-risk", "high risk")):
+    if _has_subgroup_signal(concepts, combined, vocabulary=vocabulary):
         return "subgroup_exception"
     if "dose_or_threshold" in concepts or _has_any(combined, ("dose", "threshold", "intake", "consumption", "exposure")):
         return "dose_boundary"
@@ -132,12 +144,12 @@ def _relation_pattern(left: dict[str, Any], right: dict[str, Any], tension: dict
     return "scope_boundary"
 
 
-def _claim_pattern(claim: dict[str, Any]) -> str:
+def _claim_pattern(claim: dict[str, Any], *, vocabulary: dict[str, Any]) -> str:
     concepts = set(_strings(claim.get("decision_concepts")))
     text = _claim_bundle(claim)
     if "surrogate_or_biomarker_endpoint" in concepts:
         return "biomarker_vs_hard_outcome"
-    if "subgroup_diabetes_or_metabolic_risk" in concepts or _has_any(text, ("subgroup", "diabetes", "high-risk", "high risk")):
+    if _has_subgroup_signal(concepts, text, vocabulary=vocabulary):
         return "subgroup_exception"
     if "dose_or_threshold" in concepts or _has_any(text, ("dose", "threshold", "intake", "consumption", "exposure")):
         return "dose_boundary"
@@ -148,11 +160,11 @@ def _claim_pattern(claim: dict[str, Any]) -> str:
     return "scope_boundary"
 
 
-def _text_pattern(text: str) -> str:
+def _text_pattern(text: str, *, vocabulary: dict[str, Any]) -> str:
     lowered = text.lower()
     if _has_any(lowered, ("biomarker", "surrogate", "proxy")):
         return "biomarker_vs_hard_outcome"
-    if _has_any(lowered, ("subgroup", "exception", "high-risk", "high risk")):
+    if _has_subgroup_signal(set(), lowered, vocabulary=vocabulary) or _has_any(lowered, ("subgroup", "exception", "high-risk", "high risk")):
         return "subgroup_exception"
     if _has_any(lowered, ("dose", "threshold", "intake", "consumption", "exposure")):
         return "dose_boundary"
@@ -242,6 +254,40 @@ def _valid_crux(row: dict[str, Any]) -> bool:
     return "recommendation would change if" in would or "would change if" in would
 
 
+def _validated_cruxes(
+    rows: list[dict[str, Any]],
+    *,
+    known_claim_ids: set[str],
+    known_relation_ids: set[str],
+) -> list[dict[str, Any]]:
+    validated: list[dict[str, Any]] = []
+    for row in rows:
+        cleaned = dict(row)
+        cleaned["supporting_claim_ids"] = _known_ids(cleaned.get("supporting_claim_ids"), known_claim_ids)
+        cleaned["challenging_claim_ids"] = [
+            claim_id
+            for claim_id in _known_ids(cleaned.get("challenging_claim_ids"), known_claim_ids)
+            if claim_id not in set(cleaned["supporting_claim_ids"])
+        ]
+        cleaned["relation_ids"] = _known_ids(cleaned.get("relation_ids"), known_relation_ids)
+        try:
+            validated.append(DecisionCrux.model_validate(cleaned).model_dump())
+        except ValidationError:
+            continue
+    return validated
+
+
+def _known_ids(value: Any, known: set[str]) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    ids: list[str] = []
+    for item in value:
+        identifier = str(item).strip()
+        if identifier and identifier in known and identifier not in ids:
+            ids.append(identifier)
+    return ids
+
+
 def _dedupe_cruxes(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     distinct: list[dict[str, Any]] = []
     backfill: list[dict[str, Any]] = []
@@ -283,6 +329,28 @@ def _strings(value: Any) -> list[str]:
     return [str(item) for item in value if str(item).strip()] if isinstance(value, list) else []
 
 
+def _has_subgroup_signal(concepts: set[str], text: str, *, vocabulary: dict[str, Any]) -> bool:
+    if any(_concept_is_subgroup(concept) for concept in concepts):
+        return True
+    markers = _subgroup_markers(vocabulary)
+    return _has_any(text, tuple(markers))
+
+
+def _concept_is_subgroup(concept: str) -> bool:
+    normalized = str(concept).lower()
+    return any(marker in normalized for marker in ("subgroup", "high_risk", "higher_risk", "risk_group"))
+
+
+def _subgroup_markers(vocabulary: dict[str, Any]) -> list[str]:
+    markers = ["subgroup", "high-risk", "higher-risk", "high risk", "risk profile"]
+    concept_markers = vocabulary.get("claim_concept_markers", {}) if isinstance(vocabulary.get("claim_concept_markers"), dict) else {}
+    for concept, concept_values in concept_markers.items():
+        if not _concept_is_subgroup(str(concept)) or not isinstance(concept_values, list):
+            continue
+        markers.extend(str(item).lower() for item in concept_values if str(item).strip())
+    return _dedupe_strings(markers)
+
+
 def _has_any(text: str, markers: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(marker in lowered for marker in markers)
@@ -307,6 +375,67 @@ def _join_claim_sides(left: str, right: str) -> str:
     if len(candidates) == 1:
         return candidates[0]
     return f"{candidates[0]}; contrasted with {candidates[1]}"
+
+
+def _known_claim_ids(scaffold: dict[str, Any]) -> set[str]:
+    ids: set[str] = set()
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    for row in ledger.get("all_evidence", []) if isinstance(ledger.get("all_evidence"), list) else []:
+        if isinstance(row, dict) and str(row.get("claim_id", "")).strip():
+            ids.add(str(row["claim_id"]).strip())
+    graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
+    for key in ("central_tensions", "load_bearing_claims"):
+        for row in graph_packet.get(key, []) if isinstance(graph_packet.get(key), list) else []:
+            _collect_claim_ids(row, ids)
+    return ids
+
+
+def _known_relation_ids(scaffold: dict[str, Any]) -> set[str]:
+    ids: set[str] = set()
+    graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
+    for key in ("central_tensions",):
+        for row in graph_packet.get(key, []) if isinstance(graph_packet.get(key), list) else []:
+            if isinstance(row, dict) and str(row.get("relation_id", "")).strip():
+                ids.add(str(row["relation_id"]).strip())
+    return ids
+
+
+def _collect_claim_ids(value: Any, ids: set[str]) -> None:
+    if isinstance(value, dict):
+        if str(value.get("claim_id", "")).strip():
+            ids.add(str(value["claim_id"]).strip())
+        for child in value.values():
+            _collect_claim_ids(child, ids)
+    elif isinstance(value, list):
+        for child in value:
+            _collect_claim_ids(child, ids)
+
+
+def _profile_vocabulary_for_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
+    explicit = _profile_id_from_payload(scaffold.get("epistemic_config"))
+    profile_id = infer_profile_id_from_text(_scaffold_profile_detection_text(scaffold), fallback_profile_id=explicit or DEFAULT_PROFILE_ID)
+    return profile_vocabulary(profile_id)
+
+
+def _profile_id_from_payload(value: Any) -> str:
+    if isinstance(value, dict):
+        return str(value.get("profile_id", "")).strip()
+    return ""
+
+
+def _scaffold_profile_detection_text(scaffold: dict[str, Any]) -> str:
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    claims = " ".join(str(row.get("claim", "")) for row in ledger.get("all_evidence", []) if isinstance(row, dict))
+    return " ".join((str(scaffold.get("question", "")), claims))
+
+
+def _dedupe_strings(items: list[str]) -> list[str]:
+    out: list[str] = []
+    for item in items:
+        value = str(item).strip().lower()
+        if value and value not in out:
+            out.append(value)
+    return out
 
 
 def _norm(text: str) -> str:

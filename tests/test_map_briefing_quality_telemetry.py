@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from epistemic_case_mapper.map_briefing import build_gap_diagnosis, canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_map_utils import _expand_payload_reader_references
+from epistemic_case_mapper.model_schemas import DecisionCrux
 
 
 def test_claim_canonicalization_merges_duplicates_and_drops_fragments() -> None:
@@ -134,3 +137,75 @@ def test_reader_reference_expansion_preserves_decision_crux_id_fields() -> None:
     assert crux["supporting_claim_ids"] == ["c001"]
     assert crux["challenging_claim_ids"] == ["c002"]
     assert "Support claim text" in crux["current_read"]
+
+
+def test_decision_crux_schema_rejects_overlapping_support_and_challenge_ids() -> None:
+    with pytest.raises(ValueError, match="overlap"):
+        DecisionCrux.model_validate(
+            {
+                "crux": "Whether implementation capacity changes the recommendation",
+                "uncertainty": "Whether implementation capacity changes the recommendation",
+                "current_read": "The evidence depends on implementation capacity being present.",
+                "decision_effect": "This determines whether the recommendation travels to the target setting.",
+                "would_change_if": "The recommendation would change if capacity were absent.",
+                "supporting_claim_ids": ["c001"],
+                "challenging_claim_ids": ["c001"],
+                "relation_ids": [],
+                "crux_type": "scope_boundary",
+            }
+        )
+
+
+def test_crux_telemetry_separates_explicit_invalid_and_weak_anchors() -> None:
+    candidate_map = {
+        "claims": [
+            {"claim_id": "c001", "claim": "Maintenance capacity determines whether the intervention works."},
+            {"claim_id": "c002", "claim": "The intervention improves hard outcomes."},
+        ],
+        "relations": [{"relation_id": "r001", "source_claim": "c001", "target_claim": "c002", "relation_type": "crux_for"}],
+    }
+    scaffold = {
+        "decision_synthesis_model": {
+            "cruxes": [
+                {
+                    "crux": "Whether maintenance capacity changes the recommendation",
+                    "current_read": "Maintenance capacity determines whether the intervention works.",
+                    "would_change_if": "The recommendation would change if maintenance capacity were absent.",
+                    "supporting_claim_ids": ["c001"],
+                    "challenging_claim_ids": ["missing_claim"],
+                    "relation_ids": ["missing_relation"],
+                },
+                {
+                    "crux": "Whether hard outcome gains transfer to the target setting",
+                    "current_read": "The intervention improves hard outcomes in the mapped evidence.",
+                    "would_change_if": "The recommendation would change if hard outcome gains did not transfer.",
+                    "supporting_claim_ids": [],
+                    "challenging_claim_ids": [],
+                    "relation_ids": [],
+                },
+            ]
+        },
+        "evidence_weighting_ledger": {"all_evidence": []},
+        "map_sufficiency_report": {},
+        "quality_issues": [],
+    }
+
+    diagnosis = build_gap_diagnosis(
+        question="Should the intervention be adopted?",
+        candidate_map=candidate_map,
+        prioritized_map=candidate_map,
+        quality_report={"status": "usable_with_review", "issues": []},
+        prioritization_report={},
+        scaffold=scaffold,
+        briefing_text="**Decision question:** Should the intervention be adopted?",
+        validation={"status": "passes_contract", "score": 100, "issues": []},
+        polish_report={"status": "polished", "score": 100, "duplicate_sentence_count": 0},
+        rewrite_report={"status": "accepted"},
+    )
+
+    crux_quality = diagnosis["relation_quality"]["crux_quality"]
+    assert crux_quality["explicit_claim_anchor_count"] == 1
+    assert crux_quality["explicit_relation_anchor_count"] == 0
+    assert crux_quality["weak_text_anchor_count"] == 1
+    assert crux_quality["invalid_reference_count"] == 2
+    assert "known map IDs" in crux_quality["recommended_intervention"]

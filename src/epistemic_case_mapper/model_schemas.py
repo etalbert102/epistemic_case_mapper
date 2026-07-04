@@ -20,6 +20,14 @@ RelationType = Literal[
     "none",
 ]
 Confidence = Literal["low", "medium", "high"]
+DecisionCruxType = Literal[
+    "biomarker_vs_hard_outcome",
+    "subgroup_exception",
+    "dose_boundary",
+    "comparator_dependency",
+    "causal_attribution",
+    "scope_boundary",
+]
 
 
 class RelationContractOutput(BaseModel):
@@ -89,6 +97,28 @@ class CompactDecisionModelOutput(BaseModel):
     missing_evidence: list[DecisionModelItem] = Field(default_factory=list, max_length=3)
     decision_implications: list[DecisionModelItem] = Field(default_factory=list, max_length=3)
     audit: dict[str, Any] = Field(default_factory=dict)
+
+
+class DecisionCrux(BaseModel):
+    crux: str = Field(min_length=12)
+    uncertainty: str = Field(min_length=12)
+    current_read: str = Field(min_length=12)
+    decision_effect: str = Field(min_length=12)
+    would_change_if: str = Field(min_length=12)
+    supporting_claim_ids: list[str] = Field(default_factory=list, max_length=8)
+    challenging_claim_ids: list[str] = Field(default_factory=list, max_length=8)
+    relation_ids: list[str] = Field(default_factory=list, max_length=8)
+    crux_type: DecisionCruxType
+
+    @model_validator(mode="after")
+    def require_decision_changing_and_disjoint_ids(self) -> "DecisionCrux":
+        would = self.would_change_if.lower()
+        if "would change if" not in would and "recommendation would change if" not in would:
+            raise ValueError("crux missing explicit decision-changing condition")
+        overlap = set(self.supporting_claim_ids) & set(self.challenging_claim_ids)
+        if overlap:
+            raise ValueError("supporting_claim_ids and challenging_claim_ids overlap")
+        return self
 
 
 def parse_model_output(raw: str, schema: type[T]) -> T:

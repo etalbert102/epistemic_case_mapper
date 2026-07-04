@@ -23,11 +23,26 @@ def build_crux_quality_telemetry(
 ) -> dict[str, Any]:
     cruxes = _crux_rows(scaffold)
     claim_text = " ".join(_claim_texts(prioritized_map) or _claim_texts(candidate_map))
+    known_claim_ids = _claim_ids(prioritized_map) or _claim_ids(candidate_map)
+    known_relation_ids = _relation_ids(prioritized_map) or _relation_ids(candidate_map)
     relation_crux_count = sum(1 for relation in _relations(prioritized_map) if str(relation.get("relation_type")) == "crux_for")
-    rows = [_score_crux(row, claim_text, briefing_text) for row in cruxes]
+    rows = [
+        _score_crux(
+            row,
+            claim_text,
+            briefing_text,
+            known_claim_ids=known_claim_ids,
+            known_relation_ids=known_relation_ids,
+        )
+        for row in cruxes
+    ]
     concrete_count = sum(1 for row in rows if row["concrete"])
     decision_changing_count = sum(1 for row in rows if row["decision_changing"])
     anchored_count = sum(1 for row in rows if row["anchored_to_map"])
+    explicit_claim_anchor_count = sum(1 for row in rows if row["explicit_claim_anchor"])
+    explicit_relation_anchor_count = sum(1 for row in rows if row["explicit_relation_anchor"])
+    weak_text_anchor_count = sum(1 for row in rows if row["weak_text_anchor"] and not row["explicit_anchor"])
+    invalid_reference_count = sum(int(row["invalid_reference_count"]) for row in rows)
     generic_count = sum(1 for row in rows if row["generic"])
     count = len(rows)
     score = 100
@@ -37,6 +52,8 @@ def build_crux_quality_telemetry(
         score -= max(0, 2 - concrete_count) * 18
         score -= max(0, 2 - decision_changing_count) * 16
         score -= max(0, 1 - anchored_count) * 14
+        score -= max(0, min(2, count) - explicit_claim_anchor_count - explicit_relation_anchor_count) * 10
+        score -= invalid_reference_count * 8
         score -= generic_count * 12
     if relation_crux_count and count == 0:
         score -= 20
@@ -50,9 +67,20 @@ def build_crux_quality_telemetry(
         "concrete_crux_count": concrete_count,
         "decision_changing_crux_count": decision_changing_count,
         "anchored_crux_count": anchored_count,
+        "explicit_claim_anchor_count": explicit_claim_anchor_count,
+        "explicit_relation_anchor_count": explicit_relation_anchor_count,
+        "weak_text_anchor_count": weak_text_anchor_count,
+        "invalid_reference_count": invalid_reference_count,
         "generic_crux_count": generic_count,
         "crux_rows": rows,
-        "recommended_intervention": _recommended_intervention(status, generic_count, anchored_count, decision_changing_count),
+        "recommended_intervention": _recommended_intervention(
+            status,
+            generic_count,
+            anchored_count,
+            decision_changing_count,
+            explicit_claim_anchor_count + explicit_relation_anchor_count,
+            invalid_reference_count,
+        ),
     }
 
 
@@ -65,7 +93,14 @@ def _crux_rows(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in contract.get("cruxes", []) if isinstance(row, dict)]
 
 
-def _score_crux(row: dict[str, Any], claim_text: str, briefing_text: str) -> dict[str, Any]:
+def _score_crux(
+    row: dict[str, Any],
+    claim_text: str,
+    briefing_text: str,
+    *,
+    known_claim_ids: set[str],
+    known_relation_ids: set[str],
+) -> dict[str, Any]:
     crux = str(row.get("crux") or row.get("candidate_crux") or "").strip()
     current = str(row.get("current_read", "")).strip()
     would_change = str(row.get("would_change_if", "")).strip()
@@ -74,12 +109,27 @@ def _score_crux(row: dict[str, Any], claim_text: str, briefing_text: str) -> dic
     terms = _content_terms(combined)
     concrete = len(_content_terms(crux)) >= 3 and not _generic_crux(crux)
     decision_changing = _decision_changing(combined)
-    anchored = _term_overlap(terms, _content_terms(claim_text)) >= 2 or _term_overlap(_content_terms(crux), _content_terms(briefing_text)) >= 2
+    supporting_claim_ids = _string_set(row.get("supporting_claim_ids"))
+    challenging_claim_ids = _string_set(row.get("challenging_claim_ids"))
+    relation_ids = _string_set(row.get("relation_ids"))
+    claim_reference_ids = supporting_claim_ids | challenging_claim_ids
+    explicit_claim_anchor = bool(claim_reference_ids & known_claim_ids)
+    explicit_relation_anchor = bool(relation_ids & known_relation_ids)
+    invalid_reference_count = len(claim_reference_ids - known_claim_ids) + len(relation_ids - known_relation_ids)
+    weak_text_anchor = _term_overlap(terms, _content_terms(claim_text)) >= 2
+    briefing_overlap = _term_overlap(_content_terms(crux), _content_terms(briefing_text)) >= 2
+    anchored = explicit_claim_anchor or explicit_relation_anchor or weak_text_anchor
     return {
         "crux": crux,
         "concrete": concrete,
         "decision_changing": decision_changing,
         "anchored_to_map": anchored,
+        "explicit_anchor": explicit_claim_anchor or explicit_relation_anchor,
+        "explicit_claim_anchor": explicit_claim_anchor,
+        "explicit_relation_anchor": explicit_relation_anchor,
+        "weak_text_anchor": weak_text_anchor,
+        "briefing_text_overlap": briefing_overlap,
+        "invalid_reference_count": invalid_reference_count,
         "generic": _generic_crux(combined),
         "content_term_count": len(set(terms)),
     }
@@ -99,7 +149,18 @@ def _decision_changing(text: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def _recommended_intervention(status: str, generic_count: int, anchored_count: int, decision_changing_count: int) -> str:
+def _recommended_intervention(
+    status: str,
+    generic_count: int,
+    anchored_count: int,
+    decision_changing_count: int,
+    explicit_anchor_count: int,
+    invalid_reference_count: int,
+) -> str:
+    if invalid_reference_count:
+        return "Repair crux provenance so claim and relation references point to known map IDs."
+    if explicit_anchor_count < 2:
+        return "Prefer cruxes backed by explicit claim IDs or relation IDs over weak text-overlap anchoring."
     if status == "strong":
         return "No deterministic crux intervention required."
     if generic_count:
@@ -115,8 +176,30 @@ def _claim_texts(candidate_map: dict[str, Any]) -> list[str]:
     return [str(claim.get("claim") or claim.get("text") or "") for claim in candidate_map.get("claims", []) if isinstance(claim, dict)]
 
 
+def _claim_ids(candidate_map: dict[str, Any]) -> set[str]:
+    return {
+        str(claim.get("claim_id", "")).strip()
+        for claim in candidate_map.get("claims", [])
+        if isinstance(claim, dict) and str(claim.get("claim_id", "")).strip()
+    }
+
+
 def _relations(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
     return [relation for relation in candidate_map.get("relations", []) if isinstance(relation, dict)]
+
+
+def _relation_ids(candidate_map: dict[str, Any]) -> set[str]:
+    return {
+        str(relation.get("relation_id", "")).strip()
+        for relation in candidate_map.get("relations", [])
+        if isinstance(relation, dict) and str(relation.get("relation_id", "")).strip()
+    }
+
+
+def _string_set(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item).strip() for item in value if str(item).strip()}
 
 
 def _content_terms(text: str) -> list[str]:
