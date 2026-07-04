@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing import (
     build_reader_memo_rewrite_contract,
     build_reader_memo_rewrite_prompt,
     parse_reader_memo_rewrite_payload,
+    repair_reader_memo_rewrite_candidate,
     rewrite_reader_memo_with_contract,
 )
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
@@ -106,6 +107,32 @@ def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
     assert result["report"]["status"] in {"accepted", "accepted_after_repair"}
     assert result["report"]["applied_edit_count"] == 1
     assert "The language is repetitive." in result["memo"]
+
+
+def test_reader_memo_repair_preserves_practical_read_bullets() -> None:
+    memo = """## Decision Brief
+
+People with Type 2 Diabetes: High egg consumption has been associated with increased cardiovascular risk.
+Individuals with High LDL Cholesterol: Consider reducing sources of saturated fat and dietary cholesterol.
+
+**Confidence:** medium
+
+## Practical Read
+
+However, this recommendation includes two important exceptions:
+
+- **People with Type 2 Diabetes:** High egg consumption has been associated with increased cardiovascular risk.
+- **Individuals with High LDL Cholesterol:** Consider reducing sources of saturated fat and dietary cholesterol.
+
+## Why This Read
+
+The evidence is scoped.
+"""
+
+    repaired = repair_reader_memo_rewrite_candidate(memo, {"confidence_cap": "medium"}, {"confidence": "medium"})
+
+    assert "- **People with Type 2 Diabetes:**" in repaired
+    assert "- **Individuals with High LDL Cholesterol:**" in repaired
 
 
 def test_whole_memo_rewrite_rejects_legacy_full_memo_payload(monkeypatch) -> None:

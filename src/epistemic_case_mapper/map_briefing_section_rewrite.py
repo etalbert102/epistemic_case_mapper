@@ -16,6 +16,11 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
     build_reader_memo_rewrite_contract,
 )
 from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
+from epistemic_case_mapper.map_briefing_section_ownership import (
+    build_section_evidence_ownership,
+    compact_evidence_reference,
+    section_owns_evidence,
+)
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -54,6 +59,11 @@ def rewrite_reader_memo_by_section(
     if not sections:
         report["status"] = "no_sections"
         return {"memo": memo, "report": report}
+    contract["_section_evidence_ownership"] = build_section_evidence_ownership(sections, contract)
+    report["evidence_ownership"] = {
+        "owned_row_count": len(contract["_section_evidence_ownership"].get("rows", {})),
+        "owner_counts": contract["_section_evidence_ownership"].get("owner_counts", {}),
+    }
     rewritten_sections: list[str] = []
     deferred_decision_section: dict[str, str] | None = None
     for index, section in enumerate(sections):
@@ -120,6 +130,7 @@ def _rewrite_one_section(
         "accepted": False,
         "issues": [],
         "required_evidence_count": len(section_contract["required_evidence"]),
+        "evidence_reference_count": len(section_contract.get("evidence_references", [])),
         "required_gap_count": len(section_contract["required_gaps"]),
         "required_crux_count": len(section_contract["required_cruxes"]),
     }
@@ -521,7 +532,16 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     section_jobs = frame.get("section_jobs", {}) if isinstance(frame.get("section_jobs"), dict) else {}
     required_evidence = [
         row for row in full_contract.get("required_evidence", [])
-        if isinstance(row, dict) and _rewrite_mentions_anchor_row(text, row)
+        if isinstance(row, dict)
+        and _rewrite_mentions_anchor_row(text, row)
+        and section_owns_evidence(title, row, full_contract)
+    ]
+    evidence_references = [
+        compact_evidence_reference(row, full_contract)
+        for row in full_contract.get("required_evidence", [])
+        if isinstance(row, dict)
+        and _rewrite_mentions_anchor_row(text, row)
+        and not section_owns_evidence(title, row, full_contract)
     ]
     required_gaps = [
         gap for gap in _string_list(full_contract.get("required_gaps"))
@@ -534,6 +554,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "confidence": full_contract.get("confidence"),
         "requires_confidence": "**Confidence:**" in text,
         "required_evidence": required_evidence,
+        "evidence_references": evidence_references,
         "required_gaps": required_gaps,
         "required_cruxes": required_cruxes if isinstance(required_cruxes, list) else [],
         "practical_actions": practical_actions if isinstance(practical_actions, list) else [],
@@ -546,6 +567,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
             "Keep the same heading.",
             "Use concrete prose; avoid internal phrases such as mapped support, map-backed read, and decision role.",
             "Prefer the decision-frame terms over generic intervention/option language when the frame provides them.",
+            "For evidence_references, mention only the role-level implication when useful; do not restate full source details unless this section owns that evidence.",
             "Use short transition language only when it helps connect to adjacent sections.",
         ],
     }

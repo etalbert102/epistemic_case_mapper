@@ -279,8 +279,12 @@ def _drop_duplicate_reader_sentences(text: str) -> str:
     lines = text.splitlines()
     seen: set[str] = set()
     cleaned_lines: list[str] = []
+    current_heading = ""
     for line in lines:
         stripped = line.strip()
+        heading_match = re.match(r"^##\s+(.+?)\s*$", stripped)
+        if heading_match:
+            current_heading = heading_match.group(1).strip().lower()
         if not stripped or stripped.startswith("#") or stripped.startswith("|"):
             cleaned_lines.append(line)
             continue
@@ -288,6 +292,9 @@ def _drop_duplicate_reader_sentences(text: str) -> str:
         body = line
         bullet_match = re.match(r"^(\s*[-*]\s+)(.*)$", line)
         if bullet_match:
+            if current_heading == "practical read":
+                cleaned_lines.append(line)
+                continue
             prefix = "- "
             body = bullet_match.group(2)
         sentences = re.findall(r".*?(?:[.!?](?=\s+[A-Z0-9(]|\s*$)|$)", body)
