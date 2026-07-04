@@ -16,12 +16,14 @@ def build_decision_argument_artifacts(scaffold: dict[str, Any], candidate_map: d
     reads = build_competing_reads(scaffold, findings)
     graph = build_argument_case_graph(scaffold, findings, reads)
     traceability = build_decision_traceability_matrix(scaffold, findings, graph)
+    cruxes = build_structured_decision_cruxes(findings, reads)
     return {
         "evidence_to_decision_matrix": matrix,
         "summary_of_findings": findings,
         "competing_reads": reads,
         "argument_case_graph": graph,
         "decision_traceability_matrix": traceability,
+        "structured_decision_cruxes": cruxes,
     }
 
 
@@ -172,6 +174,32 @@ def build_argument_case_graph(
         "edge_count": len(edges),
         "nodes": nodes,
         "edges": edges,
+    }
+
+
+def build_structured_decision_cruxes(findings: dict[str, Any], competing_reads: dict[str, Any]) -> dict[str, Any]:
+    rows = [row for row in findings.get("findings", []) if isinstance(row, dict)]
+    support = [row for row in rows if _finding_direction(row) == "support"]
+    challenge = [row for row in rows if _finding_direction(row) == "challenge"]
+    bounds = [row for row in rows if _finding_direction(row) == "boundary"]
+    cruxes: list[dict[str, Any]] = []
+    for primary, counter in _diagnostic_pairs(support, challenge, limit=2):
+        cruxes.append(_structured_crux("evidence_balance", primary, counter))
+    for primary, boundary in _diagnostic_pairs(support, bounds, limit=1):
+        cruxes.append(_structured_crux("scope_boundary", primary, boundary))
+    for boundary, counter in _diagnostic_pairs(bounds, challenge, limit=1):
+        cruxes.append(_structured_crux("exception_strength", boundary, counter))
+    for read in _diagnostic_read_cruxes(competing_reads, rows):
+        cruxes.append(read)
+    cruxes = _dedupe_cruxes(cruxes)
+    if not cruxes and rows:
+        cruxes.extend(_single_finding_crux(row) for row in rows[:3])
+    return {
+        "schema_id": "structured_decision_cruxes_v1",
+        "method": "deterministic_crux_objects_from_findings_and_competing_reads",
+        "crux_count": len(cruxes[:4]),
+        "most_diagnostic_reads": competing_reads.get("most_diagnostic_reads", []),
+        "cruxes": cruxes[:4],
     }
 
 
@@ -333,6 +361,7 @@ def compact_decision_argument_artifacts(scaffold: dict[str, Any], title_key: str
     reads = _dict(artifacts.get("competing_reads")).get("reads", [])
     graph = _dict(artifacts.get("argument_case_graph"))
     traceability = _dict(artifacts.get("decision_traceability_matrix")).get("rows", [])
+    cruxes = _dict(artifacts.get("structured_decision_cruxes")).get("cruxes", [])
     title_key = title_key.lower()
     if "decision brief" in title_key:
         finding_limit = 4
@@ -343,8 +372,139 @@ def compact_decision_argument_artifacts(scaffold: dict[str, Any], title_key: str
     return {
         "summary_of_findings": findings[:finding_limit] if isinstance(findings, list) else [],
         "competing_reads": reads[:4] if isinstance(reads, list) else [],
+        "structured_decision_cruxes": cruxes[:4] if isinstance(cruxes, list) else [],
         "argument_case_top_claim": _top_claim(graph),
         "traceability_requirements": traceability[:8] if isinstance(traceability, list) else [],
+    }
+
+
+def _structured_crux(crux_type: str, primary: dict[str, Any], counter: dict[str, Any]) -> dict[str, Any]:
+    if crux_type == "evidence_balance":
+        crux = f"Whether {_factor_label(counter)} should materially weaken {_factor_label(primary)}"
+    elif crux_type == "scope_boundary":
+        crux = f"Whether {_factor_label(counter)} narrows the default read"
+    else:
+        crux = f"Whether {_factor_label(primary)} is a separate exception or changes the default"
+    return {
+        "crux": _sentence(crux),
+        "why_it_matters": "This determines whether the decision read should stay general, become narrower, or move toward caution.",
+        "current_read": "The current read keeps both the supporting evidence and the counterevidence visible; neither is treated as decisive.",
+        "would_change_if": "The recommendation would change if the counterevidence applied broadly across the target decision.",
+        "supporting_finding_ids": _string_list([primary.get("finding_id")]),
+        "challenging_finding_ids": _string_list([counter.get("finding_id")]),
+        "source_ids": _dedupe([*_string_list(primary.get("source_ids")), *_string_list(counter.get("source_ids"))]),
+        "crux_type": crux_type,
+    }
+
+
+def _finding_direction(row: dict[str, Any]) -> str:
+    direction = str(row.get("direction", "")).lower()
+    factor = str(row.get("decision_factor", "")).lower()
+    text = " ".join([direction, factor])
+    if any(term in text for term in ("challenge", "counter", "risk", "warn", "harm", "unfavorable")):
+        return "challenge"
+    if any(term in text for term in ("bound", "scope", "condition", "exception", "limit", "uncertain")):
+        return "boundary"
+    if any(term in text for term in ("support", "default", "inform", "favorable", "beneficial")):
+        return "support"
+    return "boundary"
+
+
+def _diagnostic_pairs(left: list[dict[str, Any]], right: list[dict[str, Any]], *, limit: int) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for first in left:
+        for second in right:
+            if not _different_findings(first, second):
+                continue
+            pairs.append((first, second))
+            if len(pairs) >= limit:
+                return pairs
+    return pairs
+
+
+def _different_findings(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    first_text = _norm(str(first.get("finding", "")))
+    second_text = _norm(str(second.get("finding", "")))
+    if not first_text or not second_text:
+        return True
+    first_terms = set(first_text.split())
+    second_terms = set(second_text.split())
+    if not first_terms or not second_terms:
+        return True
+    overlap = len(first_terms & second_terms) / max(len(first_terms | second_terms), 1)
+    return overlap < 0.78
+
+
+def _diagnostic_read_cruxes(competing_reads: dict[str, Any], findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    lookup = {str(row.get("finding_id")): row for row in findings if str(row.get("finding_id", "")).strip()}
+    rows: list[dict[str, Any]] = []
+    reads = [row for row in competing_reads.get("reads", []) if isinstance(row, dict)]
+    for read in sorted(reads, key=lambda row: -float(row.get("diagnostic_score", 0) or 0))[:2]:
+        support_ids = [str(item.get("finding_id")) for item in read.get("supporting_findings", []) if isinstance(item, dict)]
+        challenge_ids = [str(item.get("finding_id")) for item in read.get("challenging_findings", []) if isinstance(item, dict)]
+        support = [lookup[item] for item in support_ids if item in lookup]
+        challenge = [lookup[item] for item in challenge_ids if item in lookup]
+        finding = (support or challenge or findings[:1] or [{}])[0]
+        label = _read_label(str(read.get("read_id", "")), str(read.get("label", "")))
+        finding_text = _short_phrase(str(finding.get("finding", "")))
+        rows.append(
+            {
+                "crux": _sentence(f"Whether the evidence favors the {label} read rather than the leading alternative"),
+                "why_it_matters": "This is the direct choice between plausible decision interpretations.",
+                "current_read": "The current read treats the diagnostic evidence as informative but still conditional.",
+                "would_change_if": _sentence("The recommendation would change if the diagnostic evidence consistently supported this read across the target scope"),
+                "supporting_finding_ids": support_ids[:3],
+                "challenging_finding_ids": challenge_ids[:3],
+                "source_ids": _string_list(finding.get("source_ids")),
+                "crux_type": "competing_read",
+            }
+        )
+    return rows
+
+
+def _factor_label(row: dict[str, Any]) -> str:
+    factor = str(row.get("decision_factor", "")).strip().lower().replace("_", " ")
+    direction = _finding_direction(row)
+    if factor and factor not in {"unknown", "other"}:
+        return factor
+    return {
+        "support": "supporting evidence",
+        "challenge": "counterevidence",
+        "boundary": "scope or uncertainty evidence",
+    }.get(direction, "decision-relevant evidence")
+
+
+def _read_label(read_id: str, label: str) -> str:
+    normalized = " ".join(part for part in re.split(r"[_\W]+", read_id.lower()) if part)
+    if normalized:
+        return normalized
+    cleaned = re.sub(r"^treat\s+(?:the\s+)?(?:option|answer)\s+as\s+", "", label.lower()).strip(" .")
+    return _short_phrase(cleaned) or "competing"
+
+
+def _dedupe_cruxes(cruxes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    kept: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for crux in cruxes:
+        key = _norm(str(crux.get("crux", "")))[:120]
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        kept.append(crux)
+    return kept
+
+
+def _single_finding_crux(row: dict[str, Any]) -> dict[str, Any]:
+    text = _short_phrase(str(row.get("finding", "")))
+    return {
+        "crux": _sentence(f"Whether {text.lower()} is enough to settle the decision"),
+        "why_it_matters": "This is the most decision-relevant finding available in the current packet.",
+        "current_read": _sentence(f"The current read treats {text.lower()} as important but not automatically decisive"),
+        "would_change_if": "The recommendation would change if better evidence showed this finding does not apply to the target decision.",
+        "supporting_finding_ids": _string_list([row.get("finding_id")]),
+        "challenging_finding_ids": [],
+        "source_ids": _string_list(row.get("source_ids")),
+        "crux_type": "single_finding",
     }
 
 
@@ -690,6 +850,18 @@ def _short_text(text: str, max_chars: int) -> str:
     if len(cleaned) <= max_chars:
         return cleaned
     return cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
+
+
+def _short_phrase(text: str) -> str:
+    words = re.sub(r"\s+", " ", str(text)).strip(" .").split()
+    return " ".join(words[:14]).rstrip(" ,.;")
+
+
+def _sentence(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip()
+    if not cleaned:
+        return ""
+    return cleaned if cleaned.endswith((".", "!", "?")) else cleaned + "."
 
 
 def _cell(value: Any) -> str:

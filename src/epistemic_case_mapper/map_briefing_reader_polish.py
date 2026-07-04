@@ -496,6 +496,7 @@ def clean_reader_briefing_text(text: str) -> str:
     return cleaned.strip()
 
 def clean_reader_memo_text(text: str) -> str:
+    text = re.sub(r"^(#{1,6}\s+[^\n\\]+)\\(?=\S)", r"\1\n\n", text, flags=re.MULTILINE)
     lines = []
     for line in text.splitlines():
         line = re.sub(r"\\\s*$", "", line).replace("\\|", "|")

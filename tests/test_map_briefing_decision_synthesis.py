@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing import (
     polish_briefing_for_reader,
 )
 from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
+from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
 
 
 def test_generic_decision_synthesis_model_shapes_non_egg_brief() -> None:
@@ -170,6 +171,12 @@ Prefer protected lanes where feasible.
 
     assert "Whether the stated concern changes the interpretation" in polished
     assert "relation marks" not in polished
+
+
+def test_reader_polish_splits_heading_from_backslash_joined_body() -> None:
+    cleaned = clean_reader_memo_text("### Map Quality and Gaps\\The map is usable but has known limits.")
+
+    assert cleaned == "### Map Quality and Gaps\n\nThe map is usable but has known limits."
 
 
 def test_graph_synthesis_packet_extracts_generic_network_structure() -> None:

@@ -134,6 +134,103 @@ def render_main_memo_obligation_ledger_markdown(ledger: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def build_unified_requirement_ledger(
+    *,
+    main_memo_ledger: dict[str, Any],
+    traceability_ledger: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    trace_lookup = {
+        str(row.get("requirement_id", "")): row
+        for row in (traceability_ledger or {}).get("rows", [])
+        if isinstance(row, dict)
+    }
+    for index, obligation in enumerate(main_memo_ledger.get("obligations", []), start=1):
+        if not isinstance(obligation, dict):
+            continue
+        requirement_id = str(obligation.get("obligation_id", f"requirement_{index:02d}"))
+        trace = trace_lookup.get(requirement_id, {})
+        status = str(obligation.get("status", "unknown"))
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_category": obligation.get("category"),
+                "requirement": obligation.get("statement"),
+                "stage_owner": obligation.get("stage_owner"),
+                "priority": obligation.get("priority"),
+                "status": status,
+                "disposition": _requirement_disposition(status),
+                "target_sections": trace.get("target_sections", []),
+                "memo_sections": trace.get("memo_sections", []),
+                "supporting_finding_ids": trace.get("supporting_finding_ids", []),
+                "argument_node_ids": trace.get("argument_node_ids", []),
+                "source_ids": obligation.get("source_ids", []),
+                "claim_ids": obligation.get("claim_ids", []),
+                "relation_ids": obligation.get("relation_ids", []),
+                "quantity_ids": obligation.get("quantity_ids", []),
+                "matched_terms": obligation.get("matched_terms", []),
+                "search_terms": obligation.get("search_terms", []),
+            }
+        )
+    counts = Counter(str(row.get("status", "unknown")) for row in rows)
+    dispositions = Counter(str(row.get("disposition", "unknown")) for row in rows)
+    return {
+        "schema_id": "unified_requirement_ledger_v1",
+        "method": "main_memo_obligation_status_with_traceability_dispositions",
+        "row_count": len(rows),
+        "status_counts": dict(counts),
+        "disposition_counts": dict(dispositions),
+        "rows": rows,
+    }
+
+
+def render_unified_requirement_ledger_markdown(ledger: dict[str, Any]) -> str:
+    lines = [
+        "# Unified Requirement Ledger",
+        "",
+        f"Rows: `{ledger.get('row_count', 0)}`",
+        "",
+        "## Disposition Counts",
+        "",
+        "```json",
+        _compact_json(ledger.get("disposition_counts", {})),
+        "```",
+        "",
+        "| Requirement | Status | Disposition | Target Sections |",
+        "|---|---|---|---|",
+    ]
+    for row in ledger.get("rows", [])[:60] if isinstance(ledger.get("rows"), list) else []:
+        lines.append(
+            "| "
+            + " | ".join(
+                _markdown_cell(value)
+                for value in (
+                    row.get("requirement", ""),
+                    row.get("status", ""),
+                    row.get("disposition", ""),
+                    ", ".join(str(item) for item in row.get("target_sections", [])),
+                )
+            )
+            + " |"
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _requirement_disposition(status: str) -> str:
+    if status == "satisfied":
+        return "included"
+    if status == "source_missing":
+        return "source_missing"
+    if status == "missing_from_memo":
+        return "missing"
+    return "needs_review"
+
+
+def _markdown_cell(value: Any) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).replace("|", "/").strip()
+    return _short_text(text, 180)
+
+
 def _section_obligation_categories(title: str) -> list[str]:
     lowered = title.strip().lower()
     if lowered == "decision brief":

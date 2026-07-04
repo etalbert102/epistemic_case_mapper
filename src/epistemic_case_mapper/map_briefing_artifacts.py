@@ -259,6 +259,7 @@ def write_final_review_packet(
         f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
         f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",
         f"- Main memo obligation ledger: `{_rel(repo_root, telemetry_paths.get('main_memo_obligation_ledger'))}`",
+        f"- Unified requirement ledger: `{_rel(repo_root, telemetry_paths.get('unified_requirement_ledger'))}`",
         "",
         "## Quality Snapshot",
         "",

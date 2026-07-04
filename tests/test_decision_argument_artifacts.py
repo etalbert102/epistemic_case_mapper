@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.decision_argument_artifacts import (
+    build_structured_decision_cruxes,
     compact_decision_argument_artifacts,
     evaluate_traceability_against_memo,
 )
+from epistemic_case_mapper.main_memo_obligations import build_unified_requirement_ledger
 from epistemic_case_mapper.map_briefing import briefing_scaffold
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 
@@ -54,6 +56,102 @@ def test_traceability_matrix_evaluates_final_memo_presence() -> None:
     assert evaluated["schema_id"] == "decision_traceability_matrix_v1"
     assert evaluated["status_counts"]
     assert any(row["status"] == "satisfied" for row in evaluated["rows"])
+
+
+def test_unified_requirement_ledger_keeps_missing_and_source_dispositions() -> None:
+    main_ledger = {
+        "obligations": [
+            {
+                "obligation_id": "required_a",
+                "category": "strongest_support",
+                "statement": "Included requirement",
+                "stage_owner": "decision_synthesis",
+                "status": "satisfied",
+                "priority": 90,
+                "matched_terms": ["Included"],
+            },
+            {
+                "obligation_id": "required_b",
+                "category": "baseline_comparison_concept",
+                "statement": "Missing source requirement",
+                "stage_owner": "source_coverage",
+                "status": "source_missing",
+                "priority": 88,
+            },
+            {
+                "obligation_id": "required_c",
+                "category": "baseline_comparison_concept",
+                "statement": "Missing synthesis requirement",
+                "stage_owner": "decision_synthesis",
+                "status": "missing_from_memo",
+                "priority": 87,
+            },
+        ]
+    }
+    traceability = {
+        "rows": [
+            {
+                "requirement_id": "required_a",
+                "target_sections": ["Decision Brief"],
+                "memo_sections": ["Decision Brief"],
+                "supporting_finding_ids": ["finding_01"],
+                "argument_node_ids": ["claim_top"],
+            }
+        ]
+    }
+
+    ledger = build_unified_requirement_ledger(main_memo_ledger=main_ledger, traceability_ledger=traceability)
+
+    assert ledger["disposition_counts"]["included"] == 1
+    assert ledger["disposition_counts"]["source_missing"] == 1
+    assert ledger["disposition_counts"]["missing"] == 1
+    included = next(row for row in ledger["rows"] if row["requirement_id"] == "required_a")
+    assert included["supporting_finding_ids"] == ["finding_01"]
+
+
+def test_structured_cruxes_tolerate_direction_taxonomy_drift() -> None:
+    findings = {
+        "findings": [
+            {
+                "finding_id": "finding_01",
+                "finding": "The default option improved the primary outcome by 18%.",
+                "direction": "supports_default",
+                "decision_factor": "supporting_evidence",
+                "source_ids": ["source_a"],
+            },
+            {
+                "finding_id": "finding_02",
+                "finding": "The default option increased review workload during peak periods.",
+                "direction": "challenges_or_warns",
+                "decision_factor": "counterevidence_or_risk",
+                "source_ids": ["source_b"],
+            },
+            {
+                "finding_id": "finding_03",
+                "finding": "The result only applies where supervisors can review exceptions within two days.",
+                "direction": "bounds_or_conditions",
+                "decision_factor": "scope_boundary",
+                "source_ids": ["source_c"],
+            },
+        ]
+    }
+    reads = {
+        "reads": [
+            {
+                "label": "Treat the default option as worth adopting.",
+                "diagnostic_score": 3,
+                "supporting_findings": [{"finding_id": "finding_01"}],
+                "challenging_findings": [{"finding_id": "finding_02"}],
+            }
+        ]
+    }
+
+    cruxes = build_structured_decision_cruxes(findings, reads)
+
+    assert cruxes["crux_count"] >= 3
+    assert {row["crux_type"] for row in cruxes["cruxes"]} >= {"evidence_balance", "scope_boundary", "competing_read"}
+    assert "should outweigh" not in json.dumps(cruxes).lower()
+    assert "keeps both the supporting evidence and the counterevidence visible" in json.dumps(cruxes)
 
 
 def test_scaffold_artifacts_write_decision_argument_outputs(tmp_path) -> None:

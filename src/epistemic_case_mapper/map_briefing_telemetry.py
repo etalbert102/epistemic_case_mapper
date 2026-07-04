@@ -6,9 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.decision_argument_artifacts import evaluate_traceability_against_memo
 from epistemic_case_mapper.main_memo_obligations import (
+    build_unified_requirement_ledger,
     build_main_memo_obligation_ledger,
     render_main_memo_obligation_ledger_markdown,
+    render_unified_requirement_ledger_markdown,
 )
 from epistemic_case_mapper.map_briefing_crux_telemetry import build_crux_quality_telemetry
 
@@ -50,16 +53,23 @@ def write_gap_telemetry(
     md_path = telemetry_dir / "GAP_DIAGNOSIS.md"
     obligation_path = telemetry_dir / "main_memo_obligation_ledger.json"
     obligation_md_path = telemetry_dir / "MAIN_MEMO_OBLIGATION_LEDGER.md"
+    unified_path = telemetry_dir / "unified_requirement_ledger.json"
+    unified_md_path = telemetry_dir / "UNIFIED_REQUIREMENT_LEDGER.md"
     write_json(json_path, diagnosis)
     write_markdown(md_path, render_gap_diagnosis_markdown(diagnosis))
     obligation_ledger = diagnosis.get("main_memo_obligation_ledger", {})
+    unified_ledger = diagnosis.get("unified_requirement_ledger", {})
     write_json(obligation_path, obligation_ledger)
     write_markdown(obligation_md_path, render_main_memo_obligation_ledger_markdown(obligation_ledger))
+    write_json(unified_path, unified_ledger)
+    write_markdown(unified_md_path, render_unified_requirement_ledger_markdown(unified_ledger))
     return {
         "gap_diagnosis": json_path,
         "gap_diagnosis_markdown": md_path,
         "main_memo_obligation_ledger": obligation_path,
         "main_memo_obligation_ledger_markdown": obligation_md_path,
+        "unified_requirement_ledger": unified_path,
+        "unified_requirement_ledger_markdown": unified_md_path,
     }
 
 
@@ -90,6 +100,15 @@ def build_gap_diagnosis(
         baseline_gap=baseline_gap,
         source_coverage=source_coverage,
     )
+    argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
+    traceability = evaluate_traceability_against_memo(
+        argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts, dict) else {},
+        briefing_text,
+    )
+    unified_ledger = build_unified_requirement_ledger(
+        main_memo_ledger=obligation_ledger,
+        traceability_ledger=traceability,
+    )
     drivers = _rank_gap_drivers(
         source_coverage,
         extraction_quality,
@@ -111,6 +130,8 @@ def build_gap_diagnosis(
         "baseline_gap_attribution": baseline_gap,
         "main_memo_obligation_summary": _obligation_summary(obligation_ledger),
         "main_memo_obligation_ledger": obligation_ledger,
+        "unified_requirement_summary": _unified_requirement_summary(unified_ledger),
+        "unified_requirement_ledger": unified_ledger,
         "largest_gap_drivers": drivers,
     }
 
@@ -140,6 +161,7 @@ def render_gap_diagnosis_markdown(diagnosis: dict[str, Any]) -> str:
         "decision_synthesis_quality",
         "reader_prose_quality",
         "main_memo_obligation_summary",
+        "unified_requirement_summary",
     ):
         section = diagnosis.get(key, {})
         lines.extend([f"### {key.replace('_', ' ').title()}", "", "```json", _compact_json(section), "```", ""])
@@ -359,6 +381,22 @@ def _obligation_summary(ledger: dict[str, Any]) -> dict[str, Any]:
             if isinstance(row, dict)
         ][:8],
         "recommended_interventions": ledger.get("recommended_interventions", []),
+    }
+
+
+def _unified_requirement_summary(ledger: dict[str, Any]) -> dict[str, Any]:
+    rows = [row for row in ledger.get("rows", []) if isinstance(row, dict)]
+    unresolved = [
+        row.get("requirement_id")
+        for row in rows
+        if row.get("disposition") in {"missing", "source_missing", "needs_review"}
+    ]
+    return {
+        "schema_id": ledger.get("schema_id"),
+        "row_count": ledger.get("row_count"),
+        "status_counts": ledger.get("status_counts", {}),
+        "disposition_counts": ledger.get("disposition_counts", {}),
+        "top_unresolved_requirement_ids": unresolved[:10],
     }
 
 
