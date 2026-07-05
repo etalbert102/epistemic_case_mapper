@@ -86,11 +86,15 @@ def claim_prompt_json_schema() -> dict[str, Any]:
                     "type": "object",
                     "properties": {
                         "claim": {"type": "string"},
+                        "source_quote": {"type": "string"},
                         "span_id": {"type": "string"},
                         "entailed_by_excerpt": {"type": "string", "enum": ["yes", "no", "uncertain"]},
                         "role": {"type": "string"},
+                        "question_relevance": {"type": "string", "enum": ["direct", "indirect", "scope_limit", "background", "irrelevant"]},
+                        "relevance_rationale": {"type": "string"},
+                        "scope_flags": {"type": "array", "items": {"type": "string"}},
                     },
-                    "required": ["claim", "span_id", "entailed_by_excerpt", "role"],
+                    "required": ["source_quote", "claim", "span_id", "entailed_by_excerpt", "role"],
                 },
             }
         },

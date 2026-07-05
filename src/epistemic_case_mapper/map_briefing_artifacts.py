@@ -30,6 +30,10 @@ def write_scaffold_artifacts(
         "erosion_audit": artifacts / "generated_map_erosion_audit.json",
         "sufficiency_report": artifacts / "map_sufficiency_report.json",
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
+        "global_memo_plan": artifacts / "global_memo_plan.json",
+        "global_memo_plan_prompt": artifacts / "global_memo_plan_prompt.txt",
+        "global_memo_plan_raw": artifacts / "global_memo_plan_raw.txt",
+        "global_memo_plan_validation": artifacts / "global_memo_plan_validation.json",
         "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
         "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
@@ -51,6 +55,10 @@ def write_scaffold_artifacts(
     write_json(paths["erosion_audit"], erosion_audit)
     write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
+    write_json(paths["global_memo_plan"], scaffold.get("global_memo_plan", {}))
+    write_markdown(paths["global_memo_plan_prompt"], str(scaffold.get("global_memo_plan_prompt", "")))
+    write_markdown(paths["global_memo_plan_raw"], str(scaffold.get("global_memo_plan_raw", "")))
+    write_json(paths["global_memo_plan_validation"], scaffold.get("global_memo_plan_validation", {}))
     write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
     write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
@@ -166,6 +174,10 @@ def write_run_summary(
             "generated_map_erosion_audit": scaffold_paths["erosion_audit"],
             "map_sufficiency_report": scaffold_paths["sufficiency_report"],
             "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
+            "global_memo_plan": scaffold_paths["global_memo_plan"],
+            "global_memo_plan_prompt": scaffold_paths["global_memo_plan_prompt"],
+            "global_memo_plan_raw": scaffold_paths["global_memo_plan_raw"],
+            "global_memo_plan_validation": scaffold_paths["global_memo_plan_validation"],
             "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
@@ -250,6 +262,7 @@ def write_final_review_packet(
         f"- Prioritized map: `{_rel(repo_root, scaffold_paths.get('prioritized_map'))}`",
         f"- Argument model: `{_rel(repo_root, scaffold_paths.get('argument_model'))}`",
         f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
+        f"- Global memo plan: `{_rel(repo_root, scaffold_paths.get('global_memo_plan'))}`",
         f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
         f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
         f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
@@ -259,6 +272,7 @@ def write_final_review_packet(
         f"- Decision traceability matrix: `{_rel(repo_root, scaffold_paths.get('decision_traceability_matrix'))}`",
         f"- Final traceability check: `{_rel(repo_root, final_outputs['summary_paths'].get('decision_traceability_matrix_final'))}`",
         f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
+        f"- Model context audit: `{_rel(repo_root, final_outputs['summary_paths'].get('model_context_audit'))}`",
         f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",
         f"- Main memo obligation ledger: `{_rel(repo_root, telemetry_paths.get('main_memo_obligation_ledger'))}`",
         f"- Unified requirement ledger: `{_rel(repo_root, telemetry_paths.get('unified_requirement_ledger'))}`",
@@ -350,6 +364,8 @@ def map_briefing_summary_payload(
     atomic_cards = scaffold.get("atomic_evidence_cards", {}) if isinstance(scaffold.get("atomic_evidence_cards"), dict) else {}
     argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
+    global_plan = scaffold.get("global_memo_plan", {}) if isinstance(scaffold.get("global_memo_plan"), dict) else {}
+    global_plan_validation = scaffold.get("global_memo_plan_validation", {}) if isinstance(scaffold.get("global_memo_plan_validation"), dict) else {}
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
@@ -385,6 +401,10 @@ def map_briefing_summary_payload(
         "briefing_polish_status": polish_report.get("status"),
         "briefing_polish_score": polish_report.get("score"),
         "reader_memo_rewrite_status": rewrite_result["report"].get("status"),
+        "global_memo_plan_status": global_plan.get("status"),
+        "global_memo_plan_method": global_plan.get("method"),
+        "global_memo_plan_validation_status": global_plan_validation.get("status"),
+        "global_memo_plan_target_word_count": global_plan_validation.get("target_word_count"),
         "decision_synthesis_evidence_line_count": len(decision_synthesis_model.get("evidence_lines", [])),
         "decision_synthesis_tension_count": len(decision_synthesis_model.get("central_tensions", [])),
         "decision_synthesis_recommendation_count": len(decision_synthesis_model.get("recommendations", [])),

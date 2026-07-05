@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from epistemic_case_mapper.classical_ml import diverse_ranked_edges, tfidf_near_duplicate_pairs, tfidf_pair_similarities
 from epistemic_case_mapper.config_profiles import (
     EpistemicConfigProfile,
     config_profile_from_manifest_payload,
@@ -18,6 +17,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_quote_alignment import align_source_quote_to_span, quote_alignment_metadata
 from epistemic_case_mapper.staged_semantic_prompt_schemas import (
     relation_batch_prompt_schema,
     relation_examples,
@@ -154,9 +154,11 @@ def _normalize_claim_proposal(
     if not isinstance(proposal, dict):
         return None, "claim_not_object"
     span_id = str(proposal.get("span_id", proposal.get("spanId", ""))).strip()
-    if span_id not in span_lookup:
-        return None, "unknown_span_id"
-    span = span_lookup[span_id]
+    source_quote = _proposal_source_quote(proposal)
+    alignment = align_source_quote_to_span(source_quote=source_quote, proposed_span_id=span_id, span_lookup=span_lookup)
+    if alignment is None:
+        return None, "source_quote_unaligned" if source_quote else "unknown_span_id"
+    span = span_lookup[alignment.span_id]
     claim_text = str(proposal.get("claim", "")).strip()
     if not claim_text:
         return None, "missing_claim"
@@ -169,6 +171,10 @@ def _normalize_claim_proposal(
         role = "other"
     if role not in allowed_roles:
         role = sorted(allowed_roles)[0] if allowed_roles else "other"
+    question_relevance = _normalized_question_relevance(proposal.get("question_relevance"))
+    if question_relevance == "irrelevant":
+        return None, "question_irrelevant"
+    scope_flags = _normalized_scope_flags(proposal.get("scope_flags"))
     return (
         {
             "claim_id": "",
@@ -176,11 +182,50 @@ def _normalize_claim_proposal(
             "source_id": span.source_id,
             "source_span": span.source_span,
             "excerpt": span.text,
+            "source_quote": alignment.quote or _compact_metadata_text(proposal.get("source_quote")),
+            "source_alignment": quote_alignment_metadata(alignment),
             "entailed_by_excerpt": entailed,
             "role": role,
+            "question_relevance": question_relevance,
+            "relevance_rationale": _compact_metadata_text(proposal.get("relevance_rationale")),
+            "scope_flags": scope_flags,
         },
         "",
     )
+
+def _proposal_source_quote(proposal: dict[str, Any]) -> str:
+    direct = str(proposal.get("source_quote", proposal.get("sourceQuote", "")) or "").strip()
+    if direct:
+        return direct
+    langextract = proposal.get("langextract")
+    if isinstance(langextract, dict):
+        return str(langextract.get("extraction_text", "") or "").strip()
+    return str(proposal.get("extraction_text", "") or "").strip()
+
+def _normalized_question_relevance(value: Any) -> str:
+    relevance = str(value or "").strip().lower()
+    if relevance in {"direct", "indirect", "scope_limit", "background", "irrelevant"}:
+        return relevance
+    return "unspecified"
+
+def _normalized_scope_flags(value: Any) -> list[str]:
+    if isinstance(value, list):
+        flags = [str(item).strip().lower() for item in value if str(item).strip()]
+    else:
+        flags = [part.strip().lower() for part in re.split(r"[,;|]", str(value or "")) if part.strip()]
+    allowed = {
+        "target_population_mismatch",
+        "outcome_mismatch",
+        "intervention_or_exposure_mismatch",
+        "mechanism_only",
+        "administrative_context",
+        "none",
+    }
+    normalized = [flag for flag in flags if flag in allowed]
+    return normalized or ["none"]
+
+def _compact_metadata_text(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip())[:240]
 
 def _fallback_claim_for_chunk(chunk: SourceChunk) -> dict[str, Any] | None:
     span = _best_fallback_span(chunk)
@@ -192,9 +237,20 @@ def _fallback_claim_for_chunk(chunk: SourceChunk) -> dict[str, Any] | None:
         "source_id": span.source_id,
         "source_span": span.source_span,
         "excerpt": span.text,
+        "source_quote": span.text,
         "entailed_by_excerpt": "yes",
         "role": _fallback_role(span.text),
         "span_id": span.span_id,
+        "source_alignment": {
+            "status": "deterministic_fallback_span",
+            "method": "deterministic_fallback_span",
+            "source_quote": span.text,
+            "matched_text": span.text,
+            "proposed_span_id": span.span_id,
+            "resolved_span_id": span.span_id,
+            "coverage": 1.0,
+            "density": 1.0,
+        },
         "extraction_method": "deterministic_fallback_span",
     }
 
@@ -289,57 +345,6 @@ def _normalize_relation_proposal(
         },
         "",
     )
-
-def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> list[dict[str, Any]]:
-    usable_claims = [claim for claim in claims if _usable_relation_claim(claim)]
-    if len(usable_claims) < 2:
-        usable_claims = claims
-    claim_lookup = {str(claim.get("claim_id", "")): claim for claim in usable_claims if claim.get("claim_id")}
-    claim_order = {str(claim.get("claim_id", "")): index for index, claim in enumerate(claims)}
-    tfidf_scores = _claim_tfidf_scores(usable_claims)
-    scored: list[tuple[str, str, float, str]] = []
-    for left_index, left in enumerate(usable_claims):
-        for right_index, right in enumerate(usable_claims):
-            if left_index >= right_index:
-                continue
-            score, reason = _pair_score(left, right, tfidf_scores)
-            if score <= 0:
-                continue
-            scored.append((left["claim_id"], right["claim_id"], score, reason))
-    selected = diverse_ranked_edges(
-        [claim_id for claim_id in claim_order if claim_id],
-        scored,
-        limit=max_pairs,
-    )
-    packets = []
-    ordered = sorted(selected, key=lambda item: (claim_order.get(item[0], 9999), claim_order.get(item[1], 9999)))
-    for index, (left_id, right_id, score, reason) in enumerate(ordered, start=1):
-        packets.append(
-            {
-                "pair_id": f"pair_{index:03d}",
-                "left": claim_lookup[left_id],
-                "right": claim_lookup[right_id],
-                "candidate_score": score,
-                "candidate_reason": reason,
-            }
-        )
-    return packets
-
-def _usable_relation_claim(claim: dict[str, Any]) -> bool:
-    text = re.sub(r"\s+", " ", str(claim.get("claim", "") or claim.get("excerpt", ""))).strip()
-    lowered = text.lower()
-    role = str(claim.get("role", ""))
-    if len(text) < 18 and role not in {"crux", "conclusion_support", "scope_limit", "implementation_constraint"}:
-        return False
-    if _looks_like_relation_reference_or_boilerplate(text) or _non_evidence_text_reason(text):
-        return False
-    if any(marker in lowered for marker in ("[google scholar]", "privacy policy", "nutrition policy", "no. (%)", "pmcid:", "copyright")):
-        return False
-    if re.fullmatch(r"[\w\s,./()%+-]+", text) and len(_content_terms(text)) <= 3:
-        return False
-    if re.fullmatch(r"(?:pooled\s+)?(?:relative\s+)?risk\s*\(?95%?\s*ci\)?", lowered):
-        return False
-    return True
 
 def _looks_like_relation_reference_or_boilerplate(text: str) -> bool:
     lowered = text.lower()
@@ -444,79 +449,6 @@ def _looks_like_tension(left_text: str, right_text: str) -> bool:
     ) or (
         _has_support_signal(right_text) and _has_limit_or_challenge_signal(left_text)
     )
-
-def _claim_tfidf_scores(claims: list[dict[str, Any]]) -> dict[tuple[str, str], float]:
-    ids = [str(claim.get("claim_id", "")) for claim in claims]
-    texts = [_claim_pair_text(claim) for claim in claims]
-    return tfidf_pair_similarities(texts, ids)
-
-def _claim_pair_text(claim: dict[str, Any]) -> str:
-    return " ".join(
-        str(claim.get(key, ""))
-        for key in ("claim", "excerpt", "role", "source_id")
-    )
-
-def _pair_score(
-    left: dict[str, Any],
-    right: dict[str, Any],
-    tfidf_scores: dict[tuple[str, str], float] | None = None,
-) -> tuple[float, str]:
-    score = 0.0
-    reasons: list[str] = []
-    if left.get("source_id") != right.get("source_id"):
-        score += 3
-        reasons.append("cross_source")
-    left_role = str(left.get("role", ""))
-    right_role = str(right.get("role", ""))
-    role_reason, role_score = _role_pair_priority(left_role, right_role)
-    if role_score:
-        score += role_score
-        reasons.append(role_reason)
-    if "crux" in {left_role, right_role}:
-        score += 4
-        reasons.append("crux_pair")
-    if {left_role, right_role} & {"scope_limit", "implementation_constraint"}:
-        score += 3
-        reasons.append("scope_or_implementation_pair")
-    if {left_role, right_role} & {"conclusion_support"}:
-        score += 2
-        reasons.append("support_pair")
-    left_text = _normalize_text(f"{left.get('claim', '')} {left.get('excerpt', '')}")
-    right_text = _normalize_text(f"{right.get('claim', '')} {right.get('excerpt', '')}")
-    if _looks_like_tension(left_text, right_text):
-        score += 6
-        reasons.append("support_limit_tension")
-    semantic_score = _semantic_pair_score(left, right, tfidf_scores or {})
-    if semantic_score > 0:
-        score += min(4.0, semantic_score * 5.0)
-        reasons.append("tfidf_semantic_similarity")
-    shared_terms = _content_terms(str(left.get("claim", ""))) & _content_terms(str(right.get("claim", "")))
-    if shared_terms:
-        score += min(3, len(shared_terms))
-        reasons.append("shared_terms")
-    return score, "+".join(reasons) or "low_signal"
-
-def _semantic_pair_score(
-    left: dict[str, Any],
-    right: dict[str, Any],
-    tfidf_scores: dict[tuple[str, str], float],
-) -> float:
-    left_id, right_id = sorted((str(left.get("claim_id", "")), str(right.get("claim_id", ""))))
-    return float(tfidf_scores.get((left_id, right_id), 0.0))
-
-def _role_pair_priority(left_role: str, right_role: str) -> tuple[str, int]:
-    roles = {left_role, right_role}
-    if "scope_limit" in roles and roles & {"conclusion_support", "crux"}:
-        return "scope_limit_bounds_decision_claim", 8
-    if "implementation_constraint" in roles and roles & {"conclusion_support", "crux"}:
-        return "implementation_constraint_conditions_decision_claim", 8
-    if "measurement_validity" in roles and roles & {"conclusion_support", "crux"}:
-        return "measurement_limit_bears_on_decision_claim", 7
-    if "external_validity" in roles and roles & {"conclusion_support", "crux"}:
-        return "external_validity_bounds_decision_claim", 7
-    if "crux" in roles and roles - {"background", "other"}:
-        return "crux_connected_to_substantive_claim", 7
-    return "", 0
 
 def _relation_contract(proposal: dict[str, Any], packet: dict[str, Any], rationale: str) -> dict[str, str]:
     left = packet["left"]
@@ -793,15 +725,6 @@ def _relation_proposals(payload: dict[str, Any]) -> list[dict[str, Any]]:
 def _batches(items: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
     safe_batch_size = min(batch_size, 4)
     return [items[index : index + safe_batch_size] for index in range(0, len(items), safe_batch_size)]
-
-def _relation_batch_count(max_relation_pairs: int, relation_batch_size: int, claims: list[dict[str, Any]]) -> int:
-    if len(claims) < 2:
-        return 0
-    pair_count = len(_candidate_relation_pairs(claims, max_relation_pairs))
-    if pair_count == 0:
-        return 0
-    safe_batch_size = min(relation_batch_size, 4)
-    return (pair_count + safe_batch_size - 1) // safe_batch_size
 
 def _line_span_for_excerpt(chunk: SourceChunk, excerpt: str) -> str:
     chunk_lines = chunk.plain_text.splitlines()

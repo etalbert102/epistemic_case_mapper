@@ -15,6 +15,7 @@ def finalize_sparse_relation_graph(
     region: WorkedRegion,
     relation_index: int,
     seen: set[tuple[str, str, str]],
+    min_relation_count: int = 0,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     if not accepted:
         fallback = _fallback_relation(pair_packets, permitted_types)
@@ -38,6 +39,7 @@ def finalize_sparse_relation_graph(
         region=region,
         relation_index=relation_index,
         seen=seen,
+        min_relation_count=min_relation_count,
     )
     if densification_rows:
         rejected.append(
@@ -58,6 +60,7 @@ def _densify_sparse_fallback_relations(
     region: WorkedRegion,
     relation_index: int,
     seen: set[tuple[str, str, str]],
+    min_relation_count: int = 0,
 ) -> tuple[list[dict[str, Any]], int, list[dict[str, Any]]]:
     if not pair_packets:
         return accepted, relation_index, []
@@ -67,7 +70,7 @@ def _densify_sparse_fallback_relations(
         for side in ("left", "right")
         if isinstance(packet.get(side), dict)
     }
-    target_count = min(len(pair_packets), max(1, min(8, len(unique_claim_ids) // 6)))
+    target_count = min(len(pair_packets), max(min_relation_count, 1, min(8, len(unique_claim_ids) // 6)))
     if len(accepted) >= target_count:
         return accepted, relation_index, []
     added: list[dict[str, Any]] = []

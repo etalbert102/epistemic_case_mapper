@@ -657,7 +657,9 @@ def _extract_relations(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
         return [], [], [{"reason": "too_few_claims"}]
-    pair_packets = _candidate_relation_pairs(claims, max_relation_pairs)
+    effective_max_relation_pairs = _relation_pair_budget(claims, max_relation_pairs)
+    pair_packets = _candidate_relation_pairs(claims, effective_max_relation_pairs)
+    _write_relation_candidate_pool_report(artifact_dir, claims, pair_packets, max_relation_pairs, effective_max_relation_pairs)
     claim_ids = {claim["claim_id"] for claim in claims}
     permitted_types = manifest.relation_ontology.permitted_types()
     accepted: list[dict[str, Any]] = []
@@ -776,10 +778,28 @@ def _extract_relations(
         region=region,
         relation_index=relation_index,
         seen=seen,
+        min_relation_count=max(2, len(claims) // 20) if len(claims) >= 20 else 0,
     )
     write_json(artifact_dir / "accepted_relations.json", {"relations": accepted, "rejected": rejected})
     return accepted, payloads, rejected
 
+
+def _write_relation_candidate_pool_report(
+    artifact_dir: Path,
+    claims: list[dict[str, Any]],
+    pair_packets: list[dict[str, Any]],
+    requested_max_pairs: int,
+    effective_max_pairs: int,
+) -> None:
+    write_json(
+        artifact_dir / "relation_candidate_pool_report.json",
+        _relation_candidate_pool_report(
+            claims,
+            pair_packets,
+            requested_max_pairs=requested_max_pairs,
+            effective_max_pairs=effective_max_pairs,
+        ),
+    )
 
 
 # Explicit cross-module dependencies for compatibility facade removal.
@@ -797,9 +817,13 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _text_overlap_ratio,
     evaluate_staged_map_quality,
 )
+from epistemic_case_mapper.staged_semantic_relation_candidates import (
+    _candidate_relation_pairs,
+    _relation_candidate_pool_report,
+    _relation_pair_budget,
+)
 from epistemic_case_mapper.staged_semantic_sources import (
     _batches,
-    _candidate_relation_pairs,
     _has_evidence_predicate,
     _normalize_relation_proposal,
     _normalize_text,

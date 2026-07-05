@@ -252,6 +252,8 @@ def _section_obligation_categories(title: str) -> list[str]:
     lowered = title.strip().lower()
     if lowered == "decision brief":
         return ["quantitative_anchor", "strongest_support", "strongest_counterargument", "scope_boundary"]
+    if "limit" in lowered:
+        return []
     if "scope" in lowered or "exception" in lowered or "limit" in lowered:
         return ["scope_boundary", "strongest_counterargument", "decision_crux", "evidence_family_balance"]
     if "crux" in lowered:

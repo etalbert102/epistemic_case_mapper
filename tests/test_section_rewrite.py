@@ -25,6 +25,8 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
     repeated_owned_evidence_issues,
 )
 from epistemic_case_mapper.map_briefing_section_packets import prune_section_packet_for_ownership
+from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract
+from epistemic_case_mapper.map_briefing_section_structure import structured_scope_and_exceptions
 from epistemic_case_mapper.main_memo_obligations import section_obligations_for_title
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
@@ -298,6 +300,43 @@ def test_section_ownership_allows_short_reference_but_rejects_overexplained_refe
     )
 
 
+def test_section_ownership_allows_assigned_obligation_overlap() -> None:
+    row = {
+        "slot": "scope boundary",
+        "claim": "Data above the ordinary exposure level remain sparse and should not drive the default recommendation.",
+        "source": "Evaluation",
+        "anchor_terms": ["ordinary", "exposure", "sparse", "default"],
+    }
+    sections = [
+        {
+            "title": "Evidence Carrying the Conclusion",
+            "markdown": "## Evidence Carrying the Conclusion\n\nData above the ordinary exposure level remain sparse and should not drive the default recommendation.",
+        },
+        {
+            "title": "Practical Scope and Exceptions",
+            "markdown": "## Practical Scope and Exceptions\n\nData above the ordinary exposure level remain sparse.",
+        },
+    ]
+    contract = {
+        "required_evidence": [row],
+        "required_main_memo_obligations": [
+            {
+                "obligation_id": "scope_boundary_01",
+                "category": "scope_boundary",
+                "statement": "Data above the ordinary exposure level remain sparse.",
+                "search_terms": ["ordinary exposure", "sparse"],
+            }
+        ],
+    }
+    contract["_section_evidence_ownership"] = build_section_evidence_ownership(sections, contract)
+
+    assert not repeated_owned_evidence_issues(
+        "Practical Scope and Exceptions",
+        sections[1]["markdown"],
+        contract,
+    )
+
+
 def test_section_ownership_routes_subgroup_claims_to_scope_when_present() -> None:
     row = {
         "slot": "hard-outcome counterevidence",
@@ -389,10 +428,98 @@ def test_section_prompt_hides_owned_elsewhere_full_claims() -> None:
     section_text = prompt.split("Section to rewrite:\n", 1)[1]
     model_contract = json.loads(contract_text)
     assert forbidden_claim not in contract_text
-    assert "claim" not in model_contract["owned_elsewhere_evidence"][0]
-    assert "source" not in model_contract["owned_elsewhere_evidence"][0]
-    assert forbidden_claim in section_text
+    assert "owned_elsewhere_evidence" not in model_contract
+    assert "pilot" not in json.dumps(model_contract.get("model_section_packet", {}).get("prohibited_repetition", []))
+    assert model_contract["validation_obligations"]["reference_policy_summary"][0]["slot"] == "hard-outcome support"
+    assert forbidden_claim not in section_text
+    assert "## Why This Read" in section_text
     assert "Do not mention this evidence here" in contract_text
+
+
+def test_section_prompt_uses_compact_model_packet_instead_of_full_debug_packet() -> None:
+    section = {
+        "title": "Evidence Carrying the Conclusion",
+        "markdown": "## Evidence Carrying the Conclusion\n\nThe pilot reduced review time by 34 percent.",
+    }
+    contract = {
+        "heading": "Evidence Carrying the Conclusion",
+        "confidence": "medium",
+        "requires_confidence": False,
+        "required_evidence": [
+            {
+                "slot": "Hard-outcome support",
+                "claim": "The pilot reduced review time by 34 percent without increasing error rates.",
+                "source": "Evaluation",
+                "anchor_terms": ["pilot", "reduced", "review", "34", "error"],
+            }
+        ],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {
+            "section_goal": "Group the carrying evidence by issue cluster rather than listing isolated claims.",
+            "argument_model": {"proposed_answer": "x" * 5000},
+            "decision_argument_artifacts": {"traceability_requirements": ["y" * 5000]},
+            "issue_clusters": [{"representative_claims": [{"claim": "z" * 5000}]}],
+        },
+        "section_job": "Explain the evidence carrying the conclusion.",
+        "has_obligations": True,
+        "style": [],
+    }
+
+    prompt = _section_rewrite_prompt(section, contract, previous_title="Why This Read", next_title="Scope")
+    contract_text = prompt.split("Section contract:\n", 1)[1].split("\n\nThe section below", 1)[0]
+    model_contract = json.loads(contract_text)
+
+    assert "section_synthesis_packet" not in model_contract
+    assert "argument_model" not in contract_text
+    assert "decision_argument_artifacts" not in contract_text
+    assert "model_section_packet" in model_contract
+    assert "validation_obligations" in model_contract
+    assert model_contract["model_section_packet"]["owned_evidence"][0]["claim"].startswith("The pilot reduced")
+    assert len(contract_text) < 5000
+
+
+def test_model_section_packet_promotes_concrete_cruxes_over_generic_placeholders() -> None:
+    contract = {
+        "heading": "Decision Cruxes",
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [
+            {
+                "crux": "Whether the evidence favors the unfavorable or harmful read rather than the leading alternative.",
+                "current_read": "The current read treats the diagnostic evidence as informative but still conditional.",
+                "would_change_if": "The recommendation would change if the diagnostic evidence consistently supported this read across the target scope.",
+            }
+        ],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {
+            "decision_synthesis": {
+                "cruxes": [
+                    {
+                        "crux": "Whether residual confounding explains the apparent outcome association.",
+                        "why_it_matters": "This determines whether the observational association changes the default recommendation.",
+                        "current_read": "The association remains decision-relevant but not decisive.",
+                        "would_change_if": "The recommendation would change if adjustment and sensitivity checks ruled out confounding.",
+                        "claim_ids": ["c1", "c2"],
+                        "relation_ids": ["r1"],
+                    }
+                ]
+            }
+        },
+    }
+
+    model_contract = model_facing_section_contract(contract)
+    cruxes = model_contract["model_section_packet"]["canonical_cruxes"]
+
+    assert cruxes[0]["crux"] == "Whether residual confounding explains the apparent outcome association."
+    assert "unfavorable or harmful read" not in json.dumps(cruxes)
+    assert "claim_ids" not in cruxes[0]
+    assert "relation_ids" not in cruxes[0]
 
 
 def test_section_rewrite_writes_section_synthesis_packets_with_argument_model(monkeypatch, tmp_path) -> None:
@@ -473,6 +600,26 @@ def test_section_rewrite_repairs_dangling_practical_read(monkeypatch) -> None:
     practical = result["memo"].split("## Practical Read", 1)[1].split("## Why This Read", 1)[0]
     assert not practical.strip().lower().startswith("however")
     assert "- " in practical
+
+
+def test_structured_scope_fallback_renders_required_scope_obligations() -> None:
+    section = structured_scope_and_exceptions(
+        {
+            "required_evidence": [],
+            "evidence_references": [],
+            "required_main_memo_obligations": [
+                {
+                    "obligation_id": "scope_boundary_01",
+                    "category": "scope_boundary",
+                    "statement": "Data above the ordinary exposure level remain sparse.",
+                    "search_terms": ["ordinary exposure", "sparse"],
+                }
+            ],
+            "section_synthesis_packet": {},
+        }
+    )
+
+    assert "Data above the ordinary exposure level remain sparse." in section
 
 
 def test_final_brief_fallback_prefers_practical_default_paragraph_over_exception_bullets() -> None:
@@ -644,6 +791,7 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
     )
 
     why_report = next(section for section in result["report"]["sections"] if section["title"] == "Evidence Carrying the Conclusion")
+    assert "validation_obligations" in seen_prompt
     assert "required_main_memo_obligations" in seen_prompt
     assert why_report["status"] == "rejected_fallback"
     assert any("dropped required main-memo obligation" in issue for issue in why_report["issues"])

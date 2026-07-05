@@ -67,11 +67,31 @@ def structured_scope_and_exceptions(contract: dict[str, Any]) -> str:
     exceptions = [row for row in synthesis.get("exceptions", []) if isinstance(row, dict)]
     required = [row for row in contract.get("required_evidence", []) if isinstance(row, dict)]
     refs = [row for row in contract.get("evidence_references", []) if isinstance(row, dict)]
+    obligations = [
+        row for row in contract.get("required_main_memo_obligations", [])
+        if isinstance(row, dict) and str(row.get("statement", "")).strip()
+    ]
 
-    default_scope = _first_claim(required + refs, ("study population", "free of", "default", "healthy", "population")) or _first_match(boundaries, ("population", "default", "setting"))
-    comparator = _first_claim(required + refs, ("comparator", "replacing", "substitut", "compared")) or _first_match(boundaries, ("comparator", "substitution"))
-    exception = _first_claim(required + refs, ("subgroup", "people with", "patients with", "individuals with", "higher risk", "higher-risk", "high-risk")) or _first_match(exceptions, ("subgroup", "risk", "exception"))
-    change = _first_match(boundaries, ("dose", "endpoint", "study_design")) or _first_claim(required + refs, ("dose", "endpoint", "biomarker", "risk"))
+    default_scope = (
+        _first_claim(required, ("study population", "free of", "default", "healthy", "population"))
+        or _first_reference(refs, ("study population", "free of", "default", "healthy", "population"))
+        or _first_match(boundaries, ("population", "default", "setting"))
+    )
+    comparator = (
+        _first_claim(required, ("comparator", "replacing", "substitut", "compared"))
+        or _first_reference(refs, ("comparator", "replacing", "substitut", "compared"))
+        or _first_match(boundaries, ("comparator", "substitution"))
+    )
+    exception = (
+        _first_claim(required, ("subgroup", "people with", "patients with", "individuals with", "higher risk", "higher-risk", "high-risk"))
+        or _first_reference(refs, ("subgroup", "people with", "patients with", "individuals with", "higher risk", "higher-risk", "high-risk"))
+        or _first_match(exceptions, ("subgroup", "risk", "exception"))
+    )
+    change = (
+        _first_match(boundaries, ("dose", "endpoint", "study_design"))
+        or _first_claim(required, ("dose", "endpoint", "biomarker", "risk"))
+        or _first_reference(refs, ("dose", "endpoint", "biomarker", "risk"))
+    )
 
     lines = ["## Practical Scope and Exceptions", ""]
     for label, value in (
@@ -80,8 +100,13 @@ def structured_scope_and_exceptions(contract: dict[str, Any]) -> str:
         ("Exception groups", exception),
         ("What would change this", change),
     ):
-        if value:
-            lines.append(f"- **{label}:** {_sentence(value)}")
+        sentence = _sentence(value)
+        if sentence:
+            lines.append(f"- **{label}:** {sentence}")
+    for obligation in obligations[:5]:
+        statement = _sentence(str(obligation.get("statement", "")).strip())
+        if statement and not _text_already_present(statement, "\n".join(lines)):
+            lines.append(f"- **Boundary condition:** {statement}")
     if len(lines) <= 2:
         lines.append("- **Default scope:** Apply the recommendation only within the population, comparator, and evidence limits represented in the source packet.")
     return "\n".join(lines)
@@ -115,7 +140,7 @@ def _primary_practical_actions(contract: dict[str, Any]) -> list[str]:
         if isinstance(row, dict) and str(row.get("recommendation", "")).strip()
     ]
     raw_actions.extend(str(item).strip() for item in contract.get("practical_actions", []) if str(item).strip())
-    actions = reader_facing_practical_items(filter_primary_practical_actions(raw_actions, scaffold))
+    actions = [item for item in reader_facing_practical_items(filter_primary_practical_actions(raw_actions, scaffold)) if not _looks_incomplete(item)]
     return _dedupe(actions)
 
 
@@ -209,6 +234,14 @@ def _first_claim(rows: list[dict[str, Any]], markers: tuple[str, ...]) -> str:
     return ""
 
 
+def _first_reference(rows: list[dict[str, Any]], markers: tuple[str, ...]) -> str:
+    for row in rows:
+        text = " ".join(str(row.get(key, "")) for key in ("slot", "role_summary", "reference_instruction")).strip()
+        if text and any(marker in text.lower() for marker in markers):
+            return text
+    return ""
+
+
 def _first_body_text(markdown: str) -> str:
     for paragraph in re.split(r"\n\s*\n", _body_without_heading(markdown)):
         text = paragraph.strip()
@@ -236,7 +269,9 @@ def _content_terms(text: str) -> list[str]:
 
 def _sentence(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", str(text)).strip().rstrip(".")
-    return cleaned + "." if cleaned else ""
+    if not cleaned or _looks_incomplete(cleaned):
+        return ""
+    return cleaned + "."
 
 
 def _dedupe(items: list[str]) -> list[str]:
@@ -248,3 +283,18 @@ def _dedupe(items: list[str]) -> list[str]:
             seen.add(key)
             kept.append(item)
     return kept
+
+
+def _looks_incomplete(text: str) -> bool:
+    cleaned = text.strip().rstrip(".").lower()
+    if text.count("(") != text.count(")") or text.count("[") != text.count("]"):
+        return True
+    return bool(re.search(r"\b(?:and|or|of|with|to|than|as|between|including|other|vs)\s*$", cleaned))
+
+
+def _text_already_present(statement: str, text: str) -> bool:
+    statement_terms = set(_content_terms(statement))
+    text_terms = set(_content_terms(text))
+    if not statement_terms:
+        return True
+    return len(statement_terms & text_terms) >= min(5, max(2, len(statement_terms) // 2))

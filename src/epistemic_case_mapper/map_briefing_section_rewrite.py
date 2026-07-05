@@ -12,6 +12,7 @@ from epistemic_case_mapper.main_memo_obligations import (
     section_obligations_for_title,
 )
 from epistemic_case_mapper.decision_argument_artifacts import compact_decision_argument_artifacts
+from epistemic_case_mapper.map_briefing_section_fallbacks import structured_section_fallback
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _replace_internal_reader_phrases,
     _repair_overclaim_strength_language,
@@ -30,14 +31,15 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
     repeated_owned_evidence_issues,
     section_owns_evidence,
 )
+from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet, select_section_cruxes
 from epistemic_case_mapper.map_briefing_section_packets import (
     compact_argument_model, prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact,
 )
-from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract
+from epistemic_case_mapper.map_briefing_section_obligations import section_main_memo_obligations
+from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract, model_facing_section_markdown
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
-    structured_scope_and_exceptions,
 )
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.model_backends import run_model_backend
@@ -100,6 +102,7 @@ def rewrite_reader_memo_by_section(
                 "title": section["title"],
                 "section_job": section_contract.get("section_job"),
                 "packet": section_contract.get("section_synthesis_packet", {}),
+                "model_packet": section_contract.get("model_section_packet", {}),
             }
         )
         result = _rewrite_one_section(
@@ -196,10 +199,16 @@ def _rewrite_one_section(
     _apply_attempt_report(section_report, attempt_result, deterministic_text=section["markdown"])
     if attempt_result["accepted"]:
         return {"section": clean_reader_memo_text(str(attempt_result["section"])), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
-    structured = _structured_section_fallback(section, section_contract)
-    if structured != section["markdown"] and not _section_rewrite_issues(structured, section, section_contract):
-        section_report.update({"status": "accepted_structured_fallback", "accepted": True, "structured_fallback": True})
-        return {"section": clean_reader_memo_text(structured), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+    structured = structured_section_fallback(section, section_contract)
+    if structured != section["markdown"]:
+        fallback_issues = _section_rewrite_issues(structured, section, section_contract)
+        hard_issues = [issue for issue in fallback_issues if not _structured_fallback_warning(issue)]
+        section_report["structured_fallback_issues"] = fallback_issues
+        if not hard_issues:
+            status = "accepted_structured_fallback" if not fallback_issues else "accepted_structured_fallback_with_warnings"
+            section_report.update({"status": status, "accepted": True, "issues": fallback_issues, "structured_fallback": True})
+            return {"section": clean_reader_memo_text(structured), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+        section_report["structured_fallback_hard_issues"] = hard_issues
     section_report["status"] = "rejected_fallback"
     return {"section": section["markdown"], "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
 
@@ -225,6 +234,7 @@ def _report_only_section_packets(sections: list[dict[str, str]], contract: dict[
                 "title": section["title"],
                 "section_job": section_contract.get("section_job"),
                 "packet": section_contract.get("section_synthesis_packet", {}),
+                "model_packet": section_contract.get("model_section_packet", {}),
             }
         )
     return packets
@@ -541,12 +551,13 @@ def _exception_led_answer(text: str) -> bool:
 
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
     model_contract = model_facing_section_contract(contract)
+    model_section = model_facing_section_markdown(section["markdown"], contract)
     return (
         "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
-        "Use the section synthesis packet as the primary structure: issue clusters, load-bearing claims, bridge claims, and tensions should become coherent prose.\n"
-        "Use decision_argument_artifacts first when present: summary_of_findings carries the evidence rows, competing_reads shows rejected alternatives, argument_case_top_claim anchors the answer, and traceability_requirements shows obligations that must not disappear.\n"
-        "When quantitative_anchors include key_quantities, use one relevant card-level estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
+        "Use model_section_packet as the primary structure: section_thesis, owned_evidence, local_tensions, and canonical_cruxes define the section's job.\n"
+        "Do not mine omitted debug fields or infer from other sections; if evidence is not in owned_evidence or required obligations, treat it as reference-only. prohibited_repetition is a guardrail, not memo content; never render it as bullets, brackets, named gaps, or constraints.\n"
+        "When model_section_packet includes must_include_quantities, use one relevant estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
         "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
         "Respect evidence ownership: fully explain owned evidence only in this section; for evidence_references, use at most a short cross-reference and do not repeat source-level details.\n"
@@ -557,7 +568,7 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         f"{json.dumps(model_contract, indent=2, ensure_ascii=False)}\n\n"
         "The section below is the deterministic draft to improve using the section synthesis packet.\n"
         "Section to rewrite:\n"
-        f"{section['markdown'].strip()}\n"
+        f"{model_section.strip()}\n"
     )
 
 
@@ -576,6 +587,7 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
         issues.append("section contains raw map identifiers")
     if "crux" in original["title"].lower() and _has_generic_crux_language(rewritten):
         issues.append("section crux table contains generic placeholder language")
+    if re.search(r"(?im)^\s*[-*]\s+\[[^\]]+\]\s+\([^)]+\)|named gaps and constraints", rewritten): issues.append("section surfaced internal evidence ownership metadata")
     min_decision_cruxes = int(contract.get("min_decision_changing_cruxes", 0) or 0)
     if min_decision_cruxes and _decision_changing_crux_count(rewritten) < min_decision_cruxes:
         issues.append("section does not preserve enough decision-changing crux conditions")
@@ -617,11 +629,10 @@ def _validate_final_decision_brief(rewritten: str, contract: dict[str, Any], bod
 def _post_synthesis_obligation_validation(memo: str, contract: dict[str, Any]) -> dict[str, Any]:
     _, sections = _split_sections(memo)
     missing: list[dict[str, Any]] = []
-    plan = contract.get("_main_memo_obligation_plan", [])
     for section in sections:
         if section["title"].lower() in {"evidence trail", "sources"}:
             continue
-        obligations = section_obligations_for_title(section["title"], plan, limit=4 if section["title"] == "Decision Brief" else 5)
+        obligations = section_main_memo_obligations(section["title"], contract)
         if section["title"].strip().lower() == "decision cruxes":
             obligations = []
         issues = obligation_issues_for_text(obligations, section["markdown"], prefix="post-synthesis section missing obligation")
@@ -648,11 +659,8 @@ def _apply_attempt_report(report: dict[str, Any], result: dict[str, Any], *, det
         report["deterministic_word_count"] = len(deterministic_text.split())
 
 
-def _structured_section_fallback(section: dict[str, str], contract: dict[str, Any]) -> str:
-    title = section["title"].lower()
-    if "scope" in title and "exception" in title:
-        return structured_scope_and_exceptions(contract)
-    return section["markdown"]
+def _structured_fallback_warning(issue: str) -> bool:
+    return issue.startswith("section repeats evidence owned by ") or issue.startswith("section over-explains evidence owned by ")
 
 
 def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) -> dict[str, Any]:
@@ -685,16 +693,13 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     ]
     required_cruxes = _section_required_cruxes(full_contract) if "crux" in title.lower() else []
     practical_actions = full_contract.get("practical_actions", []) if "practical" in title.lower() else []
-    main_memo_obligations = section_obligations_for_title(
-        title,
-        full_contract.get("_main_memo_obligation_plan", []),
-    )
+    main_memo_obligations = section_main_memo_obligations(title, full_contract)
     if title.strip().lower() == "decision cruxes":
         main_memo_obligations = []
     synthesis_packet = section_synthesis_packet(title, full_contract)
     synthesis_packet = prune_section_packet_for_ownership(title, synthesis_packet, owned_elsewhere_evidence)
     synthesis_packet["required_main_memo_obligations"] = main_memo_obligations
-    return {
+    section_contract = {
         "heading": title,
         "confidence": full_contract.get("confidence"),
         "requires_confidence": "**Confidence:**" in text,
@@ -707,6 +712,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "practical_actions": practical_actions if isinstance(practical_actions, list) else [],
         "min_decision_changing_cruxes": min(2, len(required_cruxes)) if "crux" in title.lower() else 0,
         "section_synthesis_packet": synthesis_packet,
+        "_section_synthesis_scaffold": full_contract.get("_section_synthesis_scaffold", {}),
         "decision_frame": frame,
         "section_job": section_jobs.get(title, "Smooth this section while preserving its local evidence obligations."),
         "has_obligations": bool(required_evidence or required_gaps or required_cruxes or practical_actions or main_memo_obligations),
@@ -718,23 +724,14 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
             "Use short transition language only when it helps connect to adjacent sections.",
         ],
     }
+    section_contract["model_section_packet"] = compile_model_section_packet(title, section_contract)
+    return section_contract
 
 
 def _section_required_cruxes(full_contract: dict[str, Any]) -> list[dict[str, Any]]:
-    scaffold = (
-        full_contract.get("_section_synthesis_scaffold", {})
-        if isinstance(full_contract.get("_section_synthesis_scaffold"), dict)
-        else {}
-    )
-    artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
-    structured = artifacts.get("structured_decision_cruxes", {}) if isinstance(artifacts.get("structured_decision_cruxes"), dict) else {}
-    structured_cruxes = [row for row in structured.get("cruxes", []) if isinstance(row, dict)]
-    if structured_cruxes:
-        return structured_cruxes[:3]
-    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
-    synthesis_cruxes = [row for row in synthesis.get("cruxes", []) if isinstance(row, dict)]
-    if synthesis_cruxes:
-        return synthesis_cruxes[:3]
+    selected = select_section_cruxes(full_contract, limit=3)
+    if selected:
+        return selected
     required = full_contract.get("required_cruxes", [])
     return [row for row in required if isinstance(row, dict)] if isinstance(required, list) else []
 
@@ -749,7 +746,7 @@ def _structured_decision_crux_section(contract: dict[str, Any]) -> str:
     for row in cruxes[:3]:
         crux = _clean_crux_cell(str(row.get("crux", "")))
         why = _clean_crux_cell(str(row.get("why_it_matters", "")))
-        current = _clean_crux_cell(str(row.get("current_read", "")))
+        current = _clean_crux_cell(_crux_current_read_cell(row, contract))
         change = _clean_crux_cell(str(row.get("would_change_if", "")))
         if crux and current and change:
             rows.append([crux, why or "This condition could change the recommendation.", current, change])
@@ -770,14 +767,20 @@ def _structured_decision_crux_section(contract: dict[str, Any]) -> str:
         lines.append("| " + " | ".join(_markdown_cell(value) for value in row) + " |")
     return "\n".join(lines)
 
+def _crux_current_read_cell(row: dict[str, Any], contract: dict[str, Any]) -> str:
+    current = str(row.get("current_read", "")).strip()
+    rows = contract.get("owned_elsewhere_evidence", [])
+    for evidence in rows if current and isinstance(rows, list) else []:
+        if isinstance(evidence, dict) and _rewrite_mentions_anchor_row(current, evidence):
+            return "The current read treats this as a boundary or counterweight, not as decisive by itself."
+    return current
+
 
 def _clean_crux_cell(text: str) -> str:
     cleaned = re.sub(r"\bClaim\s+[A-Z]\b[:\s-]*", "", text, flags=re.I)
     cleaned = re.sub(r"\b(?:claim|relation|source)_?[a-z]*\d+\b", "", cleaned, flags=re.I)
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
-    if not cleaned:
-        return ""
-    return _sentence(cleaned)
+    return _sentence(cleaned) if cleaned else ""
 
 
 def _markdown_cell(text: str) -> str:
@@ -786,9 +789,7 @@ def _markdown_cell(text: str) -> str:
 
 def _short_text(text: str, max_chars: int) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip()
-    if len(cleaned) <= max_chars:
-        return cleaned
-    return cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
+    return cleaned if len(cleaned) <= max_chars else cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
 
 
 def _decision_changing_crux_count(text: str) -> int:

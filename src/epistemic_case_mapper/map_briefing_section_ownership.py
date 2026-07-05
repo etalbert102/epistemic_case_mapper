@@ -82,6 +82,8 @@ def repeated_owned_evidence_issues(title: str, text: str, full_contract: dict[st
         style = str(policy.get("reference_style", "")).strip()
         if style == "full":
             continue
+        if _section_required_obligation_overlaps_row(full_contract, row):
+            continue
         if style == "short_reference":
             if _short_reference_overexplains_evidence(title, text, row, policy):
                 owner = str(policy.get("owner_section", "")).strip() or "another section"
@@ -257,6 +259,20 @@ def _content_overlap_count(text: str, reference: str) -> int:
 def _source_title_appears(text: str, row: dict[str, Any]) -> bool:
     source = str(row.get("source", "")).strip().lower()
     return bool(source and source != "structured option comparison" and source in text.lower())
+
+
+def _section_required_obligation_overlaps_row(full_contract: dict[str, Any], row: dict[str, Any]) -> bool:
+    claim = str(row.get("claim", "")).strip()
+    if not claim:
+        return False
+    for obligation in full_contract.get("required_main_memo_obligations", []) if isinstance(full_contract.get("required_main_memo_obligations"), list) else []:
+        if not isinstance(obligation, dict):
+            continue
+        statement = str(obligation.get("statement", "")).strip()
+        terms = " ".join(str(term) for term in obligation.get("search_terms", []) if str(term).strip()) if isinstance(obligation.get("search_terms"), list) else ""
+        if _content_overlap_count(statement, claim) >= 5 or (terms and _content_overlap_count(terms, claim) >= 4):
+            return True
+    return False
 
 
 def _quantity_overlap(text: str, claim: str) -> bool:

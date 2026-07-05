@@ -18,6 +18,8 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_cache import claim_payload_for_chunk, write_claim_progress
+from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason, region_decision_question
+from epistemic_case_mapper.staged_semantic_langextract import langextract_claim_payload_for_chunk
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
@@ -90,12 +92,14 @@ def run_staged_map(
     validate: bool = True,
     repair_quality: bool = False,
     reuse_claim_cache: bool = True,
+    claim_extractor: str = "native",
 ) -> StagedMapResult:
     _validate_staged_map_options(
         chunk_lines=chunk_lines,
         chunk_overlap_lines=chunk_overlap_lines,
         max_chunks_per_source=max_chunks_per_source,
         max_total_chunks=max_total_chunks,
+        claim_extractor=claim_extractor,
         relation_batch_size=relation_batch_size,
     )
     manifest, region, case_manifest = _load_context(repo_root, manifest_path, region_id)
@@ -119,6 +123,7 @@ def run_staged_map(
         max_claims_per_chunk=max_claims_per_chunk,
         config_profile_id=config_profile.profile_id,
         reuse_claim_cache=reuse_claim_cache,
+        claim_extractor=claim_extractor,
     )
     claims = claim_stage["claims"]
     rejected_claims = claim_stage["rejected_claims"]
@@ -177,18 +182,12 @@ def run_staged_map(
         validate=validate,
     )
     _write_staged_run_summary(
-        repo_root=repo_root,
-        region=region,
-        backend=backend,
-        chunk_lines=chunk_lines,
-        chunk_overlap_lines=chunk_overlap_lines,
-        max_chunks_per_source=max_chunks_per_source,
-        max_total_chunks=max_total_chunks,
-        max_claims_per_chunk=max_claims_per_chunk,
-        max_relation_pairs=max_relation_pairs,
-        relation_batch_size=relation_batch_size,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
+        repo_root=repo_root, region=region, backend=backend,
+        chunk_lines=chunk_lines, chunk_overlap_lines=chunk_overlap_lines,
+        max_chunks_per_source=max_chunks_per_source, max_total_chunks=max_total_chunks,
+        max_claims_per_chunk=max_claims_per_chunk, claim_extractor=claim_extractor,
+        max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
+        backend_timeout=backend_timeout, backend_retries=backend_retries,
         config_profile_id=config_profile.profile_id,
         all_chunks=all_chunks,
         chunks=chunks,
@@ -240,6 +239,7 @@ def _validate_staged_map_options(
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
+    claim_extractor: str,
     relation_batch_size: int,
 ) -> None:
     if chunk_lines < 1:
@@ -252,6 +252,8 @@ def _validate_staged_map_options(
         raise ValueError("max_total_chunks must be positive when supplied")
     if relation_batch_size < 1:
         raise ValueError("relation_batch_size must be positive")
+    if claim_extractor not in {"native", "langextract"}:
+        raise ValueError("claim_extractor must be native or langextract")
 
 def _write_staged_run_summary(
     *,
@@ -263,6 +265,7 @@ def _write_staged_run_summary(
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
     max_claims_per_chunk: int,
+    claim_extractor: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     backend_timeout: int | None,
@@ -292,6 +295,7 @@ def _write_staged_run_summary(
             max_chunks_per_source=max_chunks_per_source,
             max_total_chunks=max_total_chunks,
             max_claims_per_chunk=max_claims_per_chunk,
+            claim_extractor=claim_extractor,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
             backend_timeout=backend_timeout,
@@ -335,6 +339,7 @@ def _extract_consolidated_claims(
     max_claims_per_chunk: int,
     config_profile_id: str,
     reuse_claim_cache: bool,
+    claim_extractor: str,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
@@ -348,6 +353,7 @@ def _extract_consolidated_claims(
         artifact_dir=artifacts,
         max_claims_per_chunk=max_claims_per_chunk,
         reuse_claim_cache=reuse_claim_cache,
+        claim_extractor=claim_extractor,
     )
     llm_claim_count = len(claims)
     coverage_claims, coverage_report = _coverage_backfill_claims(
@@ -531,6 +537,7 @@ def _staged_run_summary(
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
     max_claims_per_chunk: int,
+    claim_extractor: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     backend_timeout: int | None,
@@ -565,6 +572,7 @@ def _staged_run_summary(
         "max_chunks_per_source": max_chunks_per_source,
         "max_total_chunks": max_total_chunks,
         "max_claims_per_chunk": max_claims_per_chunk,
+        "claim_extractor": claim_extractor,
         "max_relation_pairs": max_relation_pairs,
         "relation_batch_size": relation_batch_size,
         "backend_timeout": backend_timeout,
@@ -610,6 +618,7 @@ def _extract_claims(
     artifact_dir: Path,
     max_claims_per_chunk: int,
     reuse_claim_cache: bool = True,
+    claim_extractor: str = "native",
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
@@ -626,8 +635,10 @@ def _extract_claims(
         "fallback_claim_count": 0,
         "accepted_claim_count": 0,
         "rejected_claim_count": 0,
+        "claim_alignment_status_counts": {},
         "current_chunk_id": "",
         "complete": False,
+        "claim_extractor": claim_extractor,
     }
     progress_path = artifact_dir / "claim_extraction_progress.json"
 
@@ -636,17 +647,32 @@ def _extract_claims(
         chunk_accept_count = 0
         prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk)
         chunk_dir = artifact_dir / "claim_chunks"
-        canonical_path = chunk_dir / f"{chunk.chunk_id}_canonical.json"
+        canonical_suffix = "canonical" if claim_extractor == "native" else f"{claim_extractor}_canonical"
+        canonical_path = chunk_dir / f"{chunk.chunk_id}_{canonical_suffix}.json"
         write_markdown(chunk_dir / f"{chunk.chunk_id}_prompt.txt", prompt)
-        payload, cache_hit, backend_error = claim_payload_for_chunk(
-            prompt=prompt,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-            canonical_path=canonical_path,
-            raw_path=chunk_dir / f"{chunk.chunk_id}_raw.txt",
-            reuse_claim_cache=reuse_claim_cache,
-        )
+        if claim_extractor == "native":
+            payload, cache_hit, backend_error = claim_payload_for_chunk(
+                prompt=prompt,
+                backend=backend,
+                backend_timeout=backend_timeout,
+                backend_retries=backend_retries,
+                canonical_path=canonical_path,
+                raw_path=chunk_dir / f"{chunk.chunk_id}_raw.txt",
+                reuse_claim_cache=reuse_claim_cache,
+            )
+        elif claim_extractor == "langextract":
+            payload, cache_hit, backend_error = langextract_claim_payload_for_chunk(
+                chunk=chunk,
+                case_question=region_decision_question(region, case_manifest),
+                role_options=sorted(valid_roles),
+                backend=backend,
+                max_claims=max_claims_per_chunk,
+                canonical_path=canonical_path,
+                report_path=chunk_dir / f"{chunk.chunk_id}_langextract_report.json",
+                reuse_claim_cache=reuse_claim_cache,
+            )
+        else:
+            raise ValueError(f"unknown claim_extractor={claim_extractor!r}")
         if cache_hit:
             progress["cache_hit_count"] += 1
         else:
@@ -654,16 +680,10 @@ def _extract_claims(
         if backend_error:
             fallback = _fallback_claim_for_chunk(chunk)
             if fallback is not None:
-                key = (
-                    fallback["source_id"],
-                    _normalize_text(fallback["excerpt"]),
-                    _normalize_text(fallback["claim"]),
-                )
+                key = _claim_dedupe_key(fallback)
                 if key not in seen:
                     seen.add(key)
-                    fallback["claim_id"] = f"{region.id_prefix}_c{claim_index:03d}"
-                    claim_index += 1
-                    accepted.append(fallback)
+                    claim_index = _record_accepted_claim(fallback, accepted, progress, region.id_prefix, claim_index)
                     progress["fallback_claim_count"] += 1
                     rejected.append(
                         {
@@ -694,40 +714,17 @@ def _extract_claims(
             if claim is None:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": reason, "proposal": proposal})
                 continue
-            key = (
-                claim["source_id"],
-                _normalize_text(claim["excerpt"]),
-                _normalize_text(claim["claim"]),
-            )
+            relevance_reason = claim_decision_relevance_rejection_reason(claim, region_decision_question(region, case_manifest))
+            if relevance_reason:
+                rejected.append({"chunk_id": chunk.chunk_id, "reason": relevance_reason, "proposal": proposal})
+                continue
+            key = _claim_dedupe_key(claim)
             if key in seen:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": "duplicate_claim", "proposal": proposal})
                 continue
             seen.add(key)
-            claim["claim_id"] = f"{region.id_prefix}_c{claim_index:03d}"
-            claim_index += 1
-            accepted.append(claim)
+            claim_index = _record_accepted_claim(claim, accepted, progress, region.id_prefix, claim_index)
             chunk_accept_count += 1
-        if chunk_accept_count == 0:
-            fallback = _fallback_claim_for_chunk(chunk)
-            if fallback is not None:
-                key = (
-                    fallback["source_id"],
-                    _normalize_text(fallback["excerpt"]),
-                    _normalize_text(fallback["claim"]),
-                )
-                if key not in seen:
-                    seen.add(key)
-                    fallback["claim_id"] = f"{region.id_prefix}_c{claim_index:03d}"
-                    claim_index += 1
-                    accepted.append(fallback)
-                    progress["fallback_claim_count"] += 1
-                    rejected.append(
-                        {
-                            "chunk_id": chunk.chunk_id,
-                            "reason": "model_under_extracted_used_deterministic_fallback",
-                            "span_id": fallback["span_id"],
-                        }
-                    )
         write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
     progress["complete"] = True
     progress["current_chunk_id"] = ""
@@ -737,6 +734,39 @@ def _extract_claims(
     write_json(progress_path, progress)
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
+
+def _claim_dedupe_key(claim: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(claim.get("source_id", "")),
+        _normalize_text(str(claim.get("excerpt", ""))),
+        _normalize_text(str(claim.get("claim", ""))),
+    )
+
+
+def _record_accepted_claim(
+    claim: dict[str, Any],
+    accepted: list[dict[str, Any]],
+    progress: dict[str, Any],
+    id_prefix: str,
+    claim_index: int,
+) -> int:
+    claim["claim_id"] = f"{id_prefix}_c{claim_index:03d}"
+    accepted.append(claim)
+    _increment_progress_count(
+        progress,
+        "claim_alignment_status_counts",
+        str(claim.get("source_alignment", {}).get("status", "unknown")),
+    )
+    return claim_index + 1
+
+
+def _increment_progress_count(progress: dict[str, Any], key: str, value: str) -> None:
+    bucket = progress.setdefault(key, {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        progress[key] = bucket
+    label = value or "unknown"
+    bucket[label] = int(bucket.get(label, 0)) + 1
 
 def _coverage_backfill_claims(
     *,
@@ -835,6 +865,7 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _sharpen_relations,
     evaluate_staged_map_quality,
 )
+from epistemic_case_mapper.staged_semantic_relation_candidates import _relation_batch_count
 from epistemic_case_mapper.staged_semantic_sources import (
     _artifact_dir,
     _budget_chunks,
@@ -845,7 +876,6 @@ from epistemic_case_mapper.staged_semantic_sources import (
     _normalize_claim_proposal,
     _normalize_text,
     _parse_model_json,
-    _relation_batch_count,
     _relative,
     _source_chunks,
 )

@@ -42,7 +42,9 @@ from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicali
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
+from epistemic_case_mapper.map_briefing_global_plan import build_global_memo_plan
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
+from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
 from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_scaffold
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
@@ -114,6 +116,7 @@ def run_map_briefing(
     scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit, question=question)
     scaffold["claim_canonicalization_report"] = canonicalization_report
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
+    _attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -140,11 +143,9 @@ def run_map_briefing(
         quality_report=quality_report,
         scaffold=scaffold,
     )
-    model_confidence = str(render_state["model_confidence"])
-    calibrated = str(render_state["calibrated"])
+    model_confidence, calibrated = str(render_state["model_confidence"]), str(render_state["calibrated"])
     calibration = render_state["calibration"]
-    parse_ok = bool(render_state["parse_ok"])
-    parse_diagnostics = render_state["parse_diagnostics"]
+    parse_ok, parse_diagnostics = bool(render_state["parse_ok"]), render_state["parse_diagnostics"]
     rendered = _prepare_rendered_reader_packet(
         str(render_state["rendered"]),
         calibrated=calibrated,
@@ -162,6 +163,7 @@ def run_map_briefing(
         backend_retries=backend_retries,
         run_reader_memo_rewrite=run_reader_memo_rewrite,
     )
+    _attach_model_context_audit(artifacts=artifacts, backend=backend, prompt=prompt, scaffold=scaffold, final_outputs=final_outputs)
     briefing_path = final_outputs["briefing_path"]
     evidence_appendix_path = final_outputs["evidence_appendix_path"]
     telemetry_paths = write_gap_telemetry_outputs(
@@ -217,6 +219,44 @@ def run_map_briefing(
         calibrated_confidence=calibrated,
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
+
+
+def _attach_global_memo_plan(
+    scaffold: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> None:
+    result = build_global_memo_plan(
+        scaffold,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    scaffold["global_memo_plan"] = result["plan"]
+    scaffold["global_memo_plan_validation"] = result["validation"]
+    scaffold["global_memo_plan_prompt"] = result["prompt"]
+    scaffold["global_memo_plan_raw"] = result["raw"]
+
+
+def _attach_model_context_audit(
+    *,
+    artifacts: Path,
+    backend: str,
+    prompt: str,
+    scaffold: dict[str, Any],
+    final_outputs: dict[str, Any],
+) -> None:
+    audit_path = write_model_context_audit(
+        artifacts / "model_context_audit.json",
+        backend=backend,
+        legacy_prompt=prompt,
+        global_plan_prompt=str(scaffold.get("global_memo_plan_prompt", "")),
+        section_packets_path=final_outputs["summary_paths"].get("section_synthesis_packets"),
+        reader_rewrite_prompt=str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
+    )
+    final_outputs["summary_paths"]["model_context_audit"] = audit_path
 
 
 def _apply_atomic_cards_to_briefing_map(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

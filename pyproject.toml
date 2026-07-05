@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+langextract = ["langextract>=1.0"]
 
 [project.scripts]
 ecm = "epistemic_case_mapper.cli:main"

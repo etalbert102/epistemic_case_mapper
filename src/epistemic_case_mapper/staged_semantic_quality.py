@@ -18,6 +18,8 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_prompt_examples, claim_prompt_json_schema, claim_prompt_schema
+from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -668,8 +670,10 @@ def _map_quality_scaffold(
         source.source_id: _source_role_scaffold(source)
         for source in required_sources
     }
+    decision_question = region_decision_question(region, case_manifest)
     scaffold: dict[str, Any] = {
         "case_question": case_manifest.question,
+        "decision_question": decision_question,
         "epistemic_config_profile": {
             "profile_id": profile.profile_id,
             "label": profile.label,
@@ -794,27 +798,35 @@ def _claim_prompt(
     )
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk), indent=2)
     role_options = "|".join(_configured_claim_roles(case_manifest))
+    decision_question = region_decision_question(region, case_manifest)
     return render_prompt(
-        ("Task", "You are selecting source-grounded claim candidates from one bounded source-span catalog."),
+        ("Task", "You are selecting source-grounded claim candidates that help answer the specific decision question from one bounded source-span catalog."),
         (
             "Metadata",
-            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
+            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nDecision question: {decision_question}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
         ),
         (
             "Rules",
             [
                 f"- Return at most {max_claims} claims.",
+                "- Treat the decision question as the governing extraction filter, not background metadata.",
+                "- Only return claims that are direct answers, indirect evidence, or necessary scope/method limits for the case question.",
+                "- Do not return claims merely because they mention the topic term; exclude claims about different populations, outcomes, mechanisms, or administrative context unless they bound the answer.",
+                "- Inclusion test: before returning a claim, ask whether its population, outcome, evidence type, and intervention/exposure are named by or necessary for the decision question. If not, omit it.",
+                "- Use scope_limit only for a mismatch the decision question asks the map to preserve; otherwise omit the claim.",
                 "- Do not include claim_id. Deterministic code assigns IDs later.",
                 "- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.",
-                "- Use only span IDs shown in the catalog.",
-                "- Prefer claims that affect the case question, not bibliographic metadata.",
+                "- For every returned claim, include source_quote as an exact substring copied from one catalog span.",
+                "- Use only span IDs shown in the catalog. Deterministic code will verify span_id from source_quote and may override your span_id if the quote points elsewhere.",
+                "- Keep claim as a concise interpretation of source_quote; do not use claim to introduce facts absent from source_quote.",
+                "- For every returned claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
                 "- Use the map-quality scaffold to diversify claim roles and preserve source limitations.",
                 "- If a source limitation changes the answer, use the sharpest configured role available.",
                 '- If the chunk has no useful claim, return {"claims": []}.',
             ],
         ),
-        ("Output Schema", json_schema_block(_claim_prompt_schema(role_options))),
-        ("Examples", examples_block(_claim_prompt_examples())),
+        ("Output Schema", json_schema_block(claim_prompt_schema(role_options))),
+        ("Examples", examples_block(claim_prompt_examples())),
         (
             "Context",
             "\n\n".join(
@@ -826,53 +838,8 @@ def _claim_prompt(
         ),
     )
 
-
-def _claim_prompt_schema(role_options: str) -> dict[str, Any]:
-    return {
-        "claims": [
-            {
-                "claim": "one concise claim supported by the excerpt",
-                "span_id": "one span_id from the catalog",
-                "entailed_by_excerpt": "yes|no|uncertain",
-                "role": role_options,
-            }
-        ]
-    }
-
-
 def _claim_prompt_json_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "properties": {
-            "claims": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "claim": {"type": "string"},
-                        "span_id": {"type": "string"},
-                        "entailed_by_excerpt": {"type": "string", "enum": ["yes", "no", "uncertain"]},
-                        "role": {"type": "string"},
-                    },
-                    "required": ["claim", "span_id", "entailed_by_excerpt", "role"],
-                },
-            }
-        },
-        "required": ["claims"],
-    }
-
-
-def _claim_prompt_examples() -> list[dict[str, Any]]:
-    return [
-        {
-            "input_hint": "Span states an outcome relevant to the case question.",
-            "output": {"claims": [{"claim": "The program reduced processing time for the target cases.", "span_id": "doc_s0001", "entailed_by_excerpt": "yes", "role": "conclusion_support"}]},
-        },
-        {
-            "input_hint": "Span only gives title, author, or background metadata.",
-            "output": {"claims": []},
-        },
-    ]
+    return claim_prompt_json_schema()
 
 
 
