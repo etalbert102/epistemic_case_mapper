@@ -357,7 +357,8 @@ def test_briefing_scaffold_exposes_option_comparison_and_crux_contract() -> None
     assert "alternatives_or_comparators" not in slots["coverage"]["missing_required_slots"]
     comparator_slot = next(slot for slot in slots["slots"] if slot["slot_id"] == "alternatives_or_comparators")
     assert len(comparator_slot["rows"]) == 1
-    assert "Compared" in comparator_slot["rows"][0]["claim"]
+    assert "Comparator evidence" in comparator_slot["rows"][0]["claim"]
+    assert "lacks clean evidence" in comparator_slot["rows"][0]["claim"]
     assert "protected lanes versus painted lanes" in comparator_slot["rows"][0]["claim"]
     assert "..." not in comparator_slot["rows"][0]["claim"]
     crux_rows = scaffold["crux_contract"]["cruxes"]

@@ -31,9 +31,7 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
     section_owns_evidence,
 )
 from epistemic_case_mapper.map_briefing_section_packets import (
-    compact_argument_model,
-    section_synthesis_packet,
-    write_section_packets_artifact,
+    compact_argument_model, prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact,
 )
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
@@ -667,7 +665,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         and section_owns_evidence(title, row, full_contract)
     ]
     evidence_references = [
-        compact_evidence_reference(row, full_contract)
+        compact_evidence_reference(title, row, full_contract)
         for row in full_contract.get("required_evidence", [])
         if isinstance(row, dict)
         and _rewrite_mentions_anchor_row(text, row)
@@ -677,7 +675,6 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         {**row, "reference_policy": evidence_reference_policy(title, row, full_contract)}
         for row in full_contract.get("required_evidence", [])
         if isinstance(row, dict)
-        and _rewrite_mentions_anchor_row(text, row)
         and not section_owns_evidence(title, row, full_contract)
     ]
     required_gaps = [
@@ -693,6 +690,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     if title.strip().lower() == "decision cruxes":
         main_memo_obligations = []
     synthesis_packet = section_synthesis_packet(title, full_contract)
+    synthesis_packet = prune_section_packet_for_ownership(title, synthesis_packet, owned_elsewhere_evidence)
     synthesis_packet["required_main_memo_obligations"] = main_memo_obligations
     return {
         "heading": title,

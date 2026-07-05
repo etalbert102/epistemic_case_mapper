@@ -16,11 +16,7 @@ from epistemic_case_mapper.classical_ml import (
     tfidf_near_duplicate_pairs,
     weighted_pagerank,
 )
-from epistemic_case_mapper.config_profiles import (
-    DEFAULT_PROFILE_ID,
-    infer_profile_id_from_text,
-    profile_vocabulary,
-)
+from epistemic_case_mapper.config_profiles import DEFAULT_PROFILE_ID, infer_profile_id_from_text, profile_vocabulary
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
@@ -48,20 +44,30 @@ def _option_tradeoff_slot_claim(tradeoff: dict[str, Any], options: list[str]) ->
     if not any(isinstance(evidence_by_option.get(option), list) and evidence_by_option.get(option) for option in options):
         return ""
     label = str(tradeoff.get("label") or _option_criterion_label(str(tradeoff.get("criterion", "")))).strip()
-    compared = " versus ".join(options[:2])
-    clauses: list[str] = []
+    covered: list[tuple[str, str]] = []
+    missing: list[str] = []
     for option in options[:2]:
         evidence_rows = evidence_by_option.get(option, [])
         if not isinstance(evidence_rows, list) or not evidence_rows:
-            clauses.append(f"{option}: no clean mapped evidence for this criterion")
+            missing.append(option)
             continue
         claim = _option_claim_snippet(str(evidence_rows[0].get("claim", "")), max_chars=130)
         if not claim:
             continue
-        clauses.append(f"{option}: {claim}")
-    if not clauses:
+        covered.append((option, claim))
+    if not covered:
         return ""
-    return f"Compared {compared} on {label.lower()}: " + "; ".join(clauses) + "."
+    label_lower = label.lower()
+    compared = " versus ".join(options[:2])
+    if missing:
+        covered_text = "; ".join(f"{option}: {claim}" for option, claim in covered)
+        missing_text = " and ".join(missing)
+        return (
+            f"Comparator evidence for {compared} on {label_lower} is asymmetric: {covered_text}. "
+            f"The map lacks clean evidence for {missing_text} on the same criterion."
+        )
+    clauses = "; ".join(f"{option}: {claim}" for option, claim in covered[:2])
+    return f"Comparator evidence for {compared} on {label_lower}: {clauses}."
 
 def _option_tradeoff_slot_score(tradeoff: dict[str, Any]) -> int:
     evidence_by_option = tradeoff.get("evidence_by_option", {}) if isinstance(tradeoff.get("evidence_by_option"), dict) else {}

@@ -107,6 +107,20 @@ def drop_empty_packet_values(packet: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in packet.items() if value not in ({}, [], "", None)}
 
 
+def prune_section_packet_for_ownership(
+    title: str,
+    packet: dict[str, Any],
+    owned_elsewhere_evidence: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not owned_elsewhere_evidence:
+        return packet
+    rules = _ownership_packet_rules(owned_elsewhere_evidence)
+    if not rules:
+        return packet
+    pruned = _prune_packet_value(packet, rules)
+    return pruned if isinstance(pruned, dict) else packet
+
+
 def _section_goal(title_key: str) -> str:
     if "decision brief" in title_key:
         return "State the answer frame directly, with confidence and the one or two reasons that carry the read."
@@ -217,6 +231,85 @@ def _compact_claims(value: Any, *, limit: int) -> list[dict[str, Any]]:
             }
         )
     return compact
+
+
+def _ownership_packet_rules(rows: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    rules: dict[str, dict[str, str]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        claim = str(row.get("claim", "")).strip()
+        if not claim:
+            continue
+        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
+        style = str(policy.get("reference_style", "")).strip() or "short_reference"
+        owner = str(policy.get("owner_section", "")).strip()
+        slot = str(row.get("slot", "evidence")).strip() or "evidence"
+        rules[_normalize_claim_key(claim)] = {
+            "style": style,
+            "owner": owner,
+            "slot": slot,
+            "replacement": _packet_reference_replacement(slot, owner, style),
+        }
+    return rules
+
+
+def _prune_packet_value(value: Any, rules: dict[str, dict[str, str]]) -> Any:
+    if isinstance(value, list):
+        pruned_list = [_prune_packet_value(item, rules) for item in value]
+        return [item for item in pruned_list if item not in ({}, [], "", None)]
+    if isinstance(value, str):
+        return _prune_packet_text(value, rules)
+    if not isinstance(value, dict):
+        return value
+    rule = _matching_packet_rule(value, rules)
+    if rule:
+        if rule["style"] == "do_not_repeat":
+            return {}
+        scrubbed = dict(value)
+        for key, item in list(scrubbed.items()):
+            if isinstance(item, str):
+                scrubbed[key] = _prune_packet_text(item, rules)
+        scrubbed.pop("source", None)
+        scrubbed.pop("source_ids", None)
+        scrubbed["reference_style"] = rule["style"]
+        scrubbed["owner_section"] = rule["owner"]
+        return drop_empty_packet_values(scrubbed)
+    return drop_empty_packet_values({key: _prune_packet_value(item, rules) for key, item in value.items()})
+
+
+def _packet_reference_replacement(slot: str, owner: str, style: str) -> str:
+    if style == "short_reference":
+        return f"{slot} evidence is carried in {owner}; use only a brief cross-reference here." if owner else f"{slot} evidence is carried elsewhere."
+    return ""
+
+
+def _normalize_claim_key(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w%]+", " ", text.lower())).strip()
+
+
+def _matching_packet_rule(value: dict[str, Any], rules: dict[str, dict[str, str]]) -> dict[str, str] | None:
+    for item in value.values():
+        if not isinstance(item, str):
+            continue
+        normalized = _normalize_claim_key(item)
+        for claim_key, rule in rules.items():
+            if claim_key and (normalized == claim_key or claim_key in normalized):
+                return rule
+    return None
+
+
+def _prune_packet_text(text: str, rules: dict[str, dict[str, str]]) -> str:
+    cleaned = text
+    normalized = _normalize_claim_key(cleaned)
+    for claim_key, rule in sorted(rules.items(), key=lambda item: len(item[0]), reverse=True):
+        if not claim_key or claim_key not in normalized:
+            continue
+        if rule["style"] == "do_not_repeat":
+            return ""
+        cleaned = rule["replacement"]
+        normalized = _normalize_claim_key(cleaned)
+    return cleaned
 
 
 def _compact_tensions(value: Any, *, limit: int) -> list[dict[str, Any]]:

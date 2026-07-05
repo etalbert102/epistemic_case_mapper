@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
+from epistemic_case_mapper.map_briefing_validation import _content_terms
 
 
 def build_section_evidence_ownership(sections: list[dict[str, str]], contract: dict[str, Any]) -> dict[str, Any]:
@@ -51,20 +52,18 @@ def section_owns_evidence(title: str, row: dict[str, Any], full_contract: dict[s
     return not owner or owner == title
 
 
-def compact_evidence_reference(row: dict[str, Any], full_contract: dict[str, Any]) -> dict[str, Any]:
-    item = _ownership_item(row, full_contract)
-    owner = str(item.get("owner", "")).strip()
+def compact_evidence_reference(title: str, row: dict[str, Any], full_contract: dict[str, Any]) -> dict[str, Any]:
+    policy = evidence_reference_policy(title, row, full_contract)
+    owner = str(policy.get("owner_section", "")).strip()
+    style = str(policy.get("reference_style", "")).strip() or "short_reference"
     return {
         "slot": row.get("slot"),
         "owner_section": owner,
-        "reference_style": "short_reference" if owner else "full",
-        "reference_instruction": (
-            f"Do not restate this evidence here; if needed, use a short cross-reference to {owner}."
-            if owner
-            else "This section may carry the full evidence."
-        ),
-        "role_summary": _short_text(str(row.get("claim", "")), 120),
-        "source": row.get("source"),
+        "reference_style": style,
+        "allowed": bool(policy.get("allowed", True)),
+        "reference_instruction": _reference_instruction(owner, style),
+        "role_summary": _reference_role_summary(row, owner, style),
+        "source": row.get("source") if style == "full" else "",
     }
 
 
@@ -80,7 +79,13 @@ def repeated_owned_evidence_issues(title: str, text: str, full_contract: dict[st
         if not isinstance(row, dict):
             continue
         policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else evidence_reference_policy(title, row, full_contract)
-        if policy.get("reference_style") == "full":
+        style = str(policy.get("reference_style", "")).strip()
+        if style == "full":
+            continue
+        if style == "short_reference":
+            if _short_reference_overexplains_evidence(title, text, row, policy):
+                owner = str(policy.get("owner_section", "")).strip() or "another section"
+                issues.append(f"section over-explains evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
             continue
         if _rewrite_mentions_anchor_row(text, row):
             owner = str(policy.get("owner_section", "")).strip() or "another section"
@@ -127,6 +132,8 @@ def _preferred_evidence_owner(row: dict[str, Any], mentioned: list[str]) -> str:
     preference: list[str] = []
     if any(marker in slot for marker in ("high-risk", "subgroup", "default population", "dose boundary", "scope")):
         preference = ["Practical Scope and Exceptions", "Practical Read", "Evidence Carrying the Conclusion", "Why This Read"]
+    elif _claim_has_subgroup_signal(claim):
+        preference = ["Practical Scope and Exceptions", "Practical Read", "Evidence Carrying the Conclusion", "Why This Read"]
     elif any(marker in slot for marker in ("mechanism", "surrogate", "hard-outcome", "study-design", "support", "counterevidence")):
         preference = ["Evidence Carrying the Conclusion", "Why This Read", "Practical Scope and Exceptions"]
     elif any(marker in claim for marker in ("associated with", "risk", "cohort", "trial", "meta-analysis")):
@@ -162,3 +169,113 @@ def _short_text(text: str, max_chars: int) -> str:
     if len(cleaned) <= max_chars:
         return cleaned
     return cleaned[: max_chars - 3].rstrip(" ,.;") + "..."
+
+
+def _claim_has_subgroup_signal(claim: str) -> bool:
+    return any(
+        marker in claim
+        for marker in (
+            "people with",
+            "patients with",
+            "participants with",
+            "individuals with",
+            "children",
+            "older adults",
+            "pregnant",
+            "high-risk",
+            "subgroup",
+        )
+    )
+
+
+def _reference_instruction(owner: str, style: str) -> str:
+    if style == "full":
+        return "This section may carry the full evidence."
+    if style == "short_reference":
+        return (
+            f"If useful, use only a brief cross-reference to {owner}; do not include source-level details."
+            if owner
+            else "If useful, use only a brief cross-reference."
+        )
+    return (
+        f"Do not mention this evidence here; leave it to {owner}."
+        if owner
+        else "Do not mention this evidence here."
+    )
+
+
+def _reference_role_summary(row: dict[str, Any], owner: str, style: str) -> str:
+    if style == "full":
+        return _short_text(str(row.get("claim", "")), 120)
+    slot = str(row.get("slot", "evidence")).strip() or "evidence"
+    if style == "short_reference":
+        return f"{slot} evidence is carried in {owner}." if owner else f"{slot} evidence is carried elsewhere."
+    return ""
+
+
+def _short_reference_overexplains_evidence(
+    title: str,
+    text: str,
+    row: dict[str, Any],
+    policy: dict[str, Any],
+) -> bool:
+    if not _rewrite_mentions_anchor_row(text, row):
+        return False
+    owner = str(policy.get("owner_section", "")).strip()
+    sentence = _strongest_matching_sentence(text, row)
+    if not sentence:
+        return False
+    claim = str(row.get("claim", ""))
+    if _source_title_appears(sentence, row):
+        return True
+    if _quantity_overlap(sentence, claim) and _content_overlap_count(sentence, claim) >= 3:
+        return True
+    overlap = _content_overlap_count(sentence, claim)
+    if _mentions_owner_reference(sentence, owner) and len(sentence.split()) <= 38:
+        return overlap >= 9
+    return overlap >= 6
+
+
+def _strongest_matching_sentence(text: str, row: dict[str, Any]) -> str:
+    claim = str(row.get("claim", ""))
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", re.sub(r"\s+", " ", text).strip())
+    scored = [
+        (_content_overlap_count(sentence, claim), sentence)
+        for sentence in sentences
+        if sentence.strip()
+    ]
+    if not scored:
+        return ""
+    return max(scored, key=lambda item: item[0])[1]
+
+
+def _content_overlap_count(text: str, reference: str) -> int:
+    text_terms = set(_content_terms(text))
+    return sum(1 for term in _content_terms(reference) if term in text_terms)
+
+
+def _source_title_appears(text: str, row: dict[str, Any]) -> bool:
+    source = str(row.get("source", "")).strip().lower()
+    return bool(source and source != "structured option comparison" and source in text.lower())
+
+
+def _quantity_overlap(text: str, claim: str) -> bool:
+    pattern = r"\b\d+(?:\.\d+)?\b|%|percent|confidence interval|\bci\b|\brr\b|\bhr\b|\bor\b"
+    claim_quantities = {match.lower() for match in re.findall(pattern, claim, flags=re.IGNORECASE)}
+    if not claim_quantities:
+        return False
+    text_lower = text.lower()
+    return any(quantity in text_lower for quantity in claim_quantities)
+
+
+def _mentions_owner_reference(text: str, owner: str) -> bool:
+    lowered = text.lower()
+    owner_lower = owner.lower()
+    return bool(
+        owner_lower and owner_lower in lowered
+        or "evidence section" in lowered
+        or "evidence carrying" in lowered
+        or "discussed below" in lowered
+        or "discussed above" in lowered
+        or "see " in lowered
+    )
