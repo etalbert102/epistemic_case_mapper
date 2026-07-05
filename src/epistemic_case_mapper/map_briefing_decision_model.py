@@ -36,7 +36,9 @@ def build_proposition_clusters(
     clusters_by_key: dict[str, dict[str, Any]] = {}
     for row in ledger_rows:
         claim = claim_lookup[str(row["claim_id"])]
-        key = _proposition_cluster_key(claim, str(row.get("section", "")))
+        claim_text = str(row.get("claim") or claim.get("claim") or claim.get("text") or "")
+        normalized_claim = {**claim, "claim": claim_text}
+        key = _proposition_cluster_key(normalized_claim, str(row.get("section", "")))
         cluster = clusters_by_key.setdefault(
             key,
             {
@@ -52,7 +54,6 @@ def build_proposition_clusters(
                 "proposition": "",
             },
         )
-        claim_text = str(claim.get("claim") or claim.get("text") or "")
         cluster["claim_ids"].append(str(row["claim_id"]))
         cluster["sources"].extend(_claim_supporting_sources_for_briefing(claim))
         cluster["representative_claims"].append(

@@ -4,13 +4,10 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     CONFIDENCE_ORDER,
     MapBriefingResult,
     ROLE_PRIORITY,
-    _compact_top_evidence_sections,
     _deterministic_decision_brief,
     _deterministic_decision_implications,
     _deterministic_stress_caveats,
     _deterministic_top_cruxes,
-    _model_briefing_scaffold,
-    _model_concept_evidence_packets,
     _sufficiency_implications,
     _write_final_reader_outputs,
     append_map_coverage_snapshot,
@@ -18,6 +15,11 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     build_map_briefing_prompt,
     deterministic_briefing_payload,
     run_map_briefing,
+)
+from epistemic_case_mapper.map_briefing_prompt_scaffold import (
+    _compact_top_evidence_sections,
+    _model_concept_evidence_packets,
+    model_briefing_scaffold as _model_briefing_scaffold,
 )
 from epistemic_case_mapper.map_briefing_model_render import render_model_briefing_output as _render_model_briefing_output
 

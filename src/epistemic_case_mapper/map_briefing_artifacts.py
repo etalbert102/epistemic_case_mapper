@@ -32,6 +32,7 @@ def write_scaffold_artifacts(
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
         "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
+        "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
         "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
         "summary_of_findings": artifacts / "summary_of_findings.json",
@@ -52,6 +53,7 @@ def write_scaffold_artifacts(
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
     write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
+    write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
     write_json(paths["evidence_to_decision_matrix"], argument_artifacts.get("evidence_to_decision_matrix", {}))
@@ -345,6 +347,7 @@ def map_briefing_summary_payload(
     graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
     graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
     canonicalization = scaffold.get("claim_canonicalization_report", {}) if isinstance(scaffold.get("claim_canonicalization_report"), dict) else {}
+    atomic_cards = scaffold.get("atomic_evidence_cards", {}) if isinstance(scaffold.get("atomic_evidence_cards"), dict) else {}
     argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
@@ -368,6 +371,9 @@ def map_briefing_summary_payload(
         "canonical_claim_count": canonicalization.get("canonical_claim_count"),
         "canonical_duplicate_group_count": len(canonicalization.get("merged_duplicate_groups", [])) if isinstance(canonicalization.get("merged_duplicate_groups"), list) else 0,
         "canonical_fragment_drop_count": len(canonicalization.get("dropped_fragment_claim_ids", [])) if isinstance(canonicalization.get("dropped_fragment_claim_ids"), list) else 0,
+        "atomic_evidence_card_count": atomic_cards.get("card_count"),
+        "atomic_evidence_appendix_only_count": atomic_cards.get("appendix_only_count"),
+        "atomic_evidence_noise_counts": atomic_cards.get("noise_counts", {}),
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "relation_count": len(_relations(candidate_map)),

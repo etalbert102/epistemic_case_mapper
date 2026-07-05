@@ -214,6 +214,7 @@ def _extraction_quality(
     canonicalization = prioritization_report.get("claim_canonicalization_report", {})
     if not isinstance(canonicalization, dict):
         canonicalization = {}
+    atomic_cards = scaffold.get("atomic_evidence_cards", {}) if isinstance(scaffold.get("atomic_evidence_cards"), dict) else {}
     skipped = sum(1 for issue in scaffold.get("quality_issues", []) if "chunk_budget" in str(issue))
     return {
         "candidate_claim_count": len(claims),
@@ -225,6 +226,9 @@ def _extraction_quality(
         "claim_retention_ratio": _ratio(len(prioritized_claims), len(claims)),
         "near_duplicate_pair_count": len(duplicate_pairs) if isinstance(duplicate_pairs, list) else 0,
         "fragment_marker_count": _fragment_marker_count(text),
+        "atomic_evidence_card_count": atomic_cards.get("card_count"),
+        "atomic_appendix_only_count": atomic_cards.get("appendix_only_count"),
+        "atomic_noise_counts": atomic_cards.get("noise_counts", {}),
         "quantitative_claim_count": sum(1 for row in rows if _has_number(str(row.get("claim", "")))),
         "quality_issue_count": len(scaffold.get("quality_issues", [])) if isinstance(scaffold.get("quality_issues"), list) else 0,
         "chunk_budget_issue_count": skipped,

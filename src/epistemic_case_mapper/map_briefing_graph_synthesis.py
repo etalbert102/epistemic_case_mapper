@@ -282,9 +282,12 @@ def _claim_packet(claim: dict[str, Any], row_lookup: dict[str, dict[str, Any]], 
     claim_id = str(claim.get("claim_id", ""))
     row = row_lookup.get(claim_id, {})
     source_id = str(claim.get("source_id", ""))
+    claim_text = str(row.get("claim") or claim.get("claim", ""))
     return {
         "claim_id": claim_id,
-        "claim": _clean_reader_text(str(claim.get("claim", ""))),
+        "claim": _clean_reader_text(claim_text),
+        "raw_claim": _clean_reader_text(str(row.get("raw_claim", "") or claim.get("claim", ""))),
+        "atomic_evidence_card_id": row.get("atomic_evidence_card_id"),
         "source": source_lookup.get(source_id, _display_source_name(source_id)),
         "role": str(claim.get("role", "")),
         "weight": str(row.get("weight", "medium")),

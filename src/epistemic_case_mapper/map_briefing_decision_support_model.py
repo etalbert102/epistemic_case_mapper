@@ -19,6 +19,12 @@ from epistemic_case_mapper.map_briefing_evidence_tables import (
     build_evidence_compression_table,
     build_evidence_weighting_ledger,
 )
+from epistemic_case_mapper.map_briefing_evidence_cards import (
+    apply_evidence_cards_to_ledger,
+    apply_evidence_cards_to_map,
+    apply_evidence_cards_to_quantity_ledger,
+    build_atomic_evidence_cards,
+)
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_map_utils import _claims, confidence_cap
@@ -48,18 +54,27 @@ def build_decision_support_model(
     vocabulary = _profile_vocabulary_for_map(candidate_map)
     contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
     evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup, question=question)
-    quantity_ledger = build_quantity_ledger(candidate_map, source_lookup, question=question)
-    proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
-    option_comparison = build_option_comparison(question, evidence_ledger, candidate_map)
-    crux_contract = build_crux_contract(candidate_map, evidence_ledger, option_comparison)
-    refined_cruxes = refine_crux_contract(crux_contract, candidate_map)
-    decision_frame = build_decision_frame(candidate_map, evidence_ledger, quality_report, question=question)
+    atomic_cards = build_atomic_evidence_cards(candidate_map, evidence_ledger, source_lookup)
+    evidence_ledger = apply_evidence_cards_to_ledger(evidence_ledger, atomic_cards)
+    briefing_map = apply_evidence_cards_to_map(candidate_map, atomic_cards)
+    quantity_ledger = build_quantity_ledger(briefing_map, source_lookup, question=question)
+    quantity_ledger = apply_evidence_cards_to_quantity_ledger(quantity_ledger, atomic_cards)
+    partition = partition_map_evidence(briefing_map, source_lookup)
+    evidence_roles = partition["evidence_roles"]
+    cruxes = partition["crux_candidates"]
+    audit_trail = list(partition["audit_trail"])
+    contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
+    proposition_clusters = build_proposition_clusters(briefing_map, evidence_ledger, source_lookup)
+    option_comparison = build_option_comparison(question, evidence_ledger, briefing_map)
+    crux_contract = build_crux_contract(briefing_map, evidence_ledger, option_comparison)
+    refined_cruxes = refine_crux_contract(crux_contract, briefing_map)
+    decision_frame = build_decision_frame(briefing_map, evidence_ledger, quality_report, question=question)
     decision_model = adapt_decision_model_to_frame(
         build_decision_model(proposition_clusters, contract, quality_report, evidence_ledger),
         decision_frame,
     )
     sufficiency_report = build_map_sufficiency_report(
-        candidate_map,
+        briefing_map,
         question=question,
         evidence_ledger=evidence_ledger,
         decision_model=decision_model,
@@ -73,15 +88,17 @@ def build_decision_support_model(
         "schema_id": "decision_support_model_v1",
         "question": question,
         "partition": partition,
+        "briefing_candidate_map": briefing_map,
         "briefing_contract": contract,
         "evidence_weighting_ledger": evidence_ledger,
+        "atomic_evidence_cards": atomic_cards,
         "quantity_ledger": quantity_ledger,
-        "quantitative_anchors": top_quantity_anchors(quantity_ledger),
+        "quantitative_anchors": quantity_ledger.get("top_quantitative_anchors", top_quantity_anchors(quantity_ledger)),
         "quantitative_evidence_cards": quantity_ledger.get("evidence_cards", []) if isinstance(quantity_ledger.get("evidence_cards"), list) else [],
         "evidence_slot_ledger": build_evidence_slot_ledger(evidence_ledger),
         "proposition_clusters": proposition_clusters,
-        "graph_synthesis_packet": build_graph_synthesis_packet(candidate_map, evidence_ledger, source_lookup),
-        "evidence_compression_table": build_evidence_compression_table(candidate_map, evidence_ledger, source_lookup),
+        "graph_synthesis_packet": build_graph_synthesis_packet(briefing_map, evidence_ledger, source_lookup),
+        "evidence_compression_table": build_evidence_compression_table(briefing_map, evidence_ledger, source_lookup),
         "concept_evidence_packets": build_concept_evidence_packets(evidence_ledger),
         "option_comparison": option_comparison,
         "crux_contract": crux_contract,
@@ -95,8 +112,8 @@ def build_decision_support_model(
         "audit_trail": _dedupe(audit_trail)[:10],
     }
     model["decision_synthesis_model"] = build_decision_synthesis_model(model)
-    model["argument_model"] = build_argument_model(candidate_map, quality_report, model, question=question)
-    model["decision_argument_artifacts"] = build_decision_argument_artifacts(model, candidate_map)
+    model["argument_model"] = build_argument_model(briefing_map, quality_report, model, question=question)
+    model["decision_argument_artifacts"] = build_decision_argument_artifacts(model, briefing_map)
     return model
 
 
@@ -123,5 +140,5 @@ def decision_support_scaffold_fields(
             if isinstance(issue, dict)
         ][:8],
         "decision_support_model": model,
-        **{key: value for key, value in model.items() if key not in {"schema_id", "question", "partition"}},
+        **{key: value for key, value in model.items() if key not in {"schema_id", "question", "partition", "briefing_candidate_map"}},
     }

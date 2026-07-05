@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 import re
 import sys
@@ -8,9 +7,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
-
 from epistemic_case_mapper.map_briefing_reader_graph_seed import reader_graph_seed_decision_brief
-
 from epistemic_case_mapper.classical_ml import (
     relation_edge_weight,
     tfidf_near_duplicate_pairs,
@@ -23,6 +20,7 @@ from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_l
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_quantities import quantity_ledger_markdown
 from epistemic_case_mapper.map_briefing_section_structure import filter_primary_practical_actions
+from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
@@ -518,6 +516,7 @@ def clean_reader_memo_text(text: str) -> str:
     cleaned = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
     cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
     cleaned = _normalize_technical_acronyms(cleaned)
+    cleaned = replace_internal_reader_phrases(cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
 
@@ -526,6 +525,10 @@ def _normalize_technical_acronyms(text: str) -> str:
     replacements = _vocabulary_string_dict(vocabulary, "display_acronyms")
     cleaned = text
     for lower, upper in replacements.items():
+        if lower == "who":
+            pattern = r"\bwho\b(?=\s+(?:guidelines?|recommendations?|reports?|advisory|standards?|criteria)\b)"
+            cleaned = re.sub(pattern, upper, cleaned, flags=re.IGNORECASE)
+            continue
         cleaned = re.sub(rf"\b{lower}\b", upper, cleaned, flags=re.IGNORECASE)
     for replacement in vocabulary.get("display_regex_replacements", []):
         if not isinstance(replacement, dict):

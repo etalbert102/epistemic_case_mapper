@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing import (
     build_map_briefing_prompt,
     polish_briefing_for_reader,
 )
+from epistemic_case_mapper.map_briefing_decision_support_model import build_decision_support_model
 from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
 from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
 
@@ -68,6 +69,91 @@ def test_generic_decision_synthesis_model_shapes_non_egg_brief() -> None:
     assert "relation marks" not in json.dumps(synthesis).lower()
     assert scaffold["graph_synthesis_packet"]["schema_id"] == "graph_synthesis_packet_v1"
     assert scaffold["decision_synthesis_model"]["graph_summary"]["issue_cluster_count"] >= 1
+
+
+def test_decision_support_normalizes_overlong_claims_before_synthesis() -> None:
+    raw_claim = (
+        "Overall, 521,120 participants were recruited from several sites and prospectively followed. "
+        "Intakes of the exposure were assessed by a validated questionnaire. "
+        "Whole exposure and related nutrient intakes were both positively associated with all-cause and cardiovascular mortality. "
+        "Study limitations include observational design and residual confounding."
+    )
+    candidate_map = annotate_map_with_evidence_slots(
+        {
+            "claims": [
+                {
+                    "claim_id": "c001",
+                    "claim": raw_claim,
+                    "source_id": "cohort",
+                    "role": "scope_limit",
+                    "entailed_by_excerpt": "yes",
+                },
+                {
+                    "claim_id": "c002",
+                    "claim": "The associations were no longer significant after adjustment for a correlated dietary exposure.",
+                    "source_id": "cohort",
+                    "role": "crux",
+                    "entailed_by_excerpt": "yes",
+                },
+                {
+                    "claim_id": "c003",
+                    "claim": "Population in other countries have increased outcome risk than the reference population.",
+                    "source_id": "subgroup",
+                    "role": "external_validity",
+                    "entailed_by_excerpt": "yes",
+                },
+            ],
+            "relations": [
+                {
+                    "relation_id": "r001",
+                    "source_claim": "c001",
+                    "target_claim": "c002",
+                    "relation_type": "in_tension_with",
+                    "rationale": "Claim A defines the specific population: Overall, 521,120 participants were recruited before the adjusted analysis weakens the broad association.",
+                }
+            ],
+        }
+    )
+
+    model = build_decision_support_model(
+        candidate_map=candidate_map,
+        quality_report={"status": "usable_with_review", "score": 88, "issues": []},
+        source_lookup={"cohort": "Cohort Study", "subgroup": "Subgroup Review"},
+        erosion_audit={"items": []},
+        question="Should the default advice treat the exposure as harmful?",
+    )
+
+    row_lookup = {row["claim_id"]: row for row in model["evidence_weighting_ledger"]["all_evidence"]}
+    card_lookup = {card["claim_id"]: card for card in model["atomic_evidence_cards"]["cards"]}
+    serialized_graph = json.dumps(model["graph_synthesis_packet"])
+    serialized_synthesis = json.dumps(model["decision_synthesis_model"])
+
+    assert "multi_finding_claim" in card_lookup["c001"]["noise_flags"]
+    assert card_lookup["c001"]["raw_claim"] == raw_claim
+    assert row_lookup["c001"]["claim"].startswith("Whole exposure")
+    assert "participants were recruited" not in row_lookup["c001"]["claim"]
+    assert "Whole exposure" in serialized_graph
+    assert "participants were recruited" not in serialized_synthesis
+    assert card_lookup["c003"]["appendix_only"] is True
+
+    scaffold = briefing_scaffold(
+        candidate_map,
+        {"status": "usable_with_review", "score": 88, "issues": []},
+        {"cohort": "Cohort Study", "subgroup": "Subgroup Review"},
+        {"items": []},
+        question="Should the default advice treat the exposure as harmful?",
+    )
+    prompt = build_map_briefing_prompt(
+        candidate_map=candidate_map,
+        quality_report={"status": "usable_with_review", "score": 88, "issues": []},
+        question="Should the default advice treat the exposure as harmful?",
+        source_lookup={"cohort": "Cohort Study", "subgroup": "Subgroup Review"},
+        erosion_audit={"items": []},
+        scaffold=scaffold,
+    )
+    assert "participants were recruited" not in prompt
+    assert "Population in other countries have increased" not in prompt
+    assert "raw_claim" not in prompt
 
 
 def test_decision_synthesis_filters_fragmented_generic_slot_values() -> None:

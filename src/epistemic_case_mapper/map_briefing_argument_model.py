@@ -115,7 +115,9 @@ def _evidence_weight_items(scaffold: dict[str, Any], claim_lookup: dict[str, dic
 def _quantity_items(scaffold: dict[str, Any]) -> list[ArgumentEvidenceItem]:
     cards = [card for card in scaffold.get("quantitative_evidence_cards", []) if isinstance(card, dict)]
     items: list[ArgumentEvidenceItem] = []
-    for card in cards[:8]:
+    for card in sorted(cards, key=_quantity_card_rank)[:8]:
+        if str(card.get("evidence_use", "")) == "appendix quantitative context":
+            continue
         claim_id = str(card.get("claim_id", "")).strip()
         quantities = [str(value) for value in card.get("key_quantities", []) if str(value).strip()]
         statement = str(card.get("claim") or card.get("interpretation_hint") or "; ".join(quantities)).strip()
@@ -134,6 +136,17 @@ def _quantity_items(scaffold: dict[str, Any]) -> list[ArgumentEvidenceItem]:
             )
         )
     return _dedupe_items(items)[:8]
+
+
+def _quantity_card_rank(card: dict[str, Any]) -> tuple[int, int, str]:
+    has_effect = bool(card.get("effect_estimates")) or bool(card.get("uncertainty_intervals"))
+    has_scope_quantity = bool(card.get("dose_or_exposure")) or bool(card.get("biomarker_or_mean_change"))
+    context_only = str(card.get("evidence_use", "")) in {"study scale or follow-up context", "appendix quantitative context"}
+    return (
+        1 if context_only and not has_effect and not has_scope_quantity else 0,
+        -int(card.get("card_score", 0) or 0),
+        str(card.get("claim_id", "")),
+    )
 
 
 def _scope_items(

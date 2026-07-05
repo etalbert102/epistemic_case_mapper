@@ -40,8 +40,10 @@ from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_out
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
 from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
+from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
+from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_scaffold
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 
@@ -111,6 +113,7 @@ def run_map_briefing(
     erosion_audit = generated_map_erosion_audit(prioritized_map)
     scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit, question=question)
     scaffold["claim_canonicalization_report"] = canonicalization_report
+    prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -214,6 +217,13 @@ def run_map_briefing(
         calibrated_confidence=calibrated,
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
+
+
+def _apply_atomic_cards_to_briefing_map(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    normalized_map = apply_evidence_cards_to_map(prioritized_map, scaffold.get("atomic_evidence_cards", {}))
+    updated_scaffold = dict(scaffold)
+    updated_scaffold["seed_claims"] = _claims(normalized_map)[:10]
+    return normalized_map, _expand_payload_reader_references(updated_scaffold, normalized_map)
 
 
 def _validate_run_args(question: str, backend_timeout: int | None, backend_retries: int) -> None:
@@ -440,7 +450,7 @@ def build_map_briefing_prompt(
             "- Keep the briefing concise and readable for a human judge.",
             "- Do not replace the decision question with source-use advice. Source-use advice belongs in scope caveats unless the question itself asks how to use sources.",
             f"Decision question: {question}",
-            "Deterministic briefing scaffold:\n" + json.dumps(_model_briefing_scaffold(scaffold), indent=2),
+            "Deterministic briefing scaffold:\n" + json.dumps(model_briefing_scaffold(scaffold), indent=2),
             "Map quality report:\n" + json.dumps(_quality_brief(quality_report), indent=2),
         )
     )
@@ -451,118 +461,6 @@ def _require_concrete_question(question: str) -> None:
     if report["status"] == "blocked":
         issues = "; ".join(str(issue.get("message", issue.get("issue_type", "question issue"))) for issue in report.get("issues", []))
         raise ValueError(f"run_map_briefing requires a concrete decision question: {issues}")
-
-def _model_briefing_scaffold(scaffold: dict[str, Any]) -> dict[str, Any]:
-    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
-    evidence_ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
-    compact_ledger = {
-        "family_counts": evidence_ledger.get("family_counts", {}),
-        "decision_concept_counts": evidence_ledger.get("decision_concept_counts", {}),
-        "weight_counts": evidence_ledger.get("weight_counts", {}),
-        "top_evidence_by_section": _compact_top_evidence_sections(evidence_ledger.get("top_evidence_by_section", {})),
-        "notes": evidence_ledger.get("notes", []),
-    }
-    compact_decision_model = {
-        key: decision_model.get(key)
-        for key in (
-            "default_answer",
-            "decision_slots",
-            "missing_decision_slots",
-            "evidence_families",
-            "main_reasons",
-            "strongest_counterarguments",
-            "tension_resolutions",
-            "practical_recommendations",
-            "what_would_change_answer",
-            "prose_requirements",
-        )
-    }
-    return {
-        "quality_status": scaffold.get("quality_status"),
-        "quality_score": scaffold.get("quality_score"),
-        "confidence_cap": scaffold.get("confidence_cap"),
-        "briefing_contract": scaffold.get("briefing_contract"),
-        "decision_frame": scaffold.get("decision_frame"),
-        "decision_model": compact_decision_model,
-        "graph_synthesis_packet": scaffold.get("graph_synthesis_packet"),
-        "decision_synthesis_model": scaffold.get("decision_synthesis_model"),
-        "argument_model": scaffold.get("argument_model"),
-        "decision_argument_artifacts": scaffold.get("decision_argument_artifacts"),
-        "evidence_compression_table": scaffold.get("evidence_compression_table"),
-        "concept_evidence_packets": _model_concept_evidence_packets(scaffold.get("concept_evidence_packets")),
-        "map_sufficiency_report": scaffold.get("map_sufficiency_report"),
-        "briefing_plan": scaffold.get("briefing_plan"),
-        "evidence_weighting_ledger": compact_ledger,
-        "quantitative_anchors": scaffold.get("quantitative_anchors", [])[:10],
-        "quantitative_evidence_cards": scaffold.get("quantitative_evidence_cards", [])[:10],
-        "quantity_ledger_summary": {
-            "quantity_count": scaffold.get("quantity_ledger", {}).get("quantity_count"),
-            "quantitative_card_count": scaffold.get("quantity_ledger", {}).get("quantitative_card_count"),
-            "type_counts": scaffold.get("quantity_ledger", {}).get("type_counts", {}),
-        },
-        "evidence_roles_for_deterministic_attachment": scaffold.get("evidence_roles"),
-        "crux_candidates": scaffold.get("crux_candidates"),
-        "refined_cruxes": scaffold.get("refined_cruxes"),
-        "quality_issues": scaffold.get("quality_issues"),
-    }
-
-def _compact_top_evidence_sections(value: Any) -> dict[str, list[dict[str, Any]]]:
-    if not isinstance(value, dict):
-        return {}
-    compact: dict[str, list[dict[str, Any]]] = {}
-    for section, rows in value.items():
-        compact_rows: list[dict[str, Any]] = []
-        for row in rows if isinstance(rows, list) else []:
-            if not isinstance(row, dict):
-                continue
-            noise = row.get("noise", {}) if isinstance(row.get("noise"), dict) else {}
-            compact_rows.append(
-                {
-                    "claim_id": row.get("claim_id"),
-                    "section": row.get("section"),
-                    "weight": row.get("weight"),
-                    "score": row.get("score"),
-                    "source": row.get("source"),
-                    "evidence_family": row.get("evidence_family"),
-                    "decision_concepts": row.get("decision_concepts", []),
-                    "noise_kind": noise.get("kind", "none"),
-                    "claim": _compressed_claim_text(str(row.get("claim", "")), noise),
-                }
-            )
-        compact[str(section)] = compact_rows[:6]
-    return compact
-
-def _model_concept_evidence_packets(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return {}
-    compact_packets: list[dict[str, Any]] = []
-    for packet in value.get("packets", []) if isinstance(value.get("packets"), list) else []:
-        if not isinstance(packet, dict):
-            continue
-        compact_packets.append(
-            {
-                "concept": packet.get("concept"),
-                "label": packet.get("label"),
-                "synthesis_job": packet.get("synthesis_job"),
-                "must_surface_terms": packet.get("must_surface_terms", []),
-                "rows": [
-                    {
-                        "claim_id": row.get("claim_id"),
-                        "source": row.get("source"),
-                        "weight": row.get("weight"),
-                        "claim": row.get("claim"),
-                        "why_it_matters": row.get("why_it_matters"),
-                    }
-                    for row in packet.get("rows", [])[:3]
-                    if isinstance(row, dict)
-                ],
-            }
-        )
-    return {
-        "schema_id": value.get("schema_id"),
-        "method": value.get("method"),
-        "packets": compact_packets[:8],
-    }
 
 def briefing_scaffold(
     candidate_map: dict[str, Any],
@@ -583,14 +481,15 @@ def briefing_scaffold(
         erosion_audit=erosion_audit,
         question=question,
     )
+    briefing_map = support_model.get("briefing_candidate_map") if isinstance(support_model.get("briefing_candidate_map"), dict) else candidate_map
     scaffold = decision_support_scaffold_fields(
         support_model,
-        candidate_map=candidate_map,
+        candidate_map=briefing_map,
         quality_report=quality_report,
         source_lookup=source_lookup,
         question=question,
     )
-    return _expand_payload_reader_references(scaffold, candidate_map)
+    return _expand_payload_reader_references(scaffold, briefing_map)
 
 def deterministic_briefing_payload(
     scaffold: dict[str, Any],
@@ -820,7 +719,6 @@ from epistemic_case_mapper.map_briefing_evidence_partition import (
     repair_briefing_payload,
 )
 from epistemic_case_mapper.map_briefing_evidence_tables import (
-    _compressed_claim_text,
     _coverage_snapshot_rows,
     _extract_json_string_field_local,
     _markdown_table_cell,
