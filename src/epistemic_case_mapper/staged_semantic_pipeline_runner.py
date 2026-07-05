@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_claim_cache import claim_payload_for_chunk, write_claim_progress
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
@@ -88,6 +89,7 @@ def run_staged_map(
     backend_retries: int = 1,
     validate: bool = True,
     repair_quality: bool = False,
+    reuse_claim_cache: bool = True,
 ) -> StagedMapResult:
     _validate_staged_map_options(
         chunk_lines=chunk_lines,
@@ -116,6 +118,7 @@ def run_staged_map(
         artifacts=artifacts,
         max_claims_per_chunk=max_claims_per_chunk,
         config_profile_id=config_profile.profile_id,
+        reuse_claim_cache=reuse_claim_cache,
     )
     claims = claim_stage["claims"]
     rejected_claims = claim_stage["rejected_claims"]
@@ -331,6 +334,7 @@ def _extract_consolidated_claims(
     artifacts: Path,
     max_claims_per_chunk: int,
     config_profile_id: str,
+    reuse_claim_cache: bool,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
@@ -343,6 +347,7 @@ def _extract_consolidated_claims(
         backend_retries=backend_retries,
         artifact_dir=artifacts,
         max_claims_per_chunk=max_claims_per_chunk,
+        reuse_claim_cache=reuse_claim_cache,
     )
     llm_claim_count = len(claims)
     coverage_claims, coverage_report = _coverage_backfill_claims(
@@ -604,28 +609,49 @@ def _extract_claims(
     backend_retries: int,
     artifact_dir: Path,
     max_claims_per_chunk: int,
+    reuse_claim_cache: bool = True,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     claim_index = 1
     valid_roles = set(_configured_claim_roles(case_manifest))
+    progress = {
+        "schema_id": "claim_extraction_progress_v1",
+        "stage": "claim_extraction",
+        "total_chunks": len(chunks),
+        "processed_chunks": 0,
+        "cache_hit_count": 0,
+        "backend_call_count": 0,
+        "fallback_claim_count": 0,
+        "accepted_claim_count": 0,
+        "rejected_claim_count": 0,
+        "current_chunk_id": "",
+        "complete": False,
+    }
+    progress_path = artifact_dir / "claim_extraction_progress.json"
 
-    for chunk in chunks:
+    for chunk_index, chunk in enumerate(chunks, start=1):
         span_lookup = {span.span_id: span for span in chunk.spans}
         chunk_accept_count = 0
         prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk)
-        write_markdown(artifact_dir / "claim_chunks" / f"{chunk.chunk_id}_prompt.txt", prompt)
-        try:
-            result = run_model_backend(
-                prompt,
-                backend,
-                timeout_seconds=backend_timeout,
-                max_retries=backend_retries,
-                response_schema=_claim_prompt_json_schema(),
-            )
-            raw = result.text
-        except (RuntimeError, ValueError) as exc:
+        chunk_dir = artifact_dir / "claim_chunks"
+        canonical_path = chunk_dir / f"{chunk.chunk_id}_canonical.json"
+        write_markdown(chunk_dir / f"{chunk.chunk_id}_prompt.txt", prompt)
+        payload, cache_hit, backend_error = claim_payload_for_chunk(
+            prompt=prompt,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            canonical_path=canonical_path,
+            raw_path=chunk_dir / f"{chunk.chunk_id}_raw.txt",
+            reuse_claim_cache=reuse_claim_cache,
+        )
+        if cache_hit:
+            progress["cache_hit_count"] += 1
+        else:
+            progress["backend_call_count"] += 1
+        if backend_error:
             fallback = _fallback_claim_for_chunk(chunk)
             if fallback is not None:
                 key = (
@@ -638,28 +664,30 @@ def _extract_claims(
                     fallback["claim_id"] = f"{region.id_prefix}_c{claim_index:03d}"
                     claim_index += 1
                     accepted.append(fallback)
+                    progress["fallback_claim_count"] += 1
                     rejected.append(
                         {
                             "chunk_id": chunk.chunk_id,
                             "reason": "backend_error_used_deterministic_fallback",
-                            "error": str(exc),
+                            "error": backend_error,
                             "span_id": fallback["span_id"],
                         }
                     )
+                    write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
                     continue
-            rejected.append({"chunk_id": chunk.chunk_id, "reason": "backend_error", "error": str(exc)})
+            rejected.append({"chunk_id": chunk.chunk_id, "reason": "backend_error", "error": backend_error})
+            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
             continue
-        write_markdown(artifact_dir / "claim_chunks" / f"{chunk.chunk_id}_raw.txt", raw)
-        payload = _parse_model_json(raw)
-        write_json(artifact_dir / "claim_chunks" / f"{chunk.chunk_id}_canonical.json", payload or {})
         if not isinstance(payload, dict):
             rejected.append({"chunk_id": chunk.chunk_id, "reason": "invalid_json"})
+            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
             continue
         proposals = payload.get("claims", [])
         if not isinstance(proposals, list) and "claim" in payload:
             proposals = [payload]
         if not isinstance(proposals, list):
             rejected.append({"chunk_id": chunk.chunk_id, "reason": "claims_not_list"})
+            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
             continue
         for proposal in proposals:
             claim, reason = _normalize_claim_proposal(proposal, span_lookup, valid_roles)
@@ -692,6 +720,7 @@ def _extract_claims(
                     fallback["claim_id"] = f"{region.id_prefix}_c{claim_index:03d}"
                     claim_index += 1
                     accepted.append(fallback)
+                    progress["fallback_claim_count"] += 1
                     rejected.append(
                         {
                             "chunk_id": chunk.chunk_id,
@@ -699,6 +728,13 @@ def _extract_claims(
                             "span_id": fallback["span_id"],
                         }
                     )
+        write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
+    progress["complete"] = True
+    progress["current_chunk_id"] = ""
+    progress["processed_chunks"] = len(chunks)
+    progress["accepted_claim_count"] = len(accepted)
+    progress["rejected_claim_count"] = len(rejected)
+    write_json(progress_path, progress)
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
 

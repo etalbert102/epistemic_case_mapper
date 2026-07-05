@@ -154,6 +154,8 @@ def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict
             value = _slot_value(slot, claim, vocabulary=vocabulary)
             if not value:
                 continue
+            if not _slot_value_allowed(slot, value, claim):
+                continue
             entry = {
                 "value": value,
                 "claim": claim,
@@ -304,6 +306,15 @@ def _sufficiency_issues(
         issues.append({"severity": "fail", "issue_type": "no_claims", "message": "The map has no claims to synthesize."})
     if relation_count == 0:
         issues.append({"severity": "warning", "issue_type": "no_relations", "message": "The map exposes no claim relations or tensions."})
+    relation_floor = max(2, claim_count // 20) if claim_count >= 20 else 0
+    if relation_floor and relation_count < relation_floor:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "sparse_relation_graph",
+                "message": f"The map has {relation_count} relation(s) for {claim_count} claim(s); synthesis may read like ranked snippets instead of an argument graph.",
+            }
+        )
     for slot in missing_expected_slots:
         issues.append(
             {
@@ -387,6 +398,33 @@ def _slot_value(slot: str, claim: str, *, vocabulary: dict[str, Any] | None = No
     if slot == "practical_recommendation":
         return _short_claim_fragment(claim)
     return _short_claim_fragment(claim)
+
+def _slot_value_allowed(slot: str, value: str, claim: str) -> bool:
+    lowered = f" {re.sub(r'\\s+', ' ', value.lower())} "
+    claim_lowered = f" {re.sub(r'\\s+', ' ', claim.lower())} "
+    if _looks_like_non_substantive_slot_text(value):
+        return False
+    if slot == "default_population":
+        if re.search(r"\b(?:person-years|person years|follow-up|participants?\s+with\s+bmi|sample size|cohort included\s+\d)\b", lowered):
+            return False
+        return bool(re.search(r"\b(?:adults?|people|patients?|participants?|children|infants?|households|schools|workers|residents|free of|without)\b", lowered))
+    if slot == "dose_or_intensity_threshold":
+        return bool(re.search(r"\b(?:\d|per\s+day|daily|weekly|dose|threshold|intake|exposure|level|amount)\b", lowered))
+    if slot == "endpoint_type":
+        if value.strip().lower() == claim.strip().lower() and len(value.split()) <= 8:
+            return False
+        return bool(re.search(r"\b(?:risk|mortality|events?|outcome|endpoint|hospitalization|stroke|disease|failure|safety|harm|biomarker|marker)\b", lowered))
+    if slot == "practical_recommendation":
+        return bool(re.search(r"\b(?:recommend|guideline|advice|should|must|offer|provide|use|avoid|prefer|treat)\b", claim_lowered))
+    return True
+
+def _looks_like_non_substantive_slot_text(text: str) -> bool:
+    lowered = text.lower()
+    if re.search(r"\b(?:privacy|cookie|linking|whistleblower|conflict of interest|editorial guidelines|terms of use)\s+policy\b", lowered):
+        return True
+    if re.search(r"\b(?:doi|pmid|pmcid|linkout|official website|https:// ensures|google scholar|crossref)\b", lowered):
+        return True
+    return False
 
 def _slot_entry_exists(entries: list[dict[str, Any]], candidate: dict[str, Any]) -> bool:
     candidate_terms = set(_content_terms(_normalize_slot_value(str(candidate.get("value", "")))))

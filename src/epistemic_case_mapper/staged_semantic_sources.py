@@ -209,6 +209,9 @@ def _span_signal_score(text: str) -> int:
     lowered = stripped.lower()
     if not stripped or stripped.startswith("#"):
         return 0
+    non_evidence_reason = _non_evidence_text_reason(stripped)
+    if non_evidence_reason and not _allow_low_signal_coverage_fallback(stripped, non_evidence_reason):
+        return 0
     if lowered.startswith(("source:", "author:", "date:", "retrieved:", "use in worked region:")):
         return 0
     score = 1
@@ -328,7 +331,7 @@ def _usable_relation_claim(claim: dict[str, Any]) -> bool:
     role = str(claim.get("role", ""))
     if len(text) < 18 and role not in {"crux", "conclusion_support", "scope_limit", "implementation_constraint"}:
         return False
-    if _looks_like_relation_reference_or_boilerplate(text):
+    if _looks_like_relation_reference_or_boilerplate(text) or _non_evidence_text_reason(text):
         return False
     if any(marker in lowered for marker in ("[google scholar]", "privacy policy", "nutrition policy", "no. (%)", "pmcid:", "copyright")):
         return False
@@ -345,6 +348,43 @@ def _looks_like_relation_reference_or_boilerplate(text: str) -> bool:
     if lowered.count("received ") >= 2 and len(lowered) > 400:
         return True
     return False
+
+def _non_evidence_text_reason(text: str) -> str:
+    compact = re.sub(r"\s+", " ", text).strip(" -•*\t\r\n")
+    lowered = compact.lower()
+    if not compact:
+        return "blank"
+    if re.search(r"\b(?:doi|pmid|pmcid|issn|isbn|pubmed|crossref|google scholar|linkout|substances)\b", lowered):
+        return "reference_or_metadata"
+    if re.search(r"\b(?:privacy|cookie|copyright|terms of use|linking|whistleblower|conflict of interest|editorial guidelines|accessibility)\s+policy\b", lowered):
+        return "navigation_or_policy_boilerplate"
+    if re.search(r"\b(?:official website|https:// ensures|advanced search|email alerts|save citation|share this article)\b", lowered):
+        return "site_navigation_or_security_boilerplate"
+    if re.fullmatch(r"(?:[a-z][a-z\s/-]{2,40}\*?\s*){1,4}", lowered) and not _has_evidence_predicate(lowered):
+        return "list_heading_or_index_term"
+    if len(compact) < 18 and not re.search(r"\d|%|\b(risk|effect|recommend|should|found|showed)\b", lowered):
+        return "too_short_without_evidence_signal"
+    if lowered.count(";") + lowered.count(",") >= 7 and not _has_evidence_predicate(lowered):
+        return "list_without_predicate"
+    if re.fullmatch(r"[\w\s,./()%+\-*]+", compact) and len(_content_terms(compact)) <= 3 and not _has_evidence_predicate(lowered):
+        return "low_content_fragment"
+    return ""
+
+def _has_evidence_predicate(text: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(?:is|are|was|were|found|showed|reported|associated|increased|decreased|reduced|lower|higher|recommend|recommended|should|must|may|can|depends|compared)\b",
+            text,
+        )
+    )
+
+def _allow_low_signal_coverage_fallback(text: str, reason: str) -> bool:
+    if reason not in {"too_short_without_evidence_signal", "list_heading_or_index_term", "low_content_fragment"}:
+        return False
+    lowered = text.lower()
+    if "policy" in lowered or "linkout" in lowered or "substances" in lowered:
+        return False
+    return True
 
 def _fallback_relation(pair_packets: list[dict[str, Any]], permitted_types: set[str]) -> dict[str, Any] | None:
     if not pair_packets:

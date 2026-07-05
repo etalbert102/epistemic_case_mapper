@@ -98,6 +98,7 @@ def _run_staged_semantic_map(
     backend_retries: int,
     repair_quality: bool,
     no_validate: bool,
+    reuse_claim_cache: bool = True,
 ) -> int:
     if chunk_lines < 1:
         print("semantic_staged_failed chunk_lines_must_be_positive", file=sys.stderr)
@@ -146,6 +147,7 @@ def _run_staged_semantic_map(
             backend_retries=backend_retries,
             validate=not no_validate,
             repair_quality=repair_quality,
+            reuse_claim_cache=reuse_claim_cache,
         )
     except (RuntimeError, ValueError, KeyError) as exc:
         print(f"semantic_staged_failed region={region_id} error={exc}", file=sys.stderr)
@@ -252,6 +254,7 @@ def _run_staged_semantic_brief(
     backend_retries: int,
     repair_quality: bool,
     no_validate: bool,
+    reuse_claim_cache: bool = True,
 ) -> int:
     if chunk_lines < 1:
         print("semantic_staged_brief_failed chunk_lines_must_be_positive", file=sys.stderr)
@@ -307,6 +310,7 @@ def _run_staged_semantic_brief(
             backend_retries=backend_retries,
             validate=not no_validate,
             repair_quality=repair_quality,
+            reuse_claim_cache=reuse_claim_cache,
         )
         if result.failures:
             for failure in result.failures:

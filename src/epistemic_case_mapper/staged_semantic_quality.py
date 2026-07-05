@@ -314,6 +314,15 @@ def _relation_quality_issues(
     issues: list[dict[str, str]] = []
     if claim_count >= 2 and not relations:
         issues.append(_quality_issue("fail", "missing_relations", "At least two claims exist but no accepted relations were produced."))
+    relation_floor = max(2, claim_count // 20) if claim_count >= 20 else 0
+    if relation_floor and len(relations) < relation_floor:
+        issues.append(
+            _quality_issue(
+                "risk",
+                "sparse_relation_graph",
+                f"Accepted {len(relations)} relation(s) for {claim_count} claim(s); target floor is {relation_floor} for inspectable synthesis.",
+            )
+        )
     if relations and relation_contract_count < len(relations):
         missing_count = len(relations) - relation_contract_count
         issues.append(

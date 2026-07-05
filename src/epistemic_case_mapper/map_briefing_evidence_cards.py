@@ -99,7 +99,11 @@ def _card_for_row(index: int, row: dict[str, Any], claim: dict[str, Any], source
     flags = _noise_flags_for_text(raw)
     proposition = _decision_proposition(raw, row, flags)
     decision_relevance = int(row.get("decision_relevance_score", 0) or 0)
+    eligibility = row.get("eligibility", {}) if isinstance(row.get("eligibility"), dict) else {}
+    question_fit = eligibility.get("question_fit", {}) if isinstance(eligibility.get("question_fit"), dict) else {}
     appendix_only = _appendix_only(flags, row, decision_relevance)
+    if question_fit.get("status") == "mismatch":
+        appendix_only = True
     if appendix_only:
         proposition = _appendix_proposition(flags)
     return {
@@ -113,6 +117,13 @@ def _card_for_row(index: int, row: dict[str, Any], claim: dict[str, Any], source
         "evidence_family": str(row.get("evidence_family", "general_evidence")),
         "endpoint_type": _endpoint_type(row, raw),
         "population_scope": _population_scope(raw),
+        "population_fit": question_fit.get("status", "unknown"),
+        "endpoint_fit": _endpoint_fit(row, raw),
+        "question_fit": {
+            "status": question_fit.get("status", "unknown"),
+            "scope_mismatch_flags": question_fit.get("scope_mismatch_flags", []),
+            "matched_scope_terms": question_fit.get("matched_scope_terms", []),
+        },
         "effect_or_finding": _effect_or_finding(raw),
         "limitations": _limitations(flags, row),
         "decision_relevance": decision_relevance,
@@ -133,6 +144,9 @@ def _row_with_card(row: dict[str, Any], card: dict[str, Any] | None) -> dict[str
     updated["atomic_evidence_card_id"] = card.get("card_id")
     updated["atomic_evidence_card"] = card
     updated["noise"] = _merge_noise(updated.get("noise"), flags)
+    updated["question_fit"] = card.get("question_fit", {})
+    updated["population_fit"] = card.get("population_fit", "unknown")
+    updated["endpoint_fit"] = card.get("endpoint_fit", "unknown")
     updated["top_line_eligible"] = bool(updated.get("top_line_eligible")) and bool(card.get("top_line_eligible"))
     if card.get("appendix_only"):
         updated["appendix_only"] = True
@@ -320,6 +334,14 @@ def _endpoint_type(row: dict[str, Any], text: str) -> str:
         return "biomarker_or_surrogate"
     if "dose_or_threshold" in concepts:
         return "dose_or_exposure"
+    return "unspecified"
+
+def _endpoint_fit(row: dict[str, Any], text: str) -> str:
+    endpoint = _endpoint_type(row, text)
+    if endpoint in {"hard_or_decision_relevant_outcome", "biomarker_or_surrogate", "dose_or_exposure"}:
+        return "specified"
+    if any(slot in row.get("decision_slots", []) for slot in ("endpoint_type", "safety_or_risk")):
+        return "specified"
     return "unspecified"
 
 

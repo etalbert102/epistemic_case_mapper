@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_pipeline import _batches, _candidate_relation_pairs, _parse_relation_model_json, _relation_pair_block
+from pathlib import Path
+
+from epistemic_case_mapper.staged_semantic_pipeline import (
+    SourceChunk,
+    SourceSpan,
+    _batches,
+    _candidate_relation_pairs,
+    _concept_backfill_rejection_reason,
+    _extract_claims,
+    _load_context,
+    _non_evidence_text_reason,
+    _parse_relation_model_json,
+    _relation_pair_block,
+)
 
 
 def test_candidate_relation_pairs_prioritize_decision_role_templates_without_shared_terms() -> None:
@@ -80,6 +93,13 @@ def test_candidate_relation_pairs_filter_non_substantive_claims() -> None:
     assert selected_ids == {"demo_c001", "demo_c002"}
 
 
+def test_non_evidence_classifier_rejects_footer_policy_and_index_terms() -> None:
+    assert _non_evidence_text_reason("Privacy Policy") == "navigation_or_policy_boilerplate"
+    assert _non_evidence_text_reason("Nutrition Policy*") == "list_heading_or_index_term"
+    assert _non_evidence_text_reason("The https:// ensures that you are connecting to the official website.") == "site_navigation_or_security_boilerplate"
+    assert _concept_backfill_rejection_reason("• Privacy Policy", "guideline_or_recommendation") == "navigation_or_policy_boilerplate"
+
+
 def test_relation_model_json_salvages_complete_objects_from_truncated_array() -> None:
     raw = """```json
 {
@@ -117,6 +137,55 @@ def test_relation_pair_block_uses_compact_claim_cards() -> None:
     assert "excerpt_A" in block
     assert len(block) < 1600
     assert block.count("Long filler") < 20
+
+
+def test_extract_claims_reuses_cached_chunk_payload(tmp_path: Path) -> None:
+    repo_root = Path(".")
+    manifest, region, case_manifest = _load_context(repo_root, "submission_manifest.yaml", "eggs_observational_vs_rct")
+    chunk = SourceChunk(
+        chunk_id="cache_demo_lines_1_1",
+        source_id="cache_demo",
+        title="Cache Demo",
+        start_line=1,
+        end_line=1,
+        ordinal=1,
+        numbered_text="1: Cached evidence line.",
+        plain_text="Cached evidence line.",
+        spans=(
+            SourceSpan(
+                span_id="cache_demo_s0001",
+                source_id="cache_demo",
+                source_span="lines 1-1",
+                text="Cached evidence line.",
+            ),
+        ),
+    )
+    canonical = tmp_path / "claim_chunks" / "cache_demo_lines_1_1_canonical.json"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text(
+        '{"claims":[{"claim":"Cached claim from prior run.","span_id":"cache_demo_s0001","entailed_by_excerpt":"yes","role":"background"}]}',
+        encoding="utf-8",
+    )
+
+    claims, rejected = _extract_claims(
+        repo_root,
+        manifest,
+        region,
+        case_manifest,
+        [chunk],
+        backend="command:python3 -c 'raise SystemExit(99)'",
+        backend_timeout=1,
+        backend_retries=0,
+        artifact_dir=tmp_path,
+        max_claims_per_chunk=4,
+        reuse_claim_cache=True,
+    )
+    progress = (tmp_path / "claim_extraction_progress.json").read_text(encoding="utf-8")
+
+    assert [claim["claim"] for claim in claims] == ["Cached claim from prior run."]
+    assert rejected == []
+    assert '"cache_hit_count": 1' in progress
+    assert '"backend_call_count": 0' in progress
 
 
 def _claim(claim_id: str, claim: str, source_id: str, excerpt: str, role: str) -> dict[str, str]:

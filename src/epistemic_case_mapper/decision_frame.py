@@ -143,6 +143,18 @@ def memo_quality_report(markdown: str, scaffold: dict[str, Any]) -> dict[str, An
         issues.append({"severity": "risk", "issue_type": "procedural_opening", "message": "Opening tells the writer what to say instead of answering the reader."})
     if _inventory_heavy(markdown):
         issues.append({"severity": "warning", "issue_type": "inventory_heavy_prose", "message": "Main memo still reads like evidence inventory rather than synthesized decision support."})
+    sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
+    for issue in sufficiency.get("issues", []) if isinstance(sufficiency.get("issues"), list) else []:
+        if not isinstance(issue, dict):
+            continue
+        if issue.get("issue_type") in {"sparse_relation_graph", "no_relations"}:
+            issues.append(
+                {
+                    "severity": "warning",
+                    "issue_type": str(issue.get("issue_type")),
+                    "message": "Upstream map relation structure is weak, so memo polish should not be read as strong synthesis quality.",
+                }
+            )
     score = max(0, 100 - sum(20 if issue["severity"] == "risk" else 8 for issue in issues))
     return {
         "schema_id": "memo_quality_report_v1",

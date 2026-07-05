@@ -334,6 +334,7 @@ def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int
             args.backend_retries,
             args.repair_quality,
             args.no_validate,
+            not args.no_claim_cache,
         )
     if args.command == "semantic" and args.semantic_target == "staged" and args.semantic_staged_target == "brief":
         return _run_staged_semantic_brief(
@@ -357,6 +358,7 @@ def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int
             args.backend_retries,
             args.repair_quality,
             args.no_validate,
+            not args.no_claim_cache,
         )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)

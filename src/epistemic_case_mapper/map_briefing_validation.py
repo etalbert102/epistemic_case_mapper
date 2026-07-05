@@ -279,6 +279,9 @@ def validate_briefing_against_scaffold(
                     "message": f"The briefing does not visibly surface retained {packet.get('label', packet.get('concept', 'concept'))} evidence.",
                 }
             )
+    evidence_ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    if isinstance(evidence_ledger, dict):
+        issues.extend(_briefing_evidence_fit_issues(rendered, evidence_ledger, candidate_map))
     raw_id_patterns = (
         r"\b[A-Za-z0-9_\-]+_c\d{3,}\b",
         r"\b[A-Za-z0-9_\-]+_r\d{3,}\b",
@@ -394,6 +397,52 @@ def _briefing_overclaims_against_scaffold(rendered: str, scaffold: dict[str, Any
     if classification == "neutral_or_low_concern_under_stated_conditions":
         return any(marker in normalized for marker in ("beneficial default", "clearly safe", "proven safe", "no risk"))
     return "proven safe" in normalized or "no risk" in normalized
+
+def _briefing_evidence_fit_issues(rendered: str, evidence_ledger: dict[str, Any], candidate_map: dict[str, Any]) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    rows = [row for row in evidence_ledger.get("all_evidence", []) if isinstance(row, dict)]
+    mismatch_rows = [
+        row
+        for row in rows
+        if isinstance(row.get("question_fit"), dict)
+        and row["question_fit"].get("status") == "mismatch"
+        and _rendered_mentions_any_slot_value(rendered, [str(row.get("claim", ""))])
+    ]
+    if mismatch_rows:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "briefing_mentions_wrong_scope_evidence",
+                "message": "The briefing appears to use evidence flagged as a target-population mismatch.",
+            }
+        )
+    appendix_rows = [
+        row
+        for row in rows
+        if row.get("appendix_only")
+        and row.get("section") in {"main_support", "conflicting_evidence"}
+        and _rendered_mentions_any_slot_value(rendered, [str(row.get("claim", ""))])
+    ]
+    if appendix_rows:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "briefing_uses_appendix_only_evidence",
+                "message": "The briefing appears to rely on evidence marked appendix-only by deterministic eligibility checks.",
+            }
+        )
+    relation_count = len(_relations(candidate_map))
+    claim_count = len(_claims(candidate_map))
+    relation_floor = max(2, claim_count // 20) if claim_count >= 20 else 0
+    if relation_floor and relation_count < relation_floor:
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "sparse_relation_graph",
+                "message": f"The source map has {relation_count} relation(s) for {claim_count} claim(s), below the graph sufficiency floor.",
+            }
+        )
+    return issues
 
 def _rel(repo_root: Path, path: Path) -> str:
     try:

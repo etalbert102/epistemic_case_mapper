@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -40,6 +41,7 @@ def _concept_gap_backfill_claims(
     family_counts: dict[str, int] = {}
     duplicate_span_ids: list[str] = []
     selected_rows: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
     for candidate in candidates:
         if len(backfilled) >= max_total:
             break
@@ -47,6 +49,19 @@ def _concept_gap_backfill_claims(
         if family_counts.get(family, 0) >= max_per_family:
             continue
         span = candidate["span"]
+        rejection_reason = _concept_backfill_rejection_reason(span.text, family)
+        if rejection_reason:
+            rejected_rows.append(
+                {
+                    "family": family,
+                    "source_id": span.source_id,
+                    "span_id": span.span_id,
+                    "source_span": span.source_span,
+                    "reason": rejection_reason,
+                    "matched_markers": candidate["matched_markers"],
+                }
+            )
+            continue
         claim = _concept_backfill_claim(span, family, candidate["matched_markers"], vocabulary=profile_vocabulary(profile_id))
         key = (
             claim["source_id"],
@@ -83,6 +98,8 @@ def _concept_gap_backfill_claims(
         "backfilled_claim_count": len(backfilled),
         "family_counts": family_counts,
         "selected": selected_rows,
+        "rejected": rejected_rows[:100],
+        "rejection_counts": _counts(row["reason"] for row in rejected_rows),
         "duplicate_span_ids": duplicate_span_ids[:50],
     }
     return backfilled, report, next_index
@@ -130,6 +147,8 @@ def _existing_text_covers_concept(existing_text: str, family: str, matched_marke
 
 def _concept_span_score(text: str, family: str, matched_markers: list[str], *, vocabulary: dict[str, Any] | None = None) -> int:
     lowered = text.lower()
+    if _non_evidence_text_reason(text):
+        return 0
     score = 2 + 2 * len(set(matched_markers))
     for marker in _concept_family_strong_markers(vocabulary).get(family, ()):
         if marker in lowered:
@@ -142,6 +161,17 @@ def _concept_span_score(text: str, family: str, matched_markers: list[str], *, v
     if _looks_like_reference_or_boilerplate(text):
         score -= 8
     return score
+
+def _concept_backfill_rejection_reason(text: str, family: str) -> str:
+    non_evidence = _non_evidence_text_reason(text)
+    if non_evidence:
+        return non_evidence
+    lowered = text.lower()
+    if family == "guideline_or_recommendation" and "policy" in lowered and not re.search(r"\b(?:recommend|guideline|advice|should|dietary|clinical|practice)\b", lowered):
+        return "policy_marker_without_guidance_content"
+    if not _has_evidence_predicate(lowered):
+        return "no_evidence_predicate"
+    return ""
 
 def _concept_backfill_claim(span: SourceSpan, family: str, matched_markers: list[str], *, vocabulary: dict[str, Any] | None = None) -> dict[str, Any]:
     excerpt = re.sub(r"\s+", " ", span.text).strip()
@@ -738,19 +768,15 @@ def _extract_relations(
         for packet in batch:
             if packet["pair_id"] not in proposed_pair_ids:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
-    if not accepted:
-        fallback = _fallback_relation(pair_packets, permitted_types)
-        if fallback is not None:
-            fallback["relation_id"] = f"{region.id_prefix}_r{relation_index:03d}"
-            accepted.append(fallback)
-            rejected.append(
-                {
-                    "reason": "model_under_related_used_deterministic_fallback",
-                    "source_claim": fallback["source_claim"],
-                    "target_claim": fallback["target_claim"],
-                    "relation_type": fallback["relation_type"],
-                }
-            )
+    accepted, rejected, relation_index = finalize_sparse_relation_graph(
+        accepted=accepted,
+        rejected=rejected,
+        pair_packets=pair_packets,
+        permitted_types=permitted_types,
+        region=region,
+        relation_index=relation_index,
+        seen=seen,
+    )
     write_json(artifact_dir / "accepted_relations.json", {"relations": accepted, "rejected": rejected})
     return accepted, payloads, rejected
 
@@ -765,6 +791,7 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
 )
 from epistemic_case_mapper.staged_semantic_quality import (
     _classify_singleton_relations,
+    _counts,
     _map_quality_repair_prompt,
     _quality_markdown,
     _text_overlap_ratio,
@@ -773,9 +800,10 @@ from epistemic_case_mapper.staged_semantic_quality import (
 from epistemic_case_mapper.staged_semantic_sources import (
     _batches,
     _candidate_relation_pairs,
-    _fallback_relation,
+    _has_evidence_predicate,
     _normalize_relation_proposal,
     _normalize_text,
+    _non_evidence_text_reason,
     _parse_model_json,
     _parse_relation_model_json,
     _relation_batch_prompt,
