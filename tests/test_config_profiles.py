@@ -45,6 +45,9 @@ def test_model_recommendation_validates_known_profile(tmp_path: Path) -> None:
     assert run.recommendation.profile_id == "technical_safety_case"
     assert run.recommendation.confidence == "high"
     assert run.recommendation.fallback_reason is None
+    assert "# Output Schema" in run.prompt
+    assert "# Examples" in run.prompt
+    assert "<available_profiles>" in run.prompt
     assert "failure mode" in run.prompt
 
 

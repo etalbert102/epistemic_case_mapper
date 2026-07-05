@@ -622,6 +622,7 @@ def _extract_claims(
                 backend,
                 timeout_seconds=backend_timeout,
                 max_retries=backend_retries,
+                response_schema=_claim_prompt_json_schema(),
             )
             raw = result.text
         except (RuntimeError, ValueError) as exc:
@@ -790,6 +791,7 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _assemble_map,
     _case_config_profile,
     _claim_prompt,
+    _claim_prompt_json_schema,
     _configured_claim_roles,
     _map_quality_repair_prompt,
     _quality_markdown,

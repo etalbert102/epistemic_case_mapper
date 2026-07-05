@@ -21,6 +21,7 @@ def run_model_backend(
     backend: str,
     timeout_seconds: int | None = None,
     max_retries: int = 1,
+    response_schema: dict | None = None,
 ) -> ModelBackendResult:
     spec = backend.strip()
     if not spec or spec == "prompt":
@@ -39,7 +40,7 @@ def run_model_backend(
         if not model:
             raise ValueError("empty ollama model")
         text, attempts = _run_with_retries(
-            lambda: _run_ollama(model, prompt, timeout_seconds),
+            lambda: _run_ollama(model, prompt, timeout_seconds, response_schema=response_schema),
             max_retries=max_retries,
         )
         return ModelBackendResult(text=text, backend=spec, attempts=attempts)
@@ -81,24 +82,30 @@ def _run_command(command: str, prompt: str, timeout_seconds: int | None) -> str:
     return result.stdout
 
 
-def _run_ollama(model: str, prompt: str, timeout_seconds: int | None) -> str:
+def _run_ollama(model: str, prompt: str, timeout_seconds: int | None, *, response_schema: dict | None = None) -> str:
     if os.environ.get("ECM_OLLAMA_BACKEND", "http").strip().lower() == "cli":
         return _run_ollama_cli(model, prompt, timeout_seconds)
     try:
-        return _run_ollama_http(model, prompt, timeout_seconds)
+        return _run_ollama_http(model, prompt, timeout_seconds, response_schema=response_schema)
     except RuntimeError as exc:
         if not _should_fallback_to_ollama_cli(exc):
             raise
         return _run_ollama_cli(model, prompt, timeout_seconds)
 
 
-def _run_ollama_http(model: str, prompt: str, timeout_seconds: int | None) -> str:
+def _run_ollama_http(
+    model: str,
+    prompt: str,
+    timeout_seconds: int | None,
+    *,
+    response_schema: dict | None = None,
+) -> str:
     host = _ollama_host()
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
-        "format": "json",
+        "format": response_schema or "json",
         "think": False,
         "options": {
             "temperature": float(os.environ.get("ECM_OLLAMA_TEMPERATURE", "0")),

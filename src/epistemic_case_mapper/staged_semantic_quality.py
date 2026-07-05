@@ -15,8 +15,10 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
+from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _classify_singleton_relations(
@@ -54,6 +56,7 @@ def _classify_singleton_relations(
                 backend,
                 timeout_seconds=backend_timeout,
                 max_retries=backend_retries,
+                response_schema=relation_json_schema(batch=False),
             )
             raw = result.text
         except (RuntimeError, ValueError) as exc:
@@ -782,43 +785,85 @@ def _claim_prompt(
     )
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk), indent=2)
     role_options = "|".join(_configured_claim_roles(case_manifest))
-    return f"""You are selecting source-grounded claim candidates from one bounded source-span catalog.
+    return render_prompt(
+        ("Task", "You are selecting source-grounded claim candidates from one bounded source-span catalog."),
+        (
+            "Metadata",
+            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
+        ),
+        (
+            "Rules",
+            [
+                f"- Return at most {max_claims} claims.",
+                "- Do not include claim_id. Deterministic code assigns IDs later.",
+                "- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.",
+                "- Use only span IDs shown in the catalog.",
+                "- Prefer claims that affect the case question, not bibliographic metadata.",
+                "- Use the map-quality scaffold to diversify claim roles and preserve source limitations.",
+                "- If a source limitation changes the answer, use the sharpest configured role available.",
+                '- If the chunk has no useful claim, return {"claims": []}.',
+            ],
+        ),
+        ("Output Schema", json_schema_block(_claim_prompt_schema(role_options))),
+        ("Examples", examples_block(_claim_prompt_examples())),
+        (
+            "Context",
+            "\n\n".join(
+                (
+                    xml_block("source_span_catalog", span_catalog),
+                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
+                )
+            ),
+        ),
+    )
 
-Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}
-Region ID: {region.region_id}
-Case question: {case_manifest.question}
-Source ID: {chunk.source_id}
-Source title: {chunk.title}
-Line range: {chunk.start_line}-{chunk.end_line}
 
-Source span catalog:
-{span_catalog}
+def _claim_prompt_schema(role_options: str) -> dict[str, Any]:
+    return {
+        "claims": [
+            {
+                "claim": "one concise claim supported by the excerpt",
+                "span_id": "one span_id from the catalog",
+                "entailed_by_excerpt": "yes|no|uncertain",
+                "role": role_options,
+            }
+        ]
+    }
 
-Deterministic map-quality scaffold:
-{scaffold}
 
-Return only JSON:
-{{
-  "claims": [
-    {{
-      "claim": "one concise claim supported by the excerpt",
-      "span_id": "one span_id from the catalog",
-      "entailed_by_excerpt": "yes|no|uncertain",
-      "role": "{role_options}"
-    }}
-  ]
-}}
+def _claim_prompt_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "claims": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "claim": {"type": "string"},
+                        "span_id": {"type": "string"},
+                        "entailed_by_excerpt": {"type": "string", "enum": ["yes", "no", "uncertain"]},
+                        "role": {"type": "string"},
+                    },
+                    "required": ["claim", "span_id", "entailed_by_excerpt", "role"],
+                },
+            }
+        },
+        "required": ["claims"],
+    }
 
-Rules:
-- Return at most {max_claims} claims.
-- Do not include claim_id. Deterministic code assigns IDs later.
-- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.
-- Use only span IDs shown in the catalog.
-- Prefer claims that affect the case question, not bibliographic metadata.
-- Use the map-quality scaffold to diversify claim roles and preserve source limitations.
-- If a source limitation changes how the question should be answered, use the sharpest configured role such as scope_limit, implementation_constraint, external_validity, residual_risk, or jurisdictional_constraint when available.
-- If the chunk has no useful claim, return {{"claims": []}}.
-"""
+
+def _claim_prompt_examples() -> list[dict[str, Any]]:
+    return [
+        {
+            "input_hint": "Span states an outcome relevant to the case question.",
+            "output": {"claims": [{"claim": "The program reduced processing time for the target cases.", "span_id": "doc_s0001", "entailed_by_excerpt": "yes", "role": "conclusion_support"}]},
+        },
+        {
+            "input_hint": "Span only gives title, author, or background metadata.",
+            "output": {"claims": []},
+        },
+    ]
 
 
 

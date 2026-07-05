@@ -40,7 +40,11 @@ def test_llm_stress_eval_prompt_backend_writes_reviewable_artifacts(monkeypatch,
     assert report["summary"]["prompt_count"] == 4
     assert report["summary"]["model_run_count"] == 4
     assert report["built_in_metamorphic_checks"][0]["test_type"] == "source_order_shuffle"
-    assert "Known claim IDs: demo_case_c001, demo_case_c002" in prompt_path.read_text(encoding="utf-8")
+    prompt_text = prompt_path.read_text(encoding="utf-8")
+    assert "# Output Schema" in prompt_text
+    assert "# Examples" in prompt_text
+    assert "<packet>" in prompt_text
+    assert "Known claim IDs: demo_case_c001, demo_case_c002" in prompt_text
 
 
 def test_llm_stress_eval_validates_model_references(monkeypatch, tmp_path: Path) -> None:

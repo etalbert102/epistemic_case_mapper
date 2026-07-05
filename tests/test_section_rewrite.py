@@ -13,7 +13,12 @@ from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_re
 from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
-from epistemic_case_mapper.map_briefing_section_rewrite import _decision_brief_slots, _default_answer_from_body, rewrite_reader_memo_by_section
+from epistemic_case_mapper.map_briefing_section_rewrite import (
+    _decision_brief_slots,
+    _default_answer_from_body,
+    _section_rewrite_prompt,
+    rewrite_reader_memo_by_section,
+)
 from epistemic_case_mapper.map_briefing_section_ownership import (
     build_section_evidence_ownership,
     compact_evidence_reference,
@@ -343,6 +348,51 @@ def test_section_packet_pruning_removes_forbidden_owned_elsewhere_claim_text() -
     serialized = json.dumps(pruned)
     assert forbidden_claim not in serialized
     assert "Capacity remains" in serialized
+
+
+def test_section_prompt_hides_owned_elsewhere_full_claims() -> None:
+    forbidden_claim = "The pilot reduced permit review time by 34 percent without increasing error rates."
+    section = {
+        "title": "Why This Read",
+        "markdown": f"## Why This Read\n\n{forbidden_claim}",
+    }
+    contract = {
+        "heading": "Why This Read",
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [
+            {
+                "slot": "hard-outcome support",
+                "claim": forbidden_claim,
+                "source": "Evaluation",
+                "anchor_terms": ["pilot", "reduced", "permit", "review", "34", "error"],
+                "reference_policy": {
+                    "owner_section": "Evidence Carrying the Conclusion",
+                    "reference_style": "do_not_repeat",
+                    "allowed": False,
+                },
+            }
+        ],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {
+            "load_bearing_claims": [
+                {"claim": "Capacity remains the operational boundary.", "source": "Ops"}
+            ]
+        },
+    }
+
+    prompt = _section_rewrite_prompt(section, contract, previous_title="Practical Read", next_title="Evidence Carrying")
+
+    contract_text = prompt.split("Section contract:\n", 1)[1].split("\n\nThe section below", 1)[0]
+    section_text = prompt.split("Section to rewrite:\n", 1)[1]
+    model_contract = json.loads(contract_text)
+    assert forbidden_claim not in contract_text
+    assert "claim" not in model_contract["owned_elsewhere_evidence"][0]
+    assert "source" not in model_contract["owned_elsewhere_evidence"][0]
+    assert forbidden_claim in section_text
+    assert "Do not mention this evidence here" in contract_text
 
 
 def test_section_rewrite_writes_section_synthesis_packets_with_argument_model(monkeypatch, tmp_path) -> None:

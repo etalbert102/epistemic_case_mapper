@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
+from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.config_profile_vocabularies import (
     _biomedical_nutrition_vocabulary,
     _empirical_policy_vocabulary,
@@ -208,30 +209,30 @@ def build_config_recommendation_prompt(
         }
         for profile in (profiles or builtin_profiles()).values()
     ]
-    return "\n\n".join(
+    return render_prompt(
+        ("Task", "You are selecting an epistemic mapping configuration for a new document packet."),
         (
-            "You are selecting an epistemic mapping configuration for a new document packet.",
-            "Choose the built-in profile that best fits the decision question and source mix. Prefer the most general adequate profile over a narrow one.",
-            f"Decision question:\n{question}",
-            "Document packet summaries:\n" + json.dumps(source_summaries, indent=2),
-            "Available profiles:\n" + json.dumps(profile_payloads, indent=2),
-            "Return only JSON with this shape:",
-            json.dumps(
-                {
-                    "profile_id": DEFAULT_PROFILE_ID,
-                    "confidence": "low|medium|high",
-                    "reasons": ["why this profile fits the question and documents"],
-                    "suggested_overrides": {
-                        "claim_roles": ["optional additional or renamed roles"],
-                        "relation_types": ["optional additional relation types"],
-                        "evidence_sections": ["optional briefing/map sections"],
-                        "source_roles": ["optional source-role hints"],
-                    },
-                },
-                indent=2,
+            "Rules",
+            [
+                "- Choose the built-in profile that best fits the decision question and source mix.",
+                "- Prefer the most general adequate profile over a narrow one.",
+                "- profile_id must be one of the available profile IDs.",
+                "- Do not invent a new full schema; put lightweight additions under suggested_overrides.",
+                "- Name uncertainties when the source packet is too thin to justify a specialized profile.",
+            ],
+        ),
+        ("Output Schema", json_schema_block(_config_recommendation_schema())),
+        ("Examples", examples_block(_config_recommendation_examples())),
+        (
+            "Context",
+            "\n\n".join(
+                (
+                    f"Decision question:\n{question}",
+                    xml_block("document_packet_summaries", json.dumps(source_summaries, indent=2)),
+                    xml_block("available_profiles", json.dumps(profile_payloads, indent=2)),
+                )
             ),
-            "Rules:\n- profile_id must be one of the available profile IDs.\n- Do not invent a new full schema; put lightweight additions under suggested_overrides.\n- Name uncertainties when the source packet is too thin to justify a specialized profile.",
-        )
+        ),
     )
 
 
@@ -245,7 +246,13 @@ def recommend_config_profile(
 ) -> ConfigRecommendationRun:
     source_summaries = source_summaries_from_docs(doc_paths)
     prompt = build_config_recommendation_prompt(question=question, source_summaries=source_summaries)
-    result = run_model_backend(prompt, backend, timeout_seconds=timeout_seconds, max_retries=max_retries)
+    result = run_model_backend(
+        prompt,
+        backend,
+        timeout_seconds=timeout_seconds,
+        max_retries=max_retries,
+        response_schema=_config_recommendation_json_schema(),
+    )
     raw_output = result.text
     recommendation = _parse_recommendation(raw_output, backend=result.backend, prompt_only=result.prompt_only)
     return ConfigRecommendationRun(recommendation=recommendation, prompt=prompt, raw_output=raw_output)
@@ -318,6 +325,56 @@ def _parse_recommendation(raw_output: str, backend: str, prompt_only: bool) -> C
         prompt_only=prompt_only,
         raw_profile_id=raw_profile_id,
     )
+
+
+def _config_recommendation_schema() -> dict[str, Any]:
+    return {
+        "profile_id": DEFAULT_PROFILE_ID,
+        "confidence": "low|medium|high",
+        "reasons": ["why this profile fits the question and documents"],
+        "suggested_overrides": {
+            "claim_roles": ["optional additional or renamed roles"],
+            "relation_types": ["optional additional relation types"],
+            "evidence_sections": ["optional briefing/map sections"],
+            "source_roles": ["optional source-role hints"],
+        },
+    }
+
+
+def _config_recommendation_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "profile_id": {"type": "string"},
+            "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+            "reasons": {"type": "array", "items": {"type": "string"}},
+            "suggested_overrides": {"type": "object"},
+        },
+        "required": ["profile_id", "confidence", "reasons"],
+    }
+
+
+def _config_recommendation_examples() -> list[dict[str, Any]]:
+    return [
+        {
+            "input_hint": "Generic decision question with mixed source summaries.",
+            "output": {
+                "profile_id": "general_decision_support",
+                "confidence": "medium",
+                "reasons": ["The packet mixes decision-relevant claims without a specialized domain signal."],
+                "suggested_overrides": {},
+            },
+        },
+        {
+            "input_hint": "Documents emphasize hazards, mitigations, failure modes, and residual risk.",
+            "output": {
+                "profile_id": "technical_safety_case",
+                "confidence": "high",
+                "reasons": ["The source mix is organized around failure modes and mitigations."],
+                "suggested_overrides": {"claim_roles": ["monitoring_gap"]},
+            },
+        },
+    ]
 
 
 def _base_relations() -> list[RelationTypeConfig]:

@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _concept_gap_backfill_claims(
@@ -651,6 +652,7 @@ def _extract_relations(
                 backend,
                 timeout_seconds=backend_timeout,
                 max_retries=backend_retries,
+                response_schema=relation_json_schema(batch=len(batch) > 1),
             )
             raw = result.text
         except (RuntimeError, ValueError) as exc:

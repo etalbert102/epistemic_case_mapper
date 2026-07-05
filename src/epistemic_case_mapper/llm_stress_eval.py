@@ -10,6 +10,7 @@ from typing import Any
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
+from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.submission_manifest import WorkedRegion, load_submission_manifest
 
 
@@ -163,6 +164,7 @@ def run_llm_stress_eval(
     baseline_text = _read_text(repo_root, baseline_path or region.baseline_path)
     packet = _case_packet(region, map_artifact, baseline_text)
     prompts = {spec["prompt_id"]: _build_prompt(spec, packet, map_artifact) for spec in PROMPT_SPECS}
+    specs_by_id = {spec["prompt_id"]: spec for spec in PROMPT_SPECS}
     for prompt_id, prompt in prompts.items():
         write_markdown(artifacts / "prompts" / f"{prompt_id}.txt", prompt)
 
@@ -177,6 +179,7 @@ def run_llm_stress_eval(
             run_record = _run_eval_prompt(
                 prompt_id=prompt_id,
                 prompt=prompt,
+                response_schema=_stress_response_schema(specs_by_id[prompt_id]),
                 backend=backend_spec,
                 timeout_seconds=timeout_seconds,
                 max_retries=max_retries,
@@ -396,31 +399,54 @@ def _build_prompt(spec: dict[str, Any], packet: str, map_artifact: dict[str, Any
     known_claims = ", ".join(sorted(claim["claim_id"] for claim in map_artifact["claims"])) or "none"
     known_relations = ", ".join(sorted(relation["relation_id"] for relation in map_artifact["relations"])) or "none"
     known_sources = ", ".join(sorted({claim["source_id"] for claim in map_artifact["claims"] if claim["source_id"]})) or "none"
-    return "\n\n".join(
+    return render_prompt(
+        ("Task", f"You are an automated epistemic stress evaluator.\n{spec['instruction']}"),
         (
-            "You are an automated epistemic stress evaluator.",
-            f"Prompt version: {EVAL_VERSION}",
-            f"Prompt ID: {spec['prompt_id']}",
-            f"Task: {spec['title']}",
-            spec["instruction"],
-            "Rules:",
-            "- Return valid JSON only.",
-            "- Use only known IDs from the packet.",
-            "- Do not certify truth; produce source-linked stress signals and candidate improvements.",
-            "- If there is insufficient evidence, return an empty list for the relevant field.",
-            f"Known claim IDs: {known_claims}",
-            f"Known relation IDs: {known_relations}",
-            f"Known source IDs: {known_sources}",
-            "Required JSON shape:\n" + json.dumps(spec["schema"], indent=2),
-            "Packet:\n" + packet,
-        )
+            "Metadata",
+            f"Prompt version: {EVAL_VERSION}\nPrompt ID: {spec['prompt_id']}\nTask: {spec['title']}",
+        ),
+        (
+            "Rules",
+            [
+                "- Return valid JSON only.",
+                "- Use only known IDs from the packet.",
+                "- Do not certify truth; produce source-linked stress signals and candidate improvements.",
+                "- If there is insufficient evidence, return an empty list for the relevant field.",
+                f"- Known claim IDs: {known_claims}",
+                f"- Known relation IDs: {known_relations}",
+                f"- Known source IDs: {known_sources}",
+            ],
+        ),
+        ("Output Schema", json_schema_block(spec["schema"])),
+        ("Examples", examples_block(_stress_prompt_examples(spec))),
+        ("Context", xml_block("packet", packet)),
     )
+
+
+def _stress_prompt_examples(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    root_key = next(iter(spec["schema"]))
+    return [
+        {
+            "input_hint": "Packet lacks enough evidence for a reliable finding.",
+            "output": {root_key: []},
+        }
+    ]
+
+
+def _stress_response_schema(spec: dict[str, Any]) -> dict[str, Any]:
+    root_key = next(iter(spec["schema"]))
+    return {
+        "type": "object",
+        "properties": {root_key: {"type": "array", "items": {"type": "object"}}},
+        "required": [root_key],
+    }
 
 
 def _run_eval_prompt(
     *,
     prompt_id: str,
     prompt: str,
+    response_schema: dict[str, Any],
     backend: str,
     timeout_seconds: int | None,
     max_retries: int,
@@ -433,6 +459,7 @@ def _run_eval_prompt(
             backend,
             timeout_seconds=timeout_seconds,
             max_retries=max_retries,
+            response_schema=response_schema,
         )
     except (RuntimeError, ValueError) as exc:
         return {

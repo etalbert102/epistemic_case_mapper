@@ -15,8 +15,14 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
+from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_prompt_schemas import (
+    relation_batch_prompt_schema,
+    relation_examples,
+    relation_prompt_schema,
+)
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _relation_pair_prompt(
@@ -30,54 +36,23 @@ def _relation_pair_prompt(
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     profile_rules = _profile_relation_rule_text(case_manifest)
-    return f"""You are classifying one possible relation between two already-validated claim cards.
-
-Prompt version: {RELATION_PROMPT_VERSION}
-Region ID: {region.region_id}
-Pair ID: {packet['pair_id']}
-Case question: {case_manifest.question}
-
-Allowed relation types:
-{relation_types}
-
-Claim A:
-{_relation_claim_card(left, "A")}
-
-Claim B:
-{_relation_claim_card(right, "B")}
-
-Deterministic map-quality scaffold:
-{scaffold}
-
-Return only JSON:
-{{
-  "pair_id": "{packet['pair_id']}",
-  "source_claim": "claim_id or null",
-  "target_claim": "claim_id or null",
-  "relation_type": "one allowed relation type or none",
-  "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
-  "relation_confidence": "low|medium|high",
-  "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
-  "source_anchor_a": "short phrase from Claim A excerpt that supports the edge",
-  "source_anchor_b": "short phrase from Claim B excerpt that supports the edge",
-  "why_decision_relevant": "what this edge changes for the decision question",
-  "failure_condition": "what would make this edge invalid or much weaker",
-  "crux_candidates": ["crux text naming claim IDs"],
-  "similar_but_not_identical": ["distinction text naming claim IDs"]
-}}
-
-Rules:
-- Do not include relation_id. Deterministic code assigns IDs later.
-- Use only the two claim IDs shown above.
-- Use only allowed relation types, or use relation_type "none".
-- Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
-- Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
-- Fill the relation evidence contract. The anchors should quote or paraphrase visible excerpt phrases, not introduce new facts.
-{profile_rules}
-- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
-- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
-- If no defensible relation exists, set source_claim and target_claim to null and relation_type to "none".
-"""
+    return render_prompt(
+        ("Task", "You are classifying one possible relation between two already-validated claim cards."),
+        ("Metadata", f"Prompt version: {RELATION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nPair ID: {packet['pair_id']}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Rules", _relation_rules(profile_rules)),
+        ("Output Schema", json_schema_block(relation_prompt_schema(packet["pair_id"], relation_types))),
+        ("Examples", examples_block(relation_examples())),
+        (
+            "Context",
+            "\n\n".join(
+                (
+                    f"Claim A:\n{_relation_claim_card(left, 'A')}",
+                    f"Claim B:\n{_relation_claim_card(right, 'B')}",
+                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
+                )
+            ),
+        ),
+    )
 
 def _relation_batch_prompt(
     manifest: SubmissionManifest,
@@ -91,56 +66,46 @@ def _relation_batch_prompt(
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     profile_rules = _profile_relation_rule_text(case_manifest)
-    return f"""You are classifying possible relations between already-validated claim cards.
+    return render_prompt(
+        ("Task", "You are classifying possible relations between already-validated claim cards."),
+        ("Metadata", f"Prompt version: {RELATION_BATCH_PROMPT_VERSION}\nRegion ID: {region.region_id}\nBatch ID: {batch_id}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Rules", ["- Return exactly one object for each pair ID in this batch.", *_relation_rules(profile_rules)]),
+        ("Output Schema", json_schema_block(relation_batch_prompt_schema(pair_ids, relation_types))),
+        ("Examples", examples_block(relation_examples())),
+        (
+            "Context",
+            "\n\n".join(
+                (
+                    f"Pairs to classify:\n{pair_blocks}",
+                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
+                )
+            ),
+        ),
+    )
 
-Prompt version: {RELATION_BATCH_PROMPT_VERSION}
-Region ID: {region.region_id}
-Batch ID: {batch_id}
-Case question: {case_manifest.question}
-
-Allowed relation types:
-{relation_types}
-
-Pairs to classify:
-{pair_blocks}
-
-Deterministic map-quality scaffold:
-{scaffold}
-
-Return only JSON:
-{{
-  "relations": [
-    {{
-      "pair_id": "one of: {pair_ids}",
-      "source_claim": "claim_id or null",
-      "target_claim": "claim_id or null",
-      "relation_type": "one allowed relation type or none",
-      "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
-      "relation_confidence": "low|medium|high",
-      "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
-      "source_anchor_a": "short phrase from first excerpt that supports the edge",
-      "source_anchor_b": "short phrase from second excerpt that supports the edge",
-      "why_decision_relevant": "what this edge changes for the decision question",
-      "failure_condition": "what would make this edge invalid or much weaker",
-      "crux_candidates": ["crux text naming claim IDs"],
-      "similar_but_not_identical": ["distinction text naming claim IDs"]
-    }}
-  ]
-}}
-
-Rules:
-- Return exactly one object for each pair ID in this batch.
-- Do not include relation_id. Deterministic code assigns IDs later.
-- Use only the two claim IDs shown for each pair.
-- Use only allowed relation types, or use relation_type "none".
-- Use the map-quality scaffold to preserve cruxes, tensions, source limitations, and scope boundaries.
-- Prefer decision-relevant relations over generic ones: use crux_for when one claim would change the decision read of the other, depends_on when a recommendation only works under a condition, and in_tension_with/challenges when a scope limit or contrary finding weakens a support claim.
-- Fill the relation evidence contract for every non-none relation. The anchors should quote or paraphrase visible excerpt phrases, not introduce new facts.
-{profile_rules}
-- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
-- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or implementation condition being refined.
-- If no defensible relation exists for a pair, set source_claim and target_claim to null and relation_type to "none".
-"""
+def _relation_rules(profile_rules: str) -> list[str]:
+    rules = [
+        "- Do not include relation_id. Deterministic code assigns IDs later.",
+        "- Use only the claim IDs shown in the pair.",
+        '- Use only allowed relation types, or use relation_type "none".',
+        "- Use the map-quality scaffold to preserve cruxes, tensions, source limits, and scope boundaries.",
+        "- Prefer decision-relevant relations over generic links.",
+        "- Use crux_for when one claim would change the decision read of the other.",
+        "- Use depends_on when a recommendation or conclusion only works under a condition.",
+        "- Use in_tension_with or challenges when a scope limit or contrary finding weakens another claim.",
+        "- Fill the relation evidence contract for every non-none relation.",
+        "- Ground anchors in visible excerpt phrases rather than introducing new facts.",
+    ]
+    if profile_rules.strip():
+        rules.append(profile_rules.strip())
+    rules.extend(
+        [
+            "- Use similar_to only when the claims are redundant enough that a reviewer could merge them.",
+            "- Use refines only when the rationale names the boundary, population, endpoint, mechanism, or condition being refined.",
+            '- If no defensible relation exists, set source_claim and target_claim to null and relation_type "none".',
+        ]
+    )
+    return rules
 
 def _relation_pair_block(packet: dict[str, Any]) -> str:
     left = packet["left"]

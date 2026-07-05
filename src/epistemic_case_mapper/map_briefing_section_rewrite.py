@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
 from epistemic_case_mapper.map_briefing_section_packets import (
     compact_argument_model, prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact,
 )
+from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
@@ -539,6 +540,7 @@ def _exception_led_answer(text: str) -> bool:
 
 
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
+    model_contract = model_facing_section_contract(contract)
     return (
         "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
@@ -552,7 +554,7 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
         "Section contract:\n"
-        f"{json.dumps(contract, indent=2, ensure_ascii=False)}\n\n"
+        f"{json.dumps(model_contract, indent=2, ensure_ascii=False)}\n\n"
         "The section below is the deterministic draft to improve using the section synthesis packet.\n"
         "Section to rewrite:\n"
         f"{section['markdown'].strip()}\n"

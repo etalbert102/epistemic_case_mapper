@@ -194,6 +194,34 @@ def test_command_backend_retries_transient_failure(tmp_path: Path) -> None:
     assert result.attempts == 2
 
 
+def test_ollama_http_backend_sends_response_schema(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self) -> bytes:
+            return b'{"message": {"content": "{\\"ok\\": true}"}}'
+
+    def fake_urlopen(req, timeout=None):
+        captured["payload"] = json.loads(req.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
+    monkeypatch.setattr("epistemic_case_mapper.model_backends.request.urlopen", fake_urlopen)
+
+    result = run_model_backend("prompt", "ollama:test-model", timeout_seconds=7, response_schema=schema)
+
+    assert result.text == '{"ok": true}'
+    assert captured["timeout"] == 7
+    assert captured["payload"]["format"] == schema
+
+
 def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "fake_staged_model.py"
@@ -260,9 +288,15 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert quality_report["relation_confidence_counts"]["medium"] == 1
     assert quality_report["scaffold"]["required_sources"] == ["demo_case_doc_a", "demo_case_doc_b"]
     claim_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_chunks/demo_case_doc_a_lines_1_2_prompt.txt").read_text(encoding="utf-8")
+    assert "# Output Schema" in claim_prompt
+    assert "# Examples" in claim_prompt
+    assert "<source_span_catalog>" in claim_prompt
     assert "Deterministic map-quality scaffold" in claim_prompt
     assert "target_claim_roles" in claim_prompt
     relation_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_pairs/pair_001_prompt.txt").read_text(encoding="utf-8")
+    assert "# Output Schema" in relation_prompt
+    assert "# Examples" in relation_prompt
+    assert "<deterministic_map_quality_scaffold>" in relation_prompt
     assert "Deterministic map-quality scaffold" in relation_prompt
     assert "relation_goals" in relation_prompt
     assert "relation evidence contract" in relation_prompt
