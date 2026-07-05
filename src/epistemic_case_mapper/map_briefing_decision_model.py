@@ -31,6 +31,7 @@ def build_proposition_clusters(
     ledger_rows = [
         row for row in evidence_ledger.get("all_evidence", [])
         if isinstance(row, dict) and str(row.get("claim_id", "")) in claim_lookup
+        and not row.get("appendix_only")
     ]
     clusters_by_key: dict[str, dict[str, Any]] = {}
     for row in ledger_rows:
@@ -576,57 +577,6 @@ def _filter_claim_concepts_by_visible_text(
             filtered = [item for item in filtered if item != concept]
     return filtered
 
-def _claim_noise_profile(claim: dict[str, Any]) -> dict[str, Any]:
-    text = _claim_text_bundle(claim)
-    compact = re.sub(r"\s+", " ", text).strip()
-    if _looks_like_boilerplate_disclosure(compact):
-        return {"kind": "boilerplate_disclosure", "penalty": 4}
-    if _looks_like_publisher_or_license_boilerplate(compact):
-        return {"kind": "publisher_or_license_boilerplate", "penalty": 4}
-    if _looks_like_statistical_method_trivia(compact):
-        return {"kind": "statistical_method_trivia", "penalty": 2}
-    if len(compact) > 900:
-        return {"kind": "overlong_claim", "penalty": 2}
-    return {"kind": "none", "penalty": 0}
-
-def _looks_like_boilerplate_disclosure(text: str) -> bool:
-    markers = (
-        "received research grants",
-        "received research support",
-        "speaker fees",
-        "honoraria",
-        "scientific advisory board",
-        "consultant to",
-        "conflict of interest",
-        "competing interests",
-        "disclosures",
-        "funding and travel support",
-        "corresponding author on request",
-    )
-    return sum(1 for marker in markers if marker in text) >= 2 or ("professor" in text and "received" in text and len(text) > 700)
-
-def _looks_like_publisher_or_license_boilerplate(text: str) -> bool:
-    markers = (
-        "creative commons",
-        "copyright",
-        "publisher",
-        "license",
-        "all rights reserved",
-        "plos is a nonprofit",
-        "terms of use",
-    )
-    return any(marker in text for marker in markers)
-
-def _looks_like_statistical_method_trivia(text: str) -> bool:
-    markers = (
-        "competing risk regression",
-        "cox proportional hazards",
-        "statistical software",
-        "sensitivity analysis was performed using",
-        "model was adjusted for",
-    )
-    return any(marker in text for marker in markers) and not _contains_hard_outcome_signal(text)
-
 def _evidence_family_for_claim(
     claim: dict[str, Any],
     section: str,
@@ -791,6 +741,10 @@ def _row_matches_option_criterion(row: dict[str, Any], criterion: str) -> bool:
 
 
 # Explicit cross-module dependencies for compatibility facade removal.
+from epistemic_case_mapper.map_briefing_claim_eligibility import (
+    claim_eligibility_profile as _claim_eligibility_profile,
+    claim_noise_profile as _claim_noise_profile,
+)
 from epistemic_case_mapper.map_briefing_evidence_partition import (
     _attach_cluster_tensions,
     _claim_stance,

@@ -46,8 +46,12 @@ def test_representation_scaffold_does_not_use_low_concern_answer_frame() -> None
     question = "How should a narrow slice of evidence be represented without flattening disagreement?"
 
     scaffold = briefing_scaffold(candidate_map, {"status": "usable", "score": 90}, {"s1": "Source 1"}, {"items": []}, question=question)
+    support_model = scaffold["decision_support_model"]
     default_answer = scaffold["decision_model"]["default_answer"]
 
+    assert support_model["schema_id"] == "decision_support_model_v1"
+    assert support_model["evidence_weighting_ledger"] == scaffold["evidence_weighting_ledger"]
+    assert support_model["decision_model"] == scaffold["decision_model"]
     assert default_answer["classification"] == "representation_with_named_disagreement_and_scope_limits"
     assert "low-concern" not in default_answer["plain_language_instruction"]
     assert "low-concern" not in scaffold["section_policy"]["main_support"]

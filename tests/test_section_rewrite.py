@@ -13,7 +13,12 @@ from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_re
 from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
-from epistemic_case_mapper.map_briefing_section_rewrite import _default_answer_from_body, rewrite_reader_memo_by_section
+from epistemic_case_mapper.map_briefing_section_rewrite import _decision_brief_slots, _default_answer_from_body, rewrite_reader_memo_by_section
+from epistemic_case_mapper.map_briefing_section_ownership import (
+    build_section_evidence_ownership,
+    repeated_owned_evidence_issues,
+)
+from epistemic_case_mapper.main_memo_obligations import section_obligations_for_title
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
 
@@ -42,7 +47,6 @@ A scoped section.
     assert payload == {
         "section_markdown": "## Practical Scope and Exceptions\n\nA scoped section.\n- A bullet with a literal newline."
     }
-
 
 def test_section_model_attempts_retry_parse_failure() -> None:
     calls: list[str] = []
@@ -225,6 +229,36 @@ def test_section_rewrite_assigns_required_evidence_to_owner_sections(monkeypatch
     assert any(section.get("evidence_reference_count", 0) > 0 for section in sections)
 
 
+def test_section_ownership_flags_full_repeat_outside_owner_section() -> None:
+    row = {
+        "slot": "hard-outcome support",
+        "claim": "The pilot reduced permit review time by 34 percent without increasing error rates.",
+        "source": "Evaluation",
+        "anchor_terms": ["pilot", "reduced", "permit", "review", "34", "error"],
+    }
+    sections = [
+        {
+            "title": "Why This Read",
+            "markdown": "## Why This Read\n\nThe pilot reduced permit review time by 34 percent without increasing error rates.",
+        },
+        {
+            "title": "Evidence Carrying the Conclusion",
+            "markdown": "## Evidence Carrying the Conclusion\n\nThe pilot reduced permit review time by 34 percent without increasing error rates.",
+        },
+    ]
+    contract = {"required_evidence": [row]}
+    contract["_section_evidence_ownership"] = build_section_evidence_ownership(sections, contract)
+
+    owned = contract["_section_evidence_ownership"]["rows"]
+    assert next(iter(owned.values()))["primary_owner_section"] == "Evidence Carrying the Conclusion"
+    assert repeated_owned_evidence_issues("Why This Read", sections[0]["markdown"], contract)
+    assert not repeated_owned_evidence_issues(
+        "Why This Read",
+        "## Why This Read\n\nThe main outcome evidence is discussed in the evidence section.",
+        contract,
+    )
+
+
 def test_section_rewrite_writes_section_synthesis_packets_with_argument_model(monkeypatch, tmp_path) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
 
@@ -320,6 +354,79 @@ The evidence is scoped.
     assert _default_answer_from_body(body) == "For the default case, the current read is acceptable under stated conditions."
 
 
+def test_decision_brief_slots_skip_top_line_ineligible_caveat() -> None:
+    contract = {
+        "_main_memo_obligation_plan": [
+            {
+                "obligation_id": "scope_01",
+                "category": "scope_boundary",
+                "stage_owner": "decision_synthesis",
+                "priority": 90,
+                "statement": "Eating too many amino acids may increase cardiovascular disease and death risk.",
+                "eligibility": {"top_line_eligible": False, "appendix_only": False},
+            },
+            {
+                "obligation_id": "counter_01",
+                "category": "strongest_counterargument",
+                "stage_owner": "decision_synthesis",
+                "priority": 89,
+                "statement": "High exposure was associated with higher risk in a named high-risk subgroup.",
+                "eligibility": {"top_line_eligible": True, "appendix_only": False},
+            },
+            {
+                "obligation_id": "support_01",
+                "category": "strongest_support",
+                "stage_owner": "decision_synthesis",
+                "priority": 88,
+                "statement": "Moderate exposure was not associated with higher risk in the target population.",
+                "eligibility": {"top_line_eligible": True, "appendix_only": False},
+            },
+        ],
+    }
+    body = """## Practical Read
+
+For the target population, use the default read under stated conditions.
+"""
+
+    slots = _decision_brief_slots(contract, body)
+
+    assert "amino acids" not in slots["caveat"]
+    assert "high-risk subgroup" in slots["caveat"]
+
+
+def test_section_obligations_skip_section_ineligible_scope_boundary() -> None:
+    obligations = [
+        {
+            "obligation_id": "scope_01",
+            "category": "scope_boundary",
+            "stage_owner": "decision_synthesis",
+            "priority": 90,
+            "statement": "Eating too many amino acids may increase cardiovascular disease and death risk.",
+            "eligibility": {
+                "top_line_eligible": False,
+                "appendix_only": False,
+                "section_eligibility": {"scope_and_exceptions": False, "limits": False},
+            },
+        },
+        {
+            "obligation_id": "scope_02",
+            "category": "scope_boundary",
+            "stage_owner": "decision_synthesis",
+            "priority": 89,
+            "statement": "People with type 2 diabetes should be handled as a separate decision scope.",
+            "eligibility": {
+                "top_line_eligible": True,
+                "appendix_only": False,
+                "section_eligibility": {"scope_and_exceptions": True, "limits": False},
+            },
+        },
+    ]
+
+    selected = section_obligations_for_title("Practical Scope and Exceptions", obligations)
+
+    assert [row["obligation_id"] for row in selected] == ["scope_02"]
+
+
 def test_section_rewrite_uses_structured_cruxes_instead_of_model_crux_rewrite(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
     scaffold["decision_synthesis_model"] = {
@@ -380,10 +487,10 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         nonlocal seen_prompt
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
-        if prompt.startswith("You are writing one section") and section.startswith("## Why This Read"):
+        if prompt.startswith("You are writing one section") and section.startswith("## Evidence Carrying the Conclusion"):
             seen_prompt = prompt
             return ModelBackendResult(
-                text=json.dumps({"section_markdown": "## Why This Read\n\nThe answer follows from the source packet."}),
+                text=json.dumps({"section_markdown": "## Evidence Carrying the Conclusion\n\nThe answer follows from the source packet."}),
                 backend=backend,
             )
         return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
@@ -400,7 +507,7 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
         backend_retries=0,
     )
 
-    why_report = next(section for section in result["report"]["sections"] if section["title"] == "Why This Read")
+    why_report = next(section for section in result["report"]["sections"] if section["title"] == "Evidence Carrying the Conclusion")
     assert "required_main_memo_obligations" in seen_prompt
     assert why_report["status"] == "rejected_fallback"
     assert any("dropped required main-memo obligation" in issue for issue in why_report["issues"])

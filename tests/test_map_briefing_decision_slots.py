@@ -179,6 +179,62 @@ def test_slot_extraction_recognizes_population_and_comparator_without_verbs() ->
     assert slots["substitution_or_comparator"]
 
 
+def test_evidence_weighting_marks_noise_and_weak_question_alignment_not_top_line() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "Moderate egg consumption was not associated with higher cardiovascular disease risk in generally healthy adults.",
+                "source_id": "cohort",
+                "role": "conclusion_support",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "c002",
+                "claim": "Abbreviations: BMI, body mass index; CI, confidence interval; HR, hazard ratio; RR, relative risk.",
+                "source_id": "cohort",
+                "role": "scope_limit",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "c003",
+                "claim": "Eating too many amino acids may increase cardiovascular disease and death risk.",
+                "source_id": "guidance",
+                "role": "scope_limit",
+                "entailed_by_excerpt": "yes",
+            },
+            {
+                "claim_id": "c004",
+                "claim": "This link is provided for convenience only and is not an endorsement of either the linked-to entity or any product or service.",
+                "source_id": "guidance",
+                "role": "background",
+                "entailed_by_excerpt": "yes",
+            },
+        ],
+        "relations": [],
+    }
+    source_lookup = {"cohort": "Cohort Study", "guidance": "Guidance"}
+    partition = partition_map_evidence(candidate_map, source_lookup)
+    ledger = build_evidence_weighting_ledger(
+        candidate_map,
+        partition,
+        {"status": "usable_with_review", "score": 90, "issues": []},
+        source_lookup,
+        question="For generally healthy adults, should eggs be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+    rows = {row["claim_id"]: row for row in ledger["all_evidence"]}
+
+    assert rows["c001"]["top_line_eligible"] is True
+    assert rows["c002"]["appendix_only"] is True
+    assert rows["c002"]["eligibility"]["noise_severity"] == "high"
+    assert rows["c003"]["top_line_eligible"] is False
+    assert rows["c003"]["eligibility"]["question_alignment"]["status"] == "weak"
+    assert rows["c003"]["eligibility"]["section_eligibility"]["scope_and_exceptions"] is False
+    assert rows["c003"]["eligibility"]["section_eligibility"]["decision_cruxes"] is False
+    assert rows["c004"]["appendix_only"] is True
+    assert rows["c004"]["eligibility"]["noise_severity"] == "high"
+
+
 def test_typed_evidence_slots_option_comparison_and_crux_contract_are_built() -> None:
     candidate_map = {
         "claims": [
@@ -715,4 +771,3 @@ def test_model_parse_diagnostics_flags_truncated_fenced_json() -> None:
     assert diagnostics["starts_with_json_fence"] is True
     assert diagnostics["looks_truncated"] is True
     assert diagnostics["brace_balance"] > 0
-

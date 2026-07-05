@@ -236,9 +236,6 @@ from epistemic_case_mapper.map_briefing_decision_model import (
     _filter_claim_concepts_by_visible_text,
     _first_pattern,
     _infer_options_from_evidence,
-    _looks_like_boilerplate_disclosure,
-    _looks_like_publisher_or_license_boilerplate,
-    _looks_like_statistical_method_trivia,
     _missing_decision_slots,
     _normalize_slot_value,
     _option_criteria_for_rows,
@@ -260,6 +257,11 @@ from epistemic_case_mapper.map_briefing_decision_model import (
     build_decision_slots,
     build_map_sufficiency_report,
     build_proposition_clusters,
+)
+from epistemic_case_mapper.map_briefing_claim_eligibility import (
+    _looks_like_boilerplate_disclosure,
+    _looks_like_publisher_or_license_boilerplate,
+    _looks_like_statistical_method_trivia,
 )
 
 from epistemic_case_mapper.map_briefing_evidence_partition import (

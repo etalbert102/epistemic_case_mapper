@@ -7,6 +7,7 @@ from typing import Any
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.main_memo_obligations import (
     build_main_memo_obligation_plan,
+    first_top_line_obligation,
     obligation_issues_for_text,
     section_obligations_for_title,
 )
@@ -25,6 +26,8 @@ from epistemic_case_mapper.map_briefing_section_attempts import run_section_mode
 from epistemic_case_mapper.map_briefing_section_ownership import (
     build_section_evidence_ownership,
     compact_evidence_reference,
+    evidence_reference_policy,
+    repeated_owned_evidence_issues,
     section_owns_evidence,
 )
 from epistemic_case_mapper.map_briefing_section_packets import (
@@ -42,7 +45,6 @@ from epistemic_case_mapper.model_backends import run_model_backend
 
 
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", flags=re.MULTILINE)
-
 
 def rewrite_reader_memo_by_section(
     memo: str,
@@ -306,10 +308,9 @@ def _deterministic_final_decision_brief(contract: dict[str, Any], body_memo: str
 
 def _decision_brief_slots(contract: dict[str, Any], body_memo: str) -> dict[str, str]:
     obligations = section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []), limit=4)
-    by_category = {str(row.get("category", "")): row for row in obligations}
     answer = _default_answer_from_body(body_memo) or _default_answer_from_contract(contract)
-    evidence_obligation = by_category.get("quantitative_anchor") or by_category.get("strongest_support")
-    caveat_obligation = by_category.get("scope_boundary") or by_category.get("strongest_counterargument")
+    evidence_obligation = first_top_line_obligation(obligations, ("quantitative_anchor", "strongest_support", "evidence_family_balance"))
+    caveat_obligation = first_top_line_obligation(obligations, ("scope_boundary", "strongest_counterargument", "decision_crux"))
     evidence = _obligation_slot_text(evidence_obligation) or _support_evidence_from_contract(contract)
     caveat = _obligation_slot_text(caveat_obligation) or (_decision_caveats_from_body(body_memo) or _decision_caveats_from_contract(contract) or [""])[0]
     return {
@@ -412,12 +413,11 @@ def _support_evidence_from_contract(contract: dict[str, Any]) -> str:
     )
     ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
     evidence_rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
-    for role in ("conclusion_support", "main_support"):
-        for row in evidence_rows:
-            if str(row.get("role", "")) == role and str(row.get("claim", "")).strip():
-                return _short_text(str(row["claim"]).strip(), 220)
     for row in evidence_rows:
-        if str(row.get("claim", "")).strip():
+        if row.get("top_line_eligible") and str(row.get("section", "")) == "main_support" and str(row.get("claim", "")).strip():
+            return _short_text(str(row["claim"]).strip(), 220)
+    for row in evidence_rows:
+        if not row.get("appendix_only") and str(row.get("claim", "")).strip():
             return _short_text(str(row["claim"]).strip(), 220)
     return ""
 
@@ -549,6 +549,7 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "When quantitative_anchors include key_quantities, use one relevant card-level estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
         "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
+        "Respect evidence ownership: fully explain owned evidence only in this section; for evidence_references, use at most a short cross-reference and do not repeat source-level details.\n"
         "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
@@ -581,6 +582,7 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
     for row in contract["required_evidence"]:
         if not _rewrite_mentions_anchor_row(rewritten, row):
             issues.append(f"section dropped required evidence: {str(row.get('claim', ''))[:90]}")
+    issues.extend(repeated_owned_evidence_issues(original["title"], rewritten, contract))
     for gap in contract["required_gaps"]:
         if not _rewrite_mentions_gap(rewritten, gap):
             issues.append(f"section dropped required gap: {gap[:90]}")
@@ -671,6 +673,13 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         and _rewrite_mentions_anchor_row(text, row)
         and not section_owns_evidence(title, row, full_contract)
     ]
+    owned_elsewhere_evidence = [
+        {**row, "reference_policy": evidence_reference_policy(title, row, full_contract)}
+        for row in full_contract.get("required_evidence", [])
+        if isinstance(row, dict)
+        and _rewrite_mentions_anchor_row(text, row)
+        and not section_owns_evidence(title, row, full_contract)
+    ]
     required_gaps = [
         gap for gap in _string_list(full_contract.get("required_gaps"))
         if _rewrite_mentions_gap(text, gap) or "limit" in title.lower()
@@ -691,6 +700,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         "requires_confidence": "**Confidence:**" in text,
         "required_evidence": required_evidence,
         "evidence_references": evidence_references,
+        "owned_elsewhere_evidence": owned_elsewhere_evidence,
         "required_gaps": required_gaps,
         "required_cruxes": required_cruxes if isinstance(required_cruxes, list) else [],
         "required_main_memo_obligations": main_memo_obligations,

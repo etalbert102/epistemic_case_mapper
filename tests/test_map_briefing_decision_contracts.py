@@ -362,9 +362,11 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
 
     assert cli.main() == 0
     rendered = (tmp_path / "out/BRIEFING.md").read_text(encoding="utf-8")
+    rewrite_report = json.loads((tmp_path / "out/reader_memo_rewrite_report.json").read_text(encoding="utf-8"))
     assert "**Confidence:** low" in rendered
     assert "doc_a" not in rendered
     assert "Doc A" in rendered
+    assert rewrite_report["status"] == "skipped_after_section_rewrite"
 
 
 def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -> None:

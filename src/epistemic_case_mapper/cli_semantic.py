@@ -183,6 +183,7 @@ def _run_map_briefing(
     max_claims: int,
     backend_timeout: int,
     backend_retries: int,
+    run_reader_memo_rewrite: bool = False,
 ) -> int:
     if max_claims < 0:
         print("map_briefing_failed max_claims_must_be_nonnegative", file=sys.stderr)
@@ -214,6 +215,7 @@ def _run_map_briefing(
             source_titles=_source_titles_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
             max_claims=max_claims,
             baseline_path=baseline_path,
+            run_reader_memo_rewrite=run_reader_memo_rewrite,
         )
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
         print(f"map_briefing_failed error={exc}", file=sys.stderr)

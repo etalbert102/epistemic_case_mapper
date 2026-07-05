@@ -75,6 +75,7 @@ def section_obligations_for_title(
         and str(obligation.get("stage_owner", "")) == "decision_synthesis"
         and str(obligation.get("category", "")) in categories
         and obligation.get("status_override") != "source_missing"
+        and _obligation_section_eligible(title, obligation)
     ]
     ranked = sorted(
         eligible,
@@ -87,6 +88,22 @@ def section_obligations_for_title(
     first_page = title.strip().lower() == "decision brief"
     selected = _balanced_first_page_obligations(ranked, categories, limit=limit) if first_page else ranked[:limit]
     return [_compact_obligation_for_section(row, first_page_required=first_page) for row in selected]
+
+
+def first_top_line_obligation(obligations: list[dict[str, Any]], categories: tuple[str, ...]) -> dict[str, Any] | None:
+    category_matches = [
+        row
+        for category in categories
+        for row in obligations
+        if str(row.get("category", "")) == category
+    ]
+    for row in category_matches:
+        if _obligation_top_line_eligible(row):
+            return row
+    for row in category_matches:
+        if not _obligation_appendix_only(row):
+            return row
+    return category_matches[0] if category_matches else None
 
 
 def obligation_issues_for_text(obligations: list[dict[str, Any]], text: str, *, prefix: str) -> list[str]:
@@ -239,10 +256,12 @@ def _section_obligation_categories(title: str) -> list[str]:
         return ["scope_boundary", "strongest_counterargument", "decision_crux", "evidence_family_balance"]
     if "crux" in lowered:
         return ["decision_crux", "strongest_counterargument", "scope_boundary"]
-    if "evidence" in lowered or "why" in lowered:
+    if "evidence" in lowered:
         return ["quantitative_anchor", "quantitative_depth", "strongest_support", "strongest_counterargument", "evidence_family_balance"]
+    if "why" in lowered:
+        return []
     if "practical" in lowered:
-        return ["strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
+        return ["scope_boundary", "strongest_counterargument"]
     return ["quantitative_anchor", "strongest_support", "strongest_counterargument", "scope_boundary", "decision_crux"]
 
 
@@ -275,7 +294,54 @@ def _compact_obligation_for_section(obligation: dict[str, Any], *, first_page_re
         "claim_ids": _string_list(obligation.get("claim_ids"))[:4],
         "relation_ids": _string_list(obligation.get("relation_ids"))[:4],
         "quantity_ids": _string_list(obligation.get("quantity_ids"))[:4],
+        "eligibility": obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {},
     }
+
+
+def _obligation_top_line_eligible(obligation: dict[str, Any]) -> bool:
+    eligibility = obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {}
+    if not eligibility:
+        return True
+    return bool(eligibility.get("top_line_eligible"))
+
+
+def _obligation_appendix_only(obligation: dict[str, Any]) -> bool:
+    eligibility = obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {}
+    return bool(eligibility.get("appendix_only"))
+
+
+def _obligation_section_eligible(title: str, obligation: dict[str, Any]) -> bool:
+    eligibility = obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {}
+    if not eligibility:
+        return True
+    if bool(eligibility.get("appendix_only")):
+        return False
+    section_key = _section_eligibility_key(title)
+    if not section_key:
+        return True
+    section_eligibility = eligibility.get("section_eligibility", {})
+    if isinstance(section_eligibility, dict) and section_key in section_eligibility:
+        return bool(section_eligibility.get(section_key))
+    return bool(eligibility.get("top_line_eligible")) if section_key == "decision_brief" else True
+
+
+def _section_eligibility_key(title: str) -> str:
+    lowered = title.strip().lower()
+    if lowered == "decision brief":
+        return "decision_brief"
+    if lowered == "practical read":
+        return "practical_read"
+    if lowered == "why this read":
+        return "why_this_read"
+    if lowered == "evidence carrying the conclusion":
+        return "evidence_carrying_conclusion"
+    if lowered == "practical scope and exceptions":
+        return "scope_and_exceptions"
+    if lowered == "decision cruxes":
+        return "decision_cruxes"
+    if lowered == "limits of the current map":
+        return "limits"
+    return ""
 
 
 def _argument_model_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
@@ -304,6 +370,7 @@ def _argument_model_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]
                     relation_ids=_string_list(row.get("relation_ids")),
                     quantity_ids=_string_list(row.get("quantity_ids")),
                     reason=str(row.get("why_it_matters", "")).strip(),
+                    eligibility=_eligibility_for_claim_ids(_string_list(row.get("claim_ids")), scaffold),
                 )
             )
     return obligations
@@ -330,6 +397,7 @@ def _quantity_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
                 relation_ids=[str(card.get("relation_id", ""))] if str(card.get("relation_id", "")).strip() else [],
                 quantity_ids=[str(card.get("card_id", ""))] if str(card.get("card_id", "")).strip() else [],
                 reason=str(card.get("interpretation_hint", "Quantitative evidence card should be considered for the main memo.")),
+                eligibility={"top_line_eligible": True, "appendix_only": False, "source": "quantity_card"},
             )
         )
     return obligations
@@ -359,6 +427,7 @@ def _evidence_family_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any
                 relation_ids=[],
                 quantity_ids=[],
                 reason=f"Representative high-weight row for evidence family `{family}`.",
+                eligibility=_eligibility_for_claim_ids([str(row.get("claim_id", ""))], scaffold),
             )
         )
     return obligations[:10]
@@ -387,6 +456,7 @@ def _baseline_obligations(baseline_gap: dict[str, Any], source_coverage: dict[st
                 quantity_ids=[],
                 reason="Present in the comparison baseline but absent from the final memo.",
                 status_override=status_override,
+                eligibility={"top_line_eligible": stage_owner != "source_coverage", "appendix_only": False, "source": "baseline_gap"},
             )
         )
     return obligations
@@ -431,6 +501,7 @@ def _obligation(
     quantity_ids: list[str],
     reason: str,
     status_override: str = "",
+    eligibility: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "obligation_id": obligation_id,
@@ -445,7 +516,44 @@ def _obligation(
         "quantity_ids": quantity_ids,
         "reason": _short_text(reason, 220),
         "status_override": status_override,
+        "eligibility": eligibility or {},
     }
+
+
+def _eligibility_for_claim_ids(claim_ids: list[str], scaffold: dict[str, Any]) -> dict[str, Any]:
+    if not claim_ids:
+        return {}
+    rows = _evidence_rows_by_claim(scaffold)
+    profiles = [rows[claim_id].get("eligibility", {}) for claim_id in claim_ids if claim_id in rows]
+    profiles = [profile for profile in profiles if isinstance(profile, dict)]
+    if not profiles:
+        return {}
+    return {
+        "top_line_eligible": any(bool(profile.get("top_line_eligible")) for profile in profiles),
+        "crux_eligible": any(bool(profile.get("crux_eligible")) for profile in profiles),
+        "appendix_only": all(bool(profile.get("appendix_only")) for profile in profiles),
+        "section_eligibility": _merged_section_eligibility(profiles),
+        "max_decision_relevance_score": max(int(profile.get("decision_relevance_score", 0) or 0) for profile in profiles),
+        "noise_severities": sorted({str(profile.get("noise_severity", "none")) for profile in profiles}),
+        "source": "evidence_weighting_ledger",
+    }
+
+
+def _merged_section_eligibility(profiles: list[dict[str, Any]]) -> dict[str, bool]:
+    keys = sorted(
+        {
+            str(key)
+            for profile in profiles
+            for key in _dict(profile.get("section_eligibility")).keys()
+        }
+    )
+    return {key: any(bool(_dict(profile.get("section_eligibility")).get(key)) for profile in profiles) for key in keys}
+
+
+def _evidence_rows_by_claim(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    ledger = _dict(scaffold.get("evidence_weighting_ledger"))
+    rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
+    return {str(row.get("claim_id", "")): row for row in rows if str(row.get("claim_id", "")).strip()}
 
 
 def _dedupe_obligations(obligations: list[dict[str, Any]]) -> list[dict[str, Any]]:

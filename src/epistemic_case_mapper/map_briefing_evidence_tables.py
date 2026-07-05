@@ -482,6 +482,8 @@ def build_evidence_weighting_ledger(
     partition: dict[str, Any],
     quality_report: dict[str, Any],
     source_lookup: dict[str, str],
+    *,
+    question: str = "",
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     profile_id = _profile_id_for_map(candidate_map)
@@ -491,15 +493,40 @@ def build_evidence_weighting_ledger(
         score, modifiers = _claim_evidence_weight_score(claim, section, quality_report, source_lookup, vocabulary=vocabulary)
         concepts = _claim_concepts(claim, vocabulary=vocabulary)
         noise = _claim_noise_profile(claim)
+        decision_slots = _decision_slots_for_claim(claim, vocabulary=vocabulary)
+        evidence_slots = _evidence_slots_for_claim(claim, vocabulary=vocabulary)
+        eligibility = _claim_eligibility_profile(
+            claim=claim,
+            section=section,
+            score=score,
+            weight=_weight_label(score),
+            concepts=concepts,
+            decision_slots=decision_slots,
+            evidence_slots=evidence_slots,
+            noise=noise,
+            question=question,
+        )
+        if eligibility.get("appendix_only"):
+            score = min(score, 2)
+            modifiers.append("eligibility:appendix_only")
+        elif not eligibility.get("top_line_eligible") and section in {"main_support", "conflicting_evidence", "scope_limits"}:
+            score = min(score, 5)
+            modifiers.append("eligibility:not_top_line")
         rows.append(
             {
                 "claim_id": str(claim.get("claim_id", "")),
                 "section": section,
                 "evidence_family": _evidence_family_for_claim(claim, section, source_lookup, vocabulary=vocabulary),
-                "decision_slots": _decision_slots_for_claim(claim, vocabulary=vocabulary),
-                "evidence_slots": _evidence_slots_for_claim(claim, vocabulary=vocabulary),
+                "decision_slots": decision_slots,
+                "evidence_slots": evidence_slots,
                 "decision_concepts": concepts,
                 "noise": noise,
+                "eligibility": eligibility,
+                "decision_relevance_score": eligibility.get("decision_relevance_score", 0),
+                "top_line_eligible": bool(eligibility.get("top_line_eligible")),
+                "crux_eligible": bool(eligibility.get("crux_eligible")),
+                "appendix_only": bool(eligibility.get("appendix_only")),
+                "section_eligibility": eligibility.get("section_eligibility", {}),
                 "weight": _weight_label(score),
                 "score": score,
                 "modifiers": modifiers,
@@ -508,7 +535,7 @@ def build_evidence_weighting_ledger(
                 "supporting_source_count": len(_claim_supporting_sources_for_briefing(claim)),
             }
         )
-    rows.sort(key=lambda row: (-int(row["score"]), str(row["section"]), str(row["claim_id"])))
+    rows.sort(key=_evidence_ledger_row_rank)
     by_section: dict[str, list[dict[str, Any]]] = {
         "main_support": [],
         "conflicting_evidence": [],
@@ -528,6 +555,7 @@ def build_evidence_weighting_ledger(
         "evidence_slot_counts": _counts(slot for row in rows for slot in row.get("evidence_slots", [])),
         "decision_concept_counts": _counts(concept for row in rows for concept in row.get("decision_concepts", [])),
         "noise_counts": _counts(row.get("noise", {}).get("kind") for row in rows if isinstance(row.get("noise"), dict)),
+        "eligibility_counts": _counts(_eligibility_bucket(row) for row in rows),
         "top_evidence_by_section": {section: items[:6] for section, items in by_section.items()},
         "weight_counts": _counts(row["weight"] for row in rows),
         "notes": [
@@ -536,6 +564,25 @@ def build_evidence_weighting_ledger(
         ],
         "partition_counts": {key: len(value) for key, value in partition.get("evidence_roles", {}).items()},
     }
+
+def _evidence_ledger_row_rank(row: dict[str, Any]) -> tuple[int, int, int, int, str, str]:
+    return (
+        1 if row.get("appendix_only") else 0,
+        0 if row.get("top_line_eligible") else 1,
+        -int(row.get("score", 0)),
+        -int(row.get("decision_relevance_score", 0)),
+        str(row.get("section", "")),
+        str(row.get("claim_id", "")),
+    )
+
+def _eligibility_bucket(row: dict[str, Any]) -> str:
+    if row.get("appendix_only"):
+        return "appendix_only"
+    if row.get("top_line_eligible"):
+        return "top_line_eligible"
+    if row.get("crux_eligible"):
+        return "crux_eligible"
+    return "body_only"
 
 def build_evidence_compression_table(
     candidate_map: dict[str, Any],
@@ -553,8 +600,10 @@ def build_evidence_compression_table(
         concepts = [str(item) for item in row.get("decision_concepts", []) if isinstance(item, str)]
         if not concepts and str(row.get("section", "")) not in {"main_support", "conflicting_evidence"}:
             continue
+        if row.get("appendix_only"):
+            continue
         noise = row.get("noise", {}) if isinstance(row.get("noise"), dict) else {}
-        if str(noise.get("kind", "")) in {"boilerplate_disclosure", "publisher_or_license_boilerplate"} and int(row.get("score", 0)) < 5:
+        if str(noise.get("kind", "")) not in {"", "none"} and int(row.get("score", 0)) < 5:
             continue
         rows.append(
             {
@@ -564,6 +613,7 @@ def build_evidence_compression_table(
                 "role": str(claim.get("role", "")),
                 "weight": row.get("weight", "medium"),
                 "score": row.get("score", 0),
+                "appendix_only": bool(row.get("appendix_only")),
                 "concepts": concepts,
                 "evidence_slots": [str(item) for item in row.get("evidence_slots", []) if isinstance(item, str)],
                 "evidence_family": row.get("evidence_family", "general_evidence"),
@@ -808,6 +858,7 @@ def _ordered_concepts(rows: list[dict[str, Any]]) -> list[str]:
 from epistemic_case_mapper.map_briefing_decision_model import (
     _claim_concepts,
     _claim_evidence_weight_score,
+    _claim_eligibility_profile,
     _claim_noise_profile,
     _decision_slots_for_claim,
     _evidence_family_for_claim,

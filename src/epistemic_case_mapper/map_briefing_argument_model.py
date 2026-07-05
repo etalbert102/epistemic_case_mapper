@@ -107,7 +107,8 @@ def _counter_items(
 def _evidence_weight_items(scaffold: dict[str, Any], claim_lookup: dict[str, dict[str, Any]]) -> list[ArgumentEvidenceItem]:
     ledger = _dict(scaffold.get("evidence_weighting_ledger"))
     rows = [row for row in ledger.get("all_evidence", []) if isinstance(row, dict)]
-    rows = sorted(rows, key=lambda row: (-int(row.get("score", 0)), str(row.get("claim_id", ""))))
+    rows = [row for row in rows if _row_argument_eligible(row)]
+    rows = sorted(rows, key=_argument_row_rank)
     return [_item_from_evidence_row(row, claim_lookup, why="Selected by evidence-weighting ledger.") for row in rows[:8]]
 
 
@@ -229,7 +230,27 @@ def _top_section_rows(scaffold: dict[str, Any], section: str) -> list[dict[str, 
     ledger = _dict(scaffold.get("evidence_weighting_ledger"))
     rows_by_section = _dict(ledger.get("top_evidence_by_section"))
     rows = rows_by_section.get(section, [])
-    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict) and _row_argument_eligible(row)]
+
+
+def _row_argument_eligible(row: dict[str, Any]) -> bool:
+    if row.get("appendix_only"):
+        return False
+    eligibility = row.get("eligibility", {}) if isinstance(row.get("eligibility"), dict) else {}
+    if str(eligibility.get("noise_severity", "")) == "high":
+        return False
+    return int(row.get("decision_relevance_score", 0) or 0) >= 3
+
+
+def _argument_row_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
+    return (
+        0 if row.get("top_line_eligible") else 1,
+        -int(row.get("score", 0)),
+        -int(row.get("decision_relevance_score", 0) or 0),
+        str(row.get("claim_id", "")),
+    )
 
 
 def _item_from_evidence_row(row: dict[str, Any], claim_lookup: dict[str, dict[str, Any]], *, why: str) -> ArgumentEvidenceItem:

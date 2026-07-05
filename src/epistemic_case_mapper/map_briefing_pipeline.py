@@ -86,6 +86,7 @@ def run_map_briefing(
     backend_timeout: int | None = 120, backend_retries: int = 0,
     source_titles: dict[str, str] | None = None, max_claims: int | None = 0,
     baseline_path: str | Path | None = None,
+    run_reader_memo_rewrite: bool = False,
 ) -> MapBriefingResult:
     _validate_run_args(question, backend_timeout, backend_retries)
     map_file = _resolve(repo_root, map_path)
@@ -156,6 +157,7 @@ def run_map_briefing(
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
+        run_reader_memo_rewrite=run_reader_memo_rewrite,
     )
     briefing_path = final_outputs["briefing_path"]
     evidence_appendix_path = final_outputs["evidence_appendix_path"]
@@ -247,6 +249,7 @@ def _write_final_reader_outputs(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    run_reader_memo_rewrite: bool = False,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
 
@@ -267,14 +270,18 @@ def _write_final_reader_outputs(
     rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
     rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
     rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
-    rewrite_result = rewrite_reader_memo_with_contract(
-        section_memo,
-        evidence_appendix,
-        memo_package["scaffold"],
-        prioritized_map,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
+    rewrite_result = (
+        rewrite_reader_memo_with_contract(
+            section_memo,
+            evidence_appendix,
+            memo_package["scaffold"],
+            prioritized_map,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+        if run_reader_memo_rewrite
+        else _skipped_reader_memo_rewrite(section_memo)
     )
     if rewrite_result.get("prompt"):
         write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
@@ -336,6 +343,20 @@ def _section_first_generation_note(backend: str) -> str:
         "The pipeline built a deterministic source-grounded memo scaffold, then used model-backed section synthesis for each eligible section. "
         f"Section synthesis backend: {backend}.\n"
     )
+
+
+def _skipped_reader_memo_rewrite(memo: str) -> dict[str, Any]:
+    return {
+        "memo": memo,
+        "prompt": "",
+        "raw": "",
+        "report": {
+            "schema_id": "reader_memo_rewrite_report_v1",
+            "status": "skipped_after_section_rewrite",
+            "accepted": False,
+            "issues": [],
+        },
+    }
 
 
 def _section_first_render_state(
@@ -550,75 +571,25 @@ def briefing_scaffold(
     erosion_audit: dict[str, Any],
     question: str = "",
 ) -> dict[str, Any]:
-    partition = partition_map_evidence(candidate_map, source_lookup)
-    evidence_roles = partition["evidence_roles"]
-    cruxes = partition["crux_candidates"]
-    audit_trail = list(partition["audit_trail"])
-    vocabulary = _profile_vocabulary_for_map(candidate_map)
-    contract = build_briefing_contract(partition, quality_report, vocabulary=vocabulary)
-    evidence_ledger = build_evidence_weighting_ledger(candidate_map, partition, quality_report, source_lookup)
-    quantity_ledger = build_quantity_ledger(candidate_map, source_lookup, question=question)
-    quantitative_anchors = top_quantity_anchors(quantity_ledger)
-    quantitative_evidence_cards = quantity_ledger.get("evidence_cards", []) if isinstance(quantity_ledger.get("evidence_cards"), list) else []
-    proposition_clusters = build_proposition_clusters(candidate_map, evidence_ledger, source_lookup)
-    evidence_compression_table = build_evidence_compression_table(candidate_map, evidence_ledger, source_lookup)
-    concept_evidence_packets = build_concept_evidence_packets(evidence_ledger)
-    graph_synthesis_packet = build_graph_synthesis_packet(candidate_map, evidence_ledger, source_lookup)
-    option_comparison = build_option_comparison(question, evidence_ledger, candidate_map)
-    crux_contract = build_crux_contract(candidate_map, evidence_ledger, option_comparison)
-    refined_cruxes = refine_crux_contract(crux_contract, candidate_map)
-    decision_frame = build_decision_frame(candidate_map, evidence_ledger, quality_report, question=question)
-    decision_model = build_decision_model(proposition_clusters, contract, quality_report, evidence_ledger)
-    decision_model = adapt_decision_model_to_frame(decision_model, decision_frame)
-    sufficiency_report = build_map_sufficiency_report(
-        candidate_map,
-        question=question,
-        evidence_ledger=evidence_ledger,
-        decision_model=decision_model,
-        quality_report=quality_report,
+    from epistemic_case_mapper.map_briefing_decision_support_model import (
+        build_decision_support_model,
+        decision_support_scaffold_fields,
     )
-    briefing_plan = build_briefing_plan(partition, contract, evidence_ledger, quality_report, decision_model)
-    for item in erosion_audit.get("items", []):
-        if isinstance(item, dict) and item.get("reader_anchor"):
-            audit_trail.append(str(item["reader_anchor"]))
-    scaffold = {
-        "question": question,
-        "seed_claims": _claims(candidate_map)[:10],
-        "quality_status": quality_report.get("status"),
-        "quality_score": quality_report.get("score"),
-        "confidence_cap": confidence_cap(quality_report),
-        "epistemic_config": candidate_map.get("epistemic_config", {}),
-        "section_policy": section_policy_for_frame(decision_frame),
-        "briefing_contract": contract,
-        "evidence_weighting_ledger": evidence_ledger,
-        "quantity_ledger": quantity_ledger,
-        "quantitative_anchors": quantitative_anchors,
-        "quantitative_evidence_cards": quantitative_evidence_cards,
-        "evidence_slot_ledger": build_evidence_slot_ledger(evidence_ledger),
-        "proposition_clusters": proposition_clusters,
-        "decision_model": decision_model,
-        "graph_synthesis_packet": graph_synthesis_packet,
-        "evidence_compression_table": evidence_compression_table,
-        "concept_evidence_packets": concept_evidence_packets,
-        "option_comparison": option_comparison,
-        "crux_contract": crux_contract,
-        "refined_cruxes": refined_cruxes,
-        "decision_frame": decision_frame,
-        "map_sufficiency_report": sufficiency_report,
-        "briefing_plan": briefing_plan,
-        "evidence_roles": {key: _dedupe(items)[:8] for key, items in evidence_roles.items()},
-        "crux_candidates": _dedupe_dicts(cruxes)[:8],
-        "audit_trail": _dedupe(audit_trail)[:10],
-        "source_display_names": source_lookup,
-        "quality_issues": [
-            f"{issue.get('severity')}: {issue.get('issue_type')} - {issue.get('message')}"
-            for issue in quality_report.get("issues", [])
-            if isinstance(issue, dict)
-        ][:8],
-    }
-    scaffold["decision_synthesis_model"] = build_decision_synthesis_model(scaffold)
-    scaffold["argument_model"] = build_argument_model(candidate_map, quality_report, scaffold, question=question)
-    scaffold["decision_argument_artifacts"] = build_decision_argument_artifacts(scaffold, candidate_map)
+
+    support_model = build_decision_support_model(
+        candidate_map=candidate_map,
+        quality_report=quality_report,
+        source_lookup=source_lookup,
+        erosion_audit=erosion_audit,
+        question=question,
+    )
+    scaffold = decision_support_scaffold_fields(
+        support_model,
+        candidate_map=candidate_map,
+        quality_report=quality_report,
+        source_lookup=source_lookup,
+        question=question,
+    )
     return _expand_payload_reader_references(scaffold, candidate_map)
 
 def deterministic_briefing_payload(
