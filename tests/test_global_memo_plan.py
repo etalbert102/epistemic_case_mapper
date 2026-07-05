@@ -196,3 +196,74 @@ def test_section_contract_intersects_global_plan_with_section_role() -> None:
     obligations = section_main_memo_obligations("Practical Read", full_contract)
 
     assert obligations == []
+
+
+def test_model_section_packet_drops_plan_thesis_that_uses_owned_elsewhere_evidence() -> None:
+    forbidden_claim = "Individuals with a borderline LDL-c/HDL-c ratio should limit egg consumption."
+    contract = {
+        "_section_synthesis_scaffold": {
+            "global_memo_plan": {
+                "section_plans": [
+                    {
+                        "section": "Practical Scope and Exceptions",
+                        "thesis": "The section should foreground borderline LDL-c/HDL-c ratios.",
+                        "transition_goal": "Explain why borderline LDL-c/HDL-c ratios change the practical answer.",
+                    }
+                ]
+            }
+        },
+        "heading": "Practical Scope and Exceptions",
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [
+            {
+                "slot": "Mechanism and surrogate evidence",
+                "claim": forbidden_claim,
+                "reference_policy": {
+                    "owner_section": "Evidence Carrying the Conclusion",
+                    "reference_style": "do_not_repeat",
+                },
+            }
+        ],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {},
+    }
+
+    packet = compile_model_section_packet("Practical Scope and Exceptions", contract)
+    serialized = json.dumps(packet)
+
+    assert "LDL" not in serialized
+    assert "borderline" not in serialized
+
+
+def test_model_facing_prompt_drops_practical_actions_owned_by_other_sections() -> None:
+    from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract
+
+    owned_elsewhere = {
+        "slot": "High-risk subgroup",
+        "claim": "Short-term randomized interventions indicate that higher egg consumption does not negatively affect cardiovascular disease risk factors in people with diabetes.",
+        "anchor_terms": ["short-term", "randomized", "interventions", "diabetes"],
+        "reference_policy": {
+            "owner_section": "Practical Scope and Exceptions",
+            "reference_style": "do_not_repeat",
+        },
+    }
+    contract = {
+        "heading": "Practical Read",
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [owned_elsewhere],
+        "required_main_memo_obligations": [],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "practical_actions": [
+            owned_elsewhere["claim"],
+            "Use one egg per day as the practical exposure boundary.",
+        ],
+        "section_synthesis_packet": {},
+    }
+
+    model_contract = model_facing_section_contract(contract)
+    actions = model_contract["validation_obligations"]["practical_actions"]
+
+    assert actions == ["Use one egg per day as the practical exposure boundary."]

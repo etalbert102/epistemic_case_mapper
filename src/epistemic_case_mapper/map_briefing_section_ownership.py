@@ -89,7 +89,7 @@ def repeated_owned_evidence_issues(title: str, text: str, full_contract: dict[st
                 owner = str(policy.get("owner_section", "")).strip() or "another section"
                 issues.append(f"section over-explains evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
             continue
-        if _rewrite_mentions_anchor_row(text, row):
+        if _mentions_owned_evidence(text, row):
             owner = str(policy.get("owner_section", "")).strip() or "another section"
             issues.append(f"section repeats evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
     return issues[:6]
@@ -221,7 +221,7 @@ def _short_reference_overexplains_evidence(
     row: dict[str, Any],
     policy: dict[str, Any],
 ) -> bool:
-    if not _rewrite_mentions_anchor_row(text, row):
+    if not _mentions_owned_evidence(text, row):
         return False
     owner = str(policy.get("owner_section", "")).strip()
     sentence = _strongest_matching_sentence(text, row)
@@ -256,6 +256,18 @@ def _content_overlap_count(text: str, reference: str) -> int:
     return sum(1 for term in _content_terms(reference) if term in text_terms)
 
 
+def _mentions_owned_evidence(text: str, row: dict[str, Any]) -> bool:
+    if _rewrite_mentions_anchor_row(text, row):
+        return True
+    text_terms = set(_content_terms(text))
+    claim_terms = set(_content_terms(str(row.get("claim", ""))))
+    anchor_terms = set(_content_terms(" ".join(str(term) for term in row.get("anchor_terms", []) if str(term).strip()))) if isinstance(row.get("anchor_terms"), list) else set()
+    distinctive = (claim_terms | anchor_terms) - _GENERIC_OWNERSHIP_TERMS
+    if len(text_terms & distinctive) >= 2:
+        return True
+    return bool(text_terms & distinctive & _HIGH_SIGNAL_OWNERSHIP_TERMS)
+
+
 def _source_title_appears(text: str, row: dict[str, Any]) -> bool:
     source = str(row.get("source", "")).strip().lower()
     return bool(source and source != "structured option comparison" and source in text.lower())
@@ -270,6 +282,9 @@ def _section_required_obligation_overlaps_row(full_contract: dict[str, Any], row
             continue
         statement = str(obligation.get("statement", "")).strip()
         terms = " ".join(str(term) for term in obligation.get("search_terms", []) if str(term).strip()) if isinstance(obligation.get("search_terms"), list) else ""
+        source = str(row.get("source", "")).strip().lower()
+        if source and terms and source in terms.lower():
+            return True
         if _content_overlap_count(statement, claim) >= 5 or (terms and _content_overlap_count(terms, claim) >= 4):
             return True
     return False
@@ -295,3 +310,34 @@ def _mentions_owner_reference(text: str, owner: str) -> bool:
         or "discussed above" in lowered
         or "see " in lowered
     )
+
+
+_HIGH_SIGNAL_OWNERSHIP_TERMS = {
+    "diabetes",
+    "mortality",
+    "stroke",
+    "cancer",
+    "cohort",
+    "randomized",
+    "processed",
+    "unprocessed",
+    "borderline",
+}
+
+
+_GENERIC_OWNERSHIP_TERMS = {
+    "associated",
+    "association",
+    "cardiovascular",
+    "consumption",
+    "disease",
+    "evidence",
+    "higher",
+    "intake",
+    "intervention",
+    "interventions",
+    "practical",
+    "recommendation",
+    "risk",
+    "section",
+}

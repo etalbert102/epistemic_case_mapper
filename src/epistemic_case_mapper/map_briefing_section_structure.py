@@ -132,14 +132,21 @@ def _reader_section_contract(title: str, contract: dict[str, Any], scaffold: dic
 
 def _primary_practical_actions(contract: dict[str, Any]) -> list[str]:
     scaffold = contract.get("_section_synthesis_scaffold", {}) if isinstance(contract.get("_section_synthesis_scaffold"), dict) else {}
-    packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
-    synthesis = packet.get("decision_synthesis", {}) if isinstance(packet.get("decision_synthesis"), dict) else {}
-    raw_actions = [
-        str(row.get("recommendation", "")).strip()
-        for row in synthesis.get("recommendations", [])
-        if isinstance(row, dict) and str(row.get("recommendation", "")).strip()
-    ]
+    model_packet = contract.get("model_section_packet", {}) if isinstance(contract.get("model_section_packet"), dict) else {}
+    raw_actions: list[str] = []
+    if not model_packet:
+        packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
+        synthesis = packet.get("decision_synthesis", {}) if isinstance(packet.get("decision_synthesis"), dict) else {}
+        raw_actions.extend(
+            str(row.get("recommendation", "")).strip()
+            for row in synthesis.get("recommendations", [])
+            if isinstance(row, dict) and str(row.get("recommendation", "")).strip()
+        )
     raw_actions.extend(str(item).strip() for item in contract.get("practical_actions", []) if str(item).strip())
+    if model_packet and not raw_actions:
+        thesis = str(model_packet.get("section_thesis", "")).strip()
+        if thesis:
+            raw_actions.append(thesis)
     actions = [item for item in reader_facing_practical_items(filter_primary_practical_actions(raw_actions, scaffold)) if not _looks_incomplete(item)]
     return _dedupe(actions)
 
@@ -164,6 +171,9 @@ def _minimum_practical_bullets(contract: dict[str, Any]) -> int:
     actions = [item for item in contract.get("practical_actions", []) if str(item).strip()]
     if actions:
         return min(2, len(actions))
+    model_packet = contract.get("model_section_packet", {}) if isinstance(contract.get("model_section_packet"), dict) else {}
+    if model_packet:
+        return 1 if str(model_packet.get("section_thesis", "")).strip() else 0
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     synthesis = packet.get("decision_synthesis", {}) if isinstance(packet.get("decision_synthesis"), dict) else {}
     recommendations = [row for row in synthesis.get("recommendations", []) if isinstance(row, dict)]

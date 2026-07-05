@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_markdown
 from epistemic_case_mapper.map_briefing_section_structure import (
     structured_practical_read,
     structured_scope_and_exceptions,
@@ -12,6 +13,9 @@ from epistemic_case_mapper.map_briefing_section_structure import (
 def structured_section_fallback(section: dict[str, str], contract: dict[str, Any]) -> str:
     title = section["title"].lower()
     if "practical read" in title:
+        cleaned = model_facing_section_markdown(section["markdown"], contract)
+        if cleaned.strip() and cleaned != section["markdown"]:
+            return cleaned
         return structured_practical_read(contract)
     if "evidence carrying" in title:
         return _structured_evidence_carrying_section(contract)

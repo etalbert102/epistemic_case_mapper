@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_re
 from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
+from epistemic_case_mapper.map_briefing_section_retry import retry_section_prompt
 from epistemic_case_mapper.map_briefing_section_rewrite import (
     _decision_brief_slots,
     _default_answer_from_body,
@@ -429,11 +430,29 @@ def test_section_prompt_hides_owned_elsewhere_full_claims() -> None:
     model_contract = json.loads(contract_text)
     assert forbidden_claim not in contract_text
     assert "owned_elsewhere_evidence" not in model_contract
-    assert "pilot" not in json.dumps(model_contract.get("model_section_packet", {}).get("prohibited_repetition", []))
-    assert model_contract["validation_obligations"]["reference_policy_summary"][0]["slot"] == "hard-outcome support"
+    assert "prohibited_repetition" not in model_contract.get("model_section_packet", {})
+    assert "reference_policy_summary" not in model_contract.get("validation_obligations", {})
     assert forbidden_claim not in section_text
     assert "## Why This Read" in section_text
-    assert "Do not mention this evidence here" in contract_text
+    assert "Do not mention this evidence here" not in contract_text
+
+
+def test_retry_prompt_sanitizes_rejected_claim_text() -> None:
+    forbidden_claim = "Associations between egg consumption and CVD mortality were not significant after adjustment."
+
+    prompt = retry_section_prompt(
+        "Base prompt",
+        [
+            f"section repeats evidence owned by Evidence Carrying the Conclusion: {forbidden_claim}",
+            "section dropped required main-memo obligation: scope_boundary_02 The impact of egg consumption on lipid profiles appears greater.",
+        ],
+        attempt=2,
+    )
+
+    assert forbidden_claim not in prompt
+    assert "lipid profiles appears greater" not in prompt
+    assert "section used evidence assigned outside this section" in prompt
+    assert "scope_boundary_02" in prompt
 
 
 def test_section_prompt_uses_compact_model_packet_instead_of_full_debug_packet() -> None:

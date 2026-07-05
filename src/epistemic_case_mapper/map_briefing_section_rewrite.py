@@ -36,7 +36,11 @@ from epistemic_case_mapper.map_briefing_section_packets import (
     compact_argument_model, prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact,
 )
 from epistemic_case_mapper.map_briefing_section_obligations import section_main_memo_obligations
-from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract, model_facing_section_markdown
+from epistemic_case_mapper.map_briefing_section_prompt_contract import (
+    _text_mentions_owned_elsewhere,
+    model_facing_section_contract,
+    model_facing_section_markdown,
+)
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
@@ -555,12 +559,12 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
     return (
         "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
-        "Use model_section_packet as the primary structure: section_thesis, owned_evidence, local_tensions, and canonical_cruxes define the section's job.\n"
-        "Do not mine omitted debug fields or infer from other sections; if evidence is not in owned_evidence or required obligations, treat it as reference-only. prohibited_repetition is a guardrail, not memo content; never render it as bullets, brackets, named gaps, or constraints.\n"
+        "Use only the allowed information in model_section_packet and validation_obligations. If a fact is not present there or in the supplied deterministic draft, leave it out.\n"
+        "Use model_section_packet as the primary structure: section_thesis, owned_evidence, local_tensions, canonical_cruxes, and must_include_quantities define the section's job.\n"
         "When model_section_packet includes must_include_quantities, use one relevant estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
         "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
-        "Respect evidence ownership: fully explain owned evidence only in this section; for evidence_references, use at most a short cross-reference and do not repeat source-level details.\n"
+        "Fully explain owned_evidence when this section has it; keep reference_only_evidence to brief role-level context if it appears in the packet.\n"
         "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
@@ -594,7 +598,8 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
     for row in contract["required_evidence"]:
         if not _rewrite_mentions_anchor_row(rewritten, row):
             issues.append(f"section dropped required evidence: {str(row.get('claim', ''))[:90]}")
-    issues.extend(repeated_owned_evidence_issues(original["title"], rewritten, contract))
+    if "crux" not in original["title"].lower():
+        issues.extend(repeated_owned_evidence_issues(original["title"], rewritten, contract))
     for gap in contract["required_gaps"]:
         if not _rewrite_mentions_gap(rewritten, gap):
             issues.append(f"section dropped required gap: {gap[:90]}")
@@ -692,7 +697,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
         if _rewrite_mentions_gap(text, gap) or "limit" in title.lower()
     ]
     required_cruxes = _section_required_cruxes(full_contract) if "crux" in title.lower() else []
-    practical_actions = full_contract.get("practical_actions", []) if "practical" in title.lower() else []
+    practical_actions = _section_practical_actions(title, full_contract, owned_elsewhere_evidence)
     main_memo_obligations = section_main_memo_obligations(title, full_contract)
     if title.strip().lower() == "decision cruxes":
         main_memo_obligations = []
@@ -726,6 +731,27 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     }
     section_contract["model_section_packet"] = compile_model_section_packet(title, section_contract)
     return section_contract
+
+
+def _section_practical_actions(
+    title: str,
+    full_contract: dict[str, Any],
+    owned_elsewhere_evidence: list[dict[str, Any]],
+) -> list[str]:
+    if "practical" not in title.lower():
+        return []
+    rows = full_contract.get("practical_actions", [])
+    if not isinstance(rows, list):
+        return []
+    actions: list[str] = []
+    for action in rows:
+        text = str(action).strip()
+        if not text:
+            continue
+        if any(isinstance(row, dict) and _text_mentions_owned_elsewhere(text, row) for row in owned_elsewhere_evidence):
+            continue
+        actions.append(text)
+    return actions
 
 
 def _section_required_cruxes(full_contract: dict[str, Any]) -> list[dict[str, Any]]:

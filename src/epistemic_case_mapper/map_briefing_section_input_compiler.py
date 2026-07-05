@@ -22,17 +22,21 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     section_plan = _compact_section_plan(section_plan_for_title(scaffold, title), contract)
     owned_evidence = _owned_evidence(contract)
+    fallback_thesis = _section_thesis(title_key, contract, packet)
+    section_thesis = str(section_plan.get("thesis") or fallback_thesis).strip()
+    if _uses_evidence_owned_elsewhere(section_thesis, contract):
+        section_plan.pop("thesis", None)
+        section_thesis = fallback_thesis if not _uses_evidence_owned_elsewhere(fallback_thesis, contract) else ""
     model_packet = {
         "schema_id": "model_section_packet_v1",
         "global_section_plan": section_plan,
-        "section_thesis": section_plan.get("thesis") or _section_thesis(title_key, contract, packet),
+        "section_thesis": section_thesis,
         "target_shape": _target_shape(title_key),
         "owned_evidence": owned_evidence,
         "reference_only_evidence": _reference_only_evidence(contract),
         "must_include_quantities": _must_include_quantities(contract),
         "local_tensions": _local_tensions(packet) if _section_should_receive_tensions(title_key) else [],
         "canonical_cruxes": _canonical_cruxes(contract, packet),
-        "prohibited_repetition": _prohibited_repetition(contract),
         "style_instruction": packet.get("style_instruction") or _default_style_instruction(title_key),
     }
     return _drop_empty(model_packet)
@@ -42,7 +46,7 @@ def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dic
     if not isinstance(plan, dict) or not plan:
         return {}
     owned_ids = set(_section_obligation_ids(contract))
-    return _drop_empty(
+    compact = _drop_empty(
         {
             "thesis": plan.get("thesis"),
             "target_words": plan.get("target_words"),
@@ -56,6 +60,10 @@ def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dic
             "transition_goal": plan.get("transition_goal"),
         }
     )
+    for key in ("thesis", "transition_goal"):
+        if key in compact and _uses_evidence_owned_elsewhere(str(compact.get(key, "")), contract):
+            compact.pop(key, None)
+    return compact
 
 
 def select_section_cruxes(full_contract: dict[str, Any], *, limit: int = 3) -> list[dict[str, Any]]:
@@ -96,9 +104,28 @@ def compact_main_memo_obligations(rows: Any, *, limit: int = 5) -> list[dict[str
 def _section_thesis(title_key: str, contract: dict[str, Any], packet: dict[str, Any]) -> str:
     job = str(contract.get("section_job", "")).strip()
     goal = str(packet.get("section_goal", "")).strip()
-    if job and "smooth this section" not in job.lower():
+    if job and "smooth this section" not in job.lower() and not _looks_like_instruction(job):
         return job
-    return goal or "Write this section as a concise, source-grounded part of the decision memo."
+    if goal and not _looks_like_instruction(goal):
+        return goal
+    return ""
+
+
+def _looks_like_instruction(text: str) -> bool:
+    lowered = str(text).strip().lower()
+    return lowered.startswith(
+        (
+            "name ",
+            "explain ",
+            "translate ",
+            "separate ",
+            "state ",
+            "convert ",
+            "group ",
+            "write ",
+            "improve ",
+        )
+    )
 
 
 def _target_shape(title_key: str) -> str:
@@ -223,29 +250,6 @@ def _canonical_cruxes(contract: dict[str, Any], packet: dict[str, Any]) -> list[
     argument = packet.get("argument_model", {}) if isinstance(packet.get("argument_model"), dict) else {}
     candidates.extend(_argument_crux_to_decision_crux(row) for row in argument.get("cruxes", []) if isinstance(row, dict))
     return _best_cruxes(candidates, limit=3)
-
-
-def _prohibited_repetition(contract: dict[str, Any]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for row in contract.get("owned_elsewhere_evidence", []) if isinstance(contract.get("owned_elsewhere_evidence"), list) else []:
-        if not isinstance(row, dict):
-            continue
-        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
-        style = str(policy.get("reference_style", "")).strip()
-        if style == "full":
-            continue
-        rows.append(
-            _drop_empty(
-                {
-                    "slot": row.get("slot"),
-                    "owner_section": policy.get("owner_section"),
-                    "reference_style": style or "short_reference",
-                    "do_not_render": True,
-                    "instruction": "Do not restate the full evidence here; use only the allowed reference style.",
-                }
-            )
-        )
-    return rows[:8]
 
 
 def _argument_crux_to_decision_crux(row: dict[str, Any]) -> dict[str, Any]:
@@ -408,6 +412,53 @@ def _normalize_key(text: str) -> str:
     return " ".join(_content_terms(text))
 
 
+def _uses_evidence_owned_elsewhere(text: str, contract: dict[str, Any]) -> bool:
+    cleaned = str(text).strip()
+    if not cleaned:
+        return False
+    rows = contract.get("owned_elsewhere_evidence", [])
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
+        if str(policy.get("reference_style", "")).strip() == "full":
+            continue
+        if _evidence_text_overlap(cleaned, str(row.get("claim", ""))):
+            return True
+    return False
+
+
+def _evidence_text_overlap(text: str, claim: str) -> bool:
+    text_terms = set(_content_terms(text))
+    claim_terms = set(_content_terms(claim))
+    if not text_terms or not claim_terms:
+        return False
+    overlap = text_terms & claim_terms
+    distinctive = {term for term in overlap if term not in _GENERIC_EVIDENCE_TERMS}
+    if len(distinctive) >= 2:
+        return True
+    if len(overlap) >= 3 and len(overlap) >= min(5, max(3, len(claim_terms) // 3)):
+        return True
+    text_lower = text.lower()
+    claim_lower = claim.lower()
+    for phrase in _distinctive_phrases(claim_lower):
+        if phrase in text_lower:
+            return True
+    return False
+
+
+def _distinctive_phrases(text: str) -> list[str]:
+    phrases = []
+    for match in re.findall(r"\b[a-z]+(?:-[a-z]+|/[a-z]+)+\b", text):
+        if len(match) >= 6:
+            phrases.append(match)
+    for match in re.findall(r"\b(?:[a-z0-9]{4,}\s+){1,3}[a-z0-9]{4,}\b", text):
+        terms = set(_content_terms(match))
+        if len(terms - _GENERIC_EVIDENCE_TERMS) >= 2:
+            phrases.append(match.strip())
+    return phrases[:8]
+
+
 def _content_terms(text: str) -> list[str]:
     stop = {
         "the",
@@ -432,3 +483,18 @@ def _content_terms(text: str) -> list[str]:
         "source",
     }
     return [term for term in re.findall(r"[a-z0-9]{4,}", text.lower()) if term not in stop]
+
+
+_GENERIC_EVIDENCE_TERMS = {
+    "associated",
+    "association",
+    "consumption",
+    "evidence",
+    "impact",
+    "intervention",
+    "interventions",
+    "profiles",
+    "risk",
+    "study",
+    "studies",
+}
