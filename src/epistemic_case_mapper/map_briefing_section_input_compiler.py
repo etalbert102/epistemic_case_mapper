@@ -22,23 +22,29 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     section_plan = _compact_section_plan(section_plan_for_title(scaffold, title), contract)
     reasoning_contract = _section_reasoning_contract(title, scaffold)
-    owned_evidence = _reasoning_owned_evidence(reasoning_contract) or _owned_evidence(contract)
+    reasoning_owned = _reasoning_owned_evidence(reasoning_contract)
+    contract_owned = _owned_evidence(contract)
+    owned_evidence = _ownership_aligned_owned_evidence(reasoning_owned, contract_owned, contract)
     fallback_thesis = _section_thesis(title_key, contract, packet)
     reasoning_thesis = str(reasoning_contract.get("section_thesis") or "").strip()
     section_thesis = str(reasoning_thesis or section_plan.get("thesis") or fallback_thesis).strip()
-    if not reasoning_thesis and _uses_evidence_owned_elsewhere(section_thesis, contract):
+    if _uses_evidence_owned_elsewhere(section_thesis, contract):
         section_plan.pop("thesis", None)
         section_thesis = fallback_thesis if not _uses_evidence_owned_elsewhere(fallback_thesis, contract) else ""
     model_packet = {
         "schema_id": "model_section_packet_v1",
         "global_section_plan": section_plan,
-        "section_reasoning_contract": _compact_reasoning_contract(reasoning_contract),
+        "section_reasoning_contract": _compact_reasoning_contract(reasoning_contract, owned_evidence),
         "context_readiness_status": reasoning_contract.get("context_status"),
         "section_thesis": section_thesis,
         "decision_move": reasoning_contract.get("decision_move"),
         "target_shape": _target_shape(title_key),
         "owned_evidence": owned_evidence,
-        "reference_only_evidence": _reasoning_reference_only(reasoning_contract) or _reference_only_evidence(contract),
+        "reference_only_evidence": _ownership_aligned_reference_evidence(
+            _reasoning_reference_only(reasoning_contract),
+            _reference_only_evidence(contract),
+            contract,
+        ),
         "do_not_use_cards": _string_list(reasoning_contract.get("do_not_use_cards"))[:12],
         "excluded_near_miss_cards": _reasoning_near_misses(reasoning_contract),
         "must_include_quantities": _must_include_quantities(contract),
@@ -58,9 +64,16 @@ def _section_reasoning_contract(title: str, scaffold: dict[str, Any]) -> dict[st
     return {}
 
 
-def _compact_reasoning_contract(reasoning: dict[str, Any]) -> dict[str, Any]:
+def _compact_reasoning_contract(reasoning: dict[str, Any], owned_evidence: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if not reasoning:
         return {}
+    include_all_owned_ids = owned_evidence is None
+    owned_ids = {
+        str(card.get("candidate_card_id"))
+        for card in owned_evidence or []
+        if isinstance(card, dict) and card.get("candidate_card_id")
+    }
+    source_cards = reasoning.get("owned_cards", []) if isinstance(reasoning.get("owned_cards"), list) else []
     return _drop_empty(
         {
             "section": reasoning.get("section"),
@@ -69,8 +82,10 @@ def _compact_reasoning_contract(reasoning: dict[str, Any]) -> dict[str, Any]:
             "exception_reason": reasoning.get("exception_reason"),
             "owned_card_ids": [
                 str(card.get("candidate_card_id"))
-                for card in reasoning.get("owned_cards", [])
-                if isinstance(card, dict) and card.get("candidate_card_id")
+                for card in source_cards
+                if isinstance(card, dict)
+                and card.get("candidate_card_id")
+                and (include_all_owned_ids or str(card.get("candidate_card_id")) in owned_ids)
             ],
         }
     )
@@ -116,6 +131,55 @@ def _reasoning_near_misses(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
         if isinstance(row, dict):
             rows.append(_drop_empty({"candidate_card_id": row.get("candidate_card_id"), "reason_excluded": row.get("reason_excluded")}))
     return rows[:5]
+
+
+def _ownership_aligned_owned_evidence(
+    reasoning_owned: list[dict[str, Any]],
+    contract_owned: list[dict[str, Any]],
+    contract: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return only evidence the validator's ownership policy also treats as local.
+
+    Section reasoning cards are useful for synthesis, but the validator enforces
+    the section contract. The prompt must therefore be a projection of the
+    contract's ownership policy, not a parallel assignment system.
+    """
+    allowed: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in reasoning_owned:
+        key = _evidence_identity(row)
+        if not key or key in seen:
+            continue
+        if _card_conflicts_with_owned_elsewhere(row, contract):
+            continue
+        seen.add(key)
+        allowed.append(row)
+    if allowed:
+        return allowed[:7]
+    return contract_owned[:5]
+
+
+def _ownership_aligned_reference_evidence(
+    reasoning_reference: list[dict[str, Any]],
+    contract_reference: list[dict[str, Any]],
+    contract: dict[str, Any],
+) -> list[dict[str, Any]]:
+    allowed: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in contract_reference:
+        key = _evidence_identity(row)
+        if key and key not in seen:
+            seen.add(key)
+            allowed.append(row)
+    for row in reasoning_reference:
+        key = _evidence_identity(row)
+        if not key or key in seen:
+            continue
+        if _card_conflicts_with_owned_elsewhere(row, contract):
+            continue
+        seen.add(key)
+        allowed.append(row)
+    return allowed[:4]
 
 
 def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
@@ -534,11 +598,69 @@ def _uses_evidence_owned_elsewhere(text: str, contract: dict[str, Any]) -> bool:
     return False
 
 
+def _card_conflicts_with_owned_elsewhere(card: dict[str, Any], contract: dict[str, Any]) -> bool:
+    rows = contract.get("owned_elsewhere_evidence", [])
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
+        if str(policy.get("reference_style", "")).strip() == "full":
+            continue
+        if _evidence_rows_overlap(card, row):
+            return True
+    return False
+
+
+def _evidence_rows_overlap(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    left_card_id = str(left.get("candidate_card_id", "")).strip()
+    right_card_id = str(right.get("candidate_card_id", "")).strip()
+    if left_card_id and right_card_id and left_card_id == right_card_id:
+        return True
+    left_claim_ids = set(_string_list(left.get("claim_ids")))
+    right_claim_ids = set(_string_list(right.get("claim_ids")))
+    if left_claim_ids and right_claim_ids and left_claim_ids & right_claim_ids:
+        return True
+    left_sources = _source_identity(left)
+    right_sources = _source_identity(right)
+    left_text = _evidence_text(left)
+    right_text = _evidence_text(right)
+    if left_sources and right_sources and not (left_sources & right_sources):
+        return False
+    return _evidence_text_overlap(left_text, right_text)
+
+
+def _evidence_identity(row: dict[str, Any]) -> str:
+    card_id = str(row.get("candidate_card_id", "")).strip()
+    if card_id:
+        return f"candidate:{card_id}"
+    claim_ids = sorted(_string_list(row.get("claim_ids")))
+    if claim_ids:
+        return "claims:" + ",".join(claim_ids)
+    source = " ".join(sorted(_source_identity(row)))
+    text = _normalize_key(_evidence_text(row))
+    return f"{source}::{text}" if text else ""
+
+
+def _source_identity(row: dict[str, Any]) -> set[str]:
+    sources = set(_string_list(row.get("source_ids")))
+    sources.update(_string_list(row.get("source_card_ids")))
+    source = str(row.get("source", "")).strip().lower()
+    if source:
+        sources.add(source)
+    return {source for source in sources if source}
+
+
+def _evidence_text(row: dict[str, Any]) -> str:
+    return " ".join(str(row.get(key, "")).strip() for key in ("claim", "source_excerpt", "role_summary") if str(row.get(key, "")).strip())
+
+
 def _evidence_text_overlap(text: str, claim: str) -> bool:
     text_terms = set(_content_terms(text))
     claim_terms = set(_content_terms(claim))
     if not text_terms or not claim_terms:
-        return False
+        return _numeric_context_overlap(text, claim)
+    if _numeric_context_overlap(text, claim):
+        return True
     overlap = text_terms & claim_terms
     distinctive = {term for term in overlap if term not in _GENERIC_EVIDENCE_TERMS}
     if len(distinctive) >= 2:
@@ -551,6 +673,35 @@ def _evidence_text_overlap(text: str, claim: str) -> bool:
         if phrase in text_lower:
             return True
     return False
+
+
+def _numeric_context_overlap(text: str, claim: str) -> bool:
+    text_lower = text.lower()
+    claim_lower = claim.lower()
+    text_numbers = set(re.findall(r"\d+(?:\.\d+)?", text_lower))
+    claim_numbers = set(re.findall(r"\d+(?:\.\d+)?", claim_lower))
+    shared_numbers = text_numbers & claim_numbers
+    if not shared_numbers:
+        return False
+    text_terms = set(re.findall(r"[a-z]{3,}", text_lower))
+    for number in shared_numbers:
+        for phrase in _number_context_phrases(claim_lower, number):
+            phrase_terms = set(re.findall(r"[a-z]{3,}", phrase))
+            if len(text_terms & (phrase_terms - _GENERIC_EVIDENCE_TERMS)) >= 1:
+                return True
+    return False
+
+
+def _number_context_phrases(text: str, number: str) -> list[str]:
+    tokens = re.findall(r"\d+(?:\.\d+)?|[a-z]{3,}", text)
+    phrases: list[str] = []
+    for index, token in enumerate(tokens):
+        if token != number:
+            continue
+        start = max(0, index - 4)
+        end = min(len(tokens), index + 5)
+        phrases.append(" ".join(tokens[start:end]))
+    return phrases
 
 
 def _distinctive_phrases(text: str) -> list[str]:

@@ -122,3 +122,67 @@ def test_model_facing_validation_uses_curated_owned_evidence() -> None:
     assert model_owned[0]["claim"] == "Data above the ordinary exposure level remain sparse."
     assert "required_evidence" not in model_contract.get("validation_obligations", {})
     assert "Comparator evidence" not in json.dumps(model_contract)
+
+
+def test_model_packet_filters_curated_owned_cards_through_validator_ownership() -> None:
+    conflicting_claim = "Each additional 0.5 egg per day was associated with higher incident cardiovascular disease risk."
+    local_claim = "Use the result as a practical boundary rather than as evidence of benefit."
+    contract = {
+        "heading": "Practical Read",
+        "_section_synthesis_scaffold": {
+            "section_reasoning_cards": {
+                "sections": [
+                    {
+                        "section": "Practical Read",
+                        "section_thesis": "Translate the 0.5 egg per day risk estimate into practical advice.",
+                        "context_status": "ready",
+                        "owned_cards": [
+                            {
+                                "candidate_card_id": "ec-risk",
+                                "claim_ids": ["c-risk"],
+                                "claim": conflicting_claim,
+                                "source": "JAMA cohort",
+                                "intended_role": "support",
+                                "reason_for_inclusion": "The curated context assigned this to Practical Read.",
+                            },
+                            {
+                                "candidate_card_id": "ec-local",
+                                "claim": local_claim,
+                                "source": "Synthesis",
+                                "intended_role": "practical implication",
+                                "reason_for_inclusion": "This card states the local decision implication.",
+                            },
+                        ],
+                    }
+                ]
+            }
+        },
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [
+            {
+                "candidate_card_id": "ec-risk",
+                "claim_ids": ["c-risk"],
+                "claim": conflicting_claim,
+                "source": "JAMA cohort",
+                "reference_policy": {
+                    "owner_section": "Evidence Carrying the Conclusion",
+                    "reference_style": "do_not_repeat",
+                    "allowed": False,
+                },
+            }
+        ],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {},
+    }
+
+    model_contract = model_facing_section_contract(contract)
+    serialized = json.dumps(model_contract)
+    owned = model_contract["model_section_packet"]["owned_evidence"]
+
+    assert [row["candidate_card_id"] for row in owned] == ["ec-local"]
+    assert "ec-risk" not in model_contract["model_section_packet"]["section_reasoning_contract"].get("owned_card_ids", [])
+    assert conflicting_claim not in serialized
+    assert "0.5 egg per day" not in model_contract["model_section_packet"].get("section_thesis", "")
