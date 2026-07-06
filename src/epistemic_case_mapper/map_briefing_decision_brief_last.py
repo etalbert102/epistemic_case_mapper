@@ -6,7 +6,6 @@ from typing import Any
 from epistemic_case_mapper.decision_argument_artifacts import compact_decision_argument_artifacts
 from epistemic_case_mapper.main_memo_obligations import (
     first_top_line_obligation,
-    obligation_issues_for_text,
     section_obligations_for_title,
 )
 from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
@@ -85,13 +84,6 @@ def decision_brief_last_issues(section: str, contract: dict[str, Any], body_memo
         issues.append("final brief is too long for an executive opening")
     if _rewrite_has_raw_identifiers(section):
         issues.append("final brief contains raw map identifiers")
-    issues.extend(
-        obligation_issues_for_text(
-            section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []), limit=4),
-            section,
-            prefix="final brief dropped first-page obligation",
-        )
-    )
     return issues
 
 
@@ -295,4 +287,3 @@ def _content_overlap(text: str, reference: str) -> int:
     text_terms = set(re.findall(r"[a-z0-9]{4,}", str(text).lower()))
     reference_terms = set(re.findall(r"[a-z0-9]{4,}", str(reference).lower()))
     return len(text_terms & reference_terms)
-

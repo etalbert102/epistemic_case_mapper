@@ -30,6 +30,12 @@ The language is awkward and awkwardly repeated.
     assert '"edits"' in prompt
     assert "Do not rewrite the memo" in prompt
     assert "memo_markdown" not in prompt
+    assert "Final edit context" in prompt
+    assert "Evidence contract" not in prompt
+    assert '"answer_frame"' not in prompt
+    assert '"option_comparison"' not in prompt
+    assert '"required_evidence"' not in prompt
+    assert '"required_gaps"' not in prompt
 
 
 def test_apply_reader_memo_edit_suggestions_uses_only_exact_unambiguous_edits() -> None:

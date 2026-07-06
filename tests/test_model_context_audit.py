@@ -68,3 +68,63 @@ def test_model_context_audit_flags_visible_negative_anchor_terms(tmp_path) -> No
     section = audit["stages"][2]["sections"][0]
     assert "negative_anchor_terms_visible" in section["pollution_flags"]
     assert audit["stages"][3]["sent_to_model"] is True
+
+
+def test_model_context_audit_flags_broad_reader_rewrite_contract() -> None:
+    prompt = """
+    You are a controlled prose editor.
+
+    Evidence contract:
+    {
+      "answer_frame": {"direct_answer": "Use only conditionally."},
+      "option_comparison": {"options": []},
+      "required_evidence": [{"claim": "A claim.", "source": "Doc"}],
+      "required_gaps": ["Missing comparator."]
+    }
+
+    Deterministic memo to inspect:
+    ## Decision Brief
+    """
+
+    audit = build_model_context_audit(
+        backend="fake",
+        legacy_prompt="",
+        global_plan_prompt="",
+        section_packets_path=None,
+        reader_rewrite_prompt=prompt,
+    )
+
+    reader_stage = audit["stages"][3]
+    assert reader_stage["sent_to_model"] is True
+    assert "broad_evidence_contract_visible" in reader_stage["pollution_flags"]
+    assert "answer_frame_visible" in reader_stage["pollution_flags"]
+    assert "option_comparison_visible" in reader_stage["pollution_flags"]
+    assert "required_evidence_visible" in reader_stage["pollution_flags"]
+
+
+def test_model_context_audit_accepts_compact_reader_rewrite_prompt() -> None:
+    prompt = """
+    You are a final memo prose editor.
+
+    Decision question: Should this be used?
+    Protected spans:
+    - ## Decision Brief
+    - **Confidence:** medium
+    Polish diagnosis:
+    - smooth transition in Practical Read
+
+    Memo:
+    ## Decision Brief
+    """
+
+    audit = build_model_context_audit(
+        backend="fake",
+        legacy_prompt="",
+        global_plan_prompt="",
+        section_packets_path=None,
+        reader_rewrite_prompt=prompt,
+    )
+
+    reader_stage = audit["stages"][3]
+    assert reader_stage["sent_to_model"] is True
+    assert reader_stage["pollution_flags"] == []

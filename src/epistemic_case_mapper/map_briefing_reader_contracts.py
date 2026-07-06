@@ -20,6 +20,7 @@ from epistemic_case_mapper.config_profiles import (
     profile_vocabulary,
 )
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_final_edit_context import model_facing_reader_memo_edit_context
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
@@ -758,6 +759,7 @@ def _profile_crux_template(text: str, scaffold: dict[str, Any] | None) -> dict[s
     return {}
 
 def build_reader_memo_rewrite_prompt(memo: str, contract: dict[str, Any]) -> str:
+    edit_context = model_facing_reader_memo_edit_context(contract)
     return (
         "You are a controlled prose editor for a decision-support memo.\n"
         "Do not rewrite the memo. Identify only local places where the language is awkward, repetitive, or unclear.\n"
@@ -776,8 +778,8 @@ def build_reader_memo_rewrite_prompt(memo: str, contract: dict[str, Any]) -> str
         "- Do not remove any required evidence, source label, gap, confidence line, or crux item.\n"
         "- Prefer fewer high-value edits; return at most 8 edits.\n"
         "- If no safe local edit would improve the memo, return {\"edits\": []}.\n\n"
-        "Evidence contract:\n"
-        f"{json.dumps(contract, indent=2, ensure_ascii=False)}\n\n"
+        "Final edit context:\n"
+        f"{json.dumps(edit_context, indent=2, ensure_ascii=False)}\n\n"
         "Deterministic memo to inspect:\n"
         f"{memo.strip()}\n"
     )

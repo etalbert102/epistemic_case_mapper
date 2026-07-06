@@ -708,9 +708,9 @@ def test_section_rewrite_uses_structured_cruxes_instead_of_model_crux_rewrite(mo
     }
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        if "## Decision Cruxes" in prompt:
-            raise AssertionError("Decision Cruxes should not be model-rewritten when structured cruxes exist")
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        if section.startswith("## Decision Cruxes"):
+            raise AssertionError("Decision Cruxes should not be model-rewritten when structured cruxes exist")
         return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
@@ -775,35 +775,51 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
     assert any("dropped required main-memo obligation" in issue for issue in why_report["issues"])
 
 
-def test_section_rewrite_generates_decision_brief_last_deterministically(monkeypatch) -> None:
+def test_section_rewrite_generates_decision_brief_last_with_model_bluf(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
     calls: list[str] = []
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         calls.append(prompt)
-        if "opening Decision Brief" in prompt:
-            raise AssertionError("Decision Brief should be deterministic, not model-rewritten")
+        if "opening BLUF" in prompt:
+            markdown = (
+                "## Decision Brief\n\n"
+                f"**Decision question:** {scaffold['question']}\n\n"
+                "Use the pilot as the default for small building projects because the accepted body sections show the practical case and the main caveat. "
+                "Keep the rollout bounded to projects where review capacity remains adequate.\n\n"
+                "**Confidence:** medium"
+            )
+            return ModelBackendResult(text=json.dumps({"section_markdown": markdown}), backend=backend)
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
         return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
 
-    result = rewrite_reader_memo_by_section(
-        memo,
-        appendix,
-        scaffold,
-        candidate_map,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-    )
+    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
 
     brief_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Brief")
-    assert brief_report["status"] == "accepted_deterministic_slots"
-    assert brief_report["accepted"] is True
+    assert brief_report["status"] == "accepted_model_bluf"
+    assert "Use the pilot as the default" in result["memo"]
+    assert any("opening BLUF" in prompt for prompt in calls)
+
+
+def test_section_rewrite_falls_back_when_decision_brief_bluf_is_rejected(monkeypatch) -> None:
+    memo, appendix, scaffold, candidate_map = _memo_package()
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        if "opening BLUF" in prompt:
+            return ModelBackendResult(text='{"section_markdown": "## Decision Brief\\n\\nToo thin."}', backend=backend)
+        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
+
+    brief_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Brief")
+    assert brief_report["status"] == "accepted_deterministic_fallback_after_model"
+    assert brief_report["fallback_used"] is True
     assert "Key evidence:" in result["memo"]
-    assert "Key caveat:" in result["memo"]
-    assert not any("opening Decision Brief" in prompt for prompt in calls)
 
 
 def test_section_rewrite_renders_decision_cruxes_from_structured_objects(monkeypatch) -> None:
@@ -826,9 +842,9 @@ def test_section_rewrite_renders_decision_cruxes_from_structured_objects(monkeyp
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         calls.append(prompt)
-        if "## Decision Cruxes" in prompt:
-            raise AssertionError("Decision Cruxes should be deterministically rendered from structured cruxes")
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
+        if section.startswith("## Decision Cruxes"):
+            raise AssertionError("Decision Cruxes should be deterministically rendered from structured cruxes")
         return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
@@ -847,7 +863,7 @@ def test_section_rewrite_renders_decision_cruxes_from_structured_objects(monkeyp
     assert crux_report["status"] == "accepted_structured_cruxes"
     assert "Whether review capacity narrows" in result["memo"]
     assert "Claim A" not in result["memo"]
-    assert not any("## Decision Cruxes" in prompt for prompt in calls)
+    assert not any(prompt.split("Section to rewrite:\n", 1)[1].strip().startswith("## Decision Cruxes") for prompt in calls)
 
 
 def _memo_package() -> tuple[str, str, dict, dict]:

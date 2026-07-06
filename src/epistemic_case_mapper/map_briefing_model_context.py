@@ -71,6 +71,10 @@ def build_model_context_audit(
                 status="active_model_call" if reader_rewrite_prompt.strip() and not prompt_backend else "not_run",
                 sent_to_model=bool(reader_rewrite_prompt.strip()) and not prompt_backend,
                 note="Optional exact-edit suggestion pass; deterministic code applies only safe replacements.",
+                extra={
+                    "pollution_flags": _reader_rewrite_prompt_pollution_flags(reader_rewrite_prompt),
+                    "context_policy": "Final memo editors should receive memo text, protected spans, and pass-specific diagnostics; broad scaffold records should stay validator-only.",
+                },
             ),
         ],
         "policy": {
@@ -81,8 +85,16 @@ def build_model_context_audit(
     }
 
 
-def _prompt_record(stage: str, prompt: str, *, status: str, sent_to_model: bool, note: str) -> dict[str, Any]:
-    return {
+def _prompt_record(
+    stage: str,
+    prompt: str,
+    *,
+    status: str,
+    sent_to_model: bool,
+    note: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    record = {
         "stage": stage,
         "status": status,
         "sent_to_model": sent_to_model,
@@ -91,6 +103,9 @@ def _prompt_record(stage: str, prompt: str, *, status: str, sent_to_model: bool,
         "approx_tokens": max(1, len(prompt) // 4) if prompt else 0,
         "note": note,
     }
+    if extra:
+        record.update(extra)
+    return record
 
 
 def _section_context_records(section_packets_path: Path | None) -> list[dict[str, Any]]:
@@ -137,3 +152,33 @@ def _model_packet_pollution_flags(model_packet: dict[str, Any]) -> list[str]:
     if re.search(r"\b(?:raw_|debug_|_section_synthesis|section_synthesis_packet)", text):
         flags.append("internal_identifier_language_visible")
     return flags
+
+
+def _reader_rewrite_prompt_pollution_flags(prompt: str) -> list[str]:
+    """Flag broad scaffold/debug context that should not be model-visible to final editors."""
+    text = prompt.lower()
+    flags: list[str] = []
+    broad_contract_fields = {
+        "answer_frame": "answer_frame_visible",
+        "decision_frame": "decision_frame_visible",
+        "option_comparison": "option_comparison_visible",
+        "practical_actions": "practical_actions_visible",
+        "required_evidence": "required_evidence_visible",
+        "required_gaps": "required_gaps_visible",
+        "required_cruxes": "required_cruxes_visible",
+        "decision_memo_slots": "slot_model_visible",
+        "section_synthesis_packet": "section_packet_visible",
+        "model_section_packet": "section_model_packet_visible",
+    }
+    for field, flag in broad_contract_fields.items():
+        if f'"{field}"' in text or field in text:
+            flags.append(flag)
+    if "evidence contract:" in text and any(flag.endswith("_visible") for flag in flags):
+        flags.append("broad_evidence_contract_visible")
+    if "anchor_terms_to_avoid_repeating" in text:
+        flags.append("negative_anchor_terms_visible")
+    if re.search(r"\b(?:claim|relation|source)_id\b", text):
+        flags.append("raw_identifier_field_visible")
+    if re.search(r"\b(?:raw_|debug_|_section_synthesis|section_synthesis_packet)", text):
+        flags.append("internal_identifier_language_visible")
+    return list(dict.fromkeys(flags))

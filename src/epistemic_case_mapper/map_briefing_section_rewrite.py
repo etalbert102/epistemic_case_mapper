@@ -290,12 +290,42 @@ def _rewrite_decision_brief_last(
     backend_retries: int,
 ) -> dict[str, Any]:
     fallback = deterministic_final_decision_brief(contract, body_memo)
-    prompt = "Deterministic Decision Brief slot packet:\n" + json.dumps(decision_brief_last_packet(contract, body_memo), indent=2, ensure_ascii=False)
+    prompt = _decision_brief_bluf_prompt(contract, body_memo, fallback)
+    result = run_section_model_attempts(
+        prompt=prompt,
+        expected_title="Decision Brief",
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        validate=lambda rewritten: _validate_final_decision_brief(rewritten, contract, body_memo),
+        run_backend=run_model_backend,
+    )
+    if result["accepted"]:
+        section_report: dict[str, Any] = {
+            "title": "Decision Brief",
+            "status": "accepted_model_bluf",
+            "accepted": True,
+            "issues": [],
+            "attempts": result["attempts"],
+            "attempt_count": result["attempt_count"],
+            "required_evidence_count": 0,
+            "required_gap_count": 0,
+            "required_crux_count": 0,
+            "required_main_memo_obligation_count": len(
+                section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []))
+            ),
+            "generated_last": True,
+            "deterministic_slots": False,
+            "fallback_used": False,
+        }
+        return {"section": result["section"], "prompt": result["prompt"], "raw": result["raw"], "report": section_report}
     section_report: dict[str, Any] = {
         "title": "Decision Brief",
-        "status": "accepted_deterministic_slots",
+        "status": "accepted_deterministic_fallback_after_model",
         "accepted": True,
-        "issues": [],
+        "issues": result["issues"],
+        "attempts": result["attempts"],
+        "attempt_count": result["attempt_count"],
         "required_evidence_count": 0,
         "required_gap_count": 0,
         "required_crux_count": 0,
@@ -303,9 +333,43 @@ def _rewrite_decision_brief_last(
             section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []))
         ),
         "generated_last": True,
-        "deterministic_slots": True,
+        "deterministic_slots": False,
+        "fallback_used": True,
     }
-    return {"section": fallback, "prompt": prompt, "raw": "", "report": section_report}
+    return {"section": fallback, "prompt": result["prompt"], "raw": result["raw"], "report": section_report}
+
+
+def _decision_brief_bluf_prompt(contract: dict[str, Any], body_memo: str, fallback: str) -> str:
+    substantive_body = _substantive_body_sections_for_bluf(body_memo)
+    question = str(contract.get("question", "")).strip()
+    confidence = str(contract.get("confidence") or "").strip()
+    return (
+        "You are an analyst writing the opening BLUF for a source-grounded decision memo.\n"
+        "Use only the accepted body sections below as the source of truth. Do not add facts.\n"
+        "Write a crisp executive opening that directly answers the decision question before caveats.\n"
+        "The first sentence must classify the default answer using the decision question's categories when available, for example: treat it as neutral, harmful, beneficial, acceptable, avoid, use, or do not use.\n"
+        "Do not start with 'The answer is context-dependent', 'It depends', 'Practical application', 'Context', or a caveat.\n"
+        "Do not make context-dependence the lead; state the default answer first, then name the boundary.\n"
+        "Prefer this shape: default classification; why; main boundary; confidence.\n"
+        "Keep it under 150 words, preserve the exact Decision Brief heading, include the decision question line, and include a confidence line.\n"
+        "Return only the rewritten Decision Brief section as Markdown. Do not include any other ## section.\n\n"
+        f"Decision question: {question}\n"
+        f"Confidence: {confidence}\n\n"
+        "Accepted body sections:\n"
+        f"{substantive_body.strip()}\n\n"
+        "Section to rewrite:\n"
+        f"{fallback.strip()}"
+    )
+
+
+def _substantive_body_sections_for_bluf(body_memo: str) -> str:
+    _leading, sections = _split_sections(body_memo)
+    substantive = [
+        section["markdown"]
+        for section in sections
+        if section["title"].strip().lower() not in {"evidence trail", "sources"}
+    ]
+    return "\n\n".join(substantive).strip() or body_memo.strip()
 
 
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
