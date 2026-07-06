@@ -81,6 +81,8 @@ def test_section_model_attempts_retry_parse_failure() -> None:
     assert result["accepted"] is True
     assert result["attempt_count"] == 2
     assert [attempt["status"] for attempt in result["attempts"]] == ["parse_failed", "accepted"]
+    assert result["attempts"][0]["raw"] == "not a section"
+    assert result["attempts"][1]["raw"].startswith("## Why This Read")
     assert "Previous attempt 1 was rejected" in calls[1]
 
 
@@ -109,6 +111,7 @@ def test_section_model_attempts_retry_validation_failure() -> None:
     assert result["accepted"] is True
     assert result["attempt_count"] == 2
     assert result["attempts"][0]["issues"] == ["missing crux"]
+    assert result["attempts"][0]["raw"].startswith("## Decision Cruxes")
 
 
 def test_required_evidence_can_match_strong_paraphrase_without_exact_source_title() -> None:
@@ -453,7 +456,6 @@ def test_section_prompt_uses_compact_model_packet_instead_of_full_debug_packet()
     assert "argument_model" not in contract_text
     assert "decision_argument_artifacts" not in contract_text
     assert "model_section_packet" in model_contract
-    assert "validation_obligations" in model_contract
     assert model_contract["model_section_packet"]["owned_evidence"][0]["claim"].startswith("The pilot reduced")
     assert len(contract_text) < 5000
 

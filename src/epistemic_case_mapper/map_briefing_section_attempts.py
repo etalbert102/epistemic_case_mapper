@@ -33,11 +33,11 @@ def run_section_model_attempts(
         payload = parse_section_payload(raw, expected_title=expected_title)
         if not isinstance(payload, dict):
             issues = ["section response was not one Markdown section with the expected heading"]
-            attempts.append({"attempt": attempt, "status": "parse_failed", "issues": issues})
+            attempts.append({"attempt": attempt, "status": "parse_failed", "issues": issues, "raw": raw})
         else:
             rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
             repaired, issues = validate(rewritten)
-            attempts.append({"attempt": attempt, "status": "rejected" if issues else "accepted", "issues": issues})
+            attempts.append({"attempt": attempt, "status": "rejected" if issues else "accepted", "issues": issues, "raw": raw})
             if not issues:
                 return _result(True, active_prompt, raw, [], attempts, attempt, section=repaired, rewritten=rewritten)
         if attempt < SECTION_MODEL_ATTEMPTS:

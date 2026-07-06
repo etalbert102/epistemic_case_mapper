@@ -24,8 +24,9 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     reasoning_contract = _section_reasoning_contract(title, scaffold)
     owned_evidence = _reasoning_owned_evidence(reasoning_contract) or _owned_evidence(contract)
     fallback_thesis = _section_thesis(title_key, contract, packet)
-    section_thesis = str(reasoning_contract.get("section_thesis") or section_plan.get("thesis") or fallback_thesis).strip()
-    if _uses_evidence_owned_elsewhere(section_thesis, contract):
+    reasoning_thesis = str(reasoning_contract.get("section_thesis") or "").strip()
+    section_thesis = str(reasoning_thesis or section_plan.get("thesis") or fallback_thesis).strip()
+    if not reasoning_thesis and _uses_evidence_owned_elsewhere(section_thesis, contract):
         section_plan.pop("thesis", None)
         section_thesis = fallback_thesis if not _uses_evidence_owned_elsewhere(fallback_thesis, contract) else ""
     model_packet = {

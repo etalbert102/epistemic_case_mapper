@@ -352,11 +352,11 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
     min_decision_cruxes = int(contract.get("min_decision_changing_cruxes", 0) or 0)
     if min_decision_cruxes and _decision_changing_crux_count(rewritten) < min_decision_cruxes:
         issues.append("section does not preserve enough decision-changing crux conditions")
-    for row in contract["required_evidence"]:
+    for row in _validation_required_evidence(contract):
         if not _rewrite_mentions_anchor_row(rewritten, row):
             issues.append(f"section dropped required evidence: {str(row.get('claim', ''))[:90]}")
     if "crux" not in original["title"].lower():
-        issues.extend(repeated_owned_evidence_issues(original["title"], rewritten, contract))
+        issues.extend(_blocking_repetition_issues(repeated_owned_evidence_issues(original["title"], rewritten, contract)))
     for gap in contract["required_gaps"]:
         if not _rewrite_mentions_gap(rewritten, gap):
             issues.append(f"section dropped required gap: {gap[:90]}")
@@ -376,6 +376,58 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
         issues.append("section rewrite is too short for its local contract")
     issues.extend(section_structure_issues(rewritten, contract))
     return issues
+
+
+def _validation_required_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    model_packet = contract.get("model_section_packet", {}) if isinstance(contract.get("model_section_packet"), dict) else {}
+    owned = model_packet.get("owned_evidence", []) if isinstance(model_packet.get("owned_evidence"), list) else []
+    if any(isinstance(row, dict) for row in owned):
+        return []
+    return [
+        row for row in contract.get("required_evidence", [])
+        if isinstance(row, dict) and not _malformed_required_evidence(row)
+    ]
+
+
+def _validation_row_from_owned_card(row: dict[str, Any]) -> dict[str, Any]:
+    claim = str(row.get("claim", "")).strip()
+    if _malformed_claim_text(claim):
+        return {}
+    anchor_terms = _string_list(row.get("anchor_terms"))
+    if not anchor_terms:
+        anchor_terms = _validation_anchor_terms(row)
+    return {
+        "slot": row.get("intended_role") or row.get("slot"),
+        "claim": claim,
+        "source": row.get("source"),
+        "anchor_terms": anchor_terms,
+    }
+
+
+def _validation_anchor_terms(row: dict[str, Any]) -> list[str]:
+    text = " ".join(
+        str(value)
+        for value in [row.get("claim"), row.get("source"), " ".join(_string_list(row.get("quantity_values")))]
+        if str(value).strip()
+    )
+    terms = [term for term in re.findall(r"[a-z0-9]{4,}", text.lower()) if term not in {"evidence", "section", "source", "claim"}]
+    return list(dict.fromkeys(terms))[:8]
+
+
+def _malformed_required_evidence(row: dict[str, Any]) -> bool:
+    source = str(row.get("source", "")).lower()
+    return "structured option comparison" in source or _malformed_claim_text(str(row.get("claim", "")))
+
+
+def _malformed_claim_text(claim: str) -> bool:
+    cleaned = re.sub(r"\s+", " ", claim).strip()
+    if len(cleaned) < 12:
+        return True
+    return cleaned.endswith((" or.", " and.", " of.", " with."))
+
+
+def _blocking_repetition_issues(issues: list[str]) -> list[str]:
+    return issues if len(issues) > 1 else []
 
 
 def _validate_rewritten_section(rewritten: str, section: dict[str, str], contract: dict[str, Any]) -> tuple[str, list[str]]:

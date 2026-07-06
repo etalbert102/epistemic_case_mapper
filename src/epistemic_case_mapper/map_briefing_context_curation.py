@@ -399,8 +399,35 @@ def _section_thesis(title: str, spine: dict[str, Any], owned: list[dict[str, Any
     if title == "Decision Brief":
         return str(spine.get("answer_frame") or "State the bounded answer and confidence.")
     if owned:
-        return f"{title} should synthesize its owned evidence into the decision-relevant implication."
+        focus = _section_focus_phrase(owned)
+        if "why this read" in title.lower():
+            return f"Explain why the answer follows from {focus}."
+        if "scope" in title.lower() or "exception" in title.lower():
+            return f"Name the practical boundaries implied by {focus}."
+        if "evidence carrying" in title.lower():
+            return f"Show how {focus} carries or weakens the conclusion."
+        if "limit" in title.lower():
+            return f"Bound the memo by the uncertainties visible in {focus}."
+        return f"Translate {focus} into the section's decision implication."
     return f"{title} should explain the limits of what the current source packet can support."
+
+
+def _section_focus_phrase(owned: list[dict[str, Any]]) -> str:
+    roles = _dedupe([str(card.get("role") or "context").replace("_", " ") for card in owned])[:3]
+    snippets = [_claim_noun_phrase(str(card.get("claim", ""))) for card in owned[:2]]
+    snippets = [snippet for snippet in snippets if snippet]
+    if snippets and roles:
+        return f"{', '.join(roles)} evidence on {'; '.join(snippets)}"
+    if snippets:
+        return "; ".join(snippets)
+    return ", ".join(roles) + " evidence" if roles else "the owned evidence"
+
+
+def _claim_noun_phrase(claim: str) -> str:
+    cleaned = _shorten(claim, 110).strip(" .")
+    if not cleaned:
+        return ""
+    return cleaned[0].lower() + cleaned[1:]
 
 
 def _decision_move(title: str) -> str:

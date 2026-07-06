@@ -4,6 +4,7 @@ import json
 
 from epistemic_case_mapper.map_briefing_section_retry import retry_section_prompt
 from epistemic_case_mapper.map_briefing_section_rewrite import _section_rewrite_prompt
+from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_contract
 
 
 def test_section_prompt_hides_owned_elsewhere_full_claims() -> None:
@@ -77,3 +78,47 @@ def test_retry_prompt_sanitizes_rejected_claim_text() -> None:
     assert "Return regular Markdown only" in prompt
     assert "Do not use JSON" in prompt
 
+
+def test_model_facing_validation_uses_curated_owned_evidence() -> None:
+    contract = {
+        "heading": "Practical Scope and Exceptions",
+        "_section_synthesis_scaffold": {
+            "section_reasoning_cards": {
+                "sections": [
+                    {
+                        "section": "Practical Scope and Exceptions",
+                        "section_thesis": "Name where the answer travels.",
+                        "context_status": "ready",
+                        "owned_cards": [
+                            {
+                                "candidate_card_id": "ec0001",
+                                "claim": "Data above the ordinary exposure level remain sparse.",
+                                "source": "Source",
+                                "intended_role": "scope",
+                                "reason_for_inclusion": "This card bounds the practical scope.",
+                            }
+                        ],
+                    }
+                ]
+            }
+        },
+        "required_evidence": [
+            {
+                "slot": "Comparator or substitution",
+                "claim": "Comparator evidence for whole-food exposure versus replacement option: whole or.",
+                "source": "structured option comparison",
+                "anchor_terms": ["comparator", "replacement"],
+            }
+        ],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {},
+    }
+
+    model_contract = model_facing_section_contract(contract)
+    model_owned = model_contract["model_section_packet"]["owned_evidence"]
+
+    assert model_owned[0]["claim"] == "Data above the ordinary exposure level remain sparse."
+    assert "required_evidence" not in model_contract.get("validation_obligations", {})
+    assert "Comparator evidence" not in json.dumps(model_contract)

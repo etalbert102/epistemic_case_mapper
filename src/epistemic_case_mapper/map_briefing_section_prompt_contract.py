@@ -17,7 +17,7 @@ def model_facing_section_contract(contract: dict[str, Any]) -> dict[str, Any]:
         "confidence": contract.get("confidence"),
         "requires_confidence": contract.get("requires_confidence"),
         "model_section_packet": model_packet,
-        "validation_obligations": _model_facing_validation_obligations(contract),
+        "validation_obligations": _model_facing_validation_obligations(contract, model_packet),
         "section_job": contract.get("section_job"),
         "has_obligations": contract.get("has_obligations"),
         "style": contract.get("style", []),
@@ -25,9 +25,10 @@ def model_facing_section_contract(contract: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in model_contract.items() if value not in ({}, [], "", None)}
 
 
-def _model_facing_validation_obligations(contract: dict[str, Any]) -> dict[str, Any]:
+def _model_facing_validation_obligations(contract: dict[str, Any], model_packet: dict[str, Any]) -> dict[str, Any]:
+    required_evidence = [] if _curated_validation_evidence(model_packet) else contract.get("required_evidence")
     obligations = {
-        "required_evidence": _model_facing_required_evidence(contract.get("required_evidence")),
+        "required_evidence": _model_facing_required_evidence(required_evidence),
         "required_gaps": contract.get("required_gaps", []),
         "required_cruxes": _model_facing_required_cruxes(contract.get("required_cruxes")),
         "required_main_memo_obligations": compact_main_memo_obligations(
@@ -37,6 +38,45 @@ def _model_facing_validation_obligations(contract: dict[str, Any]) -> dict[str, 
         "min_decision_changing_cruxes": contract.get("min_decision_changing_cruxes"),
     }
     return {key: value for key, value in obligations.items() if value not in ({}, [], "", None)}
+
+
+def _curated_validation_evidence(model_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in model_packet.get("owned_evidence", []) if isinstance(model_packet.get("owned_evidence"), list) else []:
+        if not isinstance(row, dict):
+            continue
+        claim = str(row.get("claim", "")).strip()
+        if not claim or _malformed_validation_claim(claim):
+            continue
+        rows.append(
+            {
+                "slot": row.get("intended_role"),
+                "claim": claim,
+                "source": row.get("source"),
+                "anchor_terms": _anchor_terms_from_model_row(row),
+                "candidate_card_id": row.get("candidate_card_id"),
+            }
+        )
+    return rows
+
+
+def _anchor_terms_from_model_row(row: dict[str, Any]) -> list[str]:
+    terms = []
+    values = [row.get("claim"), row.get("source")]
+    if isinstance(row.get("quantity_values"), list):
+        values.extend(row.get("quantity_values", []))
+    for value in values:
+        terms.extend(term for term in _terms(str(value)) if term not in _GENERIC_SECTION_TERMS)
+    return sorted(set(terms))[:8]
+
+
+def _malformed_validation_claim(claim: str) -> bool:
+    cleaned = re.sub(r"\s+", " ", claim).strip()
+    if len(cleaned) < 12:
+        return True
+    if cleaned.endswith((" or.", " and.", " of.", " with.")):
+        return True
+    return "structured option comparison" in cleaned.lower()
 
 
 def model_facing_section_markdown(markdown: str, contract: dict[str, Any]) -> str:
