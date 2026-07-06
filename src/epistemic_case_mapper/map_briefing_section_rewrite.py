@@ -14,6 +14,7 @@ from epistemic_case_mapper.main_memo_obligations import (
 from epistemic_case_mapper.map_briefing_decision_brief_last import (
     decision_brief_last_issues,
     decision_brief_last_packet,
+    decision_brief_answer_frame_guidance,
     deterministic_final_decision_brief,
     _sentence,
 )
@@ -343,18 +344,21 @@ def _decision_brief_bluf_prompt(contract: dict[str, Any], body_memo: str, fallba
     substantive_body = _substantive_body_sections_for_bluf(body_memo)
     question = str(contract.get("question", "")).strip()
     confidence = str(contract.get("confidence") or "").strip()
+    answer_frame = decision_brief_answer_frame_guidance(contract)
     return (
         "You are an analyst writing the opening BLUF for a source-grounded decision memo.\n"
         "Use only the accepted body sections below as the source of truth. Do not add facts.\n"
         "Write a crisp executive opening that directly answers the decision question before caveats.\n"
-        "The first sentence must classify the default answer using the decision question's categories when available, for example: treat it as neutral, harmful, beneficial, acceptable, avoid, use, or do not use.\n"
-        "Do not start with 'The answer is context-dependent', 'It depends', 'Practical application', 'Context', or a caveat.\n"
-        "Do not make context-dependence the lead; state the default answer first, then name the boundary.\n"
-        "Prefer this shape: default classification; why; main boundary; confidence.\n"
+        "Use the controlling answer frame below, but express it in the natural vocabulary of this decision question and source packet.\n"
+        "Do not force the answer into generic labels such as beneficial, harmful, neutral, use, or avoid unless that exact framing is warranted by the answer frame and accepted body sections.\n"
+        "If the controlling frame is conditional or context-dependent, say so directly and then name the practical default or boundary.\n"
+        "Prefer this shape: direct answer frame; why; main boundary; confidence.\n"
         "Keep it under 150 words, preserve the exact Decision Brief heading, include the decision question line, and include a confidence line.\n"
         "Return only the rewritten Decision Brief section as Markdown. Do not include any other ## section.\n\n"
         f"Decision question: {question}\n"
         f"Confidence: {confidence}\n\n"
+        "Controlling answer frame:\n"
+        f"{answer_frame}\n\n"
         "Accepted body sections:\n"
         f"{substantive_body.strip()}\n\n"
         "Section to rewrite:\n"

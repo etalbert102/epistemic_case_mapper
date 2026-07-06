@@ -44,6 +44,25 @@ def decision_brief_last_packet(contract: dict[str, Any], body_memo: str) -> dict
     }
 
 
+def decision_brief_answer_frame_guidance(contract: dict[str, Any]) -> str:
+    frame = _answer_frame_parts(contract)
+    lines: list[str] = []
+    for label, value in (
+        ("Current read", frame.get("current_read", "")),
+        ("Why this frame", frame.get("why_this_frame", "")),
+        ("Plain-language guardrail", frame.get("plain_language_instruction", "")),
+        ("Reader contract", frame.get("direct_answer", "")),
+    ):
+        if value:
+            lines.append(f"- {label}: {value}")
+    requirements = frame.get("prose_requirements", [])
+    if isinstance(requirements, list):
+        for requirement in requirements[:3]:
+            if str(requirement).strip():
+                lines.append(f"- Prose requirement: {requirement}")
+    return "\n".join(lines) or "- Use the accepted body sections to give a scoped decision answer."
+
+
 def deterministic_final_decision_brief(contract: dict[str, Any], body_memo: str) -> str:
     question = str(contract.get("question", "")).strip()
     confidence = str(contract.get("confidence") or "medium").strip()
@@ -80,6 +99,8 @@ def decision_brief_last_issues(section: str, contract: dict[str, Any], body_memo
         issues.append("final brief opens with an exception instead of the default answer")
     if answer and _content_overlap(answer, _default_answer_from_body(body_memo) or _default_answer_from_contract(contract)) < 2:
         issues.append("final brief does not preserve the body default answer")
+    if answer:
+        issues.extend(_answer_frame_alignment_issues(answer, contract))
     if len(section.split()) > 190:
         issues.append("final brief is too long for an executive opening")
     if _rewrite_has_raw_identifiers(section):
@@ -140,6 +161,11 @@ def _default_answer_from_body(body_memo: str) -> str:
 
 
 def _default_answer_from_contract(contract: dict[str, Any]) -> str:
+    frame = _answer_frame_parts(contract)
+    if frame.get("current_read"):
+        return _readerize_instruction(str(frame["current_read"]))
+    if frame.get("plain_language_instruction"):
+        return _readerize_instruction(str(frame["plain_language_instruction"]))
     scaffold = (
         contract.get("_section_synthesis_scaffold", {})
         if isinstance(contract.get("_section_synthesis_scaffold"), dict)
@@ -156,6 +182,65 @@ def _default_answer_from_contract(contract: dict[str, Any]) -> str:
         return _readerize_instruction(current)
     answer_frame = contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {}
     return str(answer_frame.get("direct_answer") or "Use the source packet for a conditional decision read.").strip()
+
+
+def _answer_frame_parts(contract: dict[str, Any]) -> dict[str, Any]:
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    bottom = synthesis.get("bottom_line", {}) if isinstance(synthesis.get("bottom_line"), dict) else {}
+    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    default = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
+    answer_frame = contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {}
+    return {
+        "classification": str(bottom.get("classification") or default.get("classification") or "").strip(),
+        "current_read": str(bottom.get("current_read") or "").strip(),
+        "why_this_frame": str(default.get("why_this_frame") or "").strip(),
+        "plain_language_instruction": str(default.get("plain_language_instruction") or "").strip(),
+        "direct_answer": str(answer_frame.get("direct_answer") or "").strip(),
+        "prose_requirements": decision_model.get("prose_requirements", []),
+    }
+
+
+def _answer_frame_alignment_issues(answer: str, contract: dict[str, Any]) -> list[str]:
+    frame = _answer_frame_parts(contract)
+    frame_text = " ".join(str(value) for key, value in frame.items() if key != "classification")
+    frame_norm = frame_text.lower()
+    answer_norm = answer.lower()
+    issues: list[str] = []
+    conditional_frame = any(
+        marker in frame_norm
+        for marker in (
+            "context-dependent",
+            "conditional",
+            "insufficient",
+            "uncertain",
+            "low-concern",
+            "neutral",
+            "not shown",
+            "do not frame",
+            "avoid benefit",
+        )
+    )
+    unsupported_favorable = any(
+        marker in answer_norm
+        for marker in (
+            "beneficial",
+            "protective",
+            "clearly safe",
+            "proven safe",
+            "favorable default",
+            "lower-risk default",
+        )
+    )
+    if conditional_frame and unsupported_favorable and not any(marker in frame_norm for marker in ("beneficial_under", "state benefit only")):
+        issues.append("final brief upgrades the controlling answer frame into an unsupported favorable verdict")
+    if frame_text and _content_overlap(answer, frame_text) < 2 and conditional_frame:
+        issues.append("final brief does not preserve the controlling conditional answer frame")
+    return issues
 
 
 def _decision_caveats_from_body(body_memo: str) -> list[str]:
@@ -242,6 +327,11 @@ def _readerize_instruction(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", str(text)).strip().rstrip(".")
     replacements = (
         (r"^state the default as\b", "The default case is"),
+        (r"^state that the answer is context-dependent, then identify\b", "The answer is context-dependent; the decision turns on"),
+        (r"^state that the evidence is insufficient or uncertain, then name\b", "The evidence is insufficient or uncertain; the decision turns on"),
+        (r"^state the supportive answer and immediately name\b", "The current read is supportive, with"),
+        (r"^state benefit only under\b", "Any benefit claim applies only under"),
+        (r"^state that caution is warranted under\b", "Caution is warranted under"),
         (r"^preserve this dose/intensity boundary in practical guidance:\s*", "The practical boundary is "),
         (r"^name this subgroup separately from the default case:\s*", "Treat this as a separate caveat: "),
     )

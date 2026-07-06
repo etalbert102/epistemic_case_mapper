@@ -533,7 +533,7 @@ def build_map_briefing_prompt(
             "- Use the deterministic section buckets as hard boundaries: synthesize each evidence_roles section only from that section's bucket.",
             "- Use `briefing_contract.answer_frame` to set the bottom-line strength; do not make a stronger claim than the contract allows.",
             "- Use `briefing_contract.scope_ledger` to keep scope caveats separate from the general/default answer.",
-            "- Use `decision_model.default_answer.classification` as the controlling answer frame. State that frame directly before nuance.",
+            "- Use `decision_synthesis_model.bottom_line.current_read` and `decision_model.default_answer.plain_language_instruction` as the controlling answer frame. Express it in the decision question's natural vocabulary rather than forcing a generic category label.",
             "- Use `decision_model.decision_slots` to include practical thresholds, high-risk subgroups, mechanisms, comparators, endpoint types, study designs, and recommendations when present.",
             "- If `decision_model.missing_decision_slots` names a slot that matters for the question, say the map did not expose it rather than inventing it.",
             "- Use `decision_model.evidence_families` to avoid dropping whole families such as RCTs, cohorts, guidelines, mechanisms, subgroups, comparators, or method limits.",
@@ -671,14 +671,17 @@ def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: 
         return extracted_brief.strip()
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
     default_answer = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
+    synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    bottom_line = synthesis.get("bottom_line", {}) if isinstance(synthesis.get("bottom_line"), dict) else {}
     classification = str(default_answer.get("classification", "mixed_or_context_dependent")).replace("_", " ")
     instruction = str(default_answer.get("plain_language_instruction", "")).strip()
+    current_read = str(bottom_line.get("current_read", "")).strip()
     main_reasons = [row for row in decision_model.get("main_reasons", []) if isinstance(row, dict)]
     counters = [row for row in decision_model.get("strongest_counterarguments", []) if isinstance(row, dict)]
     graph_claims = deterministic_graph_claim_sentences(scaffold)
     if instruction.lower().startswith(("state ", "do not ", "phrase ")):
-        instruction = f"The current map supports a {classification} answer frame."
-    parts = [instruction or f"The map supports a {classification} answer."]
+        instruction = current_read or f"The current map supports a {classification} answer frame."
+    parts = [current_read or instruction or f"The map supports a {classification} answer frame."]
     if main_reasons:
         parts.append(f"The main support is: {main_reasons[0].get('proposition', '')}")
     elif graph_claims:

@@ -540,7 +540,7 @@ def _what_would_change_answer(
 
 def _decision_model_prose_requirements(classification: str) -> list[str]:
     requirements = [
-        "Start the decision brief with the controlling classification in plain language.",
+        "Start the decision brief with the controlling answer frame in the decision question's natural vocabulary.",
         "Explain evidence clusters, not isolated claim fragments.",
         "Name the strongest counterargument before listing caveats.",
     ]

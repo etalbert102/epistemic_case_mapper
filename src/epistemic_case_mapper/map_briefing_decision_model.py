@@ -499,9 +499,9 @@ def build_briefing_plan(
         "paragraph_order": [
             {
                 "section": "bottom_line",
-                "job": "Give the controlling classification directly, then name the strongest counterposition if present.",
+                "job": "Give the controlling answer frame in the decision question's natural vocabulary, then name the strongest counterposition if present.",
                 "must_use": _dedupe([
-                    str(default_answer.get("classification", "")),
+                    str(default_answer.get("plain_language_instruction", "")),
                     str(default_answer.get("why_this_frame", "")),
                     str(answer_frame.get("strongest_counterposition", "")),
                     *support[:2],
