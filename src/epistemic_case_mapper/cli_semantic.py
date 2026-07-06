@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Callable
@@ -218,6 +219,8 @@ def _run_map_briefing(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             source_titles=_source_titles_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
+            source_urls=_source_urls_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
+            source_citation_labels=_source_citation_labels_for_region(repo_root, manifest, region_id) if manifest and region_id else None,
             max_claims=max_claims,
             baseline_path=baseline_path,
             run_reader_memo_rewrite=run_reader_memo_rewrite,
@@ -331,6 +334,8 @@ def _run_staged_semantic_brief(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             source_titles=_source_titles_for_region(repo_root, manifest, region_id),
+            source_urls=_source_urls_for_region(repo_root, manifest, region_id),
+            source_citation_labels=_source_citation_labels_for_region(repo_root, manifest, region_id),
             max_claims=briefing_max_claims,
         )
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
@@ -382,6 +387,31 @@ def _source_titles_for_region(repo_root: Path, manifest: SubmissionManifest, reg
     region = manifest.region_for_id(region_id)
     case_manifest = _case_manifest_for_region(repo_root, manifest, region)
     return {source.source_id: source.title for source in case_manifest.sources}
+
+def _source_urls_for_region(repo_root: Path, manifest: SubmissionManifest, region_id: str) -> dict[str, str]:
+    region = manifest.region_for_id(region_id)
+    case_manifest = _case_manifest_for_region(repo_root, manifest, region)
+    return {source.source_id: source.url for source in case_manifest.sources if source.url}
+
+def _source_citation_labels_for_region(repo_root: Path, manifest: SubmissionManifest, region_id: str) -> dict[str, str]:
+    region = manifest.region_for_id(region_id)
+    case_manifest = _case_manifest_for_region(repo_root, manifest, region)
+    return {
+        source.source_id: _source_citation_label(source.author, source.publication_date, source.title)
+        for source in case_manifest.sources
+    }
+
+def _source_citation_label(author: str | None, publication_date: str | None, title: str) -> str:
+    year_match = re.search(r"\b(?:19|20)\d{2}\b", str(publication_date or ""))
+    year = year_match.group(0) if year_match else ""
+    author_text = str(author or "").strip()
+    if author_text:
+        author_text = re.split(r";|,", author_text, maxsplit=1)[0].strip()
+        if year:
+            return f"{author_text} {year}".strip()
+        return author_text
+    return f"{title} {year}".strip() if year else title
+
 def _case_question_for_region(repo_root: Path, manifest: SubmissionManifest, region) -> str:
     return _case_manifest_for_region(repo_root, manifest, region).question
 def _case_manifest_for_region(repo_root: Path, manifest: SubmissionManifest, region) -> CaseManifest:

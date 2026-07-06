@@ -32,7 +32,7 @@ def run_section_model_attempts(
             return _result(False, active_prompt, raw, ["backend returned prompt only"], attempts, attempt, status="prompt_only")
         payload = parse_section_payload(raw, expected_title=expected_title)
         if not isinstance(payload, dict):
-            issues = ["section response was not a JSON object"]
+            issues = ["section response was not one Markdown section with the expected heading"]
             attempts.append({"attempt": attempt, "status": "parse_failed", "issues": issues})
         else:
             rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()

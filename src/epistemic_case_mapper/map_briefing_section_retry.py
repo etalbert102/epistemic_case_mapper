@@ -13,7 +13,7 @@ def retry_section_prompt(base_prompt: str, issues: list[str], *, attempt: int) -
         f"Previous attempt {attempt - 1} was rejected for these reasons:\n"
         f"{feedback}\n\n"
         "Try again. Return the same section only. Preserve the heading, required evidence, required gaps, and required cruxes. "
-        "Return valid JSON if possible: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n"
+        "Return regular Markdown only, beginning with the same ## heading. Do not use JSON or a code fence.\n"
     )
 
 

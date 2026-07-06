@@ -434,6 +434,11 @@ def test_section_prompt_hides_owned_elsewhere_full_claims() -> None:
     assert "reference_policy_summary" not in model_contract.get("validation_obligations", {})
     assert forbidden_claim not in section_text
     assert "## Why This Read" in section_text
+    assert "analyst producing decision-ready analysis" in prompt
+    assert "not to mechanically restate the packet" in prompt
+    assert "Return only the rewritten section as regular Markdown" in prompt
+    assert "Do not wrap the answer in JSON" in prompt
+    assert "Return only valid JSON" not in prompt
     assert "Do not mention this evidence here" not in contract_text
 
 
@@ -453,6 +458,8 @@ def test_retry_prompt_sanitizes_rejected_claim_text() -> None:
     assert "lipid profiles appears greater" not in prompt
     assert "section used evidence assigned outside this section" in prompt
     assert "scope_boundary_02" in prompt
+    assert "Return regular Markdown only" in prompt
+    assert "Do not use JSON" in prompt
 
 
 def test_section_prompt_uses_compact_model_packet_instead_of_full_debug_packet() -> None:
@@ -789,7 +796,7 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         nonlocal seen_prompt
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
-        if prompt.startswith("You are writing one section") and section.startswith("## Evidence Carrying the Conclusion"):
+        if prompt.startswith("You are an analyst producing decision-ready analysis") and section.startswith("## Evidence Carrying the Conclusion"):
             seen_prompt = prompt
             return ModelBackendResult(
                 text=json.dumps({"section_markdown": "## Evidence Carrying the Conclusion\n\nThe answer follows from the source packet."}),

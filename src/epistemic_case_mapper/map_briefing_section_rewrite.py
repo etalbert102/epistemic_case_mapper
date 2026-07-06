@@ -557,7 +557,8 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
     model_contract = model_facing_section_contract(contract)
     model_section = model_facing_section_markdown(section["markdown"], contract)
     return (
-        "You are writing one section of a decision-support memo from a local source-grounded synthesis packet.\n"
+        "You are an analyst producing decision-ready analysis for one section of a source-grounded decision memo.\n"
+        "Your job is to help a thoughtful reader decide what follows from the evidence, not to mechanically restate the packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
         "Use only the allowed information in model_section_packet and validation_obligations. If a fact is not present there or in the supplied deterministic draft, leave it out.\n"
         "Use model_section_packet as the primary structure: section_thesis, owned_evidence, local_tensions, canonical_cruxes, and must_include_quantities define the section's job.\n"
@@ -565,7 +566,8 @@ def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
         "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
         "Fully explain owned_evidence when this section has it; keep reference_only_evidence to brief role-level context if it appears in the packet.\n"
-        "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
+        "Return only the rewritten section as regular Markdown. Start with exactly the same ## heading and do not include any other top-level ## section.\n"
+        "Do not wrap the answer in JSON or a code fence; the validator will check evidence coverage after generation.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
         "Section contract:\n"

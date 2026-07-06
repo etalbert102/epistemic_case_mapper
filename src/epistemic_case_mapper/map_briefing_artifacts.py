@@ -375,6 +375,8 @@ def map_briefing_summary_payload(
         "question": question,
         "paths": {key: _rel(repo_root, value) if value else None for key, value in paths.items()},
         "source_display_names": source_lookup,
+        "source_urls": scaffold.get("source_urls", {}) if isinstance(scaffold.get("source_urls"), dict) else {},
+        "source_citation_labels": scaffold.get("source_citation_labels", {}) if isinstance(scaffold.get("source_citation_labels"), dict) else {},
         "map_quality_status": str(quality_report.get("status", "unknown")),
         "map_quality_score": quality_report.get("score"),
         "model_confidence": model_confidence,

@@ -88,7 +88,10 @@ def run_map_briefing(
     backend: str,
     output_dir: str | Path | None = None,
     backend_timeout: int | None = 120, backend_retries: int = 0,
-    source_titles: dict[str, str] | None = None, max_claims: int | None = 0,
+    source_titles: dict[str, str] | None = None,
+    source_urls: dict[str, str] | None = None,
+    source_citation_labels: dict[str, str] | None = None,
+    max_claims: int | None = 0,
     baseline_path: str | Path | None = None,
     run_reader_memo_rewrite: bool = False,
 ) -> MapBriefingResult:
@@ -113,7 +116,15 @@ def run_map_briefing(
     prioritization_report["effective_max_claims"] = effective_max_claims
     prioritization_report["budget_policy"] = "adaptive" if not max_claims else "fixed"
     erosion_audit = generated_map_erosion_audit(prioritized_map)
-    scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit, question=question)
+    scaffold = briefing_scaffold(
+        prioritized_map,
+        quality_report,
+        source_lookup,
+        erosion_audit,
+        question=question,
+        source_urls=source_urls,
+        source_citation_labels=source_citation_labels,
+    )
     scaffold["claim_canonicalization_report"] = canonicalization_report
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
@@ -508,6 +519,8 @@ def briefing_scaffold(
     source_lookup: dict[str, str],
     erosion_audit: dict[str, Any],
     question: str = "",
+    source_urls: dict[str, str] | None = None,
+    source_citation_labels: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_decision_support_model import (
         build_decision_support_model,
@@ -529,6 +542,18 @@ def briefing_scaffold(
         source_lookup=source_lookup,
         question=question,
     )
+    if source_urls:
+        scaffold["source_urls"] = {
+            str(source_id): str(url).strip()
+            for source_id, url in source_urls.items()
+            if str(source_id).strip() and str(url).strip()
+        }
+    if source_citation_labels:
+        scaffold["source_citation_labels"] = {
+            str(source_id): str(label).strip()
+            for source_id, label in source_citation_labels.items()
+            if str(source_id).strip() and str(label).strip()
+        }
     return _expand_payload_reader_references(scaffold, briefing_map)
 
 def deterministic_briefing_payload(
