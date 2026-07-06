@@ -41,6 +41,10 @@ from epistemic_case_mapper.map_briefing_argument_model import build_argument_mod
 from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
+    build_final_brief_evaluation,
+    build_memo_coherence_report,
+    build_pipeline_migration_ledger,
+    build_runtime_budget_report,
     build_source_evidence_cards,
     build_source_sufficiency_report,
 )
@@ -390,15 +394,42 @@ def _write_final_reader_outputs(
     briefing_validation_path = artifacts / "briefing_validation_report.json"
     final_traceability_path = artifacts / "decision_traceability_matrix_final.json"
     final_traceability_md_path = artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md"
+    memo_coherence_report_path = artifacts / "memo_coherence_report.json"
+    pipeline_migration_ledger_path = artifacts / "pipeline_migration_ledger.json"
+    runtime_budget_report_path = artifacts / "runtime_budget_report.json"
+    final_brief_evaluation_path = artifacts / "final_brief_evaluation.json"
     argument_artifacts = memo_package["scaffold"].get("decision_argument_artifacts", {})
     traceability_matrix = evaluate_traceability_against_memo(
         argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts, dict) else {},
         reader_memo,
     )
+    memo_coherence = build_memo_coherence_report(
+        memo_markdown=reader_memo,
+        decision_question=str(memo_package["scaffold"].get("question", "")),
+        scaffold=memo_package["scaffold"],
+    )
+    pipeline_migration = build_pipeline_migration_ledger(
+        section_context_acceptance_path=str(section_rewrite_result.get("section_context_acceptance_report_path") or "")
+    )
+    runtime_budget = build_runtime_budget_report(
+        section_rewrite_report=section_rewrite_result.get("report", {}),
+        reader_rewrite_report=rewrite_result.get("report", {}),
+    )
+    final_eval = build_final_brief_evaluation(
+        memo_markdown=reader_memo,
+        memo_path=str(briefing_path),
+        decision_question=str(memo_package["scaffold"].get("question", "")),
+        coherence_report=memo_coherence,
+        scaffold=memo_package["scaffold"],
+    )
     write_markdown(briefing_path, reader_memo.rstrip() + "\n")
     write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
     write_json(final_traceability_path, traceability_matrix)
     write_markdown(final_traceability_md_path, render_decision_traceability_matrix_markdown(traceability_matrix))
+    write_json(memo_coherence_report_path, memo_coherence)
+    write_json(pipeline_migration_ledger_path, pipeline_migration)
+    write_json(runtime_budget_report_path, runtime_budget)
+    write_json(final_brief_evaluation_path, final_eval)
     write_json(briefing_validation_path, validation)
     write_json(polish_report_path, polish_report)
     write_json(memo_quality_path, memo_quality)
@@ -421,6 +452,10 @@ def _write_final_reader_outputs(
             "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),
             "decision_traceability_matrix_final": final_traceability_path,
             "decision_traceability_matrix_final_markdown": final_traceability_md_path,
+            "memo_coherence_report": memo_coherence_report_path,
+            "pipeline_migration_ledger": pipeline_migration_ledger_path,
+            "runtime_budget_report": runtime_budget_report_path,
+            "final_brief_evaluation": final_brief_evaluation_path,
             "reader_memo_rewrite_report": rewrite_report_path,
             "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
             "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,

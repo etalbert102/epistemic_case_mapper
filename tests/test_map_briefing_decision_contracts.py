@@ -302,6 +302,10 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["paths"]["source_sufficiency_report"].endswith("source_sufficiency_report.json")
     assert summary["paths"]["evidence_quality_report"].endswith("evidence_quality_report.json")
     assert summary["paths"]["section_context_acceptance_report"].endswith("section_context_acceptance_report.json")
+    assert summary["paths"]["memo_coherence_report"].endswith("memo_coherence_report.json")
+    assert summary["paths"]["pipeline_migration_ledger"].endswith("pipeline_migration_ledger.json")
+    assert summary["paths"]["runtime_budget_report"].endswith("runtime_budget_report.json")
+    assert summary["paths"]["final_brief_evaluation"].endswith("final_brief_evaluation.json")
     assert summary["source_evidence_card_count"] == 1
     assert summary["source_sufficiency_status"] in {
         "sufficient_for_decision_ready_answer",
@@ -311,6 +315,9 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert isinstance(summary["source_sufficiency_missing_categories"], list)
     assert isinstance(summary["evidence_quality_weak_or_indirect_count"], int)
     assert summary["section_context_acceptance_status"] in {"ready", "warning", "not_synthesis_ready"}
+    assert summary["memo_coherence_report_path"].endswith("memo_coherence_report.json")
+    assert summary["runtime_budget_report_path"].endswith("runtime_budget_report.json")
+    assert summary["final_brief_evaluation_path"].endswith("final_brief_evaluation.json")
     assert summary["paths"]["briefing_validation_report"].endswith("briefing_validation_report.json")
     assert summary["paths"]["gap_diagnosis"].endswith("telemetry/gap_diagnosis.json")
     assert sufficiency["schema_id"] == "map_sufficiency_report_v1"

@@ -7,6 +7,10 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_context_schemas import (
     EvidenceQualityReport,
+    FinalBriefEvaluation,
+    MemoCoherenceReport,
+    PipelineMigrationLedger,
+    RuntimeBudgetReport,
     SectionContextAcceptanceReport,
     SectionContextAcceptanceRow,
     SourceEvidenceCardReport,
@@ -157,6 +161,101 @@ def build_section_context_acceptance_report(section_packets: list[dict[str, Any]
     return report.model_dump()
 
 
+def build_memo_coherence_report(
+    *,
+    memo_markdown: str,
+    decision_question: str,
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    issues: list[dict[str, Any]] = []
+    if decision_question and _normalize(decision_question) not in _normalize(memo_markdown):
+        issues.append({"kind": "decision_question_missing", "message": "Decision question is not visible in the memo."})
+    first_answer = _first_body_paragraph(memo_markdown)
+    if not first_answer:
+        issues.append({"kind": "missing_opening_answer", "message": "Memo lacks a clear opening answer paragraph."})
+    if _repetition_count(memo_markdown) > 2:
+        issues.append({"kind": "repetition", "message": "Memo repeats exact or near-exact sentences across sections."})
+    source_lookup = scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}
+    if source_lookup and "## Sources" not in memo_markdown:
+        issues.append({"kind": "missing_sources_section", "message": "Memo has sources in scaffold but no final Sources section."})
+    sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
+    if sufficiency.get("bounded_answer_required") and "provided document" not in memo_markdown.lower() and "current map" not in memo_markdown.lower():
+        issues.append({"kind": "bounded_answer_not_visible", "message": "Source sufficiency requires a bounded answer, but the memo does not visibly bound the claim."})
+    status = "fail" if any(issue["kind"] in {"decision_question_missing", "missing_opening_answer"} for issue in issues) else "warning" if issues else "pass"
+    return MemoCoherenceReport(status=status, issue_count=len(issues), issues=issues).model_dump()
+
+
+def build_pipeline_migration_ledger(*, section_context_acceptance_path: str | None) -> dict[str, Any]:
+    old_visible = [
+        "validation_obligations.required_main_memo_obligations",
+    ]
+    new_visible = [
+        "model_section_packet",
+        "section_context_acceptance_report" if section_context_acceptance_path else "",
+    ]
+    new_visible = [item for item in new_visible if item]
+    status = "warning" if old_visible else "clean"
+    return PipelineMigrationLedger(
+        old_context_fields_still_model_visible=old_visible,
+        new_context_fields_model_visible=new_visible,
+        debug_only_artifacts=["main_memo_obligation_ledger", "unified_requirement_ledger"],
+        compatibility_shims=["main memo obligations remain as validation obligations until fully replaced"],
+        status=status,
+    ).model_dump()
+
+
+def build_runtime_budget_report(
+    *,
+    section_rewrite_report: dict[str, Any],
+    reader_rewrite_report: dict[str, Any],
+) -> dict[str, Any]:
+    section_attempts = 0
+    for section in section_rewrite_report.get("sections", []) if isinstance(section_rewrite_report.get("sections"), list) else []:
+        if isinstance(section, dict):
+            section_attempts += _int_value(section.get("attempt_count"))
+    reader_model_calls = 1 if reader_rewrite_report.get("status") not in {"skipped_after_section_rewrite", "not_run"} else 0
+    stages = [
+        {"stage": "section_rewrite", "model_call_count": section_attempts},
+        {"stage": "reader_memo_rewrite", "model_call_count": reader_model_calls},
+    ]
+    most_expensive = max(stages, key=lambda row: int(row.get("model_call_count", 0)))["stage"] if stages else ""
+    return RuntimeBudgetReport(
+        stages=stages,
+        model_call_count=section_attempts + reader_model_calls,
+        degraded_mode_triggers=_runtime_degraded_triggers(section_rewrite_report, reader_rewrite_report),
+        most_expensive_stage=most_expensive,
+    ).model_dump()
+
+
+def build_final_brief_evaluation(
+    *,
+    memo_markdown: str,
+    memo_path: str,
+    decision_question: str,
+    coherence_report: dict[str, Any],
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
+    evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
+    scores = {
+        "answers_decision_question": 1 if decision_question and _normalize(decision_question) in _normalize(memo_markdown) else 0,
+        "clear_uncertainty": 1 if "**Confidence:**" in memo_markdown or "confidence" in memo_markdown.lower() else 0,
+        "source_grounded": 1 if "## Sources" in memo_markdown else 0,
+        "coherent_memo": 1 if coherence_report.get("status") == "pass" else 0,
+        "bounded_when_sources_insufficient": 1 if not sufficiency.get("bounded_answer_required") or ("provided document" in memo_markdown.lower() or "current map" in memo_markdown.lower()) else 0,
+        "evidence_quality_visible": 1 if not evidence_quality.get("weak_or_indirect_count") or any(term in memo_markdown.lower() for term in ("limited", "indirect", "weak", "uncertain")) else 0,
+    }
+    issues = _final_eval_issues(scores, coherence_report)
+    status = "fail" if scores["answers_decision_question"] == 0 else "warning" if issues else "pass"
+    return FinalBriefEvaluation(
+        status=status,
+        decision_question=decision_question,
+        rubric_scores=scores,
+        issues=issues,
+        memo_path=memo_path,
+    ).model_dump()
+
+
 def _quality_component(card: dict[str, Any]) -> dict[str, Any]:
     relevance = _int_value(card.get("decision_relevance_score"))
     anchor = str(card.get("anchor_confidence") or "missing")
@@ -185,6 +284,60 @@ def _quality_component(card: dict[str, Any]) -> dict[str, Any]:
         "limitations": limitations,
         "overall": overall,
     }
+
+
+def _runtime_degraded_triggers(section_rewrite_report: dict[str, Any], reader_rewrite_report: dict[str, Any]) -> list[str]:
+    triggers: list[str] = []
+    if section_rewrite_report.get("status") in {"global_validation_failed_fallback", "no_sections_accepted"}:
+        triggers.append(str(section_rewrite_report.get("status")))
+    for section in section_rewrite_report.get("sections", []) if isinstance(section_rewrite_report.get("sections"), list) else []:
+        if isinstance(section, dict) and section.get("structured_fallback"):
+            triggers.append(f"structured_fallback:{section.get('title', '')}")
+    if reader_rewrite_report.get("status") == "skipped_after_section_rewrite":
+        triggers.append("reader_memo_rewrite_skipped")
+    return triggers
+
+
+def _final_eval_issues(scores: dict[str, int], coherence_report: dict[str, Any]) -> list[str]:
+    labels = {
+        "answers_decision_question": "memo does not visibly answer the decision question",
+        "clear_uncertainty": "memo does not make confidence or uncertainty visible",
+        "source_grounded": "memo lacks a final sources section",
+        "coherent_memo": "memo coherence report has warnings or failures",
+        "bounded_when_sources_insufficient": "memo does not visibly bound an insufficient-source answer",
+        "evidence_quality_visible": "memo does not surface weak or indirect evidence quality limits",
+    }
+    issues = [message for key, message in labels.items() if scores.get(key) == 0]
+    for issue in coherence_report.get("issues", []) if isinstance(coherence_report.get("issues"), list) else []:
+        if isinstance(issue, dict) and issue.get("message"):
+            issues.append(str(issue["message"]))
+    return _dedupe(issues)
+
+
+def _first_body_paragraph(markdown: str) -> str:
+    for paragraph in re.split(r"\n\s*\n", markdown):
+        stripped = paragraph.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("**Decision question:**"):
+            continue
+        return stripped
+    return ""
+
+
+def _repetition_count(markdown: str) -> int:
+    seen: set[str] = set()
+    repeated = 0
+    for sentence in re.findall(r"[^.!?]+[.!?]", re.sub(r"\s+", " ", markdown)):
+        normalized = _normalize(sentence)
+        if len(normalized) < 40:
+            continue
+        if normalized in seen:
+            repeated += 1
+        seen.add(normalized)
+    return repeated
+
+
+def _normalize(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
 
 
 def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:

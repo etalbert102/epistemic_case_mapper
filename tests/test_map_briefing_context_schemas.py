@@ -7,6 +7,10 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
 )
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
+    build_final_brief_evaluation,
+    build_memo_coherence_report,
+    build_pipeline_migration_ledger,
+    build_runtime_budget_report,
     build_section_context_acceptance_report,
     build_source_evidence_cards,
     build_source_sufficiency_report,
@@ -166,3 +170,52 @@ def test_section_context_acceptance_requires_roles_and_reasons() -> None:
     assert report["sections"][0]["status"] == "ready"
     assert report["sections"][1]["card_budget_status"] == "under_budget"
     assert any("missing intended_role" in issue for issue in report["sections"][1]["issues"])
+
+
+def test_final_diagnostic_reports_are_deterministic() -> None:
+    scaffold = {
+        "question": "Should the decision change?",
+        "source_display_names": {"s1": "Source One"},
+        "source_sufficiency_report": {"bounded_answer_required": True},
+        "evidence_quality_report": {"weak_or_indirect_count": 1},
+    }
+    memo = """## Decision Brief
+
+**Decision question:** Should the decision change?
+
+The current map supports a bounded read over the provided documents, with limited evidence quality.
+
+**Confidence:** medium
+
+## Sources
+
+- Source One
+"""
+
+    coherence = build_memo_coherence_report(
+        memo_markdown=memo,
+        decision_question="Should the decision change?",
+        scaffold=scaffold,
+    )
+    migration = build_pipeline_migration_ledger(section_context_acceptance_path="section_context_acceptance_report.json")
+    runtime = build_runtime_budget_report(
+        section_rewrite_report={"sections": [{"attempt_count": 2}, {"attempt_count": 1}]},
+        reader_rewrite_report={"status": "skipped_after_section_rewrite"},
+    )
+    evaluation = build_final_brief_evaluation(
+        memo_markdown=memo,
+        memo_path="BRIEFING.md",
+        decision_question="Should the decision change?",
+        coherence_report=coherence,
+        scaffold=scaffold,
+    )
+
+    assert coherence["schema_id"] == "memo_coherence_report_v1"
+    assert coherence["status"] == "pass"
+    assert migration["schema_id"] == "pipeline_migration_ledger_v1"
+    assert migration["status"] == "warning"
+    assert runtime["schema_id"] == "runtime_budget_report_v1"
+    assert runtime["model_call_count"] == 3
+    assert runtime["most_expensive_stage"] == "section_rewrite"
+    assert evaluation["schema_id"] == "final_brief_evaluation_v1"
+    assert evaluation["status"] == "pass"
