@@ -36,9 +36,8 @@ from epistemic_case_mapper.decision_frame import (
     question_quality_report,
     refine_crux_contract,
 )
-from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_run_summary, write_scaffold_artifacts
+from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
-from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
     build_final_brief_evaluation,
@@ -56,6 +55,7 @@ from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synth
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
 from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_scaffold
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
+from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 
 ROLE_PRIORITY = {
@@ -105,26 +105,24 @@ def run_map_briefing(
     run_reader_memo_rewrite: bool = False,
 ) -> MapBriefingResult:
     _validate_run_args(question, backend_timeout, backend_retries)
-    map_file = _resolve(repo_root, map_path)
-    quality_file = _resolve(repo_root, quality_report_path)
-    candidate_map = json.loads(map_file.read_text(encoding="utf-8"))
-    candidate_map = annotate_map_with_evidence_slots(candidate_map)
-    quality_report = json.loads(quality_file.read_text(encoding="utf-8"))
+    prep = prepare_map_briefing_inputs(
+        repo_root=repo_root,
+        map_path=map_path,
+        quality_report_path=quality_report_path,
+        source_titles=source_titles,
+        max_claims=max_claims,
+    )
+    map_file = prep["map_file"]
+    candidate_map = prep["candidate_map"]
+    quality_report = prep["quality_report"]
+    source_lookup = prep["source_lookup"]
+    effective_max_claims = prep["effective_max_claims"]
+    prioritized_map = prep["prioritized_map"]
+    prioritization_report = prep["prioritization_report"]
+    canonicalization_report = prep["canonicalization_report"]
+    erosion_audit = prep["erosion_audit"]
     artifacts = _resolve(repo_root, output_dir or Path("artifacts") / "map_briefings" / map_file.stem)
     artifacts.mkdir(parents=True, exist_ok=True)
-    candidate_map, canonicalization_report = canonicalize_claims_for_briefing(candidate_map)
-    source_lookup = build_source_display_lookup(candidate_map, source_titles=source_titles)
-    effective_max_claims = adaptive_briefing_claim_budget(candidate_map, quality_report, requested_max_claims=max_claims)
-    prioritized_map, prioritization_report = prioritize_map_for_briefing(
-        candidate_map,
-        quality_report=quality_report,
-        max_claims=effective_max_claims,
-    )
-    prioritization_report["claim_canonicalization_report"] = canonicalization_report
-    prioritization_report["requested_max_claims"] = max_claims
-    prioritization_report["effective_max_claims"] = effective_max_claims
-    prioritization_report["budget_policy"] = "adaptive" if not max_claims else "fixed"
-    erosion_audit = generated_map_erosion_audit(prioritized_map)
     scaffold = briefing_scaffold(
         prioritized_map,
         quality_report,
@@ -164,12 +162,9 @@ def run_map_briefing(
         quality_report=quality_report,
         scaffold=scaffold,
     )
-    model_confidence, calibrated = str(render_state["model_confidence"]), str(render_state["calibrated"])
-    calibration = render_state["calibration"]
-    parse_ok, parse_diagnostics = bool(render_state["parse_ok"]), render_state["parse_diagnostics"]
     rendered = _prepare_rendered_reader_packet(
         str(render_state["rendered"]),
-        calibrated=calibrated,
+        calibrated=str(render_state["calibrated"]),
         scaffold=scaffold,
         prioritized_map=prioritized_map,
         source_lookup=source_lookup,
@@ -200,12 +195,11 @@ def run_map_briefing(
         final_outputs=final_outputs,
         baseline_path=baseline_path,
     )
-    summary_path = write_run_summary(
+    summary_path = write_map_briefing_run_summary(
         artifacts=artifacts,
         repo_root=repo_root,
         backend=backend,
-        parse_ok=parse_ok,
-        parse_diagnostics=parse_diagnostics,
+        render_state=render_state,
         question=question,
         briefing_path=briefing_path,
         evidence_appendix_path=evidence_appendix_path,
@@ -215,9 +209,6 @@ def run_map_briefing(
         final_outputs=final_outputs,
         source_lookup=source_lookup,
         quality_report=quality_report,
-        model_confidence=model_confidence,
-        calibrated=calibrated,
-        calibration=calibration,
         candidate_map=candidate_map,
         prioritized_map=prioritized_map,
         max_claims=max_claims,
@@ -225,19 +216,25 @@ def run_map_briefing(
         erosion_audit=erosion_audit,
         scaffold=scaffold,
     )
+    return _map_briefing_result(
+        briefing_path=briefing_path, summary_path=summary_path, scaffold_paths=scaffold_paths,
+        briefing_validation_path=briefing_validation_path, telemetry_paths=telemetry_paths,
+        backend=backend, render_state=render_state, quality_report=quality_report,
+    )
+
+
+def _map_briefing_result(
+    *, briefing_path: Path, summary_path: Path, scaffold_paths: dict[str, Path],
+    briefing_validation_path: Path, telemetry_paths: dict[str, Path], backend: str,
+    render_state: dict[str, Any], quality_report: dict[str, Any],
+) -> MapBriefingResult:
     return MapBriefingResult(
-        briefing_path=briefing_path,
-        summary_path=summary_path,
-        prompt_path=scaffold_paths["prompt"],
-        prioritized_map_path=scaffold_paths["prioritized_map"],
-        prioritization_report_path=scaffold_paths["prioritization_report"],
-        erosion_audit_path=scaffold_paths["erosion_audit"],
-        sufficiency_report_path=scaffold_paths["sufficiency_report"],
-        briefing_validation_path=briefing_validation_path,
-        gap_diagnosis_path=telemetry_paths["gap_diagnosis"],
-        backend=backend,
-        model_confidence=model_confidence,
-        calibrated_confidence=calibrated,
+        briefing_path=briefing_path, summary_path=summary_path, prompt_path=scaffold_paths["prompt"],
+        prioritized_map_path=scaffold_paths["prioritized_map"], prioritization_report_path=scaffold_paths["prioritization_report"],
+        erosion_audit_path=scaffold_paths["erosion_audit"], sufficiency_report_path=scaffold_paths["sufficiency_report"],
+        briefing_validation_path=briefing_validation_path, gap_diagnosis_path=telemetry_paths["gap_diagnosis"], backend=backend,
+        model_confidence=str(render_state["model_confidence"]),
+        calibrated_confidence=str(render_state["calibrated"]),
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
 

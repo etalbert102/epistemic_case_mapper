@@ -142,8 +142,6 @@ def _terms(text: str) -> set[str]:
 
 _HIGH_SIGNAL_TERMS = {
     "diabetes",
-    "ldl",
-    "hdl",
     "mortality",
     "stroke",
     "cancer",
