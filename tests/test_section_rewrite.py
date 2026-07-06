@@ -240,7 +240,7 @@ def test_section_rewrite_assigns_required_evidence_to_owner_sections(monkeypatch
     assert any(section.get("evidence_reference_count", 0) > 0 for section in sections)
 
 
-def test_section_ownership_flags_full_repeat_outside_owner_section() -> None:
+def test_section_ownership_allows_cross_section_evidence_bridge() -> None:
     row = {
         "slot": "hard-outcome support",
         "claim": "The pilot reduced permit review time by 34 percent without increasing error rates.",
@@ -262,7 +262,7 @@ def test_section_ownership_flags_full_repeat_outside_owner_section() -> None:
 
     owned = contract["_section_evidence_ownership"]["rows"]
     assert next(iter(owned.values()))["primary_owner_section"] == "Evidence Carrying the Conclusion"
-    assert repeated_owned_evidence_issues("Why This Read", sections[0]["markdown"], contract)
+    assert not repeated_owned_evidence_issues("Why This Read", sections[0]["markdown"], contract)
     assert not repeated_owned_evidence_issues(
         "Why This Read",
         "## Why This Read\n\nThe main outcome evidence is discussed in the evidence section.",
@@ -270,7 +270,7 @@ def test_section_ownership_flags_full_repeat_outside_owner_section() -> None:
     )
 
 
-def test_section_ownership_allows_short_reference_but_rejects_overexplained_reference() -> None:
+def test_section_ownership_allows_short_reference_and_limited_overlap() -> None:
     row = {
         "slot": "hard-outcome support",
         "claim": "The pilot reduced permit review time by 34 percent without increasing error rates.",
@@ -295,9 +295,30 @@ def test_section_ownership_allows_short_reference_but_rejects_overexplained_refe
     assert reference["reference_style"] == "short_reference"
     assert reference["allowed"] is True
     assert not repeated_owned_evidence_issues("Why This Read", sections[0]["markdown"], contract)
-    assert repeated_owned_evidence_issues(
+    assert not repeated_owned_evidence_issues(
         "Why This Read",
         "## Why This Read\n\nThe pilot reduced permit review time by 34 percent without increasing error rates.",
+        contract,
+    )
+
+
+def test_section_ownership_still_flags_explicit_do_not_repeat_duplication() -> None:
+    row = {
+        "slot": "hard-outcome support",
+        "claim": "The pilot reduced permit review time by 34 percent without increasing error rates.",
+        "source": "Evaluation",
+        "anchor_terms": ["pilot", "reduced", "permit", "review", "34", "error"],
+        "reference_policy": {
+            "owner_section": "Evidence Carrying the Conclusion",
+            "reference_style": "do_not_repeat",
+            "allowed": False,
+        },
+    }
+    contract = {"owned_elsewhere_evidence": [row], "required_evidence": []}
+
+    assert repeated_owned_evidence_issues(
+        "Practical Read",
+        "## Practical Read\n\nThe Evaluation found the pilot reduced permit review time by 34 percent without increasing error rates.",
         contract,
     )
 

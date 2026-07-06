@@ -85,11 +85,8 @@ def repeated_owned_evidence_issues(title: str, text: str, full_contract: dict[st
         if _section_required_obligation_overlaps_row(full_contract, row):
             continue
         if style == "short_reference":
-            if _short_reference_overexplains_evidence(title, text, row, policy):
-                owner = str(policy.get("owner_section", "")).strip() or "another section"
-                issues.append(f"section over-explains evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
             continue
-        if _mentions_owned_evidence(text, row):
+        if _egregiously_repeats_owned_evidence(text, row):
             owner = str(policy.get("owner_section", "")).strip() or "another section"
             issues.append(f"section repeats evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
     return issues[:6]
@@ -236,6 +233,21 @@ def _short_reference_overexplains_evidence(
     if _mentions_owner_reference(sentence, owner) and len(sentence.split()) <= 38:
         return overlap >= 9
     return overlap >= 6
+
+
+def _egregiously_repeats_owned_evidence(text: str, row: dict[str, Any]) -> bool:
+    if not _mentions_owned_evidence(text, row):
+        return False
+    sentence = _strongest_matching_sentence(text, row)
+    if not sentence:
+        return False
+    claim = str(row.get("claim", ""))
+    overlap = _content_overlap_count(sentence, claim)
+    if _source_title_appears(sentence, row) and overlap >= 8:
+        return True
+    if _quantity_overlap(sentence, claim) and overlap >= 5:
+        return True
+    return overlap >= 10 and len(sentence.split()) >= 18
 
 
 def _strongest_matching_sentence(text: str, row: dict[str, Any]) -> str:
