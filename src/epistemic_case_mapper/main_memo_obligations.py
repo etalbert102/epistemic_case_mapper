@@ -304,12 +304,24 @@ def _obligation_top_line_eligible(obligation: dict[str, Any]) -> bool:
     eligibility = obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {}
     if not eligibility:
         return True
-    return bool(eligibility.get("top_line_eligible"))
+    return bool(eligibility.get("top_line_eligible")) and not bool(eligibility.get("appendix_only"))
 
 
 def _obligation_appendix_only(obligation: dict[str, Any]) -> bool:
     eligibility = obligation.get("eligibility", {}) if isinstance(obligation.get("eligibility"), dict) else {}
     return bool(eligibility.get("appendix_only"))
+
+
+def _row_top_line_eligible(row: dict[str, Any]) -> bool:
+    eligibility = row.get("eligibility", {}) if isinstance(row.get("eligibility"), dict) else {}
+    return bool(row.get("top_line_eligible") or eligibility.get("top_line_eligible")) and not bool(
+        row.get("appendix_only") or eligibility.get("appendix_only")
+    )
+
+
+def _row_section_usable(row: dict[str, Any]) -> bool:
+    eligibility = row.get("eligibility", {}) if isinstance(row.get("eligibility"), dict) else {}
+    return not bool(row.get("appendix_only") or eligibility.get("appendix_only"))
 
 
 def _obligation_section_eligible(title: str, obligation: dict[str, Any]) -> bool:
@@ -386,6 +398,7 @@ def _quantity_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
         key_quantities = _string_list(card.get("key_quantities"))
         if not key_quantities:
             continue
+        claim_ids = [str(card.get("claim_id", ""))] if str(card.get("claim_id", "")).strip() else []
         obligations.append(
             _obligation(
                 obligation_id=f"quantity_card_{index:02d}",
@@ -395,11 +408,11 @@ def _quantity_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
                 statement=str(card.get("claim") or card.get("interpretation_hint") or "; ".join(key_quantities)).strip(),
                 search_terms=[*key_quantities[:6], str(card.get("source", "")), *_key_phrases(str(card.get("claim", "")))],
                 source_ids=[],
-                claim_ids=[str(card.get("claim_id", ""))] if str(card.get("claim_id", "")).strip() else [],
+                claim_ids=claim_ids,
                 relation_ids=[str(card.get("relation_id", ""))] if str(card.get("relation_id", "")).strip() else [],
                 quantity_ids=[str(card.get("card_id", ""))] if str(card.get("card_id", "")).strip() else [],
                 reason=str(card.get("interpretation_hint", "Quantitative evidence card should be considered for the main memo.")),
-                eligibility={"top_line_eligible": True, "appendix_only": False, "source": "quantity_card"},
+                eligibility=_eligibility_for_claim_ids(claim_ids, scaffold) or {"top_line_eligible": True, "appendix_only": False, "source": "quantity_card"},
             )
         )
     return obligations
@@ -414,7 +427,14 @@ def _evidence_family_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any
         by_family.setdefault(family, []).append(row)
     obligations: list[dict[str, Any]] = []
     for index, (family, family_rows) in enumerate(sorted(by_family.items()), start=1):
-        ranked = sorted(family_rows, key=lambda row: (-int(row.get("score", 0)), str(row.get("claim_id", ""))))
+        ranked = sorted(
+            family_rows,
+            key=lambda row: (
+                0 if _row_top_line_eligible(row) else 1 if _row_section_usable(row) else 2,
+                -int(row.get("score", 0)),
+                str(row.get("claim_id", "")),
+            ),
+        )
         row = ranked[0]
         obligations.append(
             _obligation(

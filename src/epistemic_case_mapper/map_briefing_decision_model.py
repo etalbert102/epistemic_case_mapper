@@ -151,6 +151,8 @@ def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict
         for slot in row.get("decision_slots", []):
             if slot not in slots:
                 continue
+            if not _row_allowed_for_decision_slot(row, slot):
+                continue
             value = _slot_value(slot, claim, vocabulary=vocabulary)
             if not value:
                 continue
@@ -167,6 +169,20 @@ def build_decision_slots(evidence_ledger: dict[str, Any]) -> dict[str, list[dict
             if not _slot_entry_exists(slots[slot], entry):
                 slots[slot].append(entry)
     return {slot: entries[:6] for slot, entries in slots.items()}
+
+
+def _row_allowed_for_decision_slot(row: dict[str, Any], slot: str) -> bool:
+    if row.get("appendix_only"):
+        return False
+    question_fit = row.get("question_fit", {}) if isinstance(row.get("question_fit"), dict) else {}
+    status = str(question_fit.get("status", ""))
+    if status == "mismatch":
+        return False
+    if status == "narrower_than_question":
+        return slot in {"high_risk_subgroup", "safety_or_risk"}
+    if slot in {"default_population", "practical_recommendation", "substitution_or_comparator"}:
+        return bool(row.get("top_line_eligible")) or status in {"fits", "uncertain", "not_supplied", ""}
+    return True
 
 def build_map_sufficiency_report(
     candidate_map: dict[str, Any],
@@ -420,6 +436,8 @@ def _slot_value_allowed(slot: str, value: str, claim: str) -> bool:
 
 def _looks_like_non_substantive_slot_text(text: str) -> bool:
     lowered = text.lower()
+    if "appendix-only extraction" in lowered or "consult the source before using it as evidence" in lowered:
+        return True
     if re.search(r"\b(?:privacy|cookie|linking|whistleblower|conflict of interest|editorial guidelines|terms of use)\s+policy\b", lowered):
         return True
     if re.search(r"\b(?:doi|pmid|pmcid|linkout|official website|https:// ensures|google scholar|crossref)\b", lowered):

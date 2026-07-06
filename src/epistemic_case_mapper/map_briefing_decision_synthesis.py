@@ -46,6 +46,7 @@ def _graph_evidence_lines(graph_packet: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(cluster, dict):
             continue
         representatives = [item for item in cluster.get("representative_claims", []) if isinstance(item, dict)]
+        representatives = [item for item in representatives if _usable_graph_claim(item)]
         if not representatives:
             continue
         label = str(cluster.get("label", "Issue cluster"))
@@ -85,6 +86,8 @@ def _graph_central_tensions(graph_packet: dict[str, Any]) -> list[dict[str, str]
             continue
         left = item.get("left", {}) if isinstance(item.get("left"), dict) else {}
         right = item.get("right", {}) if isinstance(item.get("right"), dict) else {}
+        if not (_usable_graph_claim(left) and _usable_graph_claim(right)):
+            continue
         left_claim = _sentence(str(left.get("claim", "")))
         right_claim = _sentence(str(right.get("claim", "")))
         if not left_claim or not right_claim:
@@ -98,6 +101,13 @@ def _graph_central_tensions(graph_packet: dict[str, Any]) -> list[dict[str, str]
             }
         )
     return _dedupe_dicts(tensions)[:4]
+
+
+def _usable_graph_claim(row: dict[str, Any]) -> bool:
+    if row.get("appendix_only"):
+        return False
+    question_fit = row.get("question_fit", {}) if isinstance(row.get("question_fit"), dict) else {}
+    return question_fit.get("status") not in {"mismatch", "narrower_than_question"}
 
 
 def _tension_label(left_claim: str, right_claim: str) -> str:
@@ -473,6 +483,11 @@ def _has_quantitative_specificity(text: str) -> bool:
 
 
 def _usable_evidence_row(row: dict[str, Any]) -> bool:
+    if row.get("appendix_only"):
+        return False
+    question_fit = row.get("question_fit", {}) if isinstance(row.get("question_fit"), dict) else {}
+    if question_fit.get("status") in {"mismatch", "narrower_than_question"}:
+        return False
     claim = str(row.get("claim", "")).strip()
     lowered = claim.lower()
     if len(claim) < 32:

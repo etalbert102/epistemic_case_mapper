@@ -713,6 +713,8 @@ def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any]
                 continue
             if sections and str(row.get("section", "")) not in sections:
                 continue
+            if not _row_allowed_for_memo_slot(row, spec):
+                continue
             if not _row_matches_memo_slot_direction(row, spec, vocabulary=vocabulary):
                 continue
             key = f"{row.get('source')}::{row.get('claim')}"
@@ -739,6 +741,8 @@ def _fallback_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any],
         if concepts and not row_concepts.intersection(concepts):
             continue
         if sections and str(row.get("section", "")) not in sections:
+            continue
+        if not _row_allowed_for_memo_slot(row, spec):
             continue
         clean = _reader_clean_evidence_row(row)
         quality = _reader_evidence_row_quality(row, vocabulary=vocabulary)
@@ -800,6 +804,24 @@ def _row_matches_memo_slot_direction(row: dict[str, Any], spec: dict[str, Any], 
         return _looks_like_support_evidence(claim, vocabulary=vocabulary) and not _looks_like_concern_evidence(claim, vocabulary=vocabulary)
     if slot_id == "hard_outcome_counter":
         return _looks_like_concern_evidence(claim, vocabulary=vocabulary)
+    return True
+
+
+def _row_allowed_for_memo_slot(row: dict[str, Any], spec: dict[str, Any]) -> bool:
+    if row.get("appendix_only"):
+        return False
+    eligibility = row.get("eligibility", {}) if isinstance(row.get("eligibility"), dict) else {}
+    if eligibility.get("appendix_only"):
+        return False
+    question_fit = row.get("question_fit", {}) if isinstance(row.get("question_fit"), dict) else {}
+    status = str(question_fit.get("status", ""))
+    if not status and isinstance(eligibility.get("question_fit"), dict):
+        status = str(eligibility["question_fit"].get("status", ""))
+    if status == "mismatch":
+        return False
+    slot_id = str(spec.get("slot_id", ""))
+    if status == "narrower_than_question":
+        return slot_id in {"high_risk_subgroup", "safety_or_risk", "scope_conditions"}
     return True
 
 

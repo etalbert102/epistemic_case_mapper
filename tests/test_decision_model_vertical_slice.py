@@ -108,6 +108,42 @@ def test_argument_model_preserves_load_bearing_anchors_and_quantities() -> None:
     assert validated.audit["method"] == "deterministic_argument_model_from_briefing_scaffold_v1"
 
 
+def test_argument_model_bounds_large_traceability_id_lists() -> None:
+    candidate_map = {
+        "case_id": "many_claims",
+        "question": "Should the city change the program?",
+        "sources": [{"source_id": "audit", "title": "Audit"}],
+        "claims": [
+            {
+                "claim_id": f"c{i:03d}",
+                "claim": f"Program evidence claim {i} bears on the decision.",
+                "source_id": "audit",
+                "role": "scope_limit",
+            }
+            for i in range(12)
+        ],
+        "relations": [],
+    }
+    scaffold = {
+        "confidence_cap": "medium",
+        "decision_model": {
+            "strongest_counterarguments": [
+                {
+                    "proposition": "The counterargument is supported by a broad cluster of claims.",
+                    "evidence_weight": "medium",
+                    "representative_claims": [{"claim_id": f"c{i:03d}"} for i in range(12)],
+                }
+            ]
+        },
+    }
+
+    model = build_argument_model(candidate_map, _quality_report(), scaffold, question="Should the city change the program?")
+
+    validated = ArgumentModelOutput.model_validate(model)
+    assert validated.strongest_counterarguments
+    assert len(validated.strongest_counterarguments[0].claim_ids) == 10
+
+
 def test_decision_model_brief_improves_crux_scope_visibility_without_unanchored_evidence() -> None:
     model = build_compact_decision_model(
         _arbitrary_candidate_map(),

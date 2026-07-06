@@ -52,7 +52,11 @@ def claim_eligibility_profile(
         scope_fit=scope_fit,
     )
     appendix_only = noise_severity == "high" or relevance <= 2
-    question_fit = question_alignment["status"] in {"strong", "not_supplied"} and scope_fit["status"] != "mismatch"
+    broad_question_fit = question_alignment["status"] in {"strong", "not_supplied"} and scope_fit["status"] not in {
+        "mismatch",
+        "narrower_than_question",
+    }
+    contextual_question_fit = question_alignment["status"] in {"strong", "not_supplied"} and scope_fit["status"] != "mismatch"
     if scope_fit["status"] == "mismatch":
         appendix_only = True
     section_eligibility = {
@@ -60,13 +64,13 @@ def claim_eligibility_profile(
             not appendix_only
             and section in {"main_support", "conflicting_evidence", "scope_limits"}
             and relevance >= 5
-            and question_fit
+            and broad_question_fit
         ),
-        "practical_read": not appendix_only and section in {"main_support", "scope_limits"} and relevance >= 4 and question_fit,
+        "practical_read": not appendix_only and section in {"main_support", "scope_limits"} and relevance >= 4 and broad_question_fit,
         "why_this_read": not appendix_only and relevance >= 3,
-        "evidence_carrying_conclusion": not appendix_only and relevance >= 3,
-        "scope_and_exceptions": not appendix_only and section == "scope_limits" and relevance >= 3 and question_fit,
-        "decision_cruxes": not appendix_only and section in {"main_support", "conflicting_evidence", "scope_limits"} and relevance >= 4 and question_fit,
+        "evidence_carrying_conclusion": not appendix_only and relevance >= 3 and broad_question_fit,
+        "scope_and_exceptions": not appendix_only and section == "scope_limits" and relevance >= 3 and contextual_question_fit,
+        "decision_cruxes": not appendix_only and section in {"main_support", "conflicting_evidence", "scope_limits"} and relevance >= 4 and broad_question_fit,
         "limits": noise_severity in {"medium", "high"} or section == "method_limits",
     }
     return {

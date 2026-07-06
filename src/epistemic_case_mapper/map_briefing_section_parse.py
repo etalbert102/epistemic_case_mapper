@@ -11,6 +11,8 @@ SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", flags=re.MULTILINE)
 
 
 def parse_section_payload(raw: str, *, expected_title: str = "") -> dict[str, Any] | None:
+    if _looks_like_section_prompt(raw.strip()):
+        return None
     payload = _json_payload(raw)
     if isinstance(payload, dict):
         markdown = _payload_markdown(payload)
@@ -42,9 +44,12 @@ def _payload_markdown(payload: dict[str, Any]) -> str:
 
 def _loose_payload_markdown(raw: str) -> str:
     cleaned = raw.strip()
-    fence = re.fullmatch(r"```(?:json)?\s*(.*?)```", cleaned, flags=re.DOTALL | re.IGNORECASE)
-    if fence:
-        cleaned = fence.group(1).strip()
+    if _looks_like_section_prompt(cleaned):
+        return ""
+    if _is_fenced_block(cleaned):
+        cleaned = _strip_fence_boundaries(cleaned).strip()
+    elif not cleaned.lstrip().startswith("{"):
+        return ""
     keys = "|".join(("section_markdown", "memo_markdown", "section", "markdown", "text", "content"))
     match = re.search(rf'"(?:{keys})"\s*:\s*"(?P<value>.*)"\s*}}\s*$', cleaned, flags=re.DOTALL)
     if not match:
@@ -78,5 +83,23 @@ def _heading_matches(markdown: str, expected_title: str) -> bool:
 
 def _strip_markdown_fence(text: str) -> str:
     cleaned = text.strip()
-    match = re.fullmatch(r"```(?:markdown|md)?\s*(.*?)```", cleaned, flags=re.DOTALL | re.IGNORECASE)
-    return match.group(1).strip() if match else cleaned
+    return _strip_fence_boundaries(cleaned).strip() if _is_fenced_block(cleaned) else cleaned
+
+
+def _looks_like_section_prompt(text: str) -> bool:
+    prefix = text[:3000]
+    return (
+        prefix.startswith("You are ")
+        and "Section contract:" in prefix
+    )
+
+
+def _is_fenced_block(text: str) -> bool:
+    return text.startswith("```") and text.endswith("```")
+
+
+def _strip_fence_boundaries(text: str) -> str:
+    lines = text.splitlines()
+    if len(lines) >= 2 and lines[0].startswith("```") and lines[-1].strip() == "```":
+        return "\n".join(lines[1:-1])
+    return text

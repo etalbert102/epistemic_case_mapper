@@ -50,6 +50,7 @@ def build_decision_ready_context_bundle(
         evidence_quality_report=quality,
         question=question,
     )
+    candidates = apply_map_eligibility_to_candidate_cards(candidates, scaffold)
     spine = build_memo_argument_spine(
         candidate_evidence_cards=candidates,
         source_sufficiency_report=sufficiency,
@@ -109,6 +110,60 @@ def build_source_map_reconciliation(candidate_map: dict[str, Any], source_eviden
         issues=[] if rows else ["no_claims_to_reconcile"],
     )
     return report.model_dump()
+
+
+def apply_map_eligibility_to_candidate_cards(
+    candidate_evidence_cards: dict[str, Any],
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
+    row_lookup = {
+        str(row.get("claim_id", "")): row
+        for row in ledger.get("all_evidence", [])
+        if isinstance(row, dict) and str(row.get("claim_id", "")).strip()
+    }
+    cards: list[dict[str, Any]] = []
+    for card in candidate_evidence_cards.get("cards", []) if isinstance(candidate_evidence_cards.get("cards"), list) else []:
+        if not isinstance(card, dict):
+            continue
+        cards.append(_candidate_card_with_map_eligibility(card, row_lookup))
+    updated = dict(candidate_evidence_cards)
+    updated["cards"] = cards
+    updated["main_text_count"] = sum(1 for card in cards if card.get("inclusion_recommendation") == "main_text")
+    updated["appendix_only_count"] = sum(1 for card in cards if card.get("inclusion_recommendation") == "appendix_only")
+    return updated
+
+
+def _candidate_card_with_map_eligibility(card: dict[str, Any], row_lookup: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    rows = [row_lookup[claim_id] for claim_id in _string_list(card.get("claim_ids")) if claim_id in row_lookup]
+    if not rows:
+        return card
+    updated = dict(card)
+    if any(row.get("appendix_only") for row in rows):
+        updated["inclusion_recommendation"] = "appendix_only"
+        updated["map_eligibility_reason"] = "underlying_map_claim_appendix_only"
+        return updated
+    statuses = {
+        str(_dict(row.get("question_fit")).get("status", ""))
+        for row in rows
+        if isinstance(row.get("question_fit"), dict)
+    }
+    updated["map_question_fit_statuses"] = sorted(status for status in statuses if status)
+    if "mismatch" in statuses:
+        updated["inclusion_recommendation"] = "appendix_only"
+        updated["map_eligibility_reason"] = "underlying_map_claim_question_mismatch"
+        return updated
+    if "narrower_than_question" in statuses and not any(bool(row.get("top_line_eligible")) for row in rows):
+        updated["role"] = "scope"
+        updated["section_candidates"] = ["Practical Scope and Exceptions", "Decision Cruxes", "Limits of the Current Map"]
+        if updated.get("inclusion_recommendation") == "main_text":
+            updated["inclusion_recommendation"] = "supporting_context"
+        updated["map_eligibility_reason"] = "narrower_scope_context_not_default_evidence"
+    return updated
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def build_candidate_evidence_cards(
@@ -258,7 +313,7 @@ def _section_reasoning(
     owned = _cards_for_section(title, groups)
     if title == "Decision Brief":
         owned = []
-    owned = _expand_to_budget(owned, all_cards, minimum=3, maximum=7) if owned else []
+    owned = _expand_to_budget(title, owned, all_cards, minimum=3, maximum=7) if owned else []
     refs = [card for card in all_cards if card not in owned][:4]
     status, exception = _section_status(title, owned, all_cards)
     return {
@@ -469,14 +524,19 @@ def _near_miss_card(card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _expand_to_budget(cards: list[dict[str, Any]], all_cards: list[dict[str, Any]], *, minimum: int, maximum: int) -> list[dict[str, Any]]:
+def _expand_to_budget(title: str, cards: list[dict[str, Any]], all_cards: list[dict[str, Any]], *, minimum: int, maximum: int) -> list[dict[str, Any]]:
     selected = _merge_cards(cards)
     for card in all_cards:
         if len(selected) >= minimum:
             break
-        if card not in selected:
+        if card not in selected and _card_allows_section(card, title):
             selected.append(card)
     return selected[:maximum]
+
+
+def _card_allows_section(card: dict[str, Any], title: str) -> bool:
+    candidates = _string_list(card.get("section_candidates"))
+    return not candidates or title in candidates
 
 
 def _merge_cards(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -25,10 +25,19 @@ from epistemic_case_mapper.model_backends import run_model_backend
 def expand_reader_map_references(text: str, candidate_map: dict[str, Any]) -> str:
     claim_lookup = _claim_alias_lookup(candidate_map)
     relation_lookup = _relation_alias_lookup(candidate_map, claim_lookup)
+    return _expand_reader_map_references_with_lookups(text, claim_lookup, relation_lookup)
+
+
+def _expand_reader_map_references_with_lookups(
+    text: str,
+    claim_lookup: dict[str, str],
+    relation_lookup: dict[str, str],
+) -> str:
+    known_short_ids = {key.lower() for key in (*claim_lookup, *relation_lookup)}
     expanded = text
     expanded = re.sub(
         r"\s*\(([cCrR]\d{3,})\)",
-        lambda match: "" if match.group(1).lower() in {key.lower() for key in (*claim_lookup, *relation_lookup)} else match.group(0),
+        lambda match: "" if match.group(1).lower() in known_short_ids else match.group(0),
         expanded,
     )
     expanded = _expand_claim_sentence_references(expanded, claim_lookup)
@@ -58,13 +67,23 @@ def expand_reader_map_references(text: str, candidate_map: dict[str, Any]) -> st
     )
 
 def _expand_payload_reader_references(value: Any, candidate_map: dict[str, Any]) -> Any:
+    claim_lookup = _claim_alias_lookup(candidate_map)
+    relation_lookup = _relation_alias_lookup(candidate_map, claim_lookup)
+    return _expand_payload_reader_references_with_lookups(value, claim_lookup, relation_lookup)
+
+
+def _expand_payload_reader_references_with_lookups(
+    value: Any,
+    claim_lookup: dict[str, str],
+    relation_lookup: dict[str, str],
+) -> Any:
     if isinstance(value, str):
-        return expand_reader_map_references(value, candidate_map)
+        return _expand_reader_map_references_with_lookups(value, claim_lookup, relation_lookup)
     if isinstance(value, list):
-        return [_expand_payload_reader_references(item, candidate_map) for item in value]
+        return [_expand_payload_reader_references_with_lookups(item, claim_lookup, relation_lookup) for item in value]
     if isinstance(value, dict):
         return {
-            key: item if key in _STRUCTURED_ID_FIELDS else _expand_payload_reader_references(item, candidate_map)
+            key: item if key in _STRUCTURED_ID_FIELDS else _expand_payload_reader_references_with_lookups(item, claim_lookup, relation_lookup)
             for key, item in value.items()
         }
     return value

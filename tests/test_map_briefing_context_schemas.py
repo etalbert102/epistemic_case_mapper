@@ -225,6 +225,73 @@ def test_model_section_packet_prefers_section_reasoning_cards() -> None:
     assert packet["do_not_use_cards"] == ["ec0099"]
 
 
+def test_context_bundle_routes_narrower_scope_cards_to_scope_sections() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c1",
+                "claim": "Moderate use improves the decision-relevant outcome in the default adult population.",
+                "source_id": "s1",
+                "source_span": "lines 1-2",
+                "excerpt": "Moderate use improves the decision-relevant outcome in the default adult population.",
+                "role": "conclusion_support",
+                "decision_relevance_score": 8,
+            },
+            {
+                "claim_id": "c2",
+                "claim": "High use increased risk in a narrower high-risk subgroup.",
+                "source_id": "s2",
+                "source_span": "lines 3-4",
+                "excerpt": "High use increased risk in a narrower high-risk subgroup.",
+                "role": "conflicting_evidence",
+                "decision_relevance_score": 9,
+            },
+        ]
+    }
+    scaffold = {
+        "map_sufficiency_report": {},
+        "evidence_weighting_ledger": {
+            "all_evidence": [
+                {
+                    "claim_id": "c1",
+                    "appendix_only": False,
+                    "top_line_eligible": True,
+                    "question_fit": {"status": "fits"},
+                },
+                {
+                    "claim_id": "c2",
+                    "appendix_only": False,
+                    "top_line_eligible": False,
+                    "question_fit": {"status": "narrower_than_question"},
+                },
+            ]
+        },
+    }
+
+    bundle = build_decision_ready_context_bundle(
+        candidate_map,
+        scaffold=scaffold,
+        question="Should moderate use be adopted for the default adult population?",
+        source_lookup={"s1": "Default Study", "s2": "Subgroup Study"},
+    )
+    cards = {card["claim_ids"][0]: card for card in bundle["candidate_evidence_cards"]["cards"]}
+
+    assert cards["c2"]["role"] == "scope"
+    assert "Evidence Carrying the Conclusion" not in cards["c2"]["section_candidates"]
+    scope_section = next(
+        section
+        for section in bundle["section_reasoning_cards"]["sections"]
+        if section["section"] == "Practical Scope and Exceptions"
+    )
+    evidence_section = next(
+        section
+        for section in bundle["section_reasoning_cards"]["sections"]
+        if section["section"] == "Evidence Carrying the Conclusion"
+    )
+    assert any("c2" in card.get("claim_ids", []) for card in scope_section["owned_cards"])
+    assert not any("c2" in card.get("claim_ids", []) for card in evidence_section["owned_cards"])
+
+
 def test_section_context_acceptance_requires_roles_and_reasons() -> None:
     report = build_section_context_acceptance_report(
         [

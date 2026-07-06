@@ -59,6 +59,19 @@ A scoped section.
         "section_markdown": "## Practical Scope and Exceptions\n\nA scoped section.\n- A bullet with a literal newline."
     }
 
+
+def test_section_parser_skips_large_prompt_backend_text_quickly() -> None:
+    raw = (
+        "You are an analyst producing decision-ready analysis for one section.\n"
+        "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
+        "Section contract:\n"
+        + ("x" * 120_000)
+        + "\n\nSection to rewrite:\n## Why This Read\n\nDraft text."
+    )
+
+    assert parse_section_payload(raw, expected_title="Why This Read") is None
+
+
 def test_section_model_attempts_retry_parse_failure() -> None:
     calls: list[str] = []
 
@@ -750,29 +763,20 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
         if prompt.startswith("You are an analyst producing decision-ready analysis") and section.startswith("## Evidence Carrying the Conclusion"):
             seen_prompt = prompt
-            return ModelBackendResult(
-                text=json.dumps({"section_markdown": "## Evidence Carrying the Conclusion\n\nThe answer follows from the source packet."}),
-                backend=backend,
-            )
+            return ModelBackendResult(text=json.dumps({"section_markdown": "## Evidence Carrying the Conclusion\n\nThe answer follows from the source packet."}), backend=backend)
         return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
 
-    result = rewrite_reader_memo_by_section(
-        memo,
-        appendix,
-        scaffold,
-        candidate_map,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-    )
+    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
 
     why_report = next(section for section in result["report"]["sections"] if section["title"] == "Evidence Carrying the Conclusion")
     assert "validation_obligations" in seen_prompt
     assert "required_main_memo_obligations" in seen_prompt
-    assert why_report["status"] == "rejected_fallback"
-    assert any("dropped required main-memo obligation" in issue for issue in why_report["issues"])
+    assert why_report["status"] == "accepted_structured_fallback"
+    first_attempt = why_report["attempts"][0]
+    assert first_attempt["status"] == "rejected"
+    assert any("dropped required main-memo obligation" in issue for issue in first_attempt["issues"])
 
 
 def test_section_rewrite_generates_decision_brief_last_with_model_bluf(monkeypatch) -> None:

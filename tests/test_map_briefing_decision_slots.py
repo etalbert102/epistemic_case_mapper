@@ -179,6 +179,36 @@ def test_slot_extraction_recognizes_population_and_comparator_without_verbs() ->
     assert slots["substitution_or_comparator"]
 
 
+def test_decision_slots_keep_narrower_subgroups_out_of_default_slots() -> None:
+    ledger = {
+        "all_evidence": [
+            {
+                "claim_id": "c001",
+                "claim": "The effect was stronger in people with a high-risk condition.",
+                "source": "Subgroup Study",
+                "weight": "high",
+                "score": 9,
+                "appendix_only": False,
+                "top_line_eligible": False,
+                "question_fit": {"status": "narrower_than_question"},
+                "decision_slots": [
+                    "default_population",
+                    "high_risk_subgroup",
+                    "substitution_or_comparator",
+                    "safety_or_risk",
+                ],
+            }
+        ]
+    }
+
+    slots = build_decision_slots(ledger)
+
+    assert slots["default_population"] == []
+    assert slots["substitution_or_comparator"] == []
+    assert slots["high_risk_subgroup"]
+    assert slots["safety_or_risk"]
+
+
 def test_evidence_weighting_marks_noise_and_weak_question_alignment_not_top_line() -> None:
     candidate_map = {
         "claims": [
@@ -700,6 +730,24 @@ def test_map_sufficiency_report_tracks_present_and_missing_decision_contract() -
     assert "substitution_or_comparator" in report["missing_expected_decision_slots"]
     assert any(item["kind"] == "acknowledge_missing_slot" for item in report["output_obligations"])
     assert report["status"] == "usable_with_named_gaps"
+
+
+def test_decision_slots_ignore_appendix_only_extraction_placeholder_values() -> None:
+    ledger = {
+        "profile_id": "default",
+        "all_evidence": [
+            {
+                "claim_id": "c001",
+                "claim": "Appendix-only extraction with malformed or fragmentary prose; consult the source before using it as evidence.",
+                "decision_slots": ["setting_or_context"],
+                "score": 10,
+            }
+        ],
+    }
+
+    slots = build_decision_slots(ledger)
+
+    assert slots["setting_or_context"] == []
 
 
 def test_briefing_validation_checks_sufficiency_obligations() -> None:

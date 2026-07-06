@@ -116,7 +116,8 @@ def _issue_clusters(
     clusters: list[dict[str, Any]] = []
     for community_id, claim_ids in grouped.items():
         ranked_ids = sorted(claim_ids, key=lambda claim_id: _cluster_claim_rank(graph, claim_id, row_lookup))
-        representatives = [_claim_packet(claim_lookup[claim_id], row_lookup, source_lookup) for claim_id in ranked_ids[:4] if claim_id in claim_lookup]
+        representative_ids = _representative_claim_ids(ranked_ids, row_lookup)
+        representatives = [_claim_packet(claim_lookup[claim_id], row_lookup, source_lookup) for claim_id in representative_ids if claim_id in claim_lookup]
         if not representatives:
             continue
         cluster_edges = _cluster_edges(graph, set(claim_ids))
@@ -192,6 +193,8 @@ def _bridge_claims(
         neighbor_clusters.discard(None)
         if len(neighbor_clusters) < 2 and metrics["betweenness"].get(claim_id, 0.0) <= 0:
             continue
+        if not _row_synthesis_eligible(row_lookup.get(claim_id, {})):
+            continue
         packet = _claim_packet(claim, row_lookup, source_lookup)
         packet.update(
             {
@@ -216,6 +219,8 @@ def _load_bearing_claims(
     rows: list[dict[str, Any]] = []
     for claim_id, claim in claim_lookup.items():
         if graph.degree(claim_id) == 0 and claim_id not in row_lookup:
+            continue
+        if not _row_synthesis_eligible(row_lookup.get(claim_id, {})):
             continue
         packet = _claim_packet(claim, row_lookup, source_lookup)
         packet.update(
@@ -294,6 +299,9 @@ def _claim_packet(claim: dict[str, Any], row_lookup: dict[str, dict[str, Any]], 
         "section": str(row.get("section", "")),
         "evidence_family": str(row.get("evidence_family", "general_evidence")),
         "decision_concepts": [str(item) for item in row.get("decision_concepts", []) if isinstance(item, str)][:5],
+        "top_line_eligible": bool(row.get("top_line_eligible")),
+        "appendix_only": bool(row.get("appendix_only")),
+        "question_fit": row.get("question_fit", {}),
     }
 
 
@@ -325,9 +333,32 @@ def _cluster_edges(graph: nx.Graph, claim_ids: set[str]) -> list[tuple[str, str,
     return [(left, right, data) for left, right, data in graph.edges(data=True) if left in claim_ids and right in claim_ids]
 
 
-def _cluster_claim_rank(graph: nx.Graph, claim_id: str, row_lookup: dict[str, dict[str, Any]]) -> tuple[int, float, str]:
+def _cluster_claim_rank(graph: nx.Graph, claim_id: str, row_lookup: dict[str, dict[str, Any]]) -> tuple[int, int, float, str]:
     row = row_lookup.get(claim_id, {})
-    return (-_weight_rank(str(row.get("weight", "medium"))), -float(graph.degree(claim_id, weight="weight")), claim_id)
+    return (
+        0 if _row_top_line_eligible(row) else 1 if _row_synthesis_eligible(row) else 2,
+        -_weight_rank(str(row.get("weight", "medium"))),
+        -float(graph.degree(claim_id, weight="weight")),
+        claim_id,
+    )
+
+
+def _representative_claim_ids(ranked_ids: list[str], row_lookup: dict[str, dict[str, Any]]) -> list[str]:
+    preferred = [claim_id for claim_id in ranked_ids if _row_top_line_eligible(row_lookup.get(claim_id, {}))]
+    if not preferred:
+        preferred = [claim_id for claim_id in ranked_ids if _row_synthesis_eligible(row_lookup.get(claim_id, {}))]
+    return (preferred or ranked_ids)[:4]
+
+
+def _row_top_line_eligible(row: dict[str, Any]) -> bool:
+    return _row_synthesis_eligible(row) and bool(row.get("top_line_eligible"))
+
+
+def _row_synthesis_eligible(row: dict[str, Any]) -> bool:
+    if not row:
+        return True
+    question_fit = row.get("question_fit", {}) if isinstance(row.get("question_fit"), dict) else {}
+    return not bool(row.get("appendix_only")) and question_fit.get("status") not in {"mismatch", "narrower_than_question"}
 
 
 def _cluster_sources(claim_ids: list[str], claim_lookup: dict[str, dict[str, Any]], source_lookup: dict[str, str]) -> list[str]:

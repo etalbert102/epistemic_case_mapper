@@ -323,6 +323,47 @@ def test_graph_synthesis_packet_extracts_generic_network_structure() -> None:
     assert "relation marks" not in serialized
 
 
+def test_graph_synthesis_does_not_promote_narrower_scope_representatives() -> None:
+    candidate_map = {
+        "claims": [
+            _claim("c001", "The option helps the default adult population in the target decision.", "default", "conclusion_support"),
+            _claim("c002", "The option showed a stronger effect only in a narrower high-risk subgroup.", "subgroup", "conclusion_support"),
+            _claim("c003", "The subgroup finding is connected to several mechanism claims.", "mechanism", "crux"),
+        ],
+        "relations": [
+            _relation("r001", "c002", "c001", "supports"),
+            _relation("r002", "c003", "c002", "supports"),
+        ],
+    }
+    default_row = _row("c001", "The option helps the default adult population in the target decision.", "medium", "cohort_or_observational")
+    default_row["top_line_eligible"] = True
+    default_row["appendix_only"] = False
+    default_row["question_fit"] = {"status": "fits"}
+    subgroup_row = _row("c002", "The option showed a stronger effect only in a narrower high-risk subgroup.", "high", "cohort_or_observational")
+    subgroup_row["top_line_eligible"] = False
+    subgroup_row["appendix_only"] = False
+    subgroup_row["question_fit"] = {"status": "narrower_than_question"}
+    mechanism_row = _row("c003", "The subgroup finding is connected to several mechanism claims.", "high", "mechanism_or_biomarker")
+    mechanism_row["top_line_eligible"] = False
+    mechanism_row["appendix_only"] = False
+    mechanism_row["question_fit"] = {"status": "narrower_than_question"}
+    scaffold = {
+        "evidence_weighting_ledger": {"all_evidence": [default_row, subgroup_row, mechanism_row]},
+        "decision_model": {"default_answer": {"classification": "conditional", "confidence_cap": "medium"}},
+        "graph_synthesis_packet": build_graph_synthesis_packet(
+            candidate_map,
+            {"all_evidence": [default_row, subgroup_row, mechanism_row]},
+            {"default": "Default Study", "subgroup": "Subgroup Study", "mechanism": "Mechanism Study"},
+        ),
+    }
+
+    synthesis = build_decision_synthesis_model(scaffold)
+    serialized = json.dumps(synthesis["evidence_lines"]).lower()
+
+    assert "default adult population" in serialized
+    assert "narrower high-risk subgroup" not in serialized
+
+
 def test_decision_synthesis_builds_decision_changing_cruxes_from_graph_tensions() -> None:
     candidate_map = annotate_map_with_evidence_slots(
         {

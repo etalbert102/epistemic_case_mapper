@@ -98,7 +98,7 @@ def _counter_items(
                         evidence_type=_evidence_type_from_text(str(row)),
                         endpoint_type=_endpoint_type_from_text(str(row)),
                         weight=_weight(str(row.get("evidence_weight", "medium"))),
-                        claim_ids=claim_ids,
+                        claim_ids=_bounded_ids(claim_ids),
                         source_ids=_source_ids(claim_ids, claim_lookup),
                     )
                 )
@@ -133,7 +133,7 @@ def _quantity_items(scaffold: dict[str, Any]) -> list[ArgumentEvidenceItem]:
                 claim_ids=[claim_id] if claim_id else [],
                 relation_ids=[str(card.get("relation_id"))] if str(card.get("relation_id", "")).strip() else [],
                 quantity_ids=[str(card.get("card_id", ""))] if str(card.get("card_id", "")).strip() else [],
-                quantities=quantities,
+                quantities=quantities[:10],
             )
         )
     return _dedupe_items(items)[:8]
@@ -167,7 +167,7 @@ def _scope_items(
                         why_it_matters="Scope boundary from the decision model.",
                         evidence_type=_evidence_type_from_text(text),
                         endpoint_type=_endpoint_type_from_text(text),
-                        claim_ids=claim_ids,
+                        claim_ids=_bounded_ids(claim_ids),
                         source_ids=_source_ids(claim_ids, claim_lookup),
                     )
                 )
@@ -209,8 +209,8 @@ def _crux_items(
                         why_it_matters=str(crux.get("why_it_matters", "")).strip(),
                         evidence_type="decision_crux",
                         endpoint_type=_endpoint_type_from_text(str(crux)),
-                        claim_ids=[str(claim_id) for claim_id in claim_ids],
-                        relation_ids=[str(relation_id) for relation_id in relation_ids],
+                        claim_ids=_bounded_ids([str(claim_id) for claim_id in claim_ids]),
+                        relation_ids=_bounded_ids([str(relation_id) for relation_id in relation_ids]),
                         source_ids=_source_ids([str(claim_id) for claim_id in claim_ids], claim_lookup),
                     )
                 )
@@ -279,7 +279,7 @@ def _item_from_evidence_row(row: dict[str, Any], claim_lookup: dict[str, dict[st
         endpoint_type=_endpoint_type_from_text(text),
         weight=_weight(str(row.get("weight", "medium"))),
         source_ids=_source_ids(claim_ids, claim_lookup),
-        claim_ids=claim_ids,
+        claim_ids=_bounded_ids(claim_ids),
         limitations=_row_limitations(row),
     )
 
@@ -291,7 +291,7 @@ def _claim_ids_from_cluster(row: dict[str, Any], claim_lookup: dict[str, dict[st
             claim_id = str(claim.get("claim_id", "")).strip()
             if claim_id in claim_lookup:
                 claim_ids.append(claim_id)
-    return _dedupe(claim_ids)
+    return _bounded_ids(claim_ids)
 
 
 def _claim_ids_from_text(text: str, claim_lookup: dict[str, dict[str, Any]]) -> list[str]:
@@ -301,11 +301,11 @@ def _claim_ids_from_text(text: str, claim_lookup: dict[str, dict[str, Any]]) -> 
         claim_text = _normalize(str(claim.get("claim") or claim.get("text") or ""))
         if claim_text and (claim_text in normalized or normalized in claim_text):
             matches.append(claim_id)
-    return _dedupe(matches)
+    return _bounded_ids(matches)
 
 
 def _source_ids(claim_ids: list[str], claim_lookup: dict[str, dict[str, Any]]) -> list[str]:
-    return _dedupe([str(claim_lookup.get(claim_id, {}).get("source_id", "")).strip() for claim_id in claim_ids])
+    return _bounded_ids([str(claim_lookup.get(claim_id, {}).get("source_id", "")).strip() for claim_id in claim_ids])
 
 
 def _claim_text(claim_id: str, claim_lookup: dict[str, dict[str, Any]]) -> str:
@@ -400,6 +400,10 @@ def _dedupe(values: list[str]) -> list[str]:
             seen.add(cleaned)
             result.append(cleaned)
     return result
+
+
+def _bounded_ids(values: list[str], *, limit: int = 10) -> list[str]:
+    return _dedupe(values)[:limit]
 
 
 def _dedupe_items(items: list[ArgumentEvidenceItem]) -> list[ArgumentEvidenceItem]:

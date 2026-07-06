@@ -400,13 +400,14 @@ def _briefing_overclaims_against_scaffold(rendered: str, scaffold: dict[str, Any
 
 def _briefing_evidence_fit_issues(rendered: str, evidence_ledger: dict[str, Any], candidate_map: dict[str, Any]) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
+    reliance_text = _main_memo_reliance_text(rendered)
     rows = [row for row in evidence_ledger.get("all_evidence", []) if isinstance(row, dict)]
     mismatch_rows = [
         row
         for row in rows
         if isinstance(row.get("question_fit"), dict)
         and row["question_fit"].get("status") == "mismatch"
-        and _rendered_mentions_any_slot_value(rendered, [str(row.get("claim", ""))])
+        and _rendered_mentions_specific_evidence(reliance_text, str(row.get("claim", "")))
     ]
     if mismatch_rows:
         issues.append(
@@ -421,7 +422,7 @@ def _briefing_evidence_fit_issues(rendered: str, evidence_ledger: dict[str, Any]
         for row in rows
         if row.get("appendix_only")
         and row.get("section") in {"main_support", "conflicting_evidence"}
-        and _rendered_mentions_any_slot_value(rendered, [str(row.get("claim", ""))])
+        and _rendered_mentions_specific_evidence(reliance_text, str(row.get("claim", "")))
     ]
     if appendix_rows:
         issues.append(
@@ -443,6 +444,60 @@ def _briefing_evidence_fit_issues(rendered: str, evidence_ledger: dict[str, Any]
             }
         )
     return issues
+
+def _main_memo_reliance_text(rendered: str) -> str:
+    before_appendix = re.split(r"\n##\s+Evidence Appendix\b", rendered, maxsplit=1, flags=re.IGNORECASE)[0]
+    sections: list[str] = []
+    for title in ("Decision Brief", "Why This Read", "Evidence Carrying the Conclusion"):
+        match = re.search(
+            rf"(^##\s+{re.escape(title)}\s*$.*?)(?=^##\s+|\Z)",
+            before_appendix,
+            flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+        )
+        if match:
+            sections.append(match.group(1))
+    return "\n\n".join(sections) if sections else before_appendix
+
+def _rendered_mentions_specific_evidence(rendered: str, claim: str) -> bool:
+    normalized = re.sub(r"\s+", " ", rendered.lower())
+    claim_norm = re.sub(r"\s+", " ", claim.lower()).strip()
+    if len(claim_norm) >= 24 and claim_norm in normalized:
+        return True
+    if any(phrase in normalized for phrase in _distinctive_evidence_phrases(claim_norm)):
+        return True
+    terms = _distinctive_evidence_terms(claim_norm)
+    if len(terms) < 6:
+        return False
+    overlap = sum(1 for term in terms if term in normalized)
+    return overlap >= max(6, int(len(terms) * 0.85))
+
+def _distinctive_evidence_phrases(text: str) -> list[str]:
+    terms = _distinctive_evidence_terms(text)
+    phrases: list[str] = []
+    for index in range(0, max(0, len(terms) - 3)):
+        phrase = " ".join(terms[index : index + 4])
+        if len(phrase) >= 24:
+            phrases.append(phrase)
+    return phrases[:8]
+
+def _distinctive_evidence_terms(text: str) -> list[str]:
+    generic = {
+        "associated",
+        "association",
+        "cardiovascular",
+        "consumption",
+        "disease",
+        "evidence",
+        "higher",
+        "intake",
+        "lower",
+        "moderate",
+        "people",
+        "reported",
+        "risk",
+        "study",
+    }
+    return [term for term in _content_terms(text) if term not in generic]
 
 def _rel(repo_root: Path, path: Path) -> str:
     try:
