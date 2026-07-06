@@ -71,6 +71,109 @@ The language is awkward and awkwardly repeated.
     assert result["skipped_edits"][0]["reason"] == "target text was not found exactly"
 
 
+def test_apply_reader_memo_edit_suggestions_rejects_protected_span_edits() -> None:
+    memo = """## Decision Brief
+
+Decision question: Should this be used?
+
+The answer is cautious.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "Decision question: Should this be used?",
+                "replacement": "Decision question: Should this be avoided?",
+                "reason": "Do not allow question edits.",
+                "edit_type": "tighten_bluf",
+            }
+        ]
+    }
+    protected = {
+        "spans": [
+            {"kind": "decision_question", "text": "Should this be used?"},
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(memo, payload, protected_spans=protected, allowed_edit_types={"tighten_bluf"})
+
+    assert result["applied_edits"] == []
+    assert result["skipped_edits"][0]["reason"] == "edit touches protected memo content"
+    assert "Should this be avoided" not in result["memo"]
+
+
+def test_apply_reader_memo_edit_suggestions_rejects_new_numbers_and_sources() -> None:
+    memo = """## Practical Read
+
+This is a practical sentence.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "This is a practical sentence.",
+                "replacement": "This is a practical sentence at 10 mg (Source A).",
+                "reason": "Would add unsupported specifics.",
+                "edit_type": "smooth_transition",
+            }
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(memo, payload, allowed_edit_types={"smooth_transition"})
+
+    assert result["applied_edits"] == []
+    assert result["skipped_edits"][0]["reason"] == "edit changes or introduces protected numbers"
+
+
+def test_apply_reader_memo_edit_suggestions_records_typed_metadata() -> None:
+    memo = """## Practical Read
+
+This section begins awkwardly.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "This section begins awkwardly.",
+                "replacement": "This section opens directly.",
+                "reason": "Smoother local prose.",
+                "target_section": "Practical Read",
+                "edit_type": "smooth_transition",
+            }
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(
+        memo,
+        payload,
+        allowed_edit_types={"smooth_transition"},
+        pass_name="prose",
+    )
+
+    assert result["applied_edits"][0]["target_section"] == "Practical Read"
+    assert result["applied_edits"][0]["edit_type"] == "smooth_transition"
+    assert result["applied_edits"][0]["pass"] == "prose"
+    assert result["pass"] == "prose"
+
+
+def test_apply_reader_memo_edit_suggestions_rejects_wrong_pass_edit_type() -> None:
+    memo = """## Practical Read
+
+This section begins awkwardly.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "This section begins awkwardly.",
+                "replacement": "This section opens directly.",
+                "edit_type": "tighten_bluf",
+            }
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(memo, payload, allowed_edit_types={"smooth_transition"})
+
+    assert result["applied_edits"] == []
+    assert result["skipped_edits"][0]["reason"] == "edit_type is not allowed for this pass"
+
+
 def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
     memo = _long_memo()
     appendix = "## Evidence Appendix\n\nThe source supports the read."
