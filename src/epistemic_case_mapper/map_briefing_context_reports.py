@@ -7,6 +7,8 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_context_schemas import (
     EvidenceQualityReport,
+    SectionContextAcceptanceReport,
+    SectionContextAcceptanceRow,
     SourceEvidenceCardReport,
     SourceSufficiencyReport,
 )
@@ -134,6 +136,27 @@ def build_evidence_quality_report(source_evidence_cards: dict[str, Any]) -> dict
     return report.model_dump()
 
 
+def build_section_context_acceptance_report(section_packets: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[SectionContextAcceptanceRow] = []
+    for packet in section_packets:
+        if not isinstance(packet, dict):
+            continue
+        row = _section_context_row(packet)
+        rows.append(row)
+    if any(row.status == "not_synthesis_ready" for row in rows):
+        status = "not_synthesis_ready"
+    elif any(row.status == "warning" for row in rows):
+        status = "warning"
+    else:
+        status = "ready"
+    report = SectionContextAcceptanceReport(
+        status=status,
+        sections=rows,
+        issues=[issue for row in rows for issue in row.issues],
+    )
+    return report.model_dump()
+
+
 def _quality_component(card: dict[str, Any]) -> dict[str, Any]:
     relevance = _int_value(card.get("decision_relevance_score"))
     anchor = str(card.get("anchor_confidence") or "missing")
@@ -162,6 +185,114 @@ def _quality_component(card: dict[str, Any]) -> dict[str, Any]:
         "limitations": limitations,
         "overall": overall,
     }
+
+
+def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
+    title = str(packet.get("title", "")).strip() or "Untitled Section"
+    model_packet = packet.get("model_packet", {}) if isinstance(packet.get("model_packet"), dict) else {}
+    raw_packet = packet.get("packet", {}) if isinstance(packet.get("packet"), dict) else {}
+    owned = [row for row in model_packet.get("owned_evidence", []) if isinstance(row, dict)]
+    obligations = [
+        row for row in raw_packet.get("required_main_memo_obligations", []) if isinstance(row, dict)
+    ]
+    cruxes = [row for row in model_packet.get("canonical_cruxes", []) if isinstance(row, dict)]
+    quantities = [row for row in model_packet.get("must_include_quantities", []) if isinstance(row, dict)]
+    substantive = _is_substantive_section(title)
+    issues: list[str] = []
+    if substantive and not str(model_packet.get("section_thesis", "")).strip() and not str(packet.get("section_job", "")).strip():
+        issues.append(f"{title}: missing section decision move")
+    if substantive and not (owned or cruxes or quantities or obligations):
+        issues.append(f"{title}: no owned source-backed context or explicit substitute")
+    missing_roles = [
+        str(row.get("claim", ""))[:80]
+        for row in owned
+        if not str(row.get("intended_role", "")).strip()
+    ]
+    if missing_roles:
+        issues.append(f"{title}: owned cards missing intended_role")
+    missing_reasons = [
+        str(row.get("claim", ""))[:80]
+        for row in owned
+        if not str(row.get("reason_for_inclusion", "")).strip()
+    ]
+    if missing_reasons:
+        issues.append(f"{title}: owned cards missing reason_for_inclusion")
+    count = len(owned)
+    if not substantive or count == 0 and (cruxes or quantities or obligations):
+        budget_status = "justified_exception"
+    elif count < 3:
+        budget_status = "under_budget"
+        if substantive:
+            issues.append(f"{title}: owned card count below default budget")
+    elif count > 7:
+        budget_status = "over_budget"
+        issues.append(f"{title}: owned card count above default budget")
+    else:
+        budget_status = "within_budget"
+    context_risk = "high" if any("no owned" in issue or "missing section" in issue for issue in issues) else "medium" if issues else "low"
+    status = "not_synthesis_ready" if context_risk == "high" else "warning" if issues else "ready"
+    can_answer = _section_can_answer(title, model_packet, owned, cruxes, quantities, obligations)
+    missing_context = [
+        issue.split(": ", 1)[1]
+        for issue in issues
+        if ": " in issue
+    ]
+    return SectionContextAcceptanceRow(
+        section=title,
+        status=status,
+        owned_card_count=count,
+        card_budget_status=budget_status,
+        this_section_can_answer=can_answer,
+        because=_because_for_section(owned, cruxes, quantities, obligations),
+        missing_context=missing_context,
+        context_risk_level=context_risk,
+        issues=issues,
+    )
+
+
+def _is_substantive_section(title: str) -> bool:
+    lowered = title.strip().lower()
+    return lowered not in {"sources", "evidence trail"} and "appendix" not in lowered
+
+
+def _section_can_answer(
+    title: str,
+    model_packet: dict[str, Any],
+    owned: list[dict[str, Any]],
+    cruxes: list[dict[str, Any]],
+    quantities: list[dict[str, Any]],
+    obligations: list[dict[str, Any]],
+) -> str:
+    thesis = str(model_packet.get("section_thesis", "")).strip()
+    if thesis:
+        return thesis
+    if owned:
+        return f"{title} can explain its owned evidence."
+    if cruxes:
+        return f"{title} can summarize decision-changing cruxes."
+    if quantities:
+        return f"{title} can carry assigned quantitative anchors."
+    if obligations:
+        return f"{title} can satisfy assigned memo obligations."
+    return ""
+
+
+def _because_for_section(
+    owned: list[dict[str, Any]],
+    cruxes: list[dict[str, Any]],
+    quantities: list[dict[str, Any]],
+    obligations: list[dict[str, Any]],
+) -> str:
+    parts: list[str] = []
+    if owned:
+        parts.append(f"{len(owned)} owned evidence card(s)")
+    if cruxes:
+        parts.append(f"{len(cruxes)} crux item(s)")
+    if quantities:
+        parts.append(f"{len(quantities)} quantitative anchor(s)")
+    if obligations:
+        parts.append(f"{len(obligations)} memo obligation(s)")
+    return ", ".join(parts)
 
 
 def _generic_missing_categories(
@@ -343,4 +474,3 @@ def _shorten(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: max(0, limit - 1)].rstrip() + "…"
-

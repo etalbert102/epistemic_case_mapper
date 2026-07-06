@@ -284,6 +284,7 @@ def write_final_review_packet(
         f"- Decision traceability matrix: `{_rel(repo_root, scaffold_paths.get('decision_traceability_matrix'))}`",
         f"- Final traceability check: `{_rel(repo_root, final_outputs['summary_paths'].get('decision_traceability_matrix_final'))}`",
         f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
+        f"- Section context acceptance: `{_rel(repo_root, final_outputs['summary_paths'].get('section_context_acceptance_report'))}`",
         f"- Model context audit: `{_rel(repo_root, final_outputs['summary_paths'].get('model_context_audit'))}`",
         f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",
         f"- Main memo obligation ledger: `{_rel(repo_root, telemetry_paths.get('main_memo_obligation_ledger'))}`",
@@ -381,6 +382,7 @@ def map_briefing_summary_payload(
     source_cards = scaffold.get("source_evidence_cards", {}) if isinstance(scaffold.get("source_evidence_cards"), dict) else {}
     source_sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
     evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
+    section_acceptance_status = rewrite_result["report"].get("section_context_acceptance_status")
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
@@ -425,6 +427,7 @@ def map_briefing_summary_payload(
         "briefing_polish_status": polish_report.get("status"),
         "briefing_polish_score": polish_report.get("score"),
         "reader_memo_rewrite_status": rewrite_result["report"].get("status"),
+        "section_context_acceptance_status": section_acceptance_status,
         "global_memo_plan_status": global_plan.get("status"),
         "global_memo_plan_method": global_plan.get("method"),
         "global_memo_plan_validation_status": global_plan_validation.get("status"),

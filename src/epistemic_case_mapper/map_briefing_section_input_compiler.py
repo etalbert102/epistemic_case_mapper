@@ -163,11 +163,37 @@ def _owned_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
                     "claim": claim,
                     "source": row.get("source"),
                     "anchor_terms": _string_list(row.get("anchor_terms"))[:6],
+                    "intended_role": _intended_role(row),
+                    "reason_for_inclusion": _reason_for_inclusion(row),
                     "use": "This section may explain this evidence fully.",
                 }
             )
         )
     return compact[:5]
+
+
+def _intended_role(row: dict[str, Any]) -> str:
+    slot = str(row.get("slot") or row.get("section") or row.get("evidence_role") or "").lower()
+    if any(term in slot for term in ("counter", "conflict", "tension", "challenge")):
+        return "counterweight"
+    if any(term in slot for term in ("scope", "limit", "exception", "boundary")):
+        return "scope boundary"
+    if any(term in slot for term in ("quant", "effect", "estimate", "anchor")):
+        return "quantitative anchor"
+    if any(term in slot for term in ("practical", "recommend", "action")):
+        return "practical implication"
+    if any(term in slot for term in ("confidence", "uncertain", "method")):
+        return "uncertainty/confidence driver"
+    return "support"
+
+
+def _reason_for_inclusion(row: dict[str, Any]) -> str:
+    slot = str(row.get("slot") or "owned evidence").strip()
+    source = str(row.get("source") or "").strip()
+    reason = f"This card is assigned to this section as {slot}."
+    if source:
+        reason += f" It is anchored to {source}."
+    return reason
 
 
 def _reference_only_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:

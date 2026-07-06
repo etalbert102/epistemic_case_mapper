@@ -370,6 +370,9 @@ def _write_final_reader_outputs(
         if run_reader_memo_rewrite
         else _skipped_reader_memo_rewrite(section_memo)
     )
+    rewrite_result.setdefault("report", {})["section_context_acceptance_status"] = section_rewrite_result.get("report", {}).get(
+        "section_context_acceptance_status"
+    )
     if rewrite_result.get("prompt"):
         write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
     if rewrite_result.get("raw"):
@@ -415,6 +418,7 @@ def _write_final_reader_outputs(
             "evidence_curation_report": curation_report_path,
             "section_rewrite_report": section_rewrite_report_path,
             "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
+            "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),
             "decision_traceability_matrix_final": final_traceability_path,
             "decision_traceability_matrix_final_markdown": final_traceability_md_path,
             "reader_memo_rewrite_report": rewrite_report_path,

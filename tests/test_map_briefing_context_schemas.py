@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
 )
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
+    build_section_context_acceptance_report,
     build_source_evidence_cards,
     build_source_sufficiency_report,
 )
@@ -118,3 +119,50 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
     assert quality["schema_id"] == "evidence_quality_report_v1"
     assert quality["card_count"] == 2
     assert quality["quality_components"]["sc0001"]["directness"] == "direct"
+
+
+def test_section_context_acceptance_requires_roles_and_reasons() -> None:
+    report = build_section_context_acceptance_report(
+        [
+            {
+                "title": "Evidence Carrying the Conclusion",
+                "section_job": "Explain the main evidence.",
+                "model_packet": {
+                    "section_thesis": "The section can explain the main evidence.",
+                    "owned_evidence": [
+                        {
+                            "claim": "Claim one.",
+                            "source": "Source",
+                            "intended_role": "support",
+                            "reason_for_inclusion": "This is the section's support card.",
+                        },
+                        {
+                            "claim": "Claim two.",
+                            "source": "Source",
+                            "intended_role": "counterweight",
+                            "reason_for_inclusion": "This is the section's counterweight card.",
+                        },
+                        {
+                            "claim": "Claim three.",
+                            "source": "Source",
+                            "intended_role": "scope boundary",
+                            "reason_for_inclusion": "This is the section's scope card.",
+                        },
+                    ],
+                },
+                "packet": {},
+            },
+            {
+                "title": "Why This Read",
+                "section_job": "Explain the read.",
+                "model_packet": {"owned_evidence": [{"claim": "Unexplained claim."}]},
+                "packet": {},
+            },
+        ]
+    )
+
+    assert report["schema_id"] == "section_context_acceptance_report_v1"
+    assert report["status"] == "warning"
+    assert report["sections"][0]["status"] == "ready"
+    assert report["sections"][1]["card_budget_status"] == "under_budget"
+    assert any("missing intended_role" in issue for issue in report["sections"][1]["issues"])

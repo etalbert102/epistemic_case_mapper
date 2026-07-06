@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_context_reports import build_section_context_acceptance_report
 from epistemic_case_mapper.main_memo_obligations import (
     build_main_memo_obligation_plan,
     first_top_line_obligation,
@@ -86,13 +87,23 @@ def rewrite_reader_memo_by_section(
     }
     if backend.strip() == "prompt":
         section_packets = _report_only_section_packets(sections, contract)
+        context_acceptance_report = build_section_context_acceptance_report(section_packets)
         report["status"] = "skipped_prompt_backend"
         report["section_packet_count"] = len(section_packets)
         section_packet_path = None
+        section_context_acceptance_report_path = None
         if artifacts is not None:
             section_packet_path = write_section_packets_artifact(artifacts, section_packets)
+            section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
             report["section_packets_path"] = str(section_packet_path)
-        return {"memo": memo, "report": report, "section_packets_path": section_packet_path}
+            report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
+        report["section_context_acceptance_status"] = context_acceptance_report.get("status")
+        return {
+            "memo": memo,
+            "report": report,
+            "section_packets_path": section_packet_path,
+            "section_context_acceptance_report_path": section_context_acceptance_report_path,
+        }
     section_packets: list[dict[str, Any]] = []
     rewritten_sections: list[str] = []
     deferred_decision_section: dict[str, str] | None = None
@@ -154,15 +165,36 @@ def rewrite_reader_memo_by_section(
     report["main_memo_obligation_validation"] = _post_synthesis_obligation_validation(candidate, contract)
     report["accepted_section_count"] = sum(1 for item in report["sections"] if item.get("accepted"))
     report["section_packet_count"] = len(section_packets)
+    context_acceptance_report = build_section_context_acceptance_report(section_packets)
+    report["section_context_acceptance_status"] = context_acceptance_report.get("status")
     section_packet_path = None
+    section_context_acceptance_report_path = None
     if artifacts is not None:
         section_packet_path = write_section_packets_artifact(artifacts, section_packets)
+        section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
         report["section_packets_path"] = str(section_packet_path)
+        report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
     if validation.get("status") == "needs_review":
         report["status"] = "global_validation_failed_fallback"
-        return {"memo": memo, "report": report, "section_packets_path": section_packet_path}
+        return {
+            "memo": memo,
+            "report": report,
+            "section_packets_path": section_packet_path,
+            "section_context_acceptance_report_path": section_context_acceptance_report_path,
+        }
     report["status"] = "accepted_partial" if report["accepted_section_count"] else "no_sections_accepted"
-    return {"memo": candidate, "report": report, "section_packets_path": section_packet_path}
+    return {
+        "memo": candidate,
+        "report": report,
+        "section_packets_path": section_packet_path,
+        "section_context_acceptance_report_path": section_context_acceptance_report_path,
+    }
+
+
+def _write_section_context_acceptance_report(artifacts: Any, report: dict[str, Any]) -> Any:
+    path = artifacts / "section_context_acceptance_report.json"
+    write_json(path, report)
+    return path
 
 
 def _rewrite_one_section(
