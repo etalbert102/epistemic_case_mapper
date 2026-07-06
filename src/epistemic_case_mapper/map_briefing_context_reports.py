@@ -40,13 +40,13 @@ def build_source_evidence_cards(
             "source_quote_or_excerpt": excerpt,
             "span_hash": str(claim.get("source_text_hash") or claim.get("excerpt_hash") or _stable_hash(excerpt)),
             "anchor_confidence": anchor_confidence,
-            "decision_relevance_score": _int_value(claim.get("decision_relevance_score") or claim.get("relevance_score") or claim.get("score")),
+            "decision_relevance_score": _claim_relevance_score(claim),
             "endpoint_match": str(claim.get("endpoint_fit") or claim.get("endpoint_match") or "unknown"),
             "population_match": str(claim.get("population_fit") or claim.get("population_match") or "unknown"),
             "exposure_or_intervention": "",
             "comparator": "",
             "outcome_or_endpoint": str(claim.get("endpoint_type") or ""),
-            "evidence_type": str(claim.get("evidence_family") or claim.get("claim_type") or "unspecified"),
+            "evidence_type": str(claim.get("evidence_family") or claim.get("claim_type") or _joined_evidence_slots(claim) or "unspecified"),
             "quantity_values": _string_list(claim.get("quantity_values") or claim.get("quantities")),
             "limitations": _limitations_for_claim(claim),
             "supports_challenges_or_scopes": _role_for_claim(claim),
@@ -345,6 +345,16 @@ def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
     model_packet = packet.get("model_packet", {}) if isinstance(packet.get("model_packet"), dict) else {}
     raw_packet = packet.get("packet", {}) if isinstance(packet.get("packet"), dict) else {}
     owned = [row for row in model_packet.get("owned_evidence", []) if isinstance(row, dict)]
+    if title.strip().lower() == "decision brief" and not owned:
+        return SectionContextAcceptanceRow(
+            section=title,
+            status="ready",
+            owned_card_count=0,
+            card_budget_status="justified_exception",
+            this_section_can_answer="Decision Brief is generated from the accepted body sections.",
+            because="opening answer is generated last rather than from section-owned cards",
+            context_risk_level="low",
+        )
     obligations = [
         row for row in raw_packet.get("required_main_memo_obligations", []) if isinstance(row, dict)
     ]
@@ -526,15 +536,35 @@ def _anchor_confidence(claim: dict[str, Any], excerpt: str) -> str:
 def _role_for_claim(claim: dict[str, Any]) -> str:
     values = " ".join(
         str(claim.get(key, ""))
-        for key in ("evidence_role", "section", "relation_type", "claim_type", "tags")
+        for key in ("role", "evidence_role", "section", "relation_type", "claim_type", "tags", "evidence_slots")
     ).lower()
     if any(term in values for term in ("challenge", "counter", "conflict", "tension", "risk")):
         return "challenges"
-    if any(term in values for term in ("scope", "limit", "boundary", "exception")):
+    if any(term in values for term in ("scope", "limit", "boundary", "exception", "constraint", "crux")):
         return "scopes"
     if any(term in values for term in ("support", "main", "conclusion")):
         return "supports"
     return "uncategorized"
+
+
+def _claim_relevance_score(claim: dict[str, Any]) -> int:
+    explicit = _int_value(claim.get("decision_relevance_score") or claim.get("relevance_score") or claim.get("score"))
+    if explicit:
+        return explicit
+    relevance = str(claim.get("question_relevance") or claim.get("relevance") or "").lower()
+    if "direct" in relevance:
+        return 8
+    if any(term in relevance for term in ("partial", "related", "moderate")):
+        return 5
+    if any(term in relevance for term in ("indirect", "background", "low")):
+        return 2
+    if claim.get("relevance_rationale"):
+        return 4
+    return 0
+
+
+def _joined_evidence_slots(claim: dict[str, Any]) -> str:
+    return "_".join(_string_list(claim.get("evidence_slots")))
 
 
 def _limitations_for_claim(claim: dict[str, Any]) -> list[str]:

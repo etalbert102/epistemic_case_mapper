@@ -19,6 +19,25 @@ The target end state is a staged context pipeline:
 11. memo-level coherence review
 12. specificity and traceability validation
 
+## Implementation Status
+
+Implemented on 2026-07-05 in bounded slices. The pipeline now writes the planned source-card, reconciliation, candidate-card, argument-spine, section-reasoning, source-coverage, section-acceptance, coherence, runtime, migration, and final-evaluation artifacts.
+
+Verification run:
+
+- Case: eggs realistic generated map
+- Command target: `synthesize map-briefing`
+- Backend: `prompt`
+- Output: `artifacts/full_pipeline_eval/context_pipeline_eggs_20260705/briefing/`
+- Source-map reconciliation: 80/80 prioritized claims source-backed
+- Candidate evidence cards: 80 cards, 51 main-text candidates, 6 appendix-only
+- Memo argument spine: bounded
+- Section reasoning cards: ready
+- Section context acceptance: ready
+- Memo coherence report: pass
+- Final brief evaluation: warning
+- Remaining visible telemetry: `source_coverage_report.json` flags high-relevance candidate cards not assigned to sections because section packets are capped to small owned-card budgets.
+
 ## Current Gap
 
 The current section prompts are uneven:
