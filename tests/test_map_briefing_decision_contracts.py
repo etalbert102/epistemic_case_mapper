@@ -298,6 +298,17 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["model_confidence"] == "not specified"
     assert summary["calibrated_confidence"] == "medium"
     assert summary["paths"]["map_sufficiency_report"].endswith("map_sufficiency_report.json")
+    assert summary["paths"]["source_evidence_cards"].endswith("source_evidence_cards.json")
+    assert summary["paths"]["source_sufficiency_report"].endswith("source_sufficiency_report.json")
+    assert summary["paths"]["evidence_quality_report"].endswith("evidence_quality_report.json")
+    assert summary["source_evidence_card_count"] == 1
+    assert summary["source_sufficiency_status"] in {
+        "sufficient_for_decision_ready_answer",
+        "sufficient_for_bounded_answer",
+        "insufficient_source_set",
+    }
+    assert isinstance(summary["source_sufficiency_missing_categories"], list)
+    assert isinstance(summary["evidence_quality_weak_or_indirect_count"], int)
     assert summary["paths"]["briefing_validation_report"].endswith("briefing_validation_report.json")
     assert summary["paths"]["gap_diagnosis"].endswith("telemetry/gap_diagnosis.json")
     assert sufficiency["schema_id"] == "map_sufficiency_report_v1"

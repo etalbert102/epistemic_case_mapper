@@ -36,6 +36,9 @@ def write_scaffold_artifacts(
         "global_memo_plan_validation": artifacts / "global_memo_plan_validation.json",
         "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
+        "source_evidence_cards": artifacts / "source_evidence_cards.json",
+        "source_sufficiency_report": artifacts / "source_sufficiency_report.json",
+        "evidence_quality_report": artifacts / "evidence_quality_report.json",
         "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
         "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
@@ -61,6 +64,9 @@ def write_scaffold_artifacts(
     write_json(paths["global_memo_plan_validation"], scaffold.get("global_memo_plan_validation", {}))
     write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
+    write_json(paths["source_evidence_cards"], scaffold.get("source_evidence_cards", {}))
+    write_json(paths["source_sufficiency_report"], scaffold.get("source_sufficiency_report", {}))
+    write_json(paths["evidence_quality_report"], scaffold.get("evidence_quality_report", {}))
     write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
@@ -180,6 +186,9 @@ def write_run_summary(
             "global_memo_plan_validation": scaffold_paths["global_memo_plan_validation"],
             "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
+            "source_evidence_cards": scaffold_paths["source_evidence_cards"],
+            "source_sufficiency_report": scaffold_paths["source_sufficiency_report"],
+            "evidence_quality_report": scaffold_paths["evidence_quality_report"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
             "evidence_to_decision_matrix": scaffold_paths["evidence_to_decision_matrix"],
             "summary_of_findings": scaffold_paths["summary_of_findings"],
@@ -264,6 +273,9 @@ def write_final_review_packet(
         f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
         f"- Global memo plan: `{_rel(repo_root, scaffold_paths.get('global_memo_plan'))}`",
         f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
+        f"- Source evidence cards: `{_rel(repo_root, scaffold_paths.get('source_evidence_cards'))}`",
+        f"- Source sufficiency report: `{_rel(repo_root, scaffold_paths.get('source_sufficiency_report'))}`",
+        f"- Evidence quality report: `{_rel(repo_root, scaffold_paths.get('evidence_quality_report'))}`",
         f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
         f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
         f"- Summary of findings: `{_rel(repo_root, scaffold_paths.get('summary_of_findings'))}`",
@@ -366,6 +378,9 @@ def map_briefing_summary_payload(
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
     global_plan = scaffold.get("global_memo_plan", {}) if isinstance(scaffold.get("global_memo_plan"), dict) else {}
     global_plan_validation = scaffold.get("global_memo_plan_validation", {}) if isinstance(scaffold.get("global_memo_plan_validation"), dict) else {}
+    source_cards = scaffold.get("source_evidence_cards", {}) if isinstance(scaffold.get("source_evidence_cards"), dict) else {}
+    source_sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
+    evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
         "schema_id": "map_briefing_v1",
@@ -392,6 +407,13 @@ def map_briefing_summary_payload(
         "atomic_evidence_card_count": atomic_cards.get("card_count"),
         "atomic_evidence_appendix_only_count": atomic_cards.get("appendix_only_count"),
         "atomic_evidence_noise_counts": atomic_cards.get("noise_counts", {}),
+        "source_evidence_card_count": source_cards.get("source_card_count"),
+        "source_evidence_anchored_card_count": source_cards.get("anchored_card_count"),
+        "source_sufficiency_status": source_sufficiency.get("status"),
+        "source_sufficiency_bounded_answer_required": source_sufficiency.get("bounded_answer_required"),
+        "source_sufficiency_missing_categories": source_sufficiency.get("missing_source_categories", []),
+        "evidence_quality_weak_or_indirect_count": evidence_quality.get("weak_or_indirect_count"),
+        "evidence_quality_unknown_count": evidence_quality.get("unknown_quality_count"),
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "relation_count": len(_relations(candidate_map)),
