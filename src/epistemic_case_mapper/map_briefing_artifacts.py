@@ -39,6 +39,11 @@ def write_scaffold_artifacts(
         "source_evidence_cards": artifacts / "source_evidence_cards.json",
         "source_sufficiency_report": artifacts / "source_sufficiency_report.json",
         "evidence_quality_report": artifacts / "evidence_quality_report.json",
+        "candidate_evidence_cards": artifacts / "candidate_evidence_cards.json",
+        "source_map_reconciliation": artifacts / "source_map_reconciliation.json",
+        "memo_argument_spine": artifacts / "memo_argument_spine.json",
+        "section_reasoning_cards": artifacts / "section_reasoning_cards.json",
+        "source_coverage_report": artifacts / "source_coverage_report.json",
         "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
         "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
@@ -67,6 +72,11 @@ def write_scaffold_artifacts(
     write_json(paths["source_evidence_cards"], scaffold.get("source_evidence_cards", {}))
     write_json(paths["source_sufficiency_report"], scaffold.get("source_sufficiency_report", {}))
     write_json(paths["evidence_quality_report"], scaffold.get("evidence_quality_report", {}))
+    write_json(paths["candidate_evidence_cards"], scaffold.get("candidate_evidence_cards", {}))
+    write_json(paths["source_map_reconciliation"], scaffold.get("source_map_reconciliation", {}))
+    write_json(paths["memo_argument_spine"], scaffold.get("memo_argument_spine", {}))
+    write_json(paths["section_reasoning_cards"], scaffold.get("section_reasoning_cards", {}))
+    write_json(paths["source_coverage_report"], scaffold.get("source_coverage_report", {}))
     write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
@@ -189,6 +199,11 @@ def write_run_summary(
             "source_evidence_cards": scaffold_paths["source_evidence_cards"],
             "source_sufficiency_report": scaffold_paths["source_sufficiency_report"],
             "evidence_quality_report": scaffold_paths["evidence_quality_report"],
+            "candidate_evidence_cards": scaffold_paths["candidate_evidence_cards"],
+            "source_map_reconciliation": scaffold_paths["source_map_reconciliation"],
+            "memo_argument_spine": scaffold_paths["memo_argument_spine"],
+            "section_reasoning_cards": scaffold_paths["section_reasoning_cards"],
+            "source_coverage_report": scaffold_paths["source_coverage_report"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
             "evidence_to_decision_matrix": scaffold_paths["evidence_to_decision_matrix"],
             "summary_of_findings": scaffold_paths["summary_of_findings"],
@@ -276,6 +291,11 @@ def write_final_review_packet(
         f"- Source evidence cards: `{_rel(repo_root, scaffold_paths.get('source_evidence_cards'))}`",
         f"- Source sufficiency report: `{_rel(repo_root, scaffold_paths.get('source_sufficiency_report'))}`",
         f"- Evidence quality report: `{_rel(repo_root, scaffold_paths.get('evidence_quality_report'))}`",
+        f"- Candidate evidence cards: `{_rel(repo_root, scaffold_paths.get('candidate_evidence_cards'))}`",
+        f"- Source-map reconciliation: `{_rel(repo_root, scaffold_paths.get('source_map_reconciliation'))}`",
+        f"- Memo argument spine: `{_rel(repo_root, scaffold_paths.get('memo_argument_spine'))}`",
+        f"- Section reasoning cards: `{_rel(repo_root, scaffold_paths.get('section_reasoning_cards'))}`",
+        f"- Source coverage report: `{_rel(repo_root, scaffold_paths.get('source_coverage_report'))}`",
         f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
         f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
         f"- Summary of findings: `{_rel(repo_root, scaffold_paths.get('summary_of_findings'))}`",
@@ -386,6 +406,11 @@ def map_briefing_summary_payload(
     source_cards = scaffold.get("source_evidence_cards", {}) if isinstance(scaffold.get("source_evidence_cards"), dict) else {}
     source_sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
     evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
+    candidate_cards = scaffold.get("candidate_evidence_cards", {}) if isinstance(scaffold.get("candidate_evidence_cards"), dict) else {}
+    reconciliation = scaffold.get("source_map_reconciliation", {}) if isinstance(scaffold.get("source_map_reconciliation"), dict) else {}
+    argument_spine = scaffold.get("memo_argument_spine", {}) if isinstance(scaffold.get("memo_argument_spine"), dict) else {}
+    reasoning_cards = scaffold.get("section_reasoning_cards", {}) if isinstance(scaffold.get("section_reasoning_cards"), dict) else {}
+    source_coverage = scaffold.get("source_coverage_report", {}) if isinstance(scaffold.get("source_coverage_report"), dict) else {}
     section_acceptance_status = rewrite_result["report"].get("section_context_acceptance_status")
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
@@ -420,6 +445,13 @@ def map_briefing_summary_payload(
         "source_sufficiency_missing_categories": source_sufficiency.get("missing_source_categories", []),
         "evidence_quality_weak_or_indirect_count": evidence_quality.get("weak_or_indirect_count"),
         "evidence_quality_unknown_count": evidence_quality.get("unknown_quality_count"),
+        "candidate_evidence_card_count": candidate_cards.get("card_count"),
+        "candidate_evidence_main_text_count": candidate_cards.get("main_text_count"),
+        "source_map_reconciliation_unbacked_count": reconciliation.get("unbacked_count"),
+        "memo_argument_spine_status": argument_spine.get("status"),
+        "memo_argument_spine_item_count": _list_count(argument_spine, "items"),
+        "section_reasoning_cards_status": reasoning_cards.get("status"),
+        "source_coverage_omitted_high_relevance_count": _list_count(source_coverage, "omitted_high_relevance_card_ids"),
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "relation_count": len(_relations(candidate_map)),
@@ -443,11 +475,11 @@ def map_briefing_summary_payload(
         "decision_synthesis_evidence_line_count": len(decision_synthesis_model.get("evidence_lines", [])),
         "decision_synthesis_tension_count": len(decision_synthesis_model.get("central_tensions", [])),
         "decision_synthesis_recommendation_count": len(decision_synthesis_model.get("recommendations", [])),
-        "argument_support_count": len(argument_model.get("strongest_support", [])) if isinstance(argument_model.get("strongest_support"), list) else 0,
-        "argument_counterargument_count": len(argument_model.get("strongest_counterarguments", [])) if isinstance(argument_model.get("strongest_counterarguments"), list) else 0,
-        "argument_quantitative_anchor_count": len(argument_model.get("quantitative_anchors", [])) if isinstance(argument_model.get("quantitative_anchors"), list) else 0,
-        "argument_scope_boundary_count": len(argument_model.get("scope_boundaries", [])) if isinstance(argument_model.get("scope_boundaries"), list) else 0,
-        "argument_crux_count": len(argument_model.get("cruxes", [])) if isinstance(argument_model.get("cruxes"), list) else 0,
+        "argument_support_count": _list_count(argument_model, "strongest_support"),
+        "argument_counterargument_count": _list_count(argument_model, "strongest_counterarguments"),
+        "argument_quantitative_anchor_count": _list_count(argument_model, "quantitative_anchors"),
+        "argument_scope_boundary_count": _list_count(argument_model, "scope_boundaries"),
+        "argument_crux_count": _list_count(argument_model, "cruxes"),
         "graph_issue_cluster_count": graph_summary.get("issue_cluster_count"),
         "graph_tension_edge_count": graph_summary.get("tension_edge_count"),
         "graph_load_bearing_claim_count": len(graph_packet.get("load_bearing_claims", [])),

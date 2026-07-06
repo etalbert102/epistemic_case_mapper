@@ -38,14 +38,12 @@ from epistemic_case_mapper.decision_frame import (
 )
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
+from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle
 from epistemic_case_mapper.map_briefing_context_reports import (
-    build_evidence_quality_report,
     build_final_brief_evaluation,
     build_memo_coherence_report,
     build_pipeline_migration_ledger,
     build_runtime_budget_report,
-    build_source_evidence_cards,
-    build_source_sufficiency_report,
 )
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
@@ -265,17 +263,14 @@ def _attach_decision_ready_context_reports(
     question: str,
     source_lookup: dict[str, str],
 ) -> None:
-    source_urls = scaffold.get("source_urls", {}) if isinstance(scaffold.get("source_urls"), dict) else {}
-    source_cards = build_source_evidence_cards(prioritized_map, source_lookup=source_lookup, source_urls=source_urls)
-    sufficiency = build_source_sufficiency_report(
-        decision_question=question,
-        source_evidence_cards=source_cards,
-        scaffold=scaffold,
+    scaffold.update(
+        build_decision_ready_context_bundle(
+            prioritized_map,
+            scaffold=scaffold,
+            question=question,
+            source_lookup=source_lookup,
+        )
     )
-    quality = build_evidence_quality_report(source_cards)
-    scaffold["source_evidence_cards"] = source_cards
-    scaffold["source_sufficiency_report"] = sufficiency
-    scaffold["evidence_quality_report"] = quality
 
 
 def _attach_model_context_audit(

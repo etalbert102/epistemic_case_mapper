@@ -21,25 +21,100 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     title_key = title.lower()
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     section_plan = _compact_section_plan(section_plan_for_title(scaffold, title), contract)
-    owned_evidence = _owned_evidence(contract)
+    reasoning_contract = _section_reasoning_contract(title, scaffold)
+    owned_evidence = _reasoning_owned_evidence(reasoning_contract) or _owned_evidence(contract)
     fallback_thesis = _section_thesis(title_key, contract, packet)
-    section_thesis = str(section_plan.get("thesis") or fallback_thesis).strip()
+    section_thesis = str(reasoning_contract.get("section_thesis") or section_plan.get("thesis") or fallback_thesis).strip()
     if _uses_evidence_owned_elsewhere(section_thesis, contract):
         section_plan.pop("thesis", None)
         section_thesis = fallback_thesis if not _uses_evidence_owned_elsewhere(fallback_thesis, contract) else ""
     model_packet = {
         "schema_id": "model_section_packet_v1",
         "global_section_plan": section_plan,
+        "section_reasoning_contract": _compact_reasoning_contract(reasoning_contract),
+        "context_readiness_status": reasoning_contract.get("context_status"),
         "section_thesis": section_thesis,
+        "decision_move": reasoning_contract.get("decision_move"),
         "target_shape": _target_shape(title_key),
         "owned_evidence": owned_evidence,
-        "reference_only_evidence": _reference_only_evidence(contract),
+        "reference_only_evidence": _reasoning_reference_only(reasoning_contract) or _reference_only_evidence(contract),
+        "do_not_use_cards": _string_list(reasoning_contract.get("do_not_use_cards"))[:12],
+        "excluded_near_miss_cards": _reasoning_near_misses(reasoning_contract),
         "must_include_quantities": _must_include_quantities(contract),
         "local_tensions": _local_tensions(packet) if _section_should_receive_tensions(title_key) else [],
         "canonical_cruxes": _canonical_cruxes(contract, packet),
         "style_instruction": packet.get("style_instruction") or _default_style_instruction(title_key),
     }
     return _drop_empty(model_packet)
+
+
+def _section_reasoning_contract(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
+    report = scaffold.get("section_reasoning_cards", {}) if isinstance(scaffold.get("section_reasoning_cards"), dict) else {}
+    normalized_title = _normalize_title(title)
+    for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
+        if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
+            return section
+    return {}
+
+
+def _compact_reasoning_contract(reasoning: dict[str, Any]) -> dict[str, Any]:
+    if not reasoning:
+        return {}
+    return _drop_empty(
+        {
+            "section": reasoning.get("section"),
+            "decision_move": reasoning.get("decision_move"),
+            "context_status": reasoning.get("context_status"),
+            "exception_reason": reasoning.get("exception_reason"),
+            "owned_card_ids": [
+                str(card.get("candidate_card_id"))
+                for card in reasoning.get("owned_cards", [])
+                if isinstance(card, dict) and card.get("candidate_card_id")
+            ],
+        }
+    )
+
+
+def _reasoning_owned_evidence(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
+    return _reasoning_cards(reasoning, "owned_cards", use="This section may explain this evidence fully.")
+
+
+def _reasoning_reference_only(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
+    return _reasoning_cards(reasoning, "reference_only_cards", use="Briefly reference only; do not restate full source detail.")
+
+
+def _reasoning_cards(reasoning: dict[str, Any], key: str, *, use: str) -> list[dict[str, Any]]:
+    compact: list[dict[str, Any]] = []
+    for row in reasoning.get(key, []) if isinstance(reasoning.get(key), list) else []:
+        if not isinstance(row, dict):
+            continue
+        compact.append(
+            _drop_empty(
+                {
+                    "candidate_card_id": row.get("candidate_card_id"),
+                    "source_card_ids": _string_list(row.get("source_card_ids"))[:4],
+                    "claim_ids": _string_list(row.get("claim_ids"))[:4],
+                    "source": row.get("source"),
+                    "claim": _short_text(str(row.get("claim", "")), 280),
+                    "source_excerpt": _short_text(str(row.get("source_excerpt", "")), 360),
+                    "intended_role": row.get("intended_role"),
+                    "reason_for_inclusion": row.get("reason_for_inclusion"),
+                    "quality": row.get("quality"),
+                    "quantity_values": _string_list(row.get("quantity_values"))[:4],
+                    "limitations": _string_list(row.get("limitations"))[:4],
+                    "use": use,
+                }
+            )
+        )
+    return compact[:7]
+
+
+def _reasoning_near_misses(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in reasoning.get("excluded_near_miss_cards", []) if isinstance(reasoning.get("excluded_near_miss_cards"), list) else []:
+        if isinstance(row, dict):
+            rows.append(_drop_empty({"candidate_card_id": row.get("candidate_card_id"), "reason_excluded": row.get("reason_excluded")}))
+    return rows[:5]
 
 
 def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
@@ -436,6 +511,10 @@ def _clean_sentence(text: str) -> str:
 
 def _normalize_key(text: str) -> str:
     return " ".join(_content_terms(text))
+
+
+def _normalize_title(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
 
 
 def _uses_evidence_owned_elsewhere(text: str, contract: dict[str, Any]) -> bool:

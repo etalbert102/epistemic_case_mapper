@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_context_schemas import (
+    CandidateEvidenceCardsReport,
+    MemoArgumentSpineReport,
     SOURCE_EVIDENCE_CARD_OWNERSHIP,
+    SectionReasoningCardsReport,
     SourceEvidenceCardReport,
+    SourceMapReconciliationReport,
     validate_artifact_ownership,
 )
+from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
     build_final_brief_evaluation,
@@ -15,6 +20,7 @@ from epistemic_case_mapper.map_briefing_context_reports import (
     build_source_evidence_cards,
     build_source_sufficiency_report,
 )
+from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
 
 
 def test_source_evidence_card_schema_accepts_exact_anchored_card() -> None:
@@ -123,6 +129,100 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
     assert quality["schema_id"] == "evidence_quality_report_v1"
     assert quality["card_count"] == 2
     assert quality["quality_components"]["sc0001"]["directness"] == "direct"
+
+
+def test_decision_ready_context_bundle_builds_plan_artifacts() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c1",
+                "claim": "The default option improves the decision outcome by 12 percent.",
+                "source_id": "s1",
+                "source_span": "lines 1-2",
+                "excerpt": "The default option improves the decision outcome by 12 percent.",
+                "role": "conclusion_support",
+                "decision_relevance_score": 8,
+                "evidence_family": "trial",
+                "quantity_values": ["12 percent"],
+            },
+            {
+                "claim_id": "c2",
+                "claim": "The effect is uncertain for the high-risk subgroup.",
+                "source_id": "s2",
+                "source_span": "lines 3-4",
+                "excerpt": "The effect is uncertain for the high-risk subgroup.",
+                "role": "scope_limit",
+                "decision_relevance_score": 7,
+            },
+            {
+                "claim_id": "c3",
+                "claim": "A competing source reports implementation burden.",
+                "source_id": "s3",
+                "source_span": "lines 5-6",
+                "excerpt": "A competing source reports implementation burden.",
+                "role": "conflicting_evidence",
+                "decision_relevance_score": 6,
+            },
+        ]
+    }
+
+    bundle = build_decision_ready_context_bundle(
+        candidate_map,
+        scaffold={"map_sufficiency_report": {}},
+        question="Should the default option be adopted?",
+        source_lookup={"s1": "Trial", "s2": "Subgroup Study", "s3": "Implementation Report"},
+    )
+
+    reconciliation = SourceMapReconciliationReport.model_validate(bundle["source_map_reconciliation"])
+    candidates = CandidateEvidenceCardsReport.model_validate(bundle["candidate_evidence_cards"])
+    spine = MemoArgumentSpineReport.model_validate(bundle["memo_argument_spine"])
+    section_cards = SectionReasoningCardsReport.model_validate(bundle["section_reasoning_cards"])
+
+    assert reconciliation.source_backed_count == 3
+    assert candidates.main_text_count >= 2
+    assert spine.items
+    assert spine.load_bearing_candidate_card_ids
+    assert any(section.section == "Evidence Carrying the Conclusion" for section in section_cards.sections)
+    assert bundle["source_coverage_report"]["schema_id"] == "source_coverage_report_v1"
+
+
+def test_model_section_packet_prefers_section_reasoning_cards() -> None:
+    contract = {
+        "_section_synthesis_scaffold": {
+            "section_reasoning_cards": {
+                "sections": [
+                    {
+                        "section": "Evidence Carrying the Conclusion",
+                        "section_thesis": "Use the curated card, not the legacy obligation.",
+                        "decision_move": "Explain the load-bearing evidence.",
+                        "context_status": "ready",
+                        "owned_cards": [
+                            {
+                                "candidate_card_id": "ec0001",
+                                "source_card_ids": ["sc0001"],
+                                "claim": "The curated source-backed card is load-bearing.",
+                                "source": "Curated Source",
+                                "intended_role": "support",
+                                "reason_for_inclusion": "It is assigned to this section.",
+                            }
+                        ],
+                        "reference_only_cards": [],
+                        "do_not_use_cards": ["ec0099"],
+                    }
+                ]
+            }
+        },
+        "required_evidence": [
+            {"claim": "Legacy obligation should not be primary.", "source": "Legacy Source", "slot": "support"}
+        ],
+        "section_synthesis_packet": {},
+    }
+
+    packet = compile_model_section_packet("Evidence Carrying the Conclusion", contract)
+
+    assert packet["section_thesis"] == "Use the curated card, not the legacy obligation."
+    assert packet["owned_evidence"][0]["candidate_card_id"] == "ec0001"
+    assert packet["do_not_use_cards"] == ["ec0099"]
 
 
 def test_section_context_acceptance_requires_roles_and_reasons() -> None:

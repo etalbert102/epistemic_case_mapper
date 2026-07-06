@@ -73,6 +73,125 @@ class EvidenceQualityReport(BaseModel):
     issues: list[str] = Field(default_factory=list)
 
 
+class SourceMapReconciliationRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    claim_id: str = ""
+    claim_text: str = ""
+    source_card_ids: list[str] = Field(default_factory=list)
+    source_ids: list[str] = Field(default_factory=list)
+    status: Literal["source_backed", "weakly_backed", "unbacked"]
+    match_type: Literal["claim_id", "source_overlap", "none"] = "none"
+    issues: list[str] = Field(default_factory=list)
+
+
+class SourceMapReconciliationReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    schema_id: Literal["source_map_reconciliation_v1"] = "source_map_reconciliation_v1"
+    claim_count: int = 0
+    source_backed_count: int = 0
+    weakly_backed_count: int = 0
+    unbacked_count: int = 0
+    rows: list[SourceMapReconciliationRow] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+
+
+class CandidateEvidenceCard(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    candidate_card_id: str
+    source_card_ids: list[str] = Field(default_factory=list)
+    claim_ids: list[str] = Field(default_factory=list)
+    source_ids: list[str] = Field(default_factory=list)
+    source_titles: list[str] = Field(default_factory=list)
+    claim: str
+    source_excerpt: str = ""
+    role: Literal["support", "counterweight", "scope", "quantity", "limitation", "context"]
+    decision_relevance_score: int = 0
+    quality: str = "unknown"
+    inclusion_recommendation: Literal["main_text", "supporting_context", "appendix_only"] = "supporting_context"
+    inclusion_reason: str = ""
+    section_candidates: list[str] = Field(default_factory=list)
+    quantity_values: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    anchor_confidence: Literal["exact", "recovered", "missing"] = "missing"
+    off_question_risk: bool = False
+    fragment_risk: bool = False
+
+
+class CandidateEvidenceCardsReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    schema_id: Literal["candidate_evidence_cards_v1"] = "candidate_evidence_cards_v1"
+    card_count: int = 0
+    main_text_count: int = 0
+    appendix_only_count: int = 0
+    cards: list[CandidateEvidenceCard] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+
+
+class MemoArgumentSpineItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    spine_id: str
+    role: Literal["answer", "support", "counterweight", "scope", "quantity", "crux", "limitation"]
+    statement: str
+    candidate_card_ids: list[str] = Field(default_factory=list)
+    source_card_ids: list[str] = Field(default_factory=list)
+    source_ids: list[str] = Field(default_factory=list)
+    decision_relevance_score: int = 0
+
+
+class MemoArgumentSpineReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    schema_id: Literal["memo_argument_spine_v1"] = "memo_argument_spine_v1"
+    decision_question: str
+    status: Literal["ready", "bounded", "insufficient"]
+    answer_frame: str = ""
+    source_sufficiency_status: str = ""
+    load_bearing_candidate_card_ids: list[str] = Field(default_factory=list)
+    items: list[MemoArgumentSpineItem] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+
+
+class SectionReasoningCard(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    section: str
+    section_thesis: str = ""
+    decision_move: str = ""
+    owned_cards: list[dict[str, Any]] = Field(default_factory=list)
+    reference_only_cards: list[dict[str, Any]] = Field(default_factory=list)
+    do_not_use_cards: list[str] = Field(default_factory=list)
+    excluded_near_miss_cards: list[dict[str, Any]] = Field(default_factory=list)
+    context_status: Literal["ready", "warning", "not_synthesis_ready"] = "warning"
+    exception_reason: str = ""
+
+
+class SectionReasoningCardsReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    schema_id: Literal["section_reasoning_cards_v1"] = "section_reasoning_cards_v1"
+    status: Literal["ready", "warning", "not_synthesis_ready"] = "warning"
+    sections: list[SectionReasoningCard] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+
+
+class SourceCoverageReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    schema_id: Literal["source_coverage_report_v1"] = "source_coverage_report_v1"
+    total_source_card_count: int = 0
+    candidate_card_count: int = 0
+    assigned_main_card_count: int = 0
+    omitted_high_relevance_card_ids: list[str] = Field(default_factory=list)
+    unbacked_claim_ids: list[str] = Field(default_factory=list)
+    appendix_only_card_ids: list[str] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+
+
 class SectionContextAcceptanceRow(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -213,4 +332,3 @@ SOURCE_EVIDENCE_CARD_OWNERSHIP: dict[str, FieldOwnership] = {
     "limitations": "hybrid",
     "supports_challenges_or_scopes": "hybrid",
 }
-
