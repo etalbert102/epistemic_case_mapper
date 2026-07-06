@@ -21,7 +21,7 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_final_edit_context import model_facing_reader_memo_edit_context
-from epistemic_case_mapper.map_briefing_final_memo_editor import run_two_pass_reader_memo_editor
+from epistemic_case_mapper.map_briefing_final_memo_editor import run_full_memo_polish_editor
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 from epistemic_case_mapper.map_briefing_section_structure import (
     filter_primary_practical_actions,
@@ -361,7 +361,7 @@ def rewrite_reader_memo_with_contract(
 ) -> dict[str, Any]:
     """Use the model as constrained coherence and prose edit suggester."""
     contract = build_reader_memo_rewrite_contract(memo, scaffold)
-    return run_two_pass_reader_memo_editor(
+    return run_full_memo_polish_editor(
         memo,
         evidence_appendix,
         scaffold,

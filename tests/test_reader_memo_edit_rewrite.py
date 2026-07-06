@@ -11,6 +11,12 @@ from epistemic_case_mapper.map_briefing import (
     repair_reader_memo_rewrite_candidate,
     rewrite_reader_memo_with_contract,
 )
+from epistemic_case_mapper.map_briefing_final_memo_editor import (
+    build_full_memo_polish_obligation_packet,
+    full_memo_polish_judge_issues,
+    full_memo_polish_preservation_issues,
+)
+from epistemic_case_mapper.map_briefing_final_memo_diagnosis import build_memo_protected_spans
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_memo_slots import _replace_internal_reader_phrases
 from epistemic_case_mapper.model_backends import ModelBackendResult
@@ -226,6 +232,76 @@ not_dga_2020_2025_pmc_summary_suffix is an unrelated identifier.
     assert "DGA 2020-2025 PMC Summary" not in repaired
 
 
+def test_full_memo_polish_preservation_flags_dropped_required_information() -> None:
+    memo = """## Decision Brief
+
+**Decision question:** Should the intervention be used?
+
+The current read is neutral at 10 mg per day (Source A).
+
+**Confidence:** medium
+
+## Practical Read
+
+- Keep the 10 mg per day boundary visible.
+
+## Limits of the Current Map
+
+The map lacks comparator evidence.
+
+## Sources
+
+- Source A
+"""
+    scaffold = {
+        "question": "Should the intervention be used?",
+        "confidence_cap": "medium",
+        "source_display_names": {"source_a": "Source A"},
+        "decision_memo_slots": {"slots": []},
+    }
+    contract = build_reader_memo_rewrite_contract(memo, scaffold)
+    protected = build_memo_protected_spans(memo, contract)
+    obligations = build_full_memo_polish_obligation_packet(memo, scaffold, contract, protected)
+
+    issues = full_memo_polish_preservation_issues(
+        """## Decision Brief
+
+The current read is neutral.
+
+**Confidence:** medium
+""",
+        original_memo=memo,
+        evidence_appendix="## Evidence Appendix\n",
+        scaffold=scaffold,
+        candidate_map={"claims": [], "relations": []},
+        contract=contract,
+        obligation_packet=obligations,
+        validate_candidate=lambda *args: [],
+    )
+
+    assert "polish dropped or changed the exact decision question" in issues
+    assert "polish dropped required source: Source A" in issues
+    assert "polish dropped required number: 10 mg" in issues
+
+
+def test_full_memo_polish_judge_issues_rejects_semantic_drops() -> None:
+    payload = {
+        "accepted": False,
+        "dropped_information": ["Dropped comparator evidence limit."],
+        "unsupported_additions": ["Added a stronger recommendation."],
+        "changed_stance": True,
+        "limits_preserved": False,
+    }
+
+    issues = full_memo_polish_judge_issues(payload)
+
+    assert "judge did not accept polished memo" in issues
+    assert "judge dropped_information: Dropped comparator evidence limit." in issues
+    assert "judge unsupported_additions: Added a stronger recommendation." in issues
+    assert "judge found changed stance" in issues
+    assert "judge found limits were not preserved" in issues
+
+
 def test_apply_reader_memo_edit_suggestions_records_typed_metadata() -> None:
     memo = """## Practical Read
 
@@ -277,7 +353,7 @@ This section begins awkwardly.
     assert result["skipped_edits"][0]["reason"] == "edit_type is not allowed for this pass"
 
 
-def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
+def test_whole_memo_rewrite_accepts_safe_full_polish(monkeypatch) -> None:
     memo = _long_memo()
     appendix = "## Evidence Appendix\n\nThe source supports the read."
     scaffold = {
@@ -286,24 +362,28 @@ def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
         "decision_memo_slots": {"slots": []},
     }
     candidate_map = {"claims": [], "relations": []}
+    polished = memo.replace("The language is awkward and awkwardly repeated.", "The decision read is bounded and clear.")
+    calls: list[str] = []
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        assert '"edits"' in prompt
-        assert "memo_markdown" not in prompt
-        return ModelBackendResult(
-            text=json.dumps(
-                {
-                    "edits": [
-                        {
-                            "target": "The language is awkward and awkwardly repeated.",
-                            "replacement": "The language is repetitive.",
-                            "reason": "Remove awkward wording.",
-                        }
-                    ]
-                }
-            ),
-            backend=backend,
-        )
+        calls.append(prompt)
+        if "strict preservation judge" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "accepted": True,
+                        "dropped_information": [],
+                        "unsupported_additions": [],
+                        "changed_stance": False,
+                        "limits_preserved": True,
+                        "reason": "Preserved obligations.",
+                    }
+                ),
+                backend=backend,
+            )
+        assert "polished, coherent, natural briefing memo" in prompt
+        assert '"edits"' not in prompt
+        return ModelBackendResult(text=polished, backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
 
@@ -317,18 +397,35 @@ def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
         backend_retries=0,
     )
 
-    assert result["report"]["status"] in {"accepted", "accepted_after_repair"}
-    assert result["report"]["applied_edit_count"] == 1
-    assert "The language is repetitive." in result["memo"]
+    assert len(calls) == 2
+    assert result["report"]["status"] == "full_polish_accepted"
+    assert result["report"]["full_polish_status"] == "accepted"
+    assert "The decision read is bounded and clear." in result["memo"]
 
 
-def test_whole_memo_rewrite_runs_separate_coherence_and_prose_passes(monkeypatch) -> None:
+def test_whole_memo_rewrite_falls_back_to_separate_coherence_and_prose_passes(monkeypatch) -> None:
     memo = _long_memo()
     appendix = "## Evidence Appendix\n\nThe source supports the read."
     calls: list[str] = []
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         calls.append(prompt)
+        if "polished, coherent, natural briefing memo" in prompt:
+            return ModelBackendResult(text="## Decision Brief\n\nToo short.\n", backend=backend)
+        if "strict preservation judge" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "accepted": True,
+                        "dropped_information": [],
+                        "unsupported_additions": [],
+                        "changed_stance": False,
+                        "limits_preserved": True,
+                        "reason": "Style is not judged.",
+                    }
+                ),
+                backend=backend,
+            )
         assert "Final edit context" in prompt
         assert '"reader_memo_final_edit_context_v2"' in prompt
         assert '"answer_frame"' not in prompt
@@ -364,7 +461,9 @@ def test_whole_memo_rewrite_runs_separate_coherence_and_prose_passes(monkeypatch
         backend_retries=0,
     )
 
-    assert len(calls) == 2
+    assert len(calls) == 6
+    assert result["report"]["full_polish_status"] == "fallback_to_two_pass"
+    assert len(result["report"]["full_polish_attempts"]) == 2
     assert result["report"]["pass_count"] == 2
     assert result["report"]["accepted_pass_count"] == 1
     assert result["report"]["passes"][0]["pass"] == "coherence"
