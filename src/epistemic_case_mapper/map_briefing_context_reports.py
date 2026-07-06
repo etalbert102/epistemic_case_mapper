@@ -213,7 +213,10 @@ def build_runtime_budget_report(
     for section in section_rewrite_report.get("sections", []) if isinstance(section_rewrite_report.get("sections"), list) else []:
         if isinstance(section, dict):
             section_attempts += _int_value(section.get("attempt_count"))
-    reader_model_calls = 1 if reader_rewrite_report.get("status") not in {"skipped_after_section_rewrite", "not_run"} else 0
+    if reader_rewrite_report.get("status") in {"skipped_after_section_rewrite", "not_run", "skipped_prompt_backend"}:
+        reader_model_calls = 0
+    else:
+        reader_model_calls = max(1, _int_value(reader_rewrite_report.get("pass_count")))
     stages = [
         {"stage": "section_rewrite", "model_call_count": section_attempts},
         {"stage": "reader_memo_rewrite", "model_call_count": reader_model_calls},

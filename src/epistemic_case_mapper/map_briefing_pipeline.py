@@ -47,6 +47,11 @@ from epistemic_case_mapper.map_briefing_context_reports import (
 )
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
+from epistemic_case_mapper.map_briefing_final_editor_artifacts import (
+    reader_memo_edit_artifact_paths,
+    reader_memo_edit_summary_paths,
+    write_reader_memo_edit_artifacts,
+)
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_global_plan import build_global_memo_plan
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
@@ -353,6 +358,7 @@ def _write_final_reader_outputs(
     rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
     rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
     rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
+    edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
     rewrite_result = (
         rewrite_reader_memo_with_contract(
             section_memo,
@@ -373,6 +379,7 @@ def _write_final_reader_outputs(
         write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
     if rewrite_result.get("raw"):
         write_markdown(rewrite_raw_path, str(rewrite_result.get("raw", "")))
+    write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
     combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
     polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
@@ -451,6 +458,7 @@ def _write_final_reader_outputs(
             "reader_memo_rewrite_report": rewrite_report_path,
             "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
             "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,
+            **reader_memo_edit_summary_paths(rewrite_result, edit_artifact_paths),
         },
     }
 

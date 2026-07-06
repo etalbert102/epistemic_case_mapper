@@ -202,7 +202,7 @@ def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_reader_contracts.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
 
     result = rewrite_reader_memo_with_contract(
         memo,
@@ -217,6 +217,58 @@ def test_whole_memo_rewrite_accepts_safe_edit_suggestions(monkeypatch) -> None:
     assert result["report"]["status"] in {"accepted", "accepted_after_repair"}
     assert result["report"]["applied_edit_count"] == 1
     assert "The language is repetitive." in result["memo"]
+
+
+def test_whole_memo_rewrite_runs_separate_coherence_and_prose_passes(monkeypatch) -> None:
+    memo = _long_memo()
+    appendix = "## Evidence Appendix\n\nThe source supports the read."
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        calls.append(prompt)
+        assert "Final edit context" in prompt
+        assert '"reader_memo_final_edit_context_v2"' in prompt
+        assert '"answer_frame"' not in prompt
+        assert '"required_evidence"' not in prompt
+        if "Pass: prose" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "edits": [
+                            {
+                                "target": "The language is awkward and awkwardly repeated.",
+                                "replacement": "The language is direct.",
+                                "target_section": "Decision Brief",
+                                "edit_type": "fix_awkward_phrase",
+                                "reason": "Remove explicit awkwardness marker.",
+                            }
+                        ]
+                    }
+                ),
+                backend=backend,
+            )
+        return ModelBackendResult(text=json.dumps({"edits": []}), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
+
+    result = rewrite_reader_memo_with_contract(
+        memo,
+        appendix,
+        {"confidence_cap": "medium", "map_sufficiency_report": {"status": "sufficient_for_scaffolded_briefing"}, "decision_memo_slots": {"slots": []}},
+        {"claims": [], "relations": []},
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert len(calls) == 2
+    assert result["report"]["pass_count"] == 2
+    assert result["report"]["accepted_pass_count"] == 1
+    assert result["report"]["passes"][0]["pass"] == "coherence"
+    assert result["report"]["passes"][1]["pass"] == "prose"
+    assert result["prompts"]["coherence"]
+    assert result["prompts"]["prose"]
+    assert "The language is direct." in result["memo"]
 
 
 def test_reader_memo_repair_preserves_practical_read_bullets() -> None:
@@ -326,7 +378,7 @@ def test_whole_memo_rewrite_rejects_legacy_full_memo_payload(monkeypatch) -> Non
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         return ModelBackendResult(text=json.dumps({"memo_markdown": memo.replace("awkward", "smooth")}), backend=backend)
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_reader_contracts.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
 
     result = rewrite_reader_memo_with_contract(
         memo,

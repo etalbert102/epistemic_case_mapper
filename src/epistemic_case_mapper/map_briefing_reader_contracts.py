@@ -21,9 +21,8 @@ from epistemic_case_mapper.config_profiles import (
 )
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_final_edit_context import model_facing_reader_memo_edit_context
-from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.map_briefing_final_memo_editor import run_two_pass_reader_memo_editor
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
-from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
 from epistemic_case_mapper.map_briefing_section_structure import (
     filter_primary_practical_actions,
     repair_reader_memo_sections,
@@ -360,71 +359,20 @@ def rewrite_reader_memo_with_contract(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
-    """Use the model as a constrained edit suggester, accepting only validated exact edits."""
-    if backend.strip() == "prompt":
-        return {
-            "memo": memo,
-            "prompt": "",
-            "raw": "",
-            "report": {
-                "schema_id": "reader_memo_rewrite_report_v1",
-                "status": "skipped_prompt_backend",
-                "accepted": False,
-                "issues": [],
-            },
-        }
+    """Use the model as constrained coherence and prose edit suggester."""
     contract = build_reader_memo_rewrite_contract(memo, scaffold)
-    prompt = build_reader_memo_rewrite_prompt(memo, contract)
-    report: dict[str, Any] = {
-        "schema_id": "reader_memo_rewrite_report_v1",
-        "status": "not_run",
-        "accepted": False,
-        "issues": [],
-        "contract": _compact_rewrite_contract_for_report(contract),
-    }
-    try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-    except RuntimeError as exc:
-        report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
-        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
-    raw = result.text
-    if result.prompt_only:
-        report.update({"status": "prompt_backend_fallback", "issues": ["rewrite backend returned prompt only"]})
-        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    payload = parse_reader_memo_rewrite_payload(raw)
-    if not isinstance(payload, dict):
-        report.update({"status": "parse_failed_fallback", "issues": ["rewrite response was not a JSON object"]})
-        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    edit_result = apply_reader_memo_edit_suggestions(memo, payload)
-    if not edit_result["applied_edits"]:
-        report.update(
-            {
-                "status": "no_safe_edits_fallback",
-                "issues": edit_result["issues"],
-                "raw_edit_count": edit_result["raw_edit_count"],
-                "applied_edit_count": 0,
-            }
-        )
-        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    edited = ensure_rewrite_confidence_visible(str(edit_result["memo"]), str(contract.get("confidence") or "medium"))
-    repaired = repair_reader_memo_rewrite_candidate(edited, scaffold, contract)
-    candidate = repaired if repaired != edited else edited
-    issues = reader_memo_rewrite_issues(candidate, memo, evidence_appendix, scaffold, candidate_map, contract)
-    report["issues"] = issues
-    report["raw_edit_count"] = edit_result["raw_edit_count"]
-    report["applied_edit_count"] = len(edit_result["applied_edits"])
-    report["skipped_edits"] = edit_result["skipped_edits"]
-    report["raw_word_count"] = len(edited.split())
-    report["deterministic_word_count"] = len(memo.split())
-    if repaired != edited:
-        report["repair_issues"] = issues
-        report["repaired_word_count"] = len(repaired.split())
-    if issues:
-        report["status"] = "rejected_fallback"
-        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    report["status"] = "accepted_after_repair" if repaired != edited else "accepted"
-    report["accepted"] = True
-    return {"memo": clean_reader_memo_text(candidate), "prompt": prompt, "raw": raw, "report": report}
+    return run_two_pass_reader_memo_editor(
+        memo,
+        evidence_appendix,
+        scaffold,
+        candidate_map,
+        contract,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        repair_candidate=repair_reader_memo_rewrite_candidate,
+        validate_candidate=reader_memo_rewrite_issues,
+    )
 
 def repair_reader_memo_rewrite_candidate(markdown: str, scaffold: dict[str, Any], contract: dict[str, Any]) -> str:
     """Repair narrow model-writing defects without adding new evidence.

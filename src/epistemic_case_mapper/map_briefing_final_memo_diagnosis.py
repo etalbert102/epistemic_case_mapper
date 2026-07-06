@@ -30,6 +30,12 @@ INTERNAL_PROCESS_PHRASES = (
     "preserved as a load-bearing map distinction",
     "not specified",
 )
+AWKWARD_PHRASES = (
+    "awkward",
+    "unclear",
+    "clunky",
+    "mechanical",
+)
 CAVEAT_MARKERS = (
     "except",
     "exception",
@@ -86,6 +92,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
     section_openings = _awkward_section_openings(sections)
     long_sentences = _long_sentences(sentences)
     internal_phrases = _internal_phrase_issues(memo)
+    awkward_phrases = _awkward_phrase_issues(memo)
     question = str(contract.get("question", "")).strip()
     question_missing = bool(question and _normalize(question) not in _normalize(memo))
     coherence_issues: list[dict[str, Any]] = []
@@ -116,6 +123,8 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
         prose_issues.append({"kind": "long_sentences", "message": "Some sentences are long enough to impair readability.", "items": long_sentences[:8]})
     if internal_phrases:
         prose_issues.append({"kind": "internal_process_language", "message": "Memo contains internal process phrasing.", "items": internal_phrases[:8]})
+    if awkward_phrases:
+        prose_issues.append({"kind": "awkward_language_markers", "message": "Memo contains language that explicitly signals awkwardness or unclear prose.", "items": awkward_phrases[:8]})
     return {
         "schema_id": "memo_final_diagnosis_v1",
         "metrics": {
@@ -126,6 +135,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
             "repeated_caveat_term_count": len(repeated_caveats),
             "long_sentence_count": len(long_sentences),
             "internal_phrase_count": len(internal_phrases),
+            "awkward_phrase_count": len(awkward_phrases),
         },
         "coherence": {
             "status": "warning" if coherence_issues else "pass",
@@ -147,10 +157,14 @@ def diagnosis_improved(before: dict[str, Any], after: dict[str, Any], *, pass_na
     if pass_name == "coherence":
         keys = ("repeated_sentence_count", "repeated_caveat_term_count")
     elif pass_name == "prose":
-        keys = ("long_sentence_count", "internal_phrase_count")
+        keys = ("long_sentence_count", "internal_phrase_count", "awkward_phrase_count")
     else:
-        keys = ("repeated_sentence_count", "repeated_caveat_term_count", "long_sentence_count", "internal_phrase_count")
-    return any(_int(after_metrics.get(key)) < _int(before_metrics.get(key)) for key in keys)
+        keys = ("repeated_sentence_count", "repeated_caveat_term_count", "long_sentence_count", "internal_phrase_count", "awkward_phrase_count")
+    if any(_int(after_metrics.get(key)) < _int(before_metrics.get(key)) for key in keys):
+        return True
+    before_section = before.get(pass_name, {}) if isinstance(before.get(pass_name), dict) else {}
+    after_section = after.get(pass_name, {}) if isinstance(after.get(pass_name), dict) else {}
+    return _int(after_section.get("issue_count")) < _int(before_section.get("issue_count"))
 
 
 def _add_section_heading_spans(spans: list[dict[str, Any]], memo: str) -> None:
@@ -291,6 +305,11 @@ def _internal_phrase_issues(memo: str) -> list[dict[str, str]]:
         for phrase in INTERNAL_PROCESS_PHRASES
         if phrase in lowered
     ]
+
+
+def _awkward_phrase_issues(memo: str) -> list[dict[str, str]]:
+    lowered = memo.lower()
+    return [{"phrase": phrase} for phrase in AWKWARD_PHRASES if phrase in lowered]
 
 
 def _normalize(text: str) -> str:

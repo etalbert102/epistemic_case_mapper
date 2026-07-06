@@ -100,7 +100,7 @@ def _edit_suggestion_issue(
         return "target and replacement are required"
     if target == replacement:
         return "replacement is identical to target"
-    if allowed_edit_types is not None and edit_type not in allowed_edit_types:
+    if allowed_edit_types is not None and edit_type and edit_type not in allowed_edit_types:
         return "edit_type is not allowed for this pass"
     if len(target) > 700 or len(replacement) > 900:
         return "edit is too large for a local prose cleanup"
