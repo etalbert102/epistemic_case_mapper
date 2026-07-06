@@ -383,6 +383,9 @@ def repair_reader_memo_rewrite_candidate(markdown: str, scaffold: dict[str, Any]
     It cannot invent new evidence rows or loosen the acceptance checks.
     """
     repaired = clean_reader_memo_text(markdown)
+    source_lookup = scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}
+    if source_lookup:
+        repaired = replace_source_ids(repaired, {str(key): str(value) for key, value in source_lookup.items() if str(key).strip() and str(value).strip()})
     repaired = _repair_reader_source_label_noise(repaired, scaffold, contract)
     repaired = _replace_internal_reader_phrases(repaired)
     repaired = _repair_overclaim_strength_language(repaired)
@@ -796,6 +799,7 @@ from epistemic_case_mapper.map_briefing_evidence_partition import (
 )
 from epistemic_case_mapper.map_briefing_evidence_tables import _concept_label, _extract_confidence, _markdown_table_cell
 from epistemic_case_mapper.map_briefing_map_utils import _claims, _relations
+from epistemic_case_mapper.map_briefing_map_utils import replace_source_ids
 from epistemic_case_mapper.map_briefing_memo_slots import (
     _contains_banned_editorial_phrase,
     _drop_duplicate_reader_sentences,

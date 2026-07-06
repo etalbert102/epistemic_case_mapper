@@ -123,6 +123,109 @@ This is a practical sentence.
     assert result["skipped_edits"][0]["reason"] == "edit changes or introduces protected numbers"
 
 
+def test_apply_reader_memo_edit_suggestions_allows_preserved_numbers_and_sources() -> None:
+    memo = """## Practical Read
+
+This finding involved 10 mg per day (Source A), though the sentence is awkward.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "This finding involved 10 mg per day (Source A), though the sentence is awkward.",
+                "replacement": "This finding involved 10 mg per day (Source A), but the sentence is clearer.",
+                "reason": "Improve prose while preserving protected tokens.",
+                "edit_type": "fix_awkward_phrase",
+            }
+        ]
+    }
+    protected = {
+        "spans": [
+            {"kind": "quantity", "text": "10 mg"},
+            {"kind": "source_label", "text": "(Source A)"},
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(memo, payload, protected_spans=protected, allowed_edit_types={"fix_awkward_phrase"})
+
+    assert len(result["applied_edits"]) == 1
+    assert "the sentence is clearer" in result["memo"]
+
+
+def test_apply_reader_memo_edit_suggestions_does_not_treat_identifier_years_as_quantities() -> None:
+    memo = """## Limits of the Current Map
+
+fail: missing_source_claim_coverage - No accepted claim from required source dga_2020_2025_pmc_summary.
+"""
+    payload = {
+        "edits": [
+            {
+                "target": "fail: missing_source_claim_coverage - No accepted claim from required source dga_2020_2025_pmc_summary.",
+                "replacement": "The map lacks a specific accepted claim from one required source.",
+                "reason": "Convert machine diagnostic to reader-facing prose.",
+                "edit_type": "remove_internal_process_language",
+            }
+        ]
+    }
+
+    result = apply_reader_memo_edit_suggestions(memo, payload, allowed_edit_types={"remove_internal_process_language"})
+
+    assert len(result["applied_edits"]) == 1
+    assert "dga_2020_2025" not in result["memo"]
+
+
+def test_reader_memo_repair_replaces_raw_source_ids_with_display_names() -> None:
+    memo = """## Decision Brief
+
+Moderate egg consumption is not clearly harmful in this source packet.
+
+**Confidence:** medium
+
+## Limits of the Current Map
+
+The following sources did not provide accepted claims: dga_2020_2025_pmc_summary and aha_2019_dietary_cholesterol_pubmed.
+"""
+    scaffold = {
+        "confidence_cap": "medium",
+        "source_display_names": {
+            "dga_2020_2025_pmc_summary": "DGA 2020-2025 PMC Summary",
+            "aha_2019_dietary_cholesterol_pubmed": "AHA 2019 Dietary Cholesterol PubMed",
+        },
+    }
+    contract = build_reader_memo_rewrite_contract(memo, scaffold)
+
+    repaired = repair_reader_memo_rewrite_candidate(memo, scaffold, contract)
+
+    assert "dga_2020_2025_pmc_summary" not in repaired
+    assert "aha_2019_dietary_cholesterol_pubmed" not in repaired
+    assert "DGA 2020-2025 PMC Summary" in repaired
+    assert "AHA 2019 Dietary Cholesterol PubMed" in repaired
+
+
+def test_reader_memo_repair_does_not_replace_source_id_substrings() -> None:
+    memo = """## Decision Brief
+
+Moderate egg consumption is not clearly harmful in this source packet.
+
+**Confidence:** medium
+
+## Limits of the Current Map
+
+not_dga_2020_2025_pmc_summary_suffix is an unrelated identifier.
+"""
+    scaffold = {
+        "confidence_cap": "medium",
+        "source_display_names": {
+            "dga_2020_2025_pmc_summary": "DGA 2020-2025 PMC Summary",
+        },
+    }
+    contract = build_reader_memo_rewrite_contract(memo, scaffold)
+
+    repaired = repair_reader_memo_rewrite_candidate(memo, scaffold, contract)
+
+    assert "not_dga_2020_2025_pmc_summary_suffix" in repaired
+    assert "DGA 2020-2025 PMC Summary" not in repaired
+
+
 def test_apply_reader_memo_edit_suggestions_records_typed_metadata() -> None:
     memo = """## Practical Read
 

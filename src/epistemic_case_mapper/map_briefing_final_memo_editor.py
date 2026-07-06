@@ -94,7 +94,10 @@ def build_final_memo_edit_prompt(memo: str, edit_context: dict[str, Any]) -> str
     if pass_name == "coherence":
         task = "Fix decision-support coherence: BLUF/body alignment, repeated caveats, emphasis balance, and section flow."
     else:
-        task = "Fix surface prose: transitions, sentence length, awkward phrasing, and reader voice."
+        task = (
+            "Fix surface prose: transitions, sentence length, awkward phrasing, reader voice, raw diagnostic/status leakage, "
+            "and dense paragraphs."
+        )
     return (
         "You are a constrained final editor for a source-grounded decision memo.\n"
         f"Pass: {pass_name}\n"
@@ -112,6 +115,9 @@ def build_final_memo_edit_prompt(memo: str, edit_context: dict[str, Any]) -> str
         "- Each target must appear exactly once in the memo.\n"
         "- Keep edits local: one sentence, bullet, table cell, or short paragraph.\n"
         "- Use only allowed_edit_types from the context.\n"
+        "- In the coherence pass, do not propose prose-only edit types. If diagnosis includes weak_opening_answer, the first edit should use edit_type `tighten_bluf` on the opening answer.\n"
+        "- If the diagnosis flags raw diagnostics, replace machine-style status text with plain-language limits while preserving the gap.\n"
+        "- If the diagnosis flags dense paragraphs, split or compress them locally without adding evidence.\n"
         "- Do not edit protected spans or text that contains protected spans.\n"
         "- Prefer 3-8 high-value edits; return {\"edits\": []} if no safe edit helps this pass.\n\n"
         "Final edit context:\n"

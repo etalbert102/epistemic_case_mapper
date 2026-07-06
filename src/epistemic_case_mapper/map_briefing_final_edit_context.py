@@ -105,4 +105,7 @@ def _compact_protected_spans(protected_spans: dict[str, Any]) -> dict[str, Any]:
 def _pass_scope(pass_name: str) -> str:
     if pass_name == "coherence":
         return "Improve BLUF/body alignment, caveat weighting, section redundancy, and decision-flow issues without adding evidence."
-    return "Improve local readability, transitions, sentence length, and reader voice without changing argument structure or evidence."
+    return (
+        "Improve local readability, transitions, sentence length, reader voice, raw diagnostic leakage, "
+        "and dense paragraphs without changing argument structure or evidence."
+    )

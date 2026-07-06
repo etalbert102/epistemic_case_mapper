@@ -50,6 +50,8 @@ However, the reader should keep the recommendation bounded because the map-backe
 
 ## Limits of the Current Map
 
+fail: missing_source_claim_coverage - No accepted claim from required source source_without_clean_claim. This machine-style status should be rewritten for readers.
+
 {repeated}
 
 {repeated}
@@ -66,6 +68,7 @@ However, the reader should keep the recommendation bounded because the map-backe
     assert "awkward_section_openings" in prose_kinds
     assert "long_sentences" in prose_kinds
     assert "internal_process_language" in prose_kinds
+    assert "diagnostic_leakage" in prose_kinds
 
 
 def test_diagnosis_improved_uses_pass_specific_metrics() -> None:
@@ -75,6 +78,9 @@ def test_diagnosis_improved_uses_pass_specific_metrics() -> None:
             "repeated_caveat_term_count": 1,
             "long_sentence_count": 3,
             "internal_phrase_count": 1,
+            "diagnostic_leakage_count": 1,
+            "raw_status_flag_count": 1,
+            "dense_paragraph_count": 1,
         }
     }
     after_coherence = {
@@ -83,6 +89,9 @@ def test_diagnosis_improved_uses_pass_specific_metrics() -> None:
             "repeated_caveat_term_count": 1,
             "long_sentence_count": 3,
             "internal_phrase_count": 1,
+            "diagnostic_leakage_count": 1,
+            "raw_status_flag_count": 1,
+            "dense_paragraph_count": 1,
         }
     }
     after_prose = {
@@ -91,9 +100,46 @@ def test_diagnosis_improved_uses_pass_specific_metrics() -> None:
             "repeated_caveat_term_count": 1,
             "long_sentence_count": 2,
             "internal_phrase_count": 1,
+            "diagnostic_leakage_count": 1,
+            "raw_status_flag_count": 0,
+            "dense_paragraph_count": 1,
         }
     }
 
     assert diagnosis_improved(before, after_coherence, pass_name="coherence")
     assert not diagnosis_improved(before, after_coherence, pass_name="prose")
     assert diagnosis_improved(before, after_prose, pass_name="prose")
+
+
+def test_final_memo_diagnosis_flags_dense_reader_paragraphs() -> None:
+    dense = " ".join(["This paragraph preserves one local idea but is too dense for reader-facing prose"] * 7)
+    memo = f"""## Decision Brief
+
+Answer directly.
+
+**Confidence:** medium
+
+## Evidence Carrying the Conclusion
+
+{dense}
+"""
+
+    diagnosis = build_memo_final_diagnosis(memo, {"question": ""})
+
+    prose_kinds = {issue["kind"] for issue in diagnosis["prose"]["issues"]}
+    assert "dense_paragraphs" in prose_kinds
+    assert diagnosis["metrics"]["dense_paragraph_count"] == 1
+
+
+def test_final_memo_diagnosis_flags_map_process_opening_language() -> None:
+    memo = """## Decision Brief
+
+The current map supports a neutral or low concern under stated conditions read.
+
+**Confidence:** low
+"""
+
+    diagnosis = build_memo_final_diagnosis(memo, {"question": ""})
+
+    coherence_kinds = {issue["kind"] for issue in diagnosis["coherence"]["issues"]}
+    assert "weak_opening_answer" in coherence_kinds

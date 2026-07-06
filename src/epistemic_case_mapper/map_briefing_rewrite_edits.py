@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 
-NUMBER_RE = re.compile(r"(?<![A-Za-z0-9])(?:\d+(?:\.\d+)?%?|\d+\s*(?:-|to)\s*\d+|\b\d+/\d+\b)(?:\s*(?:mg|g|kg|ml|l|cm|mm|years?|months?|days?|weeks?|hours?|per\s+\w+))?", flags=re.IGNORECASE)
+NUMBER_RE = re.compile(r"(?<![A-Za-z0-9_])(?:\d+(?:\.\d+)?%?|\d+\s*(?:-|to)\s*\d+|\b\d+/\d+\b)(?![A-Za-z0-9_])(?:\s*(?:mg|g|kg|ml|l|cm|mm|years?|months?|days?|weeks?|hours?|per\s+\w+))?", flags=re.IGNORECASE)
 SOURCE_LABEL_RE = re.compile(r"\([A-Z][A-Za-z0-9][A-Za-z0-9 .,&:/+-]{1,90}\)")
 EVIDENCE_ID_RE = re.compile(r"\b(?:claim|relation|source|evidence)_[A-Za-z0-9_.:-]+\b|`[^`\n]*(?:claim|relation|source|evidence)[^`\n]*`", flags=re.IGNORECASE)
 
@@ -42,7 +42,7 @@ def apply_reader_memo_edit_suggestions(
     candidate = memo
     applied: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
-    protected_texts = _protected_texts(protected_spans or {})
+    hard_protected_texts = _hard_protected_texts(protected_spans or {})
     changed_chars = 0
     for index, raw_edit in enumerate(edits[:max_edits]):
         try:
@@ -56,7 +56,7 @@ def apply_reader_memo_edit_suggestions(
             candidate,
             target,
             replacement,
-            protected_texts=protected_texts,
+            hard_protected_texts=hard_protected_texts,
             allowed_edit_types=allowed_edit_types,
             edit_type=edit.edit_type.strip(),
         )
@@ -92,7 +92,7 @@ def _edit_suggestion_issue(
     target: str,
     replacement: str,
     *,
-    protected_texts: set[str] | None = None,
+    hard_protected_texts: set[str] | None = None,
     allowed_edit_types: set[str] | None = None,
     edit_type: str = "",
 ) -> str:
@@ -106,7 +106,7 @@ def _edit_suggestion_issue(
         return "edit is too large for a local prose cleanup"
     if "\n## " in target or "\n## " in replacement or target.startswith("##") or replacement.startswith("##"):
         return "top-level headings cannot be edited by the whole-memo edit pass"
-    if _touches_protected_text(target, protected_texts or set()):
+    if _touches_protected_text(target, hard_protected_texts or set()):
         return "edit touches protected memo content"
     if _protected_tokens_changed(target, replacement, NUMBER_RE):
         return "edit changes or introduces protected numbers"
@@ -135,10 +135,13 @@ def _clean_memo_text(text: str) -> str:
     return "\n".join(collapsed).strip() + "\n"
 
 
-def _protected_texts(protected_spans: dict[str, Any]) -> set[str]:
+def _hard_protected_texts(protected_spans: dict[str, Any]) -> set[str]:
     texts: set[str] = set()
+    hard_kinds = {"decision_question", "section_heading", "confidence_line", "sources_section"}
     for span in protected_spans.get("spans", []) if isinstance(protected_spans.get("spans"), list) else []:
         if not isinstance(span, dict):
+            continue
+        if str(span.get("kind", "")).strip() not in hard_kinds:
             continue
         text = str(span.get("text", "")).strip()
         if len(text) >= 2:

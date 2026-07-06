@@ -8,11 +8,16 @@ from typing import Any
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", flags=re.MULTILINE)
 SENTENCE_RE = re.compile(r"[^.!?\n][^.!?\n]*(?:[.!?]|$)")
 NUMBER_RE = re.compile(
-    r"(?<![A-Za-z0-9])(?:\d+(?:\.\d+)?%?|\d+\s*(?:-|to)\s*\d+|\b\d+/\d+\b)(?:\s*(?:mg|g|kg|ml|l|cm|mm|years?|months?|days?|weeks?|hours?|per\s+\w+))?",
+    r"(?<![A-Za-z0-9_])(?:\d+(?:\.\d+)?%?|\d+\s*(?:-|to)\s*\d+|\b\d+/\d+\b)(?![A-Za-z0-9_])(?:\s*(?:mg|g|kg|ml|l|cm|mm|years?|months?|days?|weeks?|hours?|per\s+\w+))?",
     flags=re.IGNORECASE,
 )
 EVIDENCE_ID_RE = re.compile(r"\b(?:claim|relation|source|evidence)_[A-Za-z0-9_.:-]+\b|`[^`\n]*(?:claim|relation|source|evidence)[^`\n]*`", flags=re.IGNORECASE)
 SOURCE_LABEL_RE = re.compile(r"\(([A-Z][A-Za-z0-9][A-Za-z0-9 .,&:/+-]{1,90})\)")
+RAW_DIAGNOSTIC_RE = re.compile(
+    r"\b(?:fail|warning|error|needs_review|missing_[a-z0-9_]+|[a-z]+(?:_[a-z0-9]+){2,})\b",
+    flags=re.IGNORECASE,
+)
+RAW_STATUS_RE = re.compile(r"\b(?:fail|warning|error|needs_review)\s*:", flags=re.IGNORECASE)
 
 COHERENCE_OPENING_MARKERS = (
     "the answer is context-dependent",
@@ -21,6 +26,14 @@ COHERENCE_OPENING_MARKERS = (
     "context",
     "however",
     "this analysis",
+)
+WEAK_OPENING_PHRASES = (
+    "the current map supports",
+    "current map supports",
+    "the map supports",
+    "under stated conditions read",
+    "under the stated conditions read",
+    "current read is",
 )
 INTERNAL_PROCESS_PHRASES = (
     "mapped support",
@@ -93,6 +106,9 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
     long_sentences = _long_sentences(sentences)
     internal_phrases = _internal_phrase_issues(memo)
     awkward_phrases = _awkward_phrase_issues(memo)
+    diagnostic_leakage = _diagnostic_leakage_issues(sections)
+    dense_paragraphs = _dense_paragraph_issues(sections)
+    raw_status_flags = _raw_status_flags(memo)
     question = str(contract.get("question", "")).strip()
     question_missing = bool(question and _normalize(question) not in _normalize(memo))
     coherence_issues: list[dict[str, Any]] = []
@@ -125,6 +141,22 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
         prose_issues.append({"kind": "internal_process_language", "message": "Memo contains internal process phrasing.", "items": internal_phrases[:8]})
     if awkward_phrases:
         prose_issues.append({"kind": "awkward_language_markers", "message": "Memo contains language that explicitly signals awkwardness or unclear prose.", "items": awkward_phrases[:8]})
+    if diagnostic_leakage:
+        prose_issues.append(
+            {
+                "kind": "diagnostic_leakage",
+                "message": "Reader-facing prose contains raw diagnostic/status language or machine identifiers.",
+                "items": diagnostic_leakage[:8],
+            }
+        )
+    if dense_paragraphs:
+        prose_issues.append(
+            {
+                "kind": "dense_paragraphs",
+                "message": "Some paragraphs are dense enough to need local compression or splitting.",
+                "items": dense_paragraphs[:8],
+            }
+        )
     return {
         "schema_id": "memo_final_diagnosis_v1",
         "metrics": {
@@ -136,6 +168,9 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
             "long_sentence_count": len(long_sentences),
             "internal_phrase_count": len(internal_phrases),
             "awkward_phrase_count": len(awkward_phrases),
+            "diagnostic_leakage_count": len(diagnostic_leakage),
+            "raw_status_flag_count": len(raw_status_flags),
+            "dense_paragraph_count": len(dense_paragraphs),
         },
         "coherence": {
             "status": "warning" if coherence_issues else "pass",
@@ -157,9 +192,25 @@ def diagnosis_improved(before: dict[str, Any], after: dict[str, Any], *, pass_na
     if pass_name == "coherence":
         keys = ("repeated_sentence_count", "repeated_caveat_term_count")
     elif pass_name == "prose":
-        keys = ("long_sentence_count", "internal_phrase_count", "awkward_phrase_count")
+        keys = (
+            "long_sentence_count",
+            "internal_phrase_count",
+            "awkward_phrase_count",
+            "diagnostic_leakage_count",
+            "raw_status_flag_count",
+            "dense_paragraph_count",
+        )
     else:
-        keys = ("repeated_sentence_count", "repeated_caveat_term_count", "long_sentence_count", "internal_phrase_count", "awkward_phrase_count")
+        keys = (
+            "repeated_sentence_count",
+            "repeated_caveat_term_count",
+            "long_sentence_count",
+            "internal_phrase_count",
+            "awkward_phrase_count",
+            "diagnostic_leakage_count",
+            "raw_status_flag_count",
+            "dense_paragraph_count",
+        )
     if any(_int(after_metrics.get(key)) < _int(before_metrics.get(key)) for key in keys):
         return True
     before_section = before.get(pass_name, {}) if isinstance(before.get(pass_name), dict) else {}
@@ -268,6 +319,8 @@ def _weak_opening_issue(memo: str) -> dict[str, Any] | None:
         return {"kind": "missing_opening_answer", "message": "Memo lacks a clear opening answer paragraph."}
     if any(first.startswith(marker) for marker in COHERENCE_OPENING_MARKERS):
         return {"kind": "weak_opening_answer", "message": "Opening answer starts with caveat or transition language.", "text": _first_body_paragraph(memo)}
+    if any(phrase in first for phrase in WEAK_OPENING_PHRASES):
+        return {"kind": "weak_opening_answer", "message": "Opening answer uses map-process language instead of a direct reader-facing answer.", "text": _first_body_paragraph(memo)}
     return None
 
 
@@ -310,6 +363,65 @@ def _internal_phrase_issues(memo: str) -> list[dict[str, str]]:
 def _awkward_phrase_issues(memo: str) -> list[dict[str, str]]:
     lowered = memo.lower()
     return [{"phrase": phrase} for phrase in AWKWARD_PHRASES if phrase in lowered]
+
+
+def _diagnostic_leakage_issues(sections: list[dict[str, str]]) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    for section in sections:
+        for paragraph in _paragraphs(section["markdown"]):
+            matches = [match.group(0) for match in RAW_DIAGNOSTIC_RE.finditer(paragraph)]
+            if not matches:
+                continue
+            if _paragraph_is_protected_reference(paragraph):
+                continue
+            issues.append(
+                {
+                    "section": section["title"],
+                    "matches": list(dict.fromkeys(matches))[:8],
+                    "text": _short_text(paragraph, 700),
+                }
+            )
+    return issues
+
+
+def _raw_status_flags(memo: str) -> list[str]:
+    return [match.group(0) for match in RAW_STATUS_RE.finditer(memo)]
+
+
+def _dense_paragraph_issues(sections: list[dict[str, str]]) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    for section in sections:
+        if section["title"].strip().lower() in {"sources", "evidence trail"}:
+            continue
+        for paragraph in _paragraphs(section["markdown"]):
+            words = paragraph.split()
+            if len(words) <= 55:
+                continue
+            if paragraph.startswith("|") or paragraph.startswith("- "):
+                continue
+            issues.append({"section": section["title"], "word_count": len(words), "text": _short_text(paragraph, 700)})
+    return issues
+
+
+def _paragraphs(markdown: str) -> list[str]:
+    values = []
+    for paragraph in re.split(r"\n\s*\n", markdown):
+        cleaned = re.sub(r"\s+", " ", paragraph).strip()
+        if cleaned and not cleaned.startswith("## "):
+            values.append(cleaned)
+    return values
+
+
+def _paragraph_is_protected_reference(paragraph: str) -> bool:
+    lowered = paragraph.lower()
+    return paragraph.startswith("- ") or lowered.startswith("the structured evidence trail")
+
+
+def _short_text(text: str, max_chars: int) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= max_chars:
+        return compact
+    return compact[: max_chars - 3].rstrip() + "..."
 
 
 def _normalize(text: str) -> str:
