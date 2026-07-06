@@ -103,6 +103,7 @@ def test_argument_model_preserves_load_bearing_anchors_and_quantities() -> None:
     assert validated.strongest_support
     assert validated.scope_boundaries
     assert validated.cruxes[0].relation_ids == ["r001"]
+    assert "map sufficiency status" not in " ".join(validated.confidence_reasons).lower()
     assert all(item.claim_ids or item.source_ids or item.relation_ids or item.quantity_ids for item in validated.strongest_support)
     assert validated.audit["method"] == "deterministic_argument_model_from_briefing_scaffold_v1"
 

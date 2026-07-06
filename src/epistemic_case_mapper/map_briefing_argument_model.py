@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_sufficiency_limit
 from epistemic_case_mapper.model_schemas import ArgumentEvidenceItem, ArgumentModelOutput
 
 
@@ -66,7 +67,7 @@ def _confidence_reasons(scaffold: dict[str, Any], quality_report: dict[str, Any]
     reasons = [f"Map quality status: {quality_report.get('status', 'unknown')}."]
     sufficiency = _dict(scaffold.get("map_sufficiency_report"))
     if sufficiency.get("status"):
-        reasons.append(f"Map sufficiency status: {sufficiency['status']}.")
+        reasons.append(reader_facing_sufficiency_limit(str(sufficiency["status"])))
     for issue in quality_report.get("issues", []) if isinstance(quality_report.get("issues"), list) else []:
         if isinstance(issue, dict):
             message = str(issue.get("message") or issue.get("issue_type") or "").strip()

@@ -25,3 +25,20 @@ def replace_internal_reader_phrases(text: str) -> str:
         cleaned,
         flags=re.IGNORECASE,
     )
+
+
+def reader_facing_sufficiency_limit(status: str) -> str:
+    if status == "usable_with_named_gaps":
+        return (
+            "Where the current source packet lacks a decision-relevant evidence slot, "
+            "the memo treats that absence as a named evidence gap rather than as negative evidence."
+        )
+    if status == "sufficient_for_scaffolded_briefing":
+        return (
+            "The current source packet is strong enough to organize a bounded briefing, "
+            "but it should not be read as exhausting the wider evidence base."
+        )
+    return (
+        "The current source packet has enough structure to name the relevant limits, "
+        "but unresolved gaps should not be filled by inference."
+    )

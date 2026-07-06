@@ -20,7 +20,7 @@ from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_l
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_quantities import quantity_ledger_markdown
 from epistemic_case_mapper.map_briefing_section_structure import filter_primary_practical_actions
-from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
+from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_sufficiency_limit, replace_internal_reader_phrases
 
 def _memo_slot_row_rank(row: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> tuple[int, int, int, int, str]:
     claim = str(row.get("claim", ""))
@@ -461,7 +461,7 @@ def _humanized_limitations_paragraph(scaffold: dict[str, Any]) -> str:
             readable.append(_polish_reader_sentence_block(issue, max_chars=260))
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     if sufficiency.get("status"):
-        readable.append(f"The map sufficiency status is {str(sufficiency.get('status')).replace('_', ' ')}, so absent slots should be treated as named gaps.")
+        readable.append(reader_facing_sufficiency_limit(str(sufficiency.get("status"))))
     readable.extend(_sufficiency_implications(sufficiency))
     if not readable:
         readable = _executive_weak_points(scaffold)
@@ -804,7 +804,7 @@ def _executive_weak_points(scaffold: dict[str, Any]) -> list[str]:
     items.extend(str(item) for item in synthesis.get("limits", [])[:3] if str(item).strip())
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     if sufficiency.get("status"):
-        items.append(f"The map sufficiency status is {str(sufficiency.get('status')).replace('_', ' ')}, so absence of a slot should be read as a mapped gap rather than as negative evidence.")
+        items.append(reader_facing_sufficiency_limit(str(sufficiency.get("status"))))
     if quality_status and quality_status != "unknown":
         items.append(f"The map quality status is {quality_status.replace('_', ' ')}, which caps confidence and argues against a stronger bottom line.")
     items.extend(_string_list(scaffold.get("quality_issues"))[:3])

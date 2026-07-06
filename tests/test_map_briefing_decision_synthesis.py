@@ -265,6 +265,27 @@ def test_reader_polish_splits_heading_from_backslash_joined_body() -> None:
     assert cleaned == "### Map Quality and Gaps\n\nThe map is usable but has known limits."
 
 
+def test_reader_polish_translates_sufficiency_status_into_reader_facing_limit() -> None:
+    rendered = """## Decision Brief
+
+The bounded read is cautious.
+
+**Confidence:** low
+"""
+    scaffold = {
+        "confidence_cap": "low",
+        "map_sufficiency_report": {"status": "usable_with_named_gaps"},
+        "decision_synthesis_model": {"limits": []},
+    }
+
+    polished = polish_briefing_for_reader(rendered, scaffold)
+
+    assert "map sufficiency status" not in polished.lower()
+    assert "usable with named gaps" not in polished.lower()
+    assert "named evidence gap" in polished
+    assert "negative evidence" in polished
+
+
 def test_graph_synthesis_packet_extracts_generic_network_structure() -> None:
     candidate_map = {
         "claims": [
