@@ -18,6 +18,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_cache import claim_payload_for_chunk, write_claim_progress
+from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
 from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason, region_decision_question
 from epistemic_case_mapper.staged_semantic_langextract import langextract_claim_payload_for_chunk
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
@@ -93,6 +94,7 @@ def run_staged_map(
     repair_quality: bool = False,
     reuse_claim_cache: bool = True,
     claim_extractor: str = "native",
+    claim_consolidation: str = "deterministic",
     decision_question: str | None = None,
 ) -> StagedMapResult:
     _validate_staged_map_options(
@@ -102,6 +104,7 @@ def run_staged_map(
         max_total_chunks=max_total_chunks,
         claim_extractor=claim_extractor,
         relation_batch_size=relation_batch_size,
+        claim_consolidation=claim_consolidation,
     )
     manifest, region, case_manifest = _load_context(repo_root, manifest_path, region_id)
     artifacts = _artifact_dir(repo_root, region_id, artifact_dir)
@@ -126,6 +129,7 @@ def run_staged_map(
         config_profile_id=config_profile.profile_id,
         reuse_claim_cache=reuse_claim_cache,
         claim_extractor=claim_extractor,
+        claim_consolidation=claim_consolidation,
         decision_question=selected_decision_question,
     )
     claims = claim_stage["claims"]
@@ -191,7 +195,7 @@ def run_staged_map(
         repo_root=repo_root, region=region, backend=backend, decision_question=selected_decision_question,
         chunk_lines=chunk_lines, chunk_overlap_lines=chunk_overlap_lines,
         max_chunks_per_source=max_chunks_per_source, max_total_chunks=max_total_chunks,
-        max_claims_per_chunk=max_claims_per_chunk, claim_extractor=claim_extractor,
+        max_claims_per_chunk=max_claims_per_chunk, claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
         max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
         backend_timeout=backend_timeout, backend_retries=backend_retries,
         config_profile_id=config_profile.profile_id,
@@ -234,6 +238,7 @@ def _validate_staged_map_options(
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
     claim_extractor: str,
+    claim_consolidation: str,
     relation_batch_size: int,
 ) -> None:
     if chunk_lines < 1:
@@ -248,6 +253,8 @@ def _validate_staged_map_options(
         raise ValueError("relation_batch_size must be positive")
     if claim_extractor not in {"native", "langextract"}:
         raise ValueError("claim_extractor must be native or langextract")
+    if claim_consolidation not in {"deterministic", "vector-llm"}:
+        raise ValueError("claim_consolidation must be deterministic or vector-llm")
 
 def _write_staged_run_summary(
     *,
@@ -261,6 +268,7 @@ def _write_staged_run_summary(
     max_total_chunks: int | None,
     max_claims_per_chunk: int,
     claim_extractor: str,
+    claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     backend_timeout: int | None,
@@ -292,6 +300,7 @@ def _write_staged_run_summary(
             max_total_chunks=max_total_chunks,
             max_claims_per_chunk=max_claims_per_chunk,
             claim_extractor=claim_extractor,
+            claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
             backend_timeout=backend_timeout,
@@ -336,6 +345,7 @@ def _extract_consolidated_claims(
     config_profile_id: str,
     reuse_claim_cache: bool,
     claim_extractor: str,
+    claim_consolidation: str,
     decision_question: str,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
@@ -365,10 +375,14 @@ def _extract_consolidated_claims(
         claims.extend(coverage_claims)
     pre_consolidation_claim_count = len(claims)
     write_json(artifacts / "coverage_backfill_claims.json", coverage_report)
-    claims, consolidation_report = consolidate_claims_for_map(
-        claims,
-        min_claims=max(2, region.thresholds.min_claims),
-    )
+    if claim_consolidation == "vector-llm":
+        claims, consolidation_report = consolidate_claims_with_vector_llm(
+            claims, backend=backend, artifact_dir=artifacts, decision_question=decision_question,
+            backend_timeout=backend_timeout, backend_retries=backend_retries,
+            min_claims=max(2, region.thresholds.min_claims),
+        )
+    else:
+        claims, consolidation_report = consolidate_claims_for_map(claims, min_claims=max(2, region.thresholds.min_claims))
     write_json(artifacts / "claim_consolidation_report.json", consolidation_report)
     return {
         "claims": claims,
@@ -542,6 +556,7 @@ def _staged_run_summary(
     max_total_chunks: int | None,
     max_claims_per_chunk: int,
     claim_extractor: str,
+    claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     backend_timeout: int | None,
@@ -578,6 +593,7 @@ def _staged_run_summary(
         "max_total_chunks": max_total_chunks,
         "max_claims_per_chunk": max_claims_per_chunk,
         "claim_extractor": claim_extractor,
+        "claim_consolidation": claim_consolidation,
         "max_relation_pairs": max_relation_pairs,
         "relation_batch_size": relation_batch_size,
         "backend_timeout": backend_timeout,

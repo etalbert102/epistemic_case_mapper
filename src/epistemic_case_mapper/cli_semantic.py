@@ -95,6 +95,7 @@ def _run_staged_semantic_map(
     max_total_chunks: int,
     max_claims_per_chunk: int,
     claim_extractor: str,
+    claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     backend_timeout: int,
@@ -146,6 +147,7 @@ def _run_staged_semantic_map(
             max_total_chunks=max_total_chunks or None,
             max_claims_per_chunk=max_claims_per_chunk,
             claim_extractor=claim_extractor,
+            claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
             backend_timeout=backend_timeout,
@@ -162,6 +164,7 @@ def _run_staged_semantic_map(
         f"{_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
         f"claim_extractor={claim_extractor} "
+        f"claim_consolidation={claim_consolidation} "
         f"rejected_claims={result.rejected_claim_count} rejected_relations={result.rejected_relation_count} "
         f"quality={result.quality_status} "
         f"repair_ran={str(result.quality_repair_ran).lower()} repair_accepted={str(result.quality_repaired).lower()} "
@@ -256,6 +259,7 @@ def _run_staged_semantic_brief(
     max_total_chunks: int,
     max_claims_per_chunk: int,
     claim_extractor: str,
+    claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
     briefing_max_claims: int,
@@ -316,6 +320,7 @@ def _run_staged_semantic_brief(
             max_total_chunks=max_total_chunks or None,
             max_claims_per_chunk=max_claims_per_chunk,
             claim_extractor=claim_extractor,
+            claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
             backend_timeout=backend_timeout,
@@ -351,6 +356,7 @@ def _run_staged_semantic_brief(
         f"map={_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
         f"claim_extractor={claim_extractor} "
+        f"claim_consolidation={claim_consolidation} "
         f"quality={result.quality_status} "
         f"confidence={briefing_result.model_confidence}->{briefing_result.calibrated_confidence}"
     )

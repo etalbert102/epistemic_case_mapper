@@ -59,6 +59,75 @@ def test_candidate_relation_pairs_prioritize_decision_role_templates_without_sha
     assert [(pairs[0]["left"]["claim_id"], pairs[0]["right"]["claim_id"])] == [("demo_c001", "demo_c002")]
     assert "scope_limit_bounds_decision_claim" in pairs[0]["candidate_reason"]
 
+
+def test_relation_candidate_pool_prefers_canonical_claims_with_source_role_coverage() -> None:
+    claims = [
+        {
+            "claim_id": "doc_a_raw_001",
+            "claim": f"Raw same-source finding {index} says the intervention had a neutral effect on the target outcome.",
+            "source_id": "doc_a",
+            "excerpt": f"Raw same-source finding {index}.",
+            "role": "conclusion_support",
+        }
+        for index in range(18)
+    ]
+    claims.extend(
+        [
+            {
+                "claim_id": "doc_a_canonical",
+                "claim": "The best canonical finding says the intervention had a neutral effect on the target outcome.",
+                "source_id": "doc_a",
+                "excerpt": "The best canonical finding says neutral effect.",
+                "role": "conclusion_support",
+                "supporting_claim_ids": ["doc_a_raw_001", "doc_a_raw_002", "doc_a_raw_003", "doc_a_raw_004"],
+                "consolidation_method": "vector_cluster_llm_adjudicated",
+            },
+            {
+                "claim_id": "doc_b_scope",
+                "claim": "The neutral finding only applies where the study population matches the decision population.",
+                "source_id": "doc_b",
+                "excerpt": "Only applies where populations match.",
+                "role": "scope_limit",
+            },
+            {
+                "claim_id": "doc_c_crux",
+                "claim": "The decision changes if the neutral effect disappears in the target subgroup.",
+                "source_id": "doc_c",
+                "excerpt": "Decision changes in the target subgroup.",
+                "role": "crux",
+            },
+        ]
+    )
+
+    pairs = _candidate_relation_pairs(claims, max_pairs=6)
+    endpoint_ids = {packet[side]["claim_id"] for packet in pairs for side in ("left", "right")}
+    report = _relation_candidate_pool_report(claims, pairs, requested_max_pairs=6, effective_max_pairs=6)
+    pool_ids = {row["claim_id"] for row in report["relation_pool_claims"]}
+
+    assert "doc_a_canonical" in endpoint_ids
+    assert "doc_c_crux" in endpoint_ids
+    assert "doc_b_scope" in pool_ids
+
+
+def test_relation_candidate_pool_report_records_pool_and_skipped_claims() -> None:
+    claims = [
+        {
+            "claim_id": f"c{index:03d}",
+            "claim": f"Claim {index} reports an association with the decision-relevant outcome.",
+            "source_id": f"doc_{index % 6}",
+            "excerpt": f"Claim {index} excerpt.",
+            "role": "conclusion_support" if index % 2 else "scope_limit",
+        }
+        for index in range(70)
+    ]
+    pairs = _candidate_relation_pairs(claims, max_pairs=12)
+    report = _relation_candidate_pool_report(claims, pairs, requested_max_pairs=12, effective_max_pairs=12)
+
+    assert report["relation_pool_count"] <= report["relation_pool_limit"]
+    assert report["skipped_relation_pool_count"] > 0
+    assert report["relation_pool_claims"]
+    assert report["skipped_relation_pool_examples"]
+
 def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
     manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
     chunk = SourceChunk(

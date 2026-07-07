@@ -100,18 +100,28 @@ def _relation_candidate_pool_report(
         for side in ("left", "right")
         if isinstance(packet.get(side), dict)
     }
+    relation_pool = _prioritized_relation_claim_pool(eligible_claims, max_pairs=effective_max_pairs)
+    relation_pool_ids = {str(claim.get("claim_id", "")) for claim in relation_pool}
+    skipped_pool_claims = [claim for claim in eligible_claims if str(claim.get("claim_id", "")) not in relation_pool_ids]
     return {
         "schema_id": "relation_candidate_pool_report_v1",
         "claim_count": len(claims),
         "eligible_endpoint_count": len(eligible_claims),
         "rejected_endpoint_count": len(rejected_endpoints),
+        "relation_pool_limit": _relation_claim_pool_limit(effective_max_pairs),
+        "relation_pool_count": len(relation_pool),
+        "skipped_relation_pool_count": len(skipped_pool_claims),
         "requested_max_pairs": requested_max_pairs,
         "effective_max_pairs": effective_max_pairs,
         "selected_pair_count": len(pair_packets),
         "selected_endpoint_count": len(selected_ids),
         "eligible_role_counts": _count_values(str(claim.get("role", "unknown")) for claim in eligible_claims),
+        "relation_pool_role_counts": _count_values(str(claim.get("role", "unknown")) for claim in relation_pool),
+        "relation_pool_source_counts": _count_values(str(claim.get("source_id", "unknown")) for claim in relation_pool),
         "rejected_endpoint_reason_counts": _count_values(str(row.get("reason", "")) for row in rejected_endpoints),
         "selected_candidate_reason_counts": _candidate_reason_counts(pair_packets),
+        "relation_pool_claims": [_candidate_endpoint_telemetry(claim) for claim in relation_pool[:80]],
+        "skipped_relation_pool_examples": [_candidate_endpoint_telemetry(claim) for claim in skipped_pool_claims[:30]],
         "selected_pairs": [_candidate_pair_telemetry(packet) for packet in pair_packets],
         "rejected_endpoint_examples": rejected_endpoints[:30],
     }
@@ -161,24 +171,72 @@ def _candidate_endpoint_telemetry(claim: Any) -> dict[str, Any]:
 def _prioritized_relation_claim_pool(claims: list[dict[str, Any]], *, max_pairs: int) -> list[dict[str, Any]]:
     if len(claims) <= 2:
         return claims
-    pool_limit = max(12, min(48, max(max_pairs * 2, 30)))
+    pool_limit = _relation_claim_pool_limit(max_pairs)
     ranked = sorted(claims, key=_relation_endpoint_rank)
-    by_source: dict[str, dict[str, Any]] = {}
+    selected: list[dict[str, Any]] = []
+    selected_ids: set[str] = set()
+    bucket_counts: dict[tuple[str, str], int] = {}
+    seen_source_role: set[tuple[str, str]] = set()
     for claim in ranked:
-        source_id = str(claim.get("source_id", ""))
-        if source_id and source_id not in by_source:
-            by_source[source_id] = claim
-    selected: list[dict[str, Any]] = list(by_source.values())[: min(len(by_source), pool_limit)]
-    selected_ids = {str(claim.get("claim_id", "")) for claim in selected}
+        bucket = _relation_pool_bucket(claim)
+        if bucket in seen_source_role:
+            continue
+        if _append_relation_pool_claim(claim, selected, selected_ids, bucket_counts, pool_limit=pool_limit):
+            seen_source_role.add(bucket)
+    max_per_bucket = max(3, min(8, pool_limit // max(1, len(seen_source_role) or 1)))
     for claim in ranked:
         if len(selected) >= pool_limit:
             break
         claim_id = str(claim.get("claim_id", ""))
         if claim_id in selected_ids:
             continue
-        selected.append(claim)
-        selected_ids.add(claim_id)
+        bucket = _relation_pool_bucket(claim)
+        if bucket_counts.get(bucket, 0) >= max_per_bucket:
+            continue
+        _append_relation_pool_claim(claim, selected, selected_ids, bucket_counts, pool_limit=pool_limit)
+    for claim in ranked:
+        if len(selected) >= pool_limit:
+            break
+        _append_relation_pool_claim(claim, selected, selected_ids, bucket_counts, pool_limit=pool_limit)
     return selected
+
+
+def _relation_claim_pool_limit(max_pairs: int) -> int:
+    return max(12, min(48, max(max_pairs * 2, 30)))
+
+
+def _relation_pool_bucket(claim: dict[str, Any]) -> tuple[str, str]:
+    return (str(claim.get("source_id", "")), _relation_role_family(str(claim.get("role", ""))))
+
+
+def _relation_role_family(role: str) -> str:
+    if role in {"scope_limit", "measurement_validity", "external_validity"}:
+        return "boundary"
+    if role in {"crux", "implementation_constraint"}:
+        return "decision_condition"
+    if role == "conclusion_support":
+        return "finding"
+    return role or "other"
+
+
+def _append_relation_pool_claim(
+    claim: dict[str, Any],
+    selected: list[dict[str, Any]],
+    selected_ids: set[str],
+    bucket_counts: dict[tuple[str, str], int],
+    *,
+    pool_limit: int,
+) -> bool:
+    if len(selected) >= pool_limit:
+        return False
+    claim_id = str(claim.get("claim_id", ""))
+    if not claim_id or claim_id in selected_ids:
+        return False
+    selected.append(claim)
+    selected_ids.add(claim_id)
+    bucket = _relation_pool_bucket(claim)
+    bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+    return True
 
 
 def _tiny_map_relation_claim_pool(claims: list[dict[str, Any]], *, max_pairs: int) -> list[dict[str, Any]]:
@@ -216,6 +274,12 @@ def _relation_endpoint_priority(claim: dict[str, Any]) -> int:
     }
     text = _normalize_text(f"{claim.get('claim', '')} {claim.get('excerpt', '')}")
     score = role_scores.get(role, 4)
+    if claim.get("supporting_claim_ids"):
+        score += min(5, 2 + len(claim.get("supporting_claim_ids", [])) // 3)
+    if str(claim.get("consolidation_method", "")).strip():
+        score += 2
+    if len(claim.get("supporting_sources", [])) > 1:
+        score += 2
     if _question_fit_status(claim) in {"match", "partial"}:
         score += 4
     if _has_support_signal(text) or _has_limit_or_challenge_signal(text):
