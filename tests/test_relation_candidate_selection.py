@@ -21,6 +21,7 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     _parse_relation_model_json,
     _relation_candidate_pool_report,
     _relation_claim_card,
+    _relation_pair_prompt,
     _relation_pair_block,
     _relation_pair_budget,
 )
@@ -90,6 +91,53 @@ def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
     assert "source_quote" in schema["properties"]["claims"]["items"]["properties"]
     assert "source_quote" in schema["properties"]["claims"]["items"]["required"]
     assert "scope_flags" in schema["properties"]["claims"]["items"]["properties"]
+
+def test_prompt_builders_honor_explicit_decision_question_override() -> None:
+    manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
+    override = "Should generally healthy adults treat eggs as harmful, neutral, or beneficial for cardiovascular risk?"
+    chunk = SourceChunk(
+        chunk_id="demo_lines_1_1",
+        source_id="demo_source",
+        title="Demo Source",
+        start_line=1,
+        end_line=1,
+        ordinal=1,
+        numbered_text="1: Egg intake was not associated with higher cardiovascular risk in this cohort.",
+        plain_text="Egg intake was not associated with higher cardiovascular risk in this cohort.",
+        spans=(
+            SourceSpan(
+                span_id="demo_s0001",
+                source_id="demo_source",
+                source_span="lines 1-1",
+                text="Egg intake was not associated with higher cardiovascular risk in this cohort.",
+            ),
+        ),
+    )
+    packet = {
+        "pair_id": "pair_001",
+        "left": {
+            "claim_id": "demo_c001",
+            "claim": "Egg intake was not associated with higher cardiovascular risk.",
+            "source_id": "doc_a",
+            "role": "conclusion_support",
+            "source_alignment": {"source_quote": "not associated with higher cardiovascular risk"},
+        },
+        "right": {
+            "claim_id": "demo_c002",
+            "claim": "The cohort design limits causal interpretation.",
+            "source_id": "doc_b",
+            "role": "scope_limit",
+            "source_alignment": {"source_quote": "cohort design limits causal interpretation"},
+        },
+        "pair_intent": {"intent": "cross_source_general_scope_to_finding", "allowed_relation_types": ["refines", "none"]},
+    }
+
+    claim_prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims=2, decision_question=override)
+    relation_prompt = _relation_pair_prompt(manifest, region, case_manifest, packet, decision_question=override)
+
+    assert f"Decision question: {override}" in claim_prompt
+    assert f"Decision question: {override}" in relation_prompt
+    assert "Decision question: How should a synthesis preserve the relationship" not in claim_prompt
 
 def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -> None:
     span = SourceSpan(

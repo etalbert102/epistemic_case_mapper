@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_quote_alignment import align_source_quote_to_span, quote_alignment_metadata
 from epistemic_case_mapper.staged_semantic_prompt_schemas import (
     relation_batch_prompt_schema,
@@ -30,14 +31,16 @@ def _relation_pair_prompt(
     region: WorkedRegion,
     case_manifest: CaseManifest,
     packet: dict[str, Any],
+    decision_question: str | None = None,
 ) -> str:
     left = packet["left"]
     right = packet["right"]
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     profile_rules = _profile_relation_rule_text(case_manifest)
+    question = region_decision_question(region, case_manifest, decision_question)
     return render_prompt(
         ("Task", "You are classifying one possible relation between two already-validated claim cards."),
-        ("Metadata", f"Prompt version: {RELATION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nPair ID: {packet['pair_id']}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Metadata", f"Prompt version: {RELATION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nPair ID: {packet['pair_id']}\nDecision question: {question}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
         ("Rules", _relation_rules(profile_rules)),
         ("Output Schema", json_schema_block(relation_prompt_schema(packet["pair_id"], relation_types))),
         ("Examples", examples_block(relation_examples())),
@@ -59,14 +62,16 @@ def _relation_batch_prompt(
     case_manifest: CaseManifest,
     packets: list[dict[str, Any]],
     batch_id: str,
+    decision_question: str | None = None,
 ) -> str:
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
     profile_rules = _profile_relation_rule_text(case_manifest)
+    question = region_decision_question(region, case_manifest, decision_question)
     return render_prompt(
         ("Task", "You are classifying possible relations between already-validated claim cards."),
-        ("Metadata", f"Prompt version: {RELATION_BATCH_PROMPT_VERSION}\nRegion ID: {region.region_id}\nBatch ID: {batch_id}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Metadata", f"Prompt version: {RELATION_BATCH_PROMPT_VERSION}\nRegion ID: {region.region_id}\nBatch ID: {batch_id}\nDecision question: {question}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
         ("Rules", ["- Return exactly one object for each pair ID in this batch.", *_relation_rules(profile_rules)]),
         ("Output Schema", json_schema_block(relation_batch_prompt_schema(pair_ids, relation_types))),
         ("Examples", examples_block(relation_examples())),

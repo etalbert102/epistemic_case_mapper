@@ -553,10 +553,11 @@ def _run_quality_repair(
     backend_timeout: int | None,
     backend_retries: int,
     artifact_dir: Path,
+    decision_question: str | None = None,
 ) -> dict[str, Any]:
     if quality_report.get("status") == "usable_with_review":
         return {"ran": False, "accepted": False, "reason": "quality_already_usable"}
-    prompt = _map_quality_repair_prompt(region, case_manifest, candidate_map, quality_report)
+    prompt = _map_quality_repair_prompt(region, case_manifest, candidate_map, quality_report, decision_question=decision_question)
     prompt_path = artifact_dir / "map_quality_repair_prompt.txt"
     write_markdown(prompt_path, prompt)
     info: dict[str, Any] = {
@@ -603,6 +604,7 @@ def _run_quality_repair(
         candidate_map=repaired,
         rejected_claims=rejected_claims,
         rejected_relations=rejected_relations,
+        decision_question=decision_question,
     )
     write_json(artifact_dir / "map_quality_repaired_report.json", repaired_quality)
     write_markdown(artifact_dir / "MAP_QUALITY_REPAIRED_REPORT.md", _quality_markdown(repaired_quality))
@@ -655,6 +657,7 @@ def _extract_relations(
     artifact_dir: Path,
     max_relation_pairs: int,
     relation_batch_size: int,
+    decision_question: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
         return [], [], [{"reason": "too_few_claims"}]
@@ -672,9 +675,9 @@ def _extract_relations(
     for batch_index, batch in enumerate(_batches(pair_packets, relation_batch_size), start=1):
         batch_id = f"batch_{batch_index:03d}"
         prompt = (
-            _relation_pair_prompt(manifest, region, case_manifest, batch[0])
+            _relation_pair_prompt(manifest, region, case_manifest, batch[0], decision_question=decision_question)
             if len(batch) == 1
-            else _relation_batch_prompt(manifest, region, case_manifest, batch, batch_id)
+            else _relation_batch_prompt(manifest, region, case_manifest, batch, batch_id, decision_question=decision_question)
         )
         artifact_subdir = "relation_pairs" if len(batch) == 1 else "relation_batches"
         artifact_stem = batch[0]["pair_id"] if len(batch) == 1 else batch_id
@@ -705,6 +708,7 @@ def _extract_relations(
                     artifact_dir=artifact_dir,
                     batch_id=batch_id,
                     batch_error=str(exc),
+                    decision_question=decision_question,
                 )
                 accepted.extend(singleton_relations)
                 payloads.extend(singleton_payloads)
@@ -733,6 +737,7 @@ def _extract_relations(
                     artifact_dir=artifact_dir,
                     batch_id=batch_id,
                     batch_error="invalid_json",
+                    decision_question=decision_question,
                 )
                 accepted.extend(singleton_relations)
                 payloads.extend(singleton_payloads)

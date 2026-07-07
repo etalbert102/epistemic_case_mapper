@@ -167,6 +167,7 @@ def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_staged_map = semantic_staged_subparsers.add_parser("map", help="Extract claims by chunk, build relations, and assemble a map.")
     semantic_staged_map.add_argument("--region", required=True)
     semantic_staged_map.add_argument("--backend", help="Override manifest default backend.")
+    semantic_staged_map.add_argument("--question", help="Decision question. Defaults to the region baseline question, then the case manifest question.")
     semantic_staged_map.add_argument("--output", help="Output path. Defaults to the region map path.")
     semantic_staged_map.add_argument("--artifact-dir", help="Directory for intermediate prompts and model outputs.")
     semantic_staged_map.add_argument("--chunk-lines", type=int, default=40)

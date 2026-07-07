@@ -6,7 +6,9 @@ from typing import Any
 from epistemic_case_mapper.schema import CaseManifest
 
 
-def region_decision_question(region: Any, case_manifest: CaseManifest) -> str:
+def region_decision_question(region: Any, case_manifest: CaseManifest, override: str | None = None) -> str:
+    if str(override or "").strip():
+        return str(override).strip()
     blinded_baseline = getattr(region, "blinded_baseline", None)
     question = getattr(blinded_baseline, "question", "") if blinded_baseline is not None else ""
     if str(question).strip():

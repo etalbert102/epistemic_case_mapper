@@ -391,6 +391,7 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
 
 def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
+    decision_question = "Should this demo decision rely on Alpha or Gamma?"
     fake_model = tmp_path / "fake_staged_brief_model.py"
     fake_model.write_text(
         "import json, sys\n"
@@ -426,6 +427,8 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--question",
+            decision_question,
             "--briefing-dir",
             str(tmp_path / "brief"),
             "--artifact-dir",
@@ -444,6 +447,10 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     assert "Doc A" in rendered
     assert "Alpha supports the decision" in rendered
     assert "demo_case_doc_a" not in rendered
+    run_summary = json.loads((tmp_path / "map_artifacts/run_summary.json").read_text(encoding="utf-8"))
+    claim_prompt = next((tmp_path / "map_artifacts/claim_chunks").glob("*_prompt.txt")).read_text(encoding="utf-8")
+    assert run_summary["decision_question"] == decision_question
+    assert f"Decision question: {decision_question}" in claim_prompt
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

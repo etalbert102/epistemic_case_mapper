@@ -86,6 +86,7 @@ def _run_staged_semantic_map(
     package: str,
     region_id: str,
     backend: str | None,
+    question: str | None,
     output: str | None,
     artifact_dir: str | None,
     chunk_lines: int,
@@ -136,6 +137,7 @@ def _run_staged_semantic_map(
             manifest_path=package,
             region_id=region_id,
             backend=backend or manifest.default_model_backend,
+            decision_question=question,
             output_path=output,
             artifact_dir=artifact_dir,
             chunk_lines=chunk_lines,
@@ -297,6 +299,7 @@ def _run_staged_semantic_brief(
     try:
         region = manifest.region_for_id(region_id)
         selected_backend = backend or manifest.default_model_backend
+        selected_question = question or _case_question_for_region(repo_root, manifest, region)
         map_output = output or Path("artifacts") / "semantic" / region_id / "staged_brief" / "generated_map.json"
         map_artifacts = artifact_dir or Path("artifacts") / "semantic" / region_id / "staged_brief" / "map"
         result = run_staged_map(
@@ -304,6 +307,7 @@ def _run_staged_semantic_brief(
             manifest_path=package,
             region_id=region_id,
             backend=selected_backend,
+            decision_question=selected_question,
             output_path=map_output,
             artifact_dir=map_artifacts,
             chunk_lines=chunk_lines,
@@ -328,7 +332,7 @@ def _run_staged_semantic_brief(
             repo_root=repo_root,
             map_path=result.output_path,
             quality_report_path=result.artifact_dir / "map_quality_report.json",
-            question=question or _case_question_for_region(repo_root, manifest, region),
+            question=selected_question,
             backend=selected_backend,
             output_dir=briefing_dir or Path("artifacts") / "semantic" / region_id / "staged_brief" / "briefing",
             backend_timeout=backend_timeout,

@@ -93,6 +93,7 @@ def run_staged_map(
     repair_quality: bool = False,
     reuse_claim_cache: bool = True,
     claim_extractor: str = "native",
+    decision_question: str | None = None,
 ) -> StagedMapResult:
     _validate_staged_map_options(
         chunk_lines=chunk_lines,
@@ -106,6 +107,7 @@ def run_staged_map(
     artifacts = _artifact_dir(repo_root, region_id, artifact_dir)
     artifacts.mkdir(parents=True, exist_ok=True)
     config_profile = _case_config_profile(case_manifest)
+    selected_decision_question = region_decision_question(region, case_manifest, decision_question)
 
     all_chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines, chunk_overlap_lines)
     chunks, skipped_chunks = _budget_chunks(all_chunks, max_chunks_per_source, max_total_chunks)
@@ -124,6 +126,7 @@ def run_staged_map(
         config_profile_id=config_profile.profile_id,
         reuse_claim_cache=reuse_claim_cache,
         claim_extractor=claim_extractor,
+        decision_question=selected_decision_question,
     )
     claims = claim_stage["claims"]
     rejected_claims = claim_stage["rejected_claims"]
@@ -142,6 +145,7 @@ def run_staged_map(
         artifacts=artifacts,
         max_relation_pairs=max_relation_pairs,
         relation_batch_size=relation_batch_size,
+        decision_question=selected_decision_question,
     )
     relations = initial_map_stage["relations"]
     rejected_relations = initial_map_stage["rejected_relations"]
@@ -165,6 +169,7 @@ def run_staged_map(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         artifacts=artifacts,
+        decision_question=selected_decision_question,
     )
     final_map = repair_stage["final_map"]
     quality_report = repair_stage["quality_report"]
@@ -180,35 +185,24 @@ def run_staged_map(
         final_map=final_map,
         quality_report=quality_report,
         validate=validate,
+        decision_question=selected_decision_question,
     )
     _write_staged_run_summary(
-        repo_root=repo_root, region=region, backend=backend,
+        repo_root=repo_root, region=region, backend=backend, decision_question=selected_decision_question,
         chunk_lines=chunk_lines, chunk_overlap_lines=chunk_overlap_lines,
         max_chunks_per_source=max_chunks_per_source, max_total_chunks=max_total_chunks,
         max_claims_per_chunk=max_claims_per_chunk, claim_extractor=claim_extractor,
         max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
         backend_timeout=backend_timeout, backend_retries=backend_retries,
         config_profile_id=config_profile.profile_id,
-        all_chunks=all_chunks,
-        chunks=chunks,
-        skipped_chunks=skipped_chunks,
-        claim_stage=claim_stage,
-        claims=claims,
-        relations=relations,
-        final_outputs=final_outputs,
-        rejected_claims=rejected_claims,
-        rejected_relations=rejected_relations,
-        quality_report=quality_report,
-        repair_info=repair_info,
-        artifacts=artifacts,
+        all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
+        claim_stage=claim_stage, claims=claims, relations=relations, final_outputs=final_outputs,
+        rejected_claims=rejected_claims, rejected_relations=rejected_relations,
+        quality_report=quality_report, repair_info=repair_info, artifacts=artifacts,
     )
     return _staged_map_result(
-        final_outputs=final_outputs,
-        artifacts=artifacts,
-        rejected_claims=rejected_claims,
-        rejected_relations=rejected_relations,
-        quality_report=quality_report,
-        repair_info=repair_info,
+        final_outputs=final_outputs, artifacts=artifacts, rejected_claims=rejected_claims,
+        rejected_relations=rejected_relations, quality_report=quality_report, repair_info=repair_info,
     )
 
 def _staged_map_result(
@@ -260,6 +254,7 @@ def _write_staged_run_summary(
     repo_root: Path,
     region: WorkedRegion,
     backend: str,
+    decision_question: str,
     chunk_lines: int,
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
@@ -290,6 +285,7 @@ def _write_staged_run_summary(
             repo_root=repo_root,
             region=region,
             backend=backend,
+            decision_question=decision_question,
             chunk_lines=chunk_lines,
             chunk_overlap_lines=chunk_overlap_lines,
             max_chunks_per_source=max_chunks_per_source,
@@ -340,6 +336,7 @@ def _extract_consolidated_claims(
     config_profile_id: str,
     reuse_claim_cache: bool,
     claim_extractor: str,
+    decision_question: str,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
@@ -354,6 +351,7 @@ def _extract_consolidated_claims(
         max_claims_per_chunk=max_claims_per_chunk,
         reuse_claim_cache=reuse_claim_cache,
         claim_extractor=claim_extractor,
+        decision_question=decision_question,
     )
     llm_claim_count = len(claims)
     coverage_claims, coverage_report = _coverage_backfill_claims(
@@ -401,6 +399,7 @@ def _maybe_repair_staged_map_quality(
     backend_timeout: int | None,
     backend_retries: int,
     artifacts: Path,
+    decision_question: str,
 ) -> dict[str, Any]:
     if not repair_quality:
         return {
@@ -425,6 +424,7 @@ def _maybe_repair_staged_map_quality(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         artifact_dir=artifacts,
+        decision_question=decision_question,
     )
     if repair_info.get("accepted") and isinstance(repair_info.get("candidate_map"), dict):
         return {
@@ -450,6 +450,7 @@ def _build_initial_staged_map(
     artifacts: Path,
     max_relation_pairs: int,
     relation_batch_size: int,
+    decision_question: str,
 ) -> dict[str, Any]:
     relations, relation_payloads, rejected_relations = _extract_relations(
         manifest=manifest,
@@ -462,6 +463,7 @@ def _build_initial_staged_map(
         artifact_dir=artifacts,
         max_relation_pairs=max_relation_pairs,
         relation_batch_size=relation_batch_size,
+        decision_question=decision_question,
     )
     final_map = _assemble_map(
         region=region,
@@ -480,6 +482,7 @@ def _build_initial_staged_map(
         candidate_map=final_map,
         rejected_claims=rejected_claims,
         rejected_relations=rejected_relations,
+        decision_question=decision_question,
     )
     write_json(artifacts / "candidate_map_initial.json", final_map)
     write_json(artifacts / "map_quality_report_initial.json", quality_report)
@@ -503,6 +506,7 @@ def _write_staged_map_outputs(
     final_map: dict[str, Any],
     quality_report: dict[str, Any],
     validate: bool,
+    decision_question: str,
 ) -> dict[str, Any]:
     target = Path(output_path or region.map_path)
     if not target.is_absolute():
@@ -517,7 +521,7 @@ def _write_staged_map_outputs(
     write_markdown(artifacts / "MAP_QUALITY_REPORT.md", _quality_markdown(quality_report))
     repair_prompt_path = artifacts / "map_quality_repair_prompt.txt"
     if not repair_prompt_path.exists():
-        write_markdown(repair_prompt_path, _map_quality_repair_prompt(region, case_manifest, final_map, quality_report))
+        write_markdown(repair_prompt_path, _map_quality_repair_prompt(region, case_manifest, final_map, quality_report, decision_question=decision_question))
     return {
         "target": target,
         "validation_target": validation_target,
@@ -531,6 +535,7 @@ def _staged_run_summary(
     repo_root: Path,
     region: WorkedRegion,
     backend: str,
+    decision_question: str,
     chunk_lines: int,
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
@@ -565,6 +570,7 @@ def _staged_run_summary(
 ) -> dict[str, Any]:
     return {
         "region_id": region.region_id,
+        "decision_question": decision_question,
         "backend": backend,
         "chunk_lines": chunk_lines,
         "chunk_overlap_lines": chunk_overlap_lines,
@@ -618,6 +624,7 @@ def _extract_claims(
     max_claims_per_chunk: int,
     reuse_claim_cache: bool = True,
     claim_extractor: str = "native",
+    decision_question: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
@@ -644,7 +651,8 @@ def _extract_claims(
     for chunk_index, chunk in enumerate(chunks, start=1):
         span_lookup = {span.span_id: span for span in chunk.spans}
         chunk_accept_count = 0
-        prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk)
+        selected_question = region_decision_question(region, case_manifest, decision_question)
+        prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk, decision_question=selected_question)
         chunk_dir = artifact_dir / "claim_chunks"
         canonical_suffix = "canonical" if claim_extractor == "native" else f"{claim_extractor}_canonical"
         canonical_path = chunk_dir / f"{chunk.chunk_id}_{canonical_suffix}.json"
@@ -662,7 +670,7 @@ def _extract_claims(
         elif claim_extractor == "langextract":
             payload, cache_hit, backend_error = langextract_claim_payload_for_chunk(
                 chunk=chunk,
-                case_question=region_decision_question(region, case_manifest),
+                case_question=selected_question,
                 role_options=sorted(valid_roles),
                 backend=backend,
                 max_claims=max_claims_per_chunk,
@@ -713,7 +721,7 @@ def _extract_claims(
             if claim is None:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": reason, "proposal": proposal})
                 continue
-            relevance_reason = claim_decision_relevance_rejection_reason(claim, region_decision_question(region, case_manifest))
+            relevance_reason = claim_decision_relevance_rejection_reason(claim, selected_question)
             if relevance_reason:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": relevance_reason, "proposal": proposal})
                 continue

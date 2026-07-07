@@ -321,6 +321,7 @@ def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int
             args.package,
             args.region,
             args.backend,
+            args.question,
             args.output,
             args.artifact_dir,
             args.chunk_lines,

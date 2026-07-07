@@ -39,6 +39,7 @@ def _classify_singleton_relations(
     artifact_dir: Path,
     batch_id: str,
     batch_error: str,
+    decision_question: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int]:
     accepted: list[dict[str, Any]] = []
     payloads: list[dict[str, Any]] = []
@@ -51,7 +52,7 @@ def _classify_singleton_relations(
         }
     ]
     for packet in batch:
-        prompt = _relation_pair_prompt(manifest, region, case_manifest, packet)
+        prompt = _relation_pair_prompt(manifest, region, case_manifest, packet, decision_question=decision_question)
         write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_prompt.txt", prompt)
         try:
             result = run_model_backend(
@@ -168,6 +169,7 @@ def evaluate_staged_map_quality(
     candidate_map: dict[str, Any],
     rejected_claims: list[dict[str, Any]],
     rejected_relations: list[dict[str, Any]],
+    decision_question: str | None = None,
 ) -> dict[str, Any]:
     claims = [claim for claim in candidate_map.get("claims", []) if isinstance(claim, dict)]
     relations = [relation for relation in candidate_map.get("relations", []) if isinstance(relation, dict)]
@@ -230,7 +232,7 @@ def evaluate_staged_map_quality(
         "relation_type_counts": relation_type_counts,
         "relation_confidence_counts": relation_confidence_counts,
         "issues": issues,
-        "scaffold": _map_quality_scaffold(manifest, region, case_manifest),
+        "scaffold": _map_quality_scaffold(manifest, region, case_manifest, decision_question=decision_question),
     }
 
 
@@ -538,11 +540,14 @@ def _map_quality_repair_prompt(
     case_manifest: CaseManifest,
     candidate_map: dict[str, Any],
     quality_report: dict[str, Any],
+    decision_question: str | None = None,
 ) -> str:
+    question = region_decision_question(region, case_manifest, decision_question)
     return "\n\n".join(
         (
             "You are repairing a source-grounded epistemic case-map candidate.",
             f"Region ID: {region.region_id}",
+            f"Decision question: {question}",
             f"Case question: {case_manifest.question}",
             "Return only JSON in the same map shape as the candidate.",
             "Repair rules:",
@@ -590,6 +595,7 @@ def _map_quality_scaffold(
     region: WorkedRegion,
     case_manifest: CaseManifest,
     chunk: SourceChunk | None = None,
+    decision_question: str | None = None,
 ) -> dict[str, Any]:
     required_sources = _required_sources(case_manifest, region)
     profile = _case_config_profile(case_manifest)
@@ -597,10 +603,10 @@ def _map_quality_scaffold(
         source.source_id: _source_role_scaffold(source)
         for source in required_sources
     }
-    decision_question = region_decision_question(region, case_manifest)
+    selected_decision_question = region_decision_question(region, case_manifest, decision_question)
     scaffold: dict[str, Any] = {
         "case_question": case_manifest.question,
-        "decision_question": decision_question,
+        "decision_question": selected_decision_question,
         "epistemic_config_profile": {
             "profile_id": profile.profile_id,
             "label": profile.label,
@@ -718,19 +724,20 @@ def _claim_prompt(
     case_manifest: CaseManifest,
     chunk: SourceChunk,
     max_claims: int,
+    decision_question: str | None = None,
 ) -> str:
     span_catalog = "\n".join(
         f"- span_id: {span.span_id}\n  source_span: {span.source_span}\n  text: {span.text}"
         for span in chunk.spans
     )
-    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk), indent=2)
+    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk, decision_question=decision_question), indent=2)
     role_options = "|".join(_configured_claim_roles(case_manifest))
-    decision_question = region_decision_question(region, case_manifest)
+    selected_decision_question = region_decision_question(region, case_manifest, decision_question)
     return render_prompt(
         ("Task", "You are selecting source-grounded claim candidates that help answer the specific decision question from one bounded source-span catalog."),
         (
             "Metadata",
-            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nDecision question: {decision_question}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
+            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nDecision question: {selected_decision_question}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
         ),
         (
             "Rules",
