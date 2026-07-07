@@ -4,6 +4,11 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_canonical_spine import build_canonical_decision_spine
 from epistemic_case_mapper.map_briefing_classical_selection import build_classical_evidence_selection_report
+from epistemic_case_mapper.map_briefing_context_reconciliation import (
+    build_section_context_decision_packets,
+    build_section_context_quality_report,
+    build_slot_reconciliation_report,
+)
 from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
 from epistemic_case_mapper.map_briefing_spine_audit import build_spine_quality_report
 from epistemic_case_mapper.map_briefing_slot_eligibility import build_slot_eligibility_audit
@@ -44,7 +49,14 @@ def build_decision_spine_bundle(
     spine = arbitration["spine"]
     spine_validation = validate_canonical_decision_spine(spine)
     consistency = build_decision_spine_consistency_report(spine, slot_audit)
+    slot_reconciliation = build_slot_reconciliation_report(spine, slot_audit, scaffold)
     projections = build_section_projection_packets(spine, scaffold)
+    section_context_decision_packets = build_section_context_decision_packets(
+        projections,
+        slot_reconciliation,
+        scaffold,
+    )
+    section_context_quality = build_section_context_quality_report(section_context_decision_packets)
     readiness = build_section_projection_readiness_report(projections)
     bundle = {
         "classical_evidence_selection_report": classical,
@@ -59,7 +71,10 @@ def build_decision_spine_bundle(
         "canonical_decision_spine_model_prompt": arbitration["prompt"],
         "canonical_decision_spine_model_raw": arbitration["raw"],
         "decision_spine_consistency_report": consistency,
+        "slot_reconciliation_report": slot_reconciliation,
         "section_projection_packets": projections,
+        "section_context_decision_packets": section_context_decision_packets,
+        "section_context_quality_report": section_context_quality,
         "section_projection_readiness_report": readiness,
     }
     bundle["spine_quality_report"] = build_spine_quality_report({**scaffold, **bundle})

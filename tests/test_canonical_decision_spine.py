@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_classical_selection import build_classical_evidence_selection_report
+from epistemic_case_mapper.map_briefing_context_reconciliation import (
+    build_section_context_decision_packets,
+    build_section_context_quality_report,
+    build_slot_reconciliation_report,
+)
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
 from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
 from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
@@ -30,7 +35,10 @@ def test_spine_bundle_builds_valid_traceable_spine_and_projection_packets() -> N
     assert bundle["canonical_decision_spine_validation"]["status"] == "valid"
     assert bundle["decision_spine_consistency_report"]["status"] == "pass"
     assert bundle["slot_eligibility_audit"]["slots"]
+    assert bundle["slot_reconciliation_report"]["rows"]
     assert bundle["section_projection_packets"]["sections"]
+    assert bundle["section_context_decision_packets"]["sections"]
+    assert bundle["section_context_quality_report"]["status"] in {"ready", "warning"}
     assert bundle["section_projection_readiness_report"]["status"] in {"ready", "warning"}
 
 
@@ -116,6 +124,7 @@ def test_section_packet_prefers_canonical_projection_when_present() -> None:
     contract = {
         "_section_synthesis_scaffold": {
             "section_projection_packets": bundle["section_projection_packets"],
+            "section_context_decision_packets": bundle["section_context_decision_packets"],
         },
         "section_synthesis_packet": {},
         "required_evidence": [],
@@ -125,9 +134,95 @@ def test_section_packet_prefers_canonical_projection_when_present() -> None:
 
     packet = compile_model_section_packet("Why This Read", contract)
 
-    assert packet["context_source"] == "canonical_spine_projection"
+    assert packet["context_source"] == "section_context_decision_packet"
     assert packet["owned_evidence"]
+    assert packet["owned_evidence"][0]["reason_for_inclusion"]
+    assert packet["owned_evidence"][0]["section_use"]
+    assert packet["owned_evidence"][0]["slot_status"]
     assert packet["section_reasoning_contract"]["owned_card_ids"]
+
+
+def test_reconciliation_keeps_rejected_comparator_contextual_not_load_bearing() -> None:
+    scaffold = {
+        "candidate_evidence_cards": {
+            "cards": [
+                {
+                    "candidate_card_id": "ec_comp",
+                    "claim": "The intervention was compared with a lower-intensity alternative in a narrow subgroup.",
+                    "source_ids": ["s1"],
+                    "source_card_ids": ["sc1"],
+                    "claim_ids": ["c1"],
+                    "quality": "indirect",
+                    "inclusion_recommendation": "appendix_only",
+                }
+            ]
+        }
+    }
+    spine = {
+        "comparator_or_substitution": [
+            {
+                "field_id": "comparator_substitution_1",
+                "role": "comparator_or_substitution",
+                "candidate_card_ids": ["ec_comp"],
+                "claim": "The intervention was compared with a lower-intensity alternative.",
+                "source_ids": ["s1"],
+            }
+        ],
+        "missing_decision_slots": [
+            {
+                "field_id": "missing_comparator_substitution",
+                "slot_id": "comparator_substitution",
+                "role": "missing_slot",
+                "claim": "The map lacks clean comparator evidence.",
+            }
+        ],
+    }
+    audit = {
+        "slots": [
+            {
+                "slot_id": "comparator_substitution",
+                "label": "Comparator or substitution",
+                "status": "missing",
+                "required": True,
+                "missing_message": "The map lacks clean comparator evidence.",
+                "rejected_candidate_cards": [
+                    {
+                        "candidate_card_id": "ec_comp",
+                        "rejection_reasons": ["appendix_only_candidate", "off_question_risk"],
+                    }
+                ],
+            }
+        ]
+    }
+    projection = {
+        "sections": [
+            {
+                "section": "Practical Read",
+                "section_thesis": "Old first-card summary.",
+                "decision_move": "Translate the answer into practical decision implications.",
+                "context_status": "ready",
+                "owned_evidence": [
+                    {
+                        "candidate_card_id": "ec_comp",
+                        "spine_field_id": "comparator_substitution_1",
+                        "claim": "The intervention was compared with a lower-intensity alternative in a narrow subgroup.",
+                        "intended_role": "comparator_or_substitution",
+                    }
+                ],
+            }
+        ]
+    }
+
+    reconciliation = build_slot_reconciliation_report(spine, audit, scaffold)
+    packets = build_section_context_decision_packets(projection, reconciliation, scaffold)
+    quality = build_section_context_quality_report(packets)
+    card = packets["sections"][0]["owned_evidence"][0]
+
+    assert card["slot_status"] == "mention_only"
+    assert "load-bearing" in card["how_not_to_use"]
+    assert card["reason_for_inclusion"]
+    assert packets["sections"][0]["section_thesis"].startswith("Translate the answer")
+    assert quality["sections"][0]["missing_reason_count"] == 0
 
 
 def test_final_validation_flags_decision_brief_drift_from_canonical_spine() -> None:

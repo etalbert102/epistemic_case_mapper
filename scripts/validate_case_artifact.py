@@ -80,7 +80,7 @@ def _validate_case_map(case_map: CaseMap, failures: list[str]) -> None:
     _validate_sources(case_map, failures)
     _validate_claims(case_map, source_ids, failures)
     _validate_relations(case_map, claim_ids, failures)
-    _validate_open_questions(case_map, failures)
+    _validate_open_questions(case_map, claim_ids, source_ids, failures)
 
 
 def _validate_sources(case_map: CaseMap, failures: list[str]) -> None:
@@ -134,7 +134,7 @@ def _validate_relations(case_map: CaseMap, claim_ids: set[str], failures: list[s
             failures.append(f"missing_relation_rationale relation={relation.relation_id}")
 
 
-def _validate_open_questions(case_map: CaseMap, failures: list[str]) -> None:
+def _validate_open_questions(case_map: CaseMap, claim_ids: set[str], source_ids: set[str], failures: list[str]) -> None:
     for question in case_map.open_questions:
         if not question.text:
             failures.append(f"missing_open_question_text question={question.question_id}")

@@ -197,6 +197,9 @@ def build_pipeline_migration_ledger(
     new_visible = [
         "model_section_packet",
         "canonical_decision_spine" if scaffold.get("canonical_decision_spine") else "",
+        "slot_reconciliation_report" if scaffold.get("slot_reconciliation_report") else "",
+        "section_context_decision_packets" if scaffold.get("section_context_decision_packets") else "",
+        "section_context_quality_report" if scaffold.get("section_context_quality_report") else "",
         "section_projection_packets" if scaffold.get("section_projection_packets") else "",
         "section_context_acceptance_report" if section_context_acceptance_path else "",
     ]

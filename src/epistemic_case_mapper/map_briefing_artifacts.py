@@ -60,7 +60,10 @@ def write_scaffold_artifacts(
         "canonical_decision_spine_model_prompt": artifacts / "canonical_decision_spine_model_prompt.txt",
         "canonical_decision_spine_model_raw": artifacts / "canonical_decision_spine_model_raw.txt",
         "decision_spine_consistency_report": artifacts / "decision_spine_consistency_report.json",
+        "slot_reconciliation_report": artifacts / "slot_reconciliation_report.json",
         "section_projection_packets": artifacts / "section_projection_packets.json",
+        "section_context_decision_packets": artifacts / "section_context_decision_packets.json",
+        "section_context_quality_report": artifacts / "section_context_quality_report.json",
         "section_projection_readiness_report": artifacts / "section_projection_readiness_report.json",
         "spine_quality_report": artifacts / "spine_quality_report.json",
         "before_after_briefing_comparison": artifacts / "before_after_briefing_comparison.md",
@@ -110,7 +113,10 @@ def write_scaffold_artifacts(
     write_markdown(paths["canonical_decision_spine_model_prompt"], str(scaffold.get("canonical_decision_spine_model_prompt", "")))
     write_markdown(paths["canonical_decision_spine_model_raw"], str(scaffold.get("canonical_decision_spine_model_raw", "")))
     write_json(paths["decision_spine_consistency_report"], scaffold.get("decision_spine_consistency_report", {}))
+    write_json(paths["slot_reconciliation_report"], scaffold.get("slot_reconciliation_report", {}))
     write_json(paths["section_projection_packets"], scaffold.get("section_projection_packets", {}))
+    write_json(paths["section_context_decision_packets"], scaffold.get("section_context_decision_packets", {}))
+    write_json(paths["section_context_quality_report"], scaffold.get("section_context_quality_report", {}))
     write_json(paths["section_projection_readiness_report"], scaffold.get("section_projection_readiness_report", {}))
     write_json(paths["spine_quality_report"], scaffold.get("spine_quality_report", {}))
     write_markdown(paths["before_after_briefing_comparison"], render_before_after_briefing_comparison(scaffold))
@@ -254,7 +260,10 @@ def write_run_summary(
             "canonical_decision_spine_model_prompt": scaffold_paths["canonical_decision_spine_model_prompt"],
             "canonical_decision_spine_model_raw": scaffold_paths["canonical_decision_spine_model_raw"],
             "decision_spine_consistency_report": scaffold_paths["decision_spine_consistency_report"],
+            "slot_reconciliation_report": scaffold_paths["slot_reconciliation_report"],
             "section_projection_packets": scaffold_paths["section_projection_packets"],
+            "section_context_decision_packets": scaffold_paths["section_context_decision_packets"],
+            "section_context_quality_report": scaffold_paths["section_context_quality_report"],
             "section_projection_readiness_report": scaffold_paths["section_projection_readiness_report"],
             "spine_quality_report": scaffold_paths["spine_quality_report"],
             "before_after_briefing_comparison": scaffold_paths["before_after_briefing_comparison"],
@@ -356,7 +365,10 @@ def write_final_review_packet(
         f"- Canonical decision spine: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine'))}`",
         f"- Canonical spine model arbitration: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine_model_arbitration_report'))}`",
         f"- Decision spine consistency: `{_rel(repo_root, scaffold_paths.get('decision_spine_consistency_report'))}`",
+        f"- Slot reconciliation report: `{_rel(repo_root, scaffold_paths.get('slot_reconciliation_report'))}`",
         f"- Section projection packets: `{_rel(repo_root, scaffold_paths.get('section_projection_packets'))}`",
+        f"- Section context decision packets: `{_rel(repo_root, scaffold_paths.get('section_context_decision_packets'))}`",
+        f"- Section context quality report: `{_rel(repo_root, scaffold_paths.get('section_context_quality_report'))}`",
         f"- Section projection readiness: `{_rel(repo_root, scaffold_paths.get('section_projection_readiness_report'))}`",
         f"- Spine quality report: `{_rel(repo_root, scaffold_paths.get('spine_quality_report'))}`",
         f"- Before/after briefing comparison: `{_rel(repo_root, scaffold_paths.get('before_after_briefing_comparison'))}`",

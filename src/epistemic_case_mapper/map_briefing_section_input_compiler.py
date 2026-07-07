@@ -25,7 +25,8 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     title_key = title.lower()
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     section_plan = _compact_section_plan(section_plan_for_title(scaffold, title), contract)
-    projection = _section_projection_contract(title, scaffold)
+    decision_packet = _section_context_decision_packet(title, scaffold)
+    projection = decision_packet or _section_projection_contract(title, scaffold)
     reasoning_contract = projection or _section_reasoning_contract(title, scaffold)
     reasoning_owned = _projection_owned_evidence(projection) if projection else _reasoning_owned_evidence(reasoning_contract)
     contract_owned = _owned_evidence(contract)
@@ -35,7 +36,11 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     section_thesis = str(reasoning_thesis or section_plan.get("thesis") or fallback_thesis).strip()
     model_packet = {
         "schema_id": "model_section_packet_v1",
-        "context_source": "canonical_spine_projection" if projection else "section_reasoning_cards",
+        "context_source": "section_context_decision_packet"
+        if decision_packet
+        else "canonical_spine_projection"
+        if projection
+        else "section_reasoning_cards",
         "global_section_plan": section_plan,
         "section_reasoning_contract": _compact_reasoning_contract(reasoning_contract, owned_evidence),
         "context_readiness_status": reasoning_contract.get("context_status"),
@@ -62,6 +67,15 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
 
 def _section_projection_contract(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
     report = scaffold.get("section_projection_packets", {}) if isinstance(scaffold.get("section_projection_packets"), dict) else {}
+    normalized_title = _normalize_title(title)
+    for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
+        if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
+            return section
+    return {}
+
+
+def _section_context_decision_packet(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
+    report = scaffold.get("section_context_decision_packets", {}) if isinstance(scaffold.get("section_context_decision_packets"), dict) else {}
     normalized_title = _normalize_title(title)
     for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
         if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
@@ -141,6 +155,19 @@ def _projection_cards(projection: dict[str, Any], key: str, *, use: str) -> list
                     "source_excerpt": _short_text(str(row.get("source_excerpt", "")), 360),
                     "intended_role": row.get("intended_role"),
                     "quality": row.get("quality"),
+                    "slot_id": row.get("slot_id"),
+                    "slot_status": row.get("slot_status"),
+                    "section_use": row.get("section_use"),
+                    "reason_for_inclusion": row.get("reason_for_inclusion"),
+                    "how_to_use": row.get("how_to_use"),
+                    "how_not_to_use": row.get("how_not_to_use"),
+                    "evidence_weight": row.get("evidence_weight"),
+                    "eligibility_reason": row.get("eligibility_reason"),
+                    "allowed_sections": _string_list(row.get("allowed_sections"))[:7],
+                    "forbidden_sections": _string_list(row.get("forbidden_sections"))[:7],
+                    "validation_terms": _string_list(row.get("validation_terms"))[:6],
+                    "context_ownership": row.get("context_ownership"),
+                    "model_judgment_needed": row.get("model_judgment_needed"),
                     "quantity_values": _string_list(row.get("quantity_values"))[:4],
                     "limitations": _string_list(row.get("limitations"))[:4],
                     "use": row.get("use") or use,
