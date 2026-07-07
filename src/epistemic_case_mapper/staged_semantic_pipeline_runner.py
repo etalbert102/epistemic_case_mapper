@@ -776,20 +776,11 @@ def _coverage_backfill_claims(
     id_prefix: str,
     profile_id: str = "general_decision_support",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    del existing_claims, id_prefix, profile_id
     selected_ids = {chunk.chunk_id for chunk in selected_chunks}
-    existing_keys = {
-        (
-            str(claim.get("source_id", "")),
-            _normalize_text(str(claim.get("excerpt", ""))),
-            _normalize_text(str(claim.get("claim", ""))),
-        )
-        for claim in existing_claims
-    }
-    next_index = _next_claim_index(existing_claims, id_prefix)
-    backfilled: list[dict[str, Any]] = []
     skipped_chunk_ids: list[str] = []
-    duplicate_chunk_ids: list[str] = []
     no_signal_chunk_ids: list[str] = []
+    suppressed_candidate_rows: list[dict[str, Any]] = []
     for chunk in all_chunks:
         if chunk.chunk_id in selected_ids:
             continue
@@ -798,57 +789,50 @@ def _coverage_backfill_claims(
         if fallback is None:
             no_signal_chunk_ids.append(chunk.chunk_id)
             continue
-        key = (
-            fallback["source_id"],
-            _normalize_text(fallback["excerpt"]),
-            _normalize_text(fallback["claim"]),
+        suppressed_candidate_rows.append(
+            {
+                "chunk_id": chunk.chunk_id,
+                "source_id": fallback["source_id"],
+                "source_span": fallback["source_span"],
+                "role": fallback["role"],
+                "excerpt": fallback["excerpt"],
+                "reason": "deterministic_backfill_disabled",
+                "signal_score": _chunk_signal_score(chunk),
+                "line_range": f"{chunk.start_line}-{chunk.end_line}",
+            }
         )
-        if key in existing_keys:
-            duplicate_chunk_ids.append(chunk.chunk_id)
-            continue
-        existing_keys.add(key)
-        fallback["claim_id"] = f"{id_prefix}_c{next_index:03d}"
-        next_index += 1
-        fallback["extraction_method"] = "deterministic_coverage_backfill"
-        fallback["coverage_backfill"] = {
-            "chunk_id": chunk.chunk_id,
-            "reason": "chunk_skipped_by_budget",
-            "signal_score": _chunk_signal_score(chunk),
-            "line_range": f"{chunk.start_line}-{chunk.end_line}",
-        }
-        backfilled.append(fallback)
-    concept_backfilled, concept_report, next_index = _concept_gap_backfill_claims(
-        all_chunks=all_chunks,
-        existing_claims=[*existing_claims, *backfilled],
-        existing_keys=existing_keys,
-        id_prefix=id_prefix,
-        next_index=next_index,
-        profile_id=profile_id,
-    )
-    backfilled.extend(concept_backfilled)
     report = {
-        "schema_id": "coverage_backfill_v1",
-        "method": "deterministic_best_span_for_budget_skipped_chunks_plus_source_concept_gap_backfill",
+        "schema_id": "coverage_backfill_v2",
+        "method": "warnings_only_for_budget_skipped_chunks",
+        "deterministic_claim_insertion": "disabled",
+        "warning": (
+            "Some source chunks were skipped by budget. The runner reports coverage risk but does not "
+            "insert deterministic backfill claims into the map."
+        ),
         "skipped_chunk_count": len(skipped_chunk_ids),
-        "backfilled_claim_count": len(backfilled),
-        "skipped_chunk_backfilled_claim_count": len(backfilled) - len(concept_backfilled),
-        "concept_gap_backfilled_claim_count": len(concept_backfilled),
-        "duplicate_chunk_count": len(duplicate_chunk_ids),
+        "backfilled_claim_count": 0,
+        "skipped_chunk_backfilled_claim_count": 0,
+        "concept_gap_backfilled_claim_count": 0,
+        "suppressed_candidate_count": len(suppressed_candidate_rows),
+        "backfilled_claim_ids": [],
+        "skipped_chunk_ids": skipped_chunk_ids[:100],
         "no_signal_chunk_count": len(no_signal_chunk_ids),
-        "backfilled_claim_ids": [claim["claim_id"] for claim in backfilled],
-        "duplicate_chunk_ids": duplicate_chunk_ids[:50],
         "no_signal_chunk_ids": no_signal_chunk_ids[:50],
-        "concept_gap_backfill": concept_report,
+        "suppressed_candidates": suppressed_candidate_rows[:50],
+        "concept_gap_backfill": {
+            "schema_id": "source_concept_gap_backfill_v1",
+            "method": "disabled",
+            "backfilled_claim_count": 0,
+            "rejection_counts": {},
+            "selected": [],
+            "rejected": [],
+        },
     }
-    return backfilled, report
-
-
+    return [], report
 
 # Explicit cross-module dependencies for compatibility facade removal.
 from epistemic_case_mapper.staged_semantic_claims_relations import (
-    _concept_gap_backfill_claims,
     _extract_relations,
-    _next_claim_index,
     _run_quality_repair,
     _summary_repair_info,
     consolidate_claims_for_map,

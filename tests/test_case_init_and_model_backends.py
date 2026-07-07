@@ -427,8 +427,10 @@ def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Pa
     assert len(generated["claims"]) == 3
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["llm_claim_count"] == 1
-    assert summary["coverage_claim_count"] == 1
-    assert summary["pre_consolidation_claim_count"] == 2
+    assert summary["coverage_claim_count"] == 0
+    assert summary["coverage_backfill"]["deterministic_claim_insertion"] == "disabled"
+    assert summary["coverage_backfill"]["suppressed_candidate_count"] == 1
+    assert summary["pre_consolidation_claim_count"] == 1
     assert summary["claim_count"] == 3
     assert summary["quality_repair"]["ran"] is True
     assert summary["quality_repair"]["accepted"] is True
@@ -486,12 +488,14 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
     assert summary["all_chunk_count"] == 4
     assert summary["selected_chunk_count"] == 2
     assert summary["skipped_chunk_count"] == 2
-    assert summary["coverage_backfill"]["backfilled_claim_count"] == 2
-    assert summary["coverage_claim_count"] == 2
-    assert summary["pre_consolidation_claim_count"] >= summary["initial_claim_count"]
+    assert summary["coverage_backfill"]["deterministic_claim_insertion"] == "disabled"
+    assert summary["coverage_backfill"]["backfilled_claim_count"] == 0
+    assert summary["coverage_backfill"]["suppressed_candidate_count"] == 2
+    assert summary["coverage_claim_count"] == 0
+    assert summary["pre_consolidation_claim_count"] == summary["llm_claim_count"]
     assert {chunk["source_id"] for chunk in summary["chunks"]} == {"demo_case_doc_a", "demo_case_doc_b"}
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
-    assert any(claim.get("extraction_method") == "deterministic_coverage_backfill" for claim in generated["claims"])
+    assert not any(str(claim.get("extraction_method", "")).startswith("deterministic") for claim in generated["claims"])
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/coverage_backfill_claims.json").exists()
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_consolidation_report.json").exists()
 
@@ -537,7 +541,7 @@ def test_claim_consolidation_preserves_supporting_sources() -> None:
     assert any(claim["claim_id"] == "demo_c003" for claim in consolidated)
 
 
-def test_concept_gap_backfill_adds_selected_chunk_missed_specific_evidence() -> None:
+def test_coverage_backfill_reports_warnings_without_adding_claims() -> None:
     span = SourceSpan(
         span_id="doc_s001",
         source_id="doc",
@@ -569,15 +573,18 @@ def test_concept_gap_backfill_adds_selected_chunk_missed_specific_evidence() -> 
 
     backfilled, report = _coverage_backfill_claims(
         all_chunks=[chunk],
-        selected_chunks=[chunk],
+        selected_chunks=[],
         existing_claims=existing_claims,
         id_prefix="demo",
     )
 
-    assert report["skipped_chunk_backfilled_claim_count"] == 0
-    assert report["concept_gap_backfilled_claim_count"] >= 1
-    assert any("plant protein" in claim["claim"].lower() for claim in backfilled)
-    assert backfilled[0]["extraction_method"] == "deterministic_concept_gap_backfill"
+    assert backfilled == []
+    assert report["deterministic_claim_insertion"] == "disabled"
+    assert report["skipped_chunk_count"] == 1
+    assert report["backfilled_claim_count"] == 0
+    assert report["concept_gap_backfilled_claim_count"] == 0
+    assert report["suppressed_candidate_count"] == 1
+    assert "plant protein" in report["suppressed_candidates"][0]["excerpt"].lower()
 
 
 def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path) -> None:
