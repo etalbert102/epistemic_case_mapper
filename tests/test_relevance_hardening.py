@@ -6,6 +6,58 @@ from epistemic_case_mapper.map_briefing import (
     partition_map_evidence,
     validate_briefing_against_scaffold,
 )
+from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason
+
+
+def test_claim_relevance_keeps_population_mismatch_when_it_bounds_decision_question() -> None:
+    claim = {
+        "claim": "High egg consumption did not adversely affect lipid profiles in adults with type 2 diabetes.",
+        "excerpt": "High egg consumption did not have an adverse effect on the lipid profile of people with T2D.",
+        "role": "conclusion_support",
+        "question_relevance": "direct",
+        "scope_flags": ["target_population_mismatch"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "For generally healthy adults, should eggs be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+
+    assert reason == ""
+
+
+def test_claim_relevance_keeps_scope_limit_population_boundary() -> None:
+    claim = {
+        "claim": "The trial enrolled patients with prior cardiovascular events or multiple risk factors.",
+        "excerpt": "randomized patients, with either a prior cardiovascular event or 2 cardiovascular risk factors",
+        "role": "scope_limit",
+        "question_relevance": "scope_limit",
+        "scope_flags": ["target_population_mismatch"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "For generally healthy adults, should eggs be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+
+    assert reason == ""
+
+
+def test_claim_relevance_still_rejects_child_only_population_mismatch_for_adult_question() -> None:
+    claim = {
+        "claim": "Infants and toddlers should be introduced to eggs between 6 and 12 months.",
+        "excerpt": "infants and toddlers with eggs beginning at 6 to 12 months old",
+        "role": "implementation_constraint",
+        "question_relevance": "scope_limit",
+        "scope_flags": ["target_population_mismatch"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "For generally healthy adults, should eggs be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+
+    assert reason == "question_population_mismatch"
 
 
 def test_adult_question_routes_child_only_evidence_to_appendix() -> None:
