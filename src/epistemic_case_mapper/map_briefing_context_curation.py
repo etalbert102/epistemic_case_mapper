@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
     SourceCoverageReport,
     SourceMapReconciliationReport,
 )
+from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_source_category
 
 
 SECTION_TITLES = [
@@ -41,6 +42,7 @@ def build_decision_ready_context_bundle(
         decision_question=question,
         source_evidence_cards=source_cards,
         scaffold=scaffold,
+        candidate_map=prioritized_map,
     )
     quality = build_evidence_quality_report(source_cards)
     reconciliation = build_source_map_reconciliation(prioritized_map, source_cards)
@@ -231,7 +233,7 @@ def build_memo_argument_spine(
         for card in _top_role_cards(cards, role, limit=2):
             items.append(_spine_item(role, str(card.get("claim", "")), [card], int(card.get("decision_relevance_score", 0))))
     for missing in _string_list(source_sufficiency_report.get("missing_source_categories"))[:4]:
-        items.append(_spine_item("limitation", f"The provided source set is missing {missing.replace('_', ' ')}.", [], 0))
+        items.append(_spine_item("limitation", reader_facing_unresolved_source_category(missing), [], 0))
     load_bearing = _dedupe([card["candidate_card_id"] for card in cards[:8] if card.get("candidate_card_id")])
     report = MemoArgumentSpineReport(
         decision_question=question,
@@ -386,7 +388,7 @@ def _appendix_only(card: dict[str, Any], score: int, quality: dict[str, Any], ba
 
 def _candidate_role(card: dict[str, Any]) -> str:
     role = str(card.get("supports_challenges_or_scopes") or "").lower()
-    if "challenge" in role:
+    if any(marker in role for marker in ("challenge", "counter", "tension", "conflict", "risk")):
         return "counterweight"
     if "scope" in role:
         return "scope"

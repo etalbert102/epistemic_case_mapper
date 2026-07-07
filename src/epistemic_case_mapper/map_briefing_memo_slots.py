@@ -16,6 +16,7 @@ from epistemic_case_mapper.classical_ml import (
 )
 from epistemic_case_mapper.config_profiles import (
     DEFAULT_PROFILE_ID,
+    builtin_profiles,
     infer_profile_id_from_text,
     profile_vocabulary,
 )
@@ -340,11 +341,15 @@ def _first_non_heading_paragraph(markdown: str) -> str:
     return ""
 
 def _rewrite_introduces_domain_leakage(text: str, scaffold: dict[str, Any]) -> bool:
-    if _uses_nutrition_memo_profile(scaffold):
-        return False
+    active_profile_id = _profile_id_for_scaffold(scaffold)
     lowered = text.lower()
-    nutrition_terms = profile_vocabulary("biomedical_nutrition_case").get("domain_leakage_terms", [])
-    return any(str(marker).lower() in lowered for marker in nutrition_terms if str(marker).strip())
+    for profile_id in builtin_profiles():
+        if profile_id == active_profile_id:
+            continue
+        leakage_terms = profile_vocabulary(profile_id).get("domain_leakage_terms", [])
+        if any(str(marker).lower() in lowered for marker in leakage_terms if str(marker).strip()):
+            return True
+    return False
 
 def _rewrite_has_raw_identifiers(text: str) -> bool:
     return any(
@@ -505,7 +510,7 @@ def build_decision_memo_slots(scaffold: dict[str, Any], *, rendered: str = "") -
                 "job": spec["job"],
                 "required": bool(spec.get("required", True)),
                 "status": "filled" if selected else "missing",
-                "missing_message": spec.get("missing_message", "The current source packet does not establish clean evidence for this slot."),
+                "missing_message": spec.get("missing_message", "The current map does not cleanly establish evidence for this slot."),
                 "rows": selected,
             }
         )
@@ -524,8 +529,6 @@ def build_decision_memo_slots(scaffold: dict[str, Any], *, rendered: str = "") -
 
 def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any], ...]:
     """Build reader-memo obligations from the question and observed map concepts."""
-    if _uses_nutrition_memo_profile(scaffold):
-        return _NUTRITION_DECISION_MEMO_SLOT_SPECS
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     profile = sufficiency.get("question_profile", {}) if isinstance(sufficiency.get("question_profile"), dict) else {}
     expected_slots = set(_string_list(profile.get("expected_decision_slots")))
@@ -541,7 +544,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("main_support",),
             "max_rows": 3,
             "required": True,
-            "missing_message": "The current source packet does not establish clean evidence supporting a default answer.",
+            "missing_message": "The current map does not cleanly establish evidence supporting a default answer.",
         },
         {
             "slot_id": "counterevidence_or_tension",
@@ -551,7 +554,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("conflicting_evidence",),
             "max_rows": 3,
             "required": False,
-            "missing_message": "The current source packet does not establish clean counterevidence or tensions.",
+            "missing_message": "The current map does not cleanly establish counterevidence or tensions.",
         },
         {
             "slot_id": "scope_conditions",
@@ -561,7 +564,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("scope_limits", "main_support", "method_limits"),
             "max_rows": 3,
             "required": bool({"default_population", "dose_or_intensity_threshold"} & expected_slots) or asks_action,
-            "missing_message": "The current source packet does not establish clean scope, setting, or intensity boundaries.",
+            "missing_message": "The current map does not cleanly establish scope, setting, or intensity boundaries.",
         },
         {
             "slot_id": "alternatives_or_comparators",
@@ -571,7 +574,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("main_support", "conflicting_evidence", "scope_limits", "method_limits"),
             "max_rows": 3,
             "required": "substitution_or_comparator" in expected_slots or asks_comparison,
-            "missing_message": "The current source packet does not establish clean comparator evidence for the named alternatives.",
+            "missing_message": "The current map does not cleanly establish comparator evidence for the named alternatives.",
         },
         {
             "slot_id": "implementation_constraints",
@@ -581,7 +584,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("method_limits", "scope_limits", "main_support", "conflicting_evidence"),
             "max_rows": 4,
             "required": asks_action or "practical_recommendation" in expected_slots,
-            "missing_message": "The current source packet does not establish clean implementation constraints.",
+            "missing_message": "The current map does not cleanly establish implementation constraints.",
         },
         {
             "slot_id": "evidence_type_limits",
@@ -598,7 +601,7 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("method_limits", "main_support", "scope_limits", "conflicting_evidence"),
             "max_rows": 4,
             "required": True,
-            "missing_message": "The current source packet does not establish clean evidence-type or outcome limitations.",
+            "missing_message": "The current map does not cleanly establish evidence-type or outcome limitations.",
         },
         {
             "slot_id": "safety_or_risk",
@@ -608,95 +611,9 @@ def _decision_memo_slot_specs(scaffold: dict[str, Any]) -> tuple[dict[str, Any],
             "sections": ("conflicting_evidence", "method_limits", "scope_limits", "main_support"),
             "max_rows": 2,
             "required": False,
-            "missing_message": "The current source packet does not establish clean downside-risk evidence.",
+            "missing_message": "The current map does not cleanly establish downside-risk evidence.",
         },
     )
-
-def _uses_nutrition_memo_profile(scaffold: dict[str, Any]) -> bool:
-    return _profile_id_for_scaffold(scaffold) == "biomedical_nutrition_case"
-
-_NUTRITION_DECISION_MEMO_SLOT_SPECS = (
-    {
-        "slot_id": "default_population",
-        "label": "Default population",
-        "job": "State who inherits the default answer.",
-        "concepts": ("default_population",),
-        "sections": ("scope_limits", "main_support"),
-        "max_rows": 1,
-        "required": True,
-        "missing_message": "The current source packet does not establish a clean default-population boundary.",
-    },
-    {
-        "slot_id": "dose_boundary",
-        "label": "Dose boundary",
-        "job": "State the intake level or threshold the answer applies to.",
-        "concepts": ("dose_or_threshold",),
-        "sections": ("main_support", "scope_limits"),
-        "max_rows": 1,
-        "required": True,
-        "missing_message": "The current source packet does not establish a clean dose or intensity boundary.",
-    },
-    {
-        "slot_id": "hard_outcome_support",
-        "label": "Hard-outcome support",
-        "job": "Surface direct outcome evidence that supports the default answer.",
-        "concepts": ("hard_outcome_endpoint", "study_design_cohort"),
-        "sections": ("main_support",),
-        "max_rows": 2,
-        "required": True,
-        "missing_message": "The map lacks clean hard-outcome support for the default answer.",
-    },
-    {
-        "slot_id": "hard_outcome_counter",
-        "label": "Hard-outcome counterevidence",
-        "job": "Surface outcome evidence that pushes against the default answer.",
-        "concepts": ("hard_outcome_endpoint", "study_design_cohort"),
-        "sections": ("conflicting_evidence",),
-        "max_rows": 2,
-        "required": True,
-        "missing_message": "The map lacks clean hard-outcome counterevidence.",
-    },
-    {
-        "slot_id": "mechanism_surrogate",
-        "label": "Mechanism and surrogate evidence",
-        "job": "Explain biomarkers or mechanisms and what they cannot settle.",
-        "concepts": ("mechanism_ldl_apob", "surrogate_or_biomarker_endpoint", "dietary_context_or_saturated_fat"),
-        "sections": ("main_support", "conflicting_evidence", "method_limits", "scope_limits"),
-        "max_rows": 3,
-        "required": True,
-        "missing_message": "The map lacks clean mechanism or surrogate-endpoint evidence.",
-    },
-    {
-        "slot_id": "comparator_substitution",
-        "label": "Comparator or substitution",
-        "job": "State how replacement foods or comparators change the practical advice.",
-        "concepts": ("substitution_or_comparator",),
-        "sections": ("main_support", "conflicting_evidence", "method_limits", "scope_limits"),
-        "max_rows": 2,
-        "required": True,
-        "missing_message": "The map lacks clean comparator or substitution evidence.",
-    },
-    {
-        "slot_id": "high_risk_subgroup",
-        "label": "High-risk subgroup",
-        "job": "State who should not inherit the default answer without extra caution.",
-        "concepts": ("subgroup_diabetes_or_metabolic_risk", "subgroup_fh_hyper_responder"),
-        "sections": ("scope_limits", "conflicting_evidence", "method_limits", "main_support"),
-        "max_rows": 2,
-        "required": True,
-        "missing_message": "The map lacks clean high-risk subgroup evidence.",
-    },
-    {
-        "slot_id": "study_design_limits",
-        "label": "Study-design limits",
-        "job": "Distinguish hard outcomes from RCT/intervention or biomarker evidence.",
-        "concepts": ("study_design_rct", "study_design_cohort"),
-        "sections": ("method_limits", "main_support", "scope_limits"),
-        "max_rows": 2,
-        "required": False,
-        "missing_message": "The current source packet does not establish clean study-design limitations.",
-    },
-)
 
 def _candidate_rows_for_memo_slot(scaffold: dict[str, Any], spec: dict[str, Any], *, vocabulary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     concepts = tuple(str(item) for item in spec.get("concepts", ()))

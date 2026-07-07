@@ -128,7 +128,7 @@ def _join_polished_sentences(items: list[str], *, max_sentences: int) -> str:
             sentence += "."
         polished.append(sentence)
     if not polished:
-        return "The current source packet does not establish enough clean evidence to support a more specific synthesis for this section."
+        return "The current map does not cleanly establish enough evidence to support a more specific synthesis for this section."
     return " ".join(_dedupe(polished)[:max_sentences])
 
 def _first_complete_sentences(text: str, *, max_sentences: int, max_chars: int) -> str:

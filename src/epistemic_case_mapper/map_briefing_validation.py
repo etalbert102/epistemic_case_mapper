@@ -313,7 +313,7 @@ def validate_briefing_against_scaffold(
             }
         )
     issues.extend(spine_memo_validation_issues(rendered, scaffold))
-    if re.search(r"\bcurrent source packet does not establish\b", _main_memo_reliance_text(rendered), flags=re.IGNORECASE):
+    if re.search(r"\bcurrent (?:source packet does not establish|map does not cleanly establish)\b", _main_memo_reliance_text(rendered), flags=re.IGNORECASE):
         issues.append(
             {
                 "severity": "warning",
@@ -405,7 +405,18 @@ def _rendered_acknowledges_missing_slot(rendered: str, slot: str) -> bool:
     label_terms = _content_terms(_slot_label(slot))
     missing_signal = any(
         marker in normalized
-        for marker in ("not expose", "does not expose", "does not establish", "not establish", "missing", "not available", "not surfaced", "does not identify")
+        for marker in (
+            "not expose",
+            "does not expose",
+            "does not establish",
+            "does not cleanly establish",
+            "not establish",
+            "not cleanly establish",
+            "missing",
+            "not available",
+            "not surfaced",
+            "does not identify",
+        )
     )
     return missing_signal and any(term in normalized for term in label_terms)
 

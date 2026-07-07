@@ -121,7 +121,7 @@ def _slot_paragraph(
             continue
         if slot.get("status") == "missing":
             if slot.get("required"):
-                sentences.append(str(slot.get("missing_message", "The current source packet does not establish this evidence slot.")))
+                sentences.append(str(slot.get("missing_message", "The current map does not cleanly establish this evidence slot.")))
             continue
         slot_sentence = _memo_slot_sentence(slot)
         if slot_sentence:
@@ -241,21 +241,6 @@ def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str
             "practical": {
                 "slot_ids": ("alternatives_or_comparators", "implementation_constraints", "scope_conditions"),
                 "lead": "The practical scope is bounded by what this packet can diagnose about process, method, and source role.",
-            },
-        }
-    if _uses_nutrition_memo_profile(scaffold):
-        return {
-            "why_this_read": {
-                "slot_ids": ("default_population", "dose_boundary", "hard_outcome_support"),
-                "lead": "The cleanest evidence-backed default is bounded by the mapped population, exposure level, and direct outcome evidence.",
-            },
-            "evidence": {
-                "slot_ids": ("hard_outcome_support", "hard_outcome_counter", "mechanism_surrogate", "study_design_limits"),
-                "lead": "The evidence mix matters because direct outcomes, intervention evidence, mechanisms, and proxies answer different parts of the decision.",
-            },
-            "practical": {
-                "slot_ids": ("comparator_substitution", "high_risk_subgroup"),
-                "lead": "The practical recommendation changes most when comparators, context, or higher-risk groups enter the decision.",
             },
         }
     return {
@@ -890,7 +875,6 @@ def _synthesis_evidence_sentences(synthesis: dict[str, Any], *, roles: tuple[str
 from epistemic_case_mapper.map_briefing_claim_eligibility import _looks_like_boilerplate_disclosure, _looks_like_publisher_or_license_boilerplate
 from epistemic_case_mapper.map_briefing_evidence_partition import _option_criterion_label
 from epistemic_case_mapper.map_briefing_evidence_tables import _clean_appendix_section, _clean_reader_briefing_line, _concept_label, _contains_truncated_fragment, _deterministic_appendix_from_scaffold, _duplicate_sentence_count, _executive_markdown, _extract_confidence, _first_complete_sentences, _generic_cluster_proposition, _join_polished_sentences, _markdown_section, _markdown_section_with_heading, _markdown_table_cell, _markdown_table_count, _polish_reader_sentence_block, _reader_source_name, _source_suffix, _trim_executive_sections
-from epistemic_case_mapper.map_briefing_memo_slots import _uses_nutrition_memo_profile
 from epistemic_case_mapper.map_briefing_pipeline import _deterministic_decision_brief, _deterministic_decision_implications, _deterministic_top_cruxes, _sufficiency_implications
 from epistemic_case_mapper.map_briefing_reader_contracts import _vocabulary_marker_list, _vocabulary_marker_map, _vocabulary_string_dict
 from epistemic_case_mapper.map_briefing_validation import _content_terms, _dedupe, _rendered_mentions_any_surface_term, _string_list

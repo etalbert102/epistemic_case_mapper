@@ -20,6 +20,10 @@ from epistemic_case_mapper.config_profiles import (
     profile_vocabulary,
 )
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_text_cleanup import (
+    reader_facing_unresolved_family,
+    reader_facing_unresolved_slot,
+)
 from epistemic_case_mapper.model_backends import run_model_backend
 
 def build_proposition_clusters(
@@ -228,7 +232,7 @@ def build_map_sufficiency_report(
         "issues": issues,
         "notes": [
             "This report evaluates whether the current map exposes decision-support ingredients; it does not judge whether the underlying sources are complete.",
-            "Missing slots should be acknowledged in the briefing when they matter to the question, not filled in by inference.",
+            "Unresolved slots should be acknowledged in the briefing when they matter to the question, not filled in by inference.",
         ],
     }
 
@@ -293,7 +297,7 @@ def _sufficiency_output_obligations(
                 "obligation_id": f"missing_{slot}",
                 "kind": "acknowledge_missing_slot",
                 "slot": slot,
-                "instruction": f"Do not invent a { _slot_label(slot) }; state that the source packet does not establish it if relevant.",
+                "instruction": f"Do not invent a {_slot_label(slot)}; state that the current map does not cleanly establish it if relevant.",
                 "candidate_values": [],
             }
         )
@@ -303,7 +307,7 @@ def _sufficiency_output_obligations(
                 "obligation_id": f"missing_family_{family}",
                 "kind": "acknowledge_missing_family",
                 "evidence_family": family,
-                "instruction": f"Do not imply that {family.replace('_', ' ')} evidence was assessed if the map lacks it.",
+                "instruction": f"Do not imply that {family.replace('_', ' ')} evidence was assessed if the current map does not cleanly establish it.",
                 "candidate_values": [],
             }
         )
@@ -336,7 +340,7 @@ def _sufficiency_issues(
             {
                 "severity": "warning",
                 "issue_type": "missing_expected_decision_slot",
-                "message": f"The question appears to require {_slot_label(slot)}, but the source packet does not establish it.",
+                "message": f"The question appears to require {_slot_label(slot)}, but {_lower_first(reader_facing_unresolved_slot(slot).removesuffix('.'))}.",
             }
         )
     for family in missing_expected_families:
@@ -344,7 +348,7 @@ def _sufficiency_issues(
             {
                 "severity": "warning",
                 "issue_type": "missing_expected_evidence_family",
-                "message": f"The question appears to benefit from {family.replace('_', ' ')} evidence, but the source packet does not establish it.",
+                "message": f"The question appears to benefit from {family.replace('_', ' ')} evidence, but {_lower_first(reader_facing_unresolved_family(family).removesuffix('.'))}.",
             }
         )
     if confidence_cap(quality_report) != "high":
@@ -390,6 +394,9 @@ def _slot_label(slot: str) -> str:
         "equity_or_distribution": "equity or distribution",
         "missing_evidence_gap": "missing evidence gap",
     }.get(slot, slot.replace("_", " "))
+
+def _lower_first(text: str) -> str:
+    return text[:1].lower() + text[1:] if text else text
 
 def _missing_decision_slots(evidence_ledger: dict[str, Any]) -> list[str]:
     required = (

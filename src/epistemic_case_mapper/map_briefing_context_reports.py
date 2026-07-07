@@ -71,10 +71,15 @@ def build_source_sufficiency_report(
     decision_question: str,
     source_evidence_cards: dict[str, Any],
     scaffold: dict[str, Any],
+    candidate_map: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cards = [card for card in source_evidence_cards.get("cards", []) if isinstance(card, dict)]
     question_terms = _content_terms(decision_question)
-    role_counts = Counter(str(card.get("supports_challenges_or_scopes") or "uncategorized") for card in cards)
+    semantic_signals = _semantic_sufficiency_signals(
+        cards=cards,
+        candidate_map=candidate_map or {},
+        scaffold=scaffold,
+    )
     direct_cards = [
         card
         for card in cards
@@ -82,15 +87,13 @@ def build_source_sufficiency_report(
         or _int_value(card.get("decision_relevance_score")) >= 6
     ]
     anchored_cards = [card for card in cards if card.get("anchor_confidence") != "missing"]
-    quantity_cards = [card for card in cards if card.get("quantity_values")]
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     missing = _generic_missing_categories(
         cards=cards,
         direct_cards=direct_cards,
         anchored_cards=anchored_cards,
-        role_counts=role_counts,
-        quantity_cards=quantity_cards,
         existing_sufficiency=sufficiency,
+        semantic_signals=semantic_signals,
     )
     if not cards or not anchored_cards or "direct_answer_evidence" in missing:
         status = "insufficient_source_set"
@@ -105,14 +108,15 @@ def build_source_sufficiency_report(
             "has_source_cards": bool(cards),
             "has_anchored_cards": bool(anchored_cards),
             "has_direct_answer_evidence": bool(direct_cards),
-            "has_support": role_counts.get("supports", 0) > 0,
-            "has_counterweight": role_counts.get("challenges", 0) > 0,
-            "has_scope_boundary": role_counts.get("scopes", 0) > 0,
-            "has_quantitative_anchor": bool(quantity_cards),
+            "has_support": semantic_signals["has_support"],
+            "has_counterweight": semantic_signals["has_counterweight"],
+            "has_scope_boundary": semantic_signals["has_scope_boundary"],
+            "has_quantitative_anchor": semantic_signals["has_quantitative_anchor"],
         },
         missing_source_categories=missing,
         bounded_answer_required=status != "sufficient_for_decision_ready_answer",
         notes=_source_sufficiency_notes(status, missing),
+        semantic_signal_report=semantic_signals["report"],
     )
     return report.model_dump()
 
@@ -476,10 +480,10 @@ def _generic_missing_categories(
     cards: list[dict[str, Any]],
     direct_cards: list[dict[str, Any]],
     anchored_cards: list[dict[str, Any]],
-    role_counts: Counter[str],
-    quantity_cards: list[dict[str, Any]],
     existing_sufficiency: dict[str, Any],
+    semantic_signals: dict[str, Any] | None = None,
 ) -> list[str]:
+    semantic_signals = semantic_signals or {}
     missing: list[str] = []
     if not cards:
         missing.append("source_cards")
@@ -487,19 +491,145 @@ def _generic_missing_categories(
         missing.append("source_anchors")
     if not direct_cards:
         missing.append("direct_answer_evidence")
-    if role_counts.get("supports", 0) == 0:
+    if not bool(semantic_signals.get("has_support")):
         missing.append("supporting_evidence")
-    if role_counts.get("challenges", 0) == 0:
+    if not bool(semantic_signals.get("has_counterweight")):
         missing.append("counterweight_evidence")
-    if role_counts.get("scopes", 0) == 0:
+    if not bool(semantic_signals.get("has_scope_boundary")):
         missing.append("scope_boundary_evidence")
-    if not quantity_cards:
+    if not bool(semantic_signals.get("has_quantitative_anchor")):
         missing.append("quantitative_anchor")
     for slot in _string_list(existing_sufficiency.get("missing_expected_decision_slots")):
         missing.append(f"decision_slot:{slot}")
     for family in _string_list(existing_sufficiency.get("missing_expected_evidence_families")):
         missing.append(f"evidence_family:{family}")
     return _dedupe(missing)
+
+
+def _semantic_sufficiency_signals(
+    *,
+    cards: list[dict[str, Any]],
+    candidate_map: dict[str, Any],
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    """Reconcile brittle card labels with richer map and briefing artifacts.
+
+    This is intentionally conservative: deterministic code can confirm that a
+    semantic category is present when multiple structured signals point to it,
+    but it should not declare a category absent merely because one coarse label
+    is missing.
+    """
+
+    card_roles = Counter(str(card.get("supports_challenges_or_scopes") or "uncategorized") for card in cards)
+    card_text = "\n".join(str(card.get("source_quote_or_excerpt") or "") for card in cards).lower()
+    relation_types = Counter(_relation_types(candidate_map))
+    map_sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
+    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
+    decision_synthesis = scaffold.get("decision_synthesis_model", {}) if isinstance(scaffold.get("decision_synthesis_model"), dict) else {}
+    argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
+    quantity_ledger = scaffold.get("quantity_ledger", {}) if isinstance(scaffold.get("quantity_ledger"), dict) else {}
+    quantitative_anchors = scaffold.get("quantitative_anchors", []) if isinstance(scaffold.get("quantitative_anchors"), list) else []
+
+    support_sources = _dedupe(
+        [
+            *_signal_sources_from_count("source_card_role:supports", card_roles.get("supports", 0)),
+            *_signal_sources_from_count("relation:supports", relation_types.get("supports", 0)),
+            *_signal_sources_from_list("decision_model:main_reasons", _listish(decision_model.get("main_reasons"))),
+            *_signal_sources_from_list("argument_model:strongest_support", _listish(argument_model.get("strongest_support"))),
+        ]
+    )
+    counter_sources = _dedupe(
+        [
+            *_signal_sources_from_count("source_card_role:challenges", card_roles.get("challenges", 0)),
+            *_signal_sources_from_count("relation:challenges", relation_types.get("challenges", 0)),
+            *_signal_sources_from_count("relation:in_tension_with", relation_types.get("in_tension_with", 0)),
+            *_signal_sources_from_list("decision_model:strongest_counterarguments", _listish(decision_model.get("strongest_counterarguments"))),
+            *_signal_sources_from_list("decision_synthesis:tensions", _listish(decision_synthesis.get("tensions"))),
+            *_signal_sources_from_list("argument_model:strongest_counterarguments", _listish(argument_model.get("strongest_counterarguments"))),
+            *_signal_sources_from_text("source_text:counter_signal", card_text, _counter_signal_terms()),
+        ]
+    )
+    scope_sources = _dedupe(
+        [
+            *_signal_sources_from_count("source_card_role:scopes", card_roles.get("scopes", 0)),
+            *_signal_sources_from_count("relation:refines", relation_types.get("refines", 0)),
+            *_signal_sources_from_count("relation:depends_on", relation_types.get("depends_on", 0)),
+            *_signal_sources_from_list("decision_model:tension_resolutions", _listish(decision_model.get("tension_resolutions"))),
+            *_signal_sources_from_list("argument_model:scope_boundaries", _listish(argument_model.get("scope_boundaries"))),
+        ]
+    )
+    quantity_sources = _dedupe(
+        [
+            *_signal_sources_from_count("source_card:quantity_values", sum(1 for card in cards if card.get("quantity_values"))),
+            *_signal_sources_from_count("quantity_ledger:quantity_count", _int_value(quantity_ledger.get("quantity_count"))),
+            *_signal_sources_from_count("scaffold:quantitative_anchors", len(quantitative_anchors)),
+            *_signal_sources_from_list("argument_model:quantitative_anchors", _listish(argument_model.get("quantitative_anchors"))),
+        ]
+    )
+
+    # The older map-sufficiency report is still useful as a missing-slot signal,
+    # but it should not override stronger positive evidence found above.
+    missing = set(_string_list(map_sufficiency.get("missing_expected_evidence_families")))
+    if "counterweight_evidence" in missing and counter_sources:
+        missing.remove("counterweight_evidence")
+
+    report = {
+        "schema_id": "semantic_sufficiency_signal_report_v1",
+        "method": "reconcile_source_card_labels_with_relations_decision_artifacts_and_quantities",
+        "source_card_role_counts": dict(card_roles),
+        "relation_type_counts": dict(relation_types),
+        "support_signal_sources": support_sources,
+        "counterweight_signal_sources": counter_sources,
+        "crux_signal_sources": _signal_sources_from_count("relation:crux_for", relation_types.get("crux_for", 0)),
+        "scope_signal_sources": scope_sources,
+        "quantitative_signal_sources": quantity_sources,
+        "overridden_missing_evidence_families": sorted(set(_string_list(map_sufficiency.get("missing_expected_evidence_families"))) - missing),
+    }
+    return {
+        "has_support": bool(support_sources),
+        "has_counterweight": bool(counter_sources),
+        "has_scope_boundary": bool(scope_sources),
+        "has_quantitative_anchor": bool(quantity_sources),
+        "report": report,
+    }
+
+
+def _relation_types(candidate_map: dict[str, Any]) -> list[str]:
+    relations = candidate_map.get("relations", [])
+    if not isinstance(relations, list):
+        return []
+    return [str(relation.get("relation_type") or "").strip() for relation in relations if isinstance(relation, dict) and str(relation.get("relation_type") or "").strip()]
+
+
+def _counter_signal_terms() -> tuple[str, ...]:
+    return (
+        "higher risk",
+        "increased risk",
+        "increase in risk",
+        "positive association",
+        "mortality",
+        "adverse",
+        "counterargument",
+        "counterevidence",
+        "in tension",
+    )
+
+
+def _signal_sources_from_count(label: str, count: int) -> list[str]:
+    return [f"{label}:{count}"] if count > 0 else []
+
+
+def _signal_sources_from_list(label: str, values: list[Any]) -> list[str]:
+    return [f"{label}:{len(values)}"] if values else []
+
+
+def _signal_sources_from_text(label: str, text: str, terms: tuple[str, ...]) -> list[str]:
+    hits = [term for term in terms if term in text]
+    return [f"{label}:{','.join(hits[:4])}"] if hits else []
+
+
+def _listish(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
 def _source_sufficiency_notes(status: str, missing: list[str]) -> list[str]:
@@ -551,7 +681,10 @@ def _role_for_claim(claim: dict[str, Any]) -> str:
         str(claim.get(key, ""))
         for key in ("role", "evidence_role", "section", "relation_type", "claim_type", "tags", "evidence_slots")
     ).lower()
+    text = _claim_text(claim).lower()
     if any(term in values for term in ("challenge", "counter", "conflict", "tension", "risk")):
+        return "challenges"
+    if any(term in text for term in ("higher risk", "increased risk", "increase in risk", "positive association", "lower mortality")):
         return "challenges"
     if any(term in values for term in ("scope", "limit", "boundary", "exception", "constraint", "crux")):
         return "scopes"

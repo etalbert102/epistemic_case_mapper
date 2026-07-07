@@ -102,7 +102,7 @@ def _exception_led(text: str) -> bool:
 
 def _gap_language(text: str) -> bool:
     lowered = text.lower()
-    return "source packet does not establish" in lowered or "map lacks clean" in lowered
+    return "source packet does not establish" in lowered or "map does not cleanly establish" in lowered or "map lacks clean" in lowered
 
 
 def _sentence(text: str) -> str:

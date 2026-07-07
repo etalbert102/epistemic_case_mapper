@@ -44,3 +44,23 @@ def reader_facing_sufficiency_limit(status: str) -> str:
         "The current source packet has enough structure to name the relevant limits, "
         "but unresolved gaps should not be filled by inference."
     )
+
+
+def reader_facing_unresolved_slot(slot: str) -> str:
+    return f"The current map does not cleanly establish the decision-relevant {_label(slot)}."
+
+
+def reader_facing_unresolved_family(family: str) -> str:
+    return f"The current map does not cleanly establish {_label(family)} evidence."
+
+
+def reader_facing_unresolved_source_category(category: str) -> str:
+    if category.startswith("decision_slot:"):
+        return reader_facing_unresolved_slot(category.split(":", 1)[1])
+    if category.startswith("evidence_family:"):
+        return reader_facing_unresolved_family(category.split(":", 1)[1])
+    return f"The current source packet does not cleanly establish {_label(category)}."
+
+
+def _label(value: str) -> str:
+    return value.replace("_", " ").replace(":", ": ")

@@ -3,6 +3,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_text_cleanup import (
+    reader_facing_unresolved_family,
+    reader_facing_unresolved_slot,
+)
+
 from epistemic_case_mapper.map_briefing_answer_frame import arbitrate_answer_frame
 from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
 
@@ -457,9 +462,9 @@ def _limits(scaffold: dict[str, Any]) -> list[str]:
     items: list[str] = []
     sufficiency = scaffold.get("map_sufficiency_report", {}) if isinstance(scaffold.get("map_sufficiency_report"), dict) else {}
     for slot in sufficiency.get("missing_expected_decision_slots", []) if isinstance(sufficiency.get("missing_expected_decision_slots"), list) else []:
-        items.append(f"The current source packet does not establish a clean {str(slot).replace('_', ' ')}.")
+        items.append(reader_facing_unresolved_slot(str(slot)))
     for family in sufficiency.get("missing_expected_evidence_families", []) if isinstance(sufficiency.get("missing_expected_evidence_families"), list) else []:
-        items.append(f"The current source packet does not establish {str(family).replace('_', ' ')} evidence.")
+        items.append(reader_facing_unresolved_family(str(family)))
     for issue in scaffold.get("quality_issues", []) if isinstance(scaffold.get("quality_issues"), list) else []:
         if str(issue).strip():
             items.append(str(issue).strip())

@@ -16,6 +16,10 @@ from epistemic_case_mapper.map_briefing_map_utils import (
 )
 from epistemic_case_mapper.map_briefing_pipeline import briefing_scaffold, deterministic_briefing_payload
 from epistemic_case_mapper.map_briefing_pipeline import _write_final_reader_outputs
+from epistemic_case_mapper.map_briefing_text_cleanup import (
+    reader_facing_unresolved_family,
+    reader_facing_unresolved_slot,
+)
 from epistemic_case_mapper.model_schemas import CompactDecisionModelOutput, DecisionModelItem
 from epistemic_case_mapper.decision_frame import question_quality_report
 
@@ -351,9 +355,9 @@ def _missing_evidence(scaffold: dict[str, Any]) -> list[DecisionModelItem]:
     report = _sufficiency_report(scaffold)
     items: list[DecisionModelItem] = []
     for slot in report.get("missing_expected_decision_slots", []) if isinstance(report.get("missing_expected_decision_slots"), list) else []:
-        items.append(DecisionModelItem(statement=f"Missing decision slot: {str(slot).replace('_', ' ')}.", why_it_matters="Do not fill this by inference."))
+        items.append(DecisionModelItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="Do not fill this by inference."))
     for family in report.get("missing_expected_evidence_families", []) if isinstance(report.get("missing_expected_evidence_families"), list) else []:
-        items.append(DecisionModelItem(statement=f"Missing evidence family: {str(family).replace('_', ' ')}.", why_it_matters="Do not imply this evidence was assessed."))
+        items.append(DecisionModelItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="Do not imply this evidence was assessed."))
     return _dedupe_items(items)
 
 

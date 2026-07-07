@@ -131,6 +131,52 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
     assert quality["quality_components"]["sc0001"]["directness"] == "direct"
 
 
+def test_source_sufficiency_reconciles_counterweight_relations() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c1",
+                "claim": "The intervention was not associated with worse outcomes.",
+                "source_id": "s1",
+                "source_span": "lines 1-2",
+                "role": "conclusion_support",
+                "decision_relevance_score": 8,
+            },
+            {
+                "claim_id": "c2",
+                "claim": "A narrower subgroup showed higher risk.",
+                "source_id": "s2",
+                "source_span": "lines 3-4",
+                "role": "scope_limit",
+                "decision_relevance_score": 8,
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "r1",
+                "source_claim": "c2",
+                "target_claim": "c1",
+                "relation_type": "in_tension_with",
+            }
+        ],
+    }
+    source_cards = build_source_evidence_cards(candidate_map, source_lookup={"s1": "S1", "s2": "S2"})
+
+    sufficiency = build_source_sufficiency_report(
+        decision_question="Should the intervention be treated as low concern?",
+        source_evidence_cards=source_cards,
+        scaffold={"map_sufficiency_report": {}},
+        candidate_map=candidate_map,
+    )
+
+    assert sufficiency["coverage"]["has_counterweight"] is True
+    assert "counterweight_evidence" not in sufficiency["missing_source_categories"]
+    assert any(
+        source.startswith("relation:in_tension_with")
+        for source in sufficiency["semantic_signal_report"]["counterweight_signal_sources"]
+    )
+
+
 def test_decision_ready_context_bundle_builds_plan_artifacts() -> None:
     candidate_map = {
         "claims": [

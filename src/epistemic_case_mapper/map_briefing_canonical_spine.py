@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_source_category
 from epistemic_case_mapper.map_briefing_spine_validation import validate_canonical_decision_spine
 
 
@@ -324,7 +325,7 @@ def _limit_fields(cards: list[dict[str, Any]], scaffold: dict[str, Any]) -> list
         fields.append(
             {
                 "field_id": f"evidence_quality_limit_{len(fields) + 1}",
-                "claim": f"The source set is missing {missing.replace('_', ' ')}.",
+                "claim": reader_facing_unresolved_source_category(missing),
                 "role": "evidence_quality_limit",
                 "source_ids": [],
                 "candidate_card_ids": [],
@@ -347,7 +348,7 @@ def _missing_slot_fields(audit: dict[str, Any]) -> list[dict[str, Any]]:
             {
                 "field_id": f"missing_{slot_id}",
                 "slot_id": slot_id,
-                "claim": str(slot.get("missing_message") or f"The current source packet does not establish {slot_id}."),
+                "claim": str(slot.get("missing_message") or f"The current map does not cleanly establish {slot_id}."),
                 "role": "missing_slot",
                 "source_ids": [],
                 "candidate_card_ids": [],

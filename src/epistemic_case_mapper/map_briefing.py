@@ -87,7 +87,6 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
 from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
 
 from epistemic_case_mapper.map_briefing_memo_slots import (
-    _NUTRITION_DECISION_MEMO_SLOT_SPECS,
     _banned_editorial_phrases,
     _candidate_rows_for_memo_slot,
     _comparison_side_terms,
@@ -122,7 +121,6 @@ from epistemic_case_mapper.map_briefing_memo_slots import (
     _sentence_fingerprints,
     _source_label_noise_variants,
     _source_label_token_overlap,
-    _uses_nutrition_memo_profile,
     build_curated_evidence_packets,
     build_decision_memo_slots,
     reader_memo_rewrite_issues,
@@ -406,7 +404,6 @@ __all__ = [
     "_COVERAGE_CONCEPT_PRIORITY",
     "_COVERAGE_CONCEPT_SLOT",
     "_NON_OBLIGATORY_COVERAGE_CONCEPTS",
-    "_NUTRITION_DECISION_MEMO_SLOT_SPECS",
     "_active_overstatement_lints",
     "_any_text_contains",
     "_apply_briefing_contract_lint",
@@ -687,7 +684,6 @@ __all__ = [
     "_tension_resolution_rows",
     "_text_has_option_term",
     "_trim_executive_sections",
-    "_uses_nutrition_memo_profile",
     "_vocabulary_marker_list",
     "_vocabulary_marker_map",
     "_vocabulary_nested_marker_map",

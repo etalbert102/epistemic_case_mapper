@@ -60,6 +60,7 @@ from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_cl
 from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
+from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_family, reader_facing_unresolved_slot
 ROLE_PRIORITY = {
     "crux": 0,
     "scope_limit": 1,
@@ -657,9 +658,9 @@ def deterministic_briefing_payload(
 def _sufficiency_implications(sufficiency_report: dict[str, Any]) -> list[str]:
     items: list[str] = []
     for slot in _string_list(sufficiency_report.get("missing_expected_decision_slots")):
-        items.append(f"The current source packet does not establish a decision-relevant {_slot_label(slot)}; do not fill that gap by inference.")
+        items.append(f"{reader_facing_unresolved_slot(slot)} Do not fill that gap by inference.")
     for family in _string_list(sufficiency_report.get("missing_expected_evidence_families")):
-        items.append(f"The current source packet does not establish {family.replace('_', ' ')} evidence; do not imply it was assessed.")
+        items.append(f"{reader_facing_unresolved_family(family)} Do not imply it was assessed.")
     return items
 
 def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: str | None = None) -> str:
@@ -837,7 +838,6 @@ def append_map_coverage_snapshot(rendered: str, scaffold: dict[str, Any]) -> str
 
 # Explicit cross-module dependencies for compatibility facade removal.
 from epistemic_case_mapper.map_briefing_decision_model import (
-    _slot_label,
     build_briefing_plan,
     build_decision_model,
     build_map_sufficiency_report,

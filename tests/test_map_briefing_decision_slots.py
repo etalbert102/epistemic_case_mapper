@@ -141,9 +141,9 @@ def test_decision_memo_slots_force_core_evidence_into_memo() -> None:
     memo = package["memo"]
 
     assert slots["coverage"]["missing_required_slots"] == []
-    assert "LDL and ApoB" in memo
+    assert "Moderate intake up to one egg per day" in memo
+    assert "generally healthy adults" in memo
     assert "Replacing whole eggs" in memo
-    assert "type 2 diabetes" in memo
     assert "higher all-cause mortality" in memo
 
 
@@ -783,9 +783,9 @@ def test_briefing_validation_checks_sufficiency_obligations() -> None:
     assert complete["score"] > incomplete["score"]
 
 
-def test_decision_memo_slots_use_narrower_hard_outcome_evidence_as_context() -> None:
+def test_decision_memo_slots_use_narrower_direct_outcome_evidence_as_context() -> None:
     scaffold = {
-        "epistemic_config": {"profile_id": "biomedical_nutrition_case"},
+        "epistemic_config": {"profile_id": "general_decision_support"},
         "curated_evidence_packets": {
             "packets": [
                 {
@@ -815,8 +815,8 @@ def test_decision_memo_slots_use_narrower_hard_outcome_evidence_as_context() -> 
 
     slots = build_decision_memo_slots(scaffold)
 
-    hard_outcome = next(slot for slot in slots["slots"] if slot["slot_id"] == "hard_outcome_support")
-    assert hard_outcome["status"] == "filled"
+    evidence_type_limits = next(slot for slot in slots["slots"] if slot["slot_id"] == "evidence_type_limits")
+    assert evidence_type_limits["status"] == "filled"
 
 
 def test_map_briefing_prompt_uses_compact_model_contract() -> None:

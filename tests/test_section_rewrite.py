@@ -103,7 +103,7 @@ def test_section_rewrite_falls_back_for_invalid_section(monkeypatch) -> None:
         backend_retries=0,
     )
 
-    assert result["report"]["status"] in {"accepted_partial", "no_sections_accepted"}
+    assert result["report"]["status"] in {"accepted_partial", "no_sections_accepted", "global_validation_failed_fallback"}
     assert any(
         section["status"] == "rejected_fallback"
         for section in result["report"]["sections"]

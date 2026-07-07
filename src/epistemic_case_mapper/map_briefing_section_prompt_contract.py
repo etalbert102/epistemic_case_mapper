@@ -96,7 +96,7 @@ def model_facing_section_markdown(markdown: str, contract: dict[str, Any]) -> st
 
 def _remove_gap_boilerplate(text: str) -> str:
     return re.sub(
-        r"\s*The current source packet does not establish[^.?!]*[.?!]\s*(?:do not fill that gap by inference[.?!])?",
+        r"\s*The current (?:source packet does not establish|map does not cleanly establish)[^.?!]*[.?!]\s*(?:do not fill that gap by inference[.?!])?",
         " ",
         text,
         flags=re.IGNORECASE,

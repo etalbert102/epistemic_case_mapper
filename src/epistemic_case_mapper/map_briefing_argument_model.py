@@ -3,7 +3,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_sufficiency_limit
+from epistemic_case_mapper.map_briefing_text_cleanup import (
+    reader_facing_sufficiency_limit,
+    reader_facing_unresolved_family,
+    reader_facing_unresolved_slot,
+)
 from epistemic_case_mapper.model_schemas import ArgumentEvidenceItem, ArgumentModelOutput
 
 
@@ -221,9 +225,9 @@ def _missing_items(scaffold: dict[str, Any]) -> list[ArgumentEvidenceItem]:
     report = _dict(scaffold.get("map_sufficiency_report"))
     items: list[ArgumentEvidenceItem] = []
     for slot in report.get("missing_expected_decision_slots", []) if isinstance(report.get("missing_expected_decision_slots"), list) else []:
-        items.append(ArgumentEvidenceItem(statement=f"Missing decision slot: {str(slot).replace('_', ' ')}.", why_it_matters="The memo should not fill this by inference.", evidence_type="missing_slot", weight="low"))
+        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="The memo should not fill this by inference.", evidence_type="unresolved_slot", weight="low"))
     for family in report.get("missing_expected_evidence_families", []) if isinstance(report.get("missing_expected_evidence_families"), list) else []:
-        items.append(ArgumentEvidenceItem(statement=f"Missing evidence family: {str(family).replace('_', ' ')}.", why_it_matters="The memo should not imply this evidence was assessed.", evidence_type="missing_evidence_family", weight="low"))
+        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="The memo should not imply this evidence was assessed.", evidence_type="unresolved_evidence_family", weight="low"))
     return _dedupe_items(items)[:6]
 
 
