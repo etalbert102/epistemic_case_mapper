@@ -20,9 +20,12 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     _non_evidence_text_reason,
     _parse_relation_model_json,
     _relation_candidate_pool_report,
+    _relation_claim_card,
     _relation_pair_block,
     _relation_pair_budget,
 )
+from epistemic_case_mapper.staged_semantic_relation_candidates import _relation_endpoint_rejection_reason
+from epistemic_case_mapper.staged_semantic_relation_quality import relation_pair_intent
 
 
 def test_candidate_relation_pairs_prioritize_decision_role_templates_without_shared_terms() -> None:
@@ -312,6 +315,102 @@ def test_candidate_relation_pairs_penalize_population_scope_mismatch() -> None:
     assert selected_ids == {"demo_c002", "demo_c003"}
 
 
+def test_candidate_relation_pairs_exclude_cross_source_study_scope_to_finding() -> None:
+    claims = [
+        _claim(
+            "demo_c001",
+            "The trial enrolled patients with prior cardiovascular events at baseline.",
+            "trial_a",
+            "patients with prior cardiovascular events at baseline",
+            "scope_limit",
+        ),
+        _claim(
+            "demo_c002",
+            "A separate meta-analysis found egg intake was not associated with cardiovascular disease.",
+            "meta_b",
+            "egg intake was not associated with cardiovascular disease",
+            "conclusion_support",
+        ),
+    ]
+
+    pairs = _candidate_relation_pairs(claims, max_pairs=5)
+
+    assert pairs == []
+    assert relation_pair_intent(claims[0], claims[1]) == {
+        "intent": "cross_source_study_scope_to_finding",
+        "allowed_relation_types": ["none"],
+    }
+
+
+def test_candidate_relation_pairs_exclude_cross_source_study_scope_to_crux() -> None:
+    claims = [
+        _claim(
+            "demo_c001",
+            "The trial enrolled patients with prior cardiovascular events at baseline.",
+            "trial_a",
+            "patients with prior cardiovascular events at baseline",
+            "scope_limit",
+        ),
+        _claim(
+            "demo_c002",
+            "The decision turns on whether egg intake changes cardiovascular event risk.",
+            "meta_b",
+            "turns on cardiovascular event risk",
+            "crux",
+        ),
+    ]
+
+    pairs = _candidate_relation_pairs(claims, max_pairs=5)
+
+    assert pairs == []
+    assert relation_pair_intent(claims[0], claims[1]) == {
+        "intent": "cross_source_study_scope_to_finding",
+        "allowed_relation_types": ["none"],
+    }
+
+
+def test_candidate_relation_pairs_keep_same_source_scope_to_finding() -> None:
+    claims = [
+        _claim(
+            "demo_c001",
+            "The cohort enrolled adults without prior cardiovascular disease.",
+            "cohort_a",
+            "adults without prior cardiovascular disease",
+            "scope_limit",
+        ),
+        _claim(
+            "demo_c002",
+            "The cohort found egg intake was not associated with cardiovascular disease events.",
+            "cohort_a",
+            "egg intake was not associated with cardiovascular disease events",
+            "conclusion_support",
+        ),
+    ]
+
+    pairs = _candidate_relation_pairs(claims, max_pairs=5)
+
+    assert pairs
+    assert pairs[0]["pair_intent"] == {
+        "intent": "same_source_scope_to_finding",
+        "allowed_relation_types": ["refines", "depends_on", "none"],
+    }
+
+
+def test_relation_endpoint_rejects_keyword_index_scope_claims() -> None:
+    claim = {
+        **_claim(
+            "demo_c001",
+            "The research involves cardiovascular outcomes, exposure, policy, and humans.",
+            "indexed_source",
+            "Outcomes; Exposure; Policy; Humans; Risk Factors",
+            "scope_limit",
+        ),
+        "source_quote": "Outcomes; Exposure; Policy; Humans; Risk Factors",
+    }
+
+    assert _relation_endpoint_rejection_reason(claim) == "keyword_index_scope"
+
+
 def test_non_evidence_classifier_rejects_footer_policy_and_index_terms() -> None:
     assert _non_evidence_text_reason("Privacy Policy") == "navigation_or_policy_boilerplate"
     assert _non_evidence_text_reason("Nutrition Policy*") == "list_heading_or_index_term"
@@ -353,9 +452,31 @@ def test_relation_pair_block_uses_compact_claim_cards() -> None:
 
     block = _relation_pair_block(packet)
 
-    assert "excerpt_A" in block
-    assert len(block) < 1600
+    assert "exact_evidence_quote_A" in block
+    assert "excerpt_A" not in block
+    assert "Pair contract:" in block
+    assert "allowed_claim_ids_for_non_none_relation: demo_c001, demo_c002" in block
+    assert "endpoint_rule:" in block
+    assert len(block) < 2200
     assert block.count("Long filler") < 20
+
+
+def test_relation_claim_card_prefers_exact_source_quote_over_broad_excerpt() -> None:
+    claim = {
+        **_claim(
+            "demo_c001",
+            "The exact finding matters.",
+            "doc_a",
+            "Broad background sentence. " * 20,
+            "conclusion_support",
+        ),
+        "source_quote": "Exact source quote that grounds the finding.",
+    }
+
+    card = _relation_claim_card(claim, "A")
+
+    assert "exact_evidence_quote_A: Exact source quote that grounds the finding." in card
+    assert "Broad background sentence" not in card
 
 
 def test_extract_claims_reuses_cached_chunk_payload(tmp_path: Path) -> None:

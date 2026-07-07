@@ -19,6 +19,7 @@ from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
 from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
+from epistemic_case_mapper.staged_semantic_relation_quality import relation_semantic_rejection_reason
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _concept_gap_backfill_claims(
@@ -759,6 +760,8 @@ def _extract_relations(
             if relation is None:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
                 continue
+            if _append_semantic_relation_rejection(rejected, relation, packet, batch_id, proposal):
+                continue
             key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
             if key in seen:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "duplicate_relation", "proposal": proposal})
@@ -770,7 +773,22 @@ def _extract_relations(
         for packet in batch:
             if packet["pair_id"] not in proposed_pair_ids:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
-    accepted, rejected, relation_index = finalize_sparse_relation_graph(
+    accepted, rejected = _finalize_and_write_relations(accepted, rejected, pair_packets, permitted_types, region, relation_index, seen, claims, artifact_dir)
+    return accepted, payloads, rejected
+
+
+def _finalize_and_write_relations(
+    accepted: list[dict[str, Any]],
+    rejected: list[dict[str, Any]],
+    pair_packets: list[dict[str, Any]],
+    permitted_types: set[str],
+    region: WorkedRegion,
+    relation_index: int,
+    seen: set[tuple[str, str, str]],
+    claims: list[dict[str, Any]],
+    artifact_dir: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    accepted, rejected, _ = finalize_sparse_relation_graph(
         accepted=accepted,
         rejected=rejected,
         pair_packets=pair_packets,
@@ -781,7 +799,21 @@ def _extract_relations(
         min_relation_count=max(2, len(claims) // 20) if len(claims) >= 20 else 0,
     )
     write_json(artifact_dir / "accepted_relations.json", {"relations": accepted, "rejected": rejected})
-    return accepted, payloads, rejected
+    return accepted, rejected
+
+
+def _append_semantic_relation_rejection(
+    rejected: list[dict[str, Any]],
+    relation: dict[str, Any],
+    packet: dict[str, Any],
+    batch_id: str,
+    proposal: Any,
+) -> bool:
+    reason = relation_semantic_rejection_reason(relation, packet)
+    if not reason:
+        return False
+    rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
+    return True
 
 
 def _write_relation_candidate_pool_report(

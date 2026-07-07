@@ -296,9 +296,11 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     relation_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_pairs/pair_001_prompt.txt").read_text(encoding="utf-8")
     assert "# Output Schema" in relation_prompt
     assert "# Examples" in relation_prompt
-    assert "<deterministic_map_quality_scaffold>" in relation_prompt
-    assert "Deterministic map-quality scaffold" in relation_prompt
-    assert "relation_goals" in relation_prompt
+    assert "<deterministic_map_quality_scaffold>" not in relation_prompt
+    assert "Deterministic map-quality scaffold" not in relation_prompt
+    assert "Pair contract:" in relation_prompt
+    assert "exact_evidence_quote_A" in relation_prompt
+    assert "routing_metadata_only" in relation_prompt
     assert "relation evidence contract" in relation_prompt
     repair_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_prompt.txt").read_text(encoding="utf-8")
     assert "Deterministic quality report" in repair_prompt
@@ -602,7 +604,7 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
         "    relations = []\n"
         "    for pair_id, block in zip(pairs, blocks):\n"
         "        ids = re.findall(r'claim_id: ([^\\n]+)', block)\n"
-        "        relations.append({'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'The batch classifies this pair.', 'crux_candidates': [pair_id + ' crux'], 'similar_but_not_identical': []})\n"
+        "        relations.append({'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'This would change whether the paired claim is decision-critical.', 'crux_candidates': [pair_id + ' crux'], 'similar_but_not_identical': []})\n"
         "    payload = {'relations': relations}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {}\n"

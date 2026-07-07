@@ -14,7 +14,7 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
-from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
+from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
 from epistemic_case_mapper.staged_semantic_quote_alignment import align_source_quote_to_span, quote_alignment_metadata
@@ -34,7 +34,6 @@ def _relation_pair_prompt(
     left = packet["left"]
     right = packet["right"]
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
-    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     profile_rules = _profile_relation_rule_text(case_manifest)
     return render_prompt(
         ("Task", "You are classifying one possible relation between two already-validated claim cards."),
@@ -48,7 +47,7 @@ def _relation_pair_prompt(
                 (
                     f"Claim A:\n{_relation_claim_card(left, 'A')}",
                     f"Claim B:\n{_relation_claim_card(right, 'B')}",
-                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
+                    _relation_pair_contract(packet),
                 )
             ),
         ),
@@ -64,7 +63,6 @@ def _relation_batch_prompt(
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
-    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest), indent=2)
     profile_rules = _profile_relation_rule_text(case_manifest)
     return render_prompt(
         ("Task", "You are classifying possible relations between already-validated claim cards."),
@@ -74,12 +72,7 @@ def _relation_batch_prompt(
         ("Examples", examples_block(relation_examples())),
         (
             "Context",
-            "\n\n".join(
-                (
-                    f"Pairs to classify:\n{pair_blocks}",
-                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
-                )
-            ),
+            f"Pairs to classify:\n{pair_blocks}",
         ),
     )
 
@@ -88,13 +81,21 @@ def _relation_rules(profile_rules: str) -> list[str]:
         "- Do not include relation_id. Deterministic code assigns IDs later.",
         "- Use only the claim IDs shown in the pair.",
         '- Use only allowed relation types, or use relation_type "none".',
-        "- Use the map-quality scaffold to preserve cruxes, tensions, source limits, and scope boundaries.",
+        "- Treat each pair's relation_intent and suggested_relation_types as routing guidance, not a hard limit.",
+        "- You may use any allowed relation type when the exact evidence quotes support it; explain the override in the rationale.",
+        "- Prefer no relation over a plausible but weak topical association.",
+        "- Use only the two claim cards, exact evidence quotes, relation intent, and pair contract shown for each pair.",
         "- Prefer decision-relevant relations over generic links.",
-        "- Use crux_for when one claim would change the decision read of the other.",
-        "- Use depends_on when a recommendation or conclusion only works under a condition.",
-        "- Use in_tension_with or challenges when a scope limit or contrary finding weakens another claim.",
+        "- Use crux_for only when the rationale says what answer would change if one claim were false.",
+        "- Use depends_on only when the rationale names a condition that must hold.",
+        "- Use in_tension_with only when the rationale names what cannot comfortably both be true.",
+        "- Use challenges only when the rationale names what proposition is weakened or contradicted.",
+        "- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or condition being narrowed.",
+        "- Use supports only when the rationale names same-proposition support, a mechanism that explains the target claim, or quantitative/statistical evidence that strengthens the target claim.",
+        "- Do not use supports merely because both claims lean harmful, neutral, or beneficial.",
+        "- Do not use a study-specific population/scope claim to refine findings from a different source.",
         "- Fill the relation evidence contract for every non-none relation.",
-        "- Ground anchors in visible excerpt phrases rather than introducing new facts.",
+        "- Ground anchors in visible evidence-quote phrases rather than introducing new facts.",
     ]
     if profile_rules.strip():
         rules.append(profile_rules.strip())
@@ -118,7 +119,8 @@ Claim B:
 {_relation_claim_card(right, "B")}
 
 Candidate-pair reason: {packet.get('candidate_reason', 'not recorded')}
-Candidate-pair score: {packet.get('candidate_score', 'not recorded')}"""
+Candidate-pair score: {packet.get('candidate_score', 'not recorded')}
+{_relation_pair_contract(packet)}"""
 
 def _relation_claim_card(claim: dict[str, Any], label: str) -> str:
     return "\n".join(
@@ -127,9 +129,58 @@ def _relation_claim_card(claim: dict[str, Any], label: str) -> str:
             f"- claim: {_compact_relation_text(str(claim.get('claim', '')), max_chars=300)}",
             f"- source_id: {claim.get('source_id')}",
             f"- role: {claim.get('role')}",
-            f"- excerpt_{label}: {_compact_relation_text(str(claim.get('excerpt', '')), max_chars=360)}",
+            f"- source_span: {claim.get('source_span', '')}",
+            f"- exact_evidence_quote_{label}: {_compact_relation_text(_relation_evidence_quote(claim), max_chars=520)}",
         ]
     )
+
+def _relation_pair_contract(packet: dict[str, Any]) -> str:
+    intent = packet.get("pair_intent") if isinstance(packet.get("pair_intent"), dict) else {}
+    intent_name = str(intent.get("intent", "generic_decision_relation"))
+    suggested = [str(item) for item in intent.get("allowed_relation_types", ["none"])]
+    left_id = str(packet.get("left", {}).get("claim_id", "")) if isinstance(packet.get("left"), dict) else ""
+    right_id = str(packet.get("right", {}).get("claim_id", "")) if isinstance(packet.get("right"), dict) else ""
+    return "\n".join(
+        [
+            "Pair contract:",
+            f"- allowed_claim_ids_for_non_none_relation: {left_id}, {right_id}",
+            f"- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type \"none\".",
+            f"- relation_intent: {intent_name}",
+            f"- suggested_relation_types: {', '.join(suggested)}",
+            f"- routing_metadata_only: candidate reason and score explain why this pair was shown; they are not evidence for an edge.",
+            f"- decision_rule: {_relation_intent_decision_rule(intent_name)}",
+            f"- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.",
+            f"- no_edge_rule: Use relation_type \"none\" unless the exact evidence quotes support a clear relation.",
+        ]
+    )
+
+def _relation_intent_decision_rule(intent_name: str) -> str:
+    rules = {
+        "cross_source_study_scope_to_finding": "Do not transfer a study-specific population or design boundary onto another source's finding.",
+        "cross_source_mechanism_scope_to_finding": "A mechanistic caveat from one source can support, challenge, or create tension with another finding only when the mechanism changes how that finding should be interpreted; do not call this refines.",
+        "cross_source_general_scope_to_finding": "Use refines only when the scope boundary is portable to the other source's finding and names a specific population, endpoint, condition, or generalizability boundary.",
+        "same_source_scope_to_finding": "Use refines when the scope card states the population, endpoint, intervention, or design boundary for the same source's finding.",
+        "crux_to_decision_claim": "Use crux_for only when one claim would change the answer to the decision question or the interpretation of the other claim.",
+        "implementation_to_guidance": "Use depends_on when practical implementation is a condition for using the evidence or recommendation.",
+        "cross_source_agreement": "Use supports or similar_to for convergent evidence. If the exact quotes conflict on the same proposition, override to in_tension_with or challenges rather than none.",
+        "same_source_agreement": "Use similar_to for redundant claims from the same source. If same-source claims conflict, override to in_tension_with rather than none.",
+        "cross_source_disagreement": "Use in_tension_with or challenges only when the exact quotes point in conflicting directions on the same decision-relevant proposition.",
+        "same_source_disagreement": "Use in_tension_with only when the source itself contains a real internal tension.",
+        "mechanism_to_outcome": "Use supports, depends_on, or in_tension_with only when the mechanism changes the interpretation of the outcome claim.",
+    }
+    return rules.get(intent_name, "Use a relation only when the exact evidence quotes establish a clear decision-relevant edge.")
+
+def _relation_evidence_quote(claim: dict[str, Any]) -> str:
+    alignment = claim.get("source_alignment") if isinstance(claim.get("source_alignment"), dict) else {}
+    for key in ("source_quote", "matched_text"):
+        value = str(alignment.get(key, "")).strip()
+        if value:
+            return value
+    for key in ("source_quote", "excerpt"):
+        value = str(claim.get(key, "")).strip()
+        if value:
+            return value
+    return ""
 
 def _compact_relation_text(text: str, *, max_chars: int) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip()
@@ -798,4 +849,4 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     SourceSpan,
     VALID_CLAIM_ROLES,
 )
-from epistemic_case_mapper.staged_semantic_quality import _map_quality_scaffold, _profile_relation_rule_text
+from epistemic_case_mapper.staged_semantic_quality import _profile_relation_rule_text

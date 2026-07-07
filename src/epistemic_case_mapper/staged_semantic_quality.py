@@ -21,6 +21,7 @@ from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_pr
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_duplicate_quality import lexically_similar_opposite_direction_pairs, near_duplicate_claim_pairs
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
+from epistemic_case_mapper.staged_semantic_relation_quality import relation_quality_issue_rows, relation_semantic_rejection_reason
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _classify_singleton_relations(
@@ -79,6 +80,10 @@ def _classify_singleton_relations(
             relation, reason = _normalize_relation_proposal(proposal, claim_ids, permitted_types, packet)
             if relation is None:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
+                continue
+            semantic_reason = relation_semantic_rejection_reason(relation, packet)
+            if semantic_reason:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": semantic_reason, "proposal": proposal})
                 continue
             key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
             if key in seen:
@@ -383,6 +388,7 @@ def _quality_issues(
             fallback_relation_count=fallback_relation_count,
         )
     )
+    issues.extend(relation_quality_issue_rows(relations, claims))
     duplicate_pairs = near_duplicate_claim_pairs(claims)
     if duplicate_pairs:
         issues.append(

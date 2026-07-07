@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.classical_ml import diverse_ranked_edges, tfidf_pair_similarities
+from epistemic_case_mapper.staged_semantic_relation_quality import relation_pair_intent, relation_pair_penalty
 
 MIN_RELATION_CANDIDATE_SCORE = 4.0
 
@@ -42,6 +43,7 @@ def _candidate_relation_pairs(claims: list[dict[str, Any]], max_pairs: int) -> l
                 "right": claim_lookup[right_id],
                 "candidate_score": score,
                 "candidate_reason": reason,
+                "pair_intent": relation_pair_intent(claim_lookup[left_id], claim_lookup[right_id]),
             }
         )
     return packets
@@ -134,6 +136,7 @@ def _candidate_pair_telemetry(packet: dict[str, Any]) -> dict[str, Any]:
         "pair_id": packet.get("pair_id"),
         "candidate_score": packet.get("candidate_score"),
         "candidate_reason": packet.get("candidate_reason"),
+        "pair_intent": packet.get("pair_intent"),
         "left": _candidate_endpoint_telemetry(packet.get("left", {})),
         "right": _candidate_endpoint_telemetry(packet.get("right", {})),
     }
@@ -255,6 +258,8 @@ def _relation_endpoint_rejection_reason(claim: dict[str, Any]) -> str:
         return non_evidence_reason or "reference_or_boilerplate"
     if any(marker in lowered for marker in ("[google scholar]", "privacy policy", "nutrition policy", "no. (%)", "pmcid:", "copyright")):
         return "metadata_or_table_fragment"
+    if _looks_like_keyword_index_scope(claim):
+        return "keyword_index_scope"
     if _looks_like_css_or_markup(text):
         return "css_or_markup"
     if _looks_like_title_or_heading(text):
@@ -283,6 +288,8 @@ def _hard_relation_endpoint_rejection_reason(claim: dict[str, Any]) -> str:
         return "question_fit_mismatch"
     if any(marker in lowered for marker in ("[google scholar]", "privacy policy", "nutrition policy", "no. (%)", "pmcid:", "copyright")):
         return "metadata_or_table_fragment"
+    if _looks_like_keyword_index_scope(claim):
+        return "keyword_index_scope"
     if _looks_like_relation_reference_or_boilerplate(text) or _looks_like_css_or_markup(text) or _looks_like_title_or_heading(text):
         return "non_evidence_endpoint"
     return ""
@@ -297,6 +304,25 @@ def _allow_low_signal_relation_endpoint(text: str, reason: str, role: str) -> bo
     if any(marker in lowered for marker in ("policy", "publication types", "no. (%)", "pmid", "doi", "privacy", "copyright")):
         return False
     return len(text.strip()) >= 18
+
+
+def _looks_like_keyword_index_scope(claim: dict[str, Any]) -> bool:
+    role = str(claim.get("role", ""))
+    if role not in {"scope_limit", "external_validity", "background"}:
+        return False
+    source_text = _normalize_text(" ".join(str(claim.get(key, "")) for key in ("source_quote", "excerpt")))
+    claim_text = _normalize_text(str(claim.get("claim", "")))
+    if source_text.count(";") >= 3 and not _has_evidence_predicate(source_text):
+        return True
+    topic_scope_markers = (
+        "research involves",
+        "source involves",
+        "article involves",
+        "indexed under",
+        "classified under",
+        "focuses on",
+    )
+    return any(marker in claim_text for marker in topic_scope_markers) and not _has_evidence_predicate(source_text)
 
 
 def _question_fit_status(claim: dict[str, Any]) -> str:
@@ -384,6 +410,10 @@ def _pair_score(
     if population_penalty:
         score -= population_penalty
         reasons.append("population_scope_mismatch")
+    relation_penalty, relation_penalty_reason = relation_pair_penalty(left, right)
+    if relation_penalty:
+        score -= relation_penalty
+        reasons.append(relation_penalty_reason)
     if left.get("source_id") == right.get("source_id") and left_role == right_role == "conclusion_support":
         score -= 15
         reasons.append("same_source_support_pair_penalty")
