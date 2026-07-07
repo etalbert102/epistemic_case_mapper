@@ -4,6 +4,8 @@ import re
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
+
 
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", flags=re.MULTILINE)
 SENTENCE_RE = re.compile(r"[^.!?\n][^.!?\n]*(?:[.!?]|$)")
@@ -108,6 +110,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
     awkward_phrases = _awkward_phrase_issues(memo)
     diagnostic_leakage = _diagnostic_leakage_issues(sections)
     dense_paragraphs = _dense_paragraph_issues(sections)
+    role_quality = section_role_quality_report(memo, contract)
     raw_status_flags = _raw_status_flags(memo)
     question = str(contract.get("question", "")).strip()
     question_missing = bool(question and _normalize(question) not in _normalize(memo))
@@ -157,6 +160,14 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
                 "items": dense_paragraphs[:8],
             }
         )
+    if role_quality.get("issues"):
+        prose_issues.append(
+            {
+                "kind": "section_role_quality",
+                "message": "Some sections do not perform their decision-memo role cleanly.",
+                "items": role_quality.get("issues", [])[:8],
+            }
+        )
     return {
         "schema_id": "memo_final_diagnosis_v1",
         "metrics": {
@@ -171,6 +182,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
             "diagnostic_leakage_count": len(diagnostic_leakage),
             "raw_status_flag_count": len(raw_status_flags),
             "dense_paragraph_count": len(dense_paragraphs),
+            "section_role_quality_issue_count": int(role_quality.get("issue_count", 0) or 0),
         },
         "coherence": {
             "status": "warning" if coherence_issues else "pass",
@@ -182,6 +194,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
             "issue_count": len(prose_issues),
             "issues": prose_issues,
         },
+        "section_role_quality": role_quality,
     }
 
 

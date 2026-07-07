@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
+from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_issues
 
 
 def filter_primary_practical_actions(actions: list[str], scaffold: dict[str, Any] | None = None) -> list[str]:
@@ -48,6 +49,7 @@ def section_structure_issues(markdown: str, contract: dict[str, Any]) -> list[st
             issues.append("Practical Read does not preserve enough practical bullets")
     if "scope" in title and "exception" in title and _scope_section_needs_structure(markdown, contract):
         issues.append("Practical Scope and Exceptions is too compressed")
+    issues.extend(section_role_quality_issues(markdown, contract))
     return issues
 
 

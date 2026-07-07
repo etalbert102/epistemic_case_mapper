@@ -69,6 +69,39 @@ def test_decision_brief_rejects_favorable_upgrade_for_conditional_frame() -> Non
     assert "final brief upgrades the controlling answer frame into an unsupported favorable verdict" in issues
 
 
+def test_decision_brief_allows_negated_benefit_language_for_conditional_frame() -> None:
+    contract = {
+        "question": "Should the default advice change?",
+        "confidence": "medium",
+        "_section_synthesis_scaffold": {
+            "decision_synthesis_model": {
+                "bottom_line": {
+                    "classification": "mixed_or_context_dependent",
+                    "current_read": "Treat the current answer as conditional and separate the default case from exceptions.",
+                }
+            },
+            "decision_model": {
+                "default_answer": {
+                    "classification": "mixed_or_context_dependent",
+                    "plain_language_instruction": "State that the answer is context-dependent, then identify the default case and the conditions that change it.",
+                    "why_this_frame": "Support and counterevidence are both live.",
+                },
+            },
+        },
+    }
+    body = "## Practical Read\n\nThe current answer is conditional and depends on whether the exception applies."
+    section = (
+        "## Decision Brief\n\n"
+        "**Decision question:** Should the default advice change?\n\n"
+        "Treat the current answer as conditional; the default case should not be framed as beneficial.\n\n"
+        "**Confidence:** medium"
+    )
+
+    issues = decision_brief_last_issues(section, contract, body)
+
+    assert "final brief upgrades the controlling answer frame into an unsupported favorable verdict" not in issues
+
+
 def test_answer_frame_arbitration_separates_default_from_exception() -> None:
     result = arbitrate_answer_frame(
         {

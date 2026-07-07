@@ -57,6 +57,7 @@ from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_sc
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
+from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
 ROLE_PRIORITY = {
@@ -70,9 +71,7 @@ ROLE_PRIORITY = {
     "background": 4,
     "other": 5,
 }
-
 CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
-
 @dataclass(frozen=True)
 class MapBriefingResult:
     briefing_path: Path
@@ -388,6 +387,7 @@ def _write_final_reader_outputs(
     final_traceability_path = artifacts / "decision_traceability_matrix_final.json"
     final_traceability_md_path = artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md"
     memo_coherence_report_path = artifacts / "memo_coherence_report.json"
+    section_role_quality_report_path = artifacts / "section_role_quality_report.json"
     pipeline_migration_ledger_path = artifacts / "pipeline_migration_ledger.json"
     runtime_budget_report_path = artifacts / "runtime_budget_report.json"
     final_brief_evaluation_path = artifacts / "final_brief_evaluation.json"
@@ -401,6 +401,7 @@ def _write_final_reader_outputs(
         decision_question=str(memo_package["scaffold"].get("question", "")),
         scaffold=memo_package["scaffold"],
     )
+    role_quality = section_role_quality_report(reader_memo, {"question": str(memo_package["scaffold"].get("question", ""))})
     pipeline_migration = build_pipeline_migration_ledger(
         section_context_acceptance_path=str(section_rewrite_result.get("section_context_acceptance_report_path") or ""),
         scaffold=memo_package["scaffold"],
@@ -421,6 +422,7 @@ def _write_final_reader_outputs(
     write_json(final_traceability_path, traceability_matrix)
     write_markdown(final_traceability_md_path, render_decision_traceability_matrix_markdown(traceability_matrix))
     write_json(memo_coherence_report_path, memo_coherence)
+    write_json(section_role_quality_report_path, role_quality)
     write_json(pipeline_migration_ledger_path, pipeline_migration)
     write_json(runtime_budget_report_path, runtime_budget)
     write_json(final_brief_evaluation_path, final_eval)
@@ -447,6 +449,7 @@ def _write_final_reader_outputs(
             "decision_traceability_matrix_final": final_traceability_path,
             "decision_traceability_matrix_final_markdown": final_traceability_md_path,
             "memo_coherence_report": memo_coherence_report_path,
+            "section_role_quality_report": section_role_quality_report_path,
             "pipeline_migration_ledger": pipeline_migration_ledger_path,
             "runtime_budget_report": runtime_budget_report_path,
             "final_brief_evaluation": final_brief_evaluation_path,

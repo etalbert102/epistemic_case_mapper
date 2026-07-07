@@ -15,6 +15,7 @@ from epistemic_case_mapper.classical_ml import (
 )
 from epistemic_case_mapper.config_profiles import DEFAULT_PROFILE_ID, infer_profile_id_from_text, profile_vocabulary
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_length_policy import executive_length_policy, executive_length_report_fields
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
@@ -599,14 +600,8 @@ def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> di
                 "message": "The executive brief contains too many tables for a reader-first artifact.",
             }
         )
-    if len(re.findall(r"\b\w+\b", executive)) > int(executive_word_target := 1500):
-        issues.append(
-            {
-                "severity": "warning",
-                "issue_type": "executive_brief_too_long",
-                "message": f"The executive brief exceeds the {executive_word_target}-word readability target.",
-            }
-        )
+    length_policy = executive_length_policy(executive, scaffold)
+    issues.extend(length_policy["issues"])
     duplicate_sentence_count = _duplicate_sentence_count(executive)
     if duplicate_sentence_count > 2:
         issues.append(
@@ -657,6 +652,7 @@ def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> di
         "score": score,
         "word_count": word_count,
         "executive_word_count": len(re.findall(r"\b\w+\b", executive)),
+        **executive_length_report_fields(length_policy),
         "table_count": _markdown_table_count(rendered),
         "executive_table_count": _markdown_table_count(executive),
         "duplicate_sentence_count": duplicate_sentence_count,

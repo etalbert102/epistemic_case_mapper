@@ -22,6 +22,7 @@ def run_section_model_attempts(
     raw = ""
     attempts: list[dict[str, Any]] = []
     issues: list[str] = []
+    last_rewritten = ""
     for attempt in range(1, SECTION_MODEL_ATTEMPTS + 1):
         try:
             result = run_backend(active_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
@@ -36,13 +37,20 @@ def run_section_model_attempts(
             attempts.append({"attempt": attempt, "status": "parse_failed", "issues": issues, "raw": raw})
         else:
             rewritten = str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
+            last_rewritten = rewritten
             repaired, issues = validate(rewritten)
             attempts.append({"attempt": attempt, "status": "rejected" if issues else "accepted", "issues": issues, "raw": raw})
             if not issues:
                 return _result(True, active_prompt, raw, [], attempts, attempt, section=repaired, rewritten=rewritten)
         if attempt < SECTION_MODEL_ATTEMPTS:
-            active_prompt = retry_section_prompt(prompt, issues, attempt=attempt + 1)
-    return _result(False, active_prompt, raw, issues, attempts, len(attempts), status="rejected")
+            active_prompt = retry_section_prompt(prompt, issues, attempt=attempt + 1, rejected_section=_retry_section_text(payload, raw))
+    return _result(False, active_prompt, raw, issues, attempts, len(attempts), status="rejected", rewritten=last_rewritten)
+
+
+def _retry_section_text(payload: Any, raw: str) -> str:
+    if isinstance(payload, dict):
+        return str(payload.get("section_markdown") or payload.get("memo_markdown") or "").strip()
+    return raw if str(raw).lstrip().startswith("## ") else ""
 
 
 def _result(

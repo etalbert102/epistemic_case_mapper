@@ -198,8 +198,8 @@ def test_section_contract_intersects_global_plan_with_section_role() -> None:
     assert obligations == []
 
 
-def test_model_section_packet_drops_plan_thesis_that_uses_owned_elsewhere_evidence() -> None:
-    forbidden_claim = "Individuals with a borderline LDL-c/HDL-c ratio should limit egg consumption."
+def test_model_section_packet_keeps_plan_thesis_that_can_add_section_value() -> None:
+    shared_claim = "Individuals with a borderline LDL-c/HDL-c ratio should limit egg consumption."
     contract = {
         "_section_synthesis_scaffold": {
             "global_memo_plan": {
@@ -218,7 +218,7 @@ def test_model_section_packet_drops_plan_thesis_that_uses_owned_elsewhere_eviden
         "owned_elsewhere_evidence": [
             {
                 "slot": "Mechanism and surrogate evidence",
-                "claim": forbidden_claim,
+                "claim": shared_claim,
                 "reference_policy": {
                     "owner_section": "Evidence Carrying the Conclusion",
                     "reference_style": "do_not_repeat",
@@ -232,8 +232,8 @@ def test_model_section_packet_drops_plan_thesis_that_uses_owned_elsewhere_eviden
     packet = compile_model_section_packet("Practical Scope and Exceptions", contract)
     serialized = json.dumps(packet)
 
-    assert "LDL" not in serialized
-    assert "borderline" not in serialized
+    assert "LDL" in serialized
+    assert "borderline" in serialized
 
 
 def test_model_facing_prompt_drops_practical_actions_owned_by_other_sections() -> None:

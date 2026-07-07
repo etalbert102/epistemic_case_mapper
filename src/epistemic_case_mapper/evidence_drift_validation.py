@@ -91,7 +91,13 @@ def unsupported_source_labels(text: str, allowed: Any) -> list[str]:
 def allowed_source_labels(allowed: Any) -> set[str]:
     labels: set[str] = set()
     _collect_source_labels(allowed, labels)
-    return {label for label in labels if label}
+    expanded: set[str] = set()
+    for label in labels:
+        if not label:
+            continue
+        expanded.add(label)
+        expanded.update(_source_label_aliases(label))
+    return expanded
 
 
 def _stringify_allowed(value: Any) -> str:
@@ -200,6 +206,59 @@ def _collect_source_labels(value: Any, labels: set[str]) -> None:
     elif isinstance(value, list):
         for item in value:
             _collect_source_labels(item, labels)
+
+
+def _source_label_aliases(label: str) -> set[str]:
+    """Allow compact author-year labels derived from an allowed source title."""
+    text = re.sub(r"[_-]+", " ", str(label))
+    match = re.search(r"\b((?:19|20)\d{2}[a-z]?)\b", text)
+    if not match:
+        return set()
+    year = match.group(1)
+    before_year = text[: match.start()]
+    tokens = [
+        token.strip(" .,:;()[]{}")
+        for token in re.findall(r"[A-Za-z][A-Za-z'.-]{2,}", before_year)
+        if token.strip(" .,:;()[]{}")
+    ]
+    aliases: set[str] = set()
+    for token in tokens[-8:]:
+        if token.lower() in _SOURCE_ALIAS_STOPWORDS:
+            continue
+        aliases.add(f"{token} {year}")
+    if len(tokens) >= 2:
+        pair = " ".join(tokens[-2:])
+        if not any(part.lower() in _SOURCE_ALIAS_STOPWORDS for part in tokens[-2:]):
+            aliases.add(f"{pair} {year}")
+    return aliases
+
+
+_SOURCE_ALIAS_STOPWORDS = {
+    "abstract",
+    "analysis",
+    "article",
+    "cohort",
+    "database",
+    "dataset",
+    "deep",
+    "full",
+    "fuller",
+    "fullish",
+    "guidance",
+    "guideline",
+    "jama",
+    "journal",
+    "meta",
+    "prospective",
+    "research",
+    "report",
+    "review",
+    "source",
+    "sources",
+    "study",
+    "trial",
+    "updated",
+}
 
 
 def _short(text: str, limit: int = 120) -> str:

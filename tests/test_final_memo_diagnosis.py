@@ -143,3 +143,23 @@ The current map supports a neutral or low concern under stated conditions read.
 
     coherence_kinds = {issue["kind"] for issue in diagnosis["coherence"]["issues"]}
     assert "weak_opening_answer" in coherence_kinds
+
+
+def test_final_memo_diagnosis_includes_section_role_quality() -> None:
+    memo = """## Decision Brief
+
+Use the option as a bounded default.
+
+**Confidence:** medium
+
+## Practical Read
+
+The evidence suggests a nuanced approach. Monitor and optimize implementation across teams.
+"""
+
+    diagnosis = build_memo_final_diagnosis(memo, {"question": ""})
+    prose_kinds = {issue["kind"] for issue in diagnosis["prose"]["issues"]}
+
+    assert "section_role_quality" in prose_kinds
+    assert diagnosis["section_role_quality"]["status"] == "warning"
+    assert diagnosis["metrics"]["section_role_quality_issue_count"] >= 1

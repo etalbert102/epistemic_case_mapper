@@ -4,6 +4,10 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_global_plan import section_plan_for_title
+from epistemic_case_mapper.map_briefing_section_use_projection import (
+    build_section_use_projections,
+    projection_guidance,
+)
 
 
 def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[str, Any]:
@@ -29,9 +33,6 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     fallback_thesis = _section_thesis(title_key, contract, packet)
     reasoning_thesis = str(reasoning_contract.get("section_thesis") or "").strip()
     section_thesis = str(reasoning_thesis or section_plan.get("thesis") or fallback_thesis).strip()
-    if _uses_evidence_owned_elsewhere(section_thesis, contract):
-        section_plan.pop("thesis", None)
-        section_thesis = fallback_thesis if not _uses_evidence_owned_elsewhere(fallback_thesis, contract) else ""
     model_packet = {
         "schema_id": "model_section_packet_v1",
         "context_source": "canonical_spine_projection" if projection else "section_reasoning_cards",
@@ -42,6 +43,8 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
         "decision_move": reasoning_contract.get("decision_move"),
         "target_shape": _target_shape(title_key),
         "owned_evidence": owned_evidence,
+        "section_use_guidance": projection_guidance(title),
+        "section_use_projections": build_section_use_projections(title, owned_evidence),
         "reference_only_evidence": _ownership_aligned_reference_evidence(
             _projection_reference_evidence(projection) if projection else _reasoning_reference_only(reasoning_contract),
             _reference_only_evidence(contract),
@@ -198,8 +201,6 @@ def _ownership_aligned_owned_evidence(
         key = _evidence_identity(row)
         if not key or key in seen:
             continue
-        if _card_conflicts_with_owned_elsewhere(row, contract):
-            continue
         seen.add(key)
         allowed.append(row)
     if allowed:
@@ -222,8 +223,6 @@ def _ownership_aligned_reference_evidence(
     for row in reasoning_reference:
         key = _evidence_identity(row)
         if not key or key in seen:
-            continue
-        if _card_conflicts_with_owned_elsewhere(row, contract):
             continue
         seen.add(key)
         allowed.append(row)
@@ -248,9 +247,6 @@ def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dic
             "transition_goal": plan.get("transition_goal"),
         }
     )
-    for key in ("thesis", "transition_goal"):
-        if key in compact and _uses_evidence_owned_elsewhere(str(compact.get(key, "")), contract):
-            compact.pop(key, None)
     return compact
 
 
@@ -339,6 +335,8 @@ def _owned_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
     compact: list[dict[str, Any]] = []
     seen: set[str] = set()
     for row in rows:
+        if _malformed_owned_evidence(row):
+            continue
         claim = _short_text(str(row.get("claim", "")), 260)
         key = _normalize_key(claim)
         if not claim or key in seen:
@@ -358,6 +356,12 @@ def _owned_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return compact[:5]
+
+
+def _malformed_owned_evidence(row: dict[str, Any]) -> bool:
+    source = str(row.get("source", "")).lower()
+    claim = re.sub(r"\s+", " ", str(row.get("claim", ""))).strip()
+    return "structured option comparison" in source or len(claim) < 12 or claim.endswith((" or.", " and.", " of.", " with."))
 
 
 def _intended_role(row: dict[str, Any]) -> str:
@@ -630,53 +634,6 @@ def _normalize_title(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
 
 
-def _uses_evidence_owned_elsewhere(text: str, contract: dict[str, Any]) -> bool:
-    cleaned = str(text).strip()
-    if not cleaned:
-        return False
-    rows = contract.get("owned_elsewhere_evidence", [])
-    for row in rows if isinstance(rows, list) else []:
-        if not isinstance(row, dict):
-            continue
-        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
-        if str(policy.get("reference_style", "")).strip() == "full":
-            continue
-        if _evidence_text_overlap(cleaned, str(row.get("claim", ""))):
-            return True
-    return False
-
-
-def _card_conflicts_with_owned_elsewhere(card: dict[str, Any], contract: dict[str, Any]) -> bool:
-    rows = contract.get("owned_elsewhere_evidence", [])
-    for row in rows if isinstance(rows, list) else []:
-        if not isinstance(row, dict):
-            continue
-        policy = row.get("reference_policy", {}) if isinstance(row.get("reference_policy"), dict) else {}
-        if str(policy.get("reference_style", "")).strip() == "full":
-            continue
-        if _evidence_rows_overlap(card, row):
-            return True
-    return False
-
-
-def _evidence_rows_overlap(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    left_card_id = str(left.get("candidate_card_id", "")).strip()
-    right_card_id = str(right.get("candidate_card_id", "")).strip()
-    if left_card_id and right_card_id and left_card_id == right_card_id:
-        return True
-    left_claim_ids = set(_string_list(left.get("claim_ids")))
-    right_claim_ids = set(_string_list(right.get("claim_ids")))
-    if left_claim_ids and right_claim_ids and left_claim_ids & right_claim_ids:
-        return True
-    left_sources = _source_identity(left)
-    right_sources = _source_identity(right)
-    left_text = _evidence_text(left)
-    right_text = _evidence_text(right)
-    if left_sources and right_sources and not (left_sources & right_sources):
-        return False
-    return _evidence_text_overlap(left_text, right_text)
-
-
 def _evidence_identity(row: dict[str, Any]) -> str:
     card_id = str(row.get("candidate_card_id", "")).strip()
     if card_id:
@@ -700,68 +657,6 @@ def _source_identity(row: dict[str, Any]) -> set[str]:
 
 def _evidence_text(row: dict[str, Any]) -> str:
     return " ".join(str(row.get(key, "")).strip() for key in ("claim", "source_excerpt", "role_summary") if str(row.get(key, "")).strip())
-
-
-def _evidence_text_overlap(text: str, claim: str) -> bool:
-    text_terms = set(_content_terms(text))
-    claim_terms = set(_content_terms(claim))
-    if not text_terms or not claim_terms:
-        return _numeric_context_overlap(text, claim)
-    if _numeric_context_overlap(text, claim):
-        return True
-    overlap = text_terms & claim_terms
-    distinctive = {term for term in overlap if term not in _GENERIC_EVIDENCE_TERMS}
-    if len(distinctive) >= 2:
-        return True
-    if len(overlap) >= 3 and len(overlap) >= min(5, max(3, len(claim_terms) // 3)):
-        return True
-    text_lower = text.lower()
-    claim_lower = claim.lower()
-    for phrase in _distinctive_phrases(claim_lower):
-        if phrase in text_lower:
-            return True
-    return False
-
-
-def _numeric_context_overlap(text: str, claim: str) -> bool:
-    text_lower = text.lower()
-    claim_lower = claim.lower()
-    text_numbers = set(re.findall(r"\d+(?:\.\d+)?", text_lower))
-    claim_numbers = set(re.findall(r"\d+(?:\.\d+)?", claim_lower))
-    shared_numbers = text_numbers & claim_numbers
-    if not shared_numbers:
-        return False
-    text_terms = set(re.findall(r"[a-z]{3,}", text_lower))
-    for number in shared_numbers:
-        for phrase in _number_context_phrases(claim_lower, number):
-            phrase_terms = set(re.findall(r"[a-z]{3,}", phrase))
-            if len(text_terms & (phrase_terms - _GENERIC_EVIDENCE_TERMS)) >= 1:
-                return True
-    return False
-
-
-def _number_context_phrases(text: str, number: str) -> list[str]:
-    tokens = re.findall(r"\d+(?:\.\d+)?|[a-z]{3,}", text)
-    phrases: list[str] = []
-    for index, token in enumerate(tokens):
-        if token != number:
-            continue
-        start = max(0, index - 4)
-        end = min(len(tokens), index + 5)
-        phrases.append(" ".join(tokens[start:end]))
-    return phrases
-
-
-def _distinctive_phrases(text: str) -> list[str]:
-    phrases = []
-    for match in re.findall(r"\b[a-z]+(?:-[a-z]+|/[a-z]+)+\b", text):
-        if len(match) >= 6:
-            phrases.append(match)
-    for match in re.findall(r"\b(?:[a-z0-9]{4,}\s+){1,3}[a-z0-9]{4,}\b", text):
-        terms = set(_content_terms(match))
-        if len(terms - _GENERIC_EVIDENCE_TERMS) >= 2:
-            phrases.append(match.strip())
-    return phrases[:8]
 
 
 def _content_terms(text: str) -> list[str]:
@@ -788,18 +683,3 @@ def _content_terms(text: str) -> list[str]:
         "source",
     }
     return [term for term in re.findall(r"[a-z0-9]{4,}", text.lower()) if term not in stop]
-
-
-_GENERIC_EVIDENCE_TERMS = {
-    "associated",
-    "association",
-    "consumption",
-    "evidence",
-    "impact",
-    "intervention",
-    "interventions",
-    "profiles",
-    "risk",
-    "study",
-    "studies",
-}

@@ -156,6 +156,34 @@ def test_section_validation_rejects_unsupported_citation_like_label() -> None:
     assert any("unsupported source label `Missing A 2023`" in issue for issue in issues)
 
 
+def test_section_validation_allows_author_year_alias_from_allowed_source_label() -> None:
+    contract = {
+        "requires_confidence": False,
+        "required_evidence": [
+            {
+                "slot": "Outcome evidence",
+                "claim": "Higher exposure was associated with higher event risk.",
+                "source": "Deep Research Sources Zhong JAMA 2019 Fullish",
+                "anchor_terms": ["higher", "exposure", "event", "risk"],
+            }
+        ],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "has_obligations": True,
+        "model_section_packet": {},
+    }
+    original = {
+        "title": "Evidence Carrying the Conclusion",
+        "markdown": "## Evidence Carrying the Conclusion\n\nHigher exposure was associated with higher event risk.",
+    }
+    rewritten = "## Evidence Carrying the Conclusion\n\nHigher exposure was associated with higher event risk (Zhong 2019)."
+
+    issues = _section_rewrite_issues(rewritten, original, contract)
+
+    assert not any("unsupported source label" in issue for issue in issues)
+
+
 def test_section_validation_flags_contradictory_statistical_language() -> None:
     contract = {
         "requires_confidence": False,

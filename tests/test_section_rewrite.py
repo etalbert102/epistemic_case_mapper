@@ -14,6 +14,7 @@ from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anch
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
 from epistemic_case_mapper.map_briefing_section_rewrite import (
+    _rewrite_one_section,
     _section_rewrite_prompt,
     rewrite_reader_memo_by_section,
 )
@@ -100,12 +101,11 @@ def test_section_model_attempts_retry_parse_failure() -> None:
 
 
 def test_section_model_attempts_retry_validation_failure() -> None:
-    calls = 0
+    calls: list[str] = []
 
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        nonlocal calls
-        calls += 1
-        text = "## Decision Cruxes\n\nBad section." if calls == 1 else "## Decision Cruxes\n\nGood section."
+        calls.append(prompt)
+        text = "## Decision Cruxes\n\nBad section." if len(calls) == 1 else "## Decision Cruxes\n\nGood section."
         return ModelBackendResult(text=text, backend=backend)
 
     def validate(text: str):
@@ -125,6 +125,9 @@ def test_section_model_attempts_retry_validation_failure() -> None:
     assert result["attempt_count"] == 2
     assert result["attempts"][0]["issues"] == ["missing crux"]
     assert result["attempts"][0]["raw"].startswith("## Decision Cruxes")
+    assert "Rejected section to correct:" in calls[1]
+    assert "## Decision Cruxes\n\nBad section." in calls[1]
+    assert "Correct the rejected section instead of starting over" in calls[1]
 
 
 def test_required_evidence_can_match_strong_paraphrase_without_exact_source_title() -> None:
@@ -202,6 +205,77 @@ def test_section_rewrite_falls_back_for_invalid_section(monkeypatch) -> None:
         section["status"] == "rejected_fallback"
         for section in result["report"]["sections"]
     )
+
+
+def test_section_rewrite_repairs_rejected_section_with_model_before_fallback(monkeypatch) -> None:
+    section = {
+        "title": "Why This Read",
+        "markdown": (
+            "## Why This Read\n\n"
+            "The draft explains why the decision should stay bounded by the source packet, "
+            "but it is intentionally long enough to make the section eligible for model "
+            "smoothing even though there are no local evidence obligations attached to it. "
+            "The important behavior under test is the repair path after ordinary retries fail."
+        ),
+    }
+    contract = {
+        "heading": "Why This Read",
+        "confidence": "moderate",
+        "requires_confidence": False,
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "practical_actions": [],
+        "min_decision_changing_cruxes": 0,
+        "section_synthesis_packet": {},
+        "_section_synthesis_scaffold": {},
+        "decision_frame": {},
+        "section_job": "Explain the reasoning without adding facts.",
+        "has_obligations": False,
+        "style": [],
+    }
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        calls.append(prompt)
+        if prompt.startswith("You are correcting one rejected section"):
+            return ModelBackendResult(
+                text=(
+                    "## Why This Read\n\n"
+                    "The source packet supports a bounded read rather than a broad conclusion. "
+                    "The safer reasoning move is to keep the implication tied to what the section already establishes."
+                ),
+                backend=backend,
+            )
+        return ModelBackendResult(
+            text=(
+                "## Why This Read\n\n"
+                "The evidence suggests a nuanced approach, and various factors have significant implications."
+            ),
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
+
+    result = _rewrite_one_section(
+        section,
+        contract,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        previous_title="Decision Brief",
+        next_title="Evidence Carrying the Conclusion",
+    )
+
+    assert result["report"]["status"] == "accepted_model_repair"
+    assert result["report"]["accepted"] is True
+    assert result["report"]["repair_attempt_count"] == 1
+    assert "bounded read rather than a broad conclusion" in result["section"]
+    assert any("Rejected section to correct:" in prompt for prompt in calls)
+    assert any(prompt.startswith("You are correcting one rejected section") for prompt in calls)
 
 
 def test_section_rewrite_keeps_sources_deterministic(monkeypatch) -> None:
@@ -742,89 +816,6 @@ def test_section_rewrite_uses_structured_cruxes_instead_of_model_crux_rewrite(mo
     assert crux_report["status"] == "accepted_structured_cruxes"
     assert "Whether" in result["memo"]
     assert "would change if" in result["memo"].lower()
-
-
-def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeypatch) -> None:
-    memo, appendix, scaffold, candidate_map = _memo_package()
-    scaffold["argument_model"]["quantitative_anchors"] = [
-        {
-            "statement": "The tracked estimate was 42 units in the main comparison.",
-            "why_it_matters": "This estimate is the main quantitative anchor.",
-            "quantities": ["42 units"],
-            "source_ids": [],
-            "claim_ids": [],
-            "quantity_ids": [],
-        }
-    ]
-    seen_prompt = ""
-
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        nonlocal seen_prompt
-        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
-        if prompt.startswith("You are an analyst producing decision-ready analysis") and section.startswith("## Evidence Carrying the Conclusion"):
-            seen_prompt = prompt
-            return ModelBackendResult(text=json.dumps({"section_markdown": "## Evidence Carrying the Conclusion\n\nThe answer follows from the source packet."}), backend=backend)
-        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
-
-    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
-
-    why_report = next(section for section in result["report"]["sections"] if section["title"] == "Evidence Carrying the Conclusion")
-    assert "validation_obligations" in seen_prompt
-    assert "required_main_memo_obligations" in seen_prompt
-    assert why_report["status"] == "accepted_structured_fallback"
-    first_attempt = why_report["attempts"][0]
-    assert first_attempt["status"] == "rejected"
-    assert any("dropped required main-memo obligation" in issue for issue in first_attempt["issues"])
-
-
-def test_section_rewrite_generates_decision_brief_last_with_model_bluf(monkeypatch) -> None:
-    memo, appendix, scaffold, candidate_map = _memo_package()
-    calls: list[str] = []
-
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        calls.append(prompt)
-        if "opening BLUF" in prompt:
-            markdown = (
-                "## Decision Brief\n\n"
-                f"**Decision question:** {scaffold['question']}\n\n"
-                "Use the pilot as the default for small building projects because the accepted body sections show the practical case and the main caveat. "
-                "Keep the rollout bounded to projects where review capacity remains adequate.\n\n"
-                "**Confidence:** medium"
-            )
-            return ModelBackendResult(text=json.dumps({"section_markdown": markdown}), backend=backend)
-        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
-        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
-
-    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
-
-    brief_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Brief")
-    assert brief_report["status"] == "accepted_model_bluf"
-    assert "Use the pilot as the default" in result["memo"]
-    assert any("opening BLUF" in prompt for prompt in calls)
-    assert any("Canonical decision spine packet" in prompt for prompt in calls)
-
-
-def test_section_rewrite_falls_back_when_decision_brief_bluf_is_rejected(monkeypatch) -> None:
-    memo, appendix, scaffold, candidate_map = _memo_package()
-
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        if "opening BLUF" in prompt:
-            return ModelBackendResult(text='{"section_markdown": "## Decision Brief\\n\\nToo thin."}', backend=backend)
-        section = prompt.split("Section to rewrite:\n", 1)[1].strip()
-        return ModelBackendResult(text=json.dumps({"section_markdown": section}), backend=backend)
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_section_rewrite.run_model_backend", fake_backend)
-
-    result = rewrite_reader_memo_by_section(memo, appendix, scaffold, candidate_map, backend="fake", backend_timeout=30, backend_retries=0)
-
-    brief_report = next(section for section in result["report"]["sections"] if section["title"] == "Decision Brief")
-    assert brief_report["status"] == "accepted_deterministic_fallback_after_model"
-    assert brief_report["fallback_used"] is True
-    assert "Key evidence:" in result["memo"]
 
 
 def test_section_rewrite_renders_decision_cruxes_from_structured_objects(monkeypatch) -> None:

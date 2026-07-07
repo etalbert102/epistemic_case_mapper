@@ -15,9 +15,12 @@ from epistemic_case_mapper.main_memo_obligations import (
 from epistemic_case_mapper.map_briefing_decision_brief_last import (
     decision_brief_last_issues,
     decision_brief_last_packet,
-    decision_brief_answer_frame_guidance,
     deterministic_final_decision_brief,
     _sentence,
+)
+from epistemic_case_mapper.map_briefing_decision_brief_prompt import (
+    _decision_brief_bluf_prompt,
+    decision_brief_repair_prompt,
 )
 from epistemic_case_mapper.map_briefing_section_fallbacks import structured_section_fallback
 from epistemic_case_mapper.map_briefing_memo_slots import (
@@ -48,6 +51,8 @@ from epistemic_case_mapper.map_briefing_section_prompt_contract import (
     model_facing_section_contract,
     model_facing_section_markdown,
 )
+from epistemic_case_mapper.map_briefing_section_repair_prompt import section_repair_prompt
+from epistemic_case_mapper.map_briefing_section_quality_prompt import section_quality_guidance
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
@@ -279,6 +284,21 @@ def _rewrite_one_section(
     _apply_attempt_report(section_report, attempt_result, deterministic_text=section["markdown"])
     if attempt_result["accepted"]:
         return {"section": clean_reader_memo_text(str(attempt_result["section"])), "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+    repair_result = _repair_rejected_section_with_model(
+        section,
+        section_contract,
+        attempt_result,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if repair_result["accepted"]:
+        section_report["model_repair"] = repair_result["attempts"]
+        section_report.update({"status": "accepted_model_repair", "accepted": True, "issues": [], "repair_attempt_count": repair_result["attempt_count"]})
+        return {"section": clean_reader_memo_text(str(repair_result["section"])), "prompt": repair_result["prompt"], "raw": repair_result["raw"], "report": section_report}
+    if repair_result["attempts"]:
+        section_report["model_repair"] = repair_result["attempts"]
+        section_report["model_repair_issues"] = repair_result["issues"]
     structured = structured_section_fallback(section, section_contract)
     if structured != section["markdown"]:
         fallback_issues = _section_rewrite_issues(structured, section, section_contract)
@@ -291,6 +311,30 @@ def _rewrite_one_section(
         section_report["structured_fallback_hard_issues"] = hard_issues
     section_report["status"] = "rejected_fallback"
     return {"section": section["markdown"], "prompt": attempt_result["prompt"], "raw": attempt_result["raw"], "report": section_report}
+
+
+def _repair_rejected_section_with_model(
+    section: dict[str, str],
+    section_contract: dict[str, Any],
+    attempt_result: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    rejected = str(attempt_result.get("rewritten") or "").strip()
+    if not rejected:
+        return {"accepted": False, "attempts": [], "issues": ["no rejected section available for repair"], "attempt_count": 0}
+    prompt = section_repair_prompt(section, section_contract, rejected, attempt_result.get("issues", []))
+    return run_section_model_attempts(
+        prompt=prompt,
+        expected_title=section["title"],
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        validate=lambda rewritten: _validate_rewritten_section(rewritten, section, section_contract),
+        run_backend=run_model_backend,
+    )
 
 
 def _report_only_section_packets(sections: list[dict[str, str]], contract: dict[str, Any]) -> list[dict[str, Any]]:
@@ -360,6 +404,20 @@ def _rewrite_decision_brief_last(
             "fallback_used": False,
         }
         return {"section": result["section"], "prompt": result["prompt"], "raw": result["raw"], "report": section_report}
+    rejected = str(result.get("rewritten") or "").strip()
+    if rejected:
+        repair = run_section_model_attempts(
+            prompt=decision_brief_repair_prompt(contract, body_memo, rejected, result["issues"]),
+            expected_title="Decision Brief",
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            validate=lambda rewritten: _validate_final_decision_brief(rewritten, contract, body_memo),
+            run_backend=run_model_backend,
+        )
+        if repair["accepted"]:
+            section_report = {"title": "Decision Brief", "status": "accepted_model_bluf_repair", "accepted": True, "issues": [], "attempts": result["attempts"], "attempt_count": result["attempt_count"], "model_repair": repair["attempts"], "repair_attempt_count": repair["attempt_count"], "required_evidence_count": 0, "required_gap_count": 0, "required_crux_count": 0, "required_main_memo_obligation_count": len(section_obligations_for_title("Decision Brief", contract.get("_main_memo_obligation_plan", []))), "generated_last": True, "deterministic_slots": False, "fallback_used": False}
+            return {"section": repair["section"], "prompt": repair["prompt"], "raw": repair["raw"], "report": section_report}
     section_report: dict[str, Any] = {
         "title": "Decision Brief",
         "status": "accepted_deterministic_fallback_after_model",
@@ -367,6 +425,8 @@ def _rewrite_decision_brief_last(
         "issues": result["issues"],
         "attempts": result["attempts"],
         "attempt_count": result["attempt_count"],
+        "model_repair": repair["attempts"] if rejected else [],
+        "model_repair_issues": repair["issues"] if rejected else [],
         "required_evidence_count": 0,
         "required_gap_count": 0,
         "required_crux_count": 0,
@@ -380,62 +440,31 @@ def _rewrite_decision_brief_last(
     return {"section": fallback, "prompt": result["prompt"], "raw": result["raw"], "report": section_report}
 
 
-def _decision_brief_bluf_prompt(contract: dict[str, Any], body_memo: str, fallback: str) -> str:
-    substantive_body = _substantive_body_sections_for_bluf(body_memo)
-    question = str(contract.get("question", "")).strip()
-    confidence = str(contract.get("confidence") or "").strip()
-    answer_frame = decision_brief_answer_frame_guidance(contract)
-    spine_packet = decision_brief_last_packet(contract, body_memo)
-    return (
-        "You are an analyst writing the opening BLUF for a source-grounded decision memo.\n"
-        "Use only the canonical decision spine and accepted body sections below as the source of truth. Do not add facts.\n"
-        "Write a crisp executive opening that directly answers the decision question before caveats.\n"
-        "Use the controlling answer frame below, but express it in the natural vocabulary of this decision question and source packet.\n"
-        "Do not force the answer into generic labels such as beneficial, harmful, neutral, use, or avoid unless that exact framing is warranted by the answer frame and accepted body sections.\n"
-        "If the controlling frame is conditional or context-dependent, say so directly and then name the practical default or boundary.\n"
-        "Prefer this shape: direct answer frame; why; main boundary; confidence.\n"
-        "Keep it under 150 words, preserve the exact Decision Brief heading, include the decision question line, and include a confidence line.\n"
-        "Return only the rewritten Decision Brief section as Markdown. Do not include any other ## section.\n\n"
-        f"Decision question: {question}\n"
-        f"Confidence: {confidence}\n\n"
-        "Controlling answer frame:\n"
-        f"{answer_frame}\n\n"
-        "Canonical decision spine packet:\n"
-        f"{json.dumps(spine_packet, indent=2, ensure_ascii=False)}\n\n"
-        "Accepted body sections:\n"
-        f"{substantive_body.strip()}\n\n"
-        "Section to rewrite:\n"
-        f"{fallback.strip()}"
-    )
-
-
-def _substantive_body_sections_for_bluf(body_memo: str) -> str:
-    _leading, sections = _split_sections(body_memo)
-    substantive = [
-        section["markdown"]
-        for section in sections
-        if section["title"].strip().lower() not in {"evidence trail", "sources"}
-    ]
-    return "\n\n".join(substantive).strip() or body_memo.strip()
-
-
 def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
     model_contract = model_facing_section_contract(contract)
     model_section = model_facing_section_markdown(section["markdown"], contract)
+    quality_guidance = section_quality_guidance(model_contract)
     return (
         "You are an analyst producing decision-ready analysis for one section of a source-grounded decision memo.\n"
         "Your job is to help a thoughtful reader decide what follows from the evidence, not to mechanically restate the packet.\n"
         "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
         "Use only the allowed information in model_section_packet and validation_obligations. If a fact is not present there or in the supplied deterministic draft, leave it out.\n"
-        "Use model_section_packet as the primary structure: section_thesis, owned_evidence, local_tensions, canonical_cruxes, and must_include_quantities define the section's job.\n"
+        "Use model_section_packet as the primary structure: section_thesis, section_use_projections, owned_evidence, local_tensions, canonical_cruxes, and must_include_quantities define the section's job.\n"
+        "When evidence appears in multiple sections, use section_use_projections to decide what distinct value this section adds. Do not repeat a source summary unless it performs this section's assigned section_use.\n"
         "When model_section_packet includes must_include_quantities, use one relevant estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
+        "Apply evidence-weight discipline: say which evidence is doing the most work, which evidence weakens or bounds it, and which inputs are indirect, weak, role-inferred, appendix-only, or otherwise lower weight.\n"
+        "Do not turn low-weight or indirect evidence into broad practical advice. Use calibrated verbs such as suggests, bounds, weakens, or is consistent with when the packet marks evidence as weak or indirect.\n"
+        "In evidence-bearing sections, prefer a compact analytic progression over a list: load-bearing support, counterweight, scope or method limit, then the implication for this section.\n"
         "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
-        "A main-memo obligation is satisfied by carrying one listed search term or by a faithful source-grounded paraphrase of its statement.\n"
-        "Fully explain owned_evidence when this section has it; keep reference_only_evidence to brief role-level context if it appears in the packet.\n"
+        "For each validation_obligations.required_main_memo_obligations item, include one listed search term exactly when search_terms are provided; otherwise use a faithful source-grounded paraphrase of its statement.\n"
+        "Use owned_evidence through the matching section_use_projections; keep reference_only_evidence to brief role-level context if it appears in the packet.\n"
+        "Do not invent or abbreviate citation labels. Avoid parenthetical source labels unless the exact label already appears in the deterministic draft or section contract.\n"
         "Return only the rewritten section as regular Markdown. Start with exactly the same ## heading and do not include any other top-level ## section.\n"
         "Do not wrap the answer in JSON or a code fence; the validator will check evidence coverage after generation.\n\n"
         f"Previous section heading: {previous_title or 'none'}\n"
         f"Next section heading: {next_title or 'none'}\n\n"
+        "Evidence-quality guidance for this section:\n"
+        f"{quality_guidance}\n\n"
         "Section contract:\n"
         f"{json.dumps(model_contract, indent=2, ensure_ascii=False)}\n\n"
         "The section below is the deterministic draft to improve using the section synthesis packet.\n"

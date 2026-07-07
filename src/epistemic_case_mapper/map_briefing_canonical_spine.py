@@ -19,6 +19,8 @@ def build_canonical_decision_spine(
     source_anchors = _source_anchors(cards, scaffold)
     default_field = _default_answer_field(scaffold, question, cards)
     missing_fields = _missing_slot_fields(slot_eligibility_audit)
+    support_fields = _evidence_carrier_fields(by_role["support"], cards, "strongest_support", "support")
+    counterevidence_fields = _evidence_carrier_fields(by_role["counterweight"], cards, "strongest_counterevidence", "counterweight")
     spine = {
         "schema_id": "canonical_decision_spine_v1",
         "decision_question": question,
@@ -27,8 +29,8 @@ def build_canonical_decision_spine(
         "exception_answers": _fields_from_cards(by_role["counterweight"][:2], "exception_answer", "exception"),
         "dose_or_intensity_boundaries": _quantity_fields(by_role["quantity"] + _cards_with_quantities(cards)),
         "population_boundaries": _fields_from_cards(by_role["scope"][:3], "population_boundary", "scope"),
-        "strongest_support": _fields_from_cards(by_role["support"][:4], "strongest_support", "support"),
-        "strongest_counterevidence": _fields_from_cards(by_role["counterweight"][:4], "strongest_counterevidence", "counterweight"),
+        "strongest_support": support_fields,
+        "strongest_counterevidence": counterevidence_fields,
         "mechanism_or_proxy_evidence": _mechanism_fields(cards),
         "comparator_or_substitution": _comparator_fields(cards, slot_eligibility_audit),
         "evidence_quality_limits": _limit_fields(cards, scaffold),
@@ -40,6 +42,8 @@ def build_canonical_decision_spine(
             "method": "deterministic_source_backed_candidate_selection_with_classical_rank_features",
             "candidate_card_count": len(cards),
             "source_anchor_count": len(source_anchors),
+            "support_field_count": len(support_fields),
+            "counterevidence_field_count": len(counterevidence_fields),
             "classical_signal_count": len(classical_selection_report.get("selection_features", []))
             if isinstance(classical_selection_report.get("selection_features"), list)
             else 0,
@@ -82,6 +86,95 @@ def _fields_from_cards(cards: list[dict[str, Any]], prefix: str, role: str) -> l
     for index, card in enumerate(_dedupe_cards(cards), start=1):
         fields.append(_field_from_cards(f"{prefix}_{index}", str(card.get("claim", "")), role, [card]))
     return [field for field in fields if field.get("claim")]
+
+
+def _evidence_carrier_fields(
+    role_cards: list[dict[str, Any]],
+    all_cards: list[dict[str, Any]],
+    prefix: str,
+    role: str,
+) -> list[dict[str, Any]]:
+    selected = role_cards[:4] or _fallback_evidence_carrier_cards(all_cards, role)
+    fields = _fields_from_cards(selected, prefix, role)
+    if role_cards:
+        return fields
+    for field in fields:
+        field["limits"] = _dedupe([*field.get("limits", []), "role_inferred_from_claim_text"])
+    return fields
+
+
+def _fallback_evidence_carrier_cards(cards: list[dict[str, Any]], role: str) -> list[dict[str, Any]]:
+    scoring_terms = _support_terms() if role == "support" else _counterevidence_terms()
+    blocked_terms = _counterevidence_terms() if role == "support" else _support_terms()
+    scored = []
+    for card in cards:
+        claim = str(card.get("claim", "")).lower()
+        score = _stance_score(claim, scoring_terms) - 0.5 * _stance_score(claim, blocked_terms)
+        if score <= 0:
+            continue
+        scored.append((score, int(card.get("decision_relevance_score", 0) or 0), str(card.get("candidate_card_id", "")), card))
+    if scored:
+        return [row[3] for row in sorted(scored, reverse=True)[:4]]
+    if role != "support":
+        return []
+    return [
+        card
+        for card in cards
+        if card.get("anchor_confidence") != "missing" and str(card.get("claim", "")).strip()
+    ][:2]
+
+
+def _stance_score(text: str, terms: tuple[str, ...]) -> float:
+    return sum(1.0 for term in terms if term in text and not _negates_counter_signal(text, term))
+
+
+def _negates_counter_signal(text: str, term: str) -> bool:
+    if term not in _counterevidence_terms():
+        return False
+    index = text.find(term)
+    if index < 0:
+        return False
+    prefix = text[max(0, index - 36):index]
+    return any(marker in prefix for marker in ("not ", "no ", "without ", "lack of ", "absence of ", "did not "))
+
+
+def _support_terms() -> tuple[str, ...]:
+    return (
+        "not associated",
+        "no association",
+        "no significant",
+        "did not increase",
+        "did not have adverse",
+        "does not increase",
+        "no adverse",
+        "without adverse",
+        "lower risk",
+        "reduced risk",
+        "decreased risk",
+        "improved",
+        "improves",
+        "benefit",
+        "effective",
+        "supports",
+    )
+
+
+def _counterevidence_terms() -> tuple[str, ...]:
+    return (
+        "higher risk",
+        "increased risk",
+        "increase in risk",
+        "associated with risk",
+        "positive association",
+        "harmful",
+        "adverse",
+        "worse",
+        "mortality",
+        "failure",
+        "delay",
+        "cost",
+        "constraint",
+    )
 
 
 def _quantity_fields(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:

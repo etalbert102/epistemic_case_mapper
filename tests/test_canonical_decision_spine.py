@@ -74,6 +74,32 @@ def test_spine_uses_anchored_appendix_cards_as_bounded_fallback() -> None:
     assert spine["construction_report"]["candidate_card_count"] == 3
 
 
+def test_spine_infers_evidence_carriers_when_upstream_roles_are_coarse() -> None:
+    scaffold = _scaffold()
+    cards = scaffold["candidate_evidence_cards"]["cards"]
+    for card in cards:
+        card["role"] = "scope"
+        card["inclusion_recommendation"] = "appendix_only"
+        card["quality"] = "indirect"
+    cards[0]["claim"] = "The option was not associated with higher adverse-event risk in the available evidence."
+    cards[1]["claim"] = "The option improved the primary outcome in a source-backed cohort."
+    cards[2]["claim"] = "The option was associated with higher risk in a narrower subgroup."
+
+    bundle = build_decision_spine_bundle(_candidate_map(), scaffold, question="Should the option be adopted?")
+    spine = bundle["canonical_decision_spine"]
+    evidence_section = next(
+        section
+        for section in bundle["section_projection_readiness_report"]["sections"]
+        if section["section"] == "Evidence Carrying the Conclusion"
+    )
+
+    assert spine["strongest_support"]
+    assert spine["strongest_counterevidence"]
+    assert "role_inferred_from_claim_text" in spine["strongest_support"][0]["limits"]
+    assert evidence_section["context_status"] in {"ready", "warning"}
+    assert bundle["section_projection_readiness_report"]["status"] in {"ready", "warning"}
+
+
 def test_spine_default_does_not_store_instruction_text_when_cards_exist() -> None:
     scaffold = _scaffold()
     scaffold["decision_synthesis_model"] = {"bottom_line": {}}

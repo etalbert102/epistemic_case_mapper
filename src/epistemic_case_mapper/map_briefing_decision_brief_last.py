@@ -231,17 +231,7 @@ def _answer_frame_alignment_issues(answer: str, contract: dict[str, Any]) -> lis
             "avoid benefit",
         )
     )
-    unsupported_favorable = any(
-        marker in answer_norm
-        for marker in (
-            "beneficial",
-            "protective",
-            "clearly safe",
-            "proven safe",
-            "favorable default",
-            "lower-risk default",
-        )
-    )
+    unsupported_favorable = _has_unnegated_favorable_verdict(answer_norm)
     if conditional_frame and unsupported_favorable and not any(marker in frame_norm for marker in ("beneficial_under", "state benefit only")):
         issues.append("final brief upgrades the controlling answer frame into an unsupported favorable verdict")
     if frame_text and _content_overlap(answer, frame_text) < 2 and conditional_frame:
@@ -250,6 +240,18 @@ def _answer_frame_alignment_issues(answer: str, contract: dict[str, Any]) -> lis
     if canonical and _content_overlap(answer, canonical) < 2:
         issues.append("final brief does not preserve the canonical default answer")
     return issues
+
+
+def _has_unnegated_favorable_verdict(text: str) -> bool:
+    if any(marker in text for marker in ("clearly safe", "proven safe", "favorable default", "lower-risk default")):
+        return True
+    for marker in ("beneficial", "protective"):
+        for match in re.finditer(rf"\b{re.escape(marker)}\b", text):
+            prefix = text[max(0, match.start() - 42): match.start()]
+            if re.search(r"\b(?:not|no|avoid|without|should not|do not|does not|isn't|not be|not framed as|not treated as)\b", prefix):
+                continue
+            return True
+    return False
 
 
 def _canonical_default_answer(contract: dict[str, Any]) -> str:

@@ -86,9 +86,9 @@ def repeated_owned_evidence_issues(title: str, text: str, full_contract: dict[st
             continue
         if style == "short_reference":
             continue
-        if _egregiously_repeats_owned_evidence(text, row):
+        if _egregiously_repeats_owned_evidence(title, text, row):
             owner = str(policy.get("owner_section", "")).strip() or "another section"
-            issues.append(f"section repeats evidence owned by {owner}: {str(row.get('claim', ''))[:90]}")
+            issues.append(f"section repeats source detail without adding {title} value; source detail is also used in {owner}: {str(row.get('claim', ''))[:90]}")
     return issues[:6]
 
 
@@ -235,11 +235,13 @@ def _short_reference_overexplains_evidence(
     return overlap >= 6
 
 
-def _egregiously_repeats_owned_evidence(text: str, row: dict[str, Any]) -> bool:
+def _egregiously_repeats_owned_evidence(title: str, text: str, row: dict[str, Any]) -> bool:
     if not _mentions_owned_evidence(text, row):
         return False
     sentence = _strongest_matching_sentence(text, row)
     if not sentence:
+        return False
+    if _adds_section_specific_value(title, sentence):
         return False
     claim = str(row.get("claim", ""))
     overlap = _content_overlap_count(sentence, claim)
@@ -250,9 +252,67 @@ def _egregiously_repeats_owned_evidence(text: str, row: dict[str, Any]) -> bool:
     return overlap >= 10 and len(sentence.split()) >= 18
 
 
+def _adds_section_specific_value(title: str, sentence: str) -> bool:
+    lowered_title = title.lower()
+    lowered = sentence.lower()
+    role_terms = {
+        "why this read": (
+            "because",
+            "therefore",
+            "reason",
+            "reasoning",
+            "explains",
+            "supports the read",
+            "bounds the read",
+            "tension",
+            "implies",
+        ),
+        "practical read": (
+            "implication",
+            "default",
+            "boundary",
+            "does not establish",
+            "supports treating",
+            "should be treated",
+        ),
+        "practical scope": (
+            "applies",
+            "boundary",
+            "scope",
+            "exception",
+            "where",
+            "subgroup",
+            "does not apply",
+        ),
+        "evidence carrying": (
+            "strongest",
+            "support",
+            "counterweight",
+            "weakens",
+            "bounded",
+            "limited",
+            "direct",
+            "indirect",
+        ),
+        "limits": (
+            "missing",
+            "does not establish",
+            "uncertain",
+            "gap",
+            "limit",
+            "cannot",
+        ),
+    }
+    for key, terms in role_terms.items():
+        if key in lowered_title and any(term in lowered for term in terms):
+            return True
+    return False
+
+
 def _strongest_matching_sentence(text: str, row: dict[str, Any]) -> str:
     claim = str(row.get("claim", ""))
-    sentences = re.split(r"(?<=[.!?])\s+|\n+", re.sub(r"\s+", " ", text).strip())
+    body = re.sub(r"^\s*#{1,6}\s+.+$", "", str(text), flags=re.MULTILINE)
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", re.sub(r"\s+", " ", body).strip())
     scored = [
         (_content_overlap_count(sentence, claim), sentence)
         for sentence in sentences
