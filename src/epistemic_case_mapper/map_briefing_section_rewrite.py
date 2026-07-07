@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.evidence_drift_validation import evidence_drift_issues
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_context_reports import build_section_context_acceptance_report
 from epistemic_case_mapper.main_memo_obligations import (
@@ -146,6 +147,7 @@ def rewrite_reader_memo_by_section(
                     "title": "Decision Brief",
                     "section_job": "Write the opening answer after the body sections are accepted.",
                     "packet": decision_brief_last_packet(contract, body_candidate),
+                    "model_packet": compile_model_section_packet("Decision Brief", contract),
             },
         )
         brief_result = _rewrite_decision_brief_last(
@@ -266,6 +268,7 @@ def _report_only_section_packets(sections: list[dict[str, str]], contract: dict[
                     "title": "Decision Brief",
                     "section_job": "Write the opening answer after the body sections are accepted.",
                     "packet": decision_brief_last_packet(contract, body_memo),
+                    "model_packet": compile_model_section_packet("Decision Brief", contract),
                 }
             )
             continue
@@ -345,9 +348,10 @@ def _decision_brief_bluf_prompt(contract: dict[str, Any], body_memo: str, fallba
     question = str(contract.get("question", "")).strip()
     confidence = str(contract.get("confidence") or "").strip()
     answer_frame = decision_brief_answer_frame_guidance(contract)
+    spine_packet = decision_brief_last_packet(contract, body_memo)
     return (
         "You are an analyst writing the opening BLUF for a source-grounded decision memo.\n"
-        "Use only the accepted body sections below as the source of truth. Do not add facts.\n"
+        "Use only the canonical decision spine and accepted body sections below as the source of truth. Do not add facts.\n"
         "Write a crisp executive opening that directly answers the decision question before caveats.\n"
         "Use the controlling answer frame below, but express it in the natural vocabulary of this decision question and source packet.\n"
         "Do not force the answer into generic labels such as beneficial, harmful, neutral, use, or avoid unless that exact framing is warranted by the answer frame and accepted body sections.\n"
@@ -359,6 +363,8 @@ def _decision_brief_bluf_prompt(contract: dict[str, Any], body_memo: str, fallba
         f"Confidence: {confidence}\n\n"
         "Controlling answer frame:\n"
         f"{answer_frame}\n\n"
+        "Canonical decision spine packet:\n"
+        f"{json.dumps(spine_packet, indent=2, ensure_ascii=False)}\n\n"
         "Accepted body sections:\n"
         f"{substantive_body.strip()}\n\n"
         "Section to rewrite:\n"
@@ -439,11 +445,35 @@ def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: 
             prefix="section dropped required main-memo obligation",
         )
     )
+    for issue in evidence_drift_issues(
+        rewritten,
+        _section_allowed_evidence_context(original, contract),
+        subject="section rewrite",
+    ):
+        issues.append(issue)
     original_words = max(1, len(original["markdown"].split()))
     if "crux" not in original["title"].lower() and contract["has_obligations"] and len(rewritten.split()) < max(35, int(original_words * 0.45)):
         issues.append("section rewrite is too short for its local contract")
     issues.extend(section_structure_issues(rewritten, contract))
     return issues
+
+
+def _section_allowed_evidence_context(original: dict[str, str], contract: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "original_markdown": original.get("markdown", ""),
+        "model_section_packet": contract.get("model_section_packet", {}),
+        "validation_obligations": {
+            "required_evidence": contract.get("required_evidence", []),
+            "evidence_references": contract.get("evidence_references", []),
+            "owned_elsewhere_evidence": contract.get("owned_elsewhere_evidence", []),
+            "required_gaps": contract.get("required_gaps", []),
+            "required_cruxes": contract.get("required_cruxes", []),
+            "required_main_memo_obligations": contract.get("required_main_memo_obligations", []),
+            "practical_actions": contract.get("practical_actions", []),
+        },
+        "section_synthesis_packet": contract.get("section_synthesis_packet", {}),
+        "model_section_context": contract.get("model_section_context", {}),
+    }
 
 
 def _validation_required_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
@@ -571,7 +601,7 @@ def _section_contract(section: dict[str, str], full_contract: dict[str, Any]) ->
     ]
     required_gaps = [
         gap for gap in _string_list(full_contract.get("required_gaps"))
-        if _rewrite_mentions_gap(text, gap) or "limit" in title.lower()
+        if "limit" in title.lower()
     ]
     required_cruxes = _section_required_cruxes(full_contract) if "crux" in title.lower() else []
     practical_actions = _section_practical_actions(title, full_contract, owned_elsewhere_evidence)

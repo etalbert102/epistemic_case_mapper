@@ -43,6 +43,8 @@ from epistemic_case_mapper.map_briefing import (
     _rewrite_mentions_anchor_row,
 )
 from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
+from epistemic_case_mapper.map_briefing_evidence_tables import _reader_source_name
+from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 
 
@@ -57,6 +59,21 @@ def test_confidence_calibration_caps_high_when_map_has_risks() -> None:
 
     assert calibrated["calibrated_confidence"] == "medium"
     assert "risk_issue_caps_high_confidence" in calibrated["reasons"]
+
+
+def test_reader_source_name_does_not_overcompact_descriptive_titles() -> None:
+    assert (
+        _reader_source_name("Eggs - a scoping review for Nordic Nutrition Recommendations 2023")
+        == "Eggs - a scoping review for Nordic Nutrition Recommendations 2023"
+    )
+    assert _reader_source_name("Drouin Chartier 2020 Full") == "Drouin Chartier 2020"
+
+
+def test_reader_cleanup_removes_internal_source_card_ids() -> None:
+    cleaned = replace_internal_reader_phrases("The cohort evidence is important (sc0002), while ec0010 is appendix context.")
+
+    assert "sc0002" not in cleaned
+    assert "ec0010" not in cleaned
 
 
 def test_prioritization_preserves_source_coverage() -> None:

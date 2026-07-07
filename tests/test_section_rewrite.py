@@ -14,12 +14,10 @@ from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anch
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
 from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
 from epistemic_case_mapper.map_briefing_section_rewrite import (
-    _decision_brief_bluf_prompt,
     _section_rewrite_prompt,
     rewrite_reader_memo_by_section,
 )
 from epistemic_case_mapper.map_briefing_decision_brief_last import (
-    decision_brief_last_issues,
     _decision_brief_slots,
     _default_answer_from_body,
 )
@@ -807,70 +805,7 @@ def test_section_rewrite_generates_decision_brief_last_with_model_bluf(monkeypat
     assert brief_report["status"] == "accepted_model_bluf"
     assert "Use the pilot as the default" in result["memo"]
     assert any("opening BLUF" in prompt for prompt in calls)
-
-
-def test_decision_brief_bluf_prompt_uses_free_form_answer_frame() -> None:
-    contract = {
-        "question": "Should the committee change the default policy?",
-        "confidence": "medium",
-        "_section_synthesis_scaffold": {
-            "decision_synthesis_model": {
-                "bottom_line": {
-                    "current_read": "The answer is conditional: keep the default unless the implementation constraint is resolved."
-                }
-            },
-            "decision_model": {
-                "default_answer": {
-                    "plain_language_instruction": "State that the answer is context-dependent, then identify the default case and the conditions that change it.",
-                    "why_this_frame": "Support and counterevidence are both live.",
-                },
-                "prose_requirements": ["Separate the default case from conditions where uncertainty dominates."],
-            },
-        },
-    }
-    body = "## Practical Read\n\nKeep the default unless the implementation constraint is resolved."
-    fallback = "## Decision Brief\n\nFallback."
-
-    prompt = _decision_brief_bluf_prompt(contract, body, fallback)
-
-    assert "Controlling answer frame" in prompt
-    assert "The answer is conditional" in prompt
-    assert "classify the default answer" not in prompt
-    assert "Do not force the answer into generic labels" in prompt
-
-
-def test_decision_brief_rejects_favorable_upgrade_for_conditional_frame() -> None:
-    contract = {
-        "question": "Should the default advice change?",
-        "confidence": "medium",
-        "_section_synthesis_scaffold": {
-            "decision_synthesis_model": {
-                "bottom_line": {
-                    "classification": "mixed_or_context_dependent",
-                    "current_read": "Treat the current answer as conditional and separate the default case from exceptions.",
-                }
-            },
-            "decision_model": {
-                "default_answer": {
-                    "classification": "mixed_or_context_dependent",
-                    "plain_language_instruction": "State that the answer is context-dependent, then identify the default case and the conditions that change it.",
-                    "why_this_frame": "Support and counterevidence are both live.",
-                },
-                "prose_requirements": ["Avoid benefit framing unless explicitly scoped."],
-            },
-        },
-    }
-    body = "## Practical Read\n\nThe current answer is conditional and depends on whether the exception applies."
-    section = (
-        "## Decision Brief\n\n"
-        "**Decision question:** Should the default advice change?\n\n"
-        "Treat the option as beneficial for the default case because the body has some favorable evidence, with exceptions handled later.\n\n"
-        "**Confidence:** medium"
-    )
-
-    issues = decision_brief_last_issues(section, contract, body)
-
-    assert "final brief upgrades the controlling answer frame into an unsupported favorable verdict" in issues
+    assert any("Canonical decision spine packet" in prompt for prompt in calls)
 
 
 def test_section_rewrite_falls_back_when_decision_brief_bluf_is_rejected(monkeypatch) -> None:

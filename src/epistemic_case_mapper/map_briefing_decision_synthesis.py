@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_answer_frame import arbitrate_answer_frame
 from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
 
 
@@ -16,6 +17,7 @@ def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
     central_tensions = _graph_central_tensions(graph_packet) or _central_tensions(decision_model, evidence_lines, rows)
     scope_boundaries = _scope_boundaries(decision_model)
     exceptions = _exceptions(decision_model, evidence_lines)
+    answer_frame = arbitrate_answer_frame(scaffold, bottom_line=_bottom_line(decision_model), evidence_lines=evidence_lines, exceptions=exceptions)
     recommendations = _recommendations(decision_model, scaffold, scope_boundaries, exceptions)
     cruxes = build_decision_cruxes(
         scaffold=scaffold,
@@ -27,7 +29,8 @@ def build_decision_synthesis_model(scaffold: dict[str, Any]) -> dict[str, Any]:
         "schema_id": "decision_synthesis_model_v1",
         "method": "generic_decision_support_slots_from_weighted_evidence",
         "question": str(scaffold.get("question", "")).strip(),
-        "bottom_line": _bottom_line(decision_model),
+        "bottom_line": answer_frame["bottom_line"],
+        "answer_frame_arbitration": answer_frame,
         "graph_summary": graph_packet.get("graph_summary", {}),
         "evidence_lines": evidence_lines,
         "central_tensions": central_tensions,

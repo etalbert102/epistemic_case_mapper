@@ -17,6 +17,8 @@ def replace_internal_reader_phrases(text: str) -> str:
     cleaned = text
     for phrase, replacement in replacements.items():
         cleaned = re.sub(re.escape(phrase), replacement, cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*\((?:sc|ec|spine)_?\d{3,}\)", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(?:sc|ec|spine)_?\d{3,}\b", "source-backed evidence", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\byou really cannot\b", "it is difficult to", cleaned, flags=re.IGNORECASE)
     person_group = r"(?:participants|people|those|adults|children|individuals|patients|respondents|workers|population|group|subgroup|cohort)"
     return re.sub(

@@ -20,6 +20,8 @@ from epistemic_case_mapper.config_profiles import (
     profile_vocabulary,
 )
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.evidence_drift_validation import evidence_drift_issues
+from epistemic_case_mapper.map_briefing_spine_memo_validation import spine_memo_validation_issues
 from epistemic_case_mapper.model_backends import run_model_backend
 
 def _lint_reader_overstatements(text: str, active_lints: set[str]) -> str:
@@ -282,13 +284,19 @@ def validate_briefing_against_scaffold(
     evidence_ledger = scaffold.get("evidence_weighting_ledger", {}) if isinstance(scaffold.get("evidence_weighting_ledger"), dict) else {}
     if isinstance(evidence_ledger, dict):
         issues.extend(_briefing_evidence_fit_issues(rendered, evidence_ledger, candidate_map))
-    raw_id_patterns = (
-        r"\b[A-Za-z0-9_\-]+_c\d{3,}\b",
-        r"\b[A-Za-z0-9_\-]+_r\d{3,}\b",
-        r"\bClaim [A-Z]\b",
-        r"\bClaim [cC]?\d{3,}\b",
-    )
-    if any(re.search(pattern, rendered) for pattern in raw_id_patterns):
+    for issue in evidence_drift_issues(
+        _main_memo_reliance_text(rendered),
+        {"scaffold": scaffold, "candidate_map": candidate_map},
+        subject="briefing",
+    ):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "possible_evidence_drift",
+                "message": issue,
+            }
+        )
+    if _has_reader_unfriendly_identifier(rendered):
         issues.append(
             {
                 "severity": "warning",
@@ -304,6 +312,15 @@ def validate_briefing_against_scaffold(
                 "message": "The briefing uses stronger benefit/safety language than the scaffold appears to support.",
             }
         )
+    issues.extend(spine_memo_validation_issues(rendered, scaffold))
+    if re.search(r"\bcurrent source packet does not establish\b", _main_memo_reliance_text(rendered), flags=re.IGNORECASE):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "gap_boilerplate_in_main_analysis",
+                "message": "Gap boilerplate appears in the main answer instead of being contained in the limits section.",
+            }
+        )
     if "## Evidence Roles" not in rendered:
         issues.append(
             {
@@ -312,11 +329,21 @@ def validate_briefing_against_scaffold(
                 "message": "The briefing does not expose separated evidence-role sections.",
             }
         )
+    readiness_status = str(scaffold.get("section_context_acceptance_status", "")).strip()
+    if readiness_status == "not_synthesis_ready":
+        issues.append(
+            {
+                "severity": "error",
+                "issue_type": "section_context_not_synthesis_ready",
+                "message": "At least one section had insufficient source-backed context for synthesis.",
+            }
+        )
     score = max(0, 100 - 12 * len(issues))
+    has_error = any(issue.get("severity") == "error" for issue in issues)
     return {
         "schema_id": "briefing_validation_report_v1",
         "method": "sufficiency_obligation_text_checks_plus_reader_contract_lints",
-        "status": "passes_contract" if not issues else "passes_with_warnings" if score >= 70 else "needs_review",
+        "status": "fails_contract" if has_error else "passes_contract" if not issues else "passes_with_warnings" if score >= 70 else "needs_review",
         "score": score,
         "satisfied_obligation_ids": satisfied,
         "unsatisfied_obligation_count": sum(1 for issue in issues if issue.get("issue_type", "").startswith("missing")),
@@ -324,6 +351,18 @@ def validate_briefing_against_scaffold(
         "claim_count": len(_claims(candidate_map)),
         "relation_count": len(_relations(candidate_map)),
     }
+
+def _has_reader_unfriendly_identifier(rendered: str) -> bool:
+    return any(
+        re.search(pattern, rendered)
+        for pattern in (
+            r"\b[A-Za-z0-9_\-]+_c\d{3,}\b",
+            r"\b[A-Za-z0-9_\-]+_r\d{3,}\b",
+            r"\b(?:sc|ec|spine)_?\d{3,}\b",
+            r"\bClaim [A-Z]\b",
+            r"\bClaim [cC]?\d{3,}\b",
+        )
+    )
 
 def model_parse_diagnostics(text: str, *, parse_ok: bool) -> dict[str, Any]:
     stripped = text.strip()

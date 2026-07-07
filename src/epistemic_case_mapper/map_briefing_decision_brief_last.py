@@ -27,6 +27,8 @@ def decision_brief_last_packet(contract: dict[str, Any], body_memo: str) -> dict
         "question": contract.get("question"),
         "confidence": contract.get("confidence"),
         "answer_frame": contract.get("answer_frame"),
+        "canonical_decision_spine": _compact_canonical_spine(scaffold),
+        "decision_brief_projection": _decision_brief_projection(scaffold),
         "argument_model": compact_argument_model(scaffold, "decision brief"),
         "decision_argument_artifacts": compact_decision_argument_artifacts(scaffold, "decision brief"),
         "bottom_line": synthesis.get("bottom_line"),
@@ -48,6 +50,7 @@ def decision_brief_answer_frame_guidance(contract: dict[str, Any]) -> str:
     frame = _answer_frame_parts(contract)
     lines: list[str] = []
     for label, value in (
+        ("Canonical default", _canonical_default_answer(contract)),
         ("Current read", frame.get("current_read", "")),
         ("Why this frame", frame.get("why_this_frame", "")),
         ("Plain-language guardrail", frame.get("plain_language_instruction", "")),
@@ -161,6 +164,9 @@ def _default_answer_from_body(body_memo: str) -> str:
 
 
 def _default_answer_from_contract(contract: dict[str, Any]) -> str:
+    canonical = _canonical_default_answer(contract)
+    if canonical:
+        return _readerize_instruction(canonical)
     frame = _answer_frame_parts(contract)
     if frame.get("current_read"):
         return _readerize_instruction(str(frame["current_read"]))
@@ -240,7 +246,72 @@ def _answer_frame_alignment_issues(answer: str, contract: dict[str, Any]) -> lis
         issues.append("final brief upgrades the controlling answer frame into an unsupported favorable verdict")
     if frame_text and _content_overlap(answer, frame_text) < 2 and conditional_frame:
         issues.append("final brief does not preserve the controlling conditional answer frame")
+    canonical = _canonical_default_answer(contract)
+    if canonical and _content_overlap(answer, canonical) < 2:
+        issues.append("final brief does not preserve the canonical default answer")
     return issues
+
+
+def _canonical_default_answer(contract: dict[str, Any]) -> str:
+    spine = _canonical_spine(contract)
+    default = spine.get("default_answer", {}) if isinstance(spine.get("default_answer"), dict) else {}
+    if str(default.get("role", "")) == "missing_slot":
+        return ""
+    return str(default.get("claim", "")).strip()
+
+
+def _compact_canonical_spine(scaffold: dict[str, Any]) -> dict[str, Any]:
+    spine = scaffold.get("canonical_decision_spine", {}) if isinstance(scaffold.get("canonical_decision_spine"), dict) else {}
+    default = spine.get("default_answer", {}) if isinstance(spine.get("default_answer"), dict) else {}
+    return {
+        "status": spine.get("status"),
+        "confidence": spine.get("confidence"),
+        "default_answer": _compact_spine_field(default),
+        "exception_answers": [_compact_spine_field(row) for row in _list(spine.get("exception_answers"))[:2]],
+        "evidence_quality_limits": [_compact_spine_field(row) for row in _list(spine.get("evidence_quality_limits"))[:3]],
+        "missing_decision_slots": [_compact_spine_field(row) for row in _list(spine.get("missing_decision_slots"))[:3]],
+    }
+
+
+def _decision_brief_projection(scaffold: dict[str, Any]) -> dict[str, Any]:
+    projections = scaffold.get("section_projection_packets", {}) if isinstance(scaffold.get("section_projection_packets"), dict) else {}
+    for section in _list(projections.get("sections")):
+        if isinstance(section, dict) and str(section.get("section", "")).strip().lower() == "decision brief":
+            return {
+                "context_status": section.get("context_status"),
+                "section_thesis": section.get("section_thesis"),
+                "owned_spine_field_ids": section.get("owned_spine_field_ids", []),
+                "owned_evidence": section.get("owned_evidence", [])[:3] if isinstance(section.get("owned_evidence"), list) else [],
+            }
+    return {}
+
+
+def _compact_spine_field(field: Any) -> dict[str, Any]:
+    if not isinstance(field, dict):
+        return {}
+    return {
+        "field_id": field.get("field_id"),
+        "role": field.get("role"),
+        "claim": _short_text(str(field.get("claim", "")), 300),
+        "source_ids": field.get("source_ids", [])[:4] if isinstance(field.get("source_ids"), list) else [],
+        "candidate_card_ids": field.get("candidate_card_ids", [])[:4] if isinstance(field.get("candidate_card_ids"), list) else [],
+        "confidence": field.get("confidence"),
+        "limits": field.get("limits", [])[:3] if isinstance(field.get("limits"), list) else [],
+    }
+
+
+def _canonical_spine(contract: dict[str, Any]) -> dict[str, Any]:
+    scaffold = (
+        contract.get("_section_synthesis_scaffold", {})
+        if isinstance(contract.get("_section_synthesis_scaffold"), dict)
+        else {}
+    )
+    spine = scaffold.get("canonical_decision_spine", {})
+    return spine if isinstance(spine, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
 def _decision_caveats_from_body(body_memo: str) -> list[str]:

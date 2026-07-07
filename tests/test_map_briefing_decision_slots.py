@@ -783,6 +783,42 @@ def test_briefing_validation_checks_sufficiency_obligations() -> None:
     assert complete["score"] > incomplete["score"]
 
 
+def test_decision_memo_slots_use_narrower_hard_outcome_evidence_as_context() -> None:
+    scaffold = {
+        "epistemic_config": {"profile_id": "biomedical_nutrition_case"},
+        "curated_evidence_packets": {
+            "packets": [
+                {
+                    "concept": "hard_outcome_endpoint",
+                    "rows": [
+                        {
+                            "claim": "A cohort found moderate exposure was not associated with worse clinical outcomes in the studied population.",
+                            "source": "Outcome Cohort",
+                            "section": "main_support",
+                            "question_fit": {"status": "narrower_than_question"},
+                            "eligibility": {"question_fit": {"status": "narrower_than_question"}},
+                            "decision_concepts": ["hard_outcome_endpoint"],
+                            "weight": "medium",
+                            "score": 8,
+                        }
+                    ],
+                }
+            ]
+        },
+        "map_sufficiency_report": {
+            "question_profile": {
+                "expected_decision_slots": ["default_population"],
+            }
+        },
+        "evidence_weighting_ledger": {"profile_id": "default", "all_evidence": []},
+    }
+
+    slots = build_decision_memo_slots(scaffold)
+
+    hard_outcome = next(slot for slot in slots["slots"] if slot["slot_id"] == "hard_outcome_support")
+    assert hard_outcome["status"] == "filled"
+
+
 def test_map_briefing_prompt_uses_compact_model_contract() -> None:
     candidate_map = {
         "claims": [

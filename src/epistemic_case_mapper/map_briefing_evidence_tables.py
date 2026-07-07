@@ -177,7 +177,7 @@ def _reader_source_name(source: str) -> str:
     raw = source.strip()
     if "_sources_" in raw.lower():
         raw = re.split(r"_sources_", raw, maxsplit=1, flags=re.IGNORECASE)[1]
-    title = display_source_name(raw)
+    title = display_source_name(raw) if re.fullmatch(r"[A-Za-z0-9_-]+", raw) and ("_" in raw or "-" in raw) else raw
     title = re.sub(r"^.*\bSources\s+", "", title)
     title = polish_source_display_name(title)
     title = re.sub(r"\b(?:Fullish|Full|Abstract|Metadata|Pubmed|PMC)\b", "", title)
@@ -189,13 +189,12 @@ def _compact_citation_label(title: str) -> str:
     year_index = next((index for index, word in enumerate(words) if re.fullmatch(r"(?:19|20)\d{2}", word)), -1)
     if year_index <= 0:
         return title
-    author_words = [
-        word
-        for word in words[:year_index]
-        if word.lower() not in {"aha", "ajcn", "bmj", "eas", "jaha", "jama", "plos", "pure"}
-    ]
+    prefix = words[:year_index]
+    if len(prefix) > 4 or any(word.lower() in {"and", "or", "of", "for", "with", "risk", "review", "analysis", "recommendations"} for word in prefix):
+        return title
+    author_words = [word for word in prefix if word.lower() not in {"aha", "ajcn", "bmj", "eas", "jaha", "jama", "plos", "pure"}]
     if not author_words:
-        author_words = words[:year_index]
+        author_words = prefix
     return f"{' '.join(author_words[:2])} {words[year_index]}".strip()
 
 def _polish_embedded_source_prefixes(text: str) -> str:

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 import re
 from collections import Counter
@@ -7,7 +6,6 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
-
 from epistemic_case_mapper.classical_ml import (
     relation_edge_weight,
     tfidf_near_duplicate_pairs,
@@ -60,7 +58,7 @@ from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_sc
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
-
+from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 ROLE_PRIORITY = {
     "crux": 0,
     "scope_limit": 1,
@@ -138,6 +136,7 @@ def run_map_briefing(
     scaffold["claim_canonicalization_report"] = canonicalization_report
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
+    scaffold.update(build_decision_spine_bundle(prioritized_map, scaffold, question=question))
     _attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
@@ -224,8 +223,6 @@ def run_map_briefing(
         briefing_validation_path=briefing_validation_path, telemetry_paths=telemetry_paths,
         backend=backend, render_state=render_state, quality_report=quality_report,
     )
-
-
 def _map_briefing_result(
     *, briefing_path: Path, summary_path: Path, scaffold_paths: dict[str, Path],
     briefing_validation_path: Path, telemetry_paths: dict[str, Path], backend: str,
@@ -240,8 +237,6 @@ def _map_briefing_result(
         calibrated_confidence=str(render_state["calibrated"]),
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
-
-
 def _attach_global_memo_plan(
     scaffold: dict[str, Any],
     *,
@@ -259,8 +254,6 @@ def _attach_global_memo_plan(
     scaffold["global_memo_plan_validation"] = result["validation"]
     scaffold["global_memo_plan_prompt"] = result["prompt"]
     scaffold["global_memo_plan_raw"] = result["raw"]
-
-
 def _attach_decision_ready_context_reports(
     prioritized_map: dict[str, Any],
     scaffold: dict[str, Any],
@@ -375,6 +368,7 @@ def _write_final_reader_outputs(
     rewrite_result.setdefault("report", {})["section_context_acceptance_status"] = section_rewrite_result.get("report", {}).get(
         "section_context_acceptance_status"
     )
+    memo_package["scaffold"]["section_context_acceptance_status"] = rewrite_result["report"]["section_context_acceptance_status"]
     if rewrite_result.get("prompt"):
         write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
     if rewrite_result.get("raw"):
@@ -408,7 +402,8 @@ def _write_final_reader_outputs(
         scaffold=memo_package["scaffold"],
     )
     pipeline_migration = build_pipeline_migration_ledger(
-        section_context_acceptance_path=str(section_rewrite_result.get("section_context_acceptance_report_path") or "")
+        section_context_acceptance_path=str(section_rewrite_result.get("section_context_acceptance_report_path") or ""),
+        scaffold=memo_package["scaffold"],
     )
     runtime_budget = build_runtime_budget_report(
         section_rewrite_report=section_rewrite_result.get("report", {}),
@@ -620,7 +615,6 @@ def briefing_scaffold(
             if str(source_id).strip() and str(label).strip()
         }
     return _expand_payload_reader_references(scaffold, briefing_map)
-
 def deterministic_briefing_payload(
     scaffold: dict[str, Any],
     *,
@@ -657,7 +651,6 @@ def deterministic_briefing_payload(
             ]
         )
     return payload
-
 def _sufficiency_implications(sufficiency_report: dict[str, Any]) -> list[str]:
     items: list[str] = []
     for slot in _string_list(sufficiency_report.get("missing_expected_decision_slots")):
@@ -676,6 +669,9 @@ def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: 
     classification = str(default_answer.get("classification", "mixed_or_context_dependent")).replace("_", " ")
     instruction = str(default_answer.get("plain_language_instruction", "")).strip()
     current_read = str(bottom_line.get("current_read", "")).strip()
+    spine = scaffold.get("canonical_decision_spine", {}) if isinstance(scaffold.get("canonical_decision_spine"), dict) else {}
+    canonical = spine.get("default_answer", {}) if isinstance(spine.get("default_answer"), dict) else {}
+    if canonical.get("role") != "missing_slot" and str(canonical.get("claim", "")).strip(): current_read = str(canonical["claim"]).strip()
     main_reasons = [row for row in decision_model.get("main_reasons", []) if isinstance(row, dict)]
     counters = [row for row in decision_model.get("strongest_counterarguments", []) if isinstance(row, dict)]
     graph_claims = deterministic_graph_claim_sentences(scaffold)
@@ -691,7 +687,6 @@ def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: 
     elif len(graph_claims) > 1:
         parts.append(f"A second important evidence line is: {graph_claims[1]}")
     return " ".join(part.strip() for part in parts if part and str(part).strip())
-
 
 def _deterministic_decision_implications(decision_model: dict[str, Any]) -> list[str]:
     items: list[str] = []

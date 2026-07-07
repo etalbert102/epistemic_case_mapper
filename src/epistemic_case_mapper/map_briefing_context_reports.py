@@ -185,12 +185,19 @@ def build_memo_coherence_report(
     return MemoCoherenceReport(status=status, issue_count=len(issues), issues=issues).model_dump()
 
 
-def build_pipeline_migration_ledger(*, section_context_acceptance_path: str | None) -> dict[str, Any]:
-    old_visible = [
-        "validation_obligations.required_main_memo_obligations",
-    ]
+def build_pipeline_migration_ledger(
+    *,
+    section_context_acceptance_path: str | None,
+    scaffold: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    scaffold = scaffold or {}
+    projection = scaffold.get("section_projection_readiness_report", {}) if isinstance(scaffold.get("section_projection_readiness_report"), dict) else {}
+    projection_ready = projection.get("status") in {"ready", "warning"}
+    old_visible = [] if projection_ready else ["validation_obligations.required_main_memo_obligations"]
     new_visible = [
         "model_section_packet",
+        "canonical_decision_spine" if scaffold.get("canonical_decision_spine") else "",
+        "section_projection_packets" if scaffold.get("section_projection_packets") else "",
         "section_context_acceptance_report" if section_context_acceptance_path else "",
     ]
     new_visible = [item for item in new_visible if item]
@@ -198,8 +205,8 @@ def build_pipeline_migration_ledger(*, section_context_acceptance_path: str | No
     return PipelineMigrationLedger(
         old_context_fields_still_model_visible=old_visible,
         new_context_fields_model_visible=new_visible,
-        debug_only_artifacts=["main_memo_obligation_ledger", "unified_requirement_ledger"],
-        compatibility_shims=["main memo obligations remain as validation obligations until fully replaced"],
+        debug_only_artifacts=["main_memo_obligation_ledger", "unified_requirement_ledger", "section_reasoning_cards"],
+        compatibility_shims=[] if projection_ready else ["main memo obligations remain as validation obligations until fully replaced"],
         status=status,
     ).model_dump()
 

@@ -352,6 +352,7 @@ def _rewrite_has_raw_identifiers(text: str) -> bool:
         for pattern in (
             r"\b[A-Za-z0-9_\-]+_c\d{3,}\b",
             r"\b[A-Za-z0-9_\-]+_r\d{3,}\b",
+            r"\b(?:sc|ec|spine)_?\d{3,}\b",
             r"\bClaim [A-Z]\b",
             r"\bClaim [cC]?\d{3,}\b",
         )
@@ -821,7 +822,17 @@ def _row_allowed_for_memo_slot(row: dict[str, Any], spec: dict[str, Any]) -> boo
         return False
     slot_id = str(spec.get("slot_id", ""))
     if status == "narrower_than_question":
-        return slot_id in {"high_risk_subgroup", "safety_or_risk", "scope_conditions"}
+        return slot_id in {
+            "alternatives_or_comparators",
+            "comparator_substitution",
+            "evidence_type_limits",
+            "hard_outcome_counter",
+            "hard_outcome_support",
+            "high_risk_subgroup",
+            "safety_or_risk",
+            "scope_conditions",
+            "study_design_limits",
+        }
     return True
 
 

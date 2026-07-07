@@ -81,6 +81,8 @@ def _malformed_validation_claim(claim: str) -> bool:
 
 def model_facing_section_markdown(markdown: str, contract: dict[str, Any]) -> str:
     text = markdown
+    if "limit" not in str(contract.get("heading", "")).lower():
+        text = _remove_gap_boilerplate(text)
     for row in contract.get("owned_elsewhere_evidence", []) if isinstance(contract.get("owned_elsewhere_evidence"), list) else []:
         if not isinstance(row, dict) or not _text_mentions_owned_elsewhere(text, row):
             continue
@@ -90,6 +92,15 @@ def model_facing_section_markdown(markdown: str, contract: dict[str, Any]) -> st
         replacement = "" if policy.get("reference_style") == "do_not_repeat" else f"{slot} evidence is handled in {owner}."
         text = _replace_matching_sentences(text, row, replacement)
     return text.strip() or markdown
+
+
+def _remove_gap_boilerplate(text: str) -> str:
+    return re.sub(
+        r"\s*The current source packet does not establish[^.?!]*[.?!]\s*(?:do not fill that gap by inference[.?!])?",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    ).strip()
 
 
 def _model_facing_required_evidence(value: Any) -> list[dict[str, Any]]:

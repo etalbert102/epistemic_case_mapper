@@ -12,6 +12,10 @@ from epistemic_case_mapper.decision_argument_artifacts import (
     render_summary_of_findings_markdown,
 )
 from epistemic_case_mapper.map_briefing_telemetry import write_gap_telemetry
+from epistemic_case_mapper.map_briefing_spine_audit import (
+    render_before_after_briefing_comparison,
+    render_spine_completion_audit,
+)
 
 
 def write_scaffold_artifacts(
@@ -44,6 +48,20 @@ def write_scaffold_artifacts(
         "memo_argument_spine": artifacts / "memo_argument_spine.json",
         "section_reasoning_cards": artifacts / "section_reasoning_cards.json",
         "source_coverage_report": artifacts / "source_coverage_report.json",
+        "classical_evidence_selection_report": artifacts / "classical_evidence_selection_report.json",
+        "claim_cluster_report": artifacts / "claim_cluster_report.json",
+        "evidence_centrality_report": artifacts / "evidence_centrality_report.json",
+        "coverage_balance_report": artifacts / "coverage_balance_report.json",
+        "quantity_outlier_report": artifacts / "quantity_outlier_report.json",
+        "slot_eligibility_audit": artifacts / "slot_eligibility_audit.json",
+        "canonical_decision_spine": artifacts / "canonical_decision_spine.json",
+        "canonical_decision_spine_validation": artifacts / "canonical_decision_spine_validation.json",
+        "decision_spine_consistency_report": artifacts / "decision_spine_consistency_report.json",
+        "section_projection_packets": artifacts / "section_projection_packets.json",
+        "section_projection_readiness_report": artifacts / "section_projection_readiness_report.json",
+        "spine_quality_report": artifacts / "spine_quality_report.json",
+        "before_after_briefing_comparison": artifacts / "before_after_briefing_comparison.md",
+        "spine_completion_audit": artifacts / "spine_completion_audit.md",
         "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
         "quantity_ledger": artifacts / "quantity_ledger.json",
         "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
@@ -77,6 +95,20 @@ def write_scaffold_artifacts(
     write_json(paths["memo_argument_spine"], scaffold.get("memo_argument_spine", {}))
     write_json(paths["section_reasoning_cards"], scaffold.get("section_reasoning_cards", {}))
     write_json(paths["source_coverage_report"], scaffold.get("source_coverage_report", {}))
+    write_json(paths["classical_evidence_selection_report"], scaffold.get("classical_evidence_selection_report", {}))
+    write_json(paths["claim_cluster_report"], scaffold.get("claim_cluster_report", {}))
+    write_json(paths["evidence_centrality_report"], scaffold.get("evidence_centrality_report", {}))
+    write_json(paths["coverage_balance_report"], scaffold.get("coverage_balance_report", {}))
+    write_json(paths["quantity_outlier_report"], scaffold.get("quantity_outlier_report", {}))
+    write_json(paths["slot_eligibility_audit"], scaffold.get("slot_eligibility_audit", {}))
+    write_json(paths["canonical_decision_spine"], scaffold.get("canonical_decision_spine", {}))
+    write_json(paths["canonical_decision_spine_validation"], scaffold.get("canonical_decision_spine_validation", {}))
+    write_json(paths["decision_spine_consistency_report"], scaffold.get("decision_spine_consistency_report", {}))
+    write_json(paths["section_projection_packets"], scaffold.get("section_projection_packets", {}))
+    write_json(paths["section_projection_readiness_report"], scaffold.get("section_projection_readiness_report", {}))
+    write_json(paths["spine_quality_report"], scaffold.get("spine_quality_report", {}))
+    write_markdown(paths["before_after_briefing_comparison"], render_before_after_briefing_comparison(scaffold))
+    write_markdown(paths["spine_completion_audit"], render_spine_completion_audit(scaffold))
     write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
     write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
@@ -204,6 +236,20 @@ def write_run_summary(
             "memo_argument_spine": scaffold_paths["memo_argument_spine"],
             "section_reasoning_cards": scaffold_paths["section_reasoning_cards"],
             "source_coverage_report": scaffold_paths["source_coverage_report"],
+            "classical_evidence_selection_report": scaffold_paths["classical_evidence_selection_report"],
+            "claim_cluster_report": scaffold_paths["claim_cluster_report"],
+            "evidence_centrality_report": scaffold_paths["evidence_centrality_report"],
+            "coverage_balance_report": scaffold_paths["coverage_balance_report"],
+            "quantity_outlier_report": scaffold_paths["quantity_outlier_report"],
+            "slot_eligibility_audit": scaffold_paths["slot_eligibility_audit"],
+            "canonical_decision_spine": scaffold_paths["canonical_decision_spine"],
+            "canonical_decision_spine_validation": scaffold_paths["canonical_decision_spine_validation"],
+            "decision_spine_consistency_report": scaffold_paths["decision_spine_consistency_report"],
+            "section_projection_packets": scaffold_paths["section_projection_packets"],
+            "section_projection_readiness_report": scaffold_paths["section_projection_readiness_report"],
+            "spine_quality_report": scaffold_paths["spine_quality_report"],
+            "before_after_briefing_comparison": scaffold_paths["before_after_briefing_comparison"],
+            "spine_completion_audit": scaffold_paths["spine_completion_audit"],
             "quantity_ledger": scaffold_paths["quantity_ledger"],
             "evidence_to_decision_matrix": scaffold_paths["evidence_to_decision_matrix"],
             "summary_of_findings": scaffold_paths["summary_of_findings"],
@@ -296,6 +342,15 @@ def write_final_review_packet(
         f"- Memo argument spine: `{_rel(repo_root, scaffold_paths.get('memo_argument_spine'))}`",
         f"- Section reasoning cards: `{_rel(repo_root, scaffold_paths.get('section_reasoning_cards'))}`",
         f"- Source coverage report: `{_rel(repo_root, scaffold_paths.get('source_coverage_report'))}`",
+        f"- Classical evidence selection: `{_rel(repo_root, scaffold_paths.get('classical_evidence_selection_report'))}`",
+        f"- Slot eligibility audit: `{_rel(repo_root, scaffold_paths.get('slot_eligibility_audit'))}`",
+        f"- Canonical decision spine: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine'))}`",
+        f"- Decision spine consistency: `{_rel(repo_root, scaffold_paths.get('decision_spine_consistency_report'))}`",
+        f"- Section projection packets: `{_rel(repo_root, scaffold_paths.get('section_projection_packets'))}`",
+        f"- Section projection readiness: `{_rel(repo_root, scaffold_paths.get('section_projection_readiness_report'))}`",
+        f"- Spine quality report: `{_rel(repo_root, scaffold_paths.get('spine_quality_report'))}`",
+        f"- Before/after briefing comparison: `{_rel(repo_root, scaffold_paths.get('before_after_briefing_comparison'))}`",
+        f"- Spine completion audit: `{_rel(repo_root, scaffold_paths.get('spine_completion_audit'))}`",
         f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
         f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
         f"- Summary of findings: `{_rel(repo_root, scaffold_paths.get('summary_of_findings'))}`",
@@ -415,6 +470,11 @@ def map_briefing_summary_payload(
     argument_spine = scaffold.get("memo_argument_spine", {}) if isinstance(scaffold.get("memo_argument_spine"), dict) else {}
     reasoning_cards = scaffold.get("section_reasoning_cards", {}) if isinstance(scaffold.get("section_reasoning_cards"), dict) else {}
     source_coverage = scaffold.get("source_coverage_report", {}) if isinstance(scaffold.get("source_coverage_report"), dict) else {}
+    slot_audit = _scaffold_dict(scaffold, "slot_eligibility_audit")
+    canonical_spine = _scaffold_dict(scaffold, "canonical_decision_spine")
+    spine_validation = _scaffold_dict(scaffold, "canonical_decision_spine_validation")
+    spine_readiness = _scaffold_dict(scaffold, "section_projection_readiness_report")
+    spine_quality = _scaffold_dict(scaffold, "spine_quality_report")
     section_acceptance_status = rewrite_result["report"].get("section_context_acceptance_status")
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
     return {
@@ -456,6 +516,12 @@ def map_briefing_summary_payload(
         "memo_argument_spine_item_count": _list_count(argument_spine, "items"),
         "section_reasoning_cards_status": reasoning_cards.get("status"),
         "source_coverage_omitted_high_relevance_count": _list_count(source_coverage, "omitted_high_relevance_card_ids"),
+        "slot_eligibility_status": slot_audit.get("status"),
+        "canonical_decision_spine_status": canonical_spine.get("status"),
+        "canonical_decision_spine_validation_status": spine_validation.get("status"),
+        "section_projection_readiness_status": spine_readiness.get("status"),
+        "spine_quality_status": spine_quality.get("status"),
+        "canonical_spine_missing_slot_count": _list_count(canonical_spine, "missing_decision_slots"),
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "relation_count": len(_relations(candidate_map)),
@@ -512,6 +578,11 @@ def _relations(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
 def _list_count(value: dict[str, Any], key: str) -> int:
     items = value.get(key, [])
     return len(items) if isinstance(items, list) else 0
+
+
+def _scaffold_dict(scaffold: dict[str, Any], key: str) -> dict[str, Any]:
+    value = scaffold.get(key, {})
+    return value if isinstance(value, dict) else {}
 
 
 def _rel(repo_root: Path, path: Path | None) -> str | None:
