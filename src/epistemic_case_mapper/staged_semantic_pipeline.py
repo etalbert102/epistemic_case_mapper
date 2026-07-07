@@ -58,7 +58,6 @@ from epistemic_case_mapper.staged_semantic_claims_relations import (
 )
 
 from epistemic_case_mapper.staged_semantic_quality import (
-    _append_sharpening_note,
     _assemble_map,
     _case_config_profile,
     _claim_prompt,
@@ -79,7 +78,6 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _quality_status,
     _relation_sharpening_summary,
     _sharpen_relations,
-    _sharper_relation_type,
     _source_role_scaffold,
     _text_overlap_ratio,
     _weak_relation_rationale_ids,
@@ -143,7 +141,6 @@ __all__ = [
     "StagedMapResult",
     "VALID_CLAIM_ROLES",
     "_CONCEPT_FAMILY_PRIORITY",
-    "_append_sharpening_note",
     "_artifact_dir",
     "_assemble_map",
     "_batches",
@@ -232,7 +229,6 @@ __all__ = [
     "_safe_filename",
     "_select_total_budget",
     "_sharpen_relations",
-    "_sharper_relation_type",
     "_shorten_excerpt",
     "_skipped_chunk_summary",
     "_source_chunks",

@@ -96,82 +96,8 @@ def _sharpen_relations(
     claims: list[dict[str, Any]],
     permitted_types: set[str],
 ) -> list[dict[str, Any]]:
-    claim_lookup = {str(claim.get("claim_id")): claim for claim in claims}
-    sharpened: list[dict[str, Any]] = []
-    for relation in relations:
-        updated = dict(relation)
-        original_type = str(updated.get("relation_type", ""))
-        sharper_type = _sharper_relation_type(updated, claim_lookup, permitted_types)
-        if sharper_type and sharper_type != original_type:
-            updated["relation_type"] = sharper_type
-            updated["rationale"] = _append_sharpening_note(
-                str(updated.get("rationale", "")),
-                original_type,
-                sharper_type,
-            )
-            updated["deterministic_sharpening"] = {
-                "from": original_type,
-                "to": sharper_type,
-                "method": "claim_role_and_rationale_rules_v1",
-            }
-        sharpened.append(updated)
-    return sharpened
-
-def _sharper_relation_type(
-    relation: dict[str, Any],
-    claim_lookup: dict[str, dict[str, Any]],
-    permitted_types: set[str],
-) -> str | None:
-    current = str(relation.get("relation_type", ""))
-    if current not in {"similar_to", "refines", "supports"}:
-        return current
-    source = claim_lookup.get(str(relation.get("source_claim")), {})
-    target = claim_lookup.get(str(relation.get("target_claim")), {})
-    source_role = str(source.get("role", ""))
-    target_role = str(target.get("role", ""))
-    rationale = str(relation.get("rationale", "")).lower()
-    claim_text = " ".join((str(source.get("claim", "")), str(target.get("claim", "")))).lower()
-    combined = f"{rationale} {claim_text}"
-    if "depends_on" in permitted_types and (
-        source_role == "implementation_constraint"
-        or target_role == "implementation_constraint"
-        or any(marker in combined for marker in ("requires", "only when", "if ", "unless", "depends", "must", "condition", "contingent", "when other", "where "))
-    ):
-        return "depends_on"
-    if "in_tension_with" in permitted_types and any(
-        marker in combined
-        for marker in (
-            "however",
-            "unclear",
-            "unproven",
-            "cannot",
-            "does not",
-            "do not",
-            "limitation",
-            "small reductions",
-            "not a solution",
-            "not replace",
-            "rather than",
-            "scope limit",
-            "tension",
-        )
-    ):
-        return "in_tension_with"
-    if "crux_for" in permitted_types and (
-        source_role == "crux"
-        or target_role == "crux"
-        or any(marker in combined for marker in ("crux", "determines", "would change", "changes whether", "changes how", "turns on"))
-    ):
-        return "crux_for"
-    if "challenges" in permitted_types and any(marker in combined for marker in ("contradicts", "undercuts", "weakens", "casts doubt")):
-        return "challenges"
-    return current
-
-def _append_sharpening_note(rationale: str, original_type: str, sharper_type: str) -> str:
-    base = rationale.strip()
-    if not base:
-        return f"Retagged from {original_type} to {sharper_type} because claim roles/rationale make the edge decision-relevant."
-    return base
+    del claims, permitted_types
+    return [dict(relation) for relation in relations]
 
 def _relation_sharpening_summary(relations: list[dict[str, Any]]) -> dict[str, Any]:
     changed = [

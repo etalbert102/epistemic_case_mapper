@@ -786,7 +786,7 @@ def test_staged_map_quality_flags_weak_relation_rationales() -> None:
     assert "weak_relation_rationales" in issue_types
 
 
-def test_relation_sharpening_retags_generic_edges_when_roles_support_it() -> None:
+def test_relation_sharpening_preserves_model_relation_types() -> None:
     claims = [
         {
             "claim_id": "demo_c001",
@@ -827,9 +827,8 @@ def test_relation_sharpening_retags_generic_edges_when_roles_support_it() -> Non
         {"supports", "refines", "similar_to", "depends_on", "crux_for", "in_tension_with"},
     )
 
-    assert sharpened[0]["relation_type"] == "in_tension_with"
-    assert sharpened[1]["relation_type"] == "depends_on"
-    assert sharpened[0]["deterministic_sharpening"]["from"] == "refines"
+    assert sharpened == relations
+    assert all("deterministic_sharpening" not in relation for relation in sharpened)
 
 
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:

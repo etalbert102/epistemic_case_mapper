@@ -463,7 +463,6 @@ def _build_initial_staged_map(
         max_relation_pairs=max_relation_pairs,
         relation_batch_size=relation_batch_size,
     )
-    relations = _sharpen_relations(relations, claims, manifest.relation_ontology.permitted_types())
     final_map = _assemble_map(
         region=region,
         case_manifest=case_manifest,
@@ -846,7 +845,6 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _map_quality_repair_prompt,
     _quality_markdown,
     _relation_sharpening_summary,
-    _sharpen_relations,
     evaluate_staged_map_quality,
 )
 from epistemic_case_mapper.staged_semantic_relation_candidates import _relation_batch_count
