@@ -11,8 +11,6 @@ from epistemic_case_mapper.map_briefing import (
 )
 from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
 from epistemic_case_mapper.map_briefing_memo_slots import _rewrite_mentions_anchor_row
-from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
-from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
 from epistemic_case_mapper.map_briefing_section_rewrite import (
     _rewrite_one_section,
     _section_rewrite_prompt,
@@ -33,101 +31,6 @@ from epistemic_case_mapper.map_briefing_section_structure import structured_scop
 from epistemic_case_mapper.main_memo_obligations import section_obligations_for_title
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
-
-
-def test_section_parser_accepts_raw_markdown_section() -> None:
-    payload = parse_section_payload(
-        "## Why This Read\n\nThe section was returned directly as Markdown.",
-        expected_title="Why This Read",
-    )
-
-    assert payload == {
-        "section_markdown": "## Why This Read\n\nThe section was returned directly as Markdown."
-    }
-
-
-def test_section_parser_accepts_json_section_alias() -> None:
-    raw = '''```json
-{"action": "rewrite", "section": "## Practical Scope and Exceptions
-
-A scoped section.
-- A bullet with a literal newline."}
-```'''
-
-    payload = parse_section_payload(raw, expected_title="Practical Scope and Exceptions")
-
-    assert payload == {
-        "section_markdown": "## Practical Scope and Exceptions\n\nA scoped section.\n- A bullet with a literal newline."
-    }
-
-
-def test_section_parser_skips_large_prompt_backend_text_quickly() -> None:
-    raw = (
-        "You are an analyst producing decision-ready analysis for one section.\n"
-        "Return only valid JSON with this schema: {\"section_markdown\": \"## Same Heading\\n\\nRewritten section\"}.\n\n"
-        "Section contract:\n"
-        + ("x" * 120_000)
-        + "\n\nSection to rewrite:\n## Why This Read\n\nDraft text."
-    )
-
-    assert parse_section_payload(raw, expected_title="Why This Read") is None
-
-
-def test_section_model_attempts_retry_parse_failure() -> None:
-    calls: list[str] = []
-
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        calls.append(prompt)
-        if len(calls) == 1:
-            return ModelBackendResult(text="not a section", backend=backend)
-        return ModelBackendResult(text="## Why This Read\n\nValid section.", backend=backend)
-
-    result = run_section_model_attempts(
-        prompt="Base prompt",
-        expected_title="Why This Read",
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-        validate=lambda text: (text, []),
-        run_backend=fake_backend,
-    )
-
-    assert result["accepted"] is True
-    assert result["attempt_count"] == 2
-    assert [attempt["status"] for attempt in result["attempts"]] == ["parse_failed", "accepted"]
-    assert result["attempts"][0]["raw"] == "not a section"
-    assert result["attempts"][1]["raw"].startswith("## Why This Read")
-    assert "Previous attempt 1 was rejected" in calls[1]
-
-
-def test_section_model_attempts_retry_validation_failure() -> None:
-    calls: list[str] = []
-
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
-        calls.append(prompt)
-        text = "## Decision Cruxes\n\nBad section." if len(calls) == 1 else "## Decision Cruxes\n\nGood section."
-        return ModelBackendResult(text=text, backend=backend)
-
-    def validate(text: str):
-        return text, ["missing crux"] if "Bad" in text else []
-
-    result = run_section_model_attempts(
-        prompt="Base prompt",
-        expected_title="Decision Cruxes",
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-        validate=validate,
-        run_backend=fake_backend,
-    )
-
-    assert result["accepted"] is True
-    assert result["attempt_count"] == 2
-    assert result["attempts"][0]["issues"] == ["missing crux"]
-    assert result["attempts"][0]["raw"].startswith("## Decision Cruxes")
-    assert "Rejected section to correct:" in calls[1]
-    assert "## Decision Cruxes\n\nBad section." in calls[1]
-    assert "Correct the rejected section instead of starting over" in calls[1]
 
 
 def test_required_evidence_can_match_strong_paraphrase_without_exact_source_title() -> None:
@@ -239,8 +142,24 @@ def test_section_rewrite_repairs_rejected_section_with_model_before_fallback(mon
     }
     calls: list[str] = []
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
         calls.append(prompt)
+        if prompt.startswith("You are a validation adjudicator"):
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "issue_assessments": [
+                            {
+                                "issue_index": 0,
+                                "blocking": True,
+                                "reason": "The section still uses vague non-analytic language.",
+                                "repair_instruction": "Rewrite with a concrete reasoning move.",
+                            }
+                        ]
+                    }
+                ),
+                backend=backend,
+            )
         if prompt.startswith("You are correcting one rejected section"):
             return ModelBackendResult(
                 text=(
@@ -274,6 +193,7 @@ def test_section_rewrite_repairs_rejected_section_with_model_before_fallback(mon
     assert result["report"]["accepted"] is True
     assert result["report"]["repair_attempt_count"] == 1
     assert "bounded read rather than a broad conclusion" in result["section"]
+    assert any(prompt.startswith("You are a validation adjudicator") for prompt in calls)
     assert any("Rejected section to correct:" in prompt for prompt in calls)
     assert any(prompt.startswith("You are correcting one rejected section") for prompt in calls)
 

@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
 from epistemic_case_mapper.evidence_drift_validation import evidence_drift_issues
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_context_reports import build_section_context_acceptance_report
-from epistemic_case_mapper.main_memo_obligations import (
-    build_main_memo_obligation_plan,
-    obligation_issues_for_text,
-    section_obligations_for_title,
-)
+from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_plan, obligation_issues_for_text, section_obligations_for_title
 from epistemic_case_mapper.map_briefing_decision_brief_last import (
     decision_brief_last_issues,
     decision_brief_last_packet,
@@ -34,6 +29,7 @@ from epistemic_case_mapper.map_briefing_memo_slots import (
 from epistemic_case_mapper.map_briefing_reader_contracts import build_reader_memo_rewrite_contract
 from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
 from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
+from epistemic_case_mapper.map_briefing_section_adjudication import adjudicate_decision_brief_issues, adjudicate_section_issues
 from epistemic_case_mapper.map_briefing_section_ownership import (
     build_section_evidence_ownership,
     compact_evidence_reference,
@@ -42,17 +38,11 @@ from epistemic_case_mapper.map_briefing_section_ownership import (
     section_owns_evidence,
 )
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet, select_section_cruxes
-from epistemic_case_mapper.map_briefing_section_packets import (
-    prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact,
-)
+from epistemic_case_mapper.map_briefing_section_packets import prune_section_packet_for_ownership, section_synthesis_packet, write_section_packets_artifact
 from epistemic_case_mapper.map_briefing_section_obligations import section_main_memo_obligations
-from epistemic_case_mapper.map_briefing_section_prompt_contract import (
-    _text_mentions_owned_elsewhere,
-    model_facing_section_contract,
-    model_facing_section_markdown,
-)
+from epistemic_case_mapper.map_briefing_section_prompt_contract import _text_mentions_owned_elsewhere
 from epistemic_case_mapper.map_briefing_section_repair_prompt import section_repair_prompt
-from epistemic_case_mapper.map_briefing_section_quality_prompt import section_quality_guidance
+from epistemic_case_mapper.map_briefing_section_rewrite_prompt import section_rewrite_prompt as _section_rewrite_prompt
 from epistemic_case_mapper.map_briefing_section_structure import (
     repair_structured_section,
     section_structure_issues,
@@ -279,7 +269,18 @@ def _rewrite_one_section(
             return {"section": clean_reader_memo_text(repaired), "prompt": prompt, "raw": "", "report": section_report}
     attempt_result = run_section_model_attempts(
         prompt=prompt, expected_title=section["title"], backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
-        validate=lambda rewritten: _validate_rewritten_section(rewritten, section, section_contract), run_backend=run_model_backend,
+        validate=lambda rewritten: _validate_rewritten_section(rewritten, section, section_contract),
+        adjudicate=lambda rewritten, issues: adjudicate_section_issues(
+            section_title=section["title"],
+            validation_context=_section_allowed_evidence_context(section, section_contract),
+            rewritten=rewritten,
+            issues=issues,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            run_backend=run_model_backend,
+        ),
+        run_backend=run_model_backend,
     )
     _apply_attempt_report(section_report, attempt_result, deterministic_text=section["markdown"])
     if attempt_result["accepted"]:
@@ -333,6 +334,16 @@ def _repair_rejected_section_with_model(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         validate=lambda rewritten: _validate_rewritten_section(rewritten, section, section_contract),
+        adjudicate=lambda rewritten, issues: adjudicate_section_issues(
+            section_title=section["title"],
+            validation_context=_section_allowed_evidence_context(section, section_contract),
+            rewritten=rewritten,
+            issues=issues,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            run_backend=run_model_backend,
+        ),
         run_backend=run_model_backend,
     )
 
@@ -383,6 +394,16 @@ def _rewrite_decision_brief_last(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         validate=lambda rewritten: _validate_final_decision_brief(rewritten, contract, body_memo),
+        adjudicate=lambda rewritten, issues: adjudicate_decision_brief_issues(
+            contract=contract,
+            body_memo=body_memo,
+            rewritten=rewritten,
+            issues=issues,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            run_backend=run_model_backend,
+        ),
         run_backend=run_model_backend,
     )
     if result["accepted"]:
@@ -413,6 +434,16 @@ def _rewrite_decision_brief_last(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             validate=lambda rewritten: _validate_final_decision_brief(rewritten, contract, body_memo),
+            adjudicate=lambda rewritten, issues: adjudicate_decision_brief_issues(
+                contract=contract,
+                body_memo=body_memo,
+                rewritten=rewritten,
+                issues=issues,
+                backend=backend,
+                backend_timeout=backend_timeout,
+                backend_retries=backend_retries,
+                run_backend=run_model_backend,
+            ),
             run_backend=run_model_backend,
         )
         if repair["accepted"]:
@@ -438,39 +469,6 @@ def _rewrite_decision_brief_last(
         "fallback_used": True,
     }
     return {"section": fallback, "prompt": result["prompt"], "raw": result["raw"], "report": section_report}
-
-
-def _section_rewrite_prompt(section: dict[str, str], contract: dict[str, Any], *, previous_title: str, next_title: str) -> str:
-    model_contract = model_facing_section_contract(contract)
-    model_section = model_facing_section_markdown(section["markdown"], contract)
-    quality_guidance = section_quality_guidance(model_contract)
-    return (
-        "You are an analyst producing decision-ready analysis for one section of a source-grounded decision memo.\n"
-        "Your job is to help a thoughtful reader decide what follows from the evidence, not to mechanically restate the packet.\n"
-        "Rewrite only the supplied section. You may reorganize and synthesize within this section, but do not add facts.\n"
-        "Use only the allowed information in model_section_packet and validation_obligations. If a fact is not present there or in the supplied deterministic draft, leave it out.\n"
-        "Use model_section_packet as the primary structure: section_thesis, section_use_projections, owned_evidence, local_tensions, canonical_cruxes, and must_include_quantities define the section's job.\n"
-        "When evidence appears in multiple sections, use section_use_projections to decide what distinct value this section adds. Do not repeat a source summary unless it performs this section's assigned section_use.\n"
-        "When model_section_packet includes must_include_quantities, use one relevant estimate in evidence-bearing sections instead of only qualitative phrasing.\n"
-        "Apply evidence-weight discipline: say which evidence is doing the most work, which evidence weakens or bounds it, and which inputs are indirect, weak, role-inferred, appendix-only, or otherwise lower weight.\n"
-        "Do not turn low-weight or indirect evidence into broad practical advice. Use calibrated verbs such as suggests, bounds, weakens, or is consistent with when the packet marks evidence as weak or indirect.\n"
-        "In evidence-bearing sections, prefer a compact analytic progression over a list: load-bearing support, counterweight, scope or method limit, then the implication for this section.\n"
-        "Preserve every required local evidence anchor, gap, confidence line, crux item, and main-memo obligation in the section contract.\n"
-        "For each validation_obligations.required_main_memo_obligations item, include one listed search term exactly when search_terms are provided; otherwise use a faithful source-grounded paraphrase of its statement.\n"
-        "Use owned_evidence through the matching section_use_projections; keep reference_only_evidence to brief role-level context if it appears in the packet.\n"
-        "Do not invent or abbreviate citation labels. Avoid parenthetical source labels unless the exact label already appears in the deterministic draft or section contract.\n"
-        "Return only the rewritten section as regular Markdown. Start with exactly the same ## heading and do not include any other top-level ## section.\n"
-        "Do not wrap the answer in JSON or a code fence; the validator will check evidence coverage after generation.\n\n"
-        f"Previous section heading: {previous_title or 'none'}\n"
-        f"Next section heading: {next_title or 'none'}\n\n"
-        "Evidence-quality guidance for this section:\n"
-        f"{quality_guidance}\n\n"
-        "Section contract:\n"
-        f"{json.dumps(model_contract, indent=2, ensure_ascii=False)}\n\n"
-        "The section below is the deterministic draft to improve using the section synthesis packet.\n"
-        "Section to rewrite:\n"
-        f"{model_section.strip()}\n"
-    )
 
 
 def _section_rewrite_issues(rewritten: str, original: dict[str, str], contract: dict[str, Any]) -> list[str]:

@@ -15,6 +15,21 @@ from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.test_decision_model_vertical_slice import _arbitrary_candidate_map, _quality_report
 
 
+def _confirming_adjudication() -> str:
+    return json.dumps(
+        {
+            "issue_assessments": [
+                {
+                    "issue_index": 0,
+                    "blocking": True,
+                    "reason": "The deterministic issue is material for this test case.",
+                    "repair_instruction": "Repair the confirmed validation failure.",
+                }
+            ]
+        }
+    )
+
+
 def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
     scaffold["argument_model"]["quantitative_anchors"] = [
@@ -29,8 +44,10 @@ def test_section_rewrite_rejects_section_that_drops_main_memo_obligation(monkeyp
     ]
     seen_prompt = ""
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
         nonlocal seen_prompt
+        if prompt.startswith("You are a validation adjudicator"):
+            return ModelBackendResult(text=_confirming_adjudication(), backend=backend)
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
         if prompt.startswith("You are an analyst producing decision-ready analysis") and section.startswith("## Evidence Carrying the Conclusion"):
             seen_prompt = prompt
@@ -57,7 +74,7 @@ def test_section_rewrite_generates_decision_brief_last_with_model_bluf(monkeypat
     memo, appendix, scaffold, candidate_map = _memo_package()
     calls: list[str] = []
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
         calls.append(prompt)
         if "opening BLUF" in prompt:
             markdown = (
@@ -86,8 +103,10 @@ def test_section_rewrite_repairs_rejected_decision_brief_before_fallback(monkeyp
     memo, appendix, scaffold, candidate_map = _memo_package()
     calls: list[str] = []
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
         calls.append(prompt)
+        if prompt.startswith("You are a validation adjudicator"):
+            return ModelBackendResult(text=_confirming_adjudication(), backend=backend)
         if prompt.startswith("You are correcting a rejected Decision Brief"):
             markdown = (
                 "## Decision Brief\n\n"
@@ -119,7 +138,9 @@ def test_section_rewrite_repairs_rejected_decision_brief_before_fallback(monkeyp
 def test_section_rewrite_falls_back_when_decision_brief_bluf_is_rejected(monkeypatch) -> None:
     memo, appendix, scaffold, candidate_map = _memo_package()
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+        if prompt.startswith("You are a validation adjudicator"):
+            return ModelBackendResult(text=_confirming_adjudication(), backend=backend)
         if "opening BLUF" in prompt:
             return ModelBackendResult(text='{"section_markdown": "## Decision Brief\\n\\nToo thin."}', backend=backend)
         section = prompt.split("Section to rewrite:\n", 1)[1].strip()
