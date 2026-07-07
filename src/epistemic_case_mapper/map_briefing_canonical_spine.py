@@ -58,7 +58,7 @@ def _default_answer_field(scaffold: dict[str, Any], question: str, cards: list[d
     bottom_line = synthesis.get("bottom_line", {}) if isinstance(synthesis.get("bottom_line"), dict) else {}
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
     default_answer = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
-    top_cards = [card for card in cards if card.get("role") in {"support", "quantity"}][:3] or cards[:2]
+    top_cards = _default_answer_cards(cards)
     if not top_cards:
         return {
             "field_id": "default_answer",
@@ -72,7 +72,7 @@ def _default_answer_field(scaffold: dict[str, Any], question: str, cards: list[d
             "limits": ["no_usable_candidate_cards"],
         }
     claim = (
-        str(bottom_line.get("current_read", "")).strip()
+        _bottom_line_default_claim(bottom_line)
         or str(default_answer.get("plain_language_instruction", "")).strip()
         or _default_from_cards(question, top_cards)
     )
@@ -94,9 +94,9 @@ def _evidence_carrier_fields(
     prefix: str,
     role: str,
 ) -> list[dict[str, Any]]:
-    selected = role_cards[:4] or _fallback_evidence_carrier_cards(all_cards, role)
+    selected = _load_bearing_cards(role_cards)[:4] or _fallback_evidence_carrier_cards(all_cards, role)
     fields = _fields_from_cards(selected, prefix, role)
-    if role_cards:
+    if selected and all(card in role_cards for card in selected):
         return fields
     for field in fields:
         field["limits"] = _dedupe([*field.get("limits", []), "role_inferred_from_claim_text"])
@@ -108,20 +108,110 @@ def _fallback_evidence_carrier_cards(cards: list[dict[str, Any]], role: str) -> 
     blocked_terms = _counterevidence_terms() if role == "support" else _support_terms()
     scored = []
     for card in cards:
+        if not _eligible_load_bearing_card(card):
+            continue
         claim = str(card.get("claim", "")).lower()
         score = _stance_score(claim, scoring_terms) - 0.5 * _stance_score(claim, blocked_terms)
         if score <= 0:
             continue
-        scored.append((score, int(card.get("decision_relevance_score", 0) or 0), str(card.get("candidate_card_id", "")), card))
+        scored.append((
+            score,
+            _answer_relevance_score(card),
+            int(card.get("decision_relevance_score", 0) or 0),
+            str(card.get("candidate_card_id", "")),
+            card,
+        ))
     if scored:
-        return [row[3] for row in sorted(scored, reverse=True)[:4]]
+        return [row[4] for row in sorted(scored, reverse=True)[:4]]
     if role != "support":
         return []
     return [
         card
         for card in cards
-        if card.get("anchor_confidence") != "missing" and str(card.get("claim", "")).strip()
+        if _eligible_load_bearing_card(card)
     ][:2]
+
+
+def _default_answer_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    role_preferred = [
+        card
+        for card in cards
+        if card.get("role") in {"support", "quantity"} and _eligible_load_bearing_card(card)
+    ]
+    if role_preferred:
+        return role_preferred[:3]
+    scored = [
+        (_answer_relevance_score(card), int(card.get("decision_relevance_score", 0) or 0), str(card.get("candidate_card_id", "")), card)
+        for card in cards
+        if _eligible_load_bearing_card(card)
+    ]
+    scored = [row for row in scored if row[0] > 0 or row[1] > 0]
+    if scored:
+        return [row[3] for row in sorted(scored, reverse=True)[:3]]
+    return [
+        dict(card, spine_fallback_reason="no_clean_load_bearing_default_card")
+        for card in cards
+        if _minimally_usable_card(card)
+    ][:2]
+
+
+def _load_bearing_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [card for card in cards if _eligible_load_bearing_card(card)]
+
+
+def _eligible_load_bearing_card(card: dict[str, Any]) -> bool:
+    if not _minimally_usable_card(card):
+        return False
+    claim = str(card.get("claim", "")).strip()
+    if _looks_like_title_or_heading(claim):
+        return False
+    if _looks_like_methods_only(claim):
+        return False
+    if _looks_like_source_metadata(claim):
+        return False
+    return True
+
+
+def _minimally_usable_card(card: dict[str, Any]) -> bool:
+    claim = str(card.get("claim", "")).strip()
+    if card.get("anchor_confidence") == "missing" or card.get("fragment_risk") or card.get("boilerplate_risk"):
+        return False
+    if card.get("inclusion_recommendation") == "appendix_only" and not card.get("spine_fallback_reason"):
+        return False
+    if len(_terms(claim)) < 5:
+        return False
+    return True
+
+
+def _answer_relevance_score(card: dict[str, Any]) -> int:
+    claim = str(card.get("claim", "")).lower()
+    score = 0
+    for term in (
+        "associated",
+        "association",
+        "risk",
+        "outcome",
+        "mortality",
+        "cardiovascular",
+        "adverse",
+        "benefit",
+        "reduction",
+        "increase",
+        "decrease",
+        "guidance",
+        "recommendation",
+        "conclusion",
+        "results",
+    ):
+        if term in claim:
+            score += 1
+    if card.get("quantity_values"):
+        score += 2
+    if card.get("role") == "support":
+        score += 1
+    if card.get("role") == "counterweight":
+        score += 1
+    return score
 
 
 def _stance_score(text: str, terms: tuple[str, ...]) -> float:
@@ -356,9 +446,27 @@ def _source_anchors(cards: list[dict[str, Any]], scaffold: dict[str, Any]) -> li
     return list(anchors.values())[:20]
 
 
+def _bottom_line_default_claim(bottom_line: dict[str, Any]) -> str:
+    current_read = str(bottom_line.get("current_read", "")).strip()
+    if current_read and not _looks_like_answer_instruction(current_read):
+        return current_read
+    classification = str(bottom_line.get("classification", "")).strip()
+    why = str(bottom_line.get("why_this_frame", "")).strip()
+    if classification:
+        label = classification.replace("_", " ")
+        claim = f"The source packet supports a bounded {label} read."
+        if why and not _looks_like_answer_instruction(why):
+            claim += f" {why}"
+        return claim
+    return ""
+
+
 def _default_from_cards(question: str, cards: list[dict[str, Any]]) -> str:
     if cards:
-        return f"For the decision question, the current source packet is most directly carried by: {cards[0].get('claim', '')}"
+        claim = str(cards[0].get("claim", "")).strip()
+        if _eligible_load_bearing_card(cards[0]):
+            return f"The current answer is bounded by the source-backed finding that {claim[0].lower() + claim[1:] if claim else claim}"
+        return f"The current source packet can only support a bounded answer to the decision question: {question}"
     return f"The current source packet is too sparse to answer the decision question without caveats: {question}"
 
 
@@ -373,6 +481,81 @@ def _looks_like_answer_instruction(text: str) -> bool:
             "say ",
             "write ",
         )
+    )
+
+
+def _looks_like_title_or_heading(text: str) -> bool:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip()
+    if not cleaned:
+        return True
+    terms = _terms(cleaned)
+    if len(terms) < 5:
+        return True
+    lower = cleaned.lower()
+    if lower.startswith(("title:", "source id:", "journal:", "publication year:", "doi:", "pmid:")):
+        return True
+    if ":" in cleaned and not any(marker in lower for marker in _evidence_markers()):
+        return True
+    if cleaned.endswith(".") and any(marker in lower for marker in _evidence_markers()):
+        return False
+    titlecase_terms = [
+        term
+        for term in re.findall(r"[A-Za-z][A-Za-z'-]+", cleaned)
+        if term[:1].isupper() and term.lower() not in _LOWERCASE_EVIDENCE_WORDS
+    ]
+    alpha_terms = re.findall(r"[A-Za-z][A-Za-z'-]+", cleaned)
+    if alpha_terms and len(titlecase_terms) / max(1, len(alpha_terms)) >= 0.65 and not any(marker in lower for marker in _evidence_markers()):
+        return True
+    return False
+
+
+def _looks_like_methods_only(text: str) -> bool:
+    lower = str(text).strip().lower()
+    if lower.startswith(("methods:", "method:", "background:", "objective:", "objectives:", "design:", "setting:", "participants:")):
+        return not any(marker in lower for marker in ("result", "conclusion", "associated", "risk", "effect", "outcome"))
+    if lower.startswith("results:"):
+        return False
+    return False
+
+
+def _looks_like_source_metadata(text: str) -> bool:
+    lower = str(text).strip().lower()
+    return lower.startswith(
+        (
+            "limitations: automatically fetched",
+            "fetch status:",
+            "source id:",
+            "pubmed url:",
+            "doi:",
+            "pmid:",
+            "journal:",
+            "publication year:",
+        )
+    )
+
+
+def _evidence_markers() -> tuple[str, ...]:
+    return (
+        "associated",
+        "association",
+        "risk",
+        "reduced",
+        "increased",
+        "decreased",
+        "lower",
+        "higher",
+        "effect",
+        "outcome",
+        "mortality",
+        "conclusion",
+        "conclusions",
+        "results",
+        "suggest",
+        "showed",
+        "found",
+        "evidence",
+        "recommend",
+        "guidance",
     )
 
 
@@ -440,3 +623,34 @@ def _dedupe(values: list[str]) -> list[str]:
 def _shorten(text: str, limit: int) -> str:
     cleaned = re.sub(r"\s+", " ", str(text)).strip()
     return cleaned if len(cleaned) <= limit else cleaned[: limit - 1].rstrip() + "..."
+
+
+def _terms(text: str) -> list[str]:
+    return re.findall(r"[A-Za-z0-9][A-Za-z0-9'-]*", str(text))
+
+
+_LOWERCASE_EVIDENCE_WORDS = {
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "just",
+    "more",
+    "not",
+    "of",
+    "on",
+    "or",
+    "than",
+    "that",
+    "the",
+    "through",
+    "to",
+    "with",
+    "without",
+}

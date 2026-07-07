@@ -119,6 +119,37 @@ def test_spine_default_does_not_store_instruction_text_when_cards_exist() -> Non
     assert bundle["canonical_decision_spine"]["default_answer"]["candidate_card_ids"]
 
 
+def test_spine_does_not_use_title_like_claim_as_default_answer_carrier() -> None:
+    scaffold = _scaffold()
+    cards = scaffold["candidate_evidence_cards"]["cards"]
+    cards[0]["candidate_card_id"] = "title_card"
+    cards[0]["role"] = "support"
+    cards[0]["claim"] = "Cardiovascular Harm From Intervention: More Than One Mechanism."
+    cards[0]["source_excerpt"] = cards[0]["claim"]
+    cards[0]["decision_relevance_score"] = 10
+    cards[1]["candidate_card_id"] = "substantive_card"
+    cards[1]["role"] = "scope"
+    cards[1]["claim"] = "CONCLUSIONS: The intervention was not associated with higher adverse-event risk in the available source-backed cohort."
+    cards[1]["source_excerpt"] = cards[1]["claim"]
+    cards[1]["decision_relevance_score"] = 8
+    scaffold["decision_synthesis_model"] = {
+        "bottom_line": {
+            "classification": "neutral_or_low_concern_under_stated_conditions",
+            "current_read": "State the default as neutral under stated conditions.",
+            "why_this_frame": "The strongest support is source-backed while the evidence remains bounded.",
+        }
+    }
+
+    bundle = build_decision_spine_bundle(_candidate_map(), scaffold, question="Should the option be adopted?")
+    spine = bundle["canonical_decision_spine"]
+
+    assert "title_card" not in spine["default_answer"]["candidate_card_ids"]
+    assert spine["default_answer"]["candidate_card_ids"][0] == "substantive_card"
+    assert "neutral or low concern" in spine["default_answer"]["claim"]
+    assert all("Cardiovascular Harm From Intervention" not in row["claim"] for row in spine["strongest_support"])
+    assert spine["strongest_support"][0]["candidate_card_ids"] == ["substantive_card"]
+
+
 def test_section_packet_prefers_canonical_projection_when_present() -> None:
     bundle = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")
     contract = {
