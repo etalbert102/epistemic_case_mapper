@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_classical_selection import build_classical_evidence_selection_report
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
+from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
+from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_spine_validation import validate_canonical_decision_spine
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 def test_classical_selection_reports_duplicates_centrality_and_quantities() -> None:
@@ -129,6 +132,49 @@ def test_final_validation_fails_when_spine_projection_not_ready() -> None:
 
     assert report["status"] == "fails_contract"
     assert any(issue["issue_type"] == "spine_projection_not_synthesis_ready" for issue in report["issues"])
+
+
+def test_model_spine_arbitration_accepts_only_existing_field_ids(monkeypatch) -> None:
+    spine = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")["canonical_decision_spine"]
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+        return ModelBackendResult(
+            text='{"default_answer_field_id":"default_answer","support_field_ids":["strongest_support_1"],"counterevidence_field_ids":[],"boundary_field_ids":[],"rationale":"Default and support are source-backed."}',
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+
+    result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert result["spine"]["model_arbitration"]["support_field_ids"] == ["strongest_support_1"]
+
+
+def test_model_spine_arbitration_rejects_invented_field_ids(monkeypatch) -> None:
+    spine = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")["canonical_decision_spine"]
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+        return ModelBackendResult(
+            text='{"default_answer_field_id":"invented_field","support_field_ids":[],"counterevidence_field_ids":[],"boundary_field_ids":[],"rationale":"Bad id."}',
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+
+    result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "rejected_invalid_ids"
+    assert "model_arbitration" not in result["spine"]
+
+
+def test_global_memo_plan_is_deprecated_when_spine_projections_are_ready() -> None:
+    scaffold = {"section_projection_readiness_report": {"status": "ready"}}
+
+    attach_global_memo_plan(scaffold, backend="prompt", backend_timeout=30, backend_retries=0)
+
+    assert scaffold["global_memo_plan"]["status"] == "deprecated_by_canonical_spine"
+    assert scaffold["global_memo_plan_prompt"].startswith("Skipped")
 
 
 def _candidate_map() -> dict:

@@ -51,7 +51,6 @@ from epistemic_case_mapper.map_briefing_final_editor_artifacts import (
     write_reader_memo_edit_artifacts,
 )
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
-from epistemic_case_mapper.map_briefing_global_plan import build_global_memo_plan
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
 from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_scaffold
@@ -59,6 +58,7 @@ from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger,
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
+from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
 ROLE_PRIORITY = {
     "crux": 0,
     "scope_limit": 1,
@@ -136,8 +136,8 @@ def run_map_briefing(
     scaffold["claim_canonicalization_report"] = canonicalization_report
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
-    scaffold.update(build_decision_spine_bundle(prioritized_map, scaffold, question=question))
-    _attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
+    _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
+    attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -237,23 +237,6 @@ def _map_briefing_result(
         calibrated_confidence=str(render_state["calibrated"]),
         map_quality_status=str(quality_report.get("status", "unknown")),
     )
-def _attach_global_memo_plan(
-    scaffold: dict[str, Any],
-    *,
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
-) -> None:
-    result = build_global_memo_plan(
-        scaffold,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
-    )
-    scaffold["global_memo_plan"] = result["plan"]
-    scaffold["global_memo_plan_validation"] = result["validation"]
-    scaffold["global_memo_plan_prompt"] = result["prompt"]
-    scaffold["global_memo_plan_raw"] = result["raw"]
 def _attach_decision_ready_context_reports(
     prioritized_map: dict[str, Any],
     scaffold: dict[str, Any],
@@ -267,6 +250,23 @@ def _attach_decision_ready_context_reports(
             scaffold=scaffold,
             question=question,
             source_lookup=source_lookup,
+        )
+    )
+
+
+def _attach_decision_spine_bundle(
+    prioritized_map: dict[str, Any],
+    scaffold: dict[str, Any],
+    *,
+    question: str,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> None:
+    scaffold.update(
+        build_decision_spine_bundle(
+            prioritized_map, scaffold, question=question, backend=backend,
+            backend_timeout=backend_timeout, backend_retries=backend_retries,
         )
     )
 

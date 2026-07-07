@@ -91,6 +91,8 @@ def rewrite_reader_memo_by_section(
         "owned_row_count": len(contract["_section_evidence_ownership"].get("rows", {})),
         "owner_counts": contract["_section_evidence_ownership"].get("owner_counts", {}),
     }
+    if _projection_readiness_blocks_synthesis(scaffold):
+        return _blocked_by_projection_readiness_result(memo, sections, contract, report, artifacts)
     if backend.strip() == "prompt":
         section_packets = _report_only_section_packets(sections, contract)
         context_acceptance_report = build_section_context_acceptance_report(section_packets)
@@ -202,6 +204,41 @@ def _write_section_context_acceptance_report(artifacts: Any, report: dict[str, A
     path = artifacts / "section_context_acceptance_report.json"
     write_json(path, report)
     return path
+
+
+def _blocked_by_projection_readiness_result(
+    memo: str,
+    sections: list[dict[str, str]],
+    contract: dict[str, Any],
+    report: dict[str, Any],
+    artifacts: Any | None,
+) -> dict[str, Any]:
+    section_packets = _report_only_section_packets(sections, contract)
+    context_acceptance_report = build_section_context_acceptance_report(section_packets)
+    report["status"] = "blocked_by_spine_projection_readiness"
+    report["section_packet_count"] = len(section_packets)
+    report["section_context_acceptance_status"] = "not_synthesis_ready"
+    report["issues"] = ["canonical spine projections are not synthesis-ready"]
+    section_packet_path = None
+    section_context_acceptance_report_path = None
+    if artifacts is not None:
+        section_packet_path = write_section_packets_artifact(artifacts, section_packets)
+        section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
+        report["section_packets_path"] = str(section_packet_path)
+        report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
+    return {
+        "memo": memo,
+        "report": report,
+        "section_packets_path": section_packet_path,
+        "section_context_acceptance_report_path": section_context_acceptance_report_path,
+    }
+
+
+def _projection_readiness_blocks_synthesis(scaffold: dict[str, Any]) -> bool:
+    readiness = scaffold.get("section_projection_readiness_report", {})
+    if not isinstance(readiness, dict):
+        return False
+    return readiness.get("status") == "not_synthesis_ready"
 
 
 def _rewrite_one_section(

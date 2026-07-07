@@ -56,6 +56,9 @@ def write_scaffold_artifacts(
         "slot_eligibility_audit": artifacts / "slot_eligibility_audit.json",
         "canonical_decision_spine": artifacts / "canonical_decision_spine.json",
         "canonical_decision_spine_validation": artifacts / "canonical_decision_spine_validation.json",
+        "canonical_decision_spine_model_arbitration_report": artifacts / "canonical_decision_spine_model_arbitration_report.json",
+        "canonical_decision_spine_model_prompt": artifacts / "canonical_decision_spine_model_prompt.txt",
+        "canonical_decision_spine_model_raw": artifacts / "canonical_decision_spine_model_raw.txt",
         "decision_spine_consistency_report": artifacts / "decision_spine_consistency_report.json",
         "section_projection_packets": artifacts / "section_projection_packets.json",
         "section_projection_readiness_report": artifacts / "section_projection_readiness_report.json",
@@ -103,6 +106,9 @@ def write_scaffold_artifacts(
     write_json(paths["slot_eligibility_audit"], scaffold.get("slot_eligibility_audit", {}))
     write_json(paths["canonical_decision_spine"], scaffold.get("canonical_decision_spine", {}))
     write_json(paths["canonical_decision_spine_validation"], scaffold.get("canonical_decision_spine_validation", {}))
+    write_json(paths["canonical_decision_spine_model_arbitration_report"], scaffold.get("canonical_decision_spine_model_arbitration_report", {}))
+    write_markdown(paths["canonical_decision_spine_model_prompt"], str(scaffold.get("canonical_decision_spine_model_prompt", "")))
+    write_markdown(paths["canonical_decision_spine_model_raw"], str(scaffold.get("canonical_decision_spine_model_raw", "")))
     write_json(paths["decision_spine_consistency_report"], scaffold.get("decision_spine_consistency_report", {}))
     write_json(paths["section_projection_packets"], scaffold.get("section_projection_packets", {}))
     write_json(paths["section_projection_readiness_report"], scaffold.get("section_projection_readiness_report", {}))
@@ -244,6 +250,9 @@ def write_run_summary(
             "slot_eligibility_audit": scaffold_paths["slot_eligibility_audit"],
             "canonical_decision_spine": scaffold_paths["canonical_decision_spine"],
             "canonical_decision_spine_validation": scaffold_paths["canonical_decision_spine_validation"],
+            "canonical_decision_spine_model_arbitration_report": scaffold_paths["canonical_decision_spine_model_arbitration_report"],
+            "canonical_decision_spine_model_prompt": scaffold_paths["canonical_decision_spine_model_prompt"],
+            "canonical_decision_spine_model_raw": scaffold_paths["canonical_decision_spine_model_raw"],
             "decision_spine_consistency_report": scaffold_paths["decision_spine_consistency_report"],
             "section_projection_packets": scaffold_paths["section_projection_packets"],
             "section_projection_readiness_report": scaffold_paths["section_projection_readiness_report"],
@@ -345,6 +354,7 @@ def write_final_review_packet(
         f"- Classical evidence selection: `{_rel(repo_root, scaffold_paths.get('classical_evidence_selection_report'))}`",
         f"- Slot eligibility audit: `{_rel(repo_root, scaffold_paths.get('slot_eligibility_audit'))}`",
         f"- Canonical decision spine: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine'))}`",
+        f"- Canonical spine model arbitration: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine_model_arbitration_report'))}`",
         f"- Decision spine consistency: `{_rel(repo_root, scaffold_paths.get('decision_spine_consistency_report'))}`",
         f"- Section projection packets: `{_rel(repo_root, scaffold_paths.get('section_projection_packets'))}`",
         f"- Section projection readiness: `{_rel(repo_root, scaffold_paths.get('section_projection_readiness_report'))}`",
@@ -473,6 +483,7 @@ def map_briefing_summary_payload(
     slot_audit = _scaffold_dict(scaffold, "slot_eligibility_audit")
     canonical_spine = _scaffold_dict(scaffold, "canonical_decision_spine")
     spine_validation = _scaffold_dict(scaffold, "canonical_decision_spine_validation")
+    spine_arbitration = _scaffold_dict(scaffold, "canonical_decision_spine_model_arbitration_report")
     spine_readiness = _scaffold_dict(scaffold, "section_projection_readiness_report")
     spine_quality = _scaffold_dict(scaffold, "spine_quality_report")
     section_acceptance_status = rewrite_result["report"].get("section_context_acceptance_status")
@@ -519,6 +530,7 @@ def map_briefing_summary_payload(
         "slot_eligibility_status": slot_audit.get("status"),
         "canonical_decision_spine_status": canonical_spine.get("status"),
         "canonical_decision_spine_validation_status": spine_validation.get("status"),
+        "canonical_decision_spine_model_arbitration_status": spine_arbitration.get("status"),
         "section_projection_readiness_status": spine_readiness.get("status"),
         "spine_quality_status": spine_quality.get("status"),
         "canonical_spine_missing_slot_count": _list_count(canonical_spine, "missing_decision_slots"),

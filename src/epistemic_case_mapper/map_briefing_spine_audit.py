@@ -8,6 +8,7 @@ def build_spine_quality_report(scaffold: dict[str, Any]) -> dict[str, Any]:
     validation = _dict(scaffold.get("canonical_decision_spine_validation"))
     consistency = _dict(scaffold.get("decision_spine_consistency_report"))
     projection = _dict(scaffold.get("section_projection_readiness_report"))
+    arbitration = _dict(scaffold.get("canonical_decision_spine_model_arbitration_report"))
     classical = _dict(scaffold.get("classical_evidence_selection_report"))
     slot_audit = _dict(scaffold.get("slot_eligibility_audit"))
     return {
@@ -16,6 +17,7 @@ def build_spine_quality_report(scaffold: dict[str, Any]) -> dict[str, Any]:
         "canonical_spine_status": spine.get("status"),
         "canonical_spine_validation_status": validation.get("status"),
         "decision_spine_consistency_status": consistency.get("status"),
+        "model_arbitration_status": arbitration.get("status"),
         "section_projection_readiness_status": projection.get("status"),
         "candidate_card_count": _dict(spine.get("construction_report")).get("candidate_card_count", 0),
         "source_anchor_count": _dict(spine.get("construction_report")).get("source_anchor_count", 0),
@@ -27,6 +29,7 @@ def build_spine_quality_report(scaffold: dict[str, Any]) -> dict[str, Any]:
             *_string_list(validation.get("issues")),
             *_string_list(consistency.get("issues")),
             *_string_list(projection.get("issues")),
+            *([] if arbitration.get("status") in {"accepted", "skipped_prompt_backend", ""} else [str(arbitration.get("message", ""))]),
         ],
     }
 
@@ -64,6 +67,8 @@ def render_spine_completion_audit(scaffold: dict[str, Any]) -> str:
     validation = _dict(scaffold.get("canonical_decision_spine_validation"))
     rows = [
         ("canonical_decision_spine.json", bool(canonical), canonical.get("status", "missing")),
+        ("canonical_decision_spine_model_arbitration_report.json", bool(scaffold.get("canonical_decision_spine_model_arbitration_report")), _dict(scaffold.get("canonical_decision_spine_model_arbitration_report")).get("status", "missing")),
+        ("canonical_decision_spine_model_prompt.txt", bool(scaffold.get("canonical_decision_spine_model_prompt") is not None), "present" if scaffold.get("canonical_decision_spine_model_prompt") is not None else "missing"),
         ("slot_eligibility_audit.json", bool(scaffold.get("slot_eligibility_audit")), _dict(scaffold.get("slot_eligibility_audit")).get("status", "missing")),
         ("classical_evidence_selection_report.json", bool(scaffold.get("classical_evidence_selection_report")), "present" if scaffold.get("classical_evidence_selection_report") else "missing"),
         ("claim_cluster_report.json", bool(scaffold.get("claim_cluster_report")), "present" if scaffold.get("claim_cluster_report") else "missing"),
