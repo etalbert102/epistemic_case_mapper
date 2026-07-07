@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from epistemic_case_mapper.classical_ml import tfidf_near_duplicate_pairs
 from epistemic_case_mapper.config_profiles import (
     EpistemicConfigProfile,
     config_profile_from_manifest_payload,
@@ -20,6 +19,7 @@ from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_prompt_examples, claim_prompt_json_schema, claim_prompt_schema
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
+from epistemic_case_mapper.staged_semantic_duplicate_quality import lexically_similar_opposite_direction_pairs, near_duplicate_claim_pairs
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -457,13 +457,23 @@ def _quality_issues(
             fallback_relation_count=fallback_relation_count,
         )
     )
-    duplicate_pairs = _near_duplicate_claim_pairs(claims)
+    duplicate_pairs = near_duplicate_claim_pairs(claims)
     if duplicate_pairs:
         issues.append(
             _quality_issue(
                 "risk",
                 "near_duplicate_claims",
                 "Near-duplicate claim pairs: " + ", ".join(f"{left}/{right}" for left, right in duplicate_pairs[:6]),
+            )
+        )
+    tension_like_pairs = lexically_similar_opposite_direction_pairs(claims)
+    if tension_like_pairs:
+        issues.append(
+            _quality_issue(
+                "note",
+                "lexically_similar_opposite_direction_claims",
+                "Lexically similar opposite-direction claim pairs may be tensions rather than duplicates: "
+                + ", ".join(f"{left}/{right}" for left, right in tension_like_pairs[:6]),
             )
         )
     permitted_types = manifest.relation_ontology.permitted_types()
@@ -622,21 +632,6 @@ def _counts(items: Any) -> dict[str, int]:
             continue
         counts[str(item)] = counts.get(str(item), 0) + 1
     return counts
-
-def _near_duplicate_claim_pairs(claims: list[dict[str, Any]]) -> list[tuple[str, str]]:
-    ids = [str(claim.get("claim_id", "")) for claim in claims]
-    texts = [str(claim.get("claim", "") or claim.get("text", "")) for claim in claims]
-    pair_scores = {
-        (left, right): score
-        for left, right, score in tfidf_near_duplicate_pairs(texts, ids, threshold=0.35)
-        if left and right
-    }
-    for left_index, left in enumerate(claims):
-        for right in claims[left_index + 1 :]:
-            pair = (str(left.get("claim_id", "")), str(right.get("claim_id", "")))
-            if _text_overlap_ratio(str(left.get("claim", "")), str(right.get("claim", ""))) >= 0.78:
-                pair_scores.setdefault(pair, 1.0)
-    return list(pair_scores)
 
 def _case_config_profile(case_manifest: CaseManifest) -> EpistemicConfigProfile:
     return config_profile_from_manifest_payload(case_manifest.epistemic_config)

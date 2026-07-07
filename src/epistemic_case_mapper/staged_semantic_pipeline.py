@@ -70,7 +70,6 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _infer_source_role,
     _map_quality_repair_prompt,
     _map_quality_scaffold,
-    _near_duplicate_claim_pairs,
     _payload_list_items,
     _profile_relation_rule_text,
     _quality_issue,
@@ -86,6 +85,7 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _weak_relation_rationale_ids,
     evaluate_staged_map_quality,
 )
+from epistemic_case_mapper.staged_semantic_duplicate_quality import near_duplicate_claim_pairs as _near_duplicate_claim_pairs
 
 from epistemic_case_mapper.staged_semantic_relation_candidates import (
     _candidate_relation_pairs,
