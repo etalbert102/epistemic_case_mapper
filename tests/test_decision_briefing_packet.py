@@ -8,6 +8,7 @@ from epistemic_case_mapper.map_briefing_decision_packet import build_decision_br
 from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
 from epistemic_case_mapper.map_briefing_packet_memo import build_packet_memo_plan, render_packet_first_draft, write_packet_first_artifacts
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
+from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 
 
@@ -378,3 +379,44 @@ def test_packet_first_comparison_report_accounts_for_calls_and_retention() -> No
     assert report["baseline_mode"] == "estimated_section_rewrite_baseline"
     assert report["model_calls"]["estimated_call_delta"] > 0
     assert report["status"] == "packet_first_supported_by_estimated_comparison"
+
+
+def test_packet_retention_repair_accepts_only_if_retention_improves(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = built["decision_briefing_packet"]
+    weak_memo = """
+## Decision Brief
+
+Option A is promising.
+
+**Confidence:** medium
+"""
+    repaired_memo = """
+## Decision Brief
+
+Option A is promising but maintenance-dependent. Option A reduced flood losses by 25% in comparable river cities
+according to Outcome Study. Counter Study shows that Option A failed when maintenance budgets were cut.
+Maintenance cuts can erase the benefit. Boundary Report says the result only applies where pump capacity exceeds expected peak flow.
+
+**Confidence:** medium
+"""
+    pre_report = build_memo_packet_retention_report(weak_memo, packet)
+
+    class FakeResult:
+        text = repaired_memo
+        prompt_only = False
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_repair.run_model_backend", lambda *args, **kwargs: FakeResult())
+
+    result = run_packet_retention_repair(
+        weak_memo,
+        packet,
+        pre_report,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["report"]["status"] == "accepted"
+    assert result["report"]["final_missing_critical_count"] == 0
+    assert "Counter Study" in result["memo"]

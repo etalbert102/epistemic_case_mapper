@@ -35,6 +35,9 @@ class FinalReaderOutputPaths:
     reader_memo_rewrite_report: Path
     memo_packet_retention: Path
     packet_first_comparison: Path
+    packet_repair_prompt: Path
+    packet_repair_raw: Path
+    packet_repair_report: Path
 
 
 def write_final_reader_outputs(
@@ -51,6 +54,8 @@ def write_final_reader_outputs(
         packet_first_section_rewrite_result,
         write_packet_first_artifacts,
     )
+    from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
+    from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
     from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
     from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
 
@@ -83,6 +88,20 @@ def write_final_reader_outputs(
         backend_config=backend_config,
     )
     _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
+    packet_repair_result = {"memo": str(rewrite_result["memo"]), "prompt": "", "raw": "", "report": {"status": "not_needed"}}
+    packet = memo_package["scaffold"].get("decision_briefing_packet")
+    if isinstance(packet, dict) and packet.get("must_retain_ledger"):
+        pre_repair_retention = build_memo_packet_retention_report(str(rewrite_result["memo"]), packet)
+        packet_repair_result = run_packet_retention_repair(
+            str(rewrite_result["memo"]),
+            packet,
+            pre_repair_retention,
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
+        )
+        rewrite_result["memo"] = packet_repair_result["memo"]
+        rewrite_result.setdefault("report", {})["packet_retention_repair_status"] = packet_repair_result.get("report", {}).get("status")
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
     paths = _final_reader_output_paths(artifacts)
     diagnostics = _build_final_reader_diagnostics(
@@ -103,6 +122,7 @@ def write_final_reader_outputs(
         memo_package=memo_package,
         section_rewrite_result=section_rewrite_result,
         rewrite_result=rewrite_result,
+        packet_repair_result=packet_repair_result,
         diagnostics=diagnostics,
     )
     return {
@@ -117,6 +137,7 @@ def write_final_reader_outputs(
             section_rewrite_result=section_rewrite_result,
             edit_artifact_paths=edit_artifact_paths,
             packet_plan_result=packet_plan_result,
+            packet_repair_result=packet_repair_result,
         ),
     }
 
@@ -181,6 +202,9 @@ def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         reader_memo_rewrite_report=artifacts / "reader_memo_rewrite_report.json",
         memo_packet_retention=artifacts / "memo_packet_retention_report.json",
         packet_first_comparison=artifacts / "packet_first_comparison_report.json",
+        packet_repair_prompt=artifacts / "packet_repair_prompt.txt",
+        packet_repair_raw=artifacts / "packet_repair_raw.md",
+        packet_repair_report=artifacts / "packet_repair_report.json",
     )
 
 
@@ -273,6 +297,7 @@ def _write_final_reader_artifacts(
     memo_package: dict[str, Any],
     section_rewrite_result: dict[str, Any],
     rewrite_result: dict[str, Any],
+    packet_repair_result: dict[str, Any],
     diagnostics: dict[str, Any],
 ) -> None:
     from epistemic_case_mapper.decision_argument_artifacts import render_decision_traceability_matrix_markdown
@@ -282,6 +307,10 @@ def _write_final_reader_artifacts(
         write_markdown(paths.reader_memo_rewrite_prompt, str(rewrite_result.get("prompt", "")))
     if rewrite_result.get("raw"):
         write_markdown(paths.reader_memo_rewrite_raw, str(rewrite_result.get("raw", "")))
+    if packet_repair_result.get("prompt"):
+        write_markdown(paths.packet_repair_prompt, str(packet_repair_result.get("prompt", "")))
+    if packet_repair_result.get("raw"):
+        write_markdown(paths.packet_repair_raw, str(packet_repair_result.get("raw", "")))
     write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
     write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
     write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
@@ -294,6 +323,7 @@ def _write_final_reader_artifacts(
     write_json(paths.final_brief_evaluation, diagnostics["final_eval"])
     write_json(paths.memo_packet_retention, diagnostics["packet_retention"])
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
+    write_json(paths.packet_repair_report, packet_repair_result.get("report", {}))
     write_json(paths.briefing_validation, diagnostics["validation"])
     write_json(paths.polish_report, diagnostics["polish_report"])
     write_json(paths.memo_quality, diagnostics["memo_quality"])
@@ -309,6 +339,7 @@ def _final_reader_summary_paths(
     section_rewrite_result: dict[str, Any],
     edit_artifact_paths: dict[str, Path],
     packet_plan_result: dict[str, Any] | None = None,
+    packet_repair_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import reader_memo_edit_summary_paths
 
@@ -330,6 +361,9 @@ def _final_reader_summary_paths(
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "memo_packet_retention_report": paths.memo_packet_retention,
         "packet_first_comparison_report": paths.packet_first_comparison,
+        "packet_repair_report": paths.packet_repair_report,
+        "packet_repair_prompt": paths.packet_repair_prompt if packet_repair_result and packet_repair_result.get("prompt") else None,
+        "packet_repair_raw": paths.packet_repair_raw if packet_repair_result and packet_repair_result.get("raw") else None,
         "reader_memo_rewrite_prompt": paths.reader_memo_rewrite_prompt if rewrite_result.get("prompt") else None,
         "reader_memo_rewrite_raw": paths.reader_memo_rewrite_raw if rewrite_result.get("raw") else None,
         "memo_plan": packet_plan_result.get("memo_plan_path") if packet_plan_result else None,
