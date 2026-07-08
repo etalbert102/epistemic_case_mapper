@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_out
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
 from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle, build_source_coverage_report
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
+from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
@@ -89,7 +90,6 @@ def run_map_briefing(
     source_citation_labels: dict[str, str] | None = None,
     max_claims: int | None = 0,
     baseline_path: str | Path | None = None,
-    run_reader_memo_rewrite: bool = False,
 ) -> MapBriefingResult:
     _validate_run_args(question, backend_timeout, backend_retries)
     backend_config = ModelBackendConfig(backend=backend, timeout=backend_timeout, retries=backend_retries)
@@ -124,6 +124,7 @@ def run_map_briefing(
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
+    _attach_decision_briefing_packet(scaffold, question=question)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -163,7 +164,6 @@ def run_map_briefing(
         prioritized_map=prioritized_map,
         artifacts=artifacts,
         backend_config=backend_config,
-        run_reader_memo_rewrite=run_reader_memo_rewrite,
     )
     _attach_model_context_audit(artifacts=artifacts, backend=backend, prompt=prompt, scaffold=scaffold, final_outputs=final_outputs)
     briefing_path = final_outputs["briefing_path"]
@@ -259,6 +259,10 @@ def _attach_decision_spine_bundle(
             section_projection_packets=scaffold.get("section_projection_packets"),
             section_context_decision_packets=scaffold.get("section_context_decision_packets"),
         )
+
+
+def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str) -> None:
+    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
 
 
 def _attach_model_context_audit(
