@@ -18,9 +18,11 @@ def build_evidence_role_matrix_bundle(
     sections = _section_packets(section_context_decision_packets)
     matrix = build_evidence_role_matrix(cards, sections)
     working_sets = build_section_evidence_working_sets(matrix, sections)
+    coverage = build_evidence_role_coverage_report(matrix, working_sets)
     return {
         "evidence_role_matrix": matrix,
         "section_evidence_working_sets": working_sets,
+        "evidence_role_coverage_report": coverage,
     }
 
 
@@ -113,6 +115,55 @@ def build_section_evidence_working_sets(
         "method": "role_matrix_grouped_into_section_local_model_working_sets",
         "sections": sections_out,
         "issues": _working_set_issues(sections_out),
+    }
+
+
+def build_evidence_role_coverage_report(
+    evidence_role_matrix: dict[str, Any],
+    section_evidence_working_sets: dict[str, Any],
+) -> dict[str, Any]:
+    matrix_rows = [row for row in evidence_role_matrix.get("rows", []) if isinstance(row, dict)]
+    working_sections = [section for section in section_evidence_working_sets.get("sections", []) if isinstance(section, dict)]
+    shown_ids = _shown_card_ids(working_sections)
+    omitted_lookup = {
+        str(item.get("candidate_card_id")): item
+        for item in evidence_role_matrix.get("omitted_cards", [])
+        if isinstance(item, dict) and item.get("candidate_card_id")
+    }
+    high_priority_omitted = [
+        _coverage_omitted_card(row, omitted_lookup)
+        for row in matrix_rows
+        if int(row.get("global_priority", 0) or 0) >= 7
+        and row.get("inclusion_recommendation") != "appendix_only"
+        and str(row.get("candidate_card_id", "")) not in shown_ids
+    ]
+    budget_pressure = [
+        {
+            "section": section.get("section"),
+            "budget_report": section.get("budget_report"),
+        }
+        for section in working_sections
+        if _budget_pressure(section.get("budget_report", {}))
+    ]
+    repeated_same_role = _repeated_same_role_rows(matrix_rows)
+    issues = []
+    if high_priority_omitted:
+        issues.append("high_priority_cards_not_shown_to_any_section")
+    if budget_pressure:
+        issues.append("section_working_set_budget_pressure")
+    if repeated_same_role:
+        issues.append("same_card_same_role_reused_across_sections")
+    return {
+        "schema_id": "evidence_role_coverage_report_v1",
+        "status": "warning" if issues else "ready",
+        "mode": "report_only",
+        "shown_card_count": len(shown_ids),
+        "assigned_card_count": int(evidence_role_matrix.get("assigned_card_count", 0) or 0),
+        "omitted_card_count": int(evidence_role_matrix.get("omitted_card_count", 0) or 0),
+        "high_priority_omitted_cards": high_priority_omitted[:30],
+        "budget_pressure_sections": budget_pressure,
+        "repeated_same_role_reuse": repeated_same_role[:30],
+        "issues": issues,
     }
 
 
@@ -251,6 +302,51 @@ def _working_set_issues(sections: list[dict[str, Any]]) -> list[str]:
 def _budget_pressure(report: Any) -> bool:
     row = _dict(report)
     return any(int(row.get(f"{name}_available", 0) or 0) > int(row.get(f"{name}_included", 0) or 0) for name in ("primary", "contrast", "boundary", "contextual"))
+
+
+def _shown_card_ids(sections: list[dict[str, Any]]) -> set[str]:
+    shown: set[str] = set()
+    for section in sections:
+        for key in ("primary_evidence", "contrast_evidence", "boundary_evidence", "contextual_evidence"):
+            for row in section.get(key, []) if isinstance(section.get(key), list) else []:
+                if isinstance(row, dict) and row.get("candidate_card_id"):
+                    shown.add(str(row["candidate_card_id"]))
+    return shown
+
+
+def _coverage_omitted_card(row: dict[str, Any], omitted_lookup: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    card_id = str(row.get("candidate_card_id", ""))
+    return _drop_empty(
+        {
+            "candidate_card_id": card_id,
+            "global_priority": row.get("global_priority"),
+            "inclusion_recommendation": row.get("inclusion_recommendation"),
+            "claim": _short_text(str(row.get("claim", "")), 220),
+            "section_uses": row.get("section_uses"),
+            "omission_reasons": omitted_lookup.get(card_id, {}).get("reasons"),
+        }
+    )
+
+
+def _repeated_same_role_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    repeated: list[dict[str, Any]] = []
+    for row in rows:
+        by_role: dict[str, list[str]] = defaultdict(list)
+        for section, use in _dict(row.get("section_uses")).items():
+            role = str(_dict(use).get("role", "")).strip()
+            if role and role != "do_not_use":
+                by_role[role].append(str(section))
+        for role, sections in sorted(by_role.items()):
+            if len(sections) > 1:
+                repeated.append(
+                    {
+                        "candidate_card_id": row.get("candidate_card_id"),
+                        "role": role,
+                        "sections": sections,
+                        "diagnostic": "Reuse is allowed, but repeated same-role use should add section-specific value.",
+                    }
+                )
+    return repeated
 
 
 def _role_counts(rows: list[dict[str, Any]]) -> dict[str, int]:

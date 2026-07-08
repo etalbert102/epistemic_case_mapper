@@ -94,6 +94,59 @@ def test_evidence_role_matrix_reports_omitted_high_priority_cards() -> None:
     assert "below_main_text_relevance" in matrix["omitted_cards"][0]["reasons"]
 
 
+def test_evidence_role_coverage_report_is_report_only_for_high_priority_omissions() -> None:
+    bundle = build_evidence_role_matrix_bundle(
+        candidate_evidence_cards={
+            "cards": [
+                {
+                    "candidate_card_id": "ec1",
+                    "claim": "The source directly changes the decision-relevant answer.",
+                    "decision_relevance_score": 9,
+                    "inclusion_recommendation": "main_text",
+                    "anchor_confidence": "high",
+                }
+            ]
+        },
+        section_context_decision_packets={"sections": [{"section": "Why This Read", "owned_evidence": []}]},
+    )
+
+    report = bundle["evidence_role_coverage_report"]
+    assert report["mode"] == "report_only"
+    assert report["status"] == "warning"
+    assert report["issues"] == ["high_priority_cards_not_shown_to_any_section"]
+    assert report["high_priority_omitted_cards"][0]["candidate_card_id"] == "ec1"
+    assert "not_selected_by_section_context" in report["high_priority_omitted_cards"][0]["omission_reasons"]
+
+
+def test_evidence_role_coverage_report_flags_same_role_reuse_without_blocking() -> None:
+    bundle = build_evidence_role_matrix_bundle(
+        candidate_evidence_cards={
+            "cards": [
+                {
+                    "candidate_card_id": "ec1",
+                    "claim": "The same finding supports two analytic sections.",
+                    "decision_relevance_score": 8,
+                    "inclusion_recommendation": "main_text",
+                }
+            ]
+        },
+        section_context_decision_packets={
+            "sections": [
+                {"section": "Why This Read", "owned_evidence": [{"candidate_card_id": "ec1", "claim": "The same finding supports two analytic sections."}]},
+                {
+                    "section": "Evidence Carrying the Conclusion",
+                    "owned_evidence": [{"candidate_card_id": "ec1", "claim": "The same finding supports two analytic sections."}],
+                },
+            ]
+        },
+    )
+
+    report = bundle["evidence_role_coverage_report"]
+    assert report["status"] == "warning"
+    assert "same_card_same_role_reused_across_sections" in report["issues"]
+    assert report["repeated_same_role_reuse"][0]["candidate_card_id"] == "ec1"
+
+
 def test_section_working_sets_report_budget_pressure() -> None:
     cards = [
         {
