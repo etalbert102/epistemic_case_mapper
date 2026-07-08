@@ -69,6 +69,8 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("slot_reconciliation_report", "slot_reconciliation_report.json", "json", _scaffold_value("slot_reconciliation_report"), review_label="Slot reconciliation report"),
         ArtifactSpec("section_projection_packets", "section_projection_packets.json", "json", _scaffold_value("section_projection_packets"), review_label="Section projection packets"),
         ArtifactSpec("section_context_decision_packets", "section_context_decision_packets.json", "json", _scaffold_value("section_context_decision_packets"), review_label="Section context decision packets"),
+        ArtifactSpec("evidence_role_matrix", "evidence_role_matrix.json", "json", _scaffold_value("evidence_role_matrix"), review_label="Evidence role matrix"),
+        ArtifactSpec("section_evidence_working_sets", "section_evidence_working_sets.json", "json", _scaffold_value("section_evidence_working_sets"), review_label="Section evidence working sets"),
         ArtifactSpec("section_context_quality_report", "section_context_quality_report.json", "json", _scaffold_value("section_context_quality_report"), review_label="Section context quality report"),
         ArtifactSpec("section_projection_readiness_report", "section_projection_readiness_report.json", "json", _scaffold_value("section_projection_readiness_report"), review_label="Section projection readiness"),
         ArtifactSpec("spine_quality_report", "spine_quality_report.json", "json", _scaffold_value("spine_quality_report"), review_label="Spine quality report"),

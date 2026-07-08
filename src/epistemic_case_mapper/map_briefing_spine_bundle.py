@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_context_reconciliation import (
     build_section_context_quality_report,
     build_slot_reconciliation_report,
 )
+from epistemic_case_mapper.map_briefing_evidence_role_matrix import build_evidence_role_matrix_bundle
 from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
 from epistemic_case_mapper.map_briefing_spine_audit import build_spine_quality_report
 from epistemic_case_mapper.map_briefing_slot_eligibility import build_slot_eligibility_audit
@@ -57,6 +58,12 @@ def build_decision_spine_bundle(
         scaffold,
     )
     section_context_quality = build_section_context_quality_report(section_context_decision_packets)
+    evidence_role_bundle = build_evidence_role_matrix_bundle(
+        candidate_evidence_cards=scaffold.get("candidate_evidence_cards", {})
+        if isinstance(scaffold.get("candidate_evidence_cards"), dict)
+        else {},
+        section_context_decision_packets=section_context_decision_packets,
+    )
     readiness = build_section_projection_readiness_report(projections)
     bundle = {
         "classical_evidence_selection_report": classical,
@@ -74,6 +81,7 @@ def build_decision_spine_bundle(
         "slot_reconciliation_report": slot_reconciliation,
         "section_projection_packets": projections,
         "section_context_decision_packets": section_context_decision_packets,
+        **evidence_role_bundle,
         "section_context_quality_report": section_context_quality,
         "section_projection_readiness_report": readiness,
     }
