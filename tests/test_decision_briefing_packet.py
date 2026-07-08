@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_plan, section_obligations_for_title
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
@@ -286,3 +287,20 @@ def test_packet_refinement_applies_only_known_id_updates(monkeypatch) -> None:
         for row in result["decision_briefing_packet"]["evidence_bundles"]
     }[known_bundle_id]
     assert updated["section_use"] == "Use as the primary load-bearing outcome estimate."
+
+
+def test_main_memo_obligations_prefer_packet_must_retain_items() -> None:
+    scaffold = _scaffold()
+    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
+
+    obligations = build_main_memo_obligation_plan(scaffold=scaffold)
+
+    packet_obligations = [row for row in obligations if str(row.get("obligation_id", "")).startswith("packet_")]
+    assert packet_obligations
+    assert packet_obligations[0]["priority"] >= 90
+    assert any("25%" in row.get("search_terms", []) for row in packet_obligations)
+
+    evidence_section = section_obligations_for_title("Evidence Carrying the Conclusion", obligations, limit=8)
+    assert any("25%" in row.get("search_terms", []) for row in evidence_section)
+    practical_section = section_obligations_for_title("Practical Read", obligations, limit=8)
+    assert all("25%" not in row.get("search_terms", []) for row in practical_section)

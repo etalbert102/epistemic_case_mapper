@@ -45,6 +45,7 @@ def build_main_memo_obligation_plan(
     """Select map-derived obligations before prose is generated."""
     return _dedupe_obligations(
         [
+            *_packet_obligations(scaffold),
             *_argument_model_obligations(scaffold),
             *_quantity_obligations(scaffold),
             *_evidence_family_obligations(scaffold),
@@ -330,6 +331,9 @@ def _obligation_section_eligible(title: str, obligation: dict[str, Any]) -> bool
         return True
     if bool(eligibility.get("appendix_only")):
         return False
+    section_targets = _string_list(eligibility.get("section_targets"))
+    if section_targets and title not in section_targets and title.strip().lower() != "decision brief":
+        return False
     section_key = _section_eligibility_key(title)
     if not section_key:
         return True
@@ -388,6 +392,59 @@ def _argument_model_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]
                 )
             )
     return obligations
+
+
+def _packet_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+    packet = _dict(scaffold.get("decision_briefing_packet"))
+    retain_items = [row for row in packet.get("must_retain_ledger", []) if isinstance(row, dict)]
+    if not retain_items:
+        return []
+    obligations: list[dict[str, Any]] = []
+    for index, row in enumerate(retain_items, start=1):
+        role = str(row.get("decision_role") or "context")
+        importance = str(row.get("importance") or "medium").lower()
+        obligations.append(
+            _obligation(
+                obligation_id=f"packet_{index:02d}_{_slug(role)}",
+                category=_packet_obligation_category(role),
+                stage_owner="decision_synthesis",
+                priority=_packet_priority(importance, index),
+                statement=str(row.get("statement", "")).strip(),
+                search_terms=[
+                    *_string_list(row.get("required_terms")),
+                    *_string_list(row.get("source_labels")),
+                    *_key_phrases(str(row.get("statement", ""))),
+                ],
+                source_ids=_string_list(row.get("source_ids")),
+                claim_ids=_string_list(row.get("claim_ids")),
+                relation_ids=_string_list(row.get("relation_ids")),
+                quantity_ids=_string_list(row.get("quantity_ids")),
+                reason=str(row.get("why_it_matters") or "Required by the decision briefing packet."),
+                eligibility={
+                    "top_line_eligible": row.get("omission_policy") != "may_appendix",
+                    "appendix_only": row.get("omission_policy") == "may_appendix",
+                    "source": "decision_briefing_packet",
+                    "section_targets": _string_list(row.get("section_targets")),
+                },
+            )
+        )
+    return obligations
+
+
+def _packet_obligation_category(role: str) -> str:
+    normalized = str(role).strip().lower()
+    if normalized == "counterweight":
+        return "strongest_counterargument"
+    if normalized in {"strongest_support", "scope_boundary", "decision_crux", "quantitative_anchor"}:
+        return normalized
+    if normalized == "mechanism":
+        return "evidence_family_balance"
+    return "evidence_family_balance"
+
+
+def _packet_priority(importance: str, index: int) -> int:
+    base = {"critical": 98, "high": 90, "medium": 78, "low": 60}.get(importance, 76)
+    return max(1, base - index)
 
 
 def _quantity_obligations(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
