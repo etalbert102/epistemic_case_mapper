@@ -59,6 +59,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("evidence_centrality_report", "evidence_centrality_report.json", "json", _scaffold_value("evidence_centrality_report")),
         ArtifactSpec("coverage_balance_report", "coverage_balance_report.json", "json", _scaffold_value("coverage_balance_report")),
         ArtifactSpec("quantity_outlier_report", "quantity_outlier_report.json", "json", _scaffold_value("quantity_outlier_report")),
+        ArtifactSpec("relation_value_report", "relation_value_report.json", "json", _scaffold_value("relation_value_report"), review_label="Relation value report"),
         ArtifactSpec("slot_eligibility_audit", "slot_eligibility_audit.json", "json", _scaffold_value("slot_eligibility_audit"), review_label="Slot eligibility audit"),
         ArtifactSpec("canonical_decision_spine", "canonical_decision_spine.json", "json", _scaffold_value("canonical_decision_spine"), review_label="Canonical decision spine"),
         ArtifactSpec("canonical_decision_spine_validation", "canonical_decision_spine_validation.json", "json", _scaffold_value("canonical_decision_spine_validation")),

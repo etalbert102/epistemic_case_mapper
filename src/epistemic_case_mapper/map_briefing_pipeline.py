@@ -44,6 +44,7 @@ from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
+from epistemic_case_mapper.map_briefing_relation_value import build_relation_value_report
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
@@ -122,6 +123,7 @@ def run_map_briefing(
         source_citation_labels=source_citation_labels,
     )
     scaffold["claim_canonicalization_report"] = canonicalization_report
+    scaffold["relation_value_report"] = build_relation_value_report(prioritized_map)
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
