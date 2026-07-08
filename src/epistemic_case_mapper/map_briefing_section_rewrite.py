@@ -90,23 +90,13 @@ def rewrite_reader_memo_by_section(
         return _blocked_by_projection_readiness_result(memo, sections, contract, report, artifacts)
     if backend.strip() == "prompt":
         section_packets = _report_only_section_packets(sections, contract)
-        context_acceptance_report = build_section_context_acceptance_report(section_packets)
         report["status"] = "skipped_prompt_backend"
-        report["section_packet_count"] = len(section_packets)
-        section_packet_path = None
-        section_context_acceptance_report_path = None
-        if artifacts is not None:
-            section_packet_path = write_section_packets_artifact(artifacts, section_packets)
-            section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
-            report["section_packets_path"] = str(section_packet_path)
-            report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
-        report["section_context_acceptance_status"] = context_acceptance_report.get("status")
-        return {
-            "memo": memo,
-            "report": report,
-            "section_packets_path": section_packet_path,
-            "section_context_acceptance_report_path": section_context_acceptance_report_path,
-        }
+        section_packet_path, section_context_acceptance_report_path = _finalize_section_packet_outputs(
+            section_packets,
+            report,
+            artifacts,
+        )
+        return _section_rewrite_result(memo, report, section_packet_path, section_context_acceptance_report_path)
     section_packets: list[dict[str, Any]] = []
     rewritten_sections: list[str] = []
     deferred_decision_section: dict[str, str] | None = None
@@ -168,9 +158,34 @@ def rewrite_reader_memo_by_section(
     report["whole_validation_issues"] = validation.get("issues", [])
     report["main_memo_obligation_validation"] = _post_synthesis_obligation_validation(candidate, contract)
     report["accepted_section_count"] = sum(1 for item in report["sections"] if item.get("accepted"))
-    report["section_packet_count"] = len(section_packets)
+    section_packet_path, section_context_acceptance_report_path = _finalize_section_packet_outputs(
+        section_packets,
+        report,
+        artifacts,
+    )
+    if validation.get("status") == "needs_review":
+        report["status"] = "global_validation_failed_fallback"
+        return _section_rewrite_result(memo, report, section_packet_path, section_context_acceptance_report_path)
+    report["status"] = "accepted_partial" if report["accepted_section_count"] else "no_sections_accepted"
+    return _section_rewrite_result(candidate, report, section_packet_path, section_context_acceptance_report_path)
+
+
+def _write_section_context_acceptance_report(artifacts: Any, report: dict[str, Any]) -> Any:
+    path = artifacts / "section_context_acceptance_report.json"
+    write_json(path, report)
+    return path
+
+
+def _finalize_section_packet_outputs(
+    section_packets: list[dict[str, Any]],
+    report: dict[str, Any],
+    artifacts: Any | None,
+    *,
+    context_status_override: str | None = None,
+) -> tuple[Any | None, Any | None]:
     context_acceptance_report = build_section_context_acceptance_report(section_packets)
-    report["section_context_acceptance_status"] = context_acceptance_report.get("status")
+    report["section_packet_count"] = len(section_packets)
+    report["section_context_acceptance_status"] = context_status_override or context_acceptance_report.get("status")
     section_packet_path = None
     section_context_acceptance_report_path = None
     if artifacts is not None:
@@ -178,27 +193,21 @@ def rewrite_reader_memo_by_section(
         section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
         report["section_packets_path"] = str(section_packet_path)
         report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
-    if validation.get("status") == "needs_review":
-        report["status"] = "global_validation_failed_fallback"
-        return {
-            "memo": memo,
-            "report": report,
-            "section_packets_path": section_packet_path,
-            "section_context_acceptance_report_path": section_context_acceptance_report_path,
-        }
-    report["status"] = "accepted_partial" if report["accepted_section_count"] else "no_sections_accepted"
+    return section_packet_path, section_context_acceptance_report_path
+
+
+def _section_rewrite_result(
+    memo: str,
+    report: dict[str, Any],
+    section_packet_path: Any | None,
+    section_context_acceptance_report_path: Any | None,
+) -> dict[str, Any]:
     return {
-        "memo": candidate,
+        "memo": memo,
         "report": report,
         "section_packets_path": section_packet_path,
         "section_context_acceptance_report_path": section_context_acceptance_report_path,
     }
-
-
-def _write_section_context_acceptance_report(artifacts: Any, report: dict[str, Any]) -> Any:
-    path = artifacts / "section_context_acceptance_report.json"
-    write_json(path, report)
-    return path
 
 
 def _blocked_by_projection_readiness_result(
@@ -209,24 +218,15 @@ def _blocked_by_projection_readiness_result(
     artifacts: Any | None,
 ) -> dict[str, Any]:
     section_packets = _report_only_section_packets(sections, contract)
-    context_acceptance_report = build_section_context_acceptance_report(section_packets)
     report["status"] = "blocked_by_spine_projection_readiness"
-    report["section_packet_count"] = len(section_packets)
-    report["section_context_acceptance_status"] = "not_synthesis_ready"
     report["issues"] = ["canonical spine projections are not synthesis-ready"]
-    section_packet_path = None
-    section_context_acceptance_report_path = None
-    if artifacts is not None:
-        section_packet_path = write_section_packets_artifact(artifacts, section_packets)
-        section_context_acceptance_report_path = _write_section_context_acceptance_report(artifacts, context_acceptance_report)
-        report["section_packets_path"] = str(section_packet_path)
-        report["section_context_acceptance_report_path"] = str(section_context_acceptance_report_path)
-    return {
-        "memo": memo,
-        "report": report,
-        "section_packets_path": section_packet_path,
-        "section_context_acceptance_report_path": section_context_acceptance_report_path,
-    }
+    section_packet_path, section_context_acceptance_report_path = _finalize_section_packet_outputs(
+        section_packets,
+        report,
+        artifacts,
+        context_status_override="not_synthesis_ready",
+    )
+    return _section_rewrite_result(memo, report, section_packet_path, section_context_acceptance_report_path)
 
 
 def _projection_readiness_blocks_synthesis(scaffold: dict[str, Any]) -> bool:
