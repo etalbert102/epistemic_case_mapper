@@ -18,6 +18,7 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_length_policy import executive_length_policy, executive_length_report_fields
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
+from epistemic_case_mapper.map_briefing_markdown_quality import extraction_debris_issues, markdown_structure_issues
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_quantities import quantity_ledger_markdown
 from epistemic_case_mapper.map_briefing_section_structure import filter_primary_practical_actions
@@ -553,7 +554,7 @@ def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> di
     executive = _executive_markdown(rendered)
     appendix_present = "## Evidence Appendix" in rendered
     issues: list[dict[str, str]] = []
-    if _contains_truncated_fragment(rendered):
+    if _contains_truncated_fragment(_fragment_lint_text(executive)):
         issues.append(
             {
                 "severity": "warning",
@@ -583,6 +584,22 @@ def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> di
                 "severity": "warning",
                 "issue_type": "executive_table_overload",
                 "message": "The executive brief contains too many tables for a reader-first artifact.",
+            }
+        )
+    for issue in markdown_structure_issues(executive):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "markdown_structure",
+                "message": issue,
+            }
+        )
+    for issue in extraction_debris_issues(executive):
+        issues.append(
+            {
+                "severity": "warning",
+                "issue_type": "extraction_debris",
+                "message": issue,
             }
         )
     length_policy = executive_length_policy(executive, scaffold)
@@ -648,6 +665,9 @@ def briefing_reader_polish_report(rendered: str, scaffold: dict[str, Any]) -> di
         "decision_memo_missing_required_slots": missing_memo_slots,
         "issues": issues,
     }
+
+def _fragment_lint_text(markdown: str) -> str:
+    return re.sub(r"(?ms)^##\s+Sources\s*$.*", "", re.sub(r"\]\([^)]+\)", "]", markdown))
 
 def _build_polished_executive_brief(rendered: str, scaffold: dict[str, Any], *, executive_word_target: int) -> str:
     decision_brief = _executive_decision_brief(rendered, scaffold)

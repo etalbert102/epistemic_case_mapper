@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata, source_list_lines
+from epistemic_case_mapper.map_briefing_memo_metadata import (
+    ensure_reader_memo_metadata,
+    normalize_reader_memo_metadata_layout,
+    source_list_lines,
+)
 
 
 def test_reader_memo_metadata_links_source_list_and_inline_mentions() -> None:
@@ -46,6 +50,37 @@ def test_source_list_lines_ignores_unlinkable_urls() -> None:
     assert "javascript:" not in "\n".join(lines)
 
 
+def test_reader_memo_metadata_layout_separates_question_and_confidence() -> None:
+    question = "Should this option be treated as beneficial, neutral, or harmful?"
+    memo = (
+        "## Decision Brief\n\n"
+        f"**Decision question:** {question} The best current answer is neutral. "
+        "The evidence is mixed. **Confidence:** medium\n\n"
+        "## Sources\n\n"
+        "- Study A\n"
+    )
+
+    updated = normalize_reader_memo_metadata_layout(memo, question)
+
+    assert f"**Decision question:** {question}\n\nThe best current answer" in updated
+    assert "The evidence is mixed.\n\n**Confidence:** medium" in updated
+
+
+def test_ensure_reader_memo_metadata_repairs_collapsed_model_metadata() -> None:
+    question = "Should this option be treated as beneficial, neutral, or harmful?"
+    memo = (
+        "## Decision Brief\n\n"
+        f"**Decision question:** {question} The best current answer is neutral. "
+        "The evidence is mixed. **Confidence:** medium\n"
+    )
+
+    updated = ensure_reader_memo_metadata(memo, {"question": question, "source_display_names": {"a": "Study A"}})
+
+    assert f"**Decision question:** {question}\n\nThe best current answer" in updated
+    assert "The evidence is mixed.\n\n**Confidence:** medium" in updated
+    assert "\n## Sources\n\n- Study A" in updated
+
+
 def test_reader_memo_metadata_smooths_generic_intro_and_duplicate_prefixed_evidence() -> None:
     memo = """## Decision Brief
 
@@ -64,4 +99,3 @@ Default population: Moderate intake was not associated with worse outcomes (Stud
     assert "The current map supports a neutral under stated conditions read." in updated
     assert updated.count("Moderate intake was not associated with worse outcomes") == 1
     assert "Better evidence used clinical events" in updated
-

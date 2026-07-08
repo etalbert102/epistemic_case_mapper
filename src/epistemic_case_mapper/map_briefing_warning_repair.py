@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_full_memo_polish import (
     build_full_memo_warning_repair_prompt,
     restore_full_memo_protected_content,
 )
+from epistemic_case_mapper.map_briefing_final_memo_diagnosis import build_memo_final_diagnosis
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 
@@ -65,6 +66,9 @@ def run_full_memo_warning_repair(
         contract,
     )
     repaired = restore_full_memo_protected_content(repaired, original_memo=original_memo, contract=contract)
+    before_diagnosis = build_memo_final_diagnosis(memo, contract)
+    after_diagnosis = build_memo_final_diagnosis(repaired, contract)
+    readability_issues = _readability_regression_issues(before_diagnosis, after_diagnosis)
     deterministic_warnings = preservation_issues_fn(
         repaired,
         original_memo=original_memo,
@@ -85,18 +89,42 @@ def run_full_memo_warning_repair(
     )
     judge_warnings = judge_issues_fn(judge_result.get("payload"))
     remaining_warnings = deterministic_warnings + judge_warnings
+    accepted = len(remaining_warnings) < len(warnings) and not readability_issues
+    status = "accepted" if accepted else "warning_repair_readability_regression_kept_original" if readability_issues else "no_warning_reduction_kept_original"
     report.update(
         {
-            "status": "accepted" if len(remaining_warnings) < len(warnings) else "no_warning_reduction_kept_original",
-            "accepted": len(remaining_warnings) < len(warnings),
+            "status": status,
+            "accepted": accepted,
+            "issues": readability_issues,
             "warnings": remaining_warnings,
             "deterministic_warnings": deterministic_warnings,
             "judge_warnings": judge_warnings,
             "judge": judge_result.get("payload", {}),
+            "diagnosis_before": before_diagnosis,
+            "diagnosis_after": after_diagnosis,
             "word_count": len(repaired.split()),
         }
     )
     return {"memo": repaired if report["accepted"] else memo, "prompt": prompt, "raw": raw, "accepted": report["accepted"], "report": report}
+
+
+def _readability_regression_issues(before: dict[str, Any], after: dict[str, Any]) -> list[str]:
+    before_metrics = before.get("metrics", {}) if isinstance(before.get("metrics"), dict) else {}
+    after_metrics = after.get("metrics", {}) if isinstance(after.get("metrics"), dict) else {}
+    watched = {
+        "long_sentence_count": "warning repair increased long sentence count",
+        "dense_paragraph_count": "warning repair increased dense paragraph count",
+        "awkward_phrase_count": "warning repair introduced awkward language markers",
+        "internal_phrase_count": "warning repair introduced internal process language",
+        "diagnostic_leakage_count": "warning repair introduced diagnostic leakage",
+        "extraction_debris_issue_count": "warning repair introduced extraction debris",
+        "markdown_structure_issue_count": "warning repair damaged Markdown structure",
+    }
+    issues = []
+    for key, message in watched.items():
+        if _int(after_metrics.get(key)) > _int(before_metrics.get(key)):
+            issues.append(message)
+    return issues
 
 
 def build_warning_repair_packet(original_memo: str, warnings: list[str], obligation_packet: dict[str, Any]) -> dict[str, Any]:
@@ -227,6 +255,13 @@ def _dedupe(values: list[str]) -> list[str]:
             seen.add(value)
             deduped.append(value)
     return deduped
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def full_memo_markdown_payload_issue(raw: str) -> str:

@@ -4,6 +4,7 @@ import re
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_markdown_quality import extraction_debris_issues, markdown_structure_issues
 from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
 
 
@@ -109,6 +110,8 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
     internal_phrases = _internal_phrase_issues(memo)
     awkward_phrases = _awkward_phrase_issues(memo)
     diagnostic_leakage = _diagnostic_leakage_issues(sections)
+    structure_issues = markdown_structure_issues(memo)
+    debris_issues = extraction_debris_issues(memo)
     dense_paragraphs = _dense_paragraph_issues(sections)
     role_quality = section_role_quality_report(memo, contract)
     raw_status_flags = _raw_status_flags(memo)
@@ -152,6 +155,22 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
                 "items": diagnostic_leakage[:8],
             }
         )
+    if structure_issues:
+        prose_issues.append(
+            {
+                "kind": "markdown_structure",
+                "message": "Memo contains mechanically damaged Markdown structure.",
+                "items": structure_issues[:8],
+            }
+        )
+    if debris_issues:
+        prose_issues.append(
+            {
+                "kind": "extraction_debris",
+                "message": "Memo contains extraction debris that should stay out of reader-facing prose.",
+                "items": debris_issues[:8],
+            }
+        )
     if dense_paragraphs:
         prose_issues.append(
             {
@@ -180,6 +199,8 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
             "internal_phrase_count": len(internal_phrases),
             "awkward_phrase_count": len(awkward_phrases),
             "diagnostic_leakage_count": len(diagnostic_leakage),
+            "markdown_structure_issue_count": len(structure_issues),
+            "extraction_debris_issue_count": len(debris_issues),
             "raw_status_flag_count": len(raw_status_flags),
             "dense_paragraph_count": len(dense_paragraphs),
             "section_role_quality_issue_count": int(role_quality.get("issue_count", 0) or 0),
@@ -210,6 +231,8 @@ def diagnosis_improved(before: dict[str, Any], after: dict[str, Any], *, pass_na
             "internal_phrase_count",
             "awkward_phrase_count",
             "diagnostic_leakage_count",
+            "markdown_structure_issue_count",
+            "extraction_debris_issue_count",
             "raw_status_flag_count",
             "dense_paragraph_count",
         )
@@ -221,6 +244,8 @@ def diagnosis_improved(before: dict[str, Any], after: dict[str, Any], *, pass_na
             "internal_phrase_count",
             "awkward_phrase_count",
             "diagnostic_leakage_count",
+            "markdown_structure_issue_count",
+            "extraction_debris_issue_count",
             "raw_status_flag_count",
             "dense_paragraph_count",
         )
@@ -420,7 +445,7 @@ def _paragraphs(markdown: str) -> list[str]:
     values = []
     for paragraph in re.split(r"\n\s*\n", markdown):
         cleaned = re.sub(r"\s+", " ", paragraph).strip()
-        if cleaned and not cleaned.startswith("## "):
+        if cleaned and not cleaned.startswith("## ") and not cleaned.startswith("**Confidence:**"):
             values.append(cleaned)
     return values
 

@@ -4,6 +4,11 @@ import re
 from collections import Counter, defaultdict
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_packet_eligibility import (
+    packet_candidate_eligibility,
+    question_content_terms,
+    question_overlap_count,
+)
 from epistemic_case_mapper.map_briefing_packet_sufficiency import (
     build_packet_sufficiency_report,
     packet_quantity_retention,
@@ -41,7 +46,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     lossy trimming is visible rather than hidden inside prose generation.
     """
 
-    candidate_pool = _candidate_pool(scaffold)
+    candidate_pool = _candidate_pool(scaffold, question=question)
     source_trail = _source_trail(scaffold, candidate_pool)
     bundles = _trimmed_bundles(candidate_pool)
     retain_ledger = _must_retain_ledger(scaffold, bundles)
@@ -90,7 +95,7 @@ def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -
     }
 
 
-def _candidate_pool(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dict[str, Any]]:
     source_by_claim = _source_cards_by_claim(scaffold)
     source_by_id = {
         str(card.get("source_card_id")): card
@@ -98,6 +103,7 @@ def _candidate_pool(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
         if str(card.get("source_card_id", "")).strip()
     }
     pool: list[dict[str, Any]] = []
+    question_terms = question_content_terms(question or str(scaffold.get("question", "")))
     for card in _cards(scaffold.get("candidate_evidence_cards")):
         card_id = str(card.get("candidate_card_id", "")).strip()
         claim_ids = _string_list(card.get("claim_ids"))
@@ -151,11 +157,12 @@ def _candidate_pool(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
                     "directionality": _directionality_for_role(role),
                     "source_grounded": bool(source_cards) or str(card.get("anchor_confidence", "")).lower() not in {"", "missing"},
                     "pretrim_kind": "candidate_evidence_card",
+                    "question_overlap_count": question_overlap_count(str(card.get("claim", "")), question_terms),
                 }
             )
         )
-    pool.extend(_argument_item_candidates(scaffold, len(pool)))
-    pool.extend(_quantity_card_candidates(scaffold, len(pool)))
+    pool.extend(_argument_item_candidates(scaffold, len(pool), question_terms=question_terms))
+    pool.extend(_quantity_card_candidates(scaffold, len(pool), question_terms=question_terms))
     return _dedupe_pool(pool)
 
 
@@ -181,7 +188,7 @@ def _source_cards_for_candidate(
     return _dedupe_dicts(rows, key_fields=("source_card_id", "source_id", "source_quote_or_excerpt"))
 
 
-def _argument_item_candidates(scaffold: dict[str, Any], offset: int) -> list[dict[str, Any]]:
+def _argument_item_candidates(scaffold: dict[str, Any], offset: int, *, question_terms: list[str] | None = None) -> list[dict[str, Any]]:
     argument = _dict(scaffold.get("argument_model"))
     source_by_claim = _source_cards_by_claim(scaffold)
     quantity_by_id = _quantity_rows_by_id(scaffold)
@@ -223,13 +230,14 @@ def _argument_item_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
                         "directionality": _directionality_for_role(role),
                         "source_grounded": bool(source_ids or claim_ids),
                         "pretrim_kind": f"argument_model.{key}",
+                        "question_overlap_count": question_overlap_count(str(item.get("statement", "")), question_terms or []),
                     }
                 )
             )
     return rows
 
 
-def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dict[str, Any]]:
+def _quantity_card_candidates(scaffold: dict[str, Any], offset: int, *, question_terms: list[str] | None = None) -> list[dict[str, Any]]:
     ledger = _dict(scaffold.get("quantity_ledger"))
     rows: list[dict[str, Any]] = []
     for card in [row for row in ledger.get("evidence_cards", []) if isinstance(row, dict)][:18]:
@@ -260,6 +268,10 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
                     "directionality": str(card.get("direction") or "quantitative_anchor"),
                     "source_grounded": bool(source_ids),
                     "pretrim_kind": "quantity_ledger.evidence_card",
+                    "question_overlap_count": max(
+                        question_overlap_count(str(card.get("claim", "")), question_terms or []),
+                        question_overlap_count(str(card.get("context", "")), question_terms or []),
+                    ),
                 }
             )
         )
@@ -269,7 +281,12 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
 def _trimmed_bundles(candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_role: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in candidate_pool:
-        by_role[str(row.get("decision_role") or "context")].append(row)
+        eligibility = packet_candidate_eligibility(row)
+        if not eligibility["main_memo_eligible"]:
+            continue
+        retained = dict(row)
+        retained["packet_eligibility"] = eligibility
+        by_role[str(retained.get("decision_role") or "context")].append(retained)
     budgets = {
         "strongest_support": 8,
         "counterweight": 8,
@@ -318,6 +335,7 @@ def _bundle_from_candidate(index: int, row: dict[str, Any]) -> dict[str, Any]:
             "source_grounded": bool(row.get("source_grounded")),
             "pretrim_pool_id": row.get("pool_id"),
             "pretrim_kind": row.get("pretrim_kind"),
+            "eligibility": row.get("packet_eligibility"),
         }
     )
 
@@ -475,6 +493,9 @@ def _packet_coverage_report(
 
 def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[str, Any], sufficiency: dict[str, Any]) -> dict[str, Any]:
     bundles = [row for row in packet.get("evidence_bundles", []) if isinstance(row, dict)]
+    eligibility = [packet_candidate_eligibility(row) for row in candidate_pool]
+    suppressed = [row for row in eligibility if not row["main_memo_eligible"]]
+    suppressed_reason_counts = Counter(reason for row in suppressed for reason in row.get("reasons", []))
     return {
         "schema_id": "decision_briefing_packet_report_v1",
         "method": "broad_candidate_inventory_then_decision_role_trimming",
@@ -482,6 +503,8 @@ def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[st
         "bundle_count": len(bundles),
         "must_retain_count": len(packet.get("must_retain_ledger", [])),
         "section_view_count": len(packet.get("section_views", [])),
+        "main_memo_suppressed_candidate_count": len(suppressed),
+        "main_memo_suppressed_reason_counts": dict(sorted(suppressed_reason_counts.items())),
         "pretrim_kind_counts": dict(Counter(str(row.get("pretrim_kind", "unknown")) for row in candidate_pool)),
         "bundle_role_counts": dict(Counter(str(row.get("decision_role", "unknown")) for row in bundles)),
         "sufficiency_status": sufficiency.get("status"),

@@ -41,6 +41,10 @@ class FinalReaderOutputPaths:
     reader_packet_repair_prompt: Path
     reader_packet_repair_raw: Path
     reader_packet_repair_report: Path
+    decision_memo_editorial_brief: Path
+    decision_memo_editorial_prompt: Path
+    decision_memo_editorial_raw: Path
+    decision_memo_editorial_report: Path
 
 
 def write_final_reader_outputs(
@@ -70,6 +74,9 @@ def write_final_reader_outputs(
         packet_plan_result = write_packet_first_artifacts(
             artifacts=artifacts,
             packet=memo_package["scaffold"]["decision_briefing_packet"],
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
         )
         section_rewrite_result = packet_first_section_rewrite_result(packet_plan_result)
     else:
@@ -90,6 +97,19 @@ def write_final_reader_outputs(
         prioritized_map=prioritized_map,
         backend_config=backend_config,
     )
+    if packet_plan_result:
+        from epistemic_case_mapper.map_briefing_reader_packet_verbalization import canonicalize_reader_packet_source_aliases
+
+        reader_packet = packet_plan_result.get("memo_plan", {}).get("reader_facing_packet", {})
+        canonicalized_memo = canonicalize_reader_packet_source_aliases(
+            str(rewrite_result.get("memo") or ""),
+            reader_packet if isinstance(reader_packet, dict) else {},
+        )
+        if canonicalized_memo != str(rewrite_result.get("memo") or ""):
+            rewrite_result["memo"] = canonicalized_memo
+            rewrite_result.setdefault("report", {})["source_alias_canonicalization_status"] = "canonicalized"
+        else:
+            rewrite_result.setdefault("report", {})["source_alias_canonicalization_status"] = "no_aliases_found"
     _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
     packet_repair_result = {"memo": str(rewrite_result["memo"]), "prompt": "", "raw": "", "report": {"status": "not_needed"}}
     packet = memo_package["scaffold"].get("decision_briefing_packet")
@@ -119,6 +139,9 @@ def write_final_reader_outputs(
     else:
         reader_packet_repair_result = {"memo": str(rewrite_result["memo"]), "prompt": "", "raw": "", "report": {"status": "not_needed"}}
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
+    editorial_result = _run_decision_memo_editorial_pass(reader_memo, memo_package["scaffold"], backend_config)
+    reader_memo = ensure_reader_memo_metadata(str(editorial_result["memo"]), memo_package["scaffold"])
+    rewrite_result.setdefault("report", {})["decision_memo_editorial_status"] = editorial_result.get("report", {}).get("status")
     paths = _final_reader_output_paths(artifacts)
     diagnostics = _build_final_reader_diagnostics(
         reader_memo=reader_memo,
@@ -140,6 +163,7 @@ def write_final_reader_outputs(
         rewrite_result=rewrite_result,
         reader_packet_repair_result=reader_packet_repair_result,
         packet_repair_result=packet_repair_result,
+        editorial_result=editorial_result,
         diagnostics=diagnostics,
     )
     return {
@@ -156,6 +180,7 @@ def write_final_reader_outputs(
             packet_plan_result=packet_plan_result,
             reader_packet_repair_result=reader_packet_repair_result,
             packet_repair_result=packet_repair_result,
+            editorial_result=editorial_result,
         ),
     }
 
@@ -165,6 +190,22 @@ def _should_use_packet_first(scaffold: dict[str, Any]) -> bool:
     if not isinstance(packet, dict) or not packet.get("evidence_bundles"):
         return False
     return True
+
+
+def _run_decision_memo_editorial_pass(
+    reader_memo: str,
+    scaffold: dict[str, Any],
+    backend_config: ModelBackendConfig,
+) -> dict[str, Any]:
+    from epistemic_case_mapper.map_briefing_editorial_pass import run_decision_memo_editorial_pass
+
+    return run_decision_memo_editorial_pass(
+        reader_memo,
+        scaffold,
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
+    )
 
 
 def _run_reader_memo_rewrite(
@@ -226,6 +267,10 @@ def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         reader_packet_repair_prompt=artifacts / "reader_packet_repair_prompt.txt",
         reader_packet_repair_raw=artifacts / "reader_packet_repair_raw.md",
         reader_packet_repair_report=artifacts / "reader_packet_repair_report.json",
+        decision_memo_editorial_brief=artifacts / "decision_memo_editorial_brief.json",
+        decision_memo_editorial_prompt=artifacts / "decision_memo_editorial_prompt.txt",
+        decision_memo_editorial_raw=artifacts / "decision_memo_editorial_raw.txt",
+        decision_memo_editorial_report=artifacts / "decision_memo_editorial_report.json",
     )
 
 
@@ -320,6 +365,7 @@ def _write_final_reader_artifacts(
     rewrite_result: dict[str, Any],
     reader_packet_repair_result: dict[str, Any],
     packet_repair_result: dict[str, Any],
+    editorial_result: dict[str, Any],
     diagnostics: dict[str, Any],
 ) -> None:
     from epistemic_case_mapper.decision_argument_artifacts import render_decision_traceability_matrix_markdown
@@ -337,6 +383,10 @@ def _write_final_reader_artifacts(
         write_markdown(paths.packet_repair_prompt, str(packet_repair_result.get("prompt", "")))
     if packet_repair_result.get("raw"):
         write_markdown(paths.packet_repair_raw, str(packet_repair_result.get("raw", "")))
+    if editorial_result.get("prompt"):
+        write_markdown(paths.decision_memo_editorial_prompt, str(editorial_result.get("prompt", "")))
+    if editorial_result.get("raw"):
+        write_markdown(paths.decision_memo_editorial_raw, str(editorial_result.get("raw", "")))
     write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
     write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
     write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
@@ -351,6 +401,8 @@ def _write_final_reader_artifacts(
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
     write_json(paths.reader_packet_repair_report, reader_packet_repair_result.get("report", {}))
     write_json(paths.packet_repair_report, packet_repair_result.get("report", {}))
+    write_json(paths.decision_memo_editorial_brief, editorial_result.get("brief", {}))
+    write_json(paths.decision_memo_editorial_report, editorial_result.get("report", {}))
     write_json(paths.briefing_validation, diagnostics["validation"])
     write_json(paths.polish_report, diagnostics["polish_report"])
     write_json(paths.memo_quality, diagnostics["memo_quality"])
@@ -368,6 +420,7 @@ def _final_reader_summary_paths(
     packet_plan_result: dict[str, Any] | None = None,
     reader_packet_repair_result: dict[str, Any] | None = None,
     packet_repair_result: dict[str, Any] | None = None,
+    editorial_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import reader_memo_edit_summary_paths
 
@@ -399,9 +452,18 @@ def _final_reader_summary_paths(
         "packet_repair_report": paths.packet_repair_report,
         "packet_repair_prompt": paths.packet_repair_prompt if packet_repair_result and packet_repair_result.get("prompt") else None,
         "packet_repair_raw": paths.packet_repair_raw if packet_repair_result and packet_repair_result.get("raw") else None,
+        "decision_memo_editorial_brief": paths.decision_memo_editorial_brief,
+        "decision_memo_editorial_report": paths.decision_memo_editorial_report,
+        "decision_memo_editorial_prompt": paths.decision_memo_editorial_prompt
+        if editorial_result and editorial_result.get("prompt")
+        else None,
+        "decision_memo_editorial_raw": paths.decision_memo_editorial_raw if editorial_result and editorial_result.get("raw") else None,
         "reader_memo_rewrite_prompt": paths.reader_memo_rewrite_prompt if rewrite_result.get("prompt") else None,
         "reader_memo_rewrite_raw": paths.reader_memo_rewrite_raw if rewrite_result.get("raw") else None,
         "memo_plan": packet_plan_result.get("memo_plan_path") if packet_plan_result else None,
         "packet_first_draft": packet_plan_result.get("packet_first_draft_path") if packet_plan_result else None,
+        "reader_packet_verbalization_report": packet_plan_result.get("reader_packet_verbalization_report_path") if packet_plan_result else None,
+        "reader_packet_verbalization_prompt": packet_plan_result.get("reader_packet_verbalization_prompt_path") if packet_plan_result else None,
+        "reader_packet_verbalization_raw": packet_plan_result.get("reader_packet_verbalization_raw_path") if packet_plan_result else None,
         **reader_memo_edit_summary_paths(rewrite_result, edit_artifact_paths),
     }

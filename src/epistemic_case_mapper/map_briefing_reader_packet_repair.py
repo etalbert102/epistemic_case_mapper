@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_packet_memo import build_reader_facing_packet
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -66,13 +67,14 @@ def run_reader_packet_retention_repair(
     if result.prompt_only:
         report.update({"status": "prompt_backend_kept_original", "issues": ["reader-packet repair backend returned prompt only"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    candidate = _extract_markdown(raw)
+    candidate = repair_markdown_structure(_extract_markdown(raw))
     if not candidate:
         report.update({"status": "empty_response_kept_original", "issues": ["reader-packet repair returned empty markdown"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     after = build_reader_packet_retention_report(candidate, reader_packet)
     regressions = _retention_regressions(before, after)
-    accepted = _retention_improved(before, after) and not regressions and not _has_internal_markers(candidate)
+    structure_issues = markdown_structure_issues(candidate, original=memo)
+    accepted = _retention_improved(before, after) and not regressions and not _has_internal_markers(candidate) and not structure_issues
     accepted_via = "model"
     deterministic_report: dict[str, Any] = {}
     if not accepted:
@@ -108,6 +110,7 @@ def run_reader_packet_retention_repair(
             "final_retained_card_count": after["retained_card_count"],
             "final_retention_report": after,
             "retention_regressions": regressions,
+            "structure_issues": structure_issues,
             "deterministic_fallback": deterministic_report,
             "issues": [] if accepted else ["reader-packet repair did not improve retention without leaking internal markers or regressions"],
         }

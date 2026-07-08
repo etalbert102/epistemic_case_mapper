@@ -55,10 +55,10 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "schema_id": "reader_facing_decision_packet_v1",
         "decision_question": str(packet.get("decision_question") or "").strip(),
         "answer": _clean_answer_frame(packet.get("answer_frame", {})),
-        "evidence_cards": [card for card in cards if card.get("role") in support_roles][:10],
-        "counterweight_cards": [card for card in cards if card.get("role") in limit_roles][:8],
-        "decision_cruxes": _decision_crux_cards(cards, packet)[:6],
-        "quantitative_anchors": [card for card in cards if card.get("quantities")][:8],
+        "evidence_cards": _with_card_ids("evidence", [card for card in cards if card.get("role") in support_roles][:10]),
+        "counterweight_cards": _with_card_ids("counterweight", [card for card in cards if card.get("role") in limit_roles][:8]),
+        "decision_cruxes": _with_card_ids("crux", _decision_crux_cards(cards, packet)[:6]),
+        "quantitative_anchors": _with_card_ids("quantitative", [card for card in cards if card.get("quantities")][:8]),
         "source_trail": _reader_source_trail(packet),
         "reader_limits": _reader_limits(packet),
     }
@@ -167,16 +167,34 @@ def write_packet_first_artifacts(
     *,
     artifacts: Path,
     packet: dict[str, Any],
+    backend: str = "prompt",
+    backend_timeout: int | None = None,
+    backend_retries: int = 0,
 ) -> dict[str, Any]:
     memo_plan = build_packet_memo_plan(packet)
+    from epistemic_case_mapper.map_briefing_reader_packet_verbalization import run_reader_packet_verbalization
+
+    verbalization_result = run_reader_packet_verbalization(
+        memo_plan.get("reader_facing_packet", {}) if isinstance(memo_plan.get("reader_facing_packet"), dict) else {},
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    memo_plan["reader_facing_packet"] = verbalization_result["reader_packet"]
     draft = render_packet_first_draft(memo_plan)
     memo_plan_path = artifacts / "memo_plan.json"
     reader_packet_path = artifacts / "reader_facing_packet.json"
     synthesis_prompt_path = artifacts / "reader_facing_packet_synthesis_prompt.txt"
+    verbalization_prompt_path = artifacts / "reader_packet_verbalization_prompt.txt"
+    verbalization_raw_path = artifacts / "reader_packet_verbalization_raw.txt"
+    verbalization_report_path = artifacts / "reader_packet_verbalization_report.json"
     draft_path = artifacts / "packet_first_draft.md"
     acceptance_path = artifacts / "section_context_acceptance_report.json"
     write_json(memo_plan_path, memo_plan)
     write_json(reader_packet_path, memo_plan.get("reader_facing_packet", {}))
+    write_markdown(verbalization_prompt_path, str(verbalization_result.get("prompt") or ""))
+    write_markdown(verbalization_raw_path, str(verbalization_result.get("raw") or ""))
+    write_json(verbalization_report_path, verbalization_result.get("report", {}))
     write_markdown(
         synthesis_prompt_path,
         build_reader_facing_packet_synthesis_prompt(
@@ -191,6 +209,9 @@ def write_packet_first_artifacts(
         "memo_plan_path": memo_plan_path,
         "reader_facing_packet_path": reader_packet_path,
         "reader_facing_packet_synthesis_prompt_path": synthesis_prompt_path,
+        "reader_packet_verbalization_prompt_path": verbalization_prompt_path,
+        "reader_packet_verbalization_raw_path": verbalization_raw_path,
+        "reader_packet_verbalization_report_path": verbalization_report_path,
         "packet_first_draft_path": draft_path,
         "section_context_acceptance_report_path": acceptance_path,
         "report": {
@@ -198,6 +219,8 @@ def write_packet_first_artifacts(
             "status": "ready" if memo_plan.get("section_views") else "warning",
             "section_count": len(memo_plan.get("section_views", [])),
             "draft_word_count": len(draft.split()),
+            "reader_packet_verbalization_status": verbalization_result.get("report", {}).get("status"),
+            "reader_packet_verbalization_accepted_count": verbalization_result.get("report", {}).get("accepted_count", 0),
             "reader_packet_card_count": len(
                 (memo_plan.get("reader_facing_packet", {}) if isinstance(memo_plan.get("reader_facing_packet"), dict) else {}).get(
                     "evidence_cards", []
@@ -373,6 +396,15 @@ def _reader_card(row: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _with_card_ids(prefix: str, cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for index, card in enumerate(cards, start=1):
+        copied = dict(card)
+        copied["card_id"] = f"{prefix}_{index:02d}"
+        result.append(copied)
+    return result
+
+
 def _decision_crux_cards(cards: list[dict[str, Any]], packet: dict[str, Any]) -> list[dict[str, Any]]:
     cruxes = [card for card in cards if card.get("role") == "decision_crux" and _statement_is_reader_usable(str(card.get("statement", "")), {})]
     if cruxes:
@@ -520,6 +552,9 @@ def _reader_card_section(value: Any, *, empty: str) -> str:
 
 
 def _reader_card_sentence(row: dict[str, Any]) -> str:
+    prose = str(row.get("prose") or "").strip()
+    if prose:
+        return _clean_reader_statement(prose)
     statement = str(row.get("statement") or "").strip()
     quantities = ", ".join(_string_list(row.get("quantities"))[:3])
     source = str(row.get("source") or "").strip()

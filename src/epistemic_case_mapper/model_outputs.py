@@ -11,12 +11,10 @@ JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", flags=re.DOTALL | re.IGNO
 def canonical_json_output(text: str) -> str:
     cleaned = ANSI_ESCAPE_RE.sub("", text).strip()
     for candidate in _json_candidates(cleaned):
-        try:
-            data = json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-        data = _repair_known_field_aliases(data)
-        return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+        data = _loads_json_candidate(candidate)
+        if data is not None:
+            data = _repair_known_field_aliases(data)
+            return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     return cleaned + ("\n" if cleaned else "")
 
 
@@ -39,6 +37,39 @@ def _extract_first_json_value(text: str) -> str | None:
             continue
         return text[start : start + end]
     return None
+
+
+def _loads_json_candidate(candidate: str):
+    for value in (candidate, _escape_raw_newlines_inside_json_strings(candidate)):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _escape_raw_newlines_inside_json_strings(text: str) -> str:
+    chars: list[str] = []
+    in_string = False
+    escaped = False
+    for char in text:
+        if escaped:
+            chars.append(char)
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            chars.append(char)
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            chars.append(char)
+            continue
+        if in_string and char in {"\n", "\r"}:
+            chars.append("\\n")
+            continue
+        chars.append(char)
+    return "".join(chars)
 
 
 def _repair_known_field_aliases(value):

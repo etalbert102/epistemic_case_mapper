@@ -3,11 +3,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_markdown_quality import repair_markdown_structure
 from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 
 
 def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
-    memo = markdown.strip()
+    memo = repair_markdown_structure(markdown).strip()
     question = str(scaffold.get("question", "")).strip()
     if question:
         memo = remove_standalone_question_restatement(memo, question)
@@ -19,6 +20,8 @@ def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
     source_lines = source_list_lines(scaffold)
     if source_lines:
         memo = _replace_sources_section(memo, source_lines)
+    if question:
+        memo = normalize_reader_memo_metadata_layout(memo, question)
     memo = replace_internal_reader_phrases(memo)
     memo = improve_reader_memo_readability(memo)
     if source_lines:
@@ -31,6 +34,17 @@ def decision_question_lines(scaffold: dict[str, Any]) -> list[str]:
     if not question:
         return []
     return [f"**Decision question:** {question}", ""]
+
+
+def normalize_reader_memo_metadata_layout(markdown: str, question: str) -> str:
+    """Keep protected reader metadata out of the opening answer paragraph."""
+
+    memo = str(markdown)
+    if question:
+        pattern = re.compile(rf"(\*\*Decision question:\*\*\s*{re.escape(question)})(?:[ \t]+|\n(?!\n))", flags=re.DOTALL)
+        memo = pattern.sub(lambda match: match.group(1).strip() + "\n\n", memo, count=1)
+    memo = re.sub(r"(?m)([^\n])\s+(\*\*Confidence:\*\*)", r"\1\n\n\2", memo)
+    return memo
 
 
 def remove_standalone_question_restatement(markdown: str, question: str) -> str:

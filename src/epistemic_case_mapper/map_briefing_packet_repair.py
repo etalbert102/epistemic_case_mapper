@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -42,12 +43,13 @@ def run_packet_retention_repair(
     if result.prompt_only:
         report.update({"status": "prompt_backend_kept_original", "issues": ["packet retention repair backend returned prompt only"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    candidate = _extract_markdown(raw)
+    candidate = repair_markdown_structure(_extract_markdown(raw))
     if not candidate:
         report.update({"status": "empty_response_kept_original", "issues": ["packet repair returned empty markdown"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     after = build_memo_packet_retention_report(candidate, packet)
-    accepted = _retention_improved(retention_report, after)
+    structure_issues = markdown_structure_issues(candidate, original=memo)
+    accepted = _retention_improved(retention_report, after) and not structure_issues
     report.update(
         {
             "status": "accepted" if accepted else "no_retention_improvement_kept_original",
@@ -55,7 +57,8 @@ def run_packet_retention_repair(
             "final_issue_count": len(after.get("issues", [])),
             "final_missing_critical_count": after.get("missing_critical_count", 0),
             "final_retained_must_retain_count": after.get("retained_must_retain_count", 0),
-            "issues": [] if accepted else ["packet repair did not improve deterministic retention audit"],
+            "structure_issues": structure_issues,
+            "issues": [] if accepted else ["packet repair did not improve deterministic retention audit without damaging Markdown structure"],
             "final_retention_report": after,
         }
     )

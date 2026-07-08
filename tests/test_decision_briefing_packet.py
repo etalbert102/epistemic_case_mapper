@@ -659,6 +659,7 @@ def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(
     assert written["reader_facing_packet_synthesis_prompt_path"].exists()
     assert written["packet_first_draft_path"].exists()
     assert written["section_context_acceptance_report_path"].exists()
+    assert written["reader_packet_verbalization_report_path"].exists()
     assert written["report"]["status"] == "ready"
 
 
