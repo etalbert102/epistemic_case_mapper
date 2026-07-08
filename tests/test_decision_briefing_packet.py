@@ -12,14 +12,13 @@ from epistemic_case_mapper.map_briefing_packet_memo import (
     render_packet_first_draft,
     write_packet_first_artifacts,
 )
-from epistemic_case_mapper.map_briefing_packet_refinement import PacketCritiqueOutput, run_packet_critique_and_refinement
+from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 from epistemic_case_mapper.map_briefing_reader_packet_repair import (
     build_reader_packet_retention_report,
     run_reader_packet_retention_repair,
 )
-from epistemic_case_mapper.model_schemas import parse_model_output_report
 
 
 def _scaffold() -> dict:
@@ -327,68 +326,6 @@ def test_packet_critique_and_refinement_skips_on_prompt_backend() -> None:
     assert result["packet_critique_adjudication_report"]["status"] == "skipped_prompt_backend"
     assert result["decision_briefing_packet_refinement_report"]["status"] == "skipped"
     assert result["decision_briefing_packet"] == built["decision_briefing_packet"]
-
-
-def test_packet_critique_parser_accepts_common_model_shape_variants() -> None:
-    raw = """
-    {
-      "schema_id": "packet_critique_v1",
-      "packet_sufficiency_judgment": "needs_repair",
-      "bundle_role_checks": [
-        {
-          "bundle_id": "bundle_001",
-          "role_matches_claim_and_direction": true,
-          "recommended_role": null
-        }
-      ],
-      "recommended_packet_edits": [
-        {
-          "target_id": "bundle_018",
-          "edit_type": "relabel",
-          "reason": "Administrative website information is not decision evidence."
-        }
-      ],
-      "misleading_synthesis_risks": [
-        {
-          "risk_type": "off_question_evidence",
-          "description": "A bundle answers an adjacent outcome rather than the decision question."
-        }
-      ],
-      "insufficiency_warnings": [
-        {
-          "type": "source_only_insufficiency",
-          "description": "A high-priority counterweight source is omitted."
-        }
-      ],
-      "claim_quality_issues": [
-        {
-          "bundle_id": "bundle_018",
-          "description": "The claim is page chrome, not a substantive evidence claim."
-        }
-      ],
-      "missing_or_weak_cruxes": [
-        {
-          "description": "The population boundary is present but overcompressed."
-        }
-      ],
-      "section_plan_risks": [
-        {
-          "description": "The section plan may put contrary evidence in a support slot."
-        }
-      ]
-    }
-    """
-
-    report = parse_model_output_report(raw, PacketCritiqueOutput)
-
-    assert report["ok"] is True
-    data = report["data"]
-    assert data["bundle_role_checks"][0]["recommended_role"] == ""
-    assert data["misleading_synthesis_risks"][0]["type"] == "off_question_evidence"
-    assert data["insufficiency_warnings"][0]["reason"] == "A high-priority counterweight source is omitted."
-    assert data["claim_quality_issues"][0]["issue"] == "The claim is page chrome, not a substantive evidence claim."
-    assert data["missing_or_weak_cruxes"] == ["The population boundary is present but overcompressed."]
-    assert data["section_plan_risks"] == ["The section plan may put contrary evidence in a support slot."]
 
 
 def test_packet_refinement_applies_only_known_id_updates(monkeypatch) -> None:

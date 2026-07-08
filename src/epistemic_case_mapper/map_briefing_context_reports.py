@@ -10,7 +10,6 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
     FinalBriefEvaluation,
     MemoCoherenceReport,
     PipelineMigrationLedger,
-    RuntimeBudgetReport,
     SectionContextAcceptanceReport,
     SectionContextAcceptanceRow,
     SourceEvidenceCardReport,
@@ -218,32 +217,6 @@ def build_pipeline_migration_ledger(
     ).model_dump()
 
 
-def build_runtime_budget_report(
-    *,
-    section_rewrite_report: dict[str, Any],
-    reader_rewrite_report: dict[str, Any],
-) -> dict[str, Any]:
-    section_attempts = 0
-    for section in section_rewrite_report.get("sections", []) if isinstance(section_rewrite_report.get("sections"), list) else []:
-        if isinstance(section, dict):
-            section_attempts += _int_value(section.get("attempt_count"))
-    if reader_rewrite_report.get("status") in {"skipped_after_section_rewrite", "not_run", "skipped_prompt_backend"}:
-        reader_model_calls = 0
-    else:
-        reader_model_calls = max(1, _int_value(reader_rewrite_report.get("pass_count")))
-    stages = [
-        {"stage": "section_rewrite", "model_call_count": section_attempts},
-        {"stage": "reader_memo_rewrite", "model_call_count": reader_model_calls},
-    ]
-    most_expensive = max(stages, key=lambda row: int(row.get("model_call_count", 0)))["stage"] if stages else ""
-    return RuntimeBudgetReport(
-        stages=stages,
-        model_call_count=section_attempts + reader_model_calls,
-        degraded_mode_triggers=_runtime_degraded_triggers(section_rewrite_report, reader_rewrite_report),
-        most_expensive_stage=most_expensive,
-    ).model_dump()
-
-
 def build_final_brief_evaluation(
     *,
     memo_markdown: str,
@@ -301,20 +274,6 @@ def _quality_component(card: dict[str, Any]) -> dict[str, Any]:
         "limitations": limitations,
         "overall": overall,
     }
-
-
-def _runtime_degraded_triggers(section_rewrite_report: dict[str, Any], reader_rewrite_report: dict[str, Any]) -> list[str]:
-    triggers: list[str] = []
-    if section_rewrite_report.get("status") in {"global_validation_failed_fallback", "no_sections_accepted"}:
-        triggers.append(str(section_rewrite_report.get("status")))
-    for section in section_rewrite_report.get("sections", []) if isinstance(section_rewrite_report.get("sections"), list) else []:
-        if isinstance(section, dict) and section.get("structured_fallback"):
-            triggers.append(f"structured_fallback:{section.get('title', '')}")
-    if reader_rewrite_report.get("status") == "skipped_after_section_rewrite":
-        triggers.append("reader_memo_rewrite_skipped")
-    if reader_rewrite_report.get("status") == "skipped_prompt_backend":
-        triggers.append("reader_memo_rewrite_prompt_backend")
-    return triggers
 
 
 def _final_eval_issues(scores: dict[str, int], coherence_report: dict[str, Any]) -> list[str]:

@@ -14,11 +14,11 @@ from epistemic_case_mapper.map_briefing_context_reports import (
     build_final_brief_evaluation,
     build_memo_coherence_report,
     build_pipeline_migration_ledger,
-    build_runtime_budget_report,
     build_section_context_acceptance_report,
     build_source_evidence_cards,
     build_source_sufficiency_report,
 )
+from epistemic_case_mapper.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
 
 
@@ -489,6 +489,12 @@ The current map supports a bounded read over the provided documents, with limite
     runtime = build_runtime_budget_report(
         section_rewrite_report={"sections": [{"attempt_count": 2}, {"attempt_count": 1}]},
         reader_rewrite_report={"status": "skipped_prompt_backend"},
+        scaffold={
+            "packet_critique_report": {"status": "parsed"},
+            "decision_briefing_packet_refinement_report": {"status": "applied"},
+        },
+        packet_plan_report={"reader_packet_verbalization_status": "accepted"},
+        editorial_report={"status": "accepted"},
     )
     evaluation = build_final_brief_evaluation(
         memo_markdown=memo,
@@ -503,7 +509,40 @@ The current map supports a bounded read over the provided documents, with limite
     assert migration["schema_id"] == "pipeline_migration_ledger_v1"
     assert migration["status"] == "warning"
     assert runtime["schema_id"] == "runtime_budget_report_v1"
-    assert runtime["model_call_count"] == 3
+    assert runtime["model_call_count"] == 7
     assert runtime["most_expensive_stage"] == "section_rewrite"
     assert evaluation["schema_id"] == "final_brief_evaluation_v1"
     assert evaluation["status"] == "pass"
+
+
+def test_stage_value_report_surfaces_weak_retention_and_stage_signals() -> None:
+    report = build_stage_value_report(
+        scaffold={
+            "source_evidence_cards": {"source_card_count": 4, "anchored_card_count": 3},
+            "decision_briefing_packet": {
+                "evidence_bundles": [{"bundle_id": "bundle_001"}],
+                "must_retain_ledger": [{"item_id": "retain_001"}],
+            },
+            "packet_critique_adjudication_report": {
+                "status": "accepted_with_warnings",
+                "accepted_count": 1,
+                "warning_only_count": 1,
+                "misleading_synthesis_risks": [{"description": "off-question evidence"}],
+            },
+            "decision_briefing_packet_refinement_report": {
+                "status": "applied",
+                "applied_update_count": 1,
+            },
+        },
+        section_rewrite_report={"status": "ready"},
+        reader_rewrite_report={"status": "accepted"},
+        packet_retention_report={"missing_critical_count": 2, "missing_high_count": 1},
+        final_evaluation={"status": "warning", "issues": ["retention gap"]},
+    )
+
+    assert report["schema_id"] == "stage_value_report_v1"
+    assert report["status"] == "warning"
+    assert "retention" in report["weak_or_missing_stages"]
+    stages = {row["stage"]: row for row in report["stages"]}
+    assert stages["packet_critique"]["status"] == "useful"
+    assert "1 accepted edits" in stages["packet_critique"]["primary_signal"]

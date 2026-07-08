@@ -28,6 +28,7 @@ class FinalReaderOutputPaths:
     section_role_quality: Path
     pipeline_migration_ledger: Path
     runtime_budget: Path
+    stage_value: Path
     final_brief_evaluation: Path
     section_rewrite_report: Path
     reader_memo_rewrite_prompt: Path
@@ -150,6 +151,10 @@ def write_final_reader_outputs(
         prioritized_map=prioritized_map,
         section_rewrite_result=section_rewrite_result,
         rewrite_result=rewrite_result,
+        packet_plan_result=packet_plan_result,
+        reader_packet_repair_result=reader_packet_repair_result,
+        packet_repair_result=packet_repair_result,
+        editorial_result=editorial_result,
         briefing_path=paths.briefing,
     )
     edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
@@ -254,6 +259,7 @@ def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         section_role_quality=artifacts / "section_role_quality_report.json",
         pipeline_migration_ledger=artifacts / "pipeline_migration_ledger.json",
         runtime_budget=artifacts / "runtime_budget_report.json",
+        stage_value=artifacts / "stage_value_report.json",
         final_brief_evaluation=artifacts / "final_brief_evaluation.json",
         section_rewrite_report=artifacts / "section_rewrite_report.json",
         reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
@@ -282,6 +288,10 @@ def _build_final_reader_diagnostics(
     prioritized_map: dict[str, Any],
     section_rewrite_result: dict[str, Any],
     rewrite_result: dict[str, Any],
+    packet_plan_result: dict[str, Any] | None,
+    reader_packet_repair_result: dict[str, Any],
+    packet_repair_result: dict[str, Any],
+    editorial_result: dict[str, Any],
     briefing_path: Path,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.decision_argument_artifacts import evaluate_traceability_against_memo
@@ -290,11 +300,11 @@ def _build_final_reader_diagnostics(
         build_final_brief_evaluation,
         build_memo_coherence_report,
         build_pipeline_migration_ledger,
-        build_runtime_budget_report,
     )
     from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
     from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
+    from epistemic_case_mapper.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
     from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
     from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 
@@ -320,6 +330,11 @@ def _build_final_reader_diagnostics(
     runtime_budget = build_runtime_budget_report(
         section_rewrite_report=section_rewrite_result.get("report", {}),
         reader_rewrite_report=rewrite_result.get("report", {}),
+        scaffold=memo_package["scaffold"],
+        packet_plan_report=packet_plan_result.get("report", {}) if packet_plan_result else {},
+        reader_packet_repair_report=reader_packet_repair_result.get("report", {}),
+        packet_repair_report=packet_repair_result.get("report", {}),
+        editorial_report=editorial_result.get("report", {}),
     )
     final_eval = build_final_brief_evaluation(
         memo_markdown=reader_memo,
@@ -331,6 +346,13 @@ def _build_final_reader_diagnostics(
     packet_retention = build_memo_packet_retention_report(
         reader_memo,
         memo_package["scaffold"].get("decision_briefing_packet"),
+    )
+    stage_value = build_stage_value_report(
+        scaffold=memo_package["scaffold"],
+        section_rewrite_report=section_rewrite_result.get("report", {}),
+        reader_rewrite_report=rewrite_result.get("report", {}),
+        packet_retention_report=packet_retention,
+        final_evaluation=final_eval,
     )
     packet_comparison = build_packet_first_comparison_report(
         scaffold=memo_package["scaffold"],
@@ -348,6 +370,7 @@ def _build_final_reader_diagnostics(
         "role_quality": role_quality,
         "pipeline_migration": pipeline_migration,
         "runtime_budget": runtime_budget,
+        "stage_value": stage_value,
         "final_eval": final_eval,
         "packet_retention": packet_retention,
         "packet_comparison": packet_comparison,
@@ -396,6 +419,7 @@ def _write_final_reader_artifacts(
     write_json(paths.section_role_quality, diagnostics["role_quality"])
     write_json(paths.pipeline_migration_ledger, diagnostics["pipeline_migration"])
     write_json(paths.runtime_budget, diagnostics["runtime_budget"])
+    write_json(paths.stage_value, diagnostics["stage_value"])
     write_json(paths.final_brief_evaluation, diagnostics["final_eval"])
     write_json(paths.memo_packet_retention, diagnostics["packet_retention"])
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
@@ -438,6 +462,7 @@ def _final_reader_summary_paths(
         "section_role_quality_report": paths.section_role_quality,
         "pipeline_migration_ledger": paths.pipeline_migration_ledger,
         "runtime_budget_report": paths.runtime_budget,
+        "stage_value_report": paths.stage_value,
         "final_brief_evaluation": paths.final_brief_evaluation,
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "memo_packet_retention_report": paths.memo_packet_retention,
