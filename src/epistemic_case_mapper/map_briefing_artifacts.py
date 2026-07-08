@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.decision_argument_artifacts import (
@@ -18,6 +19,131 @@ from epistemic_case_mapper.map_briefing_spine_audit import (
 )
 
 
+@dataclass(frozen=True)
+class ArtifactContext:
+    prompt: str
+    prioritized_map: dict[str, Any]
+    prioritization_report: dict[str, Any]
+    erosion_audit: dict[str, Any]
+    scaffold: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ArtifactSpec:
+    key: str
+    filename: str
+    kind: str
+    value: Callable[[ArtifactContext], Any]
+    summary_key: str | None = None
+    review_label: str | None = None
+
+
+def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
+    return (
+        ArtifactSpec("prompt", "map_briefing_prompt.txt", "markdown", lambda ctx: ctx.prompt),
+        ArtifactSpec("prioritized_map", "prioritized_map.json", "json", lambda ctx: ctx.prioritized_map, review_label="Prioritized map"),
+        ArtifactSpec("prioritization_report", "map_prioritization_report.json", "json", lambda ctx: ctx.prioritization_report, review_label="Prioritization report"),
+        ArtifactSpec("erosion_audit", "generated_map_erosion_audit.json", "json", lambda ctx: ctx.erosion_audit, summary_key="generated_map_erosion_audit"),
+        ArtifactSpec("sufficiency_report", "map_sufficiency_report.json", "json", _scaffold_value("map_sufficiency_report"), summary_key="map_sufficiency_report"),
+        ArtifactSpec("decision_synthesis_model", "decision_synthesis_model.json", "json", _scaffold_value("decision_synthesis_model"), review_label="Decision synthesis model"),
+        ArtifactSpec("argument_model", "argument_model.json", "json", _scaffold_value("argument_model"), review_label="Argument model"),
+        ArtifactSpec("graph_synthesis_packet", "graph_synthesis_packet.json", "json", _scaffold_value("graph_synthesis_packet"), review_label="Graph synthesis packet"),
+        ArtifactSpec("source_evidence_cards", "source_evidence_cards.json", "json", _scaffold_value("source_evidence_cards"), review_label="Source evidence cards"),
+        ArtifactSpec("source_sufficiency_report", "source_sufficiency_report.json", "json", _scaffold_value("source_sufficiency_report"), review_label="Source sufficiency report"),
+        ArtifactSpec("evidence_quality_report", "evidence_quality_report.json", "json", _scaffold_value("evidence_quality_report"), review_label="Evidence quality report"),
+        ArtifactSpec("candidate_evidence_cards", "candidate_evidence_cards.json", "json", _scaffold_value("candidate_evidence_cards"), review_label="Candidate evidence cards"),
+        ArtifactSpec("source_map_reconciliation", "source_map_reconciliation.json", "json", _scaffold_value("source_map_reconciliation"), review_label="Source-map reconciliation"),
+        ArtifactSpec("source_coverage_report", "source_coverage_report.json", "json", _scaffold_value("source_coverage_report"), review_label="Source coverage report"),
+        ArtifactSpec("classical_evidence_selection_report", "classical_evidence_selection_report.json", "json", _scaffold_value("classical_evidence_selection_report"), review_label="Classical evidence selection"),
+        ArtifactSpec("claim_cluster_report", "claim_cluster_report.json", "json", _scaffold_value("claim_cluster_report")),
+        ArtifactSpec("evidence_centrality_report", "evidence_centrality_report.json", "json", _scaffold_value("evidence_centrality_report")),
+        ArtifactSpec("coverage_balance_report", "coverage_balance_report.json", "json", _scaffold_value("coverage_balance_report")),
+        ArtifactSpec("quantity_outlier_report", "quantity_outlier_report.json", "json", _scaffold_value("quantity_outlier_report")),
+        ArtifactSpec("slot_eligibility_audit", "slot_eligibility_audit.json", "json", _scaffold_value("slot_eligibility_audit"), review_label="Slot eligibility audit"),
+        ArtifactSpec("canonical_decision_spine", "canonical_decision_spine.json", "json", _scaffold_value("canonical_decision_spine"), review_label="Canonical decision spine"),
+        ArtifactSpec("canonical_decision_spine_validation", "canonical_decision_spine_validation.json", "json", _scaffold_value("canonical_decision_spine_validation")),
+        ArtifactSpec("canonical_decision_spine_model_arbitration_report", "canonical_decision_spine_model_arbitration_report.json", "json", _scaffold_value("canonical_decision_spine_model_arbitration_report"), review_label="Canonical spine model arbitration"),
+        ArtifactSpec("canonical_decision_spine_model_prompt", "canonical_decision_spine_model_prompt.txt", "markdown", _scaffold_text("canonical_decision_spine_model_prompt")),
+        ArtifactSpec("canonical_decision_spine_model_raw", "canonical_decision_spine_model_raw.txt", "markdown", _scaffold_text("canonical_decision_spine_model_raw")),
+        ArtifactSpec("decision_spine_consistency_report", "decision_spine_consistency_report.json", "json", _scaffold_value("decision_spine_consistency_report"), review_label="Decision spine consistency"),
+        ArtifactSpec("slot_reconciliation_report", "slot_reconciliation_report.json", "json", _scaffold_value("slot_reconciliation_report"), review_label="Slot reconciliation report"),
+        ArtifactSpec("section_projection_packets", "section_projection_packets.json", "json", _scaffold_value("section_projection_packets"), review_label="Section projection packets"),
+        ArtifactSpec("section_context_decision_packets", "section_context_decision_packets.json", "json", _scaffold_value("section_context_decision_packets"), review_label="Section context decision packets"),
+        ArtifactSpec("section_context_quality_report", "section_context_quality_report.json", "json", _scaffold_value("section_context_quality_report"), review_label="Section context quality report"),
+        ArtifactSpec("section_projection_readiness_report", "section_projection_readiness_report.json", "json", _scaffold_value("section_projection_readiness_report"), review_label="Section projection readiness"),
+        ArtifactSpec("spine_quality_report", "spine_quality_report.json", "json", _scaffold_value("spine_quality_report"), review_label="Spine quality report"),
+        ArtifactSpec("before_after_briefing_comparison", "before_after_briefing_comparison.md", "markdown", lambda ctx: render_before_after_briefing_comparison(ctx.scaffold), review_label="Before/after briefing comparison"),
+        ArtifactSpec("spine_completion_audit", "spine_completion_audit.md", "markdown", lambda ctx: render_spine_completion_audit(ctx.scaffold), review_label="Spine completion audit"),
+        ArtifactSpec("atomic_evidence_cards", "atomic_evidence_cards.json", "json", _scaffold_value("atomic_evidence_cards")),
+        ArtifactSpec("quantity_ledger", "quantity_ledger.json", "json", _scaffold_value("quantity_ledger"), review_label="Quantity ledger"),
+        ArtifactSpec("evidence_to_decision_matrix", "evidence_to_decision_matrix.json", "json", _argument_artifact_value("evidence_to_decision_matrix"), review_label="Evidence-to-decision matrix"),
+        ArtifactSpec("summary_of_findings", "summary_of_findings.json", "json", _argument_artifact_value("summary_of_findings"), review_label="Summary of findings"),
+        ArtifactSpec("competing_reads", "competing_reads.json", "json", _argument_artifact_value("competing_reads"), review_label="Competing reads"),
+        ArtifactSpec("argument_case_graph", "argument_case_graph.json", "json", _argument_artifact_value("argument_case_graph"), review_label="Argument case graph"),
+        ArtifactSpec("decision_traceability_matrix", "decision_traceability_matrix.json", "json", _argument_artifact_value("decision_traceability_matrix"), review_label="Decision traceability matrix"),
+        ArtifactSpec("evidence_to_decision_matrix_markdown", "EVIDENCE_TO_DECISION_MATRIX.md", "markdown", lambda ctx: render_evidence_to_decision_matrix_markdown(_argument_artifacts(ctx.scaffold).get("evidence_to_decision_matrix", {}))),
+        ArtifactSpec("summary_of_findings_markdown", "SUMMARY_OF_FINDINGS.md", "markdown", lambda ctx: render_summary_of_findings_markdown(_argument_artifacts(ctx.scaffold).get("summary_of_findings", {}))),
+        ArtifactSpec("competing_reads_markdown", "COMPETING_READS.md", "markdown", lambda ctx: render_competing_reads_markdown(_argument_artifacts(ctx.scaffold).get("competing_reads", {}))),
+        ArtifactSpec("argument_case_graph_markdown", "ARGUMENT_CASE_GRAPH.md", "markdown", lambda ctx: render_argument_case_graph_markdown(_argument_artifacts(ctx.scaffold).get("argument_case_graph", {}))),
+        ArtifactSpec("decision_traceability_matrix_markdown", "DECISION_TRACEABILITY_MATRIX.md", "markdown", lambda ctx: render_decision_traceability_matrix_markdown(_argument_artifacts(ctx.scaffold).get("decision_traceability_matrix", {}))),
+    )
+
+
+def _scaffold_value(key: str) -> Callable[[ArtifactContext], Any]:
+    return lambda ctx: ctx.scaffold.get(key, {})
+
+
+def _scaffold_text(key: str) -> Callable[[ArtifactContext], str]:
+    return lambda ctx: str(ctx.scaffold.get(key, ""))
+
+
+def _argument_artifacts(scaffold: dict[str, Any]) -> dict[str, Any]:
+    value = scaffold.get("decision_argument_artifacts", {})
+    return value if isinstance(value, dict) else {}
+
+
+def _argument_artifact_value(key: str) -> Callable[[ArtifactContext], Any]:
+    return lambda ctx: _argument_artifacts(ctx.scaffold).get(key, {})
+
+
+def _scaffold_artifact_paths(artifacts: Path) -> dict[str, Path]:
+    return {spec.key: artifacts / spec.filename for spec in _scaffold_artifact_specs()}
+
+
+def _write_artifact(path: Path, kind: str, value: Any) -> None:
+    if kind == "markdown":
+        write_markdown(path, str(value))
+    else:
+        write_json(path, value if isinstance(value, dict) else {})
+
+
+def _scaffold_summary_paths(scaffold_paths: dict[str, Path], *, final_review_packet_path: Path) -> dict[str, Path]:
+    hidden = {
+        "atomic_evidence_cards",
+        "evidence_to_decision_matrix_markdown",
+        "summary_of_findings_markdown",
+        "competing_reads_markdown",
+        "argument_case_graph_markdown",
+        "decision_traceability_matrix_markdown",
+    }
+    paths = {
+        spec.summary_key or spec.key: scaffold_paths[spec.key]
+        for spec in _scaffold_artifact_specs()
+        if spec.key in scaffold_paths
+        and spec.key not in hidden
+    }
+    paths["final_review_packet"] = final_review_packet_path
+    return paths
+
+
+def _review_artifact_lines(repo_root: Path, scaffold_paths: dict[str, Path]) -> list[str]:
+    return [
+        f"- {spec.review_label}: `{_rel(repo_root, scaffold_paths.get(spec.key))}`"
+        for spec in _scaffold_artifact_specs()
+        if spec.review_label
+    ]
+
+
 def write_scaffold_artifacts(
     *,
     artifacts: Path,
@@ -27,101 +153,16 @@ def write_scaffold_artifacts(
     erosion_audit: dict[str, Any],
     scaffold: dict[str, Any],
 ) -> dict[str, Path]:
-    paths = {
-        "prompt": artifacts / "map_briefing_prompt.txt",
-        "prioritized_map": artifacts / "prioritized_map.json",
-        "prioritization_report": artifacts / "map_prioritization_report.json",
-        "erosion_audit": artifacts / "generated_map_erosion_audit.json",
-        "sufficiency_report": artifacts / "map_sufficiency_report.json",
-        "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
-        "argument_model": artifacts / "argument_model.json",
-        "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
-        "source_evidence_cards": artifacts / "source_evidence_cards.json",
-        "source_sufficiency_report": artifacts / "source_sufficiency_report.json",
-        "evidence_quality_report": artifacts / "evidence_quality_report.json",
-        "candidate_evidence_cards": artifacts / "candidate_evidence_cards.json",
-        "source_map_reconciliation": artifacts / "source_map_reconciliation.json",
-        "source_coverage_report": artifacts / "source_coverage_report.json",
-        "classical_evidence_selection_report": artifacts / "classical_evidence_selection_report.json",
-        "claim_cluster_report": artifacts / "claim_cluster_report.json",
-        "evidence_centrality_report": artifacts / "evidence_centrality_report.json",
-        "coverage_balance_report": artifacts / "coverage_balance_report.json",
-        "quantity_outlier_report": artifacts / "quantity_outlier_report.json",
-        "slot_eligibility_audit": artifacts / "slot_eligibility_audit.json",
-        "canonical_decision_spine": artifacts / "canonical_decision_spine.json",
-        "canonical_decision_spine_validation": artifacts / "canonical_decision_spine_validation.json",
-        "canonical_decision_spine_model_arbitration_report": artifacts / "canonical_decision_spine_model_arbitration_report.json",
-        "canonical_decision_spine_model_prompt": artifacts / "canonical_decision_spine_model_prompt.txt",
-        "canonical_decision_spine_model_raw": artifacts / "canonical_decision_spine_model_raw.txt",
-        "decision_spine_consistency_report": artifacts / "decision_spine_consistency_report.json",
-        "slot_reconciliation_report": artifacts / "slot_reconciliation_report.json",
-        "section_projection_packets": artifacts / "section_projection_packets.json",
-        "section_context_decision_packets": artifacts / "section_context_decision_packets.json",
-        "section_context_quality_report": artifacts / "section_context_quality_report.json",
-        "section_projection_readiness_report": artifacts / "section_projection_readiness_report.json",
-        "spine_quality_report": artifacts / "spine_quality_report.json",
-        "before_after_briefing_comparison": artifacts / "before_after_briefing_comparison.md",
-        "spine_completion_audit": artifacts / "spine_completion_audit.md",
-        "atomic_evidence_cards": artifacts / "atomic_evidence_cards.json",
-        "quantity_ledger": artifacts / "quantity_ledger.json",
-        "evidence_to_decision_matrix": artifacts / "evidence_to_decision_matrix.json",
-        "summary_of_findings": artifacts / "summary_of_findings.json",
-        "competing_reads": artifacts / "competing_reads.json",
-        "argument_case_graph": artifacts / "argument_case_graph.json",
-        "decision_traceability_matrix": artifacts / "decision_traceability_matrix.json",
-        "evidence_to_decision_matrix_markdown": artifacts / "EVIDENCE_TO_DECISION_MATRIX.md",
-        "summary_of_findings_markdown": artifacts / "SUMMARY_OF_FINDINGS.md",
-        "competing_reads_markdown": artifacts / "COMPETING_READS.md",
-        "argument_case_graph_markdown": artifacts / "ARGUMENT_CASE_GRAPH.md",
-        "decision_traceability_matrix_markdown": artifacts / "DECISION_TRACEABILITY_MATRIX.md",
-    }
-    write_markdown(paths["prompt"], prompt)
-    write_json(paths["prioritized_map"], prioritized_map)
-    write_json(paths["prioritization_report"], prioritization_report)
-    write_json(paths["erosion_audit"], erosion_audit)
-    write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
-    write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
-    write_json(paths["argument_model"], scaffold.get("argument_model", {}))
-    write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
-    write_json(paths["source_evidence_cards"], scaffold.get("source_evidence_cards", {}))
-    write_json(paths["source_sufficiency_report"], scaffold.get("source_sufficiency_report", {}))
-    write_json(paths["evidence_quality_report"], scaffold.get("evidence_quality_report", {}))
-    write_json(paths["candidate_evidence_cards"], scaffold.get("candidate_evidence_cards", {}))
-    write_json(paths["source_map_reconciliation"], scaffold.get("source_map_reconciliation", {}))
-    write_json(paths["source_coverage_report"], scaffold.get("source_coverage_report", {}))
-    write_json(paths["classical_evidence_selection_report"], scaffold.get("classical_evidence_selection_report", {}))
-    write_json(paths["claim_cluster_report"], scaffold.get("claim_cluster_report", {}))
-    write_json(paths["evidence_centrality_report"], scaffold.get("evidence_centrality_report", {}))
-    write_json(paths["coverage_balance_report"], scaffold.get("coverage_balance_report", {}))
-    write_json(paths["quantity_outlier_report"], scaffold.get("quantity_outlier_report", {}))
-    write_json(paths["slot_eligibility_audit"], scaffold.get("slot_eligibility_audit", {}))
-    write_json(paths["canonical_decision_spine"], scaffold.get("canonical_decision_spine", {}))
-    write_json(paths["canonical_decision_spine_validation"], scaffold.get("canonical_decision_spine_validation", {}))
-    write_json(paths["canonical_decision_spine_model_arbitration_report"], scaffold.get("canonical_decision_spine_model_arbitration_report", {}))
-    write_markdown(paths["canonical_decision_spine_model_prompt"], str(scaffold.get("canonical_decision_spine_model_prompt", "")))
-    write_markdown(paths["canonical_decision_spine_model_raw"], str(scaffold.get("canonical_decision_spine_model_raw", "")))
-    write_json(paths["decision_spine_consistency_report"], scaffold.get("decision_spine_consistency_report", {}))
-    write_json(paths["slot_reconciliation_report"], scaffold.get("slot_reconciliation_report", {}))
-    write_json(paths["section_projection_packets"], scaffold.get("section_projection_packets", {}))
-    write_json(paths["section_context_decision_packets"], scaffold.get("section_context_decision_packets", {}))
-    write_json(paths["section_context_quality_report"], scaffold.get("section_context_quality_report", {}))
-    write_json(paths["section_projection_readiness_report"], scaffold.get("section_projection_readiness_report", {}))
-    write_json(paths["spine_quality_report"], scaffold.get("spine_quality_report", {}))
-    write_markdown(paths["before_after_briefing_comparison"], render_before_after_briefing_comparison(scaffold))
-    write_markdown(paths["spine_completion_audit"], render_spine_completion_audit(scaffold))
-    write_json(paths["atomic_evidence_cards"], scaffold.get("atomic_evidence_cards", {}))
-    write_json(paths["quantity_ledger"], scaffold.get("quantity_ledger", {}))
-    argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
-    write_json(paths["evidence_to_decision_matrix"], argument_artifacts.get("evidence_to_decision_matrix", {}))
-    write_json(paths["summary_of_findings"], argument_artifacts.get("summary_of_findings", {}))
-    write_json(paths["competing_reads"], argument_artifacts.get("competing_reads", {}))
-    write_json(paths["argument_case_graph"], argument_artifacts.get("argument_case_graph", {}))
-    write_json(paths["decision_traceability_matrix"], argument_artifacts.get("decision_traceability_matrix", {}))
-    write_markdown(paths["evidence_to_decision_matrix_markdown"], render_evidence_to_decision_matrix_markdown(argument_artifacts.get("evidence_to_decision_matrix", {})))
-    write_markdown(paths["summary_of_findings_markdown"], render_summary_of_findings_markdown(argument_artifacts.get("summary_of_findings", {})))
-    write_markdown(paths["competing_reads_markdown"], render_competing_reads_markdown(argument_artifacts.get("competing_reads", {})))
-    write_markdown(paths["argument_case_graph_markdown"], render_argument_case_graph_markdown(argument_artifacts.get("argument_case_graph", {})))
-    write_markdown(paths["decision_traceability_matrix_markdown"], render_decision_traceability_matrix_markdown(argument_artifacts.get("decision_traceability_matrix", {})))
+    ctx = ArtifactContext(
+        prompt=prompt,
+        prioritized_map=prioritized_map,
+        prioritization_report=prioritization_report,
+        erosion_audit=erosion_audit,
+        scaffold=scaffold,
+    )
+    paths = _scaffold_artifact_paths(artifacts)
+    for spec in _scaffold_artifact_specs():
+        _write_artifact(paths[spec.key], spec.kind, spec.value(ctx))
     return paths
 
 
@@ -215,48 +256,8 @@ def write_run_summary(
         paths={
             "briefing": briefing_path,
             "evidence_appendix": evidence_appendix_path,
-            "prompt": scaffold_paths["prompt"],
             "raw": raw_path,
-            "prioritized_map": scaffold_paths["prioritized_map"],
-            "prioritization_report": scaffold_paths["prioritization_report"],
-            "generated_map_erosion_audit": scaffold_paths["erosion_audit"],
-            "map_sufficiency_report": scaffold_paths["sufficiency_report"],
-            "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
-            "argument_model": scaffold_paths["argument_model"],
-            "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
-            "source_evidence_cards": scaffold_paths["source_evidence_cards"],
-            "source_sufficiency_report": scaffold_paths["source_sufficiency_report"],
-            "evidence_quality_report": scaffold_paths["evidence_quality_report"],
-            "candidate_evidence_cards": scaffold_paths["candidate_evidence_cards"],
-            "source_map_reconciliation": scaffold_paths["source_map_reconciliation"],
-            "source_coverage_report": scaffold_paths["source_coverage_report"],
-            "classical_evidence_selection_report": scaffold_paths["classical_evidence_selection_report"],
-            "claim_cluster_report": scaffold_paths["claim_cluster_report"],
-            "evidence_centrality_report": scaffold_paths["evidence_centrality_report"],
-            "coverage_balance_report": scaffold_paths["coverage_balance_report"],
-            "quantity_outlier_report": scaffold_paths["quantity_outlier_report"],
-            "slot_eligibility_audit": scaffold_paths["slot_eligibility_audit"],
-            "canonical_decision_spine": scaffold_paths["canonical_decision_spine"],
-            "canonical_decision_spine_validation": scaffold_paths["canonical_decision_spine_validation"],
-            "canonical_decision_spine_model_arbitration_report": scaffold_paths["canonical_decision_spine_model_arbitration_report"],
-            "canonical_decision_spine_model_prompt": scaffold_paths["canonical_decision_spine_model_prompt"],
-            "canonical_decision_spine_model_raw": scaffold_paths["canonical_decision_spine_model_raw"],
-            "decision_spine_consistency_report": scaffold_paths["decision_spine_consistency_report"],
-            "slot_reconciliation_report": scaffold_paths["slot_reconciliation_report"],
-            "section_projection_packets": scaffold_paths["section_projection_packets"],
-            "section_context_decision_packets": scaffold_paths["section_context_decision_packets"],
-            "section_context_quality_report": scaffold_paths["section_context_quality_report"],
-            "section_projection_readiness_report": scaffold_paths["section_projection_readiness_report"],
-            "spine_quality_report": scaffold_paths["spine_quality_report"],
-            "before_after_briefing_comparison": scaffold_paths["before_after_briefing_comparison"],
-            "spine_completion_audit": scaffold_paths["spine_completion_audit"],
-            "quantity_ledger": scaffold_paths["quantity_ledger"],
-            "evidence_to_decision_matrix": scaffold_paths["evidence_to_decision_matrix"],
-            "summary_of_findings": scaffold_paths["summary_of_findings"],
-            "competing_reads": scaffold_paths["competing_reads"],
-            "argument_case_graph": scaffold_paths["argument_case_graph"],
-            "decision_traceability_matrix": scaffold_paths["decision_traceability_matrix"],
-            "final_review_packet": final_review_packet_path,
+            **_scaffold_summary_paths(scaffold_paths, final_review_packet_path=final_review_packet_path),
             **telemetry_paths,
             **final_outputs["summary_paths"],
         },
@@ -329,35 +330,7 @@ def write_final_review_packet(
         "",
         "## Structured Artifacts",
         "",
-        f"- Prioritized map: `{_rel(repo_root, scaffold_paths.get('prioritized_map'))}`",
-        f"- Argument model: `{_rel(repo_root, scaffold_paths.get('argument_model'))}`",
-        f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
-        f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
-        f"- Source evidence cards: `{_rel(repo_root, scaffold_paths.get('source_evidence_cards'))}`",
-        f"- Source sufficiency report: `{_rel(repo_root, scaffold_paths.get('source_sufficiency_report'))}`",
-        f"- Evidence quality report: `{_rel(repo_root, scaffold_paths.get('evidence_quality_report'))}`",
-        f"- Candidate evidence cards: `{_rel(repo_root, scaffold_paths.get('candidate_evidence_cards'))}`",
-        f"- Source-map reconciliation: `{_rel(repo_root, scaffold_paths.get('source_map_reconciliation'))}`",
-        f"- Source coverage report: `{_rel(repo_root, scaffold_paths.get('source_coverage_report'))}`",
-        f"- Classical evidence selection: `{_rel(repo_root, scaffold_paths.get('classical_evidence_selection_report'))}`",
-        f"- Slot eligibility audit: `{_rel(repo_root, scaffold_paths.get('slot_eligibility_audit'))}`",
-        f"- Canonical decision spine: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine'))}`",
-        f"- Canonical spine model arbitration: `{_rel(repo_root, scaffold_paths.get('canonical_decision_spine_model_arbitration_report'))}`",
-        f"- Decision spine consistency: `{_rel(repo_root, scaffold_paths.get('decision_spine_consistency_report'))}`",
-        f"- Slot reconciliation report: `{_rel(repo_root, scaffold_paths.get('slot_reconciliation_report'))}`",
-        f"- Section projection packets: `{_rel(repo_root, scaffold_paths.get('section_projection_packets'))}`",
-        f"- Section context decision packets: `{_rel(repo_root, scaffold_paths.get('section_context_decision_packets'))}`",
-        f"- Section context quality report: `{_rel(repo_root, scaffold_paths.get('section_context_quality_report'))}`",
-        f"- Section projection readiness: `{_rel(repo_root, scaffold_paths.get('section_projection_readiness_report'))}`",
-        f"- Spine quality report: `{_rel(repo_root, scaffold_paths.get('spine_quality_report'))}`",
-        f"- Before/after briefing comparison: `{_rel(repo_root, scaffold_paths.get('before_after_briefing_comparison'))}`",
-        f"- Spine completion audit: `{_rel(repo_root, scaffold_paths.get('spine_completion_audit'))}`",
-        f"- Quantity ledger: `{_rel(repo_root, scaffold_paths.get('quantity_ledger'))}`",
-        f"- Evidence-to-decision matrix: `{_rel(repo_root, scaffold_paths.get('evidence_to_decision_matrix'))}`",
-        f"- Summary of findings: `{_rel(repo_root, scaffold_paths.get('summary_of_findings'))}`",
-        f"- Competing reads: `{_rel(repo_root, scaffold_paths.get('competing_reads'))}`",
-        f"- Argument case graph: `{_rel(repo_root, scaffold_paths.get('argument_case_graph'))}`",
-        f"- Decision traceability matrix: `{_rel(repo_root, scaffold_paths.get('decision_traceability_matrix'))}`",
+        *_review_artifact_lines(repo_root, scaffold_paths),
         f"- Final traceability check: `{_rel(repo_root, final_outputs['summary_paths'].get('decision_traceability_matrix_final'))}`",
         f"- Section packets: `{_rel(repo_root, final_outputs['summary_paths'].get('section_synthesis_packets'))}`",
         f"- Section context acceptance: `{_rel(repo_root, final_outputs['summary_paths'].get('section_context_acceptance_report'))}`",
