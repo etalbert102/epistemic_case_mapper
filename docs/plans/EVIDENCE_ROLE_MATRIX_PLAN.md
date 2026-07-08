@@ -88,8 +88,25 @@ Downstream synthesis must consume `section_evidence_working_sets`; it should not
 - New artifacts should degrade gracefully when candidate cards or section packets are missing.
 
 ## Commit Ledger
-- Pending: record plan.
-- Pending: matrix artifact.
-- Pending: model-packet integration.
-- Pending: coverage telemetry and artifact links.
-- Pending: all-up verification.
+- `d30d9ae` recorded this implementation plan.
+- `7c404db` added the evidence role matrix and section evidence working-set artifacts.
+- `97e2d1c` made section model packets consume role-aware working sets while preserving compatibility fields.
+- `2b87c7f` added report-only evidence role coverage telemetry and artifact links.
+- `a654c01` updated section prompts to treat role-aware evidence groups as the primary analytic context.
+- Completed: all-up verification and completion audit.
+
+## Completion Audit
+- Matrix construction is deterministic and generic; it uses candidate card metadata and section context packets, not case-specific vocabulary.
+- The scaffold now exposes `evidence_role_matrix`, `section_evidence_working_sets`, and `evidence_role_coverage_report`.
+- Section synthesis now receives role-aware evidence groups plus legacy `owned_evidence` / `reference_only_evidence` compatibility views.
+- Evidence reuse across sections is allowed when roles differ, and same-role reuse is reported rather than blocked.
+- High-priority cards omitted from all section working sets are reported in `evidence_role_coverage_report`.
+- New checks remain report-only to avoid overblocking before corpus calibration.
+- Focused verification passed during implementation:
+  - `python3 -m compileall -q src/epistemic_case_mapper tests`
+  - `PYTHONPATH=src python3 -m pytest -q tests/test_evidence_role_matrix.py tests/test_canonical_decision_spine.py tests/test_map_briefing_context_schemas.py`
+  - `PYTHONPATH=src python3 -m pytest -q tests/test_section_prompt_contracts.py tests/test_evidence_role_matrix.py tests/test_canonical_decision_spine.py::test_section_packet_prefers_canonical_projection_when_present`
+  - `PYTHONPATH=src python3 -m pytest -q tests/test_section_prompt_contracts.py tests/test_evidence_role_matrix.py`
+- Final all-up verification passed:
+  - `python3 -m compileall -q src/epistemic_case_mapper tests`
+  - `PYTHONPATH=src python3 -m pytest -q` -> `355 passed in 13.97s`
