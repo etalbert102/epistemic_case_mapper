@@ -42,32 +42,43 @@ def write_final_reader_outputs(
     prioritized_map: dict[str, Any],
     artifacts: Path,
     backend_config: ModelBackendConfig,
-    run_reader_memo_rewrite: bool = False,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import reader_memo_edit_artifact_paths
     from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
+    from epistemic_case_mapper.map_briefing_packet_memo import (
+        packet_first_section_rewrite_result,
+        write_packet_first_artifacts,
+    )
     from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
     from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
 
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
     evidence_appendix = str(memo_package["appendix"])
-    section_rewrite_result = rewrite_reader_memo_by_section(
-        str(memo_package["memo"]),
-        evidence_appendix,
-        memo_package["scaffold"],
-        prioritized_map,
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-        artifacts=artifacts,
-    )
+    packet_first = _should_use_packet_first(memo_package["scaffold"])
+    packet_plan_result = None
+    if packet_first:
+        packet_plan_result = write_packet_first_artifacts(
+            artifacts=artifacts,
+            packet=memo_package["scaffold"]["decision_briefing_packet"],
+        )
+        section_rewrite_result = packet_first_section_rewrite_result(packet_plan_result)
+    else:
+        section_rewrite_result = rewrite_reader_memo_by_section(
+            str(memo_package["memo"]),
+            evidence_appendix,
+            memo_package["scaffold"],
+            prioritized_map,
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
+            artifacts=artifacts,
+        )
     rewrite_result = _run_reader_memo_rewrite(
         section_memo=str(section_rewrite_result["memo"]),
         evidence_appendix=evidence_appendix,
         memo_package=memo_package,
         prioritized_map=prioritized_map,
         backend_config=backend_config,
-        enabled=run_reader_memo_rewrite,
     )
     _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
@@ -103,8 +114,16 @@ def write_final_reader_outputs(
             rewrite_result=rewrite_result,
             section_rewrite_result=section_rewrite_result,
             edit_artifact_paths=edit_artifact_paths,
+            packet_plan_result=packet_plan_result,
         ),
     }
+
+
+def _should_use_packet_first(scaffold: dict[str, Any]) -> bool:
+    packet = scaffold.get("decision_briefing_packet", {})
+    if not isinstance(packet, dict) or not packet.get("evidence_bundles"):
+        return False
+    return True
 
 
 def _run_reader_memo_rewrite(
@@ -114,12 +133,9 @@ def _run_reader_memo_rewrite(
     memo_package: dict[str, Any],
     prioritized_map: dict[str, Any],
     backend_config: ModelBackendConfig,
-    enabled: bool,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_reader_contracts import rewrite_reader_memo_with_contract
 
-    if not enabled:
-        return _skipped_reader_memo_rewrite(section_memo)
     return rewrite_reader_memo_with_contract(
         section_memo,
         evidence_appendix,
@@ -271,6 +287,7 @@ def _final_reader_summary_paths(
     rewrite_result: dict[str, Any],
     section_rewrite_result: dict[str, Any],
     edit_artifact_paths: dict[str, Path],
+    packet_plan_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import reader_memo_edit_summary_paths
 
@@ -292,19 +309,7 @@ def _final_reader_summary_paths(
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "reader_memo_rewrite_prompt": paths.reader_memo_rewrite_prompt if rewrite_result.get("prompt") else None,
         "reader_memo_rewrite_raw": paths.reader_memo_rewrite_raw if rewrite_result.get("raw") else None,
+        "memo_plan": packet_plan_result.get("memo_plan_path") if packet_plan_result else None,
+        "packet_first_draft": packet_plan_result.get("packet_first_draft_path") if packet_plan_result else None,
         **reader_memo_edit_summary_paths(rewrite_result, edit_artifact_paths),
-    }
-
-
-def _skipped_reader_memo_rewrite(memo: str) -> dict[str, Any]:
-    return {
-        "memo": memo,
-        "prompt": "",
-        "raw": "",
-        "report": {
-            "schema_id": "reader_memo_rewrite_report_v1",
-            "status": "skipped_after_section_rewrite",
-            "accepted": False,
-            "issues": [],
-        },
     }

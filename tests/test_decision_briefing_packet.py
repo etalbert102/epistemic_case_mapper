@@ -5,6 +5,7 @@ from pathlib import Path
 from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_plan, section_obligations_for_title
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_packet_memo import build_packet_memo_plan, render_packet_first_draft, write_packet_first_artifacts
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 
 
@@ -304,3 +305,21 @@ def test_main_memo_obligations_prefer_packet_must_retain_items() -> None:
     assert any("25%" in row.get("search_terms", []) for row in evidence_section)
     practical_section = section_obligations_for_title("Practical Read", obligations, limit=8)
     assert all("25%" not in row.get("search_terms", []) for row in practical_section)
+
+
+def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(tmp_path: Path) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = built["decision_briefing_packet"]
+
+    plan = build_packet_memo_plan(packet)
+    draft = render_packet_first_draft(plan)
+    written = write_packet_first_artifacts(artifacts=tmp_path, packet=packet)
+
+    assert "Should the city adopt option A" in draft
+    assert "25%" in draft
+    assert "Outcome Study" in draft
+    assert "Counter Study" in draft
+    assert written["memo_plan_path"].exists()
+    assert written["packet_first_draft_path"].exists()
+    assert written["section_context_acceptance_report_path"].exists()
+    assert written["report"]["status"] == "ready"
