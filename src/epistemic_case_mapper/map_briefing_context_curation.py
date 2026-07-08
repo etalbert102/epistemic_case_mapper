@@ -156,8 +156,12 @@ def _candidate_card_with_map_eligibility(card: dict[str, Any], row_lookup: dict[
         updated["map_eligibility_reason"] = "underlying_map_claim_question_mismatch"
         return updated
     if "narrower_than_question" in statuses and not any(bool(row.get("top_line_eligible")) for row in rows):
-        updated["role"] = "scope"
-        updated["section_candidates"] = ["Practical Scope and Exceptions", "Decision Cruxes", "Limits of the Current Map"]
+        roles = _dedupe([*_string_list(updated.get("evidence_roles")), "scope"])
+        updated["evidence_roles"] = roles
+        updated["scope_tags"] = _dedupe([*_string_list(updated.get("scope_tags")), "narrower_than_question"])
+        if str(updated.get("role") or "") in ("support", "context"):
+            updated["role"] = "scope"
+        updated["section_candidates"] = _section_candidates_for_roles(roles, _string_list(updated.get("scope_tags")))
         if updated.get("inclusion_recommendation") == "main_text":
             updated["inclusion_recommendation"] = "supporting_context"
         updated["map_eligibility_reason"] = "narrower_scope_context_not_default_evidence"
@@ -185,7 +189,8 @@ def build_candidate_evidence_cards(
         source_card_id = str(source_card.get("source_card_id", ""))
         quality_row = quality.get(source_card_id, {}) if isinstance(quality.get(source_card_id), dict) else {}
         score = _candidate_score(source_card, quality_row, question_terms)
-        role = _candidate_role(source_card)
+        profile = _candidate_profile(source_card)
+        role = str(profile["primary_role"])
         claim_ids = _string_list(source_card.get("claim_ids"))
         appendix_only = _appendix_only(source_card, score, quality_row, backed_claims, claim_ids)
         cards.append(
@@ -198,11 +203,13 @@ def build_candidate_evidence_cards(
                 "claim": _shorten(str(source_card.get("source_quote_or_excerpt", "")), 300),
                 "source_excerpt": _shorten(str(source_card.get("source_quote_or_excerpt", "")), 500),
                 "role": role,
+                "evidence_roles": profile["evidence_roles"],
+                "scope_tags": profile["scope_tags"],
                 "decision_relevance_score": score,
                 "quality": str(quality_row.get("overall") or "unknown"),
                 "inclusion_recommendation": "appendix_only" if appendix_only else "main_text" if score >= 7 else "supporting_context",
                 "inclusion_reason": _inclusion_reason(source_card, role, score, quality_row),
-                "section_candidates": _section_candidates(role),
+                "section_candidates": profile["section_candidates"],
                 "quantity_values": _string_list(source_card.get("quantity_values")),
                 "limitations": _string_list(source_card.get("limitations")),
                 "anchor_confidence": str(source_card.get("anchor_confidence") or "missing"),
@@ -274,8 +281,15 @@ def build_source_coverage_report(
     candidate_evidence_cards: dict[str, Any],
     source_map_reconciliation: dict[str, Any],
     section_reasoning_cards: dict[str, Any],
+    section_projection_packets: dict[str, Any] | None = None,
+    section_context_decision_packets: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    assigned = _assigned_candidate_ids(section_reasoning_cards)
+    legacy_assigned = _assigned_candidate_ids(section_reasoning_cards)
+    final_assigned = _assigned_candidate_ids_from_final_packets(
+        section_projection_packets=section_projection_packets,
+        section_context_decision_packets=section_context_decision_packets,
+    )
+    assigned = final_assigned or legacy_assigned
     candidates = [card for card in candidate_evidence_cards.get("cards", []) if isinstance(card, dict)]
     omitted = [
         str(card.get("candidate_card_id"))
@@ -303,6 +317,9 @@ def build_source_coverage_report(
         unbacked_claim_ids=unbacked[:20],
         appendix_only_card_ids=appendix_only[:30],
         issues=issues,
+        assignment_basis="final_projection_or_context_packets" if final_assigned else "legacy_section_reasoning_cards",
+        legacy_assigned_main_card_count=len(legacy_assigned),
+        final_assigned_main_card_count=len(final_assigned),
     ).model_dump()
 
 
@@ -359,6 +376,8 @@ def _model_card(card: dict[str, Any], section: str, *, reference: bool = False) 
         "claim": card.get("claim"),
         "source_excerpt": card.get("source_excerpt"),
         "intended_role": "reference context" if reference else role,
+        "evidence_roles": _string_list(card.get("evidence_roles")),
+        "scope_tags": _string_list(card.get("scope_tags")),
         "reason_for_inclusion": _reason_for_section(section, role, reference),
         "quality": card.get("quality"),
         "quantity_values": _string_list(card.get("quantity_values")),
@@ -387,16 +406,106 @@ def _appendix_only(card: dict[str, Any], score: int, quality: dict[str, Any], ba
 
 
 def _candidate_role(card: dict[str, Any]) -> str:
-    role = str(card.get("supports_challenges_or_scopes") or "").lower()
-    if any(marker in role for marker in ("challenge", "counter", "tension", "conflict", "risk")):
-        return "counterweight"
-    if "scope" in role:
-        return "scope"
-    if card.get("quantity_values"):
-        return "quantity"
-    if _string_list(card.get("limitations")):
-        return "limitation"
-    return "support" if "support" in role else "context"
+    return str(_candidate_profile(card)["primary_role"])
+
+
+def _candidate_profile(card: dict[str, Any]) -> dict[str, list[str] | str]:
+    source_role = str(card.get("supports_challenges_or_scopes") or "").lower()
+    text = " ".join(
+        [
+            source_role,
+            str(card.get("source_quote_or_excerpt") or ""),
+            str(card.get("evidence_type") or ""),
+            str(card.get("endpoint_match") or ""),
+        ]
+    ).lower()
+    roles: list[str] = []
+    if _has_counterweight_signal(source_role, text):
+        roles.append("counterweight")
+    if _string_list(card.get("quantity_values")) or _has_quantity_signal(text):
+        roles.append("quantity")
+    if _string_list(card.get("limitations")) or _has_limitation_signal(text):
+        roles.append("limitation")
+    if _has_support_signal(source_role, text):
+        roles.append("support")
+    if "scope" in source_role or _has_scope_signal(text):
+        roles.append("scope")
+    roles = _dedupe(roles) or ["context"]
+    primary = _primary_role(roles)
+    scope_tags = _scope_tags(text, roles)
+    return {
+        "primary_role": primary,
+        "evidence_roles": roles,
+        "scope_tags": scope_tags,
+        "section_candidates": _section_candidates_for_roles(roles, scope_tags),
+    }
+
+
+def _primary_role(roles: list[str]) -> str:
+    for role in ("counterweight", "quantity", "limitation", "support", "scope", "context"):
+        if role in roles:
+            return role
+    return "context"
+
+
+def _has_counterweight_signal(source_role: str, text: str) -> bool:
+    return any(marker in source_role for marker in ("challenge", "counter", "tension", "conflict")) or any(
+        marker in text
+        for marker in (
+            "higher risk",
+            "increased risk",
+            "increase in risk",
+            "positive association",
+            "worse outcome",
+            "harm",
+            "adverse",
+            "conflicting",
+            "in tension",
+        )
+    )
+
+
+def _has_support_signal(source_role: str, text: str) -> bool:
+    return "support" in source_role or any(
+        marker in text
+        for marker in (
+            "lower risk",
+            "lower mortality",
+            "reduced risk",
+            "benefit",
+            "not associated with",
+            "no significant association",
+            "neutral",
+        )
+    )
+
+
+def _has_quantity_signal(text: str) -> bool:
+    return bool(re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|fold|mg/dl|mmol/l|ci|rr|or|hr|i2|p\s*[<=>])\b", text))
+
+
+def _has_limitation_signal(text: str) -> bool:
+    return any(marker in text for marker in ("uncertain", "heterogeneity", "low confidence", "limited", "observational", "cross-sectional"))
+
+
+def _has_scope_signal(text: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "subgroup",
+            "population",
+            "adult",
+            "children",
+            "older",
+            "diabetes",
+            "dose",
+            "per week",
+            "per day",
+            "comparator",
+            "substitution",
+            "exception",
+        )
+    )
 
 
 def _section_candidates(role: str) -> list[str]:
@@ -409,6 +518,15 @@ def _section_candidates(role: str) -> list[str]:
     if role == "limitation":
         return ["Limits of the Current Map", "Practical Scope and Exceptions"]
     return ["Why This Read", "Evidence Carrying the Conclusion", "Practical Read"]
+
+
+def _section_candidates_for_roles(roles: list[str], scope_tags: list[str] | None = None) -> list[str]:
+    sections: list[str] = []
+    for role in roles:
+        sections.extend(_section_candidates(role))
+    if scope_tags:
+        sections.extend(["Practical Scope and Exceptions", "Decision Cruxes"])
+    return _dedupe(sections)
 
 
 def _spine_item(role: str, statement: str, cards: list[dict[str, Any]], score: int) -> dict[str, Any]:
@@ -424,10 +542,33 @@ def _spine_item(role: str, statement: str, cards: list[dict[str, Any]], score: i
 
 
 def _top_role_cards(cards: list[dict[str, Any]], role: str, *, limit: int) -> list[dict[str, Any]]:
-    role_cards = [card for card in cards if card.get("role") == role]
+    role_cards = [
+        card
+        for card in cards
+        if card.get("role") == role or role in _string_list(card.get("evidence_roles"))
+    ]
     if role == "quantity":
-        role_cards = [card for card in cards if card.get("quantity_values") or card.get("role") == "quantity"]
+        role_cards = [
+            card
+            for card in cards
+            if card.get("quantity_values") or card.get("role") == "quantity" or "quantity" in _string_list(card.get("evidence_roles"))
+        ]
     return sorted(role_cards, key=lambda card: int(card.get("decision_relevance_score", 0)), reverse=True)[:limit]
+
+
+def _scope_tags(text: str, roles: list[str]) -> list[str]:
+    tags: list[str] = []
+    if any(marker in text for marker in ("subgroup", "population", "adult", "children", "older", "diabetes")):
+        tags.append("population_boundary")
+    if any(marker in text for marker in ("dose", "per week", "per day", "serving", "intake", "consumption")):
+        tags.append("dose_or_intensity_boundary")
+    if any(marker in text for marker in ("comparator", "substitution", "instead of", "replace")):
+        tags.append("comparator_or_substitution")
+    if "limitation" in roles:
+        tags.append("evidence_quality_limit")
+    if "scope" in roles and not tags:
+        tags.append("scope_boundary")
+    return _dedupe(tags)
 
 
 def _usable_cards(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -522,6 +663,8 @@ def _near_miss_card(card: dict[str, Any]) -> dict[str, Any]:
     return {
         "candidate_card_id": card.get("candidate_card_id"),
         "role": card.get("role"),
+        "evidence_roles": _string_list(card.get("evidence_roles")),
+        "scope_tags": _string_list(card.get("scope_tags")),
         "reason_excluded": "lower priority than the owned cards for this section",
     }
 
@@ -589,6 +732,25 @@ def _assigned_candidate_ids(section_cards: dict[str, Any]) -> set[str]:
         for card in section.get("owned_cards", []) if isinstance(section.get("owned_cards"), list) else []:
             if isinstance(card, dict) and card.get("candidate_card_id"):
                 assigned.add(str(card["candidate_card_id"]))
+    return assigned
+
+
+def _assigned_candidate_ids_from_final_packets(
+    *,
+    section_projection_packets: dict[str, Any] | None,
+    section_context_decision_packets: dict[str, Any] | None,
+) -> set[str]:
+    assigned: set[str] = set()
+    for packet in (section_context_decision_packets, section_projection_packets):
+        if not isinstance(packet, dict):
+            continue
+        for section in packet.get("sections", []) if isinstance(packet.get("sections"), list) else []:
+            if not isinstance(section, dict):
+                continue
+            for key in ("owned_evidence", "owned_cards"):
+                for card in section.get(key, []) if isinstance(section.get(key), list) else []:
+                    if isinstance(card, dict) and card.get("candidate_card_id"):
+                        assigned.add(str(card["candidate_card_id"]))
     return assigned
 
 

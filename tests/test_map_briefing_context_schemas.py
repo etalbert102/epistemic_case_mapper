@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
     validate_artifact_ownership,
 )
 from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle
+from epistemic_case_mapper.map_briefing_context_curation import build_source_coverage_report
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_evidence_quality_report,
     build_final_brief_evaluation,
@@ -129,6 +130,27 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
     assert quality["schema_id"] == "evidence_quality_report_v1"
     assert quality["card_count"] == 2
     assert quality["quality_components"]["sc0001"]["directness"] == "direct"
+
+
+def test_source_role_assignment_does_not_treat_lower_mortality_as_challenge() -> None:
+    source_cards = build_source_evidence_cards(
+        {
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "claim": "Higher intake was associated with lower mortality in the default population.",
+                    "source_id": "s1",
+                    "source_span": "lines 1-2",
+                    "excerpt": "Higher intake was associated with lower mortality in the default population.",
+                    "role": "risk_estimate",
+                    "decision_relevance_score": 8,
+                }
+            ]
+        },
+        source_lookup={"s1": "Cohort Study"},
+    )
+
+    assert source_cards["cards"][0]["supports_challenges_or_scopes"] != "challenges"
 
 
 def test_source_sufficiency_reconciles_counterweight_relations() -> None:
@@ -271,7 +293,7 @@ def test_model_section_packet_prefers_section_reasoning_cards() -> None:
     assert packet["do_not_use_cards"] == ["ec0099"]
 
 
-def test_context_bundle_routes_narrower_scope_cards_to_scope_sections() -> None:
+def test_context_bundle_preserves_counterweight_role_on_narrower_scope_cards() -> None:
     candidate_map = {
         "claims": [
             {
@@ -322,8 +344,10 @@ def test_context_bundle_routes_narrower_scope_cards_to_scope_sections() -> None:
     )
     cards = {card["claim_ids"][0]: card for card in bundle["candidate_evidence_cards"]["cards"]}
 
-    assert cards["c2"]["role"] == "scope"
-    assert "Evidence Carrying the Conclusion" not in cards["c2"]["section_candidates"]
+    assert cards["c2"]["role"] == "counterweight"
+    assert "counterweight" in cards["c2"]["evidence_roles"]
+    assert "scope" in cards["c2"]["evidence_roles"]
+    assert "Evidence Carrying the Conclusion" in cards["c2"]["section_candidates"]
     scope_section = next(
         section
         for section in bundle["section_reasoning_cards"]["sections"]
@@ -335,7 +359,90 @@ def test_context_bundle_routes_narrower_scope_cards_to_scope_sections() -> None:
         if section["section"] == "Evidence Carrying the Conclusion"
     )
     assert any("c2" in card.get("claim_ids", []) for card in scope_section["owned_cards"])
-    assert not any("c2" in card.get("claim_ids", []) for card in evidence_section["owned_cards"])
+    assert any("c2" in card.get("claim_ids", []) for card in evidence_section["owned_cards"])
+
+
+def test_scope_labeled_quantitative_cards_remain_evidence_carrying() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c1",
+                "claim": "In adults, the default option changed the decision outcome by 18 percent.",
+                "source_id": "s1",
+                "source_span": "lines 1-2",
+                "excerpt": "In adults, the default option changed the decision outcome by 18 percent.",
+                "role": "scope_limit",
+                "decision_relevance_score": 8,
+                "quantity_values": ["18 percent"],
+            }
+        ]
+    }
+
+    bundle = build_decision_ready_context_bundle(
+        candidate_map,
+        scaffold={"map_sufficiency_report": {}},
+        question="Should the default option be adopted for adults?",
+        source_lookup={"s1": "Quantitative Scope Study"},
+    )
+    card = bundle["candidate_evidence_cards"]["cards"][0]
+
+    assert card["role"] == "quantity"
+    assert card["evidence_roles"] == ["quantity", "scope"]
+    assert "Evidence Carrying the Conclusion" in card["section_candidates"]
+    evidence_section = next(
+        section
+        for section in bundle["section_reasoning_cards"]["sections"]
+        if section["section"] == "Evidence Carrying the Conclusion"
+    )
+    assert any("c1" in owned.get("claim_ids", []) for owned in evidence_section["owned_cards"])
+
+
+def test_source_coverage_prefers_final_projection_assignments() -> None:
+    source_cards = {"source_card_count": 2}
+    candidates = {
+        "cards": [
+            {
+                "candidate_card_id": "ec0001",
+                "decision_relevance_score": 9,
+                "inclusion_recommendation": "main_text",
+            },
+            {
+                "candidate_card_id": "ec0002",
+                "decision_relevance_score": 9,
+                "inclusion_recommendation": "main_text",
+            },
+        ]
+    }
+    legacy_sections = {
+        "sections": [
+            {
+                "section": "Evidence Carrying the Conclusion",
+                "owned_cards": [{"candidate_card_id": "ec0001"}],
+            }
+        ]
+    }
+    final_packets = {
+        "sections": [
+            {
+                "section": "Evidence Carrying the Conclusion",
+                "owned_evidence": [{"candidate_card_id": "ec0002"}],
+            }
+        ]
+    }
+
+    report = build_source_coverage_report(
+        source_evidence_cards=source_cards,
+        candidate_evidence_cards=candidates,
+        source_map_reconciliation={"rows": []},
+        section_reasoning_cards=legacy_sections,
+        section_context_decision_packets=final_packets,
+    )
+
+    assert report["assignment_basis"] == "final_projection_or_context_packets"
+    assert report["assigned_main_card_count"] == 1
+    assert report["legacy_assigned_main_card_count"] == 1
+    assert report["final_assigned_main_card_count"] == 1
+    assert report["omitted_high_relevance_card_ids"] == ["ec0001"]
 
 
 def test_section_context_acceptance_requires_roles_and_reasons() -> None:

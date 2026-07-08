@@ -46,6 +46,7 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
         "context_readiness_status": reasoning_contract.get("context_status"),
         "section_thesis": section_thesis,
         "decision_move": reasoning_contract.get("decision_move"),
+        "telemetry_context": _telemetry_context(reasoning_contract),
         "target_shape": _target_shape(title_key),
         "owned_evidence": owned_evidence,
         "section_use_guidance": projection_guidance(title),
@@ -135,6 +136,26 @@ def _projection_owned_evidence(projection: dict[str, Any]) -> list[dict[str, Any
 
 def _projection_reference_evidence(projection: dict[str, Any]) -> list[dict[str, Any]]:
     return _projection_cards(projection, "reference_only_evidence", use="Briefly reference only; do not restate full source detail.")
+
+
+def _telemetry_context(reasoning: dict[str, Any]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for row in reasoning.get("telemetry_context", []) if isinstance(reasoning.get("telemetry_context"), list) else []:
+        if not isinstance(row, dict):
+            continue
+        claim = _short_text(str(row.get("claim", "")), 220)
+        if not claim:
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "kind": str(row.get("kind", "")).strip(),
+                    "claim": claim,
+                    "use": _short_text(str(row.get("use", "")), 160),
+                }
+            )
+        )
+    return rows[:5]
 
 
 def _projection_cards(projection: dict[str, Any], key: str, *, use: str) -> list[dict[str, Any]]:

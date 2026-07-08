@@ -78,6 +78,7 @@ def build_section_context_decision_packets(
             "section_thesis": _decision_section_thesis(title, section, owned),
             "decision_move": section.get("decision_move"),
             "context_status": section.get("context_status"),
+            "telemetry_context": section.get("telemetry_context", []),
             "owned_spine_field_ids": section.get("owned_spine_field_ids", []),
             "reference_spine_field_ids": section.get("reference_spine_field_ids", []),
             "owned_evidence": owned,
@@ -275,7 +276,8 @@ def _enrich_section_card(
 
 def _section_packet_issues(title: str, owned: list[dict[str, Any]], references: list[dict[str, Any]], section: dict[str, Any]) -> list[str]:
     issues = [str(issue) for issue in section.get("issues", []) if str(issue).strip()] if isinstance(section.get("issues"), list) else []
-    if not owned and "sources" not in title.lower() and "trail" not in title.lower():
+    telemetry = section.get("telemetry_context", []) if isinstance(section.get("telemetry_context"), list) else []
+    if not owned and not telemetry and "sources" not in title.lower() and "trail" not in title.lower():
         issues.append("no_owned_evidence_after_context_reconciliation")
     if any(not row.get("reason_for_inclusion") for row in owned):
         issues.append("owned_evidence_missing_reason_for_inclusion")

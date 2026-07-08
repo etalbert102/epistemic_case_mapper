@@ -48,10 +48,15 @@ def build_spine_arbitration_prompt(spine: dict[str, Any]) -> str:
     }
     return (
         "You are reviewing a canonical decision-support spine.\n"
-        "Choose salience only among the provided pre-validated fields. Do not invent claims, sources, or IDs.\n"
+        "Choose salience only among the provided pre-validated fields. Do not invent sources or IDs.\n"
+        "Also write a concise default_answer_claim that directly answers the decision question using only the listed fields.\n"
+        "The answer must name the subject of the question and use the question's natural answer vocabulary when it supplies options.\n"
+        "Lead with the decision read, then include the most important caveat. Do not lead with a single-study result or a research-gap statement.\n"
+        "The answer should be decision-ready prose, not a label, instruction, or study-by-study summary.\n"
         "Return only JSON with this schema:\n"
         "{\n"
         '  "default_answer_field_id": "field id from fields",\n'
+        '  "default_answer_claim": "one grounded sentence or short paragraph",\n'
         '  "support_field_ids": ["field id"],\n'
         '  "counterevidence_field_ids": ["field id"],\n'
         '  "boundary_field_ids": ["field id"],\n'
@@ -77,6 +82,12 @@ def _apply_model_arbitration(spine: dict[str, Any], payload: dict[str, Any]) -> 
         "boundary_field_ids": _allowed_ids(payload.get("boundary_field_ids"), allowed),
         "rationale": _short_text(str(payload.get("rationale", "")), 360),
     }
+    default_update = _model_default_answer_update(updated, payload, allowed)
+    if default_update["accepted"]:
+        updated["default_answer"] = default_update["default_answer"]
+        updated["model_arbitration"]["accepted_default_answer_claim"] = default_update["default_answer"]["claim"]
+    elif default_update["reason"]:
+        updated["model_arbitration"]["default_answer_claim_rejection_reason"] = default_update["reason"]
     updated["strongest_support"] = _reordered_fields(updated.get("strongest_support", []), updated["model_arbitration"]["support_field_ids"])
     updated["strongest_counterevidence"] = _reordered_fields(updated.get("strongest_counterevidence", []), updated["model_arbitration"]["counterevidence_field_ids"])
     updated["population_boundaries"] = _reordered_fields(updated.get("population_boundaries", []), updated["model_arbitration"]["boundary_field_ids"])
@@ -141,6 +152,150 @@ def _allowed_ids(value: Any, allowed: dict[str, dict[str, Any]]) -> list[str]:
     return [field_id for field_id in _string_list(value) if field_id in allowed]
 
 
+def _model_default_answer_update(
+    spine: dict[str, Any],
+    payload: dict[str, Any],
+    allowed: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    default_id = str(payload.get("default_answer_field_id", "")).strip() or "default_answer"
+    selected_default = allowed.get(default_id) or _dict(spine.get("default_answer"))
+    current_default = _dict(spine.get("default_answer"))
+    selected_fields = _selected_fields_for_grounding(payload, allowed, selected_default)
+    claim = _short_text(str(payload.get("default_answer_claim", "")), 520)
+    if not claim:
+        if default_id and default_id != "default_answer" and selected_default:
+            return {
+                "accepted": True,
+                "reason": "",
+                "default_answer": _default_answer_from_selected_field(selected_default, current_default, selected_default.get("claim")),
+            }
+        return {"accepted": False, "reason": "", "default_answer": current_default}
+    rejection = _default_answer_claim_rejection_reason(claim, selected_fields, question=str(spine.get("decision_question", "")))
+    if rejection:
+        return {"accepted": False, "reason": rejection, "default_answer": current_default}
+    return {
+        "accepted": True,
+        "reason": "",
+        "default_answer": _default_answer_from_selected_field(selected_default, current_default, claim),
+    }
+
+
+def _default_answer_from_selected_field(
+    selected: dict[str, Any],
+    current: dict[str, Any],
+    claim: Any,
+) -> dict[str, Any]:
+    updated = dict(current)
+    for key in ("source_ids", "candidate_card_ids", "claim_ids", "quantity_ids", "confidence", "limits"):
+        if selected.get(key):
+            updated[key] = selected.get(key)
+    updated["field_id"] = "default_answer"
+    updated["role"] = "default_answer"
+    updated["claim"] = _short_text(str(claim or current.get("claim") or selected.get("claim") or ""), 520)
+    return updated
+
+
+def _selected_fields_for_grounding(
+    payload: dict[str, Any],
+    allowed: dict[str, dict[str, Any]],
+    selected_default: dict[str, Any],
+) -> list[dict[str, Any]]:
+    field_ids = [
+        str(payload.get("default_answer_field_id", "")).strip(),
+        *_allowed_ids(payload.get("support_field_ids"), allowed),
+        *_allowed_ids(payload.get("counterevidence_field_ids"), allowed),
+        *_allowed_ids(payload.get("boundary_field_ids"), allowed),
+    ]
+    fields = []
+    if selected_default:
+        fields.append(selected_default)
+    for field_id in field_ids:
+        field = allowed.get(field_id)
+        if field and field not in fields:
+            fields.append(field)
+    return fields
+
+
+def _default_answer_claim_rejection_reason(claim: str, selected_fields: list[dict[str, Any]], *, question: str) -> str:
+    if _looks_like_answer_instruction(claim):
+        return "default_answer_claim_looks_like_instruction"
+    terms = _content_terms(claim)
+    if len(terms) < 6:
+        return "default_answer_claim_too_short"
+    if len(terms) > 90:
+        return "default_answer_claim_too_long"
+    if "http://" in claim or "https://" in claim or "](" in claim:
+        return "default_answer_claim_contains_citation_markup"
+    evidence_terms = set(_content_terms(" ".join(str(field.get("claim", "")) for field in selected_fields)))
+    overlap = set(terms) & evidence_terms
+    if len(overlap) < 3:
+        return "default_answer_claim_not_grounded_in_selected_fields"
+    question_terms = set(_content_terms(question))
+    question_overlap = set(terms) & question_terms
+    if question_terms and len(question_overlap) < min(2, len(question_terms)):
+        return "default_answer_claim_does_not_answer_question"
+    return ""
+
+
+def _looks_like_answer_instruction(text: str) -> bool:
+    return str(text).strip().lower().startswith(
+        (
+            "state ",
+            "write ",
+            "say ",
+            "explain ",
+            "summarize ",
+            "use ",
+            "do not ",
+            "avoid ",
+        )
+    )
+
+
+def _content_terms(text: str) -> list[str]:
+    stopwords = {
+        "about",
+        "after",
+        "also",
+        "among",
+        "answer",
+        "because",
+        "being",
+        "brief",
+        "could",
+        "current",
+        "decision",
+        "does",
+        "evidence",
+        "from",
+        "have",
+        "into",
+        "only",
+        "question",
+        "should",
+        "source",
+        "that",
+        "their",
+        "there",
+        "these",
+        "this",
+        "under",
+        "using",
+        "when",
+        "where",
+        "which",
+        "while",
+        "with",
+        "without",
+        "would",
+    }
+    terms = []
+    for term in re.findall(r"[a-z0-9][a-z0-9'-]{2,}", str(text).lower()):
+        if term not in stopwords and term not in terms:
+            terms.append(term)
+    return terms
+
+
 def _parse_json(text: str) -> Any:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -177,3 +332,7 @@ def _string_list(value: Any) -> list[str]:
 def _short_text(text: str, limit: int) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip()
     return cleaned if len(cleaned) <= limit else cleaned[: limit - 1].rstrip() + "..."
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}

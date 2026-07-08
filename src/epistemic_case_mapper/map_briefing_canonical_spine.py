@@ -137,7 +137,8 @@ def _default_answer_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
     role_preferred = [
         card
         for card in cards
-        if card.get("role") in {"support", "quantity"} and _eligible_load_bearing_card(card)
+        if (card.get("role") in {"support", "quantity"} or {"support", "quantity"} & set(_string_list(card.get("evidence_roles"))))
+        and _eligible_load_bearing_card(card)
     ]
     if role_preferred:
         return role_preferred[:3]
@@ -260,7 +261,6 @@ def _counterevidence_terms() -> tuple[str, ...]:
         "harmful",
         "adverse",
         "worse",
-        "mortality",
         "failure",
         "delay",
         "cost",
@@ -318,7 +318,11 @@ def _comparator_fields(cards: list[dict[str, Any]], audit: dict[str, Any]) -> li
 
 
 def _limit_fields(cards: list[dict[str, Any]], scaffold: dict[str, Any]) -> list[dict[str, Any]]:
-    selected = [card for card in cards if card.get("role") == "limitation" or _string_list(card.get("limitations"))]
+    selected = [
+        card
+        for card in cards
+        if card.get("role") == "limitation" or "limitation" in _string_list(card.get("evidence_roles")) or _string_list(card.get("limitations"))
+    ]
     fields = _fields_from_cards(selected[:4], "evidence_quality_limit", "evidence_quality_limit")
     sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
     for missing in _string_list(sufficiency.get("missing_source_categories"))[:3]:
@@ -417,8 +421,9 @@ def _candidate_cards(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
 def _cards_by_role(cards: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     groups = {role: [] for role in ("support", "counterweight", "scope", "quantity", "limitation", "context")}
     for card in cards:
-        role = str(card.get("role") or "context")
-        groups.setdefault(role, []).append(card)
+        roles = _dedupe([str(card.get("role") or "context"), *_string_list(card.get("evidence_roles"))]) or ["context"]
+        for role in roles:
+            groups.setdefault(role, []).append(card)
         if card.get("quantity_values") and card not in groups["quantity"]:
             groups["quantity"].append(card)
     return groups

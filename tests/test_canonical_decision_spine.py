@@ -9,6 +9,10 @@ from epistemic_case_mapper.map_briefing_context_reconciliation import (
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
 from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
 from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
+from epistemic_case_mapper.map_briefing_spine_projection import (
+    build_section_projection_packets,
+    build_section_projection_readiness_report,
+)
 from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_spine_validation import validate_canonical_decision_spine
@@ -106,6 +110,197 @@ def test_spine_infers_evidence_carriers_when_upstream_roles_are_coarse() -> None
     assert "role_inferred_from_claim_text" in spine["strongest_support"][0]["limits"]
     assert evidence_section["context_status"] in {"ready", "warning"}
     assert bundle["section_projection_readiness_report"]["status"] in {"ready", "warning"}
+
+
+def test_spine_groups_cards_by_secondary_evidence_roles() -> None:
+    scaffold = _scaffold()
+    cards = scaffold["candidate_evidence_cards"]["cards"]
+    cards[0]["role"] = "scope"
+    cards[0]["evidence_roles"] = ["support", "scope", "quantity"]
+    cards[0]["section_candidates"] = [
+        "Evidence Carrying the Conclusion",
+        "Practical Scope and Exceptions",
+        "Practical Read",
+    ]
+
+    bundle = build_decision_spine_bundle(_candidate_map(), scaffold, question="Should the option be adopted?")
+    spine = bundle["canonical_decision_spine"]
+    support_ids = {
+        candidate_id
+        for field in spine["strongest_support"]
+        for candidate_id in field.get("candidate_card_ids", [])
+    }
+    default_ids = set(spine["default_answer"].get("candidate_card_ids", []))
+
+    assert "ec1" in support_ids
+    assert "ec1" in default_ids
+
+
+def test_projection_adds_high_relevance_section_supplements() -> None:
+    spine = {
+        "schema_id": "canonical_decision_spine_v1",
+        "decision_question": "Should the option be adopted?",
+        "status": "ready",
+        "default_answer": {
+            "field_id": "default_answer",
+            "claim": "The option is supported by source-backed outcome evidence.",
+            "role": "default_answer",
+            "source_ids": ["s1"],
+            "candidate_card_ids": ["ec1"],
+            "claim_ids": ["c1"],
+            "confidence": "medium",
+        },
+        "strongest_support": [
+            {
+                "field_id": "strongest_support_1",
+                "claim": "The option improves the primary outcome.",
+                "role": "support",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "strongest_counterevidence": [],
+        "exception_answers": [],
+        "dose_or_intensity_boundaries": [],
+        "population_boundaries": [],
+        "mechanism_or_proxy_evidence": [],
+        "comparator_or_substitution": [],
+        "evidence_quality_limits": [],
+        "missing_decision_slots": [],
+    }
+    scaffold = {
+        "candidate_evidence_cards": {
+            "cards": [
+                {
+                    "candidate_card_id": "ec1",
+                    "claim": "The option improves the primary outcome.",
+                    "source_ids": ["s1"],
+                    "claim_ids": ["c1"],
+                    "role": "support",
+                    "decision_relevance_score": 8,
+                    "inclusion_recommendation": "main_text",
+                    "anchor_confidence": "exact",
+                    "section_candidates": ["Evidence Carrying the Conclusion"],
+                },
+                {
+                    "candidate_card_id": "ec2",
+                    "claim": "A second anchored study reports an 18 percent improvement.",
+                    "source_ids": ["s2"],
+                    "claim_ids": ["c2"],
+                    "role": "scope",
+                    "evidence_roles": ["support", "scope", "quantity"],
+                    "decision_relevance_score": 10,
+                    "inclusion_recommendation": "main_text",
+                    "anchor_confidence": "exact",
+                    "section_candidates": ["Evidence Carrying the Conclusion"],
+                    "quantity_values": ["18 percent"],
+                },
+            ]
+        }
+    }
+
+    projection = build_section_projection_packets(spine, scaffold)
+    evidence_section = next(
+        section for section in projection["sections"] if section["section"] == "Evidence Carrying the Conclusion"
+    )
+    owned_ids = [row.get("candidate_card_id") for row in evidence_section["owned_evidence"]]
+
+    assert "ec2" in owned_ids
+    assert evidence_section["coverage_supplement_count"] == 1
+
+
+def test_limit_section_can_use_telemetry_substitute_without_blocking_projection() -> None:
+    spine = {
+        "schema_id": "canonical_decision_spine_v1",
+        "decision_question": "Should the option be adopted?",
+        "status": "ready",
+        "default_answer": {
+            "field_id": "default_answer",
+            "claim": "The option is supported by source-backed outcome evidence.",
+            "role": "default_answer",
+            "source_ids": ["s1"],
+            "candidate_card_ids": ["ec1"],
+            "claim_ids": ["c1"],
+            "confidence": "medium",
+        },
+        "strongest_support": [
+            {
+                "field_id": "strongest_support_1",
+                "claim": "The option is supported by source-backed outcome evidence.",
+                "role": "support",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "strongest_counterevidence": [
+            {
+                "field_id": "strongest_counterevidence_1",
+                "claim": "The option may have narrower-setting implementation risks.",
+                "role": "counterweight",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "exception_answers": [
+            {
+                "field_id": "exception_answer_1",
+                "claim": "Narrower settings may require caution.",
+                "role": "exception",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "dose_or_intensity_boundaries": [],
+        "population_boundaries": [
+            {
+                "field_id": "population_boundary_1",
+                "claim": "The evidence applies to the mapped population.",
+                "role": "scope",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "mechanism_or_proxy_evidence": [
+            {
+                "field_id": "mechanism_proxy_1",
+                "claim": "Outcome evidence is more decision-relevant than proxy evidence.",
+                "role": "mechanism_or_proxy",
+                "source_ids": ["s1"],
+                "candidate_card_ids": ["ec1"],
+                "claim_ids": ["c1"],
+            }
+        ],
+        "comparator_or_substitution": [],
+        "evidence_quality_limits": [],
+        "missing_decision_slots": [],
+        "canonical_decision_spine_validation": {"status": "valid"},
+        "construction_report": {"candidate_card_count": 1, "source_anchor_count": 1},
+    }
+    scaffold = {
+        "candidate_evidence_cards": {
+            "cards": [
+                {
+                    "candidate_card_id": "ec1",
+                    "claim": "The option is supported by source-backed outcome evidence.",
+                    "source_ids": ["s1"],
+                    "claim_ids": ["c1"],
+                }
+            ]
+        }
+    }
+
+    projections = build_section_projection_packets(spine, scaffold)
+    readiness = build_section_projection_readiness_report(projections)
+    limits = next(section for section in projections["sections"] if section["section"] == "Limits of the Current Map")
+
+    assert limits["context_status"] == "ready"
+    assert limits["telemetry_context"]
+    assert readiness["status"] in {"ready", "warning"}
 
 
 def test_spine_default_does_not_store_instruction_text_when_cards_exist() -> None:
@@ -301,6 +496,32 @@ def test_model_spine_arbitration_accepts_only_existing_field_ids(monkeypatch) ->
 
     assert result["report"]["status"] == "accepted"
     assert result["spine"]["model_arbitration"]["support_field_ids"] == ["strongest_support_1"]
+
+
+def test_model_spine_arbitration_accepts_grounded_default_answer_claim(monkeypatch) -> None:
+    spine = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")["canonical_decision_spine"]
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+        return ModelBackendResult(
+            text=(
+                '{"default_answer_field_id":"default_answer",'
+                '"default_answer_claim":"The option should be adopted as a bounded default because available evidence reports improved primary outcomes while implementation risks remain possible in narrower settings.",'
+                '"support_field_ids":["strongest_support_1"],'
+                '"counterevidence_field_ids":["strongest_counterevidence_1"],'
+                '"boundary_field_ids":[],'
+                '"rationale":"The answer uses the listed support and counterevidence fields."}'
+            ),
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+
+    result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert "accepted_default_answer_claim" in result["spine"]["model_arbitration"]
+    assert result["spine"]["default_answer"]["claim"].startswith("The option should be adopted as a bounded default")
+    assert result["spine"]["default_answer"]["candidate_card_ids"]
 
 
 def test_model_spine_arbitration_rejects_invented_field_ids(monkeypatch) -> None:

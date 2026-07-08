@@ -24,6 +24,7 @@ def build_section_projection_packets(
         _projection_for_section(title, canonical_decision_spine, fields, cards_by_id)
         for title in SECTION_ORDER
     ]
+    sections = _add_high_relevance_supplements(sections, scaffold)
     status = _overall_status(sections)
     return {
         "schema_id": "section_projection_packets_v1",
@@ -73,11 +74,13 @@ def _projection_for_section(
     owned_evidence = _evidence_from_fields(owned_fields, cards_by_id, use="This section may explain this evidence fully.")
     reference_evidence = _evidence_from_fields(reference_fields, cards_by_id, use="Reference only; do not restate full detail.")
     missing_context = _missing_context(title, spine, owned_fields)
-    status, issues = _context_status(title, owned_fields, owned_evidence, missing_context)
+    telemetry_context = _telemetry_context(title, spine)
+    status, issues = _context_status(title, owned_fields, owned_evidence, missing_context, telemetry_context)
     return {
         "section": title,
         "section_thesis": _section_thesis(title, spine, owned_fields),
         "decision_move": _decision_move(title),
+        "telemetry_context": telemetry_context,
         "owned_spine_field_ids": [str(field.get("field_id")) for field in owned_fields if field.get("field_id")],
         "reference_spine_field_ids": [str(field.get("field_id")) for field in reference_fields if field.get("field_id")],
         "owned_evidence": owned_evidence[:7],
@@ -86,6 +89,152 @@ def _projection_for_section(
         "context_status": status,
         "issues": issues,
     }
+
+
+def _add_high_relevance_supplements(sections: list[dict[str, Any]], scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+    cards = _rank_candidate_cards(_candidate_cards(scaffold))
+    if not cards:
+        return sections
+    updated_sections = []
+    globally_owned = _owned_candidate_ids(sections)
+    for section in sections:
+        title = str(section.get("section", "")).strip()
+        if title == "Decision Brief":
+            updated_sections.append(section)
+            continue
+        owned = [row for row in section.get("owned_evidence", []) if isinstance(row, dict)] if isinstance(section.get("owned_evidence"), list) else []
+        if len(owned) >= 8:
+            updated_sections.append(section)
+            continue
+        section_owned = {str(row.get("candidate_card_id")) for row in owned if row.get("candidate_card_id")}
+        supplements = []
+        for card in cards:
+            card_id = str(card.get("candidate_card_id", "")).strip()
+            if not card_id or card_id in section_owned:
+                continue
+            if not _card_allowed_for_section(card, title):
+                continue
+            if not _card_role_fits_section(card, title):
+                continue
+            if card_id in globally_owned:
+                continue
+            supplements.append(_supplemental_card_evidence(card, title))
+            section_owned.add(card_id)
+            globally_owned.add(card_id)
+            if len(supplements) >= _supplement_budget(title) or len(owned) + len(supplements) >= 8:
+                break
+        if supplements:
+            section = dict(section)
+            section["owned_evidence"] = [*owned, *supplements]
+            section["owned_spine_field_ids"] = _dedupe([*_string_list(section.get("owned_spine_field_ids")), f"coverage_supplement_{_section_key(title)}"])
+            section["coverage_supplement_count"] = len(supplements)
+            section["issues"] = [
+                issue
+                for issue in _string_list(section.get("issues"))
+                if issue != "owned_spine_fields_have_no_projected_evidence"
+            ]
+            if section.get("context_status") == "not_synthesis_ready":
+                section["context_status"] = "warning"
+        updated_sections.append(section)
+    return updated_sections
+
+
+def _candidate_cards(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+    report = scaffold.get("candidate_evidence_cards", {}) if isinstance(scaffold.get("candidate_evidence_cards"), dict) else {}
+    cards = report.get("cards", []) if isinstance(report.get("cards"), list) else []
+    return [card for card in cards if isinstance(card, dict)]
+
+
+def _rank_candidate_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    usable = [
+        card
+        for card in cards
+        if card.get("inclusion_recommendation") != "appendix_only"
+        and int(card.get("decision_relevance_score", 0) or 0) >= 7
+        and card.get("anchor_confidence") != "missing"
+        and not card.get("fragment_risk")
+    ]
+    return sorted(
+        usable,
+        key=lambda card: (
+            int(card.get("decision_relevance_score", 0) or 0),
+            len(_string_list(card.get("quantity_values"))),
+            str(card.get("candidate_card_id", "")),
+        ),
+        reverse=True,
+    )
+
+
+def _owned_candidate_ids(sections: list[dict[str, Any]]) -> set[str]:
+    owned: set[str] = set()
+    for section in sections:
+        for row in section.get("owned_evidence", []) if isinstance(section.get("owned_evidence"), list) else []:
+            if isinstance(row, dict) and row.get("candidate_card_id"):
+                owned.add(str(row["candidate_card_id"]))
+    return owned
+
+
+def _card_allowed_for_section(card: dict[str, Any], title: str) -> bool:
+    candidates = _string_list(card.get("section_candidates"))
+    return not candidates or title in candidates
+
+
+def _card_role_fits_section(card: dict[str, Any], title: str) -> bool:
+    roles = set(_dedupe([str(card.get("role") or "context"), *_string_list(card.get("evidence_roles"))]))
+    key = title.lower()
+    if "why this read" in key:
+        return bool(roles & {"support", "counterweight", "quantity"})
+    if "evidence carrying" in key:
+        return bool(roles & {"support", "counterweight", "quantity", "limitation"})
+    if "practical read" in key:
+        return bool(roles & {"support", "scope", "quantity"})
+    if "scope" in key or "exception" in key:
+        return bool(roles & {"scope", "counterweight", "limitation", "quantity"})
+    if "crux" in key:
+        return bool(roles & {"counterweight", "limitation", "quantity", "scope"})
+    if "limit" in key:
+        return bool(roles & {"limitation", "scope"})
+    return False
+
+
+def _supplement_budget(title: str) -> int:
+    key = title.lower()
+    if "evidence carrying" in key or "why this read" in key:
+        return 2
+    return 1
+
+
+def _supplemental_card_evidence(card: dict[str, Any], title: str) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "candidate_card_id": card.get("candidate_card_id"),
+            "spine_field_id": f"coverage_supplement_{_section_key(title)}",
+            "source_card_ids": _string_list(card.get("source_card_ids"))[:4],
+            "claim_ids": _string_list(card.get("claim_ids"))[:4],
+            "source_ids": _string_list(card.get("source_ids"))[:4],
+            "source": ", ".join(_string_list(card.get("source_titles")) or _string_list(card.get("source_ids"))),
+            "claim": card.get("claim"),
+            "source_excerpt": card.get("source_excerpt"),
+            "intended_role": _supplemental_role(card),
+            "quality": card.get("quality"),
+            "quantity_values": _string_list(card.get("quantity_values"))[:4],
+            "limitations": _string_list(card.get("limitations"))[:4],
+            "use": "This section may explain this high-relevance supplemental evidence if it adds section-specific value.",
+            "reason_for_inclusion": "High-relevance final projection supplement admitted because the card is eligible for this section.",
+        }
+    )
+
+
+def _supplemental_role(card: dict[str, Any]) -> str:
+    roles = _dedupe([str(card.get("role") or "context"), *_string_list(card.get("evidence_roles"))])
+    for role in ("quantity", "counterweight", "support", "limitation", "scope", "context"):
+        if role in roles:
+            return role
+    return "context"
+
+
+def _section_key(title: str) -> str:
+    return "_".join(token for token in title.lower().replace("&", "and").split() if token.isalnum())
 
 
 def _role_plan(title: str) -> tuple[set[str], set[str]]:
@@ -206,9 +355,12 @@ def _context_status(
     owned_fields: list[dict[str, Any]],
     owned_evidence: list[dict[str, Any]],
     missing_context: list[str],
+    telemetry_context: list[dict[str, str]],
 ) -> tuple[str, list[str]]:
     issues = []
     if not owned_fields:
+        if _allows_telemetry_substitute(title) and telemetry_context:
+            return "ready", issues
         issues.append("no_owned_spine_fields")
         return "not_synthesis_ready", issues
     if "decision brief" not in title.lower() and not owned_evidence:
@@ -218,6 +370,47 @@ def _context_status(
         issues.append("section_has_relevant_missing_context")
         return "warning", issues
     return "ready", issues
+
+
+def _allows_telemetry_substitute(title: str) -> bool:
+    return "limit" in title.lower()
+
+
+def _telemetry_context(title: str, spine: dict[str, Any]) -> list[dict[str, str]]:
+    if not _allows_telemetry_substitute(title):
+        return []
+    rows = []
+    validation = _dict(spine.get("canonical_decision_spine_validation"))
+    construction = _dict(spine.get("construction_report"))
+    if validation:
+        rows.append(
+            {
+                "kind": "spine_validation",
+                "claim": f"Canonical spine validation status is {validation.get('status', 'unknown')}.",
+                "use": "Use as method telemetry, not source evidence.",
+            }
+        )
+    if construction:
+        rows.append(
+            {
+                "kind": "source_coverage",
+                "claim": (
+                    f"The spine was built from {construction.get('candidate_card_count', 0)} candidate evidence cards "
+                    f"and {construction.get('source_anchor_count', 0)} source anchors."
+                ),
+                "use": "Use to bound completeness of the current map.",
+            }
+        )
+    status = str(spine.get("status", "")).strip()
+    if status and status != "ready":
+        rows.append(
+            {
+                "kind": "bounded_status",
+                "claim": f"Canonical spine status is {status}.",
+                "use": "Use to explain why the memo should remain bounded.",
+            }
+        )
+    return rows
 
 
 def _section_thesis(title: str, spine: dict[str, Any], owned_fields: list[dict[str, Any]]) -> str:
@@ -269,6 +462,17 @@ def _string_list(value: Any) -> list[str]:
     if isinstance(value, str) and value.strip():
         return [value.strip()]
     return []
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        key = item.lower()
+        if key and key not in seen:
+            seen.add(key)
+            result.append(item)
+    return result
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

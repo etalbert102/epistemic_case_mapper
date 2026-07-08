@@ -377,11 +377,12 @@ def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
     ]
     cruxes = [row for row in model_packet.get("canonical_cruxes", []) if isinstance(row, dict)]
     quantities = [row for row in model_packet.get("must_include_quantities", []) if isinstance(row, dict)]
+    telemetry = [row for row in model_packet.get("telemetry_context", []) if isinstance(row, dict)]
     substantive = _is_substantive_section(title)
     issues: list[str] = []
     if substantive and not str(model_packet.get("section_thesis", "")).strip() and not str(packet.get("section_job", "")).strip():
         issues.append(f"{title}: missing section decision move")
-    if substantive and not (owned or cruxes or quantities or obligations):
+    if substantive and not (owned or cruxes or quantities or obligations or telemetry):
         issues.append(f"{title}: no owned source-backed context or explicit substitute")
     missing_roles = [
         str(row.get("claim", ""))[:80]
@@ -398,7 +399,7 @@ def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
     if missing_reasons:
         issues.append(f"{title}: owned cards missing reason_for_inclusion")
     count = len(owned)
-    if not substantive or count == 0 and (cruxes or quantities or obligations):
+    if not substantive or count == 0 and (cruxes or quantities or obligations or telemetry):
         budget_status = "justified_exception"
     elif count < 3:
         budget_status = "under_budget"
@@ -411,7 +412,7 @@ def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
         budget_status = "within_budget"
     context_risk = "high" if any("no owned" in issue or "missing section" in issue for issue in issues) else "medium" if issues else "low"
     status = "not_synthesis_ready" if context_risk == "high" else "warning" if issues else "ready"
-    can_answer = _section_can_answer(title, model_packet, owned, cruxes, quantities, obligations)
+    can_answer = _section_can_answer(title, model_packet, owned, cruxes, quantities, obligations, telemetry)
     missing_context = [
         issue.split(": ", 1)[1]
         for issue in issues
@@ -423,7 +424,7 @@ def _section_context_row(packet: dict[str, Any]) -> SectionContextAcceptanceRow:
         owned_card_count=count,
         card_budget_status=budget_status,
         this_section_can_answer=can_answer,
-        because=_because_for_section(owned, cruxes, quantities, obligations),
+        because=_because_for_section(owned, cruxes, quantities, obligations, telemetry),
         missing_context=missing_context,
         context_risk_level=context_risk,
         issues=issues,
@@ -442,6 +443,7 @@ def _section_can_answer(
     cruxes: list[dict[str, Any]],
     quantities: list[dict[str, Any]],
     obligations: list[dict[str, Any]],
+    telemetry: list[dict[str, Any]],
 ) -> str:
     thesis = str(model_packet.get("section_thesis", "")).strip()
     if thesis:
@@ -454,6 +456,8 @@ def _section_can_answer(
         return f"{title} can carry assigned quantitative anchors."
     if obligations:
         return f"{title} can satisfy assigned memo obligations."
+    if telemetry:
+        return f"{title} can bound the memo using pipeline telemetry and coverage diagnostics."
     return ""
 
 
@@ -462,6 +466,7 @@ def _because_for_section(
     cruxes: list[dict[str, Any]],
     quantities: list[dict[str, Any]],
     obligations: list[dict[str, Any]],
+    telemetry: list[dict[str, Any]],
 ) -> str:
     parts: list[str] = []
     if owned:
@@ -472,6 +477,8 @@ def _because_for_section(
         parts.append(f"{len(quantities)} quantitative anchor(s)")
     if obligations:
         parts.append(f"{len(obligations)} memo obligation(s)")
+    if telemetry:
+        parts.append(f"{len(telemetry)} telemetry substitute(s)")
     return ", ".join(parts)
 
 
@@ -682,9 +689,9 @@ def _role_for_claim(claim: dict[str, Any]) -> str:
         for key in ("role", "evidence_role", "section", "relation_type", "claim_type", "tags", "evidence_slots")
     ).lower()
     text = _claim_text(claim).lower()
-    if any(term in values for term in ("challenge", "counter", "conflict", "tension", "risk")):
+    if any(term in values for term in ("challenge", "counter", "conflict", "tension")):
         return "challenges"
-    if any(term in text for term in ("higher risk", "increased risk", "increase in risk", "positive association", "lower mortality")):
+    if any(term in text for term in ("higher risk", "increased risk", "increase in risk", "worse outcome", "harm", "adverse")):
         return "challenges"
     if any(term in values for term in ("scope", "limit", "boundary", "exception", "constraint", "crux")):
         return "scopes"

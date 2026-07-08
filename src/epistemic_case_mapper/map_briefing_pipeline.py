@@ -36,7 +36,7 @@ from epistemic_case_mapper.decision_frame import (
 )
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
-from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle
+from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle, build_source_coverage_report
 from epistemic_case_mapper.map_briefing_context_reports import (
     build_final_brief_evaluation,
     build_memo_coherence_report,
@@ -269,6 +269,15 @@ def _attach_decision_spine_bundle(
             backend_timeout=backend_timeout, backend_retries=backend_retries,
         )
     )
+    if all(isinstance(scaffold.get(key), dict) for key in ("source_evidence_cards", "candidate_evidence_cards", "source_map_reconciliation", "section_reasoning_cards")):
+        scaffold["source_coverage_report"] = build_source_coverage_report(
+            source_evidence_cards=scaffold["source_evidence_cards"],
+            candidate_evidence_cards=scaffold["candidate_evidence_cards"],
+            source_map_reconciliation=scaffold["source_map_reconciliation"],
+            section_reasoning_cards=scaffold["section_reasoning_cards"],
+            section_projection_packets=scaffold.get("section_projection_packets"),
+            section_context_decision_packets=scaffold.get("section_context_decision_packets"),
+        )
 
 
 def _attach_model_context_audit(
