@@ -145,13 +145,16 @@ def build_reader_packet_retention_repair_prompt(
 
 def _required_cards(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for section in ("quantitative_anchors", "evidence_cards", "counterweight_cards", "decision_cruxes"):
+    for section in ("quantitative_anchors", "evidence_cards", "counterweight_cards"):
         for index, card in enumerate(reader_packet.get(section, []) if isinstance(reader_packet.get(section), list) else []):
             if not isinstance(card, dict):
                 continue
+            role = str(card.get("role") or "").strip()
+            if section == "counterweight_cards" and role != "counterweight":
+                continue
             statement = str(card.get("statement") or "").strip()
             source = str(card.get("source") or "").strip()
-            numbers = _number_tokens(" ".join([statement, " ".join(_string_list(card.get("quantities")))]))
+            numbers = _required_numbers_for_card(card, statement=statement)
             if section != "quantitative_anchors" and not numbers:
                 continue
             if not statement or not source:
@@ -160,7 +163,7 @@ def _required_cards(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "card_id": f"{section}_{index + 1}",
                     "section": section,
-                    "role": card.get("role"),
+                    "role": role,
                     "statement": statement,
                     "source": source,
                     "numbers": _dedupe(numbers),
@@ -168,6 +171,13 @@ def _required_cards(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
     return _dedupe_cards(rows)[:16]
+
+
+def _required_numbers_for_card(card: dict[str, Any], *, statement: str) -> list[str]:
+    quantities = _string_list(card.get("quantities"))
+    if quantities:
+        return _dedupe(_number_tokens(" ".join(quantities[:3])))
+    return _dedupe(_number_tokens(statement))
 
 
 def _card_status(memo: str, card: dict[str, Any]) -> dict[str, Any]:
