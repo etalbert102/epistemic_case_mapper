@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -53,13 +52,11 @@ from epistemic_case_mapper.map_briefing_final_editor_artifacts import (
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
-from epistemic_case_mapper.map_briefing_prompt_scaffold import model_briefing_scaffold
 from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, top_quantity_anchors
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
 from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
-from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
 from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_family, reader_facing_unresolved_slot
 ROLE_PRIORITY = {
     "crux": 0,
@@ -137,7 +134,6 @@ def run_map_briefing(
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
-    attach_global_memo_plan(scaffold, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -269,12 +265,11 @@ def _attach_decision_spine_bundle(
             backend_timeout=backend_timeout, backend_retries=backend_retries,
         )
     )
-    if all(isinstance(scaffold.get(key), dict) for key in ("source_evidence_cards", "candidate_evidence_cards", "source_map_reconciliation", "section_reasoning_cards")):
+    if all(isinstance(scaffold.get(key), dict) for key in ("source_evidence_cards", "candidate_evidence_cards", "source_map_reconciliation")):
         scaffold["source_coverage_report"] = build_source_coverage_report(
             source_evidence_cards=scaffold["source_evidence_cards"],
             candidate_evidence_cards=scaffold["candidate_evidence_cards"],
             source_map_reconciliation=scaffold["source_map_reconciliation"],
-            section_reasoning_cards=scaffold["section_reasoning_cards"],
             section_projection_packets=scaffold.get("section_projection_packets"),
             section_context_decision_packets=scaffold.get("section_context_decision_packets"),
         )
@@ -292,7 +287,6 @@ def _attach_model_context_audit(
         artifacts / "model_context_audit.json",
         backend=backend,
         legacy_prompt=prompt,
-        global_plan_prompt=str(scaffold.get("global_memo_plan_prompt", "")),
         section_packets_path=final_outputs["summary_paths"].get("section_synthesis_packets"),
         reader_rewrite_prompt=str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
     )
@@ -523,60 +517,14 @@ def build_map_briefing_prompt(
     erosion_audit: dict[str, Any],
     scaffold: dict[str, Any] | None = None,
 ) -> str:
-    scaffold = scaffold or briefing_scaffold(candidate_map, quality_report, source_lookup, erosion_audit)
-    return "\n\n".join(
-        (
-            "You are writing a decision-support briefing from a source-grounded epistemic map.",
-            "Return valid compact JSON only. Do not wrap it in a markdown code fence.",
-            "Required JSON shape: "
-            "{\"decision_brief\": \"readable bottom-line prose\", "
-            "\"confidence\": \"low|medium|high\", "
-            "\"decision_implications\": [\"action-relevant implication\"], "
-            "\"top_cruxes\": [{\"crux\": \"...\", \"why_it_matters\": \"...\", \"current_read\": \"...\", \"would_change_if\": \"...\"}], "
-            "\"stress_caveats\": [\"decision-relevant caveat\"]}",
-            "Rules:",
-            "- Keep the JSON compact: decision_brief <= 160 words, decision_implications <= 4 items, top_cruxes <= 3 items, stress_caveats <= 4 items.",
-            "- Do not return evidence_roles or audit_trail unless you need to correct the deterministic scaffold; the engine will attach those sections deterministically.",
-            "- Answer the decision question directly, then explain the map-backed cruxes.",
-            "- Use the deterministic section buckets as hard boundaries: synthesize each evidence_roles section only from that section's bucket.",
-            "- Use `briefing_contract.answer_frame` to set the bottom-line strength; do not make a stronger claim than the contract allows.",
-            "- Use `briefing_contract.scope_ledger` to keep scope caveats separate from the general/default answer.",
-            "- Use `decision_synthesis_model.bottom_line.current_read` and `decision_model.default_answer.plain_language_instruction` as the controlling answer frame. Express it in the decision question's natural vocabulary rather than forcing a generic category label.",
-            "- Use `decision_model.decision_slots` to include practical thresholds, high-risk subgroups, mechanisms, comparators, endpoint types, study designs, and recommendations when present.",
-            "- If `decision_model.missing_decision_slots` names a slot that matters for the question, say the map did not expose it rather than inventing it.",
-            "- Use `decision_model.evidence_families` to avoid dropping whole families such as RCTs, cohorts, guidelines, mechanisms, subgroups, comparators, or method limits.",
-            "- Use `graph_synthesis_packet` before raw evidence tables: draft from issue clusters, load-bearing claims, bridge claims, and central tensions.",
-            "- Each main section should correspond to a graph issue cluster or a cross-cluster tension; do not merely list isolated claims.",
-            "- Use graph orphan claims only as caveats or appendix material unless they are high-weight scope boundaries.",
-            "- Use `decision_synthesis_model` as the controlling decision-support structure: preserve its evidence lines, central tensions, scope boundaries, exceptions, recommendations, and cruxes.",
-            "- Use `argument_model` to decide which support, counterarguments, scope boundaries, cruxes, quantities, and known failure modes are load-bearing for the memo.",
-            "- Use `decision_argument_artifacts`: the matrix, findings, competing reads, argument graph, and traceability rows separate evidence, alternatives, uncertainty, and requirements before prose.",
-            "- Treat `map_sufficiency_report.output_obligations` as the prose contract: satisfy present-slot obligations and explicitly acknowledge decision-relevant missing slots.",
-            "- If `map_sufficiency_report.status` is limited or thin, make that limitation visible in caveats or audit trail.",
-            "- Use `evidence_compression_table` as the main source for compact synthesis; it is already filtered for decision relevance and noise.",
-            "- Preserve concept coverage from `evidence_compression_table.coverage`: mechanisms, subgroups, comparators, endpoints, thresholds, and study designs should not silently disappear.",
-            "- Use `concept_evidence_packets` to synthesize by decision lever before composing the bottom line; do not collapse RCTs, cohorts, mechanisms, comparators, and subgroups into one generic evidence sentence.",
-            "- Use `proposition_clusters` to synthesize claim clusters into propositions; do not narrate isolated claim fragments when a cluster-level proposition exists.",
-            "- Use `briefing_plan` as the prose outline: bottom line first, then weighted reasons, then counterposition, then scope/method limits.",
-            "- Use `evidence_weighting_ledger`; lead with high/medium weight direct evidence and identify low-weight evidence as limited, indirect, deterministic backfill, or source-incomplete.",
-            "- Use `quantitative_evidence_cards` first, then `quantitative_anchors`, for quantitative depth: include only decision-relevant quantities such as effect sizes, intervals, p-values, sample sizes, thresholds, durations, and biomarker changes.",
-            "- Do not dump every extracted number into prose; the full `quantity_ledger` is an appendix artifact.",
-            "- Apply `briefing_contract.overstatement_lint` before returning: soften any sentence that violates an active lint rule.",
-            "- Use `section_policy` for the meanings of main_support, conflicting_evidence, scope_limits, and method_limits.",
-            "- Do not put concern, counterposition, or scope-boundary evidence in main_support unless the section_policy explicitly says it supports the requested answer frame.",
-            "- Preserve tensions, scope limits, and method limits; do not flatten them into a single confident answer.",
-            "- Write section prose in human terms; do not say `Claim A`, `Claim B`, raw claim IDs, or raw relation IDs.",
-            "- Use source display names, not raw source IDs, claim IDs, or relation IDs, in reader-facing fields.",
-            "- Every evidence_roles bullet must be a substantive evidence statement, not just a source name.",
-            "- An evidence_roles bullet is invalid if it only says which source exists; include the relevant claim and put the source in parentheses.",
-            "- Do not invent facts beyond the map, quality report, or erosion audit.",
-            "- Calibrate uncertainty to the quality report. A map marked review_recommended or needs_repair cannot support high confidence.",
-            "- Keep the briefing concise and readable for a human judge.",
-            "- Do not replace the decision question with source-use advice. Source-use advice belongs in scope caveats unless the question itself asks how to use sources.",
+    _ = (candidate_map, quality_report, source_lookup, erosion_audit, scaffold)
+    return "\n".join(
+        [
+            "Whole-memo JSON prompt retired.",
+            "Active synthesis path: canonical decision spine -> section context decision packets -> section-first model synthesis.",
             f"Decision question: {question}",
-            "Deterministic briefing scaffold:\n" + json.dumps(model_briefing_scaffold(scaffold), indent=2),
-            "Map quality report:\n" + json.dumps(_quality_brief(quality_report), indent=2),
-        )
+            "See section_synthesis_packets.json and model_context_audit.json for model-facing context.",
+        ]
     )
 
 

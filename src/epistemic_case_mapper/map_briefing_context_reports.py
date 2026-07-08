@@ -212,7 +212,7 @@ def build_pipeline_migration_ledger(
     return PipelineMigrationLedger(
         old_context_fields_still_model_visible=old_visible,
         new_context_fields_model_visible=new_visible,
-        debug_only_artifacts=["main_memo_obligation_ledger", "unified_requirement_ledger", "section_reasoning_cards"],
+        debug_only_artifacts=["main_memo_obligation_ledger", "unified_requirement_ledger"],
         compatibility_shims=[] if projection_ready else ["main memo obligations remain as validation obligations until fully replaced"],
         status=status,
     ).model_dump()

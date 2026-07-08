@@ -118,13 +118,13 @@ def test_section_prompt_requires_visible_evidence_weighting() -> None:
 def test_model_packet_projects_reused_evidence_into_section_specific_uses() -> None:
     claim = "The pilot reduced application delays by 18 percent in a before-after evaluation."
     base_scaffold = {
-        "section_reasoning_cards": {
+        "section_context_decision_packets": {
             "sections": [
                 {
                     "section": "Why This Read",
                     "section_thesis": "Explain why the pilot result supports the default read.",
                     "context_status": "ready",
-                    "owned_cards": [
+                    "owned_evidence": [
                         {
                             "candidate_card_id": "ec-delay",
                             "claim": claim,
@@ -138,7 +138,7 @@ def test_model_packet_projects_reused_evidence_into_section_specific_uses() -> N
                     "section": "Practical Read",
                     "section_thesis": "Translate the pilot result into bounded practical implications.",
                     "context_status": "ready",
-                    "owned_cards": [
+                    "owned_evidence": [
                         {
                             "candidate_card_id": "ec-delay",
                             "claim": claim,
@@ -238,13 +238,13 @@ def test_model_facing_validation_uses_curated_owned_evidence() -> None:
     contract = {
         "heading": "Practical Scope and Exceptions",
         "_section_synthesis_scaffold": {
-            "section_reasoning_cards": {
+            "section_context_decision_packets": {
                 "sections": [
                     {
                         "section": "Practical Scope and Exceptions",
                         "section_thesis": "Name where the answer travels.",
                         "context_status": "ready",
-                        "owned_cards": [
+                        "owned_evidence": [
                             {
                                 "candidate_card_id": "ec0001",
                                 "claim": "Data above the ordinary exposure level remain sparse.",
@@ -285,13 +285,13 @@ def test_model_packet_allows_reused_cards_when_they_can_support_section_value() 
     contract = {
         "heading": "Practical Read",
         "_section_synthesis_scaffold": {
-            "section_reasoning_cards": {
+            "section_context_decision_packets": {
                 "sections": [
                     {
                         "section": "Practical Read",
                         "section_thesis": "Translate the 0.5 egg per day risk estimate into practical advice.",
                         "context_status": "ready",
-                        "owned_cards": [
+                        "owned_evidence": [
                             {
                                 "candidate_card_id": "ec-risk",
                                 "claim_ids": ["c-risk"],
@@ -348,13 +348,13 @@ def test_model_packet_allows_reference_cards_when_section_can_add_reasoning_valu
     contract = {
         "heading": "Why This Read",
         "_section_synthesis_scaffold": {
-            "section_reasoning_cards": {
+            "section_context_decision_packets": {
                 "sections": [
                     {
                         "section": "Why This Read",
                         "section_thesis": "Explain the reasoning path from the trial result.",
                         "context_status": "ready",
-                        "owned_cards": [
+                        "owned_evidence": [
                             {
                                 "candidate_card_id": "ec-trial",
                                 "claim_ids": ["c-trial"],

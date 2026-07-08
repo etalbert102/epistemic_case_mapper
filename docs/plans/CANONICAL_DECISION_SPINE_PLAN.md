@@ -56,7 +56,6 @@ Before implementation, classify the existing artifacts into four groups:
   - `source_sufficiency_report`
 - Candidate replacement artifacts:
   - `decision_synthesis_model`
-  - `global_memo_plan`
   - current section synthesis packets
 - Validation artifacts to move earlier:
   - briefing validation
@@ -74,9 +73,9 @@ Current code path:
 2. `briefing_scaffold` calls `build_decision_support_model` in `map_briefing_decision_support_model.py`.
 3. `build_decision_support_model` builds ledgers, quantities, graph synthesis, current decision model, decision synthesis, argument model, and argument artifacts.
 4. `_attach_decision_ready_context_reports` in `map_briefing_pipeline.py` calls `build_decision_ready_context_bundle` in `map_briefing_context_curation.py`.
-5. `build_decision_ready_context_bundle` builds source evidence cards, candidate cards, current `memo_argument_spine`, section reasoning cards, and source coverage.
-6. `_attach_global_memo_plan` builds the current global memo plan.
-7. `rewrite_reader_memo_by_section` builds section packets and calls the model section by section.
+5. `build_decision_ready_context_bundle` builds source evidence cards, candidate cards, source-map reconciliation, evidence quality, and source coverage.
+6. `_attach_decision_spine_bundle` builds the canonical spine, projection packets, and section context decision packets.
+7. `rewrite_reader_memo_by_section` builds section packets from those canonical context packets and calls the model section by section.
 
 The canonical spine should initially be inserted between steps 4 and 6:
 
@@ -88,7 +87,7 @@ briefing_scaffold
   -> _attach_slot_eligibility_audit
   -> _attach_canonical_decision_spine
   -> _attach_spine_projection_packets
-  -> _attach_global_memo_plan
+  -> _attach_section_context_decision_packets
   -> section synthesis
 ```
 
@@ -461,12 +460,12 @@ Validation:
 5. Build a deterministic spine from existing artifacts, slot audit, and classical selection features.
 6. Add spine consistency and repair reports in report-only mode.
 7. Add section projections from the spine, still report-only.
-8. Update `compile_model_section_packet` to prefer spine projections when present while retaining fallback to current section reasoning cards.
+8. Update `compile_model_section_packet` to consume section context decision packets and spine projections.
 9. Add model-assisted spine arbitration behind strict provenance validation.
 10. Make projection readiness blocking once report-only telemetry is calibrated.
 11. Generate the BLUF from accepted body sections plus the spine.
 12. Rerun eggs and one non-egg unseen case.
-13. Deprecate or simplify `global_memo_plan`, current `memo_argument_spine`, and ad hoc section reasoning only after before/after artifacts show the spine path is better.
+13. Remove retired global-planning and ad hoc section-reasoning compatibility paths once the spine path is better supported by tests.
 14. Tighten reliable report-only gates into blocking gates.
 
 ## Acceptance Criteria

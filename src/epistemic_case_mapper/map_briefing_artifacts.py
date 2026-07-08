@@ -34,10 +34,6 @@ def write_scaffold_artifacts(
         "erosion_audit": artifacts / "generated_map_erosion_audit.json",
         "sufficiency_report": artifacts / "map_sufficiency_report.json",
         "decision_synthesis_model": artifacts / "decision_synthesis_model.json",
-        "global_memo_plan": artifacts / "global_memo_plan.json",
-        "global_memo_plan_prompt": artifacts / "global_memo_plan_prompt.txt",
-        "global_memo_plan_raw": artifacts / "global_memo_plan_raw.txt",
-        "global_memo_plan_validation": artifacts / "global_memo_plan_validation.json",
         "argument_model": artifacts / "argument_model.json",
         "graph_synthesis_packet": artifacts / "graph_synthesis_packet.json",
         "source_evidence_cards": artifacts / "source_evidence_cards.json",
@@ -45,8 +41,6 @@ def write_scaffold_artifacts(
         "evidence_quality_report": artifacts / "evidence_quality_report.json",
         "candidate_evidence_cards": artifacts / "candidate_evidence_cards.json",
         "source_map_reconciliation": artifacts / "source_map_reconciliation.json",
-        "memo_argument_spine": artifacts / "memo_argument_spine.json",
-        "section_reasoning_cards": artifacts / "section_reasoning_cards.json",
         "source_coverage_report": artifacts / "source_coverage_report.json",
         "classical_evidence_selection_report": artifacts / "classical_evidence_selection_report.json",
         "claim_cluster_report": artifacts / "claim_cluster_report.json",
@@ -87,10 +81,6 @@ def write_scaffold_artifacts(
     write_json(paths["erosion_audit"], erosion_audit)
     write_json(paths["sufficiency_report"], scaffold.get("map_sufficiency_report", {}))
     write_json(paths["decision_synthesis_model"], scaffold.get("decision_synthesis_model", {}))
-    write_json(paths["global_memo_plan"], scaffold.get("global_memo_plan", {}))
-    write_markdown(paths["global_memo_plan_prompt"], str(scaffold.get("global_memo_plan_prompt", "")))
-    write_markdown(paths["global_memo_plan_raw"], str(scaffold.get("global_memo_plan_raw", "")))
-    write_json(paths["global_memo_plan_validation"], scaffold.get("global_memo_plan_validation", {}))
     write_json(paths["argument_model"], scaffold.get("argument_model", {}))
     write_json(paths["graph_synthesis_packet"], scaffold.get("graph_synthesis_packet", {}))
     write_json(paths["source_evidence_cards"], scaffold.get("source_evidence_cards", {}))
@@ -98,8 +88,6 @@ def write_scaffold_artifacts(
     write_json(paths["evidence_quality_report"], scaffold.get("evidence_quality_report", {}))
     write_json(paths["candidate_evidence_cards"], scaffold.get("candidate_evidence_cards", {}))
     write_json(paths["source_map_reconciliation"], scaffold.get("source_map_reconciliation", {}))
-    write_json(paths["memo_argument_spine"], scaffold.get("memo_argument_spine", {}))
-    write_json(paths["section_reasoning_cards"], scaffold.get("section_reasoning_cards", {}))
     write_json(paths["source_coverage_report"], scaffold.get("source_coverage_report", {}))
     write_json(paths["classical_evidence_selection_report"], scaffold.get("classical_evidence_selection_report", {}))
     write_json(paths["claim_cluster_report"], scaffold.get("claim_cluster_report", {}))
@@ -234,10 +222,6 @@ def write_run_summary(
             "generated_map_erosion_audit": scaffold_paths["erosion_audit"],
             "map_sufficiency_report": scaffold_paths["sufficiency_report"],
             "decision_synthesis_model": scaffold_paths["decision_synthesis_model"],
-            "global_memo_plan": scaffold_paths["global_memo_plan"],
-            "global_memo_plan_prompt": scaffold_paths["global_memo_plan_prompt"],
-            "global_memo_plan_raw": scaffold_paths["global_memo_plan_raw"],
-            "global_memo_plan_validation": scaffold_paths["global_memo_plan_validation"],
             "argument_model": scaffold_paths["argument_model"],
             "graph_synthesis_packet": scaffold_paths["graph_synthesis_packet"],
             "source_evidence_cards": scaffold_paths["source_evidence_cards"],
@@ -245,8 +229,6 @@ def write_run_summary(
             "evidence_quality_report": scaffold_paths["evidence_quality_report"],
             "candidate_evidence_cards": scaffold_paths["candidate_evidence_cards"],
             "source_map_reconciliation": scaffold_paths["source_map_reconciliation"],
-            "memo_argument_spine": scaffold_paths["memo_argument_spine"],
-            "section_reasoning_cards": scaffold_paths["section_reasoning_cards"],
             "source_coverage_report": scaffold_paths["source_coverage_report"],
             "classical_evidence_selection_report": scaffold_paths["classical_evidence_selection_report"],
             "claim_cluster_report": scaffold_paths["claim_cluster_report"],
@@ -350,15 +332,12 @@ def write_final_review_packet(
         f"- Prioritized map: `{_rel(repo_root, scaffold_paths.get('prioritized_map'))}`",
         f"- Argument model: `{_rel(repo_root, scaffold_paths.get('argument_model'))}`",
         f"- Decision synthesis model: `{_rel(repo_root, scaffold_paths.get('decision_synthesis_model'))}`",
-        f"- Global memo plan: `{_rel(repo_root, scaffold_paths.get('global_memo_plan'))}`",
         f"- Graph synthesis packet: `{_rel(repo_root, scaffold_paths.get('graph_synthesis_packet'))}`",
         f"- Source evidence cards: `{_rel(repo_root, scaffold_paths.get('source_evidence_cards'))}`",
         f"- Source sufficiency report: `{_rel(repo_root, scaffold_paths.get('source_sufficiency_report'))}`",
         f"- Evidence quality report: `{_rel(repo_root, scaffold_paths.get('evidence_quality_report'))}`",
         f"- Candidate evidence cards: `{_rel(repo_root, scaffold_paths.get('candidate_evidence_cards'))}`",
         f"- Source-map reconciliation: `{_rel(repo_root, scaffold_paths.get('source_map_reconciliation'))}`",
-        f"- Memo argument spine: `{_rel(repo_root, scaffold_paths.get('memo_argument_spine'))}`",
-        f"- Section reasoning cards: `{_rel(repo_root, scaffold_paths.get('section_reasoning_cards'))}`",
         f"- Source coverage report: `{_rel(repo_root, scaffold_paths.get('source_coverage_report'))}`",
         f"- Classical evidence selection: `{_rel(repo_root, scaffold_paths.get('classical_evidence_selection_report'))}`",
         f"- Slot eligibility audit: `{_rel(repo_root, scaffold_paths.get('slot_eligibility_audit'))}`",
@@ -483,15 +462,11 @@ def map_briefing_summary_payload(
     atomic_cards = scaffold.get("atomic_evidence_cards", {}) if isinstance(scaffold.get("atomic_evidence_cards"), dict) else {}
     argument_model = scaffold.get("argument_model", {}) if isinstance(scaffold.get("argument_model"), dict) else {}
     argument_artifacts = scaffold.get("decision_argument_artifacts", {}) if isinstance(scaffold.get("decision_argument_artifacts"), dict) else {}
-    global_plan = scaffold.get("global_memo_plan", {}) if isinstance(scaffold.get("global_memo_plan"), dict) else {}
-    global_plan_validation = scaffold.get("global_memo_plan_validation", {}) if isinstance(scaffold.get("global_memo_plan_validation"), dict) else {}
     source_cards = scaffold.get("source_evidence_cards", {}) if isinstance(scaffold.get("source_evidence_cards"), dict) else {}
     source_sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
     evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
     candidate_cards = scaffold.get("candidate_evidence_cards", {}) if isinstance(scaffold.get("candidate_evidence_cards"), dict) else {}
     reconciliation = scaffold.get("source_map_reconciliation", {}) if isinstance(scaffold.get("source_map_reconciliation"), dict) else {}
-    argument_spine = scaffold.get("memo_argument_spine", {}) if isinstance(scaffold.get("memo_argument_spine"), dict) else {}
-    reasoning_cards = scaffold.get("section_reasoning_cards", {}) if isinstance(scaffold.get("section_reasoning_cards"), dict) else {}
     source_coverage = scaffold.get("source_coverage_report", {}) if isinstance(scaffold.get("source_coverage_report"), dict) else {}
     slot_audit = _scaffold_dict(scaffold, "slot_eligibility_audit")
     canonical_spine = _scaffold_dict(scaffold, "canonical_decision_spine")
@@ -536,9 +511,6 @@ def map_briefing_summary_payload(
         "candidate_evidence_card_count": candidate_cards.get("card_count"),
         "candidate_evidence_main_text_count": candidate_cards.get("main_text_count"),
         "source_map_reconciliation_unbacked_count": reconciliation.get("unbacked_count"),
-        "memo_argument_spine_status": argument_spine.get("status"),
-        "memo_argument_spine_item_count": _list_count(argument_spine, "items"),
-        "section_reasoning_cards_status": reasoning_cards.get("status"),
         "source_coverage_omitted_high_relevance_count": _list_count(source_coverage, "omitted_high_relevance_card_ids"),
         "slot_eligibility_status": slot_audit.get("status"),
         "canonical_decision_spine_status": canonical_spine.get("status"),
@@ -564,10 +536,6 @@ def map_briefing_summary_payload(
         "pipeline_migration_ledger_path": _rel(repo_root, paths.get("pipeline_migration_ledger")),
         "runtime_budget_report_path": _rel(repo_root, paths.get("runtime_budget_report")),
         "final_brief_evaluation_path": _rel(repo_root, paths.get("final_brief_evaluation")),
-        "global_memo_plan_status": global_plan.get("status"),
-        "global_memo_plan_method": global_plan.get("method"),
-        "global_memo_plan_validation_status": global_plan_validation.get("status"),
-        "global_memo_plan_target_word_count": global_plan_validation.get("target_word_count"),
         "decision_synthesis_evidence_line_count": len(decision_synthesis_model.get("evidence_lines", [])),
         "decision_synthesis_tension_count": len(decision_synthesis_model.get("central_tensions", [])),
         "decision_synthesis_recommendation_count": len(decision_synthesis_model.get("recommendations", [])),

@@ -8,7 +8,6 @@ from epistemic_case_mapper.map_briefing_context_reconciliation import (
 )
 from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
 from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
-from epistemic_case_mapper.map_briefing_spine_global_plan import attach_global_memo_plan
 from epistemic_case_mapper.map_briefing_spine_projection import (
     build_section_projection_packets,
     build_section_projection_readiness_report,
@@ -539,15 +538,6 @@ def test_model_spine_arbitration_rejects_invented_field_ids(monkeypatch) -> None
 
     assert result["report"]["status"] == "rejected_invalid_ids"
     assert "model_arbitration" not in result["spine"]
-
-
-def test_global_memo_plan_is_deprecated_when_spine_projections_are_ready() -> None:
-    scaffold = {"section_projection_readiness_report": {"status": "ready"}}
-
-    attach_global_memo_plan(scaffold, backend="prompt", backend_timeout=30, backend_retries=0)
-
-    assert scaffold["global_memo_plan"]["status"] == "deprecated_by_canonical_spine"
-    assert scaffold["global_memo_plan_prompt"].startswith("Skipped")
 
 
 def _candidate_map() -> dict:

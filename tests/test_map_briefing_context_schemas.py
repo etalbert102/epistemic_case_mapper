@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_context_schemas import (
     CandidateEvidenceCardsReport,
-    MemoArgumentSpineReport,
     SOURCE_EVIDENCE_CARD_OWNERSHIP,
-    SectionReasoningCardsReport,
     SourceEvidenceCardReport,
     SourceMapReconciliationReport,
     validate_artifact_ownership,
@@ -243,28 +241,24 @@ def test_decision_ready_context_bundle_builds_plan_artifacts() -> None:
 
     reconciliation = SourceMapReconciliationReport.model_validate(bundle["source_map_reconciliation"])
     candidates = CandidateEvidenceCardsReport.model_validate(bundle["candidate_evidence_cards"])
-    spine = MemoArgumentSpineReport.model_validate(bundle["memo_argument_spine"])
-    section_cards = SectionReasoningCardsReport.model_validate(bundle["section_reasoning_cards"])
 
     assert reconciliation.source_backed_count == 3
     assert candidates.main_text_count >= 2
-    assert spine.items
-    assert spine.load_bearing_candidate_card_ids
-    assert any(section.section == "Evidence Carrying the Conclusion" for section in section_cards.sections)
     assert bundle["source_coverage_report"]["schema_id"] == "source_coverage_report_v1"
+    assert bundle["source_coverage_report"]["assignment_basis"] == "pending_final_projection"
 
 
-def test_model_section_packet_prefers_section_reasoning_cards() -> None:
+def test_model_section_packet_prefers_section_context_decision_packets() -> None:
     contract = {
         "_section_synthesis_scaffold": {
-            "section_reasoning_cards": {
+            "section_context_decision_packets": {
                 "sections": [
                     {
                         "section": "Evidence Carrying the Conclusion",
                         "section_thesis": "Use the curated card, not the legacy obligation.",
                         "decision_move": "Explain the load-bearing evidence.",
                         "context_status": "ready",
-                        "owned_cards": [
+                        "owned_evidence": [
                             {
                                 "candidate_card_id": "ec0001",
                                 "source_card_ids": ["sc0001"],
@@ -274,7 +268,7 @@ def test_model_section_packet_prefers_section_reasoning_cards() -> None:
                                 "reason_for_inclusion": "It is assigned to this section.",
                             }
                         ],
-                        "reference_only_cards": [],
+                        "reference_only_evidence": [],
                         "do_not_use_cards": ["ec0099"],
                     }
                 ]
@@ -288,6 +282,7 @@ def test_model_section_packet_prefers_section_reasoning_cards() -> None:
 
     packet = compile_model_section_packet("Evidence Carrying the Conclusion", contract)
 
+    assert packet["context_source"] == "section_context_decision_packet"
     assert packet["section_thesis"] == "Use the curated card, not the legacy obligation."
     assert packet["owned_evidence"][0]["candidate_card_id"] == "ec0001"
     assert packet["do_not_use_cards"] == ["ec0099"]
@@ -348,18 +343,7 @@ def test_context_bundle_preserves_counterweight_role_on_narrower_scope_cards() -
     assert "counterweight" in cards["c2"]["evidence_roles"]
     assert "scope" in cards["c2"]["evidence_roles"]
     assert "Evidence Carrying the Conclusion" in cards["c2"]["section_candidates"]
-    scope_section = next(
-        section
-        for section in bundle["section_reasoning_cards"]["sections"]
-        if section["section"] == "Practical Scope and Exceptions"
-    )
-    evidence_section = next(
-        section
-        for section in bundle["section_reasoning_cards"]["sections"]
-        if section["section"] == "Evidence Carrying the Conclusion"
-    )
-    assert any("c2" in card.get("claim_ids", []) for card in scope_section["owned_cards"])
-    assert any("c2" in card.get("claim_ids", []) for card in evidence_section["owned_cards"])
+    assert "Practical Scope and Exceptions" in cards["c2"]["section_candidates"]
 
 
 def test_scope_labeled_quantitative_cards_remain_evidence_carrying() -> None:
@@ -389,12 +373,6 @@ def test_scope_labeled_quantitative_cards_remain_evidence_carrying() -> None:
     assert card["role"] == "quantity"
     assert card["evidence_roles"] == ["quantity", "scope"]
     assert "Evidence Carrying the Conclusion" in card["section_candidates"]
-    evidence_section = next(
-        section
-        for section in bundle["section_reasoning_cards"]["sections"]
-        if section["section"] == "Evidence Carrying the Conclusion"
-    )
-    assert any("c1" in owned.get("claim_ids", []) for owned in evidence_section["owned_cards"])
 
 
 def test_source_coverage_prefers_final_projection_assignments() -> None:
@@ -413,14 +391,6 @@ def test_source_coverage_prefers_final_projection_assignments() -> None:
             },
         ]
     }
-    legacy_sections = {
-        "sections": [
-            {
-                "section": "Evidence Carrying the Conclusion",
-                "owned_cards": [{"candidate_card_id": "ec0001"}],
-            }
-        ]
-    }
     final_packets = {
         "sections": [
             {
@@ -434,13 +404,11 @@ def test_source_coverage_prefers_final_projection_assignments() -> None:
         source_evidence_cards=source_cards,
         candidate_evidence_cards=candidates,
         source_map_reconciliation={"rows": []},
-        section_reasoning_cards=legacy_sections,
         section_context_decision_packets=final_packets,
     )
 
     assert report["assignment_basis"] == "final_projection_or_context_packets"
     assert report["assigned_main_card_count"] == 1
-    assert report["legacy_assigned_main_card_count"] == 1
     assert report["final_assigned_main_card_count"] == 1
     assert report["omitted_high_relevance_card_ids"] == ["ec0001"]
 

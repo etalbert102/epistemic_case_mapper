@@ -819,7 +819,7 @@ def test_decision_memo_slots_use_narrower_direct_outcome_evidence_as_context() -
     assert evidence_type_limits["status"] == "filled"
 
 
-def test_map_briefing_prompt_uses_compact_model_contract() -> None:
+def test_map_briefing_prompt_is_retired_diagnostic_note() -> None:
     candidate_map = {
         "claims": [
             {
@@ -844,10 +844,10 @@ def test_map_briefing_prompt_uses_compact_model_contract() -> None:
         scaffold=scaffold,
     )
 
-    assert "Return valid compact JSON only" in prompt
-    assert "Do not return evidence_roles or audit_trail" in prompt
+    assert "Whole-memo JSON prompt retired." in prompt
+    assert "section context decision packets" in prompt
     assert "Prioritized map artifact:" not in prompt
-    assert "evidence_roles_for_deterministic_attachment" in prompt
+    assert "evidence_roles_for_deterministic_attachment" not in prompt
 
 
 def test_model_parse_diagnostics_flags_truncated_fenced_json() -> None:

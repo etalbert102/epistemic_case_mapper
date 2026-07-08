@@ -13,7 +13,6 @@ def write_model_context_audit(
     *,
     backend: str,
     legacy_prompt: str,
-    global_plan_prompt: str,
     section_packets_path: Path | None,
     reader_rewrite_prompt: str,
 ) -> Path:
@@ -22,7 +21,6 @@ def write_model_context_audit(
         build_model_context_audit(
             backend=backend,
             legacy_prompt=legacy_prompt,
-            global_plan_prompt=global_plan_prompt,
             section_packets_path=section_packets_path,
             reader_rewrite_prompt=reader_rewrite_prompt,
         ),
@@ -34,7 +32,6 @@ def build_model_context_audit(
     *,
     backend: str,
     legacy_prompt: str,
-    global_plan_prompt: str,
     section_packets_path: Path | None,
     reader_rewrite_prompt: str,
 ) -> dict[str, Any]:
@@ -50,13 +47,6 @@ def build_model_context_audit(
                 status="record_only_legacy_prompt",
                 sent_to_model=False,
                 note="Retained as a compatibility/debug artifact; section-first synthesis is the active path.",
-            ),
-            _prompt_record(
-                "global_memo_plan",
-                global_plan_prompt,
-                status="record_only_prompt_backend" if prompt_backend else "active_model_call",
-                sent_to_model=not prompt_backend,
-                note="Model plans memo architecture; deterministic fallback is used for prompt backend or parse failure.",
             ),
             {
                 "stage": "section_rewrite",

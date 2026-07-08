@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from epistemic_case_mapper.map_briefing_global_plan import section_plan_for_title
 from epistemic_case_mapper.map_briefing_section_use_projection import (
     build_section_use_projections,
     projection_guidance,
@@ -24,24 +23,22 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     )
     title_key = title.lower()
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
-    section_plan = _compact_section_plan(section_plan_for_title(scaffold, title), contract)
     decision_packet = _section_context_decision_packet(title, scaffold)
     projection = decision_packet or _section_projection_contract(title, scaffold)
-    reasoning_contract = projection or _section_reasoning_contract(title, scaffold)
-    reasoning_owned = _projection_owned_evidence(projection) if projection else _reasoning_owned_evidence(reasoning_contract)
+    reasoning_contract = projection
+    reasoning_owned = _projection_owned_evidence(projection)
     contract_owned = _owned_evidence(contract)
     owned_evidence = _ownership_aligned_owned_evidence(reasoning_owned, contract_owned, contract)
     fallback_thesis = _section_thesis(title_key, contract, packet)
     reasoning_thesis = str(reasoning_contract.get("section_thesis") or "").strip()
-    section_thesis = str(reasoning_thesis or section_plan.get("thesis") or fallback_thesis).strip()
+    section_thesis = str(reasoning_thesis or fallback_thesis).strip()
     model_packet = {
         "schema_id": "model_section_packet_v1",
         "context_source": "section_context_decision_packet"
         if decision_packet
         else "canonical_spine_projection"
         if projection
-        else "section_reasoning_cards",
-        "global_section_plan": section_plan,
+        else "missing_section_context",
         "section_reasoning_contract": _compact_reasoning_contract(reasoning_contract, owned_evidence),
         "context_readiness_status": reasoning_contract.get("context_status"),
         "section_thesis": section_thesis,
@@ -52,7 +49,7 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
         "section_use_guidance": projection_guidance(title),
         "section_use_projections": build_section_use_projections(title, owned_evidence),
         "reference_only_evidence": _ownership_aligned_reference_evidence(
-            _projection_reference_evidence(projection) if projection else _reasoning_reference_only(reasoning_contract),
+            _projection_reference_evidence(projection),
             _reference_only_evidence(contract),
             contract,
         ),
@@ -84,15 +81,6 @@ def _section_context_decision_packet(title: str, scaffold: dict[str, Any]) -> di
     return {}
 
 
-def _section_reasoning_contract(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
-    report = scaffold.get("section_reasoning_cards", {}) if isinstance(scaffold.get("section_reasoning_cards"), dict) else {}
-    normalized_title = _normalize_title(title)
-    for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
-        if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
-            return section
-    return {}
-
-
 def _compact_reasoning_contract(reasoning: dict[str, Any], owned_evidence: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if not reasoning:
         return {}
@@ -102,9 +90,7 @@ def _compact_reasoning_contract(reasoning: dict[str, Any], owned_evidence: list[
         for card in owned_evidence or []
         if isinstance(card, dict) and card.get("candidate_card_id")
     }
-    source_cards = reasoning.get("owned_cards", []) if isinstance(reasoning.get("owned_cards"), list) else []
-    if not source_cards:
-        source_cards = reasoning.get("owned_evidence", []) if isinstance(reasoning.get("owned_evidence"), list) else []
+    source_cards = reasoning.get("owned_evidence", []) if isinstance(reasoning.get("owned_evidence"), list) else []
     return _drop_empty(
         {
             "section": reasoning.get("section"),
@@ -120,14 +106,6 @@ def _compact_reasoning_contract(reasoning: dict[str, Any], owned_evidence: list[
             ],
         }
     )
-
-
-def _reasoning_owned_evidence(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
-    return _reasoning_cards(reasoning, "owned_cards", use="This section may explain this evidence fully.")
-
-
-def _reasoning_reference_only(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
-    return _reasoning_cards(reasoning, "reference_only_cards", use="Briefly reference only; do not restate full source detail.")
 
 
 def _projection_owned_evidence(projection: dict[str, Any]) -> list[dict[str, Any]]:
@@ -198,32 +176,6 @@ def _projection_cards(projection: dict[str, Any], key: str, *, use: str) -> list
     return compact[:7]
 
 
-def _reasoning_cards(reasoning: dict[str, Any], key: str, *, use: str) -> list[dict[str, Any]]:
-    compact: list[dict[str, Any]] = []
-    for row in reasoning.get(key, []) if isinstance(reasoning.get(key), list) else []:
-        if not isinstance(row, dict):
-            continue
-        compact.append(
-            _drop_empty(
-                {
-                    "candidate_card_id": row.get("candidate_card_id"),
-                    "source_card_ids": _string_list(row.get("source_card_ids"))[:4],
-                    "claim_ids": _string_list(row.get("claim_ids"))[:4],
-                    "source": row.get("source"),
-                    "claim": _short_text(str(row.get("claim", "")), 280),
-                    "source_excerpt": _short_text(str(row.get("source_excerpt", "")), 360),
-                    "intended_role": row.get("intended_role"),
-                    "reason_for_inclusion": row.get("reason_for_inclusion"),
-                    "quality": row.get("quality"),
-                    "quantity_values": _string_list(row.get("quantity_values"))[:4],
-                    "limitations": _string_list(row.get("limitations"))[:4],
-                    "use": use,
-                }
-            )
-        )
-    return compact[:7]
-
-
 def _reasoning_near_misses(reasoning: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in reasoning.get("excluded_near_miss_cards", []) if isinstance(reasoning.get("excluded_near_miss_cards"), list) else []:
@@ -239,9 +191,9 @@ def _ownership_aligned_owned_evidence(
 ) -> list[dict[str, Any]]:
     """Return only evidence the validator's ownership policy also treats as local.
 
-    Section reasoning cards are useful for synthesis, but the validator enforces
-    the section contract. The prompt must therefore be a projection of the
-    contract's ownership policy, not a parallel assignment system.
+    The section packet and validator must share one ownership policy. The prompt
+    must therefore be a projection of the contract, not a parallel assignment
+    system.
     """
     allowed: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -275,27 +227,6 @@ def _ownership_aligned_reference_evidence(
         seen.add(key)
         allowed.append(row)
     return allowed[:4]
-
-
-def _compact_section_plan(plan: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(plan, dict) or not plan:
-        return {}
-    owned_ids = set(_section_obligation_ids(contract))
-    compact = _drop_empty(
-        {
-            "thesis": plan.get("thesis"),
-            "target_words": plan.get("target_words"),
-            "owned_obligation_ids": [
-                item for item in _string_list(plan.get("owned_obligation_ids"))
-                if item in owned_ids
-            ],
-            "owned_evidence_roles": _string_list(plan.get("owned_evidence_roles")),
-            "cross_reference_only": _string_list(plan.get("cross_reference_only"))[:6],
-            "omit_or_appendix": _string_list(plan.get("omit_or_appendix"))[:6],
-            "transition_goal": plan.get("transition_goal"),
-        }
-    )
-    return compact
 
 
 def select_section_cruxes(full_contract: dict[str, Any], *, limit: int = 3) -> list[dict[str, Any]]:
@@ -472,14 +403,6 @@ def _must_include_quantities(contract: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return _dedupe_dicts(rows)[:4]
-
-
-def _section_obligation_ids(contract: dict[str, Any]) -> list[str]:
-    return [
-        str(row.get("obligation_id", "")).strip()
-        for row in contract.get("required_main_memo_obligations", [])
-        if isinstance(row, dict) and str(row.get("obligation_id", "")).strip()
-    ]
 
 
 def _section_should_receive_tensions(title_key: str) -> bool:

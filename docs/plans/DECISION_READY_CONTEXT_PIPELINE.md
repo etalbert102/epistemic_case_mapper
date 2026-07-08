@@ -12,8 +12,8 @@ The target end state is a staged context pipeline:
 4. `candidate_evidence_cards.json`
 5. `source_map_reconciliation.json`
 6. `evidence_quality_report.json`
-7. `memo_argument_spine.json`
-8. `section_reasoning_cards.json`
+7. `canonical_decision_spine.json`
+8. `section_context_decision_packets.json`
 9. `section_context_acceptance_report.json`
 10. section markdown synthesis
 11. memo-level coherence review
@@ -21,7 +21,7 @@ The target end state is a staged context pipeline:
 
 ## Implementation Status
 
-Implemented on 2026-07-05 in bounded slices. The pipeline now writes the planned source-card, reconciliation, candidate-card, argument-spine, section-reasoning, source-coverage, section-acceptance, coherence, runtime, migration, and final-evaluation artifacts.
+Implemented on 2026-07-05 in bounded slices and cleaned up after the canonical-spine migration. The pipeline now writes source-card, reconciliation, candidate-card, canonical-spine, section-context, source-coverage, section-acceptance, coherence, runtime, migration, and final-evaluation artifacts.
 
 Verification run:
 
@@ -31,8 +31,8 @@ Verification run:
 - Output: `artifacts/full_pipeline_eval/context_pipeline_eggs_20260705/briefing/`
 - Source-map reconciliation: 80/80 prioritized claims source-backed
 - Candidate evidence cards: 80 cards, 51 main-text candidates, 6 appendix-only
-- Memo argument spine: bounded
-- Section reasoning cards: ready
+- Canonical decision spine: bounded
+- Section context decision packets: ready
 - Section context acceptance: ready
 - Memo coherence report: pass
 - Final brief evaluation: warning
@@ -103,7 +103,7 @@ All model outputs that enter durable artifacts must be parsed through typed sche
 | Candidate card inclusion/demotion | Deterministic code | None, except optional salience tie-break after filters | Demotion reason required | Keep in appendix/telemetry if uncertain |
 | Argument spine candidate selection | Deterministic code plus classical ranking | Model may compress selected candidates, not select from the full map | Every load-bearing sentence must trace to selected cards | Use deterministic spine text |
 | `decision_move`, `reader_question_answered`, section thesis | Hybrid: deterministic templates from spine plus model wording | Improve wording or propose section-local framing | Must remain tied to spine and decision question | Use deterministic template |
-| `owned_cards`, `reference_only_cards`, `do_not_use_cards` | Deterministic code | Optional salience check on borderline assignments | Card budget, source backing, role coverage, and exclusion checks | Trim/reassign deterministically |
+| `owned_evidence`, `reference_only_evidence`, `do_not_use_cards` | Deterministic code | Optional salience check on borderline assignments | Card budget, source backing, role coverage, and exclusion checks | Trim/reassign deterministically |
 | `reason_for_inclusion`, `intended_role` | Hybrid | Model may draft concise rationale from accepted card and section question | Must mention section relevance and use allowed role labels | Generate deterministic rationale from role assignment |
 | `excluded_near_miss_cards` and exclusion reasons | Deterministic code | Optional wording only | Reason required for each exclusion | Keep card as reference-only if exclusion confidence is low |
 | Section context acceptance pass/fail | Deterministic code | None | Pydantic/schema plus rule checks | Mark `context_not_synthesis_ready` |
@@ -135,18 +135,16 @@ Each model call must receive the minimum context needed for its job:
 Current code surfaces:
 
 - `map_briefing_pipeline.py`
-  - Builds map/scaffold, applies atomic cards, attaches global memo plan, writes scaffold artifacts, and invokes final reader outputs.
-  - Best integration point for source cards, candidate cards, source-map reconciliation, and argument spine is after `_apply_atomic_cards_to_briefing_map` and before `_attach_global_memo_plan`.
+  - Builds map/scaffold, applies atomic cards, attaches decision-ready context and the canonical decision spine, writes scaffold artifacts, and invokes final reader outputs.
+  - Best integration point for source cards, candidate cards, source-map reconciliation, and canonical section context is after `_apply_atomic_cards_to_briefing_map` and before section synthesis.
 - `data/cases/*/case.yaml` and source text paths
   - Already record source IDs, titles, URLs, and local text paths. Source evidence cards should consume these files when available, not require new acquisition.
 - staged semantic extraction artifacts
   - Claims may already include source IDs, spans, hashes, and excerpts. Reuse these anchors before falling back to text matching.
 - `main_memo_obligations.py`
   - Builds the current obligation plan. This is useful input, but too noisy to be the model-facing context by itself.
-- `map_briefing_global_plan.py`
-  - Assigns obligations to sections. The new argument spine should inform or constrain this stage.
 - `map_briefing_section_input_compiler.py`
-  - Builds `model_section_packet`. This is the main integration point for `section_reasoning_cards`.
+  - Builds `model_section_packet`. This is the main integration point for `section_context_decision_packets`.
 - `map_briefing_section_prompt_contract.py`
   - Separates model-facing packets from validation obligations. The new plan should preserve this boundary.
 - `map_briefing_section_rewrite.py`
@@ -158,7 +156,6 @@ Current code surfaces:
 
 Existing artifacts to preserve:
 
-- `global_memo_plan.json`
 - `source_evidence_cards.json`
 - `source_sufficiency_report.json`
 - `source_map_reconciliation.json`
@@ -428,7 +425,7 @@ AI role:
 
 Artifact:
 
-- `memo_argument_spine.json`
+- `canonical_decision_spine.json`
 
 Validation:
 
@@ -440,7 +437,7 @@ Validation:
 - Every load-bearing statement must trace to cards.
 - Every load-bearing card must trace back to one or more source evidence cards.
 
-### 6. Section Reasoning Contracts
+### 6. Section Context Decision Packets
 
 Purpose: Give each section a clear decision move and the exact cards it may use.
 
@@ -451,8 +448,8 @@ Deterministic code:
   - `decision_move`
   - `reader_question_answered`
   - `section_thesis`
-  - `owned_cards`
-  - `reference_only_cards`
+  - `owned_evidence`
+  - `reference_only_evidence`
   - `required_counterweight`
   - `required_scope_boundary`
   - `allowed_quantities`
@@ -460,8 +457,8 @@ Deterministic code:
   - `excluded_near_miss_cards`
   - `do_not_overstate`
   - `target_shape`
-- Derive contracts from the argument spine and curated evidence cards, not raw obligations.
-- Include source-card IDs in `owned_cards` so final memo traceability can explain which source spans drive each section.
+- Derive contracts from the canonical decision spine and curated evidence cards, not raw obligations.
+- Include source-card IDs in `owned_evidence` so final memo traceability can explain which source spans drive each section.
 - Include a short `reason_for_inclusion` and `intended_role` for each owned card:
   - support
   - counterweight
@@ -477,7 +474,7 @@ AI role:
 
 Artifact:
 
-- `section_reasoning_cards.json`
+- `section_context_decision_packets.json`
 
 Validation:
 
@@ -875,7 +872,7 @@ Artifact:
 ### Fit Strengths
 
 - The current code already has a stage boundary where the plan can fit:
-  - `candidate_map -> prioritized_map -> scaffold -> global_memo_plan -> section packets -> section rewrite`.
+  - `candidate_map -> prioritized_map -> scaffold -> canonical spine -> section context packets -> section rewrite`.
 - Section prompts already use compact model-facing packets via `model_facing_section_contract`.
 - Full debug artifacts are already written, so adding card/spine artifacts follows existing conventions.
 - Existing validation can remain binding while new context gates start in report-only mode.
@@ -888,7 +885,7 @@ Artifact:
 - Typed ownership schemas do not yet exist for all new artifacts; adding model-assisted fields before schemas would recreate the current ambiguity.
 - Some generated claims include source IDs but not exact usable spans; source-card construction must support recovered anchors and confidence labels.
 - `main_memo_obligations.py` currently creates many obligations without enough question-specific curation. The plan must not simply wrap these obligations as cards.
-- `map_briefing_global_plan.py` assigns obligation IDs before a cleaned argument spine exists. The plan should either move spine creation before global planning or make global planning consume the spine.
+- Section context must be derived from the canonical spine before section synthesis, not from broad obligation lists.
 - `compile_model_section_packet` currently relies on `required_evidence` and section-owned obligations. Sections with no required evidence get thin packets. This is the direct cause of generic accepted prose.
 - `section_main_memo_obligations` filters by allowed categories and plan IDs, which can silently remove useful concrete context while leaving abstract section goals.
 - `decision_synthesis_model.json` and `graph_synthesis_packet.json` can contain fragments and off-question endpoints. Candidate card curation must run before section context is built.

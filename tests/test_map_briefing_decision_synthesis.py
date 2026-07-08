@@ -154,6 +154,7 @@ def test_decision_support_normalizes_overlong_claims_before_synthesis() -> None:
     assert "participants were recruited" not in prompt
     assert "Population in other countries have increased" not in prompt
     assert "raw_claim" not in prompt
+    assert "Whole-memo JSON prompt retired." in prompt
 
 
 def test_decision_synthesis_filters_fragmented_generic_slot_values() -> None:
@@ -491,7 +492,7 @@ def test_scope_boundary_crux_preserves_originating_claim_id() -> None:
     assert boundary_crux["supporting_claim_ids"] == ["c010"]
 
 
-def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:
+def test_map_briefing_prompt_points_to_section_first_artifacts() -> None:
     candidate_map = annotate_map_with_evidence_slots(
         {
             "claims": [
@@ -518,9 +519,10 @@ def test_map_briefing_prompt_uses_graph_synthesis_packet() -> None:
         scaffold=scaffold,
     )
 
-    assert "graph_synthesis_packet" in prompt
-    assert "issue_clusters" in prompt
-    assert "load-bearing claims" in prompt
+    assert "Whole-memo JSON prompt retired." in prompt
+    assert "section_synthesis_packets.json" in prompt
+    assert "model_context_audit.json" in prompt
+    assert "issue_clusters" not in prompt
 
 
 def _claim(claim_id: str, claim: str, source_id: str, role: str) -> dict[str, str]:

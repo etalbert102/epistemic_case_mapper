@@ -131,54 +131,6 @@ class CandidateEvidenceCardsReport(BaseModel):
     issues: list[str] = Field(default_factory=list)
 
 
-class MemoArgumentSpineItem(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    spine_id: str
-    role: Literal["answer", "support", "counterweight", "scope", "quantity", "crux", "limitation"]
-    statement: str
-    candidate_card_ids: list[str] = Field(default_factory=list)
-    source_card_ids: list[str] = Field(default_factory=list)
-    source_ids: list[str] = Field(default_factory=list)
-    decision_relevance_score: int = 0
-
-
-class MemoArgumentSpineReport(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    schema_id: Literal["memo_argument_spine_v1"] = "memo_argument_spine_v1"
-    decision_question: str
-    status: Literal["ready", "bounded", "insufficient"]
-    answer_frame: str = ""
-    source_sufficiency_status: str = ""
-    load_bearing_candidate_card_ids: list[str] = Field(default_factory=list)
-    items: list[MemoArgumentSpineItem] = Field(default_factory=list)
-    issues: list[str] = Field(default_factory=list)
-
-
-class SectionReasoningCard(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    section: str
-    section_thesis: str = ""
-    decision_move: str = ""
-    owned_cards: list[dict[str, Any]] = Field(default_factory=list)
-    reference_only_cards: list[dict[str, Any]] = Field(default_factory=list)
-    do_not_use_cards: list[str] = Field(default_factory=list)
-    excluded_near_miss_cards: list[dict[str, Any]] = Field(default_factory=list)
-    context_status: Literal["ready", "warning", "not_synthesis_ready"] = "warning"
-    exception_reason: str = ""
-
-
-class SectionReasoningCardsReport(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    schema_id: Literal["section_reasoning_cards_v1"] = "section_reasoning_cards_v1"
-    status: Literal["ready", "warning", "not_synthesis_ready"] = "warning"
-    sections: list[SectionReasoningCard] = Field(default_factory=list)
-    issues: list[str] = Field(default_factory=list)
-
-
 class SourceCoverageReport(BaseModel):
     model_config = ConfigDict(extra="allow")
 

@@ -35,23 +35,21 @@ def build_spine_quality_report(scaffold: dict[str, Any]) -> dict[str, Any]:
 
 
 def render_before_after_briefing_comparison(scaffold: dict[str, Any]) -> str:
-    legacy_spine = _dict(scaffold.get("memo_argument_spine"))
-    legacy_sections = _dict(scaffold.get("section_reasoning_cards"))
     canonical = _dict(scaffold.get("canonical_decision_spine"))
     projection = _dict(scaffold.get("section_projection_readiness_report"))
     quality = _dict(scaffold.get("spine_quality_report"))
     lines = [
-        "# Before/After Briefing Comparison",
+        "# Briefing Context Path Audit",
         "",
-        "This artifact compares the legacy section-local context path with the canonical decision-spine path for the same run.",
+        "This artifact summarizes whether the canonical decision-spine path produced the artifacts needed for section-first synthesis.",
         "",
-        "| Dimension | Legacy Context Path | Canonical Spine Path |",
-        "|---|---|---|",
-        f"| Central answer object | `memo_argument_spine` status `{legacy_spine.get('status', 'unknown')}` | `canonical_decision_spine` status `{canonical.get('status', 'unknown')}` |",
-        f"| Section context | `section_reasoning_cards` status `{legacy_sections.get('status', 'unknown')}` | `section_projection_readiness_report` status `{projection.get('status', 'unknown')}` |",
-        f"| Source traceability | load-bearing IDs `{len(legacy_spine.get('load_bearing_candidate_card_ids', [])) if isinstance(legacy_spine.get('load_bearing_candidate_card_ids'), list) else 0}` | source anchors `{quality.get('source_anchor_count', 0)}` |",
-        f"| Missing slots | legacy issues `{len(legacy_sections.get('issues', [])) if isinstance(legacy_sections.get('issues'), list) else 0}` | canonical missing slots `{quality.get('missing_decision_slot_count', 0)}` |",
-        f"| Duplicate control | not canonicalized at section projection | duplicate pairs flagged `{quality.get('duplicate_pair_count', 0)}` |",
+        "| Dimension | Canonical Path Signal |",
+        "|---|---|",
+        f"| Central answer object | `canonical_decision_spine` status `{canonical.get('status', 'unknown')}` |",
+        f"| Section context | `section_projection_readiness_report` status `{projection.get('status', 'unknown')}` |",
+        f"| Source traceability | source anchors `{quality.get('source_anchor_count', 0)}` |",
+        f"| Missing slots | canonical missing slots `{quality.get('missing_decision_slot_count', 0)}` |",
+        f"| Duplicate control | duplicate pairs flagged `{quality.get('duplicate_pair_count', 0)}` |",
         "",
         "## Read",
         "",
@@ -98,7 +96,6 @@ def render_spine_completion_audit(scaffold: dict[str, Any]) -> str:
             "## Deferred Slices",
             "",
             "- Model-assisted spine arbitration remains report-compatible but not enabled by default; deterministic provenance gates are in place first.",
-            "- Legacy context artifacts are retained during migration; removal should wait for before/after evidence across more live-backend runs.",
             "- Projection readiness is reported and summary-linked; making it hard-blocking should follow more telemetry on sparse source sets.",
         ]
     )

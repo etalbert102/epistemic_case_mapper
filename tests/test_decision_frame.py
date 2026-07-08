@@ -65,7 +65,7 @@ def test_representation_scaffold_does_not_use_low_concern_answer_frame() -> None
         scaffold=scaffold,
     )
     assert "low-concern" not in prompt
-    assert "representation_with_named_disagreement_and_scope_limits" in prompt
+    assert "Whole-memo JSON prompt retired." in prompt
 
 
 def test_decision_frame_detects_process_evaluation_without_domain_specific_case_terms() -> None:

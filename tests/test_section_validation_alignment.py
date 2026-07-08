@@ -5,7 +5,7 @@ from epistemic_case_mapper.map_briefing_section_rewrite import _section_rewrite_
 from epistemic_case_mapper.map_briefing_section_prompt_contract import model_facing_section_markdown
 
 
-def test_section_validation_uses_curated_owned_cards_before_legacy_required_evidence() -> None:
+def test_section_validation_uses_curated_model_packet_before_validation_obligations() -> None:
     contract = {
         "requires_confidence": False,
         "required_evidence": [

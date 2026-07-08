@@ -3,26 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from epistemic_case_mapper.main_memo_obligations import section_obligations_for_title
-from epistemic_case_mapper.map_briefing_global_plan import section_plan_for_title
 
 
 def section_main_memo_obligations(title: str, full_contract: dict[str, Any]) -> list[dict[str, Any]]:
-    scaffold = (
-        full_contract.get("_section_synthesis_scaffold", {})
-        if isinstance(full_contract.get("_section_synthesis_scaffold"), dict)
-        else {}
-    )
-    plan = section_plan_for_title(scaffold, title)
-    plan_ids = [str(item).strip() for item in plan.get("owned_obligation_ids", []) if str(item).strip()] if isinstance(plan, dict) else []
     obligations = [row for row in full_contract.get("_main_memo_obligation_plan", []) if isinstance(row, dict)]
     category_allowed = section_obligations_for_title(title, obligations, limit=16)
-    if plan_ids:
-        by_id = {str(row.get("obligation_id", "")).strip(): row for row in category_allowed}
-        return [
-            _compact_section_obligation(by_id[item], first_page_required=title.strip().lower() == "decision brief")
-            for item in plan_ids
-            if item in by_id and by_id[item].get("status_override") != "source_missing"
-        ][:8]
     return category_allowed[:8]
 
 
