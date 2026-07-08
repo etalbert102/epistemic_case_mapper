@@ -747,6 +747,7 @@ def _claim_prompt(
                 "- Only return claims that are direct answers, indirect evidence, or necessary scope/method limits for the case question.",
                 "- Do not return claims merely because they mention the topic term; exclude claims about different populations, outcomes, mechanisms, or administrative context unless they bound the answer.",
                 "- Inclusion test: before returning a claim, ask whether its population, outcome, evidence type, and intervention/exposure are named by the decision question or would materially bound the answer. If neither is true, omit it.",
+                "- If a claim is about a different outcome than the decision question, include it only when relevance_rationale explicitly names how that outcome bears on the decision question's target outcome.",
                 "- Preserve population, subgroup, setting, endpoint, or exposure mismatches when they change how confidently the decision question can be answered; mark them with question_relevance=scope_limit and the relevant scope_flags.",
                 "- Do not include claim_id. Deterministic code assigns IDs later.",
                 "- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.",

@@ -155,6 +155,7 @@ def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
     assert "Decision question: How should a synthesis preserve the relationship between observational CVD outcome evidence" in prompt
     assert "Treat the decision question as the governing extraction filter" in prompt
     assert "Do not return claims merely because they mention the topic term" in prompt
+    assert "different outcome than the decision question" in prompt
     assert "source_quote as an exact substring" in prompt
     assert "question_relevance" in prompt
     assert "source_quote" in schema["properties"]["claims"]["items"]["properties"]

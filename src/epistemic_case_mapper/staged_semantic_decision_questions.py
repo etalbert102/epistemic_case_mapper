@@ -28,7 +28,9 @@ def claim_decision_relevance_rejection_reason(claim: dict[str, Any], decision_qu
         and not _claim_can_bound_population_mismatch(claim)
     ):
         return "question_population_mismatch"
-    if "outcome_mismatch" in flags and not _question_allows_outcome_mismatch(question, claim_text):
+    if "outcome_mismatch" in flags and not _claim_has_explicit_question_bridge(claim, question):
+        return "question_outcome_mismatch"
+    if _inferred_outcome_mismatch_without_bridge(claim, question, claim_text):
         return "question_outcome_mismatch"
     if _mentions_child_population(claim_text) and not _mentions_child_population(question):
         return "question_population_mismatch"
@@ -59,8 +61,144 @@ def _claim_can_bound_population_mismatch(claim: dict[str, Any]) -> bool:
     }
 
 
-def _question_allows_outcome_mismatch(question: str, claim_text: str) -> bool:
-    return "outcome" in question or "endpoint" in question or bool(_content_terms(question) & _content_terms(claim_text))
+def _inferred_outcome_mismatch_without_bridge(claim: dict[str, Any], question: str, claim_text: str) -> bool:
+    target_terms = _decision_target_terms(question)
+    if not target_terms:
+        return False
+    claim_statement = _normalize_text(str(claim.get("claim", ""))) or claim_text
+    claim_outcome_terms = _claim_outcome_terms(claim_statement)
+    if not claim_outcome_terms:
+        return False
+    if target_terms & _target_content_terms(claim_statement):
+        return False
+    if target_terms & claim_outcome_terms:
+        return False
+    return not _claim_has_explicit_question_bridge(claim, question)
+
+
+def _claim_has_explicit_question_bridge(claim: dict[str, Any], question: str) -> bool:
+    target_terms = _decision_target_terms(question) or _target_content_terms(question)
+    if not target_terms:
+        return False
+    bridge_text = _normalize_text(
+        " ".join(
+            [
+                str(claim.get("claim", "")),
+                str(claim.get("relevance_rationale", "")),
+            ]
+        )
+    )
+    return bool(target_terms & _target_content_terms(bridge_text))
+
+
+def _decision_target_terms(question: str) -> set[str]:
+    terms: set[str] = set()
+    terms.update(_terms_near_outcome_anchors(question))
+    terms.update(_terms_after_change_verbs(question))
+    return terms
+
+
+def _claim_outcome_terms(claim_text: str) -> set[str]:
+    terms: set[str] = set()
+    terms.update(_terms_near_outcome_anchors(claim_text))
+    for match in re.finditer(r"\brisk\s+of\s+([a-z0-9][a-z0-9\-/ ]{2,80})", claim_text):
+        terms.update(_target_content_terms(match.group(1)))
+    for match in re.finditer(r"\b(?:associated\s+with|linked\s+to)\s+(?:higher|lower|increased|decreased)?\s*([a-z0-9][a-z0-9\-/ ]{2,80})", claim_text):
+        terms.update(_target_content_terms(match.group(1)))
+    for match in re.finditer(r"\bassociation\s+between\s+[a-z0-9][a-z0-9\-/ ]{2,80}?\s+and\s+([a-z0-9][a-z0-9\-/ ]{2,80})", claim_text):
+        terms.update(_target_content_terms(match.group(1)))
+    for match in re.finditer(r"\bassociation\s+with\s+([a-z0-9][a-z0-9\-/ ]{2,80})", claim_text):
+        terms.update(_target_content_terms(match.group(1)))
+    return terms
+
+
+def _terms_near_outcome_anchors(text: str) -> set[str]:
+    anchors = {
+        "benefit",
+        "benefits",
+        "cost",
+        "costs",
+        "disease",
+        "endpoint",
+        "endpoints",
+        "event",
+        "events",
+        "harm",
+        "harms",
+        "illness",
+        "incidence",
+        "injury",
+        "mortality",
+        "outcome",
+        "outcomes",
+        "rate",
+        "rates",
+        "reliability",
+        "risk",
+        "risks",
+        "safety",
+        "symptom",
+        "symptoms",
+    }
+    tokens = re.findall(r"[a-z0-9][a-z0-9\-]*", text.lower())
+    terms: set[str] = set()
+    for index, token in enumerate(tokens):
+        if token not in anchors:
+            continue
+        window = tokens[max(0, index - 3) : min(len(tokens), index + 5)]
+        terms.update(_target_content_terms(" ".join(window)))
+    return terms
+
+
+def _terms_after_change_verbs(text: str) -> set[str]:
+    verbs = r"affect|change|decrease|improve|increase|lower|mitigate|prevent|raise|reduce"
+    terms: set[str] = set()
+    for match in re.finditer(rf"\b(?:{verbs})\s+([a-z0-9][a-z0-9\-/ ]{{2,80}})", text.lower()):
+        terms.update(_target_content_terms(match.group(1)))
+    return terms
+
+
+def _target_content_terms(text: str) -> set[str]:
+    stopwords = {
+        "about",
+        "adopt",
+        "adults",
+        "after",
+        "also",
+        "answer",
+        "associated",
+        "beneficial",
+        "because",
+        "before",
+        "change",
+        "decision",
+        "decrease",
+        "does",
+        "effect",
+        "effects",
+        "evidence",
+        "from",
+        "generally",
+        "harmful",
+        "higher",
+        "increase",
+        "intake",
+        "lower",
+        "neutral",
+        "overall",
+        "question",
+        "reduce",
+        "reduced",
+        "risk",
+        "risks",
+        "should",
+        "treated",
+        "treat",
+        "whether",
+        "while",
+        "with",
+    }
+    return {token for token in re.findall(r"[a-z0-9]{4,}", text.lower()) if token not in stopwords}
 
 
 def _mentions_child_population(text: str) -> bool:

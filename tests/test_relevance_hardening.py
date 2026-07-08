@@ -60,6 +60,78 @@ def test_claim_relevance_still_rejects_child_only_population_mismatch_for_adult_
     assert reason == "question_population_mismatch"
 
 
+def test_claim_relevance_rejects_different_outcome_without_explicit_bridge() -> None:
+    claim = {
+        "claim": "The retrofit increased the risk of equipment discoloration.",
+        "excerpt": "The same paragraph also mentions hospital admissions, but the reported effect was equipment discoloration.",
+        "role": "conclusion_support",
+        "question_relevance": "direct",
+        "relevance_rationale": "It reports a measured effect of the retrofit.",
+        "scope_flags": ["none"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "Should the retrofit reduce hospital admissions?",
+    )
+
+    assert reason == "question_outcome_mismatch"
+
+
+def test_claim_relevance_keeps_different_outcome_when_rationale_bridges_to_target() -> None:
+    claim = {
+        "claim": "The retrofit reduced emergency department visits.",
+        "excerpt": "The retrofit reduced emergency department visits.",
+        "role": "conclusion_support",
+        "question_relevance": "indirect",
+        "relevance_rationale": "Emergency department visits are an explicit upstream component of hospital admissions.",
+        "scope_flags": ["outcome_mismatch"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "Should the retrofit reduce hospital admissions?",
+    )
+
+    assert reason == ""
+
+
+def test_claim_relevance_rejects_adjacent_health_outcome_when_question_names_target_outcome() -> None:
+    claim = {
+        "claim": "Higher exposure was associated with higher risk of bladder cancer.",
+        "excerpt": "The review discussed several outcomes including cardiovascular disease and cancer.",
+        "role": "conclusion_support",
+        "question_relevance": "direct",
+        "relevance_rationale": "It reports a health risk from the exposure.",
+        "scope_flags": ["none"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "For generally healthy adults, should the exposure be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+
+    assert reason == "question_outcome_mismatch"
+
+
+def test_claim_relevance_rejects_association_between_exposure_and_different_outcome() -> None:
+    claim = {
+        "claim": "There was no association between the exposure and equipment discoloration.",
+        "excerpt": "There was no association between the exposure and equipment discoloration.",
+        "role": "conclusion_support",
+        "question_relevance": "direct",
+        "relevance_rationale": "It reports an association for the exposure.",
+        "scope_flags": ["none"],
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "Should the exposure reduce hospital admissions?",
+    )
+
+    assert reason == "question_outcome_mismatch"
+
+
 def test_adult_question_routes_child_only_evidence_to_appendix() -> None:
     candidate_map = {
         "claims": [
