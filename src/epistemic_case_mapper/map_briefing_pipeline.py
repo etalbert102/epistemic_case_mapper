@@ -86,6 +86,14 @@ class MapBriefingResult:
     calibrated_confidence: str
     map_quality_status: str
 
+
+@dataclass(frozen=True)
+class ModelBackendConfig:
+    backend: str
+    timeout: int | None
+    retries: int
+
+
 def run_map_briefing(
     *,
     repo_root: Path,
@@ -103,6 +111,7 @@ def run_map_briefing(
     run_reader_memo_rewrite: bool = False,
 ) -> MapBriefingResult:
     _validate_run_args(question, backend_timeout, backend_retries)
+    backend_config = ModelBackendConfig(backend=backend, timeout=backend_timeout, retries=backend_retries)
     prep = prepare_map_briefing_inputs(
         repo_root=repo_root,
         map_path=map_path,
@@ -133,7 +142,7 @@ def run_map_briefing(
     scaffold["claim_canonicalization_report"] = canonicalization_report
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
-    _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries)
+    _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -172,9 +181,7 @@ def run_map_briefing(
         scaffold=scaffold,
         prioritized_map=prioritized_map,
         artifacts=artifacts,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
+        backend_config=backend_config,
         run_reader_memo_rewrite=run_reader_memo_rewrite,
     )
     _attach_model_context_audit(artifacts=artifacts, backend=backend, prompt=prompt, scaffold=scaffold, final_outputs=final_outputs)
@@ -255,14 +262,12 @@ def _attach_decision_spine_bundle(
     scaffold: dict[str, Any],
     *,
     question: str,
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
+    backend_config: ModelBackendConfig,
 ) -> None:
     scaffold.update(
         build_decision_spine_bundle(
-            prioritized_map, scaffold, question=question, backend=backend,
-            backend_timeout=backend_timeout, backend_retries=backend_retries,
+            prioritized_map, scaffold, question=question, backend=backend_config.backend,
+            backend_timeout=backend_config.timeout, backend_retries=backend_config.retries,
         )
     )
     if all(isinstance(scaffold.get(key), dict) for key in ("source_evidence_cards", "candidate_evidence_cards", "source_map_reconciliation")):
@@ -330,9 +335,7 @@ def _write_final_reader_outputs(
     scaffold: dict[str, Any],
     prioritized_map: dict[str, Any],
     artifacts: Path,
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
+    backend_config: ModelBackendConfig,
     run_reader_memo_rewrite: bool = False,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
@@ -345,9 +348,9 @@ def _write_final_reader_outputs(
         evidence_appendix,
         memo_package["scaffold"],
         prioritized_map,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
         artifacts=artifacts,
     )
     section_memo = str(section_rewrite_result["memo"])
@@ -361,9 +364,9 @@ def _write_final_reader_outputs(
             evidence_appendix,
             memo_package["scaffold"],
             prioritized_map,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
         )
         if run_reader_memo_rewrite
         else _skipped_reader_memo_rewrite(section_memo)

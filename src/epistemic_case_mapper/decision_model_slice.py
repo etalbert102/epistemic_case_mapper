@@ -14,7 +14,7 @@ from epistemic_case_mapper.map_briefing_map_utils import (
     confidence_cap,
     generated_map_erosion_audit,
 )
-from epistemic_case_mapper.map_briefing_pipeline import briefing_scaffold, deterministic_briefing_payload
+from epistemic_case_mapper.map_briefing_pipeline import ModelBackendConfig, briefing_scaffold, deterministic_briefing_payload
 from epistemic_case_mapper.map_briefing_pipeline import _write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_text_cleanup import (
     reader_facing_unresolved_family,
@@ -215,9 +215,11 @@ def run_decision_model_slice(
             scaffold=scaffold,
             prioritized_map=candidate_map,
             artifacts=artifacts,
-            backend=synthesis_backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
+            backend_config=ModelBackendConfig(
+                backend=synthesis_backend,
+                timeout=backend_timeout,
+                retries=backend_retries,
+            ),
         )
         synthesized_paths = {
             "briefing": final_outputs.get("briefing_path"),
