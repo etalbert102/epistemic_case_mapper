@@ -94,6 +94,27 @@ class ModelBackendConfig:
     retries: int
 
 
+@dataclass(frozen=True)
+class FinalReaderOutputPaths:
+    briefing: Path
+    evidence_appendix: Path
+    polish_report: Path
+    memo_quality: Path
+    curation_report: Path
+    briefing_validation: Path
+    final_traceability: Path
+    final_traceability_markdown: Path
+    memo_coherence: Path
+    section_role_quality: Path
+    pipeline_migration_ledger: Path
+    runtime_budget: Path
+    final_brief_evaluation: Path
+    section_rewrite_report: Path
+    reader_memo_rewrite_prompt: Path
+    reader_memo_rewrite_raw: Path
+    reader_memo_rewrite_report: Path
+
+
 def run_map_briefing(
     *,
     repo_root: Path,
@@ -342,7 +363,6 @@ def _write_final_reader_outputs(
 
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
     evidence_appendix = str(memo_package["appendix"])
-    section_rewrite_report_path = artifacts / "section_rewrite_report.json"
     section_rewrite_result = rewrite_reader_memo_by_section(
         str(memo_package["memo"]),
         evidence_appendix,
@@ -353,51 +373,121 @@ def _write_final_reader_outputs(
         backend_retries=backend_config.retries,
         artifacts=artifacts,
     )
-    section_memo = str(section_rewrite_result["memo"])
-    rewrite_prompt_path = artifacts / "reader_memo_rewrite_prompt.txt"
-    rewrite_raw_path = artifacts / "reader_memo_rewrite_raw.txt"
-    rewrite_report_path = artifacts / "reader_memo_rewrite_report.json"
-    edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
-    rewrite_result = (
-        rewrite_reader_memo_with_contract(
-            section_memo,
-            evidence_appendix,
-            memo_package["scaffold"],
-            prioritized_map,
-            backend=backend_config.backend,
-            backend_timeout=backend_config.timeout,
-            backend_retries=backend_config.retries,
-        )
-        if run_reader_memo_rewrite
-        else _skipped_reader_memo_rewrite(section_memo)
+    rewrite_result = _run_reader_memo_rewrite(
+        section_memo=str(section_rewrite_result["memo"]),
+        evidence_appendix=evidence_appendix,
+        memo_package=memo_package,
+        prioritized_map=prioritized_map,
+        backend_config=backend_config,
+        enabled=run_reader_memo_rewrite,
     )
+    _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
+    reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
+    paths = _final_reader_output_paths(artifacts)
+    diagnostics = _build_final_reader_diagnostics(
+        reader_memo=reader_memo,
+        evidence_appendix=evidence_appendix,
+        memo_package=memo_package,
+        prioritized_map=prioritized_map,
+        section_rewrite_result=section_rewrite_result,
+        rewrite_result=rewrite_result,
+        briefing_path=paths.briefing,
+    )
+    edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
+    _write_final_reader_artifacts(
+        paths=paths,
+        edit_artifact_paths=edit_artifact_paths,
+        reader_memo=reader_memo,
+        evidence_appendix=evidence_appendix,
+        memo_package=memo_package,
+        section_rewrite_result=section_rewrite_result,
+        rewrite_result=rewrite_result,
+        diagnostics=diagnostics,
+    )
+    return {
+        "briefing_path": paths.briefing,
+        "evidence_appendix_path": paths.evidence_appendix,
+        "briefing_validation": diagnostics["validation"],
+        "polish_report": diagnostics["polish_report"],
+        "rewrite_result": rewrite_result,
+        "summary_paths": _final_reader_summary_paths(
+            paths,
+            rewrite_result=rewrite_result,
+            section_rewrite_result=section_rewrite_result,
+            edit_artifact_paths=edit_artifact_paths,
+        ),
+    }
+
+
+def _run_reader_memo_rewrite(
+    *,
+    section_memo: str,
+    evidence_appendix: str,
+    memo_package: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    backend_config: ModelBackendConfig,
+    enabled: bool,
+) -> dict[str, Any]:
+    if not enabled:
+        return _skipped_reader_memo_rewrite(section_memo)
+    return rewrite_reader_memo_with_contract(
+        section_memo,
+        evidence_appendix,
+        memo_package["scaffold"],
+        prioritized_map,
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
+    )
+
+
+def _attach_section_context_status(
+    memo_package: dict[str, Any],
+    rewrite_result: dict[str, Any],
+    section_rewrite_result: dict[str, Any],
+) -> None:
     rewrite_result.setdefault("report", {})["section_context_acceptance_status"] = section_rewrite_result.get("report", {}).get(
         "section_context_acceptance_status"
     )
     memo_package["scaffold"]["section_context_acceptance_status"] = rewrite_result["report"]["section_context_acceptance_status"]
-    if rewrite_result.get("prompt"):
-        write_markdown(rewrite_prompt_path, str(rewrite_result.get("prompt", "")))
-    if rewrite_result.get("raw"):
-        write_markdown(rewrite_raw_path, str(rewrite_result.get("raw", "")))
-    write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
-    reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
+
+
+def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
+    return FinalReaderOutputPaths(
+        briefing=artifacts / "BRIEFING.md",
+        evidence_appendix=artifacts / "EVIDENCE_APPENDIX.md",
+        polish_report=artifacts / "briefing_polish_report.json",
+        memo_quality=artifacts / "memo_quality_report.json",
+        curation_report=artifacts / "evidence_curation_report.json",
+        briefing_validation=artifacts / "briefing_validation_report.json",
+        final_traceability=artifacts / "decision_traceability_matrix_final.json",
+        final_traceability_markdown=artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md",
+        memo_coherence=artifacts / "memo_coherence_report.json",
+        section_role_quality=artifacts / "section_role_quality_report.json",
+        pipeline_migration_ledger=artifacts / "pipeline_migration_ledger.json",
+        runtime_budget=artifacts / "runtime_budget_report.json",
+        final_brief_evaluation=artifacts / "final_brief_evaluation.json",
+        section_rewrite_report=artifacts / "section_rewrite_report.json",
+        reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
+        reader_memo_rewrite_raw=artifacts / "reader_memo_rewrite_raw.txt",
+        reader_memo_rewrite_report=artifacts / "reader_memo_rewrite_report.json",
+    )
+
+
+def _build_final_reader_diagnostics(
+    *,
+    reader_memo: str,
+    evidence_appendix: str,
+    memo_package: dict[str, Any],
+    prioritized_map: dict[str, Any],
+    section_rewrite_result: dict[str, Any],
+    rewrite_result: dict[str, Any],
+    briefing_path: Path,
+) -> dict[str, Any]:
     combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
     polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
     memo_quality = memo_quality_report(combined, memo_package["scaffold"])
     validation = validate_briefing_against_scaffold(combined, memo_package["scaffold"], prioritized_map)
-    briefing_path = artifacts / "BRIEFING.md"
-    evidence_appendix_path = artifacts / "EVIDENCE_APPENDIX.md"
-    polish_report_path = artifacts / "briefing_polish_report.json"
-    memo_quality_path = artifacts / "memo_quality_report.json"
-    curation_report_path = artifacts / "evidence_curation_report.json"
-    briefing_validation_path = artifacts / "briefing_validation_report.json"
-    final_traceability_path = artifacts / "decision_traceability_matrix_final.json"
-    final_traceability_md_path = artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md"
-    memo_coherence_report_path = artifacts / "memo_coherence_report.json"
-    section_role_quality_report_path = artifacts / "section_role_quality_report.json"
-    pipeline_migration_ledger_path = artifacts / "pipeline_migration_ledger.json"
-    runtime_budget_report_path = artifacts / "runtime_budget_report.json"
-    final_brief_evaluation_path = artifacts / "final_brief_evaluation.json"
     argument_artifacts = memo_package["scaffold"].get("decision_argument_artifacts", {})
     traceability_matrix = evaluate_traceability_against_memo(
         argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts, dict) else {},
@@ -424,47 +514,78 @@ def _write_final_reader_outputs(
         coherence_report=memo_coherence,
         scaffold=memo_package["scaffold"],
     )
-    write_markdown(briefing_path, reader_memo.rstrip() + "\n")
-    write_markdown(evidence_appendix_path, evidence_appendix.rstrip() + "\n")
-    write_json(final_traceability_path, traceability_matrix)
-    write_markdown(final_traceability_md_path, render_decision_traceability_matrix_markdown(traceability_matrix))
-    write_json(memo_coherence_report_path, memo_coherence)
-    write_json(section_role_quality_report_path, role_quality)
-    write_json(pipeline_migration_ledger_path, pipeline_migration)
-    write_json(runtime_budget_report_path, runtime_budget)
-    write_json(final_brief_evaluation_path, final_eval)
-    write_json(briefing_validation_path, validation)
-    write_json(polish_report_path, polish_report)
-    write_json(memo_quality_path, memo_quality)
-    write_json(curation_report_path, memo_package["curation_report"])
-    write_json(section_rewrite_report_path, section_rewrite_result["report"])
-    write_json(rewrite_report_path, rewrite_result["report"])
     return {
-        "briefing_path": briefing_path,
-        "evidence_appendix_path": evidence_appendix_path,
-        "briefing_validation": validation,
         "polish_report": polish_report,
-        "rewrite_result": rewrite_result,
-        "summary_paths": {
-            "briefing_validation_report": briefing_validation_path,
-            "briefing_polish_report": polish_report_path,
-            "memo_quality_report": memo_quality_path,
-            "evidence_curation_report": curation_report_path,
-            "section_rewrite_report": section_rewrite_report_path,
-            "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
-            "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),
-            "decision_traceability_matrix_final": final_traceability_path,
-            "decision_traceability_matrix_final_markdown": final_traceability_md_path,
-            "memo_coherence_report": memo_coherence_report_path,
-            "section_role_quality_report": section_role_quality_report_path,
-            "pipeline_migration_ledger": pipeline_migration_ledger_path,
-            "runtime_budget_report": runtime_budget_report_path,
-            "final_brief_evaluation": final_brief_evaluation_path,
-            "reader_memo_rewrite_report": rewrite_report_path,
-            "reader_memo_rewrite_prompt": rewrite_prompt_path if rewrite_result.get("prompt") else None,
-            "reader_memo_rewrite_raw": rewrite_raw_path if rewrite_result.get("raw") else None,
-            **reader_memo_edit_summary_paths(rewrite_result, edit_artifact_paths),
-        },
+        "memo_quality": memo_quality,
+        "validation": validation,
+        "traceability_matrix": traceability_matrix,
+        "memo_coherence": memo_coherence,
+        "role_quality": role_quality,
+        "pipeline_migration": pipeline_migration,
+        "runtime_budget": runtime_budget,
+        "final_eval": final_eval,
+    }
+
+
+def _write_final_reader_artifacts(
+    *,
+    paths: FinalReaderOutputPaths,
+    edit_artifact_paths: dict[str, Path],
+    reader_memo: str,
+    evidence_appendix: str,
+    memo_package: dict[str, Any],
+    section_rewrite_result: dict[str, Any],
+    rewrite_result: dict[str, Any],
+    diagnostics: dict[str, Any],
+) -> None:
+    if rewrite_result.get("prompt"):
+        write_markdown(paths.reader_memo_rewrite_prompt, str(rewrite_result.get("prompt", "")))
+    if rewrite_result.get("raw"):
+        write_markdown(paths.reader_memo_rewrite_raw, str(rewrite_result.get("raw", "")))
+    write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
+    write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
+    write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
+    write_json(paths.final_traceability, diagnostics["traceability_matrix"])
+    write_markdown(paths.final_traceability_markdown, render_decision_traceability_matrix_markdown(diagnostics["traceability_matrix"]))
+    write_json(paths.memo_coherence, diagnostics["memo_coherence"])
+    write_json(paths.section_role_quality, diagnostics["role_quality"])
+    write_json(paths.pipeline_migration_ledger, diagnostics["pipeline_migration"])
+    write_json(paths.runtime_budget, diagnostics["runtime_budget"])
+    write_json(paths.final_brief_evaluation, diagnostics["final_eval"])
+    write_json(paths.briefing_validation, diagnostics["validation"])
+    write_json(paths.polish_report, diagnostics["polish_report"])
+    write_json(paths.memo_quality, diagnostics["memo_quality"])
+    write_json(paths.curation_report, memo_package["curation_report"])
+    write_json(paths.section_rewrite_report, section_rewrite_result["report"])
+    write_json(paths.reader_memo_rewrite_report, rewrite_result["report"])
+
+
+def _final_reader_summary_paths(
+    paths: FinalReaderOutputPaths,
+    *,
+    rewrite_result: dict[str, Any],
+    section_rewrite_result: dict[str, Any],
+    edit_artifact_paths: dict[str, Path],
+) -> dict[str, Any]:
+    return {
+        "briefing_validation_report": paths.briefing_validation,
+        "briefing_polish_report": paths.polish_report,
+        "memo_quality_report": paths.memo_quality,
+        "evidence_curation_report": paths.curation_report,
+        "section_rewrite_report": paths.section_rewrite_report,
+        "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
+        "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),
+        "decision_traceability_matrix_final": paths.final_traceability,
+        "decision_traceability_matrix_final_markdown": paths.final_traceability_markdown,
+        "memo_coherence_report": paths.memo_coherence,
+        "section_role_quality_report": paths.section_role_quality,
+        "pipeline_migration_ledger": paths.pipeline_migration_ledger,
+        "runtime_budget_report": paths.runtime_budget,
+        "final_brief_evaluation": paths.final_brief_evaluation,
+        "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
+        "reader_memo_rewrite_prompt": paths.reader_memo_rewrite_prompt if rewrite_result.get("prompt") else None,
+        "reader_memo_rewrite_raw": paths.reader_memo_rewrite_raw if rewrite_result.get("raw") else None,
+        **reader_memo_edit_summary_paths(rewrite_result, edit_artifact_paths),
     }
 
 
