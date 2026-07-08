@@ -473,3 +473,50 @@ def test_model_packet_prefers_evidence_role_working_set_when_present() -> None:
     assert packet["do_not_use_cards"] == ["ec-off-question"]
     assert [row["candidate_card_id"] for row in packet["owned_evidence"]] == ["ec-support", "ec-boundary"]
     assert "ec-legacy" not in json.dumps(packet)
+
+
+def test_section_rewrite_prompt_treats_role_groups_as_primary_context() -> None:
+    section = {
+        "title": "Practical Scope and Exceptions",
+        "markdown": "## Practical Scope and Exceptions\n\nThe deterministic draft names the scope.",
+    }
+    contract = {
+        "heading": "Practical Scope and Exceptions",
+        "_section_synthesis_scaffold": {
+            "section_evidence_working_sets": {
+                "sections": [
+                    {
+                        "section": "Practical Scope and Exceptions",
+                        "primary_evidence": [
+                            {
+                                "candidate_card_id": "ec-support",
+                                "claim": "The program reduced delay in observed offices.",
+                                "evidence_role": "load_bearing",
+                            }
+                        ],
+                        "boundary_evidence": [
+                            {
+                                "candidate_card_id": "ec-boundary",
+                                "claim": "Smaller offices were not observed.",
+                                "evidence_role": "boundary",
+                            }
+                        ],
+                    }
+                ]
+            }
+        },
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {},
+    }
+
+    prompt = _section_rewrite_prompt(section, contract, previous_title="Practical Read", next_title="Decision Cruxes")
+
+    assert "primary_evidence as the load-bearing working set" in prompt
+    assert "boundary_evidence to define where the answer does and does not travel" in prompt
+    assert "owned_evidence only as the compatibility view" in prompt
+    assert "ec-boundary" in prompt
