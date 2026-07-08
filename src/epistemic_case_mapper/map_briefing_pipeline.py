@@ -263,6 +263,8 @@ def _attach_decision_spine_bundle(
 
 
 def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str, backend_config: ModelBackendConfig) -> None:
+    from epistemic_case_mapper.map_briefing_readiness import build_packet_quality_gate_report
+
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
     scaffold.update(
         run_packet_critique_and_refinement(
@@ -273,6 +275,7 @@ def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str,
             backend_retries=backend_config.retries,
         )
     )
+    scaffold["packet_quality_gate_report"] = build_packet_quality_gate_report(scaffold)
 
 
 def _attach_model_context_audit(
