@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifact
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_memo import build_packet_memo_plan, render_packet_first_draft, write_packet_first_artifacts
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
+from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 
 
 def _scaffold() -> dict:
@@ -323,3 +324,30 @@ def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(
     assert written["packet_first_draft_path"].exists()
     assert written["section_context_acceptance_report_path"].exists()
     assert written["report"]["status"] == "ready"
+
+
+def test_memo_packet_retention_report_flags_missing_required_packet_items() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = built["decision_briefing_packet"]
+    complete_memo = """
+## Decision Brief
+
+Option A is promising but maintenance-dependent. Option A reduced flood losses by 25% in comparable river cities
+according to Outcome Study. Counter Study shows that Option A failed when maintenance budgets were cut.
+Maintenance cuts can erase the benefit.
+Boundary Report says the result only applies where pump capacity exceeds expected peak flow.
+"""
+    weak_memo = """
+## Decision Brief
+
+Option A is promising.
+"""
+
+    complete = build_memo_packet_retention_report(complete_memo, packet)
+    weak = build_memo_packet_retention_report(weak_memo, packet)
+
+    assert complete["status"] == "ready"
+    assert complete["missing_critical_count"] == 0
+    assert weak["status"] == "critical_warnings"
+    assert weak["missing_critical_count"] > 0
+    assert any(issue["issue_type"] == "missing_must_retain_item" for issue in weak["issues"])
