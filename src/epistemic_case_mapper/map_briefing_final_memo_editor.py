@@ -14,8 +14,17 @@ from epistemic_case_mapper.map_briefing_final_memo_diagnosis import (
     build_memo_protected_spans,
     diagnosis_improved,
 )
+from epistemic_case_mapper.map_briefing_full_memo_polish import (
+    build_full_memo_polish_obligation_packet,
+    build_full_memo_polish_prompt,
+    restore_full_memo_protected_content,
+)
 from epistemic_case_mapper.map_briefing_rewrite_edits import NUMBER_RE, SOURCE_LABEL_RE
 from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
+from epistemic_case_mapper.map_briefing_warning_repair import (
+    full_memo_markdown_payload_issue,
+    run_full_memo_warning_repair,
+)
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.synthesis_uplift_packet import _parse_json
 
@@ -97,15 +106,12 @@ def run_full_memo_polish_editor(
     candidate_map: dict[str, Any],
     contract: dict[str, Any],
     *,
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
+    backend: str, backend_timeout: int | None, backend_retries: int,
     repair_candidate: RepairFn,
     validate_candidate: ValidateFn,
-    fallback_to_two_pass: bool = True,
-    max_polish_attempts: int = 2,
+    fallback_to_two_pass: bool = True, max_polish_attempts: int = 2,
 ) -> dict[str, Any]:
-    """Rewrite the whole memo for readability, then accept only gated candidates."""
+    """Rewrite the whole memo for readability, recording validation failures as warnings."""
     initial_diagnosis = build_memo_final_diagnosis(memo, contract)
     protected_spans = build_memo_protected_spans(memo, contract)
     if backend.strip() == "prompt":
@@ -116,100 +122,76 @@ def run_full_memo_polish_editor(
     prompts: dict[str, str] = {}
     raws: dict[str, str] = {}
     for attempt_index in range(max(1, max_polish_attempts)):
-        prompt = build_full_memo_polish_prompt(memo, obligation_packet, previous_issues=current_issues)
-        pass_name = f"full_polish_attempt_{attempt_index + 1}"
-        prompts[pass_name] = prompt
-        report: dict[str, Any] = {
-            "schema_id": "reader_memo_full_polish_attempt_v1",
-            "pass": pass_name,
-            "accepted": False,
-            "status": "not_run",
-            "issues": [],
-        }
-        try:
-            result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-        except RuntimeError as exc:
-            report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
+        generated = generate_full_memo_polish_candidate(
+            memo,
+            obligation_packet,
+            current_issues=current_issues,
+            attempt_index=attempt_index,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            repair_candidate=repair_candidate,
+            scaffold=scaffold,
+            contract=contract,
+        )
+        pass_name = generated["pass_name"]
+        prompts[pass_name] = generated["prompt"]
+        raws[pass_name] = generated["raw"]
+        report = generated["report"]
+        if not generated["accepted"]:
             attempts.append(report)
             break
-        raw = result.text
-        raws[pass_name] = raw
-        if result.prompt_only:
-            report.update({"status": "prompt_backend_fallback", "issues": ["rewrite backend returned prompt only"]})
-            attempts.append(report)
-            break
-        candidate = repair_candidate(_extract_polished_memo(raw), scaffold, contract)
-        deterministic_issues = full_memo_polish_preservation_issues(
-            candidate,
+        settled = evaluate_full_memo_polish_candidate(
+            generated["candidate"],
+            attempt_index=attempt_index,
             original_memo=memo,
             evidence_appendix=evidence_appendix,
             scaffold=scaffold,
             candidate_map=candidate_map,
             contract=contract,
             obligation_packet=obligation_packet,
-            validate_candidate=validate_candidate,
-        )
-        judge_result = run_full_memo_polish_judge(
-            original_memo=memo,
-            polished_memo=candidate,
-            obligation_packet=obligation_packet,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-        )
-        prompts[f"judge_attempt_{attempt_index + 1}"] = judge_result.get("prompt", "")
-        raws[f"judge_attempt_{attempt_index + 1}"] = judge_result.get("raw", "")
-        judge_issues = full_memo_polish_judge_issues(judge_result.get("payload"))
-        issues = deterministic_issues + judge_issues
-        after_diagnosis = build_memo_final_diagnosis(candidate, contract)
-        report.update(
-            {
-                "status": "accepted" if not issues else "rejected_fallback",
-                "accepted": not issues,
-                "issues": issues,
-                "deterministic_issues": deterministic_issues,
-                "judge_issues": judge_issues,
-                "judge": judge_result.get("payload", {}),
-                "diagnosis_after": after_diagnosis,
-                "diagnosis_improved": diagnosis_improved(initial_diagnosis, after_diagnosis, pass_name="all"),
-                "word_count": len(candidate.split()),
-            }
-        )
-        attempts.append(report)
-        if not issues:
-            return _accepted_full_polish_result(
-                candidate,
-                prompts=prompts,
-                raws=raws,
-                attempts=attempts,
-                contract=contract,
-                initial_diagnosis=initial_diagnosis,
-                final_diagnosis=after_diagnosis,
-                protected_spans=build_memo_protected_spans(candidate, contract),
-                obligation_packet=obligation_packet,
-            )
-        current_issues = issues[:12]
-    if fallback_to_two_pass:
-        fallback = run_two_pass_reader_memo_editor(
-            memo,
-            evidence_appendix,
-            scaffold,
-            candidate_map,
-            contract,
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             repair_candidate=repair_candidate,
             validate_candidate=validate_candidate,
         )
-        fallback_report = fallback.setdefault("report", {})
-        fallback_report["full_polish_attempts"] = attempts
-        fallback_report["full_polish_status"] = "fallback_to_two_pass"
-        fallback["prompts"] = {**prompts, **(fallback.get("prompts", {}) if isinstance(fallback.get("prompts"), dict) else {})}
-        fallback["raws"] = {**raws, **(fallback.get("raws", {}) if isinstance(fallback.get("raws"), dict) else {})}
-        fallback["prompt"] = _combined_text(fallback["prompts"])
-        fallback["raw"] = _combined_text(fallback["raws"])
-        return fallback
+        prompts.update(settled.get("prompts", {}))
+        raws.update(settled.get("raws", {}))
+        candidate = str(settled["memo"])
+        after_diagnosis = build_memo_final_diagnosis(candidate, contract)
+        report.update(settled["report_update"])
+        report["diagnosis_after"] = after_diagnosis
+        report["diagnosis_improved"] = diagnosis_improved(initial_diagnosis, after_diagnosis, pass_name="all")
+        report["word_count"] = len(candidate.split())
+        attempts.append(report)
+        return _accepted_full_polish_result(
+            candidate,
+            prompts=prompts,
+            raws=raws,
+            attempts=attempts,
+            contract=contract,
+            initial_diagnosis=initial_diagnosis,
+            final_diagnosis=after_diagnosis,
+            protected_spans=build_memo_protected_spans(candidate, contract),
+            obligation_packet=obligation_packet,
+        )
+    if fallback_to_two_pass:
+        return run_full_polish_two_pass_fallback(
+            memo=memo,
+            evidence_appendix=evidence_appendix,
+            scaffold=scaffold,
+            candidate_map=candidate_map,
+            contract=contract,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            repair_candidate=repair_candidate,
+            validate_candidate=validate_candidate,
+            attempts=attempts,
+            prompts=prompts,
+            raws=raws,
+        )
     return {
         "memo": memo,
         "prompt": _combined_text(prompts),
@@ -229,61 +211,6 @@ def run_full_memo_polish_editor(
             "full_polish_attempts": attempts,
             "obligation_packet": obligation_packet,
         },
-    }
-
-
-def build_full_memo_polish_prompt(memo: str, obligation_packet: dict[str, Any], *, previous_issues: list[str] | None = None) -> str:
-    retry_block = ""
-    if previous_issues:
-        retry_block = (
-            "\nThe previous polished memo was rejected for these reasons. Correct them while preserving readability:\n"
-            f"{json.dumps(previous_issues, indent=2, ensure_ascii=False)}\n"
-        )
-    return (
-        "You are a senior analyst writing a decision-ready briefing memo for a thoughtful human decision-maker.\n"
-        "Rewrite the memo below into a polished, coherent, natural briefing memo.\n\n"
-        "Hard constraints:\n"
-        "- Do not drop any substantive information listed in the obligation packet.\n"
-        "- Do not add new factual claims, sources, numbers, populations, or causal interpretations.\n"
-        "- Preserve the decision question exactly.\n"
-        "- Preserve the confidence level exactly.\n"
-        "- Preserve all cited source labels and the final source list.\n"
-        "- Preserve the answer stance, boundaries, subgroup caveats, and named evidence limits.\n"
-        "- You may reorganize, combine, split, and smooth prose so the memo reads like an analyst wrote it.\n"
-        "- Return only the polished memo in Markdown. Do not include commentary.\n"
-        f"{retry_block}\n"
-        "Obligation packet:\n"
-        f"{json.dumps(obligation_packet, indent=2, ensure_ascii=False)}\n\n"
-        "Original memo:\n"
-        f"{memo.strip()}\n"
-    )
-
-
-def build_full_memo_polish_obligation_packet(
-    memo: str,
-    scaffold: dict[str, Any],
-    contract: dict[str, Any],
-    protected_spans: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    protected_spans = protected_spans or build_memo_protected_spans(memo, contract)
-    source_names = [
-        str(value).strip()
-        for value in (scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}).values()
-        if str(value).strip()
-    ]
-    source_names.extend(_source_lines_from_memo(memo))
-    return {
-        "schema_id": "reader_memo_full_polish_obligations_v1",
-        "question": str(contract.get("question", "")).strip(),
-        "confidence": str(contract.get("confidence", "")).strip(),
-        "required_sources": sorted(set(source_names)),
-        "required_numbers": sorted(_regex_tokens(memo, NUMBER_RE)),
-        "required_source_labels": sorted(_regex_tokens(memo, SOURCE_LABEL_RE)),
-        "required_evidence": contract.get("required_evidence", []) if isinstance(contract.get("required_evidence"), list) else [],
-        "required_gaps": contract.get("required_gaps", []) if isinstance(contract.get("required_gaps"), list) else [],
-        "practical_actions": contract.get("practical_actions", []) if isinstance(contract.get("practical_actions"), list) else [],
-        "answer_frame": contract.get("answer_frame", {}) if isinstance(contract.get("answer_frame"), dict) else {},
-        "protected_content_rules": protected_spans.get("rules", []) if isinstance(protected_spans.get("rules"), list) else [],
     }
 
 
@@ -311,7 +238,8 @@ def full_memo_polish_preservation_issues(
     for number in _string_list(obligation_packet.get("required_numbers")):
         if number not in polished:
             issues.append(f"polish dropped required number: {number}")
-    introduced_numbers = sorted(_regex_tokens(polished, NUMBER_RE) - set(_string_list(obligation_packet.get("required_numbers"))))
+    allowed_numbers = set(_string_list(obligation_packet.get("required_numbers"))) | set(_string_list(obligation_packet.get("optional_numbers")))
+    introduced_numbers = sorted(_regex_tokens(polished, NUMBER_RE) - allowed_numbers)
     for number in introduced_numbers[:6]:
         issues.append(f"polish introduced unsupported number: {number}")
     for label in _string_list(obligation_packet.get("required_source_labels")):
@@ -326,6 +254,175 @@ def full_memo_polish_preservation_issues(
         if value and not _mentions_enough_content_terms(polished, value, minimum=2):
             issues.append(f"polish dropped answer-frame obligation: {value[:100]}")
     return _dedupe_issues(issues)
+
+
+def evaluate_full_memo_polish_candidate(
+    candidate: str,
+    *,
+    attempt_index: int,
+    original_memo: str,
+    evidence_appendix: str,
+    scaffold: dict[str, Any],
+    candidate_map: dict[str, Any],
+    contract: dict[str, Any],
+    obligation_packet: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    repair_candidate: RepairFn,
+    validate_candidate: ValidateFn,
+) -> dict[str, Any]:
+    deterministic_warnings = full_memo_polish_preservation_issues(
+        candidate,
+        original_memo=original_memo,
+        evidence_appendix=evidence_appendix,
+        scaffold=scaffold,
+        candidate_map=candidate_map,
+        contract=contract,
+        obligation_packet=obligation_packet,
+        validate_candidate=validate_candidate,
+    )
+    judge_result = run_full_memo_polish_judge(
+        original_memo=original_memo,
+        polished_memo=candidate,
+        obligation_packet=obligation_packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    judge_warnings = full_memo_polish_judge_issues(judge_result.get("payload"))
+    warnings = deterministic_warnings + judge_warnings
+    repair_report: dict[str, Any] = {}
+    prompts = {f"judge_attempt_{attempt_index + 1}": judge_result.get("prompt", "")}
+    raws = {f"judge_attempt_{attempt_index + 1}": judge_result.get("raw", "")}
+    if warnings:
+        repair_result = run_full_memo_warning_repair(
+            candidate,
+            warnings,
+            original_memo=original_memo,
+            evidence_appendix=evidence_appendix,
+            scaffold=scaffold,
+            candidate_map=candidate_map,
+            contract=contract,
+            obligation_packet=obligation_packet,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            repair_candidate=repair_candidate,
+            validate_candidate=validate_candidate,
+            preservation_issues_fn=full_memo_polish_preservation_issues,
+            judge_fn=run_full_memo_polish_judge,
+            judge_issues_fn=full_memo_polish_judge_issues,
+        )
+        prompts[f"warning_repair_attempt_{attempt_index + 1}"] = repair_result.get("prompt", "")
+        raws[f"warning_repair_attempt_{attempt_index + 1}"] = repair_result.get("raw", "")
+        repair_report = repair_result.get("report", {})
+        if repair_result.get("accepted"):
+            candidate = str(repair_result.get("memo", candidate))
+            deterministic_warnings = repair_report.get("deterministic_warnings", [])
+            judge_warnings = repair_report.get("judge_warnings", [])
+            warnings = deterministic_warnings + judge_warnings
+    return {
+        "memo": candidate,
+        "prompts": prompts,
+        "raws": raws,
+        "report_update": {
+            "status": "accepted" if not warnings else "accepted_with_warnings",
+            "accepted": True,
+            "issues": [],
+            "warnings": warnings,
+            "deterministic_warnings": deterministic_warnings,
+            "judge_warnings": judge_warnings,
+            "deterministic_issues": deterministic_warnings,
+            "judge_issues": judge_warnings,
+            "judge": judge_result.get("payload", {}),
+            "patches": [],
+            "warning_repair": repair_report,
+        },
+    }
+
+
+def generate_full_memo_polish_candidate(
+    memo: str,
+    obligation_packet: dict[str, Any],
+    *,
+    current_issues: list[str],
+    attempt_index: int,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    repair_candidate: RepairFn,
+    scaffold: dict[str, Any],
+    contract: dict[str, Any],
+) -> dict[str, Any]:
+    pass_name = f"full_polish_attempt_{attempt_index + 1}"
+    prompt = build_full_memo_polish_prompt(memo, obligation_packet, previous_issues=current_issues)
+    report: dict[str, Any] = {
+        "schema_id": "reader_memo_full_polish_attempt_v1",
+        "pass": pass_name,
+        "accepted": False,
+        "status": "not_run",
+        "issues": [],
+    }
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_fallback", "issues": [str(exc)]})
+        return {"accepted": False, "pass_name": pass_name, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    if result.prompt_only:
+        report.update({"status": "prompt_backend_fallback", "issues": ["rewrite backend returned prompt only"]})
+        return {"accepted": False, "pass_name": pass_name, "prompt": prompt, "raw": raw, "report": report}
+    parse_issue = full_memo_markdown_payload_issue(raw)
+    if parse_issue:
+        status = "legacy_json_payload_fallback" if "legacy" in parse_issue else "json_payload_fallback"
+        report.update({"status": status, "issues": [parse_issue]})
+        return {"accepted": False, "pass_name": pass_name, "prompt": prompt, "raw": raw, "report": report}
+    candidate = repair_candidate(
+        restore_full_memo_protected_content(_extract_polished_memo(raw), original_memo=memo, contract=contract),
+        scaffold,
+        contract,
+    )
+    candidate = restore_full_memo_protected_content(candidate, original_memo=memo, contract=contract)
+    return {"accepted": True, "pass_name": pass_name, "prompt": prompt, "raw": raw, "report": report, "candidate": candidate}
+
+
+def run_full_polish_two_pass_fallback(
+    *,
+    memo: str,
+    evidence_appendix: str,
+    scaffold: dict[str, Any],
+    candidate_map: dict[str, Any],
+    contract: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    repair_candidate: RepairFn,
+    validate_candidate: ValidateFn,
+    attempts: list[dict[str, Any]],
+    prompts: dict[str, str],
+    raws: dict[str, str],
+) -> dict[str, Any]:
+    fallback = run_two_pass_reader_memo_editor(
+        memo,
+        evidence_appendix,
+        scaffold,
+        candidate_map,
+        contract,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        repair_candidate=repair_candidate,
+        validate_candidate=validate_candidate,
+    )
+    fallback_report = fallback.setdefault("report", {})
+    fallback_report["full_polish_attempts"] = attempts
+    fallback_report["full_polish_status"] = "fallback_to_two_pass"
+    fallback["prompts"] = {**prompts, **(fallback.get("prompts", {}) if isinstance(fallback.get("prompts"), dict) else {})}
+    fallback["raws"] = {**raws, **(fallback.get("raws", {}) if isinstance(fallback.get("raws"), dict) else {})}
+    fallback["prompt"] = _combined_text(fallback["prompts"])
+    fallback["raw"] = _combined_text(fallback["raws"])
+    return fallback
 
 
 def run_full_memo_polish_judge(
@@ -361,7 +458,8 @@ def build_full_memo_polish_judge_prompt(original_memo: str, polished_memo: str, 
         '  "limits_preserved": true,\n'
         '  "reason": "brief explanation"\n'
         "}\n\n"
-        "Accept only if the polished memo preserves the obligation packet, keeps uncertainty/limits visible, and adds no new facts.\n\n"
+        "Accept only if the polished memo preserves required obligations, keeps uncertainty/limits visible, and adds no new facts.\n"
+        "Do not reject merely because optional_numbers from the obligation packet are omitted, unless the omission changes the stance or removes a required evidence item.\n\n"
         "Obligation packet:\n"
         f"{json.dumps(obligation_packet, indent=2, ensure_ascii=False)}\n\n"
         "Original memo:\n"
@@ -598,6 +696,9 @@ def _accepted_full_polish_result(
     protected_spans: dict[str, Any],
     obligation_packet: dict[str, Any],
 ) -> dict[str, Any]:
+    warnings = _full_polish_attempt_warnings(attempts)
+    status = "full_polish_accepted_with_warnings" if warnings else "full_polish_accepted"
+    full_polish_status = "accepted_with_warnings" if warnings else "accepted"
     return {
         "memo": _clean_memo_text(memo),
         "prompt": _combined_text(prompts),
@@ -608,9 +709,10 @@ def _accepted_full_polish_result(
         "protected_spans": protected_spans,
         "report": {
             "schema_id": "reader_memo_rewrite_report_v3",
-            "status": "full_polish_accepted",
+            "status": status,
             "accepted": True,
             "issues": [],
+            "warnings": warnings,
             "contract": {
                 "schema_id": contract.get("schema_id"),
                 "confidence": contract.get("confidence"),
@@ -619,13 +721,23 @@ def _accepted_full_polish_result(
             "accepted_pass_count": 1,
             "passes": attempts,
             "full_polish_attempts": attempts,
-            "full_polish_status": "accepted",
+            "full_polish_status": full_polish_status,
             "obligation_packet": obligation_packet,
             "diagnosis_initial": initial_diagnosis,
             "diagnosis_final": final_diagnosis,
             "diagnosis_improved": diagnosis_improved(initial_diagnosis, final_diagnosis, pass_name="all"),
         },
     }
+
+
+def _full_polish_attempt_warnings(attempts: list[dict[str, Any]]) -> list[str]:
+    warnings: list[str] = []
+    for attempt in attempts:
+        for warning in attempt.get("warnings", []) if isinstance(attempt.get("warnings"), list) else []:
+            text = str(warning).strip()
+            if text and text not in warnings:
+                warnings.append(text)
+    return warnings
 
 
 def _combined_text(parts: dict[str, str]) -> str:
@@ -658,20 +770,6 @@ def _extract_polished_memo(raw: str) -> str:
     if start > 0:
         cleaned = cleaned[start:]
     return _clean_memo_text(cleaned)
-
-
-def _source_lines_from_memo(memo: str) -> list[str]:
-    match = re.search(r"^## Sources\s*\n(?P<body>.*)$", memo, flags=re.MULTILINE | re.DOTALL)
-    if not match:
-        return []
-    lines = []
-    for line in match.group("body").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("## "):
-            break
-        if stripped.startswith("- "):
-            lines.append(stripped.removeprefix("- ").strip())
-    return [line for line in lines if line]
 
 
 def _regex_tokens(text: str, pattern: re.Pattern[str]) -> set[str]:

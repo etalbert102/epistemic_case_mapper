@@ -488,7 +488,7 @@ The current map supports a bounded read over the provided documents, with limite
     migration = build_pipeline_migration_ledger(section_context_acceptance_path="section_context_acceptance_report.json")
     runtime = build_runtime_budget_report(
         section_rewrite_report={"sections": [{"attempt_count": 2}, {"attempt_count": 1}]},
-        reader_rewrite_report={"status": "skipped_after_section_rewrite"},
+        reader_rewrite_report={"status": "skipped_prompt_backend"},
     )
     evaluation = build_final_brief_evaluation(
         memo_markdown=memo,

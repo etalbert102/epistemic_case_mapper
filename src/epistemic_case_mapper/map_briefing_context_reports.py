@@ -312,6 +312,8 @@ def _runtime_degraded_triggers(section_rewrite_report: dict[str, Any], reader_re
             triggers.append(f"structured_fallback:{section.get('title', '')}")
     if reader_rewrite_report.get("status") == "skipped_after_section_rewrite":
         triggers.append("reader_memo_rewrite_skipped")
+    if reader_rewrite_report.get("status") == "skipped_prompt_backend":
+        triggers.append("reader_memo_rewrite_prompt_backend")
     return triggers
 
 

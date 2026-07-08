@@ -217,7 +217,6 @@ def _dispatch_synthesize_command(repo_root: Path, args: argparse.Namespace) -> i
             region_id=args.region,
             baseline_path=args.baseline,
             max_claims=args.max_claims,
-            run_reader_memo_rewrite=args.run_reader_memo_rewrite,
             backend_timeout=args.backend_timeout,
             backend_retries=args.backend_retries,
         )

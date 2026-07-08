@@ -2,7 +2,7 @@
 
 ## Objective
 
-Split the optional whole-memo edit pass into two constrained final-editor passes that improve decision-brief readability without weakening source grounding.
+Split the whole-memo edit pass into two constrained final-editor passes that improve decision-brief readability without weakening source grounding. The pass is now part of the normal final briefing path for real model backends; prompt-only backends still emit diagnostics without model synthesis.
 
 The target end state is a final decision memo that:
 

@@ -206,7 +206,7 @@ def test_run_decision_model_slice_can_use_main_synthesis_stage(tmp_path: Path) -
     assert result.synthesized_briefing_path.exists()
     assert "Decision Brief" in result.synthesized_briefing_path.read_text(encoding="utf-8")
     report = json.loads(result.synthesis_report_path.read_text(encoding="utf-8"))
-    assert report["status"] == "skipped_after_section_rewrite"
+    assert report["status"] == "skipped_prompt_backend"
 
 
 def _arbitrary_candidate_map() -> dict:

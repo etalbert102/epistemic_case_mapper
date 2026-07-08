@@ -13,12 +13,16 @@ from epistemic_case_mapper.map_briefing import (
 )
 from epistemic_case_mapper.map_briefing_final_memo_editor import (
     build_full_memo_polish_obligation_packet,
+    build_full_memo_polish_prompt,
     full_memo_polish_judge_issues,
     full_memo_polish_preservation_issues,
+    run_full_memo_polish_editor,
 )
+from epistemic_case_mapper.map_briefing_full_memo_polish import restore_full_memo_protected_content
 from epistemic_case_mapper.map_briefing_final_memo_diagnosis import build_memo_protected_spans
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_memo_slots import _replace_internal_reader_phrases
+from epistemic_case_mapper.map_briefing_warning_repair import build_warning_repair_packet
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -284,6 +288,99 @@ The current read is neutral.
     assert "polish dropped required number: 10 mg" in issues
 
 
+def test_full_memo_polish_allows_original_optional_numbers_without_requiring_them() -> None:
+    memo = """## Decision Brief
+
+**Decision question:** Should the intervention be used?
+
+The required dose is 10 mg. A secondary appendix detail mentions 20 mg.
+
+**Confidence:** medium
+
+## Sources
+
+- Source A
+"""
+    scaffold = {"question": "Should the intervention be used?", "confidence_cap": "medium", "decision_memo_slots": {"slots": []}}
+    contract = {
+        "question": "Should the intervention be used?",
+        "confidence": "medium",
+        "required_evidence": [{"claim": "The required dose is 10 mg.", "source": "Source A", "anchor_terms": ["10 mg"]}],
+    }
+    obligations = build_full_memo_polish_obligation_packet(memo, scaffold, contract)
+
+    issues = full_memo_polish_preservation_issues(
+        memo.replace("A secondary appendix detail mentions 20 mg.", ""),
+        original_memo=memo,
+        evidence_appendix="",
+        scaffold=scaffold,
+        candidate_map={"claims": [], "relations": []},
+        contract=contract,
+        obligation_packet=obligations,
+        validate_candidate=lambda *args: [],
+    )
+
+    assert "polish dropped required number: 20 mg" not in issues
+    assert not [issue for issue in issues if issue.startswith("polish introduced unsupported number")]
+
+
+def test_full_memo_polish_prompt_curates_checklist_without_off_question_noise() -> None:
+    memo = """## Decision Brief
+
+**Decision question:** How should a synthesis preserve observational outcome evidence and randomized marker evidence for egg consumption and CVD?
+
+The memo mentions 0.98, 0.99, and 08 as extracted quantities.
+
+**Confidence:** medium
+"""
+    obligation_packet = {
+        "question": "How should a synthesis preserve observational outcome evidence and randomized marker evidence for egg consumption and CVD?",
+        "confidence": "medium",
+        "required_numbers": ["0.98"],
+        "optional_numbers": ["0.99", "08"],
+        "required_evidence": [
+            {"slot": "Main support", "claim": "Moderate egg consumption is not associated with cardiovascular disease risk overall."},
+            {"slot": "Counterevidence or tension", "claim": "Higher daily egg consumption may increase marker ratios in randomized studies."},
+            {"slot": "Scope and boundary conditions", "claim": "In an egg consumption and CVD subgroup analysis, the relative risk was 1.25 (95% confidence interval 0.99 to 1.59) and the pooled estimate was..."},
+            {"slot": "Safety and downside risk", "claim": "Higher relative risks of bladder cancer were associated with fried egg intake compared to boiled egg intake."},
+        ],
+        "required_gaps": ["The current map does not cleanly establish randomized intervention evidence for disease incidence."],
+        "answer_frame": {"direct_answer": "Treat the answer as conditional on named risks and missing evidence.", "near_term_recommendation": "Moderate use is not associated with the main outcome overall, and is associated with..."},
+    }
+
+    prompt = build_full_memo_polish_prompt(memo, obligation_packet)
+    assert "bladder cancer" not in prompt
+    assert "0.99, 08" not in prompt
+    assert "Preserve bottom-line support" in prompt
+    assert "Preserve main counterweight" in prompt
+    assert "Preserve evidence-family limit" in prompt
+    assert "0.99 to 1.59" in prompt
+    assert "0.99 to 1.\n" not in prompt
+    assert "and is." not in prompt
+
+
+def test_full_memo_polish_restoration_drops_plain_duplicate_question() -> None:
+    original = """## Decision Brief
+
+**Decision question:** Should the intervention be used?
+
+**Confidence:** medium
+"""
+    candidate = """## Decision Brief
+
+**Should the intervention be used?**
+
+The answer is conditional.
+
+**Confidence:** Medium
+"""
+
+    restored = restore_full_memo_protected_content(candidate, original_memo=original, contract={"confidence": "medium"})
+
+    assert restored.count("Should the intervention be used?") == 1
+    assert "**Confidence:** medium" in restored
+
+
 def test_full_memo_polish_judge_issues_rejects_semantic_drops() -> None:
     payload = {
         "accepted": False,
@@ -300,6 +397,40 @@ def test_full_memo_polish_judge_issues_rejects_semantic_drops() -> None:
     assert "judge unsupported_additions: Added a stronger recommendation." in issues
     assert "judge found changed stance" in issues
     assert "judge found limits were not preserved" in issues
+
+
+def test_warning_repair_packet_supplies_missing_atoms_from_original_memo() -> None:
+    original = """## Decision Brief
+
+The cohort included 60 candidate evidence cards and 11 source anchors.
+The subgroup had 204 exposed participants and 299 controls.
+
+## Sources
+
+- Source A
+"""
+    packet = build_warning_repair_packet(
+        original,
+        [
+            "polish dropped required source: Source A",
+            "polish dropped required number: 204",
+            "polish dropped required source label: (Source A)",
+            "judge dropped_information: The subgroup had 204 exposed participants and 299 controls.",
+        ],
+        {
+            "required_sources": ["Source A"],
+            "required_numbers": ["204", "299"],
+            "required_source_labels": ["(Source A)"],
+            "required_evidence": [{"claim": "The subgroup had 204 exposed participants and 299 controls.", "source": "Source A"}],
+        },
+    )
+
+    assert packet["final_source_list"] == ["Source A"]
+    assert packet["missing_number_contexts"][0]["number"] == "204"
+    assert "204 exposed participants and 299 controls" in packet["missing_number_contexts"][0]["original_context"]
+    assert packet["judge_dropped_information"] == ["The subgroup had 204 exposed participants and 299 controls."]
+    assert packet["suggested_insertions"]
+    assert packet["required_evidence"][0]["claim"] == "The subgroup had 204 exposed participants and 299 controls."
 
 
 def test_apply_reader_memo_edit_suggestions_records_typed_metadata() -> None:
@@ -386,6 +517,7 @@ def test_whole_memo_rewrite_accepts_safe_full_polish(monkeypatch) -> None:
         return ModelBackendResult(text=polished, backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_warning_repair.run_model_backend", fake_backend)
 
     result = rewrite_reader_memo_with_contract(
         memo,
@@ -403,7 +535,7 @@ def test_whole_memo_rewrite_accepts_safe_full_polish(monkeypatch) -> None:
     assert "The decision read is bounded and clear." in result["memo"]
 
 
-def test_whole_memo_rewrite_falls_back_to_separate_coherence_and_prose_passes(monkeypatch) -> None:
+def test_whole_memo_rewrite_accepts_full_polish_with_validation_warnings(monkeypatch) -> None:
     memo = _long_memo()
     appendix = "## Evidence Appendix\n\nThe source supports the read."
     calls: list[str] = []
@@ -411,6 +543,8 @@ def test_whole_memo_rewrite_falls_back_to_separate_coherence_and_prose_passes(mo
     def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
         calls.append(prompt)
         if "polished, coherent, natural briefing memo" in prompt:
+            return ModelBackendResult(text="## Decision Brief\n\nToo short.\n", backend=backend)
+        if "repairing a polished decision memo after validation produced warnings" in prompt:
             return ModelBackendResult(text="## Decision Brief\n\nToo short.\n", backend=backend)
         if "strict preservation judge" in prompt:
             return ModelBackendResult(
@@ -426,30 +560,10 @@ def test_whole_memo_rewrite_falls_back_to_separate_coherence_and_prose_passes(mo
                 ),
                 backend=backend,
             )
-        assert "Final edit context" in prompt
-        assert '"reader_memo_final_edit_context_v2"' in prompt
-        assert '"answer_frame"' not in prompt
-        assert '"required_evidence"' not in prompt
-        if "Pass: prose" in prompt:
-            return ModelBackendResult(
-                text=json.dumps(
-                    {
-                        "edits": [
-                            {
-                                "target": "The language is awkward and awkwardly repeated.",
-                                "replacement": "The language is direct.",
-                                "target_section": "Decision Brief",
-                                "edit_type": "fix_awkward_phrase",
-                                "reason": "Remove explicit awkwardness marker.",
-                            }
-                        ]
-                    }
-                ),
-                backend=backend,
-            )
-        return ModelBackendResult(text=json.dumps({"edits": []}), backend=backend)
+        raise AssertionError("full-polish validation warnings should not fall back to local edit passes")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_warning_repair.run_model_backend", fake_backend)
 
     result = rewrite_reader_memo_with_contract(
         memo,
@@ -461,16 +575,139 @@ def test_whole_memo_rewrite_falls_back_to_separate_coherence_and_prose_passes(mo
         backend_retries=0,
     )
 
-    assert len(calls) == 6
-    assert result["report"]["full_polish_status"] == "fallback_to_two_pass"
-    assert len(result["report"]["full_polish_attempts"]) == 2
-    assert result["report"]["pass_count"] == 2
+    assert len(calls) == 4
+    assert result["report"]["status"] == "full_polish_accepted_with_warnings"
+    assert result["report"]["full_polish_status"] == "accepted_with_warnings"
+    assert len(result["report"]["full_polish_attempts"]) == 1
+    assert result["report"]["pass_count"] == 1
     assert result["report"]["accepted_pass_count"] == 1
-    assert result["report"]["passes"][0]["pass"] == "coherence"
-    assert result["report"]["passes"][1]["pass"] == "prose"
-    assert result["prompts"]["coherence"]
-    assert result["prompts"]["prose"]
-    assert "The language is direct." in result["memo"]
+    assert result["report"]["warnings"]
+    assert result["report"]["full_polish_attempts"][0]["warning_repair"]["status"] == "no_warning_reduction_kept_original"
+    assert "Too short." in result["memo"]
+
+
+def test_whole_memo_rewrite_repairs_validation_warnings_when_possible(monkeypatch) -> None:
+    memo = """## Decision Brief
+
+**Decision question:** Should the evidence be treated as decision-ready?
+
+The current read is bounded: the intervention may help the target outcome, but the inference depends on observational follow-up and the comparator evidence.
+
+**Confidence:** medium
+
+## Practical Read
+
+Use the intervention only when the target population matches the evidence base. Comparator evidence matters because studies often lack data on replacement foods and substitution options, which can change the observed outcome association.
+
+## Why This Read
+
+The strongest support comes from a cohort estimate of 1.25 with a 95% confidence interval from 0.99 to 1.59, while implementation remains conditional on whether replacement foods or substitution options are measured.
+
+## Decision Cruxes
+
+| Crux | Why it matters | Current read | Would change if |
+|---|---|---|---|
+| Comparator measurement | It determines whether the observed association is attributable to the exposure or what it replaces. | Replacement foods are incompletely measured. | Direct comparator evidence showed the association was unchanged across replacement options. |
+
+## Limits of the Current Map
+
+The map does not cleanly establish randomized intervention evidence for disease incidence.
+
+## Sources
+
+- [Long Source Title About Comparator Evidence](https://example.test/source)
+"""
+    concise_without_required_evidence = """## Decision Brief
+
+**Decision Question:** Should the evidence be treated as decision-ready?
+
+The evidence supports a bounded read for the target outcome, but the inference remains observational and uncertain.
+
+**Confidence:** Medium
+
+## What the Evidence Supports
+
+The strongest support comes from a cohort estimate of 1.25 with a 95% confidence interval from 0.99 to 1.59.
+
+## What Limits the Inference
+
+The map does not cleanly establish randomized intervention evidence for disease incidence.
+
+## Sources
+
+- [Short Source](https://example.test/source)
+"""
+    concise_with_required_evidence = concise_without_required_evidence.replace(
+        "The evidence supports a bounded read for the target outcome, but the inference remains observational and uncertain.",
+        "The evidence supports a bounded read for the target outcome, but the inference remains observational and uncertain; comparator evidence matters because studies often lack data on replacement foods and substitution options.",
+    )
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0):
+        calls.append(prompt)
+        if "repairing a polished decision memo after validation produced warnings" in prompt:
+            assert "Targeted repair packet" in prompt
+            assert "Comparator evidence matters because studies often lack data on replacement foods and substitution options" in prompt
+            assert "Long Source Title About Comparator Evidence" in prompt
+            return ModelBackendResult(text=concise_with_required_evidence, backend=backend)
+        if "strict preservation judge" in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "accepted": True,
+                        "dropped_information": [],
+                        "unsupported_additions": [],
+                        "changed_stance": False,
+                        "limits_preserved": True,
+                        "reason": "Required evidence restored.",
+                    }
+                ),
+                backend=backend,
+            )
+        return ModelBackendResult(text=concise_without_required_evidence, backend=backend)
+
+    contract = {
+        "schema_id": "reader_memo_rewrite_contract_v1",
+        "question": "Should the evidence be treated as decision-ready?",
+        "confidence": "medium",
+        "required_evidence": [
+            {
+                "claim": "Comparator evidence matters because studies often lack data on replacement foods and substitution options, which can change the observed outcome association.",
+                "source": "Long Source Title About Comparator Evidence",
+                "anchor_terms": ["comparator", "replacement", "foods", "substitution", "options"],
+            }
+        ],
+        "required_gaps": [],
+        "practical_actions": [],
+        "answer_frame": {},
+    }
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_final_memo_editor.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_warning_repair.run_model_backend", fake_backend)
+
+    result = run_full_memo_polish_editor(
+        memo,
+        "## Evidence Appendix\n",
+        {},
+        {"claims": [], "relations": []},
+        contract,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        repair_candidate=lambda markdown, _scaffold, _contract: markdown,
+        validate_candidate=lambda rewritten, *_args: []
+        if "replacement foods and substitution options" in rewritten
+        else ["rewrite dropped required evidence: comparator replacement foods"],
+    )
+
+    assert any("repairing a polished decision memo after validation produced warnings" in call for call in calls)
+    assert result["report"]["status"] == "full_polish_accepted"
+    assert not result["report"]["warnings"]
+    assert result["report"]["full_polish_attempts"][0]["patches"] == []
+    assert result["report"]["full_polish_attempts"][0]["warning_repair"]["status"] == "accepted"
+    assert "**Decision question:** Should the evidence be treated as decision-ready?" in result["memo"]
+    assert "**Confidence:** medium" in result["memo"]
+    assert "- [Long Source Title About Comparator Evidence](https://example.test/source)" in result["memo"]
+    assert "replacement foods and substitution options" in result["memo"]
 
 
 def test_reader_memo_repair_preserves_practical_read_bullets() -> None:

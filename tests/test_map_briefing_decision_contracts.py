@@ -386,7 +386,8 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
     assert "**Confidence:** low" in rendered
     assert "doc_a" not in rendered
     assert "Doc A" in rendered
-    assert rewrite_report["status"] == "skipped_after_section_rewrite"
+    assert rewrite_report["status"] != "skipped_after_section_rewrite"
+    assert rewrite_report["pass_count"] >= 1
 
 
 def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -> None:
