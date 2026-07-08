@@ -506,6 +506,29 @@ Risks:
 10. Run at least one unrelated case to check generalizability.
 11. Make packet-first the default only if comparison reports support it.
 
+## Implementation Record
+
+Status: implemented in bounded slices.
+
+Committed slices:
+
+1. `3a619d8` - recorded this packet-first briefing pipeline plan.
+2. `3821518` - added deterministic `decision_briefing_packet.json`, pre/post `packet_sufficiency_report.json`, and scaffold artifact wiring.
+3. `adb1756` - added structured model packet critique, deterministic ID adjudication, and packet refinement.
+4. `336d4bd` - made main memo obligations prefer packet `must_retain_ledger` items with fallback to prior obligation logic.
+5. `0ef71d7` - added deterministic packet memo plan/draft artifacts and routed final memo generation through packet-first draft plus one whole-memo pass by default when a packet exists.
+6. `28642bf` - added `memo_packet_retention_report.json` and final-summary wiring.
+7. `89137fd` - added `packet_first_comparison_report.json` with model-call and retention accounting.
+8. `b05b4c2` - added targeted `packet_repair_prompt.txt`, `packet_repair_raw.md`, and `packet_repair_report.json`; repairs are accepted only when deterministic packet-retention metrics improve.
+
+Completion notes:
+
+- Section-by-section rewrite remains available as fallback when no `decision_briefing_packet` is present.
+- Packet-first is the default route when the pipeline has a populated packet.
+- Comparison reports use an estimated legacy section-rewrite baseline unless a live legacy run report is available; this avoids claiming a live A/B run when only the packet-first route was executed.
+- The new retention and repair checks are warning/report oriented except for hard schema and ID validation in packet refinement.
+- Verification for the final implementation slice passed with `PYTHONPATH=src python3 -m pytest -q`.
+
 ## Acceptance Criteria
 
 - The pipeline writes `decision_briefing_packet.json`, `memo_plan.json`, `memo_packet_retention_report.json`, and `packet_first_comparison_report.json`.
