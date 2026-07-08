@@ -5,6 +5,7 @@ from pathlib import Path
 from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_plan, section_obligations_for_title
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
 from epistemic_case_mapper.map_briefing_packet_memo import build_packet_memo_plan, render_packet_first_draft, write_packet_first_artifacts
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
@@ -351,3 +352,29 @@ Option A is promising.
     assert weak["status"] == "critical_warnings"
     assert weak["missing_critical_count"] > 0
     assert any(issue["issue_type"] == "missing_must_retain_item" for issue in weak["issues"])
+
+
+def test_packet_first_comparison_report_accounts_for_calls_and_retention() -> None:
+    scaffold = _scaffold()
+    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
+    retention = {
+        "must_retain_count": 3,
+        "retained_must_retain_count": 3,
+        "missing_critical_count": 0,
+        "missing_high_count": 0,
+        "issues": [],
+    }
+
+    report = build_packet_first_comparison_report(
+        scaffold=scaffold,
+        section_rewrite_report={"packet_first": True, "status": "skipped_packet_first_default"},
+        reader_rewrite_report={"status": "full_polish_accepted", "pass_count": 1},
+        runtime_budget_report={"model_call_count": 1},
+        memo_packet_retention_report=retention,
+    )
+
+    assert report["schema_id"] == "packet_first_comparison_report_v1"
+    assert report["packet_first"] is True
+    assert report["baseline_mode"] == "estimated_section_rewrite_baseline"
+    assert report["model_calls"]["estimated_call_delta"] > 0
+    assert report["status"] == "packet_first_supported_by_estimated_comparison"
