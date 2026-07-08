@@ -4,6 +4,7 @@ from pathlib import Path
 
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 
 
 def _scaffold() -> dict:
@@ -196,3 +197,92 @@ def test_scaffold_artifacts_write_packet_reports(tmp_path: Path) -> None:
     assert paths["decision_briefing_packet"].exists()
     assert paths["decision_briefing_packet_report"].exists()
     assert paths["packet_sufficiency_report"].exists()
+
+
+def test_packet_critique_and_refinement_skips_on_prompt_backend() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+
+    result = run_packet_critique_and_refinement(
+        built["decision_briefing_packet"],
+        built["packet_sufficiency_report"],
+        backend="prompt",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["packet_critique_report"]["status"] == "skipped"
+    assert result["packet_critique_adjudication_report"]["status"] == "skipped_prompt_backend"
+    assert result["decision_briefing_packet_refinement_report"]["status"] == "skipped"
+    assert result["decision_briefing_packet"] == built["decision_briefing_packet"]
+
+
+def test_packet_refinement_applies_only_known_id_updates(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    known_bundle_id = built["decision_briefing_packet"]["evidence_bundles"][0]["bundle_id"]
+
+    calls = {"count": 0}
+
+    class FakeResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    def fake_backend(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return FakeResult(
+                """
+                {
+                  "schema_id": "packet_critique_v1",
+                  "packet_sufficiency_judgment": "needs_repair",
+                  "recommended_packet_edits": [
+                    {"edit_type": "relabel", "target_ids": ["%s"], "recommended_role": "strongest_support", "rationale": "Known bundle."},
+                    {"edit_type": "relabel", "target_ids": ["missing_bundle"], "recommended_role": "counterweight", "rationale": "Unknown bundle."}
+                  ]
+                }
+                """
+                % known_bundle_id
+            )
+        return FakeResult(
+            """
+            {
+              "schema_id": "decision_briefing_packet_refinement_v1",
+              "packet_ready_for_synthesis": true,
+              "bundle_updates": [
+                {
+                  "bundle_id": "%s",
+                  "decision_role": "strongest_support",
+                  "weight": "high",
+                  "why_it_matters": "This is the primary source-grounded outcome estimate.",
+                  "section_use": "Use as the primary load-bearing outcome estimate."
+                },
+                {
+                  "bundle_id": "missing_bundle",
+                  "decision_role": "counterweight"
+                }
+              ],
+              "warnings": []
+            }
+            """
+            % known_bundle_id
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+
+    result = run_packet_critique_and_refinement(
+        built["decision_briefing_packet"],
+        built["packet_sufficiency_report"],
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["packet_critique_report"]["status"] == "parsed"
+    assert result["packet_critique_adjudication_report"]["accepted_count"] == 1
+    assert result["packet_critique_adjudication_report"]["rejected_count"] == 1
+    assert result["decision_briefing_packet_refinement_report"]["applied_update_count"] == 1
+    assert result["decision_briefing_packet_refinement_report"]["rejected_update_count"] == 1
+    updated = {
+        row["bundle_id"]: row
+        for row in result["decision_briefing_packet"]["evidence_bundles"]
+    }[known_bundle_id]
+    assert updated["section_use"] == "Use as the primary load-bearing outcome estimate."

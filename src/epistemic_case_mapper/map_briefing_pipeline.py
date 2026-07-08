@@ -34,6 +34,7 @@ from epistemic_case_mapper.map_briefing_argument_model import build_argument_mod
 from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle, build_source_coverage_report
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
@@ -124,7 +125,7 @@ def run_map_briefing(
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
-    _attach_decision_briefing_packet(scaffold, question=question)
+    _attach_decision_briefing_packet(scaffold, question=question, backend_config=backend_config)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -261,8 +262,17 @@ def _attach_decision_spine_bundle(
         )
 
 
-def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str) -> None:
+def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str, backend_config: ModelBackendConfig) -> None:
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
+    scaffold.update(
+        run_packet_critique_and_refinement(
+            scaffold.get("decision_briefing_packet", {}) if isinstance(scaffold.get("decision_briefing_packet"), dict) else {},
+            scaffold.get("packet_sufficiency_report", {}) if isinstance(scaffold.get("packet_sufficiency_report"), dict) else {},
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
+        )
+    )
 
 
 def _attach_model_context_audit(
