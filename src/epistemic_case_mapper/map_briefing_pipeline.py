@@ -276,6 +276,20 @@ def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str,
         )
     )
     scaffold["packet_quality_gate_report"] = build_packet_quality_gate_report(scaffold)
+    packet = scaffold.get("decision_briefing_packet")
+    if isinstance(packet, dict):
+        packet["synthesis_warning_inputs"] = {
+            "packet_sufficiency_issues": (
+                scaffold.get("packet_sufficiency_report", {}).get("issues", [])
+                if isinstance(scaffold.get("packet_sufficiency_report"), dict)
+                else []
+            ),
+            "packet_quality_gate_issues": [
+                issue.get("issue_type")
+                for issue in scaffold["packet_quality_gate_report"].get("issues", [])
+                if isinstance(issue, dict) and issue.get("issue_type")
+            ],
+        }
 
 
 def _attach_model_context_audit(

@@ -650,10 +650,14 @@ def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(
     reader_packet = plan["reader_facing_packet"]
     assert reader_packet["schema_id"] == "reader_facing_decision_packet_v1"
     assert reader_packet["evidence_cards"]
+    assert reader_packet["must_retain_obligations"]
+    assert any(card.get("required_in_memo") for card in reader_packet["evidence_cards"])
+    assert any("25%" in obligation.get("required_terms", []) for obligation in reader_packet["must_retain_obligations"])
     assert "bundle_id" not in str(reader_packet)
     prompt = build_reader_facing_packet_synthesis_prompt(reader_packet)
     assert "Write like an analyst" in prompt
-    assert "required_terms" not in prompt
+    assert "must_retain_obligations" in prompt
+    assert "required_in_memo" in prompt
     assert written["memo_plan_path"].exists()
     assert written["reader_facing_packet_path"].exists()
     assert written["reader_facing_packet_synthesis_prompt_path"].exists()
@@ -661,6 +665,23 @@ def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(
     assert written["section_context_acceptance_report_path"].exists()
     assert written["reader_packet_verbalization_report_path"].exists()
     assert written["report"]["status"] == "ready"
+
+
+def test_reader_packet_includes_compact_synthesis_warnings() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = built["decision_briefing_packet"]
+    packet["synthesis_warning_inputs"] = {
+        "packet_sufficiency_issues": ["counterweights_not_preserved"],
+        "packet_quality_gate_issues": ["packet_critique_warning_only_recommendations"],
+    }
+
+    reader_packet = build_packet_memo_plan(packet)["reader_facing_packet"]
+    prompt = build_reader_facing_packet_synthesis_prompt(reader_packet)
+
+    assert reader_packet["synthesis_warnings"]
+    assert any("counterweight" in warning.lower() for warning in reader_packet["synthesis_warnings"])
+    assert "packet_critique_warning_only_recommendations" not in prompt
+    assert "synthesis_warnings" in prompt
 
 
 def test_memo_packet_retention_report_flags_missing_required_packet_items() -> None:

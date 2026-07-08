@@ -47,7 +47,8 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
     required-term ledgers so generation starts from analyst-readable material.
     """
 
-    cards = [_reader_card(row) for row in _ranked_bundles(packet)]
+    requirements_by_bundle = _bundle_retain_requirements(packet)
+    cards = [_reader_card(row, requirements_by_bundle) for row in _ranked_bundles(packet)]
     cards = [card for card in cards if card.get("statement")]
     support_roles = {"strongest_support", "quantitative_anchor", "mechanism"}
     limit_roles = {"counterweight", "scope_boundary"}
@@ -59,6 +60,8 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "counterweight_cards": _with_card_ids("counterweight", [card for card in cards if card.get("role") in limit_roles][:8]),
         "decision_cruxes": _with_card_ids("crux", _decision_crux_cards(cards, packet)[:6]),
         "quantitative_anchors": _with_card_ids("quantitative", [card for card in cards if card.get("quantities")][:8]),
+        "must_retain_obligations": _reader_must_retain_obligations(packet)[:12],
+        "synthesis_warnings": _reader_synthesis_warnings(packet)[:8],
         "source_trail": _reader_source_trail(packet),
         "reader_limits": _reader_limits(packet),
     }
@@ -72,6 +75,8 @@ def build_reader_facing_packet_synthesis_prompt(reader_packet: dict[str, Any]) -
         "Rules:\n"
         "- Answer the decision question directly.\n"
         "- Preserve load-bearing numbers, uncertainty, exceptions, and source labels.\n"
+        "- Treat `must_retain_obligations` and evidence cards marked `required_in_memo` as mandatory content unless a packet warning says the evidence is unsafe to use.\n"
+        "- Use `synthesis_warnings` to bound confidence and avoid overclaiming; do not name the warning machinery.\n"
         "- Every evidence paragraph or bullet must include bracketed source labels copied from the packet's `source` fields.\n"
         "- Include the exact decision question near the top of the memo.\n"
         "- Do not add parenthetical examples or named conditions unless the same example or condition appears in an evidence card.\n"
@@ -380,10 +385,11 @@ def _bundle_rank(row: dict[str, Any]) -> tuple[int, int, str]:
     return (role_rank, weight_rank, str(row.get("claim") or ""))
 
 
-def _reader_card(row: dict[str, Any]) -> dict[str, Any]:
+def _reader_card(row: dict[str, Any], requirements_by_bundle: dict[str, list[dict[str, Any]]] | None = None) -> dict[str, Any]:
     statement = _clean_reader_statement(str(row.get("claim") or "").strip())
     if not _statement_is_reader_usable(statement, row):
         return {}
+    requirements = (requirements_by_bundle or {}).get(str(row.get("bundle_id", "")).strip(), [])
     return _drop_empty(
         {
             "role": str(row.get("decision_role") or "context").strip(),
@@ -392,6 +398,8 @@ def _reader_card(row: dict[str, Any]) -> dict[str, Any]:
             "quantities": _string_list(row.get("quantity_values"))[:4],
             "interpretation": _clean_interpretation(str(row.get("why_it_matters") or row.get("section_use") or "").strip()),
             "limits": [_clean_reader_statement(item) for item in _string_list(row.get("limits"))[:3]],
+            "required_in_memo": bool(requirements),
+            "must_preserve": _required_terms_for_reader(requirements),
         }
     )
 
@@ -542,6 +550,105 @@ def _reader_limits(packet: dict[str, Any]) -> list[str]:
     if coverage.get("packet_quality_repair_warning_count"):
         limits.append("Some extracted evidence was too malformed for synthesis and was left out of the reader-facing evidence packet.")
     return _dedupe(limits)
+
+
+def _reader_must_retain_obligations(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for item in packet.get("must_retain_ledger", []) if isinstance(packet.get("must_retain_ledger"), list) else []:
+        if not isinstance(item, dict) or item.get("synthesis_suppressed"):
+            continue
+        statement = _clean_reader_statement(str(item.get("statement") or "").strip())
+        if not statement:
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "statement": statement,
+                    "importance": str(item.get("importance") or "").strip(),
+                    "required_terms": _string_list(item.get("required_terms"))[:8],
+                    "source_labels": _source_labels_for_retain_item(packet, item),
+                    "omission_policy": str(item.get("omission_policy") or "").strip(),
+                }
+            )
+        )
+    return rows
+
+
+def _reader_synthesis_warnings(packet: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
+    warning_inputs = packet.get("synthesis_warning_inputs", {}) if isinstance(packet.get("synthesis_warning_inputs"), dict) else {}
+    for issue in _string_list(warning_inputs.get("packet_sufficiency_issues")):
+        warnings.append(_warning_text(issue))
+    for issue in _string_list(warning_inputs.get("packet_quality_gate_issues")):
+        warnings.append(_warning_text(issue))
+    coverage = packet.get("coverage_report", {}) if isinstance(packet.get("coverage_report"), dict) else {}
+    if coverage.get("high_priority_omitted_count"):
+        warnings.append("Do not imply the packet is exhaustive; some high-priority candidate evidence was omitted from the compact synthesis packet.")
+    if coverage.get("packet_quality_repair_warning_count"):
+        warnings.append("Some extracted rows were too malformed for safe synthesis; avoid using fragments or page boilerplate as evidence.")
+    return _dedupe(warnings)
+
+
+def _warning_text(issue: str) -> str:
+    labels = {
+        "high_priority_omitted_evidence": "Do not imply exhaustive coverage; high-priority available evidence may be omitted from the compact packet.",
+        "missing_available_roles": "Avoid a one-sided read if available support, counterweight, scope, crux, or quantity roles are missing from the retained packet.",
+        "top_quantities_missing_from_must_retain": "Check that load-bearing quantities remain visible in the memo.",
+        "counterweights_not_preserved": "Avoid overstating the answer because available counterweight evidence was not preserved.",
+        "weakly_anchored_bundles": "Bound confidence where evidence cards have weak or missing source grounding.",
+        "over_merge_risk": "Avoid treating heavily merged evidence as a single clean finding.",
+        "packet_sufficiency_warnings": "Use packet limitations to bound the answer rather than presenting the memo as exhaustive.",
+        "packet_critique_rejected_recommendations": "Some critique recommendations could not be applied automatically; avoid overconfident synthesis where packet quality is uncertain.",
+        "packet_critique_warning_only_recommendations": "Some critique recommendations were warning-only; use them to qualify confidence rather than as new evidence.",
+    }
+    return labels.get(issue, f"Account for packet limitation: {issue}.")
+
+
+def _bundle_retain_requirements(packet: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    bundle_lookup = _bundle_lookup(packet)
+    result: dict[str, list[dict[str, Any]]] = {}
+    for item in packet.get("must_retain_ledger", []) if isinstance(packet.get("must_retain_ledger"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        for bundle_id in _bundle_ids_for_retain_item(item, bundle_lookup):
+            result.setdefault(bundle_id, []).append(item)
+    return result
+
+
+def _bundle_ids_for_retain_item(item: dict[str, Any], bundle_lookup: dict[str, dict[str, Any]]) -> list[str]:
+    explicit = [bundle_id for bundle_id in _string_list(item.get("bundle_ids")) if bundle_id in bundle_lookup]
+    if explicit:
+        return explicit
+    claim_ids = set(_string_list(item.get("claim_ids")))
+    source_ids = set(_string_list(item.get("source_ids")))
+    matched = []
+    for bundle_id, bundle in bundle_lookup.items():
+        if claim_ids and claim_ids & set(_string_list(bundle.get("claim_ids"))):
+            matched.append(bundle_id)
+            continue
+        if source_ids and source_ids & set(_string_list(bundle.get("source_ids"))):
+            matched.append(bundle_id)
+    return matched[:5]
+
+
+def _required_terms_for_reader(requirements: list[dict[str, Any]]) -> list[str]:
+    terms = []
+    for item in requirements:
+        terms.extend(_string_list(item.get("required_terms")))
+    return _dedupe(terms)[:8]
+
+
+def _source_labels_for_retain_item(packet: dict[str, Any], item: dict[str, Any]) -> list[str]:
+    source_lookup = {
+        str(row.get("source_id") or "").strip(): str(row.get("source_label") or "").strip()
+        for row in packet.get("source_trail", [])
+        if isinstance(row, dict)
+    }
+    return [
+        source_lookup[source_id]
+        for source_id in _string_list(item.get("source_ids"))
+        if source_lookup.get(source_id)
+    ][:5]
 
 
 def _reader_card_section(value: Any, *, empty: str) -> str:
