@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from epistemic_case_mapper.map_briefing_decision_packet import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_packet_critique_issues import (
@@ -23,27 +23,54 @@ PacketJudgment = Literal["ready", "needs_repair", "not_sufficient"]
 PacketEditType = Literal["promote", "demote", "split", "merge", "relabel", "add_warning", "insufficiency_warning"]
 
 
-class PacketFrameRisk(BaseModel):
+def _blank_if_none(value: Any) -> Any:
+    return "" if value is None else value
+
+
+def _note_to_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        for key in ("description", "risk", "issue", "critique", "comment", "warning", "recommended_action"):
+            text = str(value.get(key, "")).strip()
+            if text:
+                return text
+        return json.dumps(value, sort_keys=True, ensure_ascii=False)
+    return str(value).strip()
+
+
+class _FlexibleCritiqueModel(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class PacketFrameRisk(_FlexibleCritiqueModel):
     risk: str = ""
     affected_bundle_ids: list[str] = Field(default_factory=list, max_length=12)
     why_it_matters: str = ""
     recommended_action: str = ""
 
 
-class MissingDecisionFunction(BaseModel):
+class MissingDecisionFunction(_FlexibleCritiqueModel):
     decision_function: str = ""
     evidence_ids_that_suggest_gap: list[str] = Field(default_factory=list, max_length=12)
     recommended_action: str = ""
 
 
-class MisassignedRole(BaseModel):
+class MisassignedRole(_FlexibleCritiqueModel):
     bundle_id: str = ""
     current_role: str = ""
     recommended_role: str = ""
     rationale: str = ""
 
+    @field_validator("bundle_id", "current_role", "recommended_role", "rationale", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class RecommendedPacketEdit(BaseModel):
+
+class RecommendedPacketEdit(_FlexibleCritiqueModel):
     edit_type: PacketEditType
     target_ids: list[str] = Field(default_factory=list, max_length=12)
     target_id: str = ""
@@ -51,12 +78,18 @@ class RecommendedPacketEdit(BaseModel):
     source_id: str = ""
     rationale: str = ""
     description: str = ""
+    reason: str = ""
     recommended_role: str = ""
     recommended_weight: str = ""
     warning: str = ""
 
+    @field_validator("target_id", "bundle_id", "source_id", "rationale", "description", "reason", "recommended_role", "recommended_weight", "warning", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class BundleRoleCheck(BaseModel):
+
+class BundleRoleCheck(_FlexibleCritiqueModel):
     bundle_id: str = ""
     current_role: str = ""
     directionality: str = ""
@@ -65,9 +98,15 @@ class BundleRoleCheck(BaseModel):
     rationale: str = ""
     problem: str = ""
 
+    @field_validator("bundle_id", "current_role", "directionality", "recommended_role", "rationale", "problem", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class SynthesisRisk(BaseModel):
+
+class SynthesisRisk(_FlexibleCritiqueModel):
     type: str = ""
+    risk_type: str = ""
     risk: str = ""
     description: str = ""
     impact_level: str = ""
@@ -76,40 +115,97 @@ class SynthesisRisk(BaseModel):
     why_it_matters: str = ""
     recommended_action: str = ""
 
+    @field_validator("type", "risk_type", "risk", "description", "impact_level", "why_it_matters", "recommended_action", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class PacketInsufficiencyWarning(BaseModel):
+    @model_validator(mode="after")
+    def normalize_synonyms(self) -> "SynthesisRisk":
+        if not self.type and self.risk_type:
+            self.type = self.risk_type
+        if not self.risk and self.description:
+            self.risk = self.description
+        return self
+
+
+class PacketInsufficiencyWarning(_FlexibleCritiqueModel):
+    type: str = ""
     bundle_id: str = ""
     source_id: str = ""
     reason: str = ""
+    description: str = ""
     warning: str = ""
     recommended_action: str = ""
 
+    @field_validator("type", "bundle_id", "source_id", "reason", "description", "warning", "recommended_action", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class ClaimQualityIssue(BaseModel):
+    @model_validator(mode="after")
+    def normalize_description(self) -> "PacketInsufficiencyWarning":
+        if not self.reason and self.description:
+            self.reason = self.description
+        if not self.warning and self.description:
+            self.warning = self.description
+        return self
+
+
+class ClaimQualityIssue(_FlexibleCritiqueModel):
     bundle_id: str = ""
     claim: str = ""
     issue: str = ""
+    description: str = ""
     why_it_matters: str = ""
     recommended_action: str = ""
 
+    @field_validator("bundle_id", "claim", "issue", "description", "why_it_matters", "recommended_action", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class SectionRoutingIssue(BaseModel):
+    @model_validator(mode="after")
+    def normalize_description(self) -> "ClaimQualityIssue":
+        if not self.issue and self.description:
+            self.issue = self.description
+        return self
+
+
+class SectionRoutingIssue(_FlexibleCritiqueModel):
     bundle_id: str = ""
     section: str = ""
     current_bucket: str = ""
     issue: str = ""
+    description: str = ""
     recommended_action: str = ""
 
+    @field_validator("bundle_id", "section", "current_bucket", "issue", "description", "recommended_action", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class AnswerFrameIssue(BaseModel):
+    @model_validator(mode="after")
+    def normalize_description(self) -> "SectionRoutingIssue":
+        if not self.issue and self.description:
+            self.issue = self.description
+        return self
+
+
+class AnswerFrameIssue(_FlexibleCritiqueModel):
     component: str = ""
     critique: str = ""
     risk: str = ""
     why_it_matters: str = ""
     recommended_action: str = ""
 
+    @field_validator("component", "critique", "risk", "why_it_matters", "recommended_action", mode="before")
+    @classmethod
+    def coerce_nullable_text(cls, value: Any) -> Any:
+        return _blank_if_none(value)
 
-class PacketCritiqueOutput(BaseModel):
+
+class PacketCritiqueOutput(_FlexibleCritiqueModel):
     schema_id: Literal["packet_critique_v1"] = "packet_critique_v1"
     decision_adequate: bool | None = None
     packet_sufficiency_judgment: PacketJudgment = "ready"
@@ -130,6 +226,16 @@ class PacketCritiqueOutput(BaseModel):
     missing_or_weak_cruxes: list[str] = Field(default_factory=list, max_length=8)
     section_plan_risks: list[str] = Field(default_factory=list, max_length=8)
     recommended_packet_edits: list[RecommendedPacketEdit] = Field(default_factory=list, max_length=16)
+
+    @field_validator("missing_or_weak_cruxes", "section_plan_risks", mode="before")
+    @classmethod
+    def coerce_note_rows(cls, value: Any) -> Any:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [text for item in value if (text := _note_to_text(item))]
+        text = _note_to_text(value)
+        return [text] if text else []
 
 
 class BundleRefinement(BaseModel):
