@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from epistemic_case_mapper.map_briefing_decision_packet import packet_summary_for_model
+from epistemic_case_mapper.map_briefing_packet_critique_issues import (
+    dedupe_issue_rows,
+    normalized_critique_issues,
+)
+from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -14,7 +20,7 @@ from epistemic_case_mapper.model_schemas import parse_model_output_report
 
 
 PacketJudgment = Literal["ready", "needs_repair", "not_sufficient"]
-PacketEditType = Literal["promote", "demote", "split", "merge", "relabel", "add_warning"]
+PacketEditType = Literal["promote", "demote", "split", "merge", "relabel", "add_warning", "insufficiency_warning"]
 
 
 class PacketFrameRisk(BaseModel):
@@ -40,16 +46,83 @@ class MisassignedRole(BaseModel):
 class RecommendedPacketEdit(BaseModel):
     edit_type: PacketEditType
     target_ids: list[str] = Field(default_factory=list, max_length=12)
+    target_id: str = ""
+    bundle_id: str = ""
+    source_id: str = ""
     rationale: str = ""
+    description: str = ""
     recommended_role: str = ""
     recommended_weight: str = ""
     warning: str = ""
 
 
+class BundleRoleCheck(BaseModel):
+    bundle_id: str = ""
+    current_role: str = ""
+    directionality: str = ""
+    role_matches_claim_and_direction: bool = True
+    recommended_role: str = ""
+    rationale: str = ""
+    problem: str = ""
+
+
+class SynthesisRisk(BaseModel):
+    type: str = ""
+    risk: str = ""
+    description: str = ""
+    impact_level: str = ""
+    affected_bundle_ids: list[str] = Field(default_factory=list, max_length=12)
+    affected_sections: list[str] = Field(default_factory=list, max_length=8)
+    why_it_matters: str = ""
+    recommended_action: str = ""
+
+
+class PacketInsufficiencyWarning(BaseModel):
+    bundle_id: str = ""
+    source_id: str = ""
+    reason: str = ""
+    warning: str = ""
+    recommended_action: str = ""
+
+
+class ClaimQualityIssue(BaseModel):
+    bundle_id: str = ""
+    claim: str = ""
+    issue: str = ""
+    why_it_matters: str = ""
+    recommended_action: str = ""
+
+
+class SectionRoutingIssue(BaseModel):
+    bundle_id: str = ""
+    section: str = ""
+    current_bucket: str = ""
+    issue: str = ""
+    recommended_action: str = ""
+
+
+class AnswerFrameIssue(BaseModel):
+    component: str = ""
+    critique: str = ""
+    risk: str = ""
+    why_it_matters: str = ""
+    recommended_action: str = ""
+
+
 class PacketCritiqueOutput(BaseModel):
     schema_id: Literal["packet_critique_v1"] = "packet_critique_v1"
+    decision_adequate: bool | None = None
     packet_sufficiency_judgment: PacketJudgment = "ready"
+    bundle_role_checks: list[BundleRoleCheck] = Field(default_factory=list, max_length=24)
     bad_answer_frame_risks: list[PacketFrameRisk] = Field(default_factory=list, max_length=8)
+    answer_frame_issues: list[AnswerFrameIssue] = Field(default_factory=list, max_length=8)
+    answer_frame_challenges: list[AnswerFrameIssue] = Field(default_factory=list, max_length=8)
+    misleading_synthesis_risks: list[SynthesisRisk | str] = Field(default_factory=list, max_length=12)
+    misleading_risks: list[SynthesisRisk | str] = Field(default_factory=list, max_length=12)
+    insufficiency_warnings: list[PacketInsufficiencyWarning] = Field(default_factory=list, max_length=12)
+    claim_quality_issues: list[ClaimQualityIssue] = Field(default_factory=list, max_length=12)
+    section_routing_issues: list[SectionRoutingIssue] = Field(default_factory=list, max_length=12)
+    challenges: dict[str, Any] = Field(default_factory=dict)
     missing_decision_functions: list[MissingDecisionFunction] = Field(default_factory=list, max_length=8)
     misassigned_roles: list[MisassignedRole] = Field(default_factory=list, max_length=12)
     overweighted_bundles: list[str] = Field(default_factory=list, max_length=12)
@@ -185,8 +258,9 @@ def run_packet_refinement(
     ).text
     parse_report = parse_model_output_report(raw, PacketRefinementOutput)
     if not parse_report.get("ok"):
+        repaired, repair_report = repair_packet_for_synthesis(packet, critique_adjudication)
         return {
-            "packet": packet,
+            "packet": repaired,
             "prompt": prompt,
             "raw": canonical_json_output(raw),
             "report": {
@@ -195,11 +269,16 @@ def run_packet_refinement(
                 "parse_report": parse_report,
                 "applied_update_count": 0,
                 "rejected_update_count": 0,
+                "packet_quality_repair_report": repair_report,
             },
         }
     refined, applied, rejected = apply_packet_refinement(packet, parse_report["data"])
+    cleanup_applied, cleanup_rejected = apply_adjudicated_relabel_cleanup(refined, critique_adjudication)
+    applied.extend(cleanup_applied)
+    rejected.extend(cleanup_rejected)
+    repaired, repair_report = repair_packet_for_synthesis(refined, critique_adjudication)
     return {
-        "packet": refined,
+        "packet": repaired,
         "prompt": prompt,
         "raw": canonical_json_output(raw),
         "report": {
@@ -212,6 +291,7 @@ def run_packet_refinement(
             "applied_updates": applied[:30],
             "rejected_updates": rejected[:30],
             "warnings": parse_report["data"].get("warnings", []),
+            "packet_quality_repair_report": repair_report,
         },
     }
 
@@ -221,7 +301,14 @@ def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dic
     return (
         "You are an adversarial analyst reviewing a source-grounded decision briefing packet before prose synthesis.\n"
         "Do not write the memo. Identify whether the packet is decision-adequate and where it may mislead synthesis.\n"
-        "You may challenge the answer frame, role assignments, weights, cruxes, and section plan.\n"
+        "You must check every evidence_bundles row in the packet summary for role/direction consistency.\n"
+        "For each bundle, decide whether `decision_role` matches the claim text, source role, directionality, and section_use.\n"
+        "Use these role meanings: strongest_support = evidence supporting the main/default answer; counterweight = evidence that challenges, weakens, or cautions against the answer; scope_boundary = evidence limiting where the answer applies; quantitative_anchor = a load-bearing numeric estimate; decision_crux = a fact or uncertainty that could change the answer; mechanism/context = explanatory or background evidence.\n"
+        "If a bundle has directionality like challenges/in_tension/bounds but current_role is strongest_support, treat that as suspicious unless the claim clearly supports the answer despite the direction label.\n"
+        "Return one `bundle_role_checks` item for every bundle in the packet summary. If role_matches_claim_and_direction is false, set recommended_role and add the same problem to `misassigned_roles` and `recommended_packet_edits` with edit_type `relabel`.\n"
+        "When adding recommended_packet_edits, use target_ids for bundle IDs; if you include a source-only insufficiency warning, use edit_type `add_warning`.\n"
+        "Also check for packet problems that would mislead synthesis even when role labels are valid: malformed or non-claim claim text, off-question evidence, low-quality evidence treated as load-bearing, answer-frame problems, section-routing mistakes, missing decision functions, overcompressed scope/crux evidence, and quantity interpretation risks.\n"
+        "Record these in the structured fields: misleading_synthesis_risks, insufficiency_warnings, claim_quality_issues, section_routing_issues, answer_frame_issues, missing_decision_functions, missing_or_weak_cruxes, and section_plan_risks.\n"
         "You may not invent new sources, quantities, or claims. Recommendations must reference existing IDs, or be recorded as insufficiency warnings.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
@@ -240,6 +327,8 @@ def build_packet_refinement_prompt(
     return (
         "You are improving a structured decision briefing packet, not writing prose.\n"
         "Use the accepted critique recommendations and sufficiency report to improve roles, weights, salience, crux clarity, and bundle rationales.\n"
+        "For accepted recommendations with edit_type `relabel`, return a bundle_update for each target bundle with the recommended decision_role and rewrite all role-dependent fields you touch, especially section_use and why_it_matters, so they no longer describe the old role.\n"
+        "Role-dependent language must be internally consistent: strongest_support should explain how the item supports the current answer; counterweight should explain how it challenges, limits, or cautions against the current answer; scope_boundary should explain where the answer applies; quantitative_anchor should explain the numeric estimate carried by the item.\n"
         "Do not add new sources, quantities, claims, or IDs. Preserve every critical/high must-retain item unless you explicitly demote it with an anchored rationale.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
@@ -291,6 +380,73 @@ def apply_packet_refinement(packet: dict[str, Any], payload: dict[str, Any]) -> 
     return refined, applied, rejected
 
 
+def apply_adjudicated_relabel_cleanup(packet: dict[str, Any], critique_adjudication: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    bundle_lookup = {
+        str(bundle.get("bundle_id")): bundle
+        for bundle in packet.get("evidence_bundles", [])
+        if isinstance(bundle, dict)
+    }
+    applied: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for recommendation in critique_adjudication.get("accepted_recommendations", []) if isinstance(critique_adjudication.get("accepted_recommendations"), list) else []:
+        if not isinstance(recommendation, dict) or recommendation.get("edit_type") != "relabel":
+            continue
+        role = str(recommendation.get("recommended_role", "")).strip()
+        if not role:
+            continue
+        for target_id in _string_list(recommendation.get("target_ids")):
+            bundle = bundle_lookup.get(target_id)
+            if not bundle:
+                rejected.append({"target_id": target_id, "reason": "unknown_bundle_id_for_adjudicated_relabel"})
+                continue
+            changed = _apply_role_consistency_cleanup(bundle, role)
+            if changed:
+                applied.append(
+                    {
+                        "target_id": target_id,
+                        "fields": changed,
+                        "rationale": recommendation.get("rationale", ""),
+                        "source": "accepted_critique_relabel_cleanup",
+                    }
+                )
+    return applied, rejected
+
+
+def _apply_role_consistency_cleanup(bundle: dict[str, Any], role: str) -> list[str]:
+    changed = []
+    if str(bundle.get("decision_role", "")).strip() != role:
+        bundle["decision_role"] = role
+        changed.append("decision_role")
+    section_use = str(bundle.get("section_use", "")).strip()
+    if not section_use or _section_use_conflicts_with_role(section_use, role):
+        bundle["section_use"] = _default_section_use_for_role(role)
+        changed.append("section_use")
+    return changed
+
+
+def _section_use_conflicts_with_role(section_use: str, role: str) -> bool:
+    text = section_use.lower()
+    support_terms = ("primary support", "strongest support", "load-bearing support", "supports the current answer")
+    caution_terms = ("contrary evidence", "counterweight", "challenges", "cautions against", "limits the current answer")
+    if role == "counterweight":
+        return any(term in text for term in support_terms)
+    if role == "strongest_support":
+        return any(term in text for term in caution_terms)
+    return False
+
+
+def _default_section_use_for_role(role: str) -> str:
+    uses = {
+        "strongest_support": "Use as evidence supporting the current answer.",
+        "counterweight": "Use as contrary or cautionary evidence that tests the current answer.",
+        "scope_boundary": "Use to define where the current answer does and does not apply.",
+        "quantitative_anchor": "Use as a load-bearing quantitative estimate for the decision.",
+        "decision_crux": "Use as a crux that could change the recommended answer.",
+        "mechanism/context": "Use as mechanism or context for interpreting the decision evidence.",
+    }
+    return uses.get(role, "Use according to the accepted evidence role for this decision.")
+
+
 def _adjudication_report(critique: dict[str, Any], packet: dict[str, Any], *, skipped: bool = False) -> dict[str, Any]:
     ids = _known_packet_ids(packet)
     if skipped:
@@ -304,14 +460,25 @@ def _adjudication_report(critique: dict[str, Any], packet: dict[str, Any], *, sk
     accepted = []
     rejected = []
     warning_only = []
-    for edit in critique.get("recommended_packet_edits", []) if isinstance(critique.get("recommended_packet_edits"), list) else []:
+    role_check_edits = _recommended_edits_from_role_checks(critique)
+    explicit_edits = critique.get("recommended_packet_edits", []) if isinstance(critique.get("recommended_packet_edits"), list) else []
+    for edit in [*role_check_edits, *explicit_edits]:
+        edit = _normalize_recommended_edit(edit)
         target_ids = [str(item) for item in edit.get("target_ids", []) if str(item).strip()]
-        if target_ids and all(target_id in ids for target_id in target_ids):
+        if edit.get("edit_type") in {"add_warning", "insufficiency_warning"} and not target_ids:
+            warning_only.append({**edit, "reason": "source_or_packet_level_warning"})
+        elif edit.get("edit_type") == "relabel" and not str(edit.get("recommended_role", "")).strip():
+            warning_only.append({**edit, "reason": "relabel_without_recommended_role"})
+        elif target_ids and all(target_id in ids for target_id in target_ids):
             accepted.append(edit)
         elif target_ids:
             rejected.append({**edit, "reason": "unknown_target_id"})
         else:
             warning_only.append({**edit, "reason": "no_target_ids"})
+    accepted = dedupe_issue_rows(accepted, key_fields=("edit_type", "target_ids", "recommended_role", "recommended_weight"))
+    rejected = dedupe_issue_rows(rejected, key_fields=("edit_type", "target_ids", "recommended_role", "reason"))
+    warning_only = dedupe_issue_rows(warning_only, key_fields=("edit_type", "target_ids", "bundle_id", "source_id", "warning", "reason"))
+    normalized_issues = normalized_critique_issues(critique, packet)
     return {
         "schema_id": "packet_critique_adjudication_report_v1",
         "status": "accepted_with_warnings" if rejected or warning_only else "accepted",
@@ -322,11 +489,104 @@ def _adjudication_report(critique: dict[str, Any], packet: dict[str, Any], *, sk
         "accepted_count": len(accepted),
         "rejected_count": len(rejected),
         "warning_only_count": len(warning_only),
+        "bundle_role_checks": critique.get("bundle_role_checks", []),
         "bad_answer_frame_risks": critique.get("bad_answer_frame_risks", []),
+        "answer_frame_issues": normalized_issues["answer_frame_issues"],
+        "misleading_synthesis_risks": normalized_issues["misleading_synthesis_risks"],
+        "insufficiency_warnings": normalized_issues["insufficiency_warnings"],
+        "claim_quality_issues": normalized_issues["claim_quality_issues"],
+        "section_routing_issues": normalized_issues["section_routing_issues"],
         "missing_decision_functions": critique.get("missing_decision_functions", []),
         "misassigned_roles": critique.get("misassigned_roles", []),
         "section_plan_risks": critique.get("section_plan_risks", []),
     }
+
+
+def _recommended_edits_from_role_checks(critique: dict[str, Any]) -> list[dict[str, Any]]:
+    edits = []
+    for check in critique.get("bundle_role_checks", []) if isinstance(critique.get("bundle_role_checks"), list) else []:
+        if not isinstance(check, dict) or check.get("role_matches_claim_and_direction") is not False:
+            continue
+        bundle_id = str(check.get("bundle_id", "")).strip()
+        recommended_role = str(check.get("recommended_role", "")).strip()
+        if not bundle_id or not recommended_role:
+            continue
+        edits.append(
+            {
+                "edit_type": "relabel",
+                "target_ids": [bundle_id],
+                "recommended_role": recommended_role,
+                "rationale": str(check.get("rationale") or check.get("problem") or "").strip(),
+                "source": "bundle_role_check",
+            }
+        )
+    return edits
+
+
+def _normalize_recommended_edit(edit: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(edit)
+    target_ids = _string_list(normalized.get("target_ids"))
+    if not target_ids and str(normalized.get("target_id", "")).strip():
+        target_ids = [str(normalized.get("target_id", "")).strip()]
+    if not target_ids and str(normalized.get("bundle_id", "")).strip():
+        target_ids = [str(normalized.get("bundle_id", "")).strip()]
+    if target_ids:
+        normalized["target_ids"] = target_ids
+    if not normalized.get("rationale") and normalized.get("description"):
+        normalized["rationale"] = normalized.get("description")
+    if normalized.get("edit_type") == "insufficiency_warning":
+        normalized["edit_type"] = "add_warning"
+        if normalized.get("description") and not normalized.get("warning"):
+            normalized["warning"] = normalized.get("description")
+    if normalized.get("edit_type") == "relabel" and not str(normalized.get("recommended_role", "")).strip():
+        inferred = _infer_recommended_role_from_text(
+            " ".join(
+                item
+                for item in (
+                    str(normalized.get("rationale", "")),
+                    str(normalized.get("description", "")),
+                    str(normalized.get("warning", "")),
+                )
+                if item.strip()
+            )
+        )
+        if inferred:
+            normalized["recommended_role"] = inferred
+    return normalized
+
+
+def _infer_recommended_role_from_text(text: str) -> str:
+    lowered = text.lower()
+    roles = (
+        "strongest_support",
+        "counterweight",
+        "scope_boundary",
+        "quantitative_anchor",
+        "decision_crux",
+        "mechanism/context",
+        "mechanism",
+        "context",
+    )
+    phrase_map = {
+        "strongest support": "strongest_support",
+        "primary support": "strongest_support",
+        "scope boundary": "scope_boundary",
+        "quantitative anchor": "quantitative_anchor",
+        "decision crux": "decision_crux",
+    }
+    for role in roles:
+        if re.search(rf"\bto\s+{re.escape(role)}\b", lowered):
+            return role
+    for phrase, role in phrase_map.items():
+        if re.search(rf"\bto\s+{re.escape(phrase)}\b", lowered):
+            return role
+    for role in roles:
+        if role in lowered:
+            return role
+    for phrase, role in phrase_map.items():
+        if phrase in lowered:
+            return role
+    return ""
 
 
 def _apply_bundle_update(target: dict[str, Any], update: dict[str, Any]) -> list[str]:

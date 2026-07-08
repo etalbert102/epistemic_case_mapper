@@ -68,12 +68,21 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
 def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -> dict[str, Any]:
     """Return a compact, model-facing view for critique/refinement/writing."""
 
-    bundles = [row for row in packet.get("evidence_bundles", []) if isinstance(row, dict)]
+    bundles = [
+        row
+        for row in packet.get("evidence_bundles", [])
+        if isinstance(row, dict) and not row.get("synthesis_suppressed")
+    ]
+    retain_rows = [
+        row
+        for row in packet.get("must_retain_ledger", [])
+        if isinstance(row, dict) and not row.get("synthesis_suppressed")
+    ]
     return {
         "schema_id": "decision_briefing_packet_model_view_v1",
         "decision_question": packet.get("decision_question"),
         "answer_frame": packet.get("answer_frame", {}),
-        "must_retain_ledger": packet.get("must_retain_ledger", [])[:18],
+        "must_retain_ledger": retain_rows[:18],
         "evidence_bundles": bundles[:max_bundles],
         "section_views": packet.get("section_views", []),
         "source_trail": packet.get("source_trail", [])[:24],
@@ -174,6 +183,8 @@ def _source_cards_for_candidate(
 
 def _argument_item_candidates(scaffold: dict[str, Any], offset: int) -> list[dict[str, Any]]:
     argument = _dict(scaffold.get("argument_model"))
+    source_by_claim = _source_cards_by_claim(scaffold)
+    quantity_by_id = _quantity_rows_by_id(scaffold)
     specs = [
         ("strongest_support", "strongest_support", 9),
         ("counterweight", "strongest_counterarguments", 9),
@@ -184,27 +195,33 @@ def _argument_item_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
     rows: list[dict[str, Any]] = []
     for role, key, base_score in specs:
         for item in [row for row in argument.get(key, []) if isinstance(row, dict)][:8]:
+            claim_ids = _string_list(item.get("claim_ids"))[:8]
+            quantity_ids = _string_list(item.get("quantity_ids"))[:8]
+            quantities = _string_list(item.get("quantities"))[:8]
+            if role == "quantitative_anchor" and not quantities:
+                continue
+            source_ids = _source_ids_for_argument_item(scaffold, item, source_by_claim=source_by_claim, quantity_by_id=quantity_by_id)
             rows.append(
                 _drop_empty(
                     {
                         "pool_id": f"pool_{offset+len(rows)+1:04d}",
                         "candidate_card_id": "",
-                        "claim_ids": _string_list(item.get("claim_ids"))[:8],
-                        "source_ids": _string_list(item.get("source_ids"))[:8],
-                        "source_labels": _source_labels(scaffold, _string_list(item.get("source_ids"))[:8]),
+                        "claim_ids": claim_ids,
+                        "source_ids": source_ids,
+                        "source_labels": _source_labels(scaffold, source_ids, fallback=_string_list(item.get("sources"))),
                         "relation_ids": _string_list(item.get("relation_ids"))[:8],
-                        "quantity_ids": _string_list(item.get("quantity_ids"))[:8],
+                        "quantity_ids": quantity_ids,
                         "claim": _short_text(str(item.get("statement", "")), 420),
                         "decision_role": role,
                         "raw_roles": [key],
-                        "quantity_values": _string_list(item.get("quantities"))[:8],
+                        "quantity_values": quantities,
                         "limitations": _string_list(item.get("limitations"))[:6],
                         "decision_relevance_score": base_score,
                         "quality": item.get("weight"),
                         "why_it_matters": _short_text(str(item.get("why_it_matters", "")), 260),
                         "limits": _string_list(item.get("limitations"))[:6],
                         "directionality": _directionality_for_role(role),
-                        "source_grounded": bool(_string_list(item.get("source_ids")) or _string_list(item.get("claim_ids"))),
+                        "source_grounded": bool(source_ids or claim_ids),
                         "pretrim_kind": f"argument_model.{key}",
                     }
                 )
@@ -217,6 +234,11 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
     rows: list[dict[str, Any]] = []
     for card in [row for row in ledger.get("evidence_cards", []) if isinstance(row, dict)][:18]:
         quantities = _dedupe([*_string_list(card.get("key_quantities")), *_string_list(card.get("effect_estimates"))])
+        if not quantities:
+            continue
+        source_ids = _source_ids_for_quantity_row(scaffold, card)
+        if not source_ids and _is_relation_rationale_source(card):
+            continue
         rows.append(
             _drop_empty(
                 {
@@ -224,8 +246,8 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
                     "candidate_card_id": str(card.get("atomic_evidence_card_id", "")),
                     "claim_ids": [str(card.get("claim_id", ""))] if str(card.get("claim_id", "")).strip() else [],
                     "quantity_ids": [str(card.get("card_id", ""))] if str(card.get("card_id", "")).strip() else [],
-                    "source_ids": _string_list(card.get("source_id")),
-                    "source_labels": _source_labels(scaffold, _string_list(card.get("source_id"))),
+                    "source_ids": source_ids,
+                    "source_labels": _source_labels(scaffold, source_ids, fallback=_string_list(card.get("source"))),
                     "claim": _short_text(str(card.get("claim", "")), 420),
                     "source_excerpt": _short_text(str(card.get("context", "")), 520),
                     "decision_role": "quantitative_anchor",
@@ -236,7 +258,7 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int) -> list[dic
                     "why_it_matters": _short_text(str(card.get("interpretation_hint") or card.get("evidence_use") or ""), 260),
                     "limits": _string_list(card.get("limitations"))[:6],
                     "directionality": str(card.get("direction") or "quantitative_anchor"),
-                    "source_grounded": True,
+                    "source_grounded": bool(source_ids),
                     "pretrim_kind": "quantity_ledger.evidence_card",
                 }
             )
@@ -316,9 +338,10 @@ def _must_retain_ledger(scaffold: dict[str, Any], bundles: list[dict[str, Any]])
 
 
 def _retain_item(index: int, bundle: dict[str, Any], *, importance: str) -> dict[str, Any]:
+    quantity_limit = 12 if bundle.get("decision_role") == "quantitative_anchor" else 6
     required_terms = _dedupe(
         [
-            *_string_list(bundle.get("quantity_values"))[:6],
+            *_string_list(bundle.get("quantity_values"))[:quantity_limit],
             *_string_list(bundle.get("source_labels"))[:3],
             *_key_phrases(str(bundle.get("claim", "")))[:4],
         ]
@@ -343,7 +366,8 @@ def _retain_item(index: int, bundle: dict[str, Any], *, importance: str) -> dict
 
 
 def _retain_quantity_item(index: int, quantity: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
-    source_ids = _string_list(quantity.get("source"))
+    source_ids = _source_ids_for_quantity_row(scaffold, quantity)
+    source_labels = _source_labels(scaffold, source_ids, fallback=_string_list(quantity.get("source")))
     return _drop_empty(
         {
             "item_id": f"retain_{index:03d}",
@@ -351,7 +375,7 @@ def _retain_quantity_item(index: int, quantity: dict[str, Any], scaffold: dict[s
             "statement": _short_text(str(quantity.get("claim", "")), 320),
             "required_terms": _dedupe([str(quantity.get("quantity_text", "")), *_key_phrases(str(quantity.get("claim", "")))])[:10],
             "source_ids": source_ids,
-            "source_labels": _source_labels(scaffold, source_ids),
+            "source_labels": source_labels,
             "claim_ids": _string_list(quantity.get("claim_id"))[:4],
             "quantity_ids": _string_list(quantity.get("quantity_id"))[:4],
             "importance": "critical",
@@ -492,6 +516,63 @@ def _top_quantity_anchor_rows(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
 def _quantity_already_retained(quantity: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
     terms = {_norm(term) for row in rows for term in _string_list(row.get("required_terms"))}
     return _norm(str(quantity.get("quantity_text", ""))) in terms
+
+
+def _quantity_rows_by_id(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    ledger = _dict(scaffold.get("quantity_ledger"))
+    rows = {}
+    for key in ("evidence_cards", "top_quantitative_anchors"):
+        for row in ledger.get(key, []) if isinstance(ledger.get(key), list) else []:
+            if not isinstance(row, dict):
+                continue
+            for row_id in _string_list(row.get("card_id")) + _string_list(row.get("quantity_id")):
+                rows[row_id] = row
+    return rows
+
+
+def _source_ids_for_argument_item(
+    scaffold: dict[str, Any],
+    item: dict[str, Any],
+    *,
+    source_by_claim: dict[str, list[dict[str, Any]]],
+    quantity_by_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    source_ids = _string_list(item.get("source_ids"))[:8]
+    if source_ids:
+        return source_ids
+    resolved: list[str] = []
+    for claim_id in _string_list(item.get("claim_ids")):
+        for source_card in source_by_claim.get(claim_id, []):
+            resolved.extend(_string_list(source_card.get("source_id")))
+    for quantity_id in _string_list(item.get("quantity_ids")):
+        quantity_row = quantity_by_id.get(quantity_id, {})
+        resolved.extend(_source_ids_for_quantity_row(scaffold, quantity_row))
+    return _dedupe(resolved)[:8]
+
+
+def _source_ids_for_quantity_row(scaffold: dict[str, Any], row: dict[str, Any]) -> list[str]:
+    explicit = _dedupe([*_string_list(row.get("source_id")), *_string_list(row.get("source_ids"))])
+    if explicit:
+        return explicit
+    source_text = str(row.get("source") or row.get("source_title") or "").strip()
+    if not source_text:
+        return []
+    display = _dict(scaffold.get("source_display_names"))
+    citation = _dict(scaffold.get("source_citation_labels"))
+    matches = [
+        source_id
+        for source_id, label in {**display, **citation}.items()
+        if _norm(str(label)) == _norm(source_text)
+    ]
+    if matches:
+        return _dedupe([str(source_id) for source_id in matches])
+    if source_text in display or source_text in citation:
+        return [source_text]
+    return []
+
+
+def _is_relation_rationale_source(row: dict[str, Any]) -> bool:
+    return _norm(str(row.get("source") or row.get("source_title") or "")) == "relation rationale"
 
 
 def _candidate_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
