@@ -25,8 +25,14 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
     packet = contract.get("section_synthesis_packet", {}) if isinstance(contract.get("section_synthesis_packet"), dict) else {}
     decision_packet = _section_context_decision_packet(title, scaffold)
     projection = decision_packet or _section_projection_contract(title, scaffold)
+    working_set = _section_evidence_working_set(title, scaffold)
     reasoning_contract = projection
-    reasoning_owned = _projection_owned_evidence(projection)
+    role_primary = _working_set_cards(working_set, "primary_evidence")
+    role_contrast = _working_set_cards(working_set, "contrast_evidence")
+    role_boundary = _working_set_cards(working_set, "boundary_evidence")
+    role_contextual = _working_set_cards(working_set, "contextual_evidence")
+    role_do_not_use = _working_set_cards(working_set, "do_not_use_evidence")
+    reasoning_owned = _role_aware_owned_evidence(role_primary, role_contrast, role_boundary) or _projection_owned_evidence(projection)
     contract_owned = _owned_evidence(contract)
     owned_evidence = _ownership_aligned_owned_evidence(reasoning_owned, contract_owned, contract)
     fallback_thesis = _section_thesis(title_key, contract, packet)
@@ -45,19 +51,34 @@ def compile_model_section_packet(title: str, contract: dict[str, Any]) -> dict[s
         "decision_move": reasoning_contract.get("decision_move"),
         "telemetry_context": _telemetry_context(reasoning_contract),
         "target_shape": _target_shape(title_key),
+        "primary_evidence": role_primary or owned_evidence,
+        "contrast_evidence": role_contrast,
+        "boundary_evidence": role_boundary,
+        "contextual_evidence": role_contextual,
         "owned_evidence": owned_evidence,
         "section_use_guidance": projection_guidance(title),
         "section_use_projections": build_section_use_projections(title, owned_evidence),
-        "reference_only_evidence": _ownership_aligned_reference_evidence(
+        "reference_only_evidence": role_contextual or _ownership_aligned_reference_evidence(
             _projection_reference_evidence(projection),
             _reference_only_evidence(contract),
             contract,
         ),
-        "do_not_use_cards": _string_list(reasoning_contract.get("do_not_use_cards"))[:12],
+        "do_not_use_cards": _dedupe(
+            [
+                *_string_list(reasoning_contract.get("do_not_use_cards")),
+                *[
+                    str(row.get("candidate_card_id"))
+                    for row in role_do_not_use
+                    if isinstance(row, dict) and row.get("candidate_card_id")
+                ],
+            ]
+        )[:12],
+        "do_not_use_evidence": role_do_not_use,
         "excluded_near_miss_cards": _reasoning_near_misses(reasoning_contract),
         "must_include_quantities": _must_include_quantities(contract),
         "local_tensions": _local_tensions(packet) if _section_should_receive_tensions(title_key) else [],
         "canonical_cruxes": _canonical_cruxes(contract, packet),
+        "evidence_role_budget": working_set.get("budget_report") if working_set else {},
         "style_instruction": packet.get("style_instruction") or _default_style_instruction(title_key),
     }
     return _drop_empty(model_packet)
@@ -74,6 +95,15 @@ def _section_projection_contract(title: str, scaffold: dict[str, Any]) -> dict[s
 
 def _section_context_decision_packet(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
     report = scaffold.get("section_context_decision_packets", {}) if isinstance(scaffold.get("section_context_decision_packets"), dict) else {}
+    normalized_title = _normalize_title(title)
+    for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
+        if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
+            return section
+    return {}
+
+
+def _section_evidence_working_set(title: str, scaffold: dict[str, Any]) -> dict[str, Any]:
+    report = scaffold.get("section_evidence_working_sets", {}) if isinstance(scaffold.get("section_evidence_working_sets"), dict) else {}
     normalized_title = _normalize_title(title)
     for section in report.get("sections", []) if isinstance(report.get("sections"), list) else []:
         if isinstance(section, dict) and _normalize_title(str(section.get("section", ""))) == normalized_title:
@@ -114,6 +144,44 @@ def _projection_owned_evidence(projection: dict[str, Any]) -> list[dict[str, Any
 
 def _projection_reference_evidence(projection: dict[str, Any]) -> list[dict[str, Any]]:
     return _projection_cards(projection, "reference_only_evidence", use="Briefly reference only; do not restate full source detail.")
+
+
+def _role_aware_owned_evidence(
+    primary: list[dict[str, Any]],
+    contrast: list[dict[str, Any]],
+    boundary: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return _dedupe_evidence_rows([*primary, *contrast, *boundary])[:8]
+
+
+def _working_set_cards(working_set: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in working_set.get(key, []) if isinstance(working_set.get(key), list) else []:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "candidate_card_id": row.get("candidate_card_id"),
+                    "source_card_ids": _string_list(row.get("source_card_ids"))[:4],
+                    "claim_ids": _string_list(row.get("claim_ids"))[:4],
+                    "source_ids": _string_list(row.get("source_ids"))[:4],
+                    "source": row.get("source"),
+                    "claim": _short_text(str(row.get("claim", "")), 320),
+                    "source_excerpt": _short_text(str(row.get("source_excerpt", "")), 420),
+                    "intended_role": row.get("evidence_role"),
+                    "section_use": row.get("section_use"),
+                    "reason_for_inclusion": row.get("reason_for_inclusion"),
+                    "quality": row.get("quality"),
+                    "slot_status": row.get("slot_status"),
+                    "quantity_values": _string_list(row.get("quantity_values"))[:4],
+                    "limitations": _string_list(row.get("limitations"))[:4],
+                    "evidence_weight": row.get("evidence_weight"),
+                    "use": row.get("use"),
+                }
+            )
+        )
+    return rows
 
 
 def _telemetry_context(reasoning: dict[str, Any]) -> list[dict[str, str]]:
@@ -227,6 +295,18 @@ def _ownership_aligned_reference_evidence(
         seen.add(key)
         allowed.append(row)
     return allowed[:4]
+
+
+def _dedupe_evidence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        key = _evidence_identity(row)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
 
 
 def select_section_cruxes(full_contract: dict[str, Any], *, limit: int = 3) -> list[dict[str, Any]]:
@@ -583,6 +663,10 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in values if item))
 
 
 def _short_text(text: str, max_chars: int) -> str:

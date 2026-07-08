@@ -392,3 +392,84 @@ def test_model_packet_allows_reference_cards_when_section_can_add_reasoning_valu
     assert packet["owned_evidence"][0]["candidate_card_id"] == "ec-trial"
     assert packet["reference_only_evidence"][0]["owner_section"] == "Evidence Carrying the Conclusion"
     assert referenced_claim in json.dumps(model_contract)
+
+
+def test_model_packet_prefers_evidence_role_working_set_when_present() -> None:
+    contract = {
+        "heading": "Practical Scope and Exceptions",
+        "_section_synthesis_scaffold": {
+            "section_evidence_working_sets": {
+                "sections": [
+                    {
+                        "section": "Practical Scope and Exceptions",
+                        "primary_evidence": [
+                            {
+                                "candidate_card_id": "ec-support",
+                                "claim": "The program reduced avoidable delays in the observed sites.",
+                                "source": "Operations evaluation",
+                                "section_use": "State the load-bearing observed-site finding.",
+                                "evidence_role": "load_bearing",
+                            }
+                        ],
+                        "boundary_evidence": [
+                            {
+                                "candidate_card_id": "ec-boundary",
+                                "claim": "The evidence does not show whether smaller offices can staff the same process.",
+                                "source": "Implementation memo",
+                                "section_use": "Bound the finding to offices with enough staffing.",
+                                "evidence_role": "boundary",
+                            }
+                        ],
+                        "contextual_evidence": [
+                            {
+                                "candidate_card_id": "ec-context",
+                                "claim": "The implementation period included central technical support.",
+                                "source": "Rollout report",
+                                "section_use": "Briefly contextualize implementation support.",
+                                "evidence_role": "contextual",
+                            }
+                        ],
+                        "do_not_use_evidence": [
+                            {
+                                "candidate_card_id": "ec-off-question",
+                                "claim": "A separate dashboard project improved staff satisfaction.",
+                                "source": "Staff survey",
+                                "evidence_role": "do_not_use",
+                            }
+                        ],
+                        "budget_report": {"primary_available": 1, "primary_included": 1},
+                    }
+                ]
+            },
+            "section_context_decision_packets": {
+                "sections": [
+                    {
+                        "section": "Practical Scope and Exceptions",
+                        "owned_evidence": [
+                            {
+                                "candidate_card_id": "ec-legacy",
+                                "claim": "Legacy evidence should not win when a working set is present.",
+                            }
+                        ],
+                    }
+                ]
+            },
+        },
+        "required_evidence": [],
+        "evidence_references": [],
+        "owned_elsewhere_evidence": [],
+        "required_gaps": [],
+        "required_cruxes": [],
+        "required_main_memo_obligations": [],
+        "section_synthesis_packet": {},
+    }
+
+    model_contract = model_facing_section_contract(contract)
+    packet = model_contract["model_section_packet"]
+
+    assert packet["primary_evidence"][0]["candidate_card_id"] == "ec-support"
+    assert packet["boundary_evidence"][0]["candidate_card_id"] == "ec-boundary"
+    assert packet["reference_only_evidence"][0]["candidate_card_id"] == "ec-context"
+    assert packet["do_not_use_cards"] == ["ec-off-question"]
+    assert [row["candidate_card_id"] for row in packet["owned_evidence"]] == ["ec-support", "ec-boundary"]
+    assert "ec-legacy" not in json.dumps(packet)
