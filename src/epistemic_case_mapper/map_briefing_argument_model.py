@@ -187,7 +187,7 @@ def _crux_items(
     items: list[ArgumentEvidenceItem] = []
     for relation_id, relation in relation_lookup.items():
         relation_type = str(relation.get("relation_type", ""))
-        if relation_type not in {"crux_for", "in_tension_with", "challenges", "depends_on"}:
+        if relation_type != "crux_for":
             continue
         claim_ids = _dedupe([str(relation.get("source_claim", "")), str(relation.get("target_claim", ""))])
         items.append(

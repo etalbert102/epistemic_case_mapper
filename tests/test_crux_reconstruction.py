@@ -3,7 +3,7 @@ from __future__ import annotations
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 
 
-def test_crux_reconstruction_replaces_topical_tension_with_answer_changing_question() -> None:
+def test_crux_reconstruction_reports_topical_tension_without_rewriting() -> None:
     items = [
         {
             "item_id": "support",
@@ -32,9 +32,10 @@ def test_crux_reconstruction_replaces_topical_tension_with_answer_changing_quest
     updated, report = reconstruct_decision_crux_items(items)
     cruxes = [item for item in updated if item["role"] == "decision_crux"]
 
-    assert report["status"] == "changed"
+    assert updated == items
+    assert report["status"] == "warning"
+    assert report["reason"] == "weak_crux_reported_without_deterministic_rewrite"
     assert len(cruxes) == 1
-    assert cruxes[0]["item_id"] == "reconstructed_crux_001"
-    assert "should outweigh" in cruxes[0]["reader_claim"]
-    assert "in tension with" not in cruxes[0]["reader_claim"]
-    assert cruxes[0]["lineage"]["derived_from_claim_ids"] == ["c1", "c2"]
+    assert cruxes[0]["item_id"] == "weak"
+    assert report["reconstructed_crux_count"] == 0
+    assert report["weak_crux_item_ids"] == ["weak"]
