@@ -35,6 +35,7 @@ from epistemic_case_mapper.map_briefing_context_curation import build_decision_r
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
+from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
@@ -300,6 +301,7 @@ def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str,
                 if isinstance(issue, dict) and issue.get("issue_type")
             ],
         }
+        scaffold.update(build_quality_synthesis_packet_bundle(packet))
 
 
 def _attach_model_context_audit(

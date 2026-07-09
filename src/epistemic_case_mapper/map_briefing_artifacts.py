@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_spine_audit import (
     render_before_after_briefing_comparison,
     render_spine_completion_audit,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,15 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("decision_briefing_packet_refinement_prompt", "decision_briefing_packet_refinement_prompt.txt", "markdown", _scaffold_text("decision_briefing_packet_refinement_prompt")),
         ArtifactSpec("decision_briefing_packet_refinement_raw", "decision_briefing_packet_refinement_raw.txt", "markdown", _scaffold_text("decision_briefing_packet_refinement_raw")),
         ArtifactSpec("decision_briefing_packet_refinement_report", "decision_briefing_packet_refinement_report.json", "json", _scaffold_value("decision_briefing_packet_refinement_report"), review_label="Decision briefing packet refinement"),
+        ArtifactSpec("packet_assembly_clusters", "packet_assembly_clusters.json", "json", _scaffold_value("packet_assembly_clusters"), review_label="Packet assembly clusters"),
+        ArtifactSpec("packet_role_assignment_report", "packet_role_assignment_report.json", "json", _scaffold_value("packet_role_assignment_report"), review_label="Packet role assignment"),
+        ArtifactSpec("diagnosticity_matrix", "diagnosticity_matrix.json", "json", _scaffold_value("diagnosticity_matrix"), review_label="Diagnosticity matrix"),
+        ArtifactSpec("quantity_binding_report", "quantity_binding_report.json", "json", _scaffold_value("quantity_binding_report"), review_label="Quantity binding report"),
+        ArtifactSpec("evidence_profile_report", "evidence_profile_report.json", "json", _scaffold_value("evidence_profile_report"), review_label="Evidence profile report"),
+        ArtifactSpec("packet_assembly_audit", "packet_assembly_audit.json", "json", _scaffold_value("packet_assembly_audit"), review_label="Packet assembly audit"),
+        ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
+        ArtifactSpec("memo_ready_packet_quality_report", "memo_ready_packet_quality_report.json", "json", _scaffold_value("memo_ready_packet_quality_report"), review_label="Memo-ready packet quality"),
+        ArtifactSpec("memo_ready_packet_synthesis_prompt", "memo_ready_packet_synthesis_prompt.txt", "markdown", lambda ctx: build_memo_ready_packet_synthesis_prompt(_scaffold_dict(ctx.scaffold, "memo_ready_packet"))),
         ArtifactSpec("before_after_briefing_comparison", "before_after_briefing_comparison.md", "markdown", lambda ctx: render_before_after_briefing_comparison(ctx.scaffold), review_label="Before/after briefing comparison"),
         ArtifactSpec("spine_completion_audit", "spine_completion_audit.md", "markdown", lambda ctx: render_spine_completion_audit(ctx.scaffold), review_label="Spine completion audit"),
         ArtifactSpec("atomic_evidence_cards", "atomic_evidence_cards.json", "json", _scaffold_value("atomic_evidence_cards")),

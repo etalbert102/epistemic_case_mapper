@@ -12,6 +12,7 @@ from epistemic_case_mapper.map_briefing_packet_memo import (
     render_packet_first_draft,
     write_packet_first_artifacts,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
@@ -296,6 +297,7 @@ def test_packet_does_not_promote_relation_rationale_quantity_rows() -> None:
 def test_scaffold_artifacts_write_packet_reports(tmp_path: Path) -> None:
     scaffold = _scaffold()
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
+    scaffold.update(build_quality_synthesis_packet_bundle(scaffold["decision_briefing_packet"]))
 
     paths = write_scaffold_artifacts(
         artifacts=tmp_path,
@@ -309,6 +311,11 @@ def test_scaffold_artifacts_write_packet_reports(tmp_path: Path) -> None:
     assert paths["decision_briefing_packet"].exists()
     assert paths["decision_briefing_packet_report"].exists()
     assert paths["packet_sufficiency_report"].exists()
+    assert paths["packet_assembly_clusters"].exists()
+    assert paths["diagnosticity_matrix"].exists()
+    assert paths["quantity_binding_report"].exists()
+    assert paths["memo_ready_packet"].exists()
+    assert paths["memo_ready_packet_synthesis_prompt"].exists()
 
 
 def test_packet_critique_and_refinement_skips_on_prompt_backend() -> None:
