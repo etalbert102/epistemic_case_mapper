@@ -14,6 +14,7 @@ from epistemic_case_mapper.map_briefing_packet_sufficiency import (
     packet_quantity_retention,
 )
 from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
+from epistemic_case_mapper.map_briefing_answer_frame import normalize_answer_frame
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
 )
@@ -55,10 +56,11 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     bundles = _trimmed_bundles(candidate_pool)
     retain_ledger = _must_retain_ledger(scaffold, bundles)
     section_views = _section_views(scaffold, bundles, retain_ledger)
+    answer_frame, answer_frame_report = _answer_frame(scaffold)
     packet = {
         "schema_id": "decision_briefing_packet_v1",
         "decision_question": question or str(scaffold.get("question", "")),
-        "answer_frame": _answer_frame(scaffold),
+        "answer_frame": answer_frame,
         "must_retain_ledger": retain_ledger,
         "evidence_bundles": bundles,
         "section_views": section_views,
@@ -69,6 +71,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     report = _packet_builder_report(candidate_pool, packet, sufficiency)
     return {
         "decision_briefing_packet": packet,
+        "answer_frame_normalization_report": answer_frame_report,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
@@ -515,22 +518,10 @@ def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[st
     }
 
 
-def _answer_frame(scaffold: dict[str, Any]) -> dict[str, Any]:
-    spine = _dict(scaffold.get("canonical_decision_spine"))
-    default = _dict(spine.get("default_answer"))
-    argument = _dict(scaffold.get("argument_model"))
-    proposed = argument.get("proposed_answer")
-    if isinstance(proposed, dict):
-        current_read = str(proposed.get("current_read") or proposed.get("classification") or default.get("claim") or "")
-    else:
-        current_read = str(proposed or default.get("claim") or "")
-    return _drop_empty(
-        {
-            "default_answer": _short_text(current_read, 420),
-            "confidence": str(spine.get("confidence") or argument.get("confidence") or "medium"),
-            "scope": _short_text(" ".join(_string_list(default.get("limits"))), 260),
-            "main_uncertainty": _short_text(" ".join(_string_list(argument.get("confidence_reasons"))), 260),
-        }
+def _answer_frame(scaffold: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    return normalize_answer_frame(
+        canonical_decision_spine=_dict(scaffold.get("canonical_decision_spine")),
+        argument_model=_dict(scaffold.get("argument_model")),
     )
 
 

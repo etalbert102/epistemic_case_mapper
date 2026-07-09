@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 from typing import Any
 
@@ -7,106 +8,191 @@ from typing import Any
 def arbitrate_answer_frame(
     scaffold: dict[str, Any],
     *,
-    bottom_line: dict[str, str],
+    bottom_line: dict[str, Any],
     evidence_lines: list[dict[str, Any]],
-    exceptions: list[dict[str, str]],
+    exceptions: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Keep default-answer and exception-answer roles separate before prose synthesis."""
-    decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
-    default_read = _default_read(decision_model, evidence_lines)
-    exception_read = _exception_read(exceptions)
-    current_read = str(bottom_line.get("current_read", "")).strip()
-    issue = _frame_issue(current_read, default_read, exception_read)
-    revised = dict(bottom_line)
-    if issue:
-        revised["current_read"] = _combined_read(default_read, exception_read, current_read)
-        revised["why_this_frame"] = _combined_why(bottom_line, exception_read)
+    decision_model = _dict(scaffold.get("decision_model"))
+    default = _dict(decision_model.get("default_answer"))
+    current = _dict(bottom_line)
+    default_read = _default_case_read(default, decision_model, evidence_lines)
+    exception_text = _exception_text(exceptions)
+    should_reframe = bool(default_read and exception_text and _exception_driven(current, default))
+    if should_reframe:
+        read = default_read
+        if exception_text:
+            read = f"{read} Treat the named exception separately: {exception_text}."
+        return {
+            "schema_id": "answer_frame_arbitration_v1",
+            "status": "reframed",
+            "reason": "separated_default_case_from_exception",
+            "bottom_line": _drop_empty(
+                {
+                    **current,
+                    "current_read": _short_text(read, 700),
+                    "confidence": current.get("confidence") or decision_model.get("confidence"),
+                }
+            ),
+        }
     return {
         "schema_id": "answer_frame_arbitration_v1",
-        "method": "deterministic_default_then_exception_frame_check",
-        "status": "reframed" if issue else "unchanged",
-        "issue": issue,
-        "default_read": default_read,
-        "exception_read": exception_read,
-        "original_bottom_line": bottom_line,
-        "bottom_line": revised,
+        "status": "unchanged",
+        "reason": "bottom_line_already_matches_default_frame",
+        "bottom_line": _drop_empty(current),
     }
 
 
-def _default_read(decision_model: dict[str, Any], evidence_lines: list[dict[str, Any]]) -> str:
-    default = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
-    candidates = [
-        str(default.get("plain_language_instruction", "")),
-        *[
-            str(row.get("proposition", ""))
-            for row in decision_model.get("main_reasons", [])
-            if isinstance(row, dict)
-        ],
-        *[
-            str(line.get("current_read", ""))
-            for line in evidence_lines
-            if isinstance(line, dict) and line.get("role") in {"direct_outcome", "guidance_or_practical_advice", "general_evidence"}
-        ],
-        str(default.get("why_this_frame", "")),
-    ]
-    for candidate in candidates:
-        cleaned = _readerize(candidate)
-        if cleaned and not _exception_led(cleaned) and not _gap_language(cleaned):
-            return cleaned
-    return ""
+def normalize_answer_frame(
+    *,
+    canonical_decision_spine: dict[str, Any],
+    argument_model: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    default = _dict(canonical_decision_spine.get("default_answer"))
+    proposed = argument_model.get("proposed_answer")
+    raw_current = proposed.get("current_read") or proposed.get("classification") if isinstance(proposed, dict) else proposed
+    raw_current = raw_current or default.get("claim") or ""
+    normalized, status = _clean_structured_text(raw_current)
+    frame = _drop_empty(
+        {
+            "default_answer": _short_text(normalized, 420),
+            "classification": _classification(proposed, raw_current),
+            "confidence": str(canonical_decision_spine.get("confidence") or argument_model.get("confidence") or "medium"),
+            "scope": _short_text(" ".join(_string_list(default.get("limits"))), 260),
+            "main_uncertainty": _short_text(" ".join(_string_list(argument_model.get("confidence_reasons"))), 260),
+        }
+    )
+    return frame, {
+        "schema_id": "answer_frame_normalization_report_v1",
+        "status": status,
+        "raw_default_answer": _short_text(str(raw_current or ""), 500),
+        "normalized_default_answer": frame.get("default_answer", ""),
+        "changed": str(raw_current or "").strip() != frame.get("default_answer", ""),
+    }
 
 
-def _exception_read(exceptions: list[dict[str, str]]) -> str:
-    for exception in exceptions:
-        text = _readerize(str(exception.get("current_read", "")))
-        if text and not _gap_language(text):
-            condition = str(exception.get("condition", "")).strip()
-            return f"{condition}: {text}" if condition else text
-    return ""
+def _default_case_read(
+    default: dict[str, Any],
+    decision_model: dict[str, Any],
+    evidence_lines: list[dict[str, Any]],
+) -> str:
+    instruction = str(default.get("plain_language_instruction") or default.get("current_read") or default.get("claim") or "").strip()
+    if instruction.lower().startswith("for the default case"):
+        return _sentence(instruction)
+    for row in _dicts(decision_model.get("main_reasons")) + _dicts(evidence_lines):
+        proposition = str(row.get("proposition") or row.get("current_read") or row.get("claim") or "").strip()
+        if proposition and not _artifact_language(proposition):
+            return _sentence(proposition)
+    return _sentence(instruction)
 
 
-def _frame_issue(current_read: str, default_read: str, exception_read: str) -> str:
-    if not current_read or not default_read or not exception_read:
-        return ""
-    if _exception_led(current_read) or "named conditions" in current_read.lower():
-        return "bottom_line_exception_led_despite_available_default_read"
-    return ""
+def _exception_text(exceptions: list[dict[str, Any]]) -> str:
+    parts = []
+    for row in exceptions:
+        if not isinstance(row, dict):
+            continue
+        condition = str(row.get("condition") or row.get("scope") or "").strip()
+        read = str(row.get("current_read") or row.get("claim") or "").strip()
+        text = " ".join(part for part in (condition, read) if part)
+        if text:
+            parts.append(text)
+    return _short_text("; ".join(parts), 260)
 
 
-def _combined_read(default_read: str, exception_read: str, current_read: str) -> str:
-    default_sentence = _sentence(default_read)
-    exception_sentence = _sentence(exception_read)
-    if default_sentence and exception_sentence:
-        return f"{default_sentence} Treat the named exception separately: {exception_sentence}"
-    return default_sentence or exception_sentence or current_read
+def _exception_driven(bottom_line: dict[str, Any], default: dict[str, Any]) -> bool:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            bottom_line.get("classification"),
+            bottom_line.get("current_read"),
+            bottom_line.get("why_this_frame"),
+            default.get("plain_language_instruction"),
+            default.get("why_this_frame"),
+        )
+    ).lower()
+    return any(term in text for term in ("condition", "exception", "subgroup", "caution", "harm", "counterevidence"))
 
 
-def _combined_why(bottom_line: dict[str, str], exception_read: str) -> str:
-    why = _readerize(str(bottom_line.get("why_this_frame", "")))
-    if exception_read and "exception" not in why.lower():
-        return _sentence(why) + " The exception evidence limits transfer rather than replacing the default answer."
-    return why
+def _clean_structured_text(value: Any) -> tuple[str, str]:
+    text = str(value or "").strip()
+    if not text:
+        return "", "missing"
+    parsed = _parse_dict_like(text)
+    if parsed:
+        current = str(parsed.get("current_read") or parsed.get("claim") or parsed.get("classification") or "").strip()
+        return current, "normalized_structured_text" if current else "normalized_empty_structured_text"
+    current = _regex_field(text, "current_read") or _regex_field(text, "claim")
+    if current:
+        return current, "recovered_field_from_malformed_text"
+    if _looks_like_structure(text):
+        cleaned = re.sub(r"[{}]+", " ", text)
+        cleaned = re.sub(r"['\"]?[a-zA-Z_]+['\"]?\s*:", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,")
+        return cleaned, "stripped_malformed_structure"
+    return text, "plain_text"
 
 
-def _readerize(text: str) -> str:
-    cleaned = re.sub(r"\s+", " ", text).strip(" .")
-    cleaned = re.sub(r"^(?:state|say|phrase)\s+that\s+", "", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"^do not\s+", "Avoid ", cleaned, flags=re.IGNORECASE)
-    return cleaned.strip(" .")
+def _classification(proposed: Any, raw_current: Any) -> str:
+    if isinstance(proposed, dict) and proposed.get("classification"):
+        return str(proposed.get("classification") or "").strip()
+    parsed = _parse_dict_like(str(raw_current or ""))
+    return str(parsed.get("classification") or "").strip() if parsed else ""
 
 
-def _exception_led(text: str) -> bool:
-    lowered = text.lower().strip()
-    return lowered.startswith(("caution", "warning", "avoid", "for people with", "for individuals with", "under named", "counterevidence")) or "named conditions" in lowered
+def _parse_dict_like(text: str) -> dict[str, Any]:
+    stripped = text.strip()
+    if not stripped.startswith("{"):
+        return {}
+    try:
+        parsed = ast.literal_eval(stripped)
+    except (SyntaxError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
-def _gap_language(text: str) -> bool:
-    lowered = text.lower()
-    return "source packet does not establish" in lowered or "map does not cleanly establish" in lowered or "map lacks clean" in lowered
+def _regex_field(text: str, field: str) -> str:
+    match = re.search(rf"['\"]?{re.escape(field)}['\"]?\s*:\s*['\"]([^'\"]+)", text)
+    return match.group(1).strip() if match else ""
+
+
+def _looks_like_structure(text: str) -> bool:
+    return text.strip().startswith("{") or any(token in text for token in ("'classification'", '"classification"', "'current_read'", '"current_read"'))
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _short_text(text: str, limit: int) -> str:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "..."
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in ("", [], {}, None)}
+
+
+def _dicts(value: Any) -> list[dict[str, Any]]:
+    return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
 
 
 def _sentence(text: str) -> str:
-    cleaned = _readerize(text)
+    cleaned = _short_text(text, 520).rstrip()
     if not cleaned:
         return ""
-    return cleaned if cleaned.endswith((".", "?", "!")) else cleaned + "."
+    return cleaned if cleaned.endswith((".", "?", "!")) else f"{cleaned}."
+
+
+def _artifact_language(text: str) -> bool:
+    lowered = text.lower()
+    return "state that " in lowered or "identify the default" in lowered or "separate those conditions" in lowered
