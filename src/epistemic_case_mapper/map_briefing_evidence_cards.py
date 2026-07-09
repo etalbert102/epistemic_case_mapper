@@ -225,11 +225,14 @@ def _relation_with_cards(relation: dict[str, Any], cards: dict[str, dict[str, An
 
 
 def _decision_proposition(text: str, row: dict[str, Any], flags: list[str]) -> str:
-    sentences = _sentences(text)
-    if not sentences:
+    cleaned = _clean_sentence(text)
+    if not cleaned:
         return text
     if "overlong_claim" not in flags and "multi_finding_claim" not in flags:
-        return _clean_sentence(sentences[0])
+        return cleaned
+    sentences = _sentences(cleaned)
+    if not sentences:
+        return cleaned
     ranked = sorted(sentences, key=lambda sentence: _sentence_rank(sentence, row), reverse=True)
     selected = [sentence for sentence in ranked if not _method_only(sentence)][:2] or ranked[:1]
     proposition = " ".join(_clean_sentence(sentence) for sentence in selected)
