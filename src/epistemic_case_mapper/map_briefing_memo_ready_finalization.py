@@ -1,0 +1,399 @@
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
+from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
+    dedupe as _dedupe,
+    dict_value as _dict,
+    list_value as _list,
+    norm as _norm,
+    string_list as _string_list,
+)
+from epistemic_case_mapper.model_backends import run_model_backend
+
+
+def run_memo_ready_packet_synthesis(
+    memo_ready_packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    prompt = build_memo_ready_packet_synthesis_prompt(memo_ready_packet)
+    draft = render_memo_ready_packet_draft(memo_ready_packet)
+    report = {
+        "schema_id": "memo_ready_packet_synthesis_report_v1",
+        "status": "deterministic_fallback" if backend.strip() == "prompt" else "not_run",
+        "accepted": backend.strip() == "prompt",
+        "used_default_path": True,
+        "issues": [],
+    }
+    if backend.strip() == "prompt":
+        return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_deterministic_fallback", "issues": [str(exc)]})
+        return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = repair_markdown_structure(_extract_markdown(raw))
+    if not candidate:
+        report.update({"status": "empty_or_unparseable_deterministic_fallback", "issues": ["synthesis returned no markdown"]})
+        return {"memo": draft, "prompt": prompt, "raw": raw, "report": report}
+    retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+    accepted = _acceptable_synthesis(candidate, retention)
+    report.update(
+        {
+            "status": "accepted" if accepted else "accepted_with_retention_warnings",
+            "accepted": True,
+            "retention_status": retention.get("status"),
+            "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
+            "issues": [] if accepted else ["synthesis has packet-retention warnings"],
+        }
+    )
+    return {"memo": candidate, "prompt": prompt, "raw": raw, "report": report}
+
+
+def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:
+    spine = _dict(packet.get("answer_spine"))
+    items = _list(packet.get("evidence_items"))
+    question = str(packet.get("decision_question") or "").strip()
+    lines = [
+        "## Decision Brief",
+        "",
+        f"**Decision question:** {question or 'not specified'}",
+        "",
+        str(spine.get("default_read") or "The packet does not establish a clear default read.").strip(),
+    ]
+    confidence = str(spine.get("confidence") or "").strip()
+    if confidence:
+        lines.extend(["", f"**Confidence:** {confidence}"])
+    support = _item_lines(items, {"strongest_support", "quantitative_anchor"})
+    if support:
+        lines.extend(["", "## What the Evidence Supports", "", *support])
+    limits = _item_lines(items, {"strongest_counterweight", "scope_boundary"})
+    if limits:
+        lines.extend(["", "## What Limits the Inference", "", *limits])
+    cruxes = _item_lines(items, {"decision_crux"})
+    if cruxes:
+        lines.extend(["", "## Decision Cruxes", "", *cruxes])
+    sources = _source_lines(packet)
+    if sources:
+        lines.extend(["", "## Sources", "", *sources])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+    statuses = [_item_retention_status(memo, item) for item in _mandatory_items(packet)]
+    issues = [row for row in statuses if not row["retained"]]
+    return {
+        "schema_id": "memo_ready_packet_retention_report_v1",
+        "status": "ready" if not issues else "warning",
+        "must_retain_count": len(statuses),
+        "retained_must_retain_count": sum(1 for row in statuses if row["retained"]),
+        "missing_critical_count": len(issues),
+        "missing_high_count": 0,
+        "mandatory_item_count": len(statuses),
+        "retained_mandatory_count": sum(1 for row in statuses if row["retained"]),
+        "missing_mandatory_count": len(issues),
+        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in issues),
+        "item_statuses": statuses,
+        "issues": issues,
+    }
+
+
+def run_memo_ready_packet_repair(
+    memo: str,
+    packet: dict[str, Any],
+    retention_report: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    prompt = build_memo_ready_packet_repair_prompt(memo, packet, retention_report)
+    report = {
+        "schema_id": "memo_ready_packet_repair_report_v1",
+        "status": "not_needed" if not retention_report.get("issues") else "not_run",
+        "accepted": False,
+        "initial_missing_mandatory_count": retention_report.get("missing_mandatory_count", 0),
+        "issues": [],
+    }
+    if not retention_report.get("issues"):
+        return {"memo": memo, "prompt": "", "raw": "", "report": report}
+    if backend.strip() == "prompt":
+        report.update({"status": "skipped_prompt_backend", "issues": ["memo-ready repair backend returned prompt only"]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = repair_markdown_structure(_extract_markdown(raw))
+    if not candidate:
+        report.update({"status": "empty_response_kept_original", "issues": ["repair returned no markdown"]})
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    after = build_memo_ready_packet_retention_report(candidate, packet)
+    structure_issues = markdown_structure_issues(candidate, original=memo)
+    accepted = _retention_improved(retention_report, after) and not structure_issues
+    report.update(
+        {
+            "status": "accepted" if accepted else "no_retention_improvement_kept_original",
+            "accepted": accepted,
+            "final_missing_mandatory_count": after.get("missing_mandatory_count", 0),
+            "final_retained_mandatory_count": after.get("retained_mandatory_count", 0),
+            "final_retention_report": after,
+            "structure_issues": structure_issues,
+            "issues": [] if accepted else ["repair did not improve packet retention without markdown damage"],
+        }
+    )
+    return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], retention_report: dict[str, Any]) -> str:
+    repair_packet = {
+        "decision_question": packet.get("decision_question"),
+        "missing_items": [
+            _repair_item(packet, issue)
+            for issue in _list(retention_report.get("issues"))[:8]
+            if isinstance(issue, dict)
+        ],
+    }
+    return (
+        "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"
+        "Rewrite the affected paragraph or section naturally; do not append orphan facts.\n\n"
+        "Rules:\n"
+        "- Return the full revised memo in Markdown, not JSON.\n"
+        "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
+        "- Use only the missing items in the repair packet; do not introduce new evidence.\n"
+        "- For each quantity you add, explain what it means for the decision.\n"
+        "- Do not mention packet IDs, validation, telemetry, or internal pipeline machinery.\n\n"
+        f"Repair packet:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
+        f"Current memo:\n{memo.strip()}\n"
+    )
+
+
+def run_memo_ready_final_polish(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    before = build_memo_ready_packet_retention_report(memo, packet)
+    prompt = build_memo_ready_final_polish_prompt(memo, packet)
+    report = {
+        "schema_id": "memo_ready_final_polish_report_v1",
+        "status": "skipped_prompt_backend" if backend.strip() == "prompt" else "not_run",
+        "accepted": False,
+        "issues": [],
+    }
+    if backend.strip() == "prompt":
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = repair_markdown_structure(_extract_markdown(raw))
+    if not candidate:
+        report.update({"status": "empty_response_kept_original", "issues": ["final polish returned no markdown"]})
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    after = build_memo_ready_packet_retention_report(candidate, packet)
+    structure_issues = markdown_structure_issues(candidate, original=memo)
+    accepted = _retention_not_worse(before, after) and not structure_issues
+    report.update(
+        {
+            "status": "accepted" if accepted else "rejected_kept_original",
+            "accepted": accepted,
+            "before_missing_mandatory_count": before.get("missing_mandatory_count", 0),
+            "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
+            "structure_issues": structure_issues,
+            "issues": [] if accepted else ["final polish regressed retention or damaged markdown"],
+        }
+    )
+    return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
+    protected = {
+        "decision_question": packet.get("decision_question"),
+        "mandatory_items": [
+            {
+                "source_label": item.get("source_label"),
+                "reader_claim": item.get("reader_claim"),
+                "quantities": item.get("quantities", []),
+            }
+            for item in _mandatory_items(packet)[:18]
+        ],
+    }
+    return (
+        "You are doing a final prose polish on a source-grounded decision memo.\n"
+        "Improve flow and remove awkward wording while preserving every protected source-backed item.\n\n"
+        "Rules:\n"
+        "- Return the full revised memo in Markdown, not JSON.\n"
+        "- Do not drop protected quantities, source labels, caveats, counterweights, or scope boundaries.\n"
+        "- Do not add facts or sources beyond the memo and protected item list.\n"
+        "- Make the memo read like decision-ready analysis, not a checklist.\n\n"
+        f"Protected item list:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
+        f"Memo:\n{memo.strip()}\n"
+    )
+
+
+def _item_lines(items: list[Any], roles: set[str]) -> list[str]:
+    lines = []
+    for item in items:
+        if not isinstance(item, dict) or item.get("role") not in roles:
+            continue
+        source = str(item.get("source_label") or "").strip()
+        suffix = f" [{source}]" if source else ""
+        quantities = _quantity_clause(item)
+        lines.append(f"- {item.get('reader_claim')}{quantities}{suffix}")
+    return lines
+
+
+def _source_lines(packet: dict[str, Any]) -> list[str]:
+    rows = []
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        label = str(source.get("source_label") or "").strip()
+        url = str(source.get("source_url") or "").strip()
+        if label and url:
+            rows.append(f"- [{label}]({url})")
+        elif label:
+            rows.append(f"- {label}")
+    return _dedupe(rows)
+
+
+def _quantity_clause(item: dict[str, Any]) -> str:
+    quantities = []
+    for quantity in _list(item.get("quantities"))[:3]:
+        if not isinstance(quantity, dict):
+            continue
+        value = str(quantity.get("value") or "").strip()
+        interpretation = str(quantity.get("interpretation") or "").strip()
+        if value and interpretation:
+            quantities.append(f"{value}: {interpretation}")
+        elif value:
+            quantities.append(value)
+    return f" ({'; '.join(quantities)})" if quantities else ""
+
+
+def _mandatory_items(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    return [item for item in _list(packet.get("evidence_items")) if isinstance(item, dict) and item.get("must_use")]
+
+
+def _item_retention_status(memo: str, item: dict[str, Any]) -> dict[str, Any]:
+    claim = str(item.get("reader_claim") or "").strip()
+    source = str(item.get("source_label") or "").strip()
+    quantities = [
+        str(quantity.get("value") or "").strip()
+        for quantity in _list(item.get("quantities"))
+        if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
+    ]
+    missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
+    source_retained = not source or _contains_text(memo, source)
+    claim_retained = _mentions_enough_content_terms(memo, claim, minimum=4)
+    retained = source_retained and claim_retained and not missing_quantities
+    return {
+        "item_id": item.get("item_id"),
+        "severity": "critical",
+        "issue_type": "missing_memo_ready_item",
+        "role": item.get("role"),
+        "retained": retained,
+        "source_retained": source_retained,
+        "claim_retained": claim_retained,
+        "missing_quantities": missing_quantities,
+        "reader_claim": claim,
+        "source_label": source,
+    }
+
+
+def _repair_item(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any]:
+    item_id = str(issue.get("item_id") or "")
+    item = next((row for row in _mandatory_items(packet) if str(row.get("item_id") or "") == item_id), {})
+    return {
+        "item_id": item_id,
+        "preferred_role": item.get("role"),
+        "reader_claim": item.get("reader_claim"),
+        "source_label": item.get("source_label"),
+        "quantities": item.get("quantities", []),
+        "decision_relevance": item.get("decision_relevance"),
+        "caveat": item.get("caveat"),
+        "missing_quantities": issue.get("missing_quantities", []),
+    }
+
+
+def _acceptable_synthesis(memo: str, retention: dict[str, Any]) -> bool:
+    return bool(memo.strip()) and int(retention.get("missing_mandatory_count", 0) or 0) <= 2
+
+
+def _retention_improved(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    before_missing = int(before.get("missing_mandatory_count", 0) or 0)
+    after_missing = int(after.get("missing_mandatory_count", 0) or 0)
+    if after_missing < before_missing:
+        return True
+    return int(after.get("missing_quantity_count", 0) or 0) < int(before.get("missing_quantity_count", 0) or 0)
+
+
+def _retention_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    return int(after.get("missing_mandatory_count", 0) or 0) <= int(before.get("missing_mandatory_count", 0) or 0)
+
+
+def _extract_markdown(raw: str) -> str:
+    cleaned = str(raw).strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:markdown|md|json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+    payload = _parse_json(cleaned)
+    if isinstance(payload, dict):
+        for key in ("memo_markdown", "markdown", "memo", "text"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+    if isinstance(payload, list):
+        return ""
+    return cleaned
+
+
+def _parse_json(text: str) -> Any:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+
+def _contains_text(text: str, needle: str) -> bool:
+    needle = str(needle).strip()
+    return not needle or needle.lower() in text.lower()
+
+
+def _contains_quantity(text: str, quantity: str) -> bool:
+    if _contains_text(text, quantity):
+        return True
+    normalized_text = _norm(text)
+    numbers = re.findall(r"\d+(?:\.\d+)?", quantity)
+    return bool(numbers) and all(number in normalized_text for number in numbers)
+
+
+def _mentions_enough_content_terms(text: str, statement: str, *, minimum: int) -> bool:
+    terms = _content_terms(statement)
+    if not terms:
+        return True
+    required = min(minimum, len(terms))
+    lowered = text.lower()
+    return sum(1 for term in terms if term in lowered) >= required
+
+
+def _content_terms(text: str) -> list[str]:
+    stop = {"about", "after", "also", "because", "before", "between", "could", "from", "have", "into", "only", "should", "that", "their", "there", "this", "when", "where", "with", "would"}
+    return _dedupe([term.lower() for term in re.findall(r"[A-Za-z][A-Za-z-]{2,}", text) if term.lower() not in stop])

@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_memo_ready_packet_retention_report,
+    run_memo_ready_final_polish,
+    run_memo_ready_packet_repair,
+    run_memo_ready_packet_synthesis,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
 
@@ -101,3 +111,84 @@ def test_synthesis_prompt_uses_memo_ready_packet_not_legacy_section_contract() -
     assert "Evidence Carrying the Conclusion" not in prompt
     assert "25%" in prompt
     assert "Counter Study" in prompt
+
+
+def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    result = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)
+    retention = build_memo_ready_packet_retention_report(result["memo"], packet)
+
+    assert result["report"]["status"] == "deterministic_fallback"
+    assert retention["missing_mandatory_count"] == 0
+    assert "25%" in result["memo"]
+    assert "Counter Study" in result["memo"]
+
+
+def test_memo_ready_retention_report_flags_missing_source_and_quantity() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    report = build_memo_ready_packet_retention_report("## Decision Brief\n\nOption A may help.\n", packet)
+
+    assert report["status"] == "warning"
+    assert report["missing_mandatory_count"] >= 1
+    assert report["missing_quantity_count"] >= 1
+
+
+def test_memo_ready_repair_accepts_retention_improvement(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    weak_memo = "## Decision Brief\n\nOption A may help.\n"
+    before = build_memo_ready_packet_retention_report(weak_memo, packet)
+    repaired = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=repaired, backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert "25%" in result["memo"]
+    assert "Counter Study" in result["memo"]
+
+
+def test_memo_ready_final_polish_rejects_evidence_loss(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    memo = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text="## Decision Brief\n\nOption A may help.\n", backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "rejected_kept_original"
+    assert result["memo"] == memo
+
+
+def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None:
+    scaffold = _scaffold()
+    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
+    scaffold.update(build_quality_synthesis_packet_bundle(scaffold["decision_briefing_packet"]))
+
+    result = write_final_reader_outputs(
+        rendered="## Decision Brief\n\nSeed memo.",
+        scaffold=scaffold,
+        prioritized_map={"claims": []},
+        artifacts=tmp_path,
+        backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
+    )
+
+    paths = result["summary_paths"]
+    assert result["rewrite_result"]["report"]["memo_ready_packet_path"] is True
+    assert paths["memo_ready_synthesis_report"].exists()
+    assert paths["memo_ready_synthesis_prompt"].exists()
+    assert paths["memo_ready_repair_report"].exists()
+    assert paths["memo_ready_final_polish_report"].exists()
+    assert "25%" in result["briefing_path"].read_text()
