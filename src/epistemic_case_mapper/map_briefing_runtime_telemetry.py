@@ -37,6 +37,8 @@ def build_runtime_budget_report(
     ]
     most_expensive = max(stages, key=lambda row: int(row.get("model_call_count", 0)))["stage"] if stages else ""
     return RuntimeBudgetReport(
+        scope="late_briefing_stages_only",
+        excludes=["claim_extraction", "claim_consolidation", "relation_candidate_selection", "relation_mapping"],
         stages=stages,
         model_call_count=sum(int(stage.get("model_call_count", 0)) for stage in stages),
         degraded_mode_triggers=_runtime_degraded_triggers(

@@ -47,6 +47,9 @@ class FinalReaderOutputPaths:
     decision_memo_editorial_prompt: Path
     decision_memo_editorial_raw: Path
     decision_memo_editorial_report: Path
+    scoped_metric_report: Path
+    final_source_lineage: Path
+    pipeline_measurement_audit: Path
 
 
 def write_final_reader_outputs(
@@ -279,6 +282,9 @@ def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         decision_memo_editorial_prompt=artifacts / "decision_memo_editorial_prompt.txt",
         decision_memo_editorial_raw=artifacts / "decision_memo_editorial_raw.txt",
         decision_memo_editorial_report=artifacts / "decision_memo_editorial_report.json",
+        scoped_metric_report=artifacts / "scoped_metric_report.json",
+        final_source_lineage=artifacts / "final_source_lineage_report.json",
+        pipeline_measurement_audit=artifacts / "pipeline_measurement_audit.json",
     )
 
 
@@ -302,6 +308,11 @@ def _build_final_reader_diagnostics(
         build_final_brief_evaluation,
         build_memo_coherence_report,
         build_pipeline_migration_ledger,
+    )
+    from epistemic_case_mapper.map_briefing_measurement_audit import (
+        build_final_source_lineage_report,
+        build_pipeline_measurement_audit,
+        build_scoped_metric_report,
     )
     from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
@@ -371,6 +382,21 @@ def _build_final_reader_diagnostics(
         runtime_budget_report=runtime_budget,
         memo_packet_retention_report=packet_retention,
     )
+    source_lineage = build_final_source_lineage_report(reader_memo, memo_package["scaffold"])
+    scoped_metrics = build_scoped_metric_report(
+        scaffold=memo_package["scaffold"],
+        prioritized_map=prioritized_map,
+        runtime_budget_report=runtime_budget,
+        packet_retention_report=packet_retention,
+    )
+    measurement_audit = build_pipeline_measurement_audit(
+        scoped_metric_report=scoped_metrics,
+        source_lineage_report=source_lineage,
+        relation_value_report=memo_package["scaffold"].get("relation_value_report", {}),
+        packet_retention_report=packet_retention,
+        runtime_budget_report=runtime_budget,
+        section_role_quality_report=role_quality,
+    )
     return {
         "polish_report": polish_report,
         "memo_quality": memo_quality,
@@ -385,6 +411,9 @@ def _build_final_reader_diagnostics(
         "final_readiness": final_readiness,
         "packet_retention": packet_retention,
         "packet_comparison": packet_comparison,
+        "source_lineage": source_lineage,
+        "scoped_metrics": scoped_metrics,
+        "measurement_audit": measurement_audit,
     }
 
 
@@ -439,6 +468,9 @@ def _write_final_reader_artifacts(
     write_json(paths.packet_repair_report, packet_repair_result.get("report", {}))
     write_json(paths.decision_memo_editorial_brief, editorial_result.get("brief", {}))
     write_json(paths.decision_memo_editorial_report, editorial_result.get("report", {}))
+    write_json(paths.final_source_lineage, diagnostics["source_lineage"])
+    write_json(paths.scoped_metric_report, diagnostics["scoped_metrics"])
+    write_json(paths.pipeline_measurement_audit, diagnostics["measurement_audit"])
     write_json(paths.briefing_validation, diagnostics["validation"])
     write_json(paths.polish_report, diagnostics["polish_report"])
     write_json(paths.memo_quality, diagnostics["memo_quality"])
@@ -492,6 +524,9 @@ def _final_reader_summary_paths(
         "packet_repair_raw": paths.packet_repair_raw if packet_repair_result and packet_repair_result.get("raw") else None,
         "decision_memo_editorial_brief": paths.decision_memo_editorial_brief,
         "decision_memo_editorial_report": paths.decision_memo_editorial_report,
+        "scoped_metric_report": paths.scoped_metric_report,
+        "final_source_lineage_report": paths.final_source_lineage,
+        "pipeline_measurement_audit": paths.pipeline_measurement_audit,
         "decision_memo_editorial_prompt": paths.decision_memo_editorial_prompt
         if editorial_result and editorial_result.get("prompt")
         else None,

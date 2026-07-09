@@ -12,6 +12,7 @@ def build_relation_value_report(candidate_map: dict[str, Any]) -> dict[str, Any]
     claims = _claims(candidate_map)
     relations = _relations(candidate_map)
     type_counts = Counter(_relation_type(row) for row in relations)
+    endpoint_report = _endpoint_report(relations)
     connected_claim_ids = {
         claim_id
         for relation in relations
@@ -27,6 +28,7 @@ def build_relation_value_report(candidate_map: dict[str, Any]) -> dict[str, Any]
         type_counts=type_counts,
         grounded_count=len(grounded),
         valuable_count=len(valuable),
+        connectivity_status=endpoint_report["connectivity_status"],
     )
     return {
         "schema_id": "relation_value_report_v1",
@@ -35,6 +37,9 @@ def build_relation_value_report(candidate_map: dict[str, Any]) -> dict[str, Any]
         "relation_count": len(relations),
         "connected_claim_count": len(connected_claim_ids),
         "connected_claim_fraction": round(len(connected_claim_ids) / len(claims), 3) if claims else 0.0,
+        "connectivity_status": endpoint_report["connectivity_status"],
+        "missing_endpoint_relation_count": endpoint_report["missing_endpoint_relation_count"],
+        "endpoint_field_coverage": endpoint_report["endpoint_field_coverage"],
         "relation_type_counts": dict(sorted(type_counts.items())),
         "valuable_relation_count": len(valuable),
         "valuable_relation_fraction": round(len(valuable) / len(relations), 3) if relations else 0.0,
@@ -52,11 +57,14 @@ def _issues(
     type_counts: Counter[str],
     grounded_count: int,
     valuable_count: int,
+    connectivity_status: str,
 ) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     if claim_count and relation_count < max(3, claim_count // 12):
         issues.append({"issue_type": "sparse_relation_graph", "severity": "warning"})
-    if relation_count and connected_claim_count / max(1, claim_count) < 0.15:
+    if connectivity_status == "not_computable_missing_endpoint_ids":
+        issues.append({"issue_type": "relation_connectivity_not_computable", "severity": "warning"})
+    elif relation_count and connected_claim_count / max(1, claim_count) < 0.15:
         issues.append({"issue_type": "low_claim_connectivity", "severity": "warning"})
     low_value_count = sum(type_counts.get(kind, 0) for kind in LOW_VALUE_RELATION_TYPES)
     if relation_count and low_value_count / relation_count > 0.5:
@@ -88,6 +96,21 @@ def _source_id(row: dict[str, Any]) -> str:
 
 def _target_id(row: dict[str, Any]) -> str:
     return str(row.get("target_claim_id") or row.get("claim_b_id") or row.get("to") or row.get("target") or "").strip()
+
+
+def _endpoint_report(relations: list[dict[str, Any]]) -> dict[str, Any]:
+    missing = [row for row in relations if not (_source_id(row) and _target_id(row))]
+    if not relations:
+        status = "no_relations"
+    elif missing:
+        status = "not_computable_missing_endpoint_ids"
+    else:
+        status = "computed"
+    return {
+        "connectivity_status": status,
+        "missing_endpoint_relation_count": len(missing),
+        "endpoint_field_coverage": round((len(relations) - len(missing)) / len(relations), 3) if relations else 0.0,
+    }
 
 
 def _relation_has_rationale(row: dict[str, Any]) -> bool:

@@ -51,3 +51,23 @@ def test_relation_value_report_flags_sparse_generic_maps() -> None:
     issue_types = {issue["issue_type"] for issue in report["issues"]}
     assert "sparse_relation_graph" in issue_types
     assert "low_value_relation_type_dominance" in issue_types
+
+
+def test_relation_value_report_marks_connectivity_not_computable_without_endpoint_ids() -> None:
+    report = build_relation_value_report(
+        {
+            "claims": [{"claim_id": "c1"}, {"claim_id": "c2"}],
+            "relations": [
+                {
+                    "source_claim": "One claim text",
+                    "target_claim": "Another claim text",
+                    "relation_type": "supports",
+                    "rationale": "The first claim supports the second by sharing the same decision-relevant finding.",
+                }
+            ],
+        }
+    )
+
+    assert report["connectivity_status"] == "not_computable_missing_endpoint_ids"
+    assert report["missing_endpoint_relation_count"] == 1
+    assert any(issue["issue_type"] == "relation_connectivity_not_computable" for issue in report["issues"])

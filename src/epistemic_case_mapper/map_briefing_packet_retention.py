@@ -15,8 +15,8 @@ def build_memo_packet_retention_report(memo_markdown: str, packet: dict[str, Any
     retain_rows = [row for row in packet.get("must_retain_ledger", []) if isinstance(row, dict)]
     bundle_rows = [row for row in packet.get("evidence_bundles", []) if isinstance(row, dict)]
     bundle_lookup = {str(row.get("bundle_id", "")).strip(): row for row in bundle_rows if str(row.get("bundle_id", "")).strip()}
-    source_labels = _source_label_lookup(packet)
-    retained_items = [_retain_item_status(row, memo_markdown, bundle_lookup, source_labels) for row in retain_rows]
+    source_aliases = _source_alias_lookup(packet)
+    retained_items = [_retain_item_status(row, memo_markdown, bundle_lookup, source_aliases) for row in retain_rows]
     bundle_items = [_bundle_status(row, memo_markdown) for row in bundle_rows if _bundle_requires_surface_check(row)]
     issues = _retention_issues(retained_items, bundle_items)
     status = "ready" if not issues else "warning"
@@ -42,11 +42,12 @@ def _retain_item_status(
     row: dict[str, Any],
     memo: str,
     bundle_lookup: dict[str, dict[str, Any]],
-    source_labels: dict[str, str],
+    source_aliases: dict[str, list[str]],
 ) -> dict[str, Any]:
     statement = str(row.get("statement", "")).strip()
     source_ids = _string_list(row.get("source_ids"))
-    source_names = [source_labels[source_id] for source_id in source_ids if source_labels.get(source_id)]
+    source_names = [source_aliases[source_id][0] for source_id in source_ids if source_aliases.get(source_id)]
+    source_match_inputs = [(source_aliases[source_id][0], source_aliases[source_id]) for source_id in source_ids if source_aliases.get(source_id)]
     required_terms = _string_list(row.get("required_terms"))
     bundle_ids = _bundle_ids_for_retain_item(row, bundle_lookup)
     bundle_sources = [
@@ -55,14 +56,17 @@ def _retain_item_status(
         for label in _string_list(bundle_lookup.get(bundle_id, {}).get("source_labels"))
     ]
     source_names = _dedupe(source_names + bundle_sources)
+    source_match_inputs.extend((label, [label]) for label in bundle_sources)
     bundle_quantities = [
         quantity
         for bundle_id in bundle_ids
         for quantity in _string_list(bundle_lookup.get(bundle_id, {}).get("quantity_values"))
     ]
     required_terms = _dedupe(required_terms + bundle_quantities)
-    missing_terms = [term for term in required_terms if not _required_term_retained(memo, term)]
-    missing_sources = [label for label in source_names if not _contains_text(memo, label)]
+    required_term_matches = [_required_term_match(memo, term) for term in required_terms]
+    source_label_matches = [_source_label_match(memo, label, aliases) for label, aliases in source_match_inputs]
+    missing_terms = [row["term"] for row in required_term_matches if not row["retained"]]
+    missing_sources = [row["label"] for row in source_label_matches if not row["retained"]]
     statement_retained = _mentions_enough_content_terms(memo, statement, minimum=3)
     retained = not missing_terms and not missing_sources and statement_retained
     return {
@@ -73,6 +77,8 @@ def _retain_item_status(
         "statement_retained": statement_retained,
         "missing_required_terms": missing_terms,
         "missing_source_labels": missing_sources,
+        "required_term_matches": required_term_matches,
+        "source_label_matches": source_label_matches,
         "bundle_ids": bundle_ids,
         "retained": retained,
     }
@@ -82,8 +88,10 @@ def _bundle_status(row: dict[str, Any], memo: str) -> dict[str, Any]:
     claim = str(row.get("claim", "")).strip()
     quantities = _string_list(row.get("quantity_values"))
     source_labels = _string_list(row.get("source_labels"))
-    missing_quantities = [quantity for quantity in quantities if not _contains_text(memo, quantity)]
-    missing_sources = [label for label in source_labels if not _contains_text(memo, label)]
+    quantity_matches = [_required_term_match(memo, quantity) for quantity in quantities]
+    source_label_matches = [_source_label_match(memo, label, [label]) for label in source_labels]
+    missing_quantities = [row["term"] for row in quantity_matches if not row["retained"]]
+    missing_sources = [row["label"] for row in source_label_matches if not row["retained"]]
     claim_retained = _mentions_enough_content_terms(memo, claim, minimum=3)
     return {
         "bundle_id": row.get("bundle_id"),
@@ -92,6 +100,8 @@ def _bundle_status(row: dict[str, Any], memo: str) -> dict[str, Any]:
         "claim_retained": claim_retained,
         "missing_quantities": missing_quantities,
         "missing_source_labels": missing_sources,
+        "quantity_matches": quantity_matches,
+        "source_label_matches": source_label_matches,
         "retained": claim_retained and not missing_quantities and not missing_sources,
     }
 
@@ -172,16 +182,23 @@ def _bundle_ids_for_retain_item(row: dict[str, Any], bundle_lookup: dict[str, di
     return matched[:5]
 
 
-def _source_label_lookup(packet: dict[str, Any]) -> dict[str, str]:
-    labels = {}
+def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
+    aliases: dict[str, list[str]] = {}
     for row in packet.get("source_trail", []) if isinstance(packet.get("source_trail"), list) else []:
         if not isinstance(row, dict):
             continue
         source_id = str(row.get("source_id") or "").strip()
-        label = str(row.get("source_label") or "").strip()
-        if source_id and label:
-            labels[source_id] = label
-    return labels
+        row_aliases = _dedupe(
+            [
+                str(row.get("source_label") or "").strip(),
+                str(row.get("citation_label") or "").strip(),
+                str(row.get("display_label") or "").strip(),
+                str(row.get("source_url") or "").strip(),
+            ]
+        )
+        if source_id and row_aliases:
+            aliases[source_id] = row_aliases
+    return aliases
 
 
 def _contains_text(text: str, needle: str) -> bool:
@@ -192,15 +209,48 @@ def _contains_text(text: str, needle: str) -> bool:
 
 
 def _required_term_retained(text: str, term: str) -> bool:
+    return bool(_required_term_match(text, term)["retained"])
+
+
+def _required_term_match(text: str, term: str) -> dict[str, Any]:
     term = str(term).strip()
     if not term:
-        return True
+        return {"term": term, "retained": True, "match_method": "empty_term"}
+    if _contains_text(text, term):
+        return {"term": term, "retained": True, "match_method": "exact"}
+    normalized_text = _normalize_for_match(text)
+    normalized_term = _normalize_for_match(term)
+    if normalized_term and normalized_term in normalized_text:
+        return {"term": term, "retained": True, "match_method": "normalized_text"}
     numbers = _number_tokens(term)
     if numbers and len(_content_terms(term)) > 1:
-        return all(_contains_text(text, number) for number in numbers) and _mentions_enough_content_terms(text, term, minimum=2)
+        retained = all(_normalized_number_present(normalized_text, number) for number in numbers) and _mentions_enough_content_terms(
+            text,
+            term,
+            minimum=2,
+        )
+        return {
+            "term": term,
+            "retained": retained,
+            "match_method": "normalized_numeric" if retained else "not_found",
+        }
     if _requires_exact_term_match(term):
-        return _contains_text(text, term)
-    return _mentions_enough_content_terms(text, term, minimum=2)
+        return {"term": term, "retained": False, "match_method": "not_found"}
+    retained = _mentions_enough_content_terms(text, term, minimum=2)
+    return {"term": term, "retained": retained, "match_method": "content_terms" if retained else "not_found"}
+
+
+def _source_label_match(text: str, label: str, aliases: list[str]) -> dict[str, Any]:
+    label = str(label).strip()
+    for alias in _dedupe([label, *aliases]):
+        if not alias:
+            continue
+        if _contains_text(text, alias):
+            return {"label": label, "retained": True, "match_method": "exact_alias", "matched_alias": alias}
+        normalized_alias = _normalize_for_match(alias)
+        if normalized_alias and normalized_alias in _normalize_for_match(text):
+            return {"label": label, "retained": True, "match_method": "normalized_alias", "matched_alias": alias}
+    return {"label": label, "retained": False, "match_method": "not_found"}
 
 
 def _requires_exact_term_match(term: str) -> bool:
@@ -208,7 +258,22 @@ def _requires_exact_term_match(term: str) -> bool:
 
 
 def _number_tokens(text: str) -> list[str]:
-    return re.findall(r"\$?\d+(?:\.\d+)?%?", text)
+    return re.findall(r"\$?\d[\d,]*(?:\.\d+)?%?", text)
+
+
+def _normalize_for_match(text: str) -> str:
+    normalized = str(text).lower()
+    normalized = re.sub(r"[\u2010-\u2015]", "-", normalized)
+    normalized = re.sub(r"\s*([=:/<>])\s*", r"\1", normalized)
+    normalized = re.sub(r"\bconfidence interval\b", "ci", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
+
+
+def _normalized_number_present(normalized_text: str, number: str) -> bool:
+    normalized_number = _normalize_for_match(number)
+    variants = {normalized_number, normalized_number.replace(",", "")}
+    return any(variant and variant in normalized_text.replace(",", "") for variant in variants)
 
 
 def _mentions_enough_content_terms(text: str, statement: str, *, minimum: int) -> bool:

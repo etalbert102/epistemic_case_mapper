@@ -440,6 +440,8 @@ def _section_views(scaffold: dict[str, Any], bundles: list[dict[str, Any]], reta
 
 def _source_trail(scaffold: dict[str, Any], candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
     source_lookup = _dict(scaffold.get("source_display_names"))
+    source_urls = _dict(scaffold.get("source_urls"))
+    citation_labels = _dict(scaffold.get("source_citation_labels"))
     used_for: dict[str, set[str]] = defaultdict(set)
     for row in candidate_pool:
         for source_id in _string_list(row.get("source_ids")):
@@ -452,6 +454,9 @@ def _source_trail(scaffold: dict[str, Any], candidate_pool: list[dict[str, Any]]
             {
                 "source_id": source_id,
                 "source_label": _source_label(scaffold, source_id),
+                "display_label": str(source_lookup.get(source_id) or "").strip(),
+                "citation_label": str(citation_labels.get(source_id) or "").strip(),
+                "source_url": str(source_urls.get(source_id) or "").strip(),
                 "used_for": sorted(role for role in roles if role),
                 "appears_in_packet": bool(roles),
             }

@@ -123,6 +123,14 @@ def run_map_briefing(
         source_citation_labels=source_citation_labels,
     )
     scaffold["claim_canonicalization_report"] = canonicalization_report
+    scaffold["input_map_scope_counts"] = {
+        "schema_id": "input_map_scope_counts_v1",
+        "map_path": str(map_file),
+        "claim_count": len(candidate_map.get("claims", [])) if isinstance(candidate_map.get("claims"), list) else 0,
+        "relation_count": len(candidate_map.get("relations", [])) if isinstance(candidate_map.get("relations"), list) else 0,
+        "prioritized_claim_count": len(prioritized_map.get("claims", [])) if isinstance(prioritized_map.get("claims"), list) else 0,
+        "prioritized_relation_count": len(prioritized_map.get("relations", [])) if isinstance(prioritized_map.get("relations"), list) else 0,
+    }
     scaffold["relation_value_report"] = build_relation_value_report(prioritized_map)
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
