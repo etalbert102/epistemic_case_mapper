@@ -14,6 +14,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_warning_packet import (
+    build_warning_resolution_report,
+    unresolved_warning_repair_items,
+)
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -53,6 +57,8 @@ def run_memo_ready_packet_synthesis(
             "accepted": True,
             "retention_status": retention.get("status"),
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
+            "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
+            "warning_resolution_report": retention.get("warning_resolution_report", {}),
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
         }
     )
@@ -90,19 +96,41 @@ def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:
 
 def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
     statuses = [_item_retention_status(memo, item) for item in _mandatory_items(packet)]
-    issues = [row for row in statuses if not row["retained"]]
+    item_issues = [row for row in statuses if not row["retained"]]
+    warning_resolution = build_warning_resolution_report(
+        memo,
+        _dict(packet.get("memo_warning_packet")),
+    )
+    warning_issues = [
+        {
+            "issue_type": "unresolved_memo_warning",
+            "warning_status": row.get("status"),
+            "severity": row.get("severity"),
+            "warning_id": row.get("warning_id"),
+            "warning_type": row.get("warning_type"),
+            "claim": row.get("claim"),
+            "source_labels": row.get("source_labels", []),
+            "missing_anchor_terms": row.get("missing_anchor_terms", []),
+        }
+        for row in _list(warning_resolution.get("warnings_needing_repair"))
+        if isinstance(row, dict)
+    ]
+    issues = [*item_issues, *warning_issues]
     return {
         "schema_id": "memo_ready_packet_retention_report_v1",
         "status": "ready" if not issues else "warning",
         "must_retain_count": len(statuses),
         "retained_must_retain_count": sum(1 for row in statuses if row["retained"]),
-        "missing_critical_count": len(issues),
+        "missing_critical_count": len(item_issues),
         "missing_high_count": 0,
         "mandatory_item_count": len(statuses),
         "retained_mandatory_count": sum(1 for row in statuses if row["retained"]),
-        "missing_mandatory_count": len(issues),
-        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in issues),
+        "missing_mandatory_count": len(item_issues),
+        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in item_issues),
+        "unresolved_warning_count": len(warning_issues),
+        "warning_resolution_report": warning_resolution,
         "item_statuses": statuses,
+        "warning_issues": warning_issues,
         "issues": issues,
     }
 
@@ -122,6 +150,7 @@ def run_memo_ready_packet_repair(
         "status": "not_needed" if not retention_report.get("issues") else "not_run",
         "accepted": False,
         "initial_missing_mandatory_count": retention_report.get("missing_mandatory_count", 0),
+        "initial_unresolved_warning_count": retention_report.get("unresolved_warning_count", 0),
         "issues": [],
     }
     if not retention_report.get("issues"):
@@ -148,6 +177,7 @@ def run_memo_ready_packet_repair(
             "accepted": accepted,
             "final_missing_mandatory_count": after.get("missing_mandatory_count", 0),
             "final_retained_mandatory_count": after.get("retained_mandatory_count", 0),
+            "final_unresolved_warning_count": after.get("unresolved_warning_count", 0),
             "final_retention_report": after,
             "structure_issues": structure_issues,
             "issues": [] if accepted else ["repair did not improve packet retention without markdown damage"],
@@ -157,13 +187,16 @@ def run_memo_ready_packet_repair(
 
 
 def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], retention_report: dict[str, Any]) -> str:
+    warning_packet = _dict(packet.get("memo_warning_packet"))
+    warning_resolution = _dict(retention_report.get("warning_resolution_report"))
     repair_packet = {
         "decision_question": packet.get("decision_question"),
         "missing_items": [
             _repair_item(packet, issue)
             for issue in _list(retention_report.get("issues"))[:8]
-            if isinstance(issue, dict)
+            if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_ready_item"
         ],
+        "unresolved_warnings": unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
     return (
         "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"
@@ -172,6 +205,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- Return the full revised memo in Markdown, not JSON.\n"
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
         "- Use only the missing items in the repair packet; do not introduce new evidence.\n"
+        "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"
         "- Do not mention packet IDs, validation, telemetry, or internal pipeline machinery.\n\n"
         f"Repair packet:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
@@ -234,6 +268,7 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
             }
             for item in _mandatory_items(packet)[:18]
         ],
+        "memo_warnings": _list(_dict(packet.get("memo_warning_packet")).get("warnings"))[:8],
     }
     return (
         "You are doing a final prose polish on a source-grounded decision memo.\n"
@@ -241,6 +276,7 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "Rules:\n"
         "- Return the full revised memo in Markdown, not JSON.\n"
         "- Do not drop protected quantities, source labels, caveats, counterweights, or scope boundaries.\n"
+        "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
         "- Do not add facts or sources beyond the memo and protected item list.\n"
         "- Make the memo read like decision-ready analysis, not a checklist.\n\n"
         f"Protected item list:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
@@ -369,11 +405,18 @@ def _retention_improved(before: dict[str, Any], after: dict[str, Any]) -> bool:
     after_missing = int(after.get("missing_mandatory_count", 0) or 0)
     if after_missing < before_missing:
         return True
+    before_warnings = int(before.get("unresolved_warning_count", 0) or 0)
+    after_warnings = int(after.get("unresolved_warning_count", 0) or 0)
+    if after_warnings < before_warnings:
+        return True
     return int(after.get("missing_quantity_count", 0) or 0) < int(before.get("missing_quantity_count", 0) or 0)
 
 
 def _retention_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:
-    return int(after.get("missing_mandatory_count", 0) or 0) <= int(before.get("missing_mandatory_count", 0) or 0)
+    return (
+        int(after.get("missing_mandatory_count", 0) or 0) <= int(before.get("missing_mandatory_count", 0) or 0)
+        and int(after.get("unresolved_warning_count", 0) or 0) <= int(before.get("unresolved_warning_count", 0) or 0)
+    )
 
 
 def _extract_markdown(raw: str) -> str:

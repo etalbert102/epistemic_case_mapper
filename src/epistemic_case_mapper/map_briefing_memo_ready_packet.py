@@ -20,6 +20,7 @@ from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_b
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
 from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
+from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
 from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
@@ -46,19 +47,14 @@ MANDATORY_ROLES = {
 
 
 def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Build the minimal viable claim-map-to-packet assembly artifacts.
-
-    The existing decision packet remains the source of truth. This layer turns
-    its bundles into a compact model-facing packet with conservative clustering,
-    quantity binding, diagnosticity-lite, and packet-quality telemetry.
-    """
-
+    """Build claim-map-to-packet assembly artifacts from the decision packet."""
     packet = packet if isinstance(packet, dict) else {}
     clusters = build_packet_assembly_clusters(packet)
     role_report = build_packet_role_assignment_report(packet, clusters)
     diagnosticity = build_diagnosticity_matrix(packet, clusters)
     quantity_binding = build_quantity_binding_report(packet, clusters)
     evidence_profile = build_evidence_profile_report(packet, clusters, quantity_binding)
+    memo_warning_packet = build_memo_warning_packet(packet)
     assembly_audit = build_packet_assembly_audit(
         packet,
         clusters=clusters,
@@ -74,6 +70,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         quantity_binding=quantity_binding,
         evidence_profile=evidence_profile,
         assembly_audit=assembly_audit,
+        memo_warning_packet=memo_warning_packet,
     )
     quality = build_memo_ready_packet_quality_report(memo_ready, assembly_audit)
     quantity_slot_report = build_quantity_slot_report(memo_ready)
@@ -85,6 +82,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         "quantity_binding_report": quantity_binding,
         "evidence_profile_report": evidence_profile,
         "packet_assembly_audit": assembly_audit,
+        "memo_warning_packet": memo_warning_packet,
         "memo_ready_packet": memo_ready,
         "memo_ready_selection_report": memo_ready.get("selection_report", {}),
         "decision_crux_reconstruction_report": memo_ready.get("decision_crux_reconstruction_report", {}),
@@ -297,6 +295,7 @@ def build_memo_ready_packet(
     quantity_binding: dict[str, Any],
     evidence_profile: dict[str, Any],
     assembly_audit: dict[str, Any],
+    memo_warning_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     quantity_by_cluster = {
         str(row.get("cluster_id")): row
@@ -334,6 +333,7 @@ def build_memo_ready_packet(
         "evidence_items": selected,
         "evidence_groups": _evidence_groups(selected),
         "source_trail": _source_trail(packet),
+        "memo_warning_packet": memo_warning_packet if isinstance(memo_warning_packet, dict) else build_memo_warning_packet(packet),
         "selection_report": selection_report,
         "decision_crux_reconstruction_report": crux_report,
         "assembly_summary": {
@@ -407,6 +407,8 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record for this memo.\n\n"
         "The packet includes a decision_synthesis_contract. Use that contract as the writing plan.\n"
+        "If memo_warning_packet contains warnings, treat them as actionable evidence that was at risk of omission.\n"
+        "Incorporate each warning naturally when it affects the answer; otherwise use it to bound scope, confidence, or uncertainty.\n"
         "Do not merely summarize or list evidence. Produce a decision read: default stance, why it is supported, strongest counterweight, scope/conditions, and practical implication.\n\n"
         "Rules:\n"
         "- Answer the decision question directly in the first paragraph.\n"

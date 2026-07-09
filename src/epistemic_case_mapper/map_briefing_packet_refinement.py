@@ -12,6 +12,7 @@ from epistemic_case_mapper.map_briefing_packet_critique_issues import (
     dedupe_issue_rows,
     normalized_critique_issues,
 )
+from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissions_with_recomputed_quantities
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
 from epistemic_case_mapper.model_backends import run_model_backend
@@ -334,8 +335,13 @@ def run_packet_critique_and_refinement(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
-    candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
-    post_sufficiency = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
+    if _refinement_left_packet_semantics_unchanged(refined["report"]):
+        candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
+        recomputed = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
+        post_sufficiency = preserve_omissions_with_recomputed_quantities(pre_sufficiency, recomputed)
+    else:
+        candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
+        post_sufficiency = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
     _sync_packet_coverage_with_sufficiency(refined["packet"], post_sufficiency)
     return {
         "decision_briefing_packet": refined["packet"],
@@ -773,6 +779,17 @@ def _post_refinement_candidate_pool(packet: dict[str, Any], pre_sufficiency: dic
     rows = _candidate_pool_from_packet(packet)
     rows.extend(_quantity_obligation_candidates(pre_sufficiency))
     return rows
+
+
+def _refinement_left_packet_semantics_unchanged(report: dict[str, Any]) -> bool:
+    status = str(report.get("status") or "")
+    if status == "skipped":
+        return True
+    try:
+        applied = int(report.get("applied_update_count", 0) or 0)
+    except (TypeError, ValueError):
+        applied = 0
+    return status == "applied" and applied == 0
 
 
 def _quantity_obligation_candidates(pre_sufficiency: dict[str, Any]) -> list[dict[str, Any]]:

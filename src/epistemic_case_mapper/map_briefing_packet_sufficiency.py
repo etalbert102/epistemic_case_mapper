@@ -4,6 +4,11 @@ import re
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_omission_priority import (
+    candidate_priority,
+    omitted_candidate_row,
+)
+
 
 ROLE_ORDER = (
     "strongest_support",
@@ -19,13 +24,24 @@ ROLE_ORDER = (
 def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: list[dict[str, Any]]) -> dict[str, Any]:
     bundles = [row for row in packet.get("evidence_bundles", []) if isinstance(row, dict)]
     retained_ids = _retained_candidate_ids(bundles)
-    high_priority_omitted = [
-        _omitted_candidate_row(row)
+    review_worthy_omitted_rows = [
+        row
         for row in candidate_pool
-        if _candidate_priority(row) >= 7
+        if candidate_priority(row) >= 7
         and row.get("candidate_card_id")
         and str(row.get("candidate_card_id")) not in retained_ids
         and "appendix" not in str(row.get("inclusion_recommendation", "")).lower()
+    ]
+    truly_lost_omitted_rows = [
+        row for row in review_worthy_omitted_rows if not _omission_represented(row, bundles)
+    ]
+    review_worthy_omitted = [omitted_candidate_row(row) for row in review_worthy_omitted_rows]
+    truly_lost_omitted = [omitted_candidate_row(row) for row in truly_lost_omitted_rows]
+    decision_critical_omitted = [
+        row for row in truly_lost_omitted if row.get("omission_severity") == "decision_critical"
+    ]
+    moderate_context_omitted = [
+        row for row in truly_lost_omitted if row.get("omission_severity") == "moderate_context"
     ]
     role_coverage = _role_coverage(candidate_pool, bundles)
     quantity_retention = _quantity_retention(packet, candidate_pool)
@@ -39,7 +55,8 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
     weak = _unsupported_or_weakly_anchored_bundles(bundles)
     over_merge = _over_merge_risk(bundles)
     issues = [
-        *(["high_priority_omitted_evidence"] if high_priority_omitted else []),
+        *(["decision_critical_omitted_evidence"] if decision_critical_omitted else []),
+        *(["moderate_context_omitted_evidence"] if moderate_context_omitted else []),
         *(["missing_available_roles"] if role_coverage["missing_available_roles"] else []),
         *(["top_quantities_missing_from_must_retain"] if quantity_retention["missing_top_quantities"] else []),
         *(["counterweights_not_preserved"] if not counterweight["preserved"] and counterweight["available_count"] else []),
@@ -55,7 +72,11 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
         "schema_id": "packet_sufficiency_report_v1",
         "status": status,
         "method": "pre_synthesis_packet_role_quantity_source_and_compression_checks",
-        "high_priority_omitted_evidence": high_priority_omitted[:30],
+        "review_worthy_omitted_evidence": review_worthy_omitted[:30],
+        "truly_lost_omitted_evidence": truly_lost_omitted[:30],
+        "decision_critical_omitted_evidence": decision_critical_omitted[:30],
+        "moderate_context_omitted_evidence": moderate_context_omitted[:30],
+        "high_priority_omitted_evidence": review_worthy_omitted[:30],
         "role_coverage": role_coverage,
         "quantity_retention": quantity_retention,
         "quantity_obligation_ledger": quantity_obligations,
@@ -253,7 +274,7 @@ def _compression_loss(candidate_pool: list[dict[str, Any]], bundles: list[dict[s
     retained_sources = {s for row in bundles for s in _string_list(row.get("source_ids"))}
     loss_rows = []
     for row in candidate_pool:
-        if str(row.get("pool_id")) in retained_pool_ids or _candidate_priority(row) < 7:
+        if str(row.get("pool_id")) in retained_pool_ids or candidate_priority(row) < 7:
             continue
         unique_quantities = [q for q in _string_list(row.get("quantity_values")) if q not in retained_quantities]
         unique_sources = [s for s in _string_list(row.get("source_ids")) if s not in retained_sources]
@@ -310,21 +331,35 @@ def _candidate_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
         "context": 6,
     }.get(str(row.get("decision_role", "")), 7)
     grounded = 0 if row.get("source_grounded") else 1
-    return (role_rank, -_candidate_priority(row), grounded, str(row.get("pool_id", "")))
+    return (role_rank, -candidate_priority(row), grounded, str(row.get("pool_id", "")))
 
 
-def _candidate_priority(row: dict[str, Any]) -> int:
-    try:
-        score = int(row.get("decision_relevance_score", 0) or 0)
-    except (TypeError, ValueError):
-        score = 0
-    if row.get("quantity_values"):
-        score += 1
-    if row.get("decision_role") in {"counterweight", "quantitative_anchor"}:
-        score += 1
-    if not row.get("source_grounded"):
-        score -= 2
-    return max(0, min(10, score))
+def _omission_represented(row: dict[str, Any], bundles: list[dict[str, Any]]) -> bool:
+    return any(_representation_reason(row, bundle) for bundle in bundles)
+
+
+def _representation_reason(row: dict[str, Any], bundle: dict[str, Any]) -> str:
+    if _overlap(row, bundle, "claim_ids"):
+        return "shared_claim_id"
+    if _overlap(row, bundle, "source_card_ids"):
+        return "shared_source_card_id"
+    if _overlap(row, bundle, "quantity_values"):
+        return "shared_quantity_value"
+    row_sources = set(_string_list(row.get("source_ids")))
+    bundle_sources = set(_string_list(bundle.get("source_ids")))
+    if row_sources and row_sources & bundle_sources and _normalized_claim_overlap(row, bundle) >= 4:
+        return "shared_source_and_claim_terms"
+    return ""
+
+
+def _overlap(left: dict[str, Any], right: dict[str, Any], key: str) -> bool:
+    return bool(set(_string_list(left.get(key))) & set(_string_list(right.get(key))))
+
+
+def _normalized_claim_overlap(row: dict[str, Any], bundle: dict[str, Any]) -> int:
+    left = {token for token in str(row.get("claim", "")).lower().split() if len(token) > 4}
+    right = {token for token in str(bundle.get("claim", "")).lower().split() if len(token) > 4}
+    return len(left & right)
 
 
 def _retained_candidate_ids(bundles: list[dict[str, Any]]) -> set[str]:
@@ -334,21 +369,6 @@ def _retained_candidate_ids(bundles: list[dict[str, Any]]) -> set[str]:
         for card_id in _string_list(bundle.get("candidate_card_ids"))
         if card_id
     }
-
-
-def _omitted_candidate_row(row: dict[str, Any]) -> dict[str, Any]:
-    return _drop_empty(
-        {
-            "pool_id": row.get("pool_id"),
-            "candidate_card_id": row.get("candidate_card_id"),
-            "decision_role": row.get("decision_role"),
-            "priority": _candidate_priority(row),
-            "source_ids": _string_list(row.get("source_ids"))[:5],
-            "quantity_values": _string_list(row.get("quantity_values"))[:5],
-            "claim": _short_text(str(row.get("claim", "")), 220),
-            "reason": "high-priority candidate was not retained after packet role budgets",
-        }
-    )
 
 
 def _string_list(value: Any) -> list[str]:

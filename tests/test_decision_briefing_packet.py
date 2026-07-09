@@ -192,8 +192,9 @@ def test_packet_sufficiency_reports_high_priority_compression_loss() -> None:
     result = build_decision_briefing_packet_bundle(scaffold, question="Should the city adopt option A for flood protection?")
     sufficiency = result["packet_sufficiency_report"]
 
-    assert sufficiency["high_priority_omitted_evidence"]
-    assert "high_priority_omitted_evidence" in sufficiency["issues"]
+    assert sufficiency["review_worthy_omitted_evidence"]
+    assert sufficiency["decision_critical_omitted_evidence"]
+    assert "decision_critical_omitted_evidence" in sufficiency["issues"]
 
 
 def test_packet_resolves_quantity_source_labels_and_retains_all_top_quantities() -> None:

@@ -112,6 +112,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("evidence_profile_report", "evidence_profile_report.json", "json", _scaffold_value("evidence_profile_report"), review_label="Evidence profile report"),
         ArtifactSpec("packet_assembly_audit", "packet_assembly_audit.json", "json", _scaffold_value("packet_assembly_audit"), review_label="Packet assembly audit"),
         ArtifactSpec("packet_qa_report", "packet_qa_report.json", "json", _scaffold_value("packet_qa_report"), review_label="Packet QA report"),
+        ArtifactSpec("memo_warning_packet", "memo_warning_packet.json", "json", _scaffold_value("memo_warning_packet"), review_label="Memo warning packet"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
         ArtifactSpec("decision_crux_reconstruction_report", "decision_crux_reconstruction_report.json", "json", _scaffold_value("decision_crux_reconstruction_report"), review_label="Decision crux reconstruction"),

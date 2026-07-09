@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
 )
+from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report
 from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
@@ -276,6 +277,58 @@ def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     assert "Counter Study" in result["memo"]
 
 
+def test_memo_warning_packet_routes_truly_lost_evidence_into_synthesis_prompt() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    decision_packet = built["decision_briefing_packet"]
+    decision_packet["source_trail"].append(
+        {"source_id": "s4", "source_label": "Equity Review", "source_url": "https://example.test/equity"}
+    )
+    decision_packet["coverage_report"]["truly_lost_decision_critical"] = [
+        {
+            "candidate_card_id": "ec_warning",
+            "decision_role": "counterweight",
+            "priority": 10,
+            "source_ids": ["s4"],
+            "claim": "Option A shifted flood risk toward downstream neighborhoods.",
+            "quantity_values": ["3 neighborhoods"],
+        }
+    ]
+
+    result = build_quality_synthesis_packet_bundle(decision_packet)
+    packet = result["memo_ready_packet"]
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert result["memo_warning_packet"]["critical_warning_count"] == 1
+    assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
+    assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
+    assert "If memo_warning_packet contains warnings" in prompt
+
+
+def test_warning_resolution_report_flags_unresolved_warning_evidence() -> None:
+    warning_packet = {
+        "warnings": [
+            {
+                "warning_id": "memo_warning_001",
+                "warning_type": "omitted_decision_critical_evidence",
+                "severity": "critical",
+                "source_labels": ["Equity Review"],
+                "claim": "Option A shifted flood risk toward downstream neighborhoods.",
+                "anchor_terms": ["shifted", "downstream", "neighborhoods"],
+            }
+        ]
+    }
+
+    unresolved = build_warning_resolution_report("## Decision Brief\n\nOption A has strong support.", warning_packet)
+    addressed = build_warning_resolution_report(
+        "## Decision Brief\n\nEquity Review warns that Option A shifted flood risk toward downstream neighborhoods.",
+        warning_packet,
+    )
+
+    assert unresolved["unresolved_count"] == 1
+    assert addressed["unresolved_count"] == 0
+    assert addressed["addressed_count"] == 1
+
+
 def test_memo_ready_synthesis_fallback_renders_all_bound_quantities() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
@@ -337,6 +390,40 @@ def test_memo_ready_repair_accepts_retention_improvement(monkeypatch) -> None:
     assert result["report"]["status"] == "accepted"
     assert "25%" in result["memo"]
     assert "Counter Study" in result["memo"]
+
+
+def test_memo_ready_repair_accepts_warning_resolution(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    decision_packet = built["decision_briefing_packet"]
+    decision_packet["source_trail"].append({"source_id": "s4", "source_label": "Equity Review"})
+    decision_packet["coverage_report"]["truly_lost_decision_critical"] = [
+        {
+            "candidate_card_id": "ec_warning",
+            "decision_role": "counterweight",
+            "priority": 10,
+            "source_ids": ["s4"],
+            "claim": "Option A shifted flood risk toward downstream neighborhoods.",
+        }
+    ]
+    packet = build_quality_synthesis_packet_bundle(decision_packet)["memo_ready_packet"]
+    weak_memo = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
+    before = build_memo_ready_packet_retention_report(weak_memo, packet)
+    repaired = weak_memo.replace(
+        "## Sources",
+        "The Equity Review adds an important limitation: Option A shifted flood risk toward downstream neighborhoods.\n\n## Sources",
+    )
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=repaired, backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert before["unresolved_warning_count"] == 1
+    assert result["report"]["status"] == "accepted"
+    assert result["report"]["final_unresolved_warning_count"] == 0
+    assert "Equity Review" in result["memo"]
 
 
 def test_memo_ready_final_polish_rejects_evidence_loss(monkeypatch) -> None:

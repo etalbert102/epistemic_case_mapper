@@ -594,8 +594,10 @@ def _reader_source_trail(packet: dict[str, Any]) -> list[dict[str, Any]]:
 def _reader_limits(packet: dict[str, Any]) -> list[str]:
     coverage = packet.get("coverage_report", {}) if isinstance(packet.get("coverage_report"), dict) else {}
     limits: list[str] = []
-    if coverage.get("high_priority_omitted_count"):
-        limits.append("Some high-priority evidence was not included in the compact packet; treat the memo as a prioritized synthesis rather than an exhaustive review.")
+    if coverage.get("truly_lost_decision_critical_count"):
+        limits.append("Some decision-critical candidate evidence may be missing from the compact packet; treat the memo as a prioritized synthesis rather than an exhaustive review.")
+    elif coverage.get("truly_lost_moderate_context_count"):
+        limits.append("Some moderate context evidence was left out of the compact packet; check scope and applicability before treating the memo as exhaustive.")
     if coverage.get("source_label_missing_count"):
         limits.append("Some evidence lacked clean source labels in the packet.")
     if coverage.get("packet_quality_repair_warning_count"):
@@ -633,8 +635,10 @@ def _reader_synthesis_warnings(packet: dict[str, Any]) -> list[str]:
     for issue in _string_list(warning_inputs.get("packet_quality_gate_issues")):
         warnings.append(_warning_text(issue))
     coverage = packet.get("coverage_report", {}) if isinstance(packet.get("coverage_report"), dict) else {}
-    if coverage.get("high_priority_omitted_count"):
-        warnings.append("Do not imply the packet is exhaustive; some high-priority candidate evidence was omitted from the compact synthesis packet.")
+    if coverage.get("truly_lost_decision_critical_count"):
+        warnings.append("Do not imply the packet is exhaustive; decision-critical candidate evidence may be missing from the compact synthesis packet.")
+    elif coverage.get("truly_lost_moderate_context_count"):
+        warnings.append("Avoid overstating scope; moderate context evidence was omitted from the compact synthesis packet.")
     if coverage.get("packet_quality_repair_warning_count"):
         warnings.append("Some extracted rows were too malformed for safe synthesis; avoid using fragments or page boilerplate as evidence.")
     return _dedupe(warnings)
@@ -643,6 +647,8 @@ def _reader_synthesis_warnings(packet: dict[str, Any]) -> list[str]:
 def _warning_text(issue: str) -> str:
     labels = {
         "high_priority_omitted_evidence": "Do not imply exhaustive coverage; high-priority available evidence may be omitted from the compact packet.",
+        "decision_critical_omitted_evidence": "Do not imply exhaustive coverage; decision-critical available evidence may be omitted from the compact packet.",
+        "moderate_context_omitted_evidence": "Avoid overstating scope; moderate context evidence may be omitted from the compact packet.",
         "missing_available_roles": "Avoid a one-sided read if available support, counterweight, scope, crux, or quantity roles are missing from the retained packet.",
         "top_quantities_missing_from_must_retain": "Check that load-bearing quantities remain visible in the memo.",
         "counterweights_not_preserved": "Avoid overstating the answer because available counterweight evidence was not preserved.",

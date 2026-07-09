@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_omission_priority import (
+    candidate_priority,
+    omitted_candidate_row,
+    omitted_evidence_severity,
+)
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_quantity_obligation_ledger
 
 
@@ -12,24 +17,27 @@ def build_packet_coverage_report(
     source_trail: list[dict[str, Any]],
 ) -> dict[str, Any]:
     retained_ids = _retained_candidate_ids(bundles)
-    high_priority_omitted = [
+    review_worthy_omitted = [
         row
         for row in candidate_pool
-        if _candidate_priority(row) >= 7
+        if candidate_priority(row) >= 7
         and row.get("candidate_card_id")
         and str(row.get("candidate_card_id")) not in retained_ids
         and "appendix" not in str(row.get("inclusion_recommendation", "")).lower()
     ]
     represented_omissions = [
         _omission_representation(row, bundles)
-        for row in high_priority_omitted
+        for row in review_worthy_omitted
     ]
     represented_omissions = [row for row in represented_omissions if row.get("represented")]
     truly_lost_omissions = [
         row
-        for row in high_priority_omitted
+        for row in review_worthy_omitted
         if not any(item.get("candidate_card_id") == str(row.get("candidate_card_id")) for item in represented_omissions)
     ]
+    decision_critical_lost = [row for row in truly_lost_omissions if omitted_evidence_severity(row) == "decision_critical"]
+    moderate_context_lost = [row for row in truly_lost_omissions if omitted_evidence_severity(row) == "moderate_context"]
+    review_context_lost = [row for row in truly_lost_omissions if omitted_evidence_severity(row) == "review_worthy_context"]
     source_bottom_line_candidates = [
         row for row in candidate_pool if str(row.get("pretrim_kind")) == "source_bottom_line" and row.get("candidate_card_id")
     ]
@@ -42,7 +50,17 @@ def build_packet_coverage_report(
         "candidate_pool_count": len(candidate_pool),
         "evidence_bundle_count": len(bundles),
         "must_retain_count": len(retain_ledger),
-        "high_priority_omitted_count": len(high_priority_omitted),
+        "review_worthy_omitted_count": len(review_worthy_omitted),
+        "represented_elsewhere_count": len(represented_omissions),
+        "truly_lost_review_worthy_count": len(truly_lost_omissions),
+        "truly_lost_decision_critical_count": len(decision_critical_lost),
+        "truly_lost_moderate_context_count": len(moderate_context_lost),
+        "truly_lost_review_context_count": len(review_context_lost),
+        "represented_elsewhere": represented_omissions[:20],
+        "truly_lost_decision_critical": [omitted_candidate_row(row) for row in decision_critical_lost[:20]],
+        "truly_lost_moderate_context": [omitted_candidate_row(row) for row in moderate_context_lost[:20]],
+        "truly_lost_review_context": [omitted_candidate_row(row) for row in review_context_lost[:20]],
+        "high_priority_omitted_count": len(review_worthy_omitted),
         "high_priority_represented_elsewhere_count": len(represented_omissions),
         "high_priority_truly_lost_count": len(truly_lost_omissions),
         "high_priority_represented_elsewhere": represented_omissions[:20],
@@ -57,8 +75,9 @@ def build_packet_coverage_report(
         "quantity_obligation_count": quantity_ledger["obligation_count"],
         "warnings": _dedupe(
             [
-                *(["high_priority_omitted_after_trimming"] if high_priority_omitted else []),
-                *(["high_priority_truly_lost_after_trimming"] if truly_lost_omissions else []),
+                *(["review_worthy_omitted_after_trimming"] if review_worthy_omitted else []),
+                *(["decision_critical_evidence_lost_after_trimming"] if decision_critical_lost else []),
+                *(["moderate_context_evidence_lost_after_trimming"] if moderate_context_lost else []),
                 *(["source_bottom_lines_omitted_after_trimming"] if omitted_source_bottom_lines else []),
                 *(["primary_bundles_low_question_fit"] if low_fit_primary else []),
                 *(["no_must_retain_items"] if not retain_ledger else []),
@@ -120,22 +139,6 @@ def _normalized_claim_overlap(row: dict[str, Any], bundle: dict[str, Any]) -> in
     left = {token for token in str(row.get("claim", "")).lower().split() if len(token) > 4}
     right = {token for token in str(bundle.get("claim", "")).lower().split() if len(token) > 4}
     return len(left & right)
-
-
-def _candidate_priority(row: dict[str, Any]) -> int:
-    try:
-        score = int(row.get("decision_relevance_score", 0) or 0)
-    except (TypeError, ValueError):
-        score = 0
-    if row.get("quantity_values"):
-        score += 1
-    if row.get("decision_role") in {"counterweight", "quantitative_anchor"}:
-        score += 1
-    if not row.get("source_grounded"):
-        score -= 2
-    return max(0, min(10, score))
-
-
 def _string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
