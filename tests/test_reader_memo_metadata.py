@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_memo_metadata import (
+    ensure_decision_question_line,
     ensure_reader_memo_metadata,
     normalize_reader_memo_metadata_layout,
     source_list_lines,
@@ -79,6 +80,37 @@ def test_ensure_reader_memo_metadata_repairs_collapsed_model_metadata() -> None:
     assert f"**Decision question:** {question}\n\nThe best current answer" in updated
     assert "The evidence is mixed.\n\n**Confidence:** medium" in updated
     assert "\n## Sources\n\n- Study A" in updated
+
+
+def test_ensure_reader_memo_metadata_prepends_question_when_model_uses_memo_format() -> None:
+    question = "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?"
+    memo = """**MEMORANDUM**
+
+**SUBJECT:** Analysis of LHC Operation and Catastrophic Black Hole Risk
+
+### Executive Summary
+Investigators concluded the risk was not catastrophic.
+"""
+
+    updated = ensure_reader_memo_metadata(memo, {"question": question})
+
+    assert updated.startswith(f"**Decision question:** {question}\n\n**MEMORANDUM**")
+
+
+def test_ensure_decision_question_line_replaces_wrong_question_metadata() -> None:
+    question = "Should the intervention be adopted?"
+    memo = """# Decision Memo
+
+**Decision question:** Should the intervention be avoided?
+
+The evidence is mixed.
+"""
+
+    updated = ensure_decision_question_line(memo, question)
+
+    assert f"**Decision question:** {question}" in updated
+    assert "Should the intervention be avoided?" not in updated
+    assert updated.count("**Decision question:**") == 1
 
 
 def test_reader_memo_metadata_smooths_generic_intro_and_duplicate_prefixed_evidence() -> None:

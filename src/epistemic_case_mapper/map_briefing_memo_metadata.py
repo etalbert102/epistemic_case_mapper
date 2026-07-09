@@ -12,11 +12,7 @@ def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
     question = str(scaffold.get("question", "")).strip()
     if question:
         memo = remove_standalone_question_restatement(memo, question)
-    if "**Decision question:**" not in memo:
-        question_lines = decision_question_lines(scaffold)
-        if question_lines:
-            metadata = "\n" + "\n".join(question_lines) + "\n"
-            memo = re.sub(r"^(## Decision Brief\s*)", lambda match: match.group(1) + metadata, memo, count=1)
+        memo = ensure_decision_question_line(memo, question)
     source_lines = source_list_lines(scaffold)
     if source_lines:
         memo = _replace_sources_section(memo, source_lines)
@@ -34,6 +30,31 @@ def decision_question_lines(scaffold: dict[str, Any]) -> list[str]:
     if not question:
         return []
     return [f"**Decision question:** {question}", ""]
+
+
+def ensure_decision_question_line(markdown: str, question: str) -> str:
+    exact_line = f"**Decision question:** {question}"
+    memo = _remove_decision_question_metadata_lines(str(markdown), exact_line=exact_line)
+    if exact_line in memo:
+        return memo
+    metadata = exact_line + "\n\n"
+    decision_heading = re.compile(r"^(## Decision Brief\s*\n+)", flags=re.MULTILINE)
+    if decision_heading.search(memo):
+        return decision_heading.sub(lambda match: match.group(1) + metadata, memo, count=1)
+    first_heading = re.compile(r"^(#{1,3}\s+[^\n]+\n+)")
+    if first_heading.search(memo):
+        return first_heading.sub(lambda match: match.group(1) + metadata, memo, count=1)
+    return metadata + memo.lstrip()
+
+
+def _remove_decision_question_metadata_lines(markdown: str, *, exact_line: str) -> str:
+    lines = []
+    for line in str(markdown).splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("**decision question:**") and exact_line not in stripped:
+            continue
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def normalize_reader_memo_metadata_layout(markdown: str, question: str) -> str:
