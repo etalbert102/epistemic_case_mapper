@@ -52,6 +52,7 @@ def build_spine_arbitration_prompt(spine: dict[str, Any]) -> str:
         "Also write a concise default_answer_claim that directly answers the decision question using only the listed fields.\n"
         "The answer must name the subject of the question and use the question's natural answer vocabulary when it supplies options.\n"
         "Lead with the decision read, then include the most important caveat. Do not lead with a single-study result or a research-gap statement.\n"
+        "If any counterevidence fields are listed, select at least one counterevidence_field_id and explain why it does or does not change the answer.\n"
         "The answer should be decision-ready prose, not a label, instruction, or study-by-study summary.\n"
         "Return only JSON with this schema:\n"
         "{\n"
@@ -171,6 +172,8 @@ def _model_default_answer_update(
             }
         return {"accepted": False, "reason": "", "default_answer": current_default}
     rejection = _default_answer_claim_rejection_reason(claim, selected_fields, question=str(spine.get("decision_question", "")))
+    if not rejection and _has_counterevidence_available(spine) and not _allowed_ids(payload.get("counterevidence_field_ids"), allowed):
+        rejection = "default_answer_claim_omits_available_counterevidence"
     if rejection:
         return {"accepted": False, "reason": rejection, "default_answer": current_default}
     return {
@@ -214,6 +217,10 @@ def _selected_fields_for_grounding(
         if field and field not in fields:
             fields.append(field)
     return fields
+
+
+def _has_counterevidence_available(spine: dict[str, Any]) -> bool:
+    return any(isinstance(field, dict) and field.get("field_id") for field in spine.get("strongest_counterevidence", []))
 
 
 def _default_answer_claim_rejection_reason(claim: str, selected_fields: list[dict[str, Any]], *, question: str) -> str:

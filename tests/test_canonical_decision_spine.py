@@ -524,6 +524,33 @@ def test_model_spine_arbitration_accepts_grounded_default_answer_claim(monkeypat
     assert result["spine"]["default_answer"]["candidate_card_ids"]
 
 
+def test_model_spine_arbitration_rejects_default_answer_that_omits_counterevidence(monkeypatch) -> None:
+    spine = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")["canonical_decision_spine"]
+    original_default = spine["default_answer"]["claim"]
+
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+        return ModelBackendResult(
+            text=(
+                '{"default_answer_field_id":"default_answer",'
+                '"default_answer_claim":"The option should be adopted as a bounded default because available evidence reports improved primary outcomes.",'
+                '"support_field_ids":["strongest_support_1"],'
+                '"counterevidence_field_ids":[],'
+                '"boundary_field_ids":[],'
+                '"rationale":"The support field answers the question."}'
+            ),
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+
+    result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert result["spine"]["default_answer"]["claim"] == original_default
+    assert result["spine"]["model_arbitration"]["default_answer_claim_rejection_reason"] == "default_answer_claim_omits_available_counterevidence"
+    assert "accepted_default_answer_claim" not in result["spine"]["model_arbitration"]
+
+
 def test_model_spine_arbitration_rejects_invented_field_ids(monkeypatch) -> None:
     spine = build_decision_spine_bundle(_candidate_map(), _scaffold(), question="Should the option be adopted?")["canonical_decision_spine"]
 
