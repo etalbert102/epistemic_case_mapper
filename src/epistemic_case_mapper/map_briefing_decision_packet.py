@@ -348,10 +348,10 @@ def _must_retain_ledger(scaffold: dict[str, Any], bundles: list[dict[str, Any]])
         if importance not in CRITICAL_IMPORTANCE:
             continue
         rows.append(_retain_item(len(rows) + 1, bundle, importance=importance))
-    for quantity in _top_quantity_anchor_rows(scaffold):
-        if _quantity_already_retained(quantity, rows):
+    for quantity_group in _top_quantity_anchor_groups(scaffold):
+        if _quantity_group_already_retained(quantity_group, rows):
             continue
-        rows.append(_retain_quantity_item(len(rows) + 1, quantity, scaffold))
+        rows.append(_retain_quantity_group_item(len(rows) + 1, quantity_group))
     return _dedupe_dicts(rows, key_fields=("statement", "decision_role", "required_terms"))[:28]
 
 
@@ -383,19 +383,19 @@ def _retain_item(index: int, bundle: dict[str, Any], *, importance: str) -> dict
     )
 
 
-def _retain_quantity_item(index: int, quantity: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
-    source_ids = _source_ids_for_quantity_row(scaffold, quantity)
-    source_labels = _source_labels(scaffold, source_ids, fallback=_string_list(quantity.get("source")))
+def _retain_quantity_group_item(index: int, quantity_group: dict[str, Any]) -> dict[str, Any]:
+    quantities = _string_list(quantity_group.get("quantity_values"))
     return _drop_empty(
         {
             "item_id": f"retain_{index:03d}",
             "decision_role": "quantitative_anchor",
-            "statement": _short_text(str(quantity.get("claim", "")), 320),
-            "required_terms": _dedupe([str(quantity.get("quantity_text", "")), *_key_phrases(str(quantity.get("claim", "")))])[:10],
-            "source_ids": source_ids,
-            "source_labels": source_labels,
-            "claim_ids": _string_list(quantity.get("claim_id"))[:4],
-            "quantity_ids": _string_list(quantity.get("quantity_id"))[:4],
+            "statement": _short_text(str(quantity_group.get("claim", "")), 320),
+            "required_terms": _dedupe([*quantities, *_key_phrases(str(quantity_group.get("claim", "")))])[:10],
+            "source_ids": _string_list(quantity_group.get("source_ids"))[:8],
+            "source_labels": _string_list(quantity_group.get("source_labels"))[:4],
+            "claim_ids": _string_list(quantity_group.get("claim_ids"))[:4],
+            "quantity_ids": _string_list(quantity_group.get("quantity_ids"))[:8],
+            "quantity_values": quantities[:8],
             "importance": "critical",
             "section_targets": ["Evidence Carrying the Conclusion"],
             "omission_policy": "must_include",
@@ -541,9 +541,28 @@ def _top_quantity_anchor_rows(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in ledger.get("top_quantitative_anchors", []) if isinstance(row, dict)][:12]
 
 
-def _quantity_already_retained(quantity: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
+def _top_quantity_anchor_groups(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    order: list[tuple[str, str]] = []
+    for row in _top_quantity_anchor_rows(scaffold):
+        quantity_text = str(row.get("quantity_text") or row.get("quantity") or "").strip()
+        claim = str(row.get("claim") or "").strip()
+        if not quantity_text or not claim:
+            continue
+        source_ids = _source_ids_for_quantity_row(scaffold, row)
+        source_labels = _source_labels(scaffold, source_ids, fallback=_string_list(row.get("source")))
+        key = ("|".join(_string_list(row.get("claim_id")) or [claim]), "|".join(source_ids or source_labels or _string_list(row.get("source"))))
+        if key not in grouped:
+            order.append(key)
+            grouped[key] = {"claim": claim, "claim_ids": _string_list(row.get("claim_id")), "source_ids": source_ids, "source_labels": source_labels, "quantity_values": [], "quantity_ids": []}
+        grouped[key]["quantity_values"] = _dedupe([*grouped[key]["quantity_values"], quantity_text])
+        grouped[key]["quantity_ids"] = _dedupe([*grouped[key]["quantity_ids"], *_string_list(row.get("quantity_id"))])
+    return [grouped[key] for key in order if grouped[key].get("quantity_values")]
+
+
+def _quantity_group_already_retained(quantity_group: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
     terms = {_norm(term) for row in rows for term in _string_list(row.get("required_terms"))}
-    return _norm(str(quantity.get("quantity_text", ""))) in terms
+    return bool(quantities := [_norm(quantity) for quantity in _string_list(quantity_group.get("quantity_values"))]) and all(quantity in terms for quantity in quantities)
 
 
 def _quantity_rows_by_id(scaffold: dict[str, Any]) -> dict[str, dict[str, Any]]:

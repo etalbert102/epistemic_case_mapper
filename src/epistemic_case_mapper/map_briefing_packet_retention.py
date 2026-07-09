@@ -174,6 +174,12 @@ def _bundle_ids_for_retain_item(row: dict[str, Any], bundle_lookup: dict[str, di
     if explicit:
         return [bundle_id for bundle_id in explicit if bundle_id in bundle_lookup]
     claim_ids = set(_string_list(row.get("claim_ids")))
+    if str(row.get("decision_role") or "") == "quantitative_anchor":
+        return [
+            bundle_id
+            for bundle_id, bundle in bundle_lookup.items()
+            if claim_ids and claim_ids & set(_string_list(bundle.get("claim_ids")))
+        ][:5]
     source_ids = set(_string_list(row.get("source_ids")))
     matched = []
     for bundle_id, bundle in bundle_lookup.items():

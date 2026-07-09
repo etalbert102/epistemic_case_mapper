@@ -50,6 +50,10 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
     requirements_by_bundle = _bundle_retain_requirements(packet)
     cards = [_reader_card(row, requirements_by_bundle) for row in _ranked_bundles(packet)]
     cards = [card for card in cards if card.get("statement")]
+    quantitative_cards = _dedupe_quantity_cards(
+        [card for card in cards if card.get("quantities")]
+        + _quantity_obligation_cards(packet, existing_cards=[card for card in cards if card.get("quantities")])
+    )
     support_roles = {"strongest_support", "quantitative_anchor", "mechanism"}
     limit_roles = {"counterweight", "scope_boundary"}
     return {
@@ -59,7 +63,7 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "evidence_cards": _with_card_ids("evidence", [card for card in cards if card.get("role") in support_roles][:10]),
         "counterweight_cards": _with_card_ids("counterweight", [card for card in cards if card.get("role") in limit_roles][:8]),
         "decision_cruxes": _with_card_ids("crux", _decision_crux_cards(cards, packet)[:6]),
-        "quantitative_anchors": _with_card_ids("quantitative", [card for card in cards if card.get("quantities")][:8]),
+        "quantitative_anchors": _with_card_ids("quantitative", quantitative_cards[:12]),
         "must_retain_obligations": _reader_must_retain_obligations(packet)[:12],
         "synthesis_warnings": _reader_synthesis_warnings(packet)[:8],
         "source_trail": _reader_source_trail(packet),
@@ -404,6 +408,75 @@ def _reader_card(row: dict[str, Any], requirements_by_bundle: dict[str, list[dic
     )
 
 
+def _quantity_obligation_cards(packet: dict[str, Any], *, existing_cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    existing_terms = {_normalize_quantity_token(term) for card in existing_cards for term in _string_list(card.get("quantities"))}
+    cards = []
+    for item in packet.get("must_retain_ledger", []) if isinstance(packet.get("must_retain_ledger"), list) else []:
+        if not isinstance(item, dict) or str(item.get("decision_role") or "") != "quantitative_anchor":
+            continue
+        quantities = _quantity_terms_from_retain_item(item)
+        if not quantities:
+            continue
+        normalized = {_normalize_quantity_token(term) for term in quantities}
+        if normalized and normalized <= existing_terms:
+            continue
+        statement = _clean_reader_statement(str(item.get("statement") or "").strip())
+        if not _statement_is_reader_usable(statement, item):
+            continue
+        source = _reader_retain_source_label(packet, item)
+        cards.append(
+            _drop_empty(
+                {
+                    "role": "quantitative_anchor",
+                    "statement": statement,
+                    "source": source,
+                    "quantities": quantities[:6],
+                    "interpretation": _clean_interpretation(str(item.get("why_it_matters") or "").strip()),
+                    "required_in_memo": True,
+                    "must_preserve": _string_list(item.get("required_terms"))[:8],
+                }
+            )
+        )
+        existing_terms.update(normalized)
+    return cards
+
+
+def _quantity_terms_from_retain_item(item: dict[str, Any]) -> list[str]:
+    explicit = _string_list(item.get("quantity_values"))
+    if explicit:
+        return explicit
+    return [term for term in _string_list(item.get("required_terms")) if _looks_like_quantity_term(term)]
+
+
+def _looks_like_quantity_term(term: str) -> bool:
+    lowered = str(term).lower()
+    return bool(re.search(r"\d", str(term))) and ("%" in str(term) or any(token in lowered for token in ("rr", "hr", "hazard ratio", "relative risk", "confidence interval", "ci")))
+
+
+def _reader_retain_source_label(packet: dict[str, Any], item: dict[str, Any]) -> str:
+    labels = _source_labels_for_retain_item(packet, item) or _string_list(item.get("source_labels"))
+    return labels[0] if labels else ""
+
+
+def _normalize_quantity_token(term: str) -> str:
+    return re.sub(r"\s+", " ", str(term).strip().lower().replace("–", "-").replace("—", "-"))
+
+
+def _dedupe_quantity_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    seen = set()
+    for card in cards:
+        key = (
+            re.sub(r"\s+", " ", str(card.get("statement") or "").strip().lower()),
+            tuple(_normalize_quantity_token(term) for term in _string_list(card.get("quantities"))),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(card)
+    return result
+
+
 def _with_card_ids(prefix: str, cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for index, card in enumerate(cards, start=1):
@@ -620,6 +693,12 @@ def _bundle_ids_for_retain_item(item: dict[str, Any], bundle_lookup: dict[str, d
     if explicit:
         return explicit
     claim_ids = set(_string_list(item.get("claim_ids")))
+    if str(item.get("decision_role") or "") == "quantitative_anchor":
+        return [
+            bundle_id
+            for bundle_id, bundle in bundle_lookup.items()
+            if claim_ids and claim_ids & set(_string_list(bundle.get("claim_ids")))
+        ][:5]
     source_ids = set(_string_list(item.get("source_ids")))
     matched = []
     for bundle_id, bundle in bundle_lookup.items():
