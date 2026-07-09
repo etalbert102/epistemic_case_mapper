@@ -182,6 +182,135 @@ This plan addresses those directly:
 - Background evidence remains traceable but does not burden the memo.
 - The plan's acceptance criteria require improved memo quality and evidence accounting together.
 
+## Live-Test Update: Structured Adjudication Failure Mode
+
+A first live test of the analyst-adjudication stage on the eggs ledger showed the plan needs one additional architectural constraint before synthesis-packet assembly:
+
+- The model made useful semantic decisions when it did adjudicate rows.
+- With the default output budget, the response truncated after roughly the first third of the ledger.
+- With a larger output budget, the model covered all rows but returned minor JSON defects such as trailing commas and `null` in list fields.
+- After tolerant local repair, the all-row adjudication parsed and covered `44/44` evidence rows, but still over-prioritized individual quantity rows and made a few questionable role assignments.
+
+Implication:
+
+The adjudication stage must not rely on a single large all-ledger JSON response. It needs chunked model calls, tolerant syntax repair, deterministic row accounting, and a second-stage packet assembly step that can prevent quantity rows or incidental evidence from crowding the final decision packet.
+
+This is not a failure of the plan's core premise. It confirms the right split: the model is useful for semantic judgment, while code must own structured-output robustness and evidence accounting.
+
+## Implementation Update: Analyst Packet Assembly Slice
+
+The implementation has now completed the first usable analyst-adjudicated packet path:
+
+- `analyst_evidence_ledger.json` normalizes retained bundles, warning rows, review-worthy omissions, and top quantity anchors.
+- `analyst_adjudication.json` can be produced by chunked live model calls with tolerant JSON repair and chunk-level reports.
+- `analyst_answer_frame.json`, `analyst_evidence_groups.json`, `analyst_synthesis_packet.json`, `analyst_packet_quality_report.json`, and `analyst_memo_ready_packet.json` are now assembled from the adjudication.
+- The final-output path prefers `analyst_memo_ready_packet` when present and falls back to the older `memo_ready_packet` otherwise.
+- Explicit model downgrades such as `not_decision_relevant` count as accounted evidence without being forced into memo prose.
+- Quantity-anchor rows are merged into source-sharing evidence groups when the linkage is mechanical by source or quantity identity.
+
+Smoke result on the saved eggs ledger plus live adjudication:
+
+- ledger rows: `44`
+- packet-accounted rows: `44`
+- quality status: `ready`
+- foreground groups: `26`
+- memo adapter items: `33`
+- memo adapter mandatory items after rank/quality capping: `12`
+- explicit downgrade: `bundle:bundle_006`
+
+Live synthesis smoke result with `ollama:gemma4:12b-mlx`:
+
+- output path: `artifacts/decision_model_plan_completion/eggs_analyst_packet_live_synthesis_smoke_v2/memo.md`
+- synthesis status: `accepted`
+- memo length: `5144` characters
+- missing mandatory count: `1`
+- unresolved warning count: `2`
+- qualitative read: the memo directly answers the decision question as neutral, uses source labels, retains the main relative-risk and hazard-ratio quantities, and reads more like decision analysis than a stitched inventory.
+
+Remaining observed weaknesses:
+
+- One counterweight interval remains omitted by the memo despite being included in the packet.
+- Two warning rows remain hard for synthesis because they are excerpt-shaped rather than analyst-shaped; they should be converted into clearer warning obligations or downgraded before memo synthesis.
+- The answer-frame field now falls back to an instruction when the inherited answer frame is weak. A future model-owned answer-frame pass should replace that instruction with a concise answer before final memo synthesis.
+
+This slice verifies that the system can transform a live model adjudication into a valid decision packet and that the packet can produce a materially better live memo. It still needs a broader before/after comparison against the previous memo-ready path, the flat-source baseline, and at least one unrelated case.
+
+## Implementation Update: Answer-Frame And Warning-Obligation Refinement Slice
+
+The next slice added a model-owned refinement stage between analyst packet assembly and final memo synthesis:
+
+- `analyst_packet_refinement_prompt.txt` asks the model to produce a direct one-sentence answer frame and warning-specific memo obligations.
+- `analyst_packet_refinement.json` stores accepted model output with stable warning IDs.
+- `analyst_packet_refinement_parse_report.json` validates schema shape and warning-ID coverage.
+- `analyst_packet_refinement_report.json` records accepted/scaffold/error status.
+- The final analyst packet is rebuilt after refinement so `analyst_answer_frame`, `analyst_synthesis_packet`, and `analyst_memo_ready_packet` consume the refined answer and warning obligations.
+- Warning obligations marked `not_needed_for_memo` remain accounted in `analyst_synthesis_packet` but are removed from memo-facing warning validation.
+- Actionable warning obligations become memo-ready evidence items; critical background obligations are promoted to scope-level mandatory items.
+- Warning validation anchors are derived from the obligation text, not exact model key-phrase strings.
+
+Live refinement smoke result on the eggs packet with `ollama:gemma4:12b-mlx`:
+
+- refinement status: `accepted`
+- parse status: `ready`
+- direct answer: eggs are neutral for generally healthy adults because large-scale evidence shows no significant CVD association after dietary-cholesterol adjustment
+- warning obligations: `3`
+  - AHA guideline context -> `background_context`
+  - Prosperity demographic/scope context -> `bound_scope_or_confidence`
+  - already-covered lipid marker evidence -> `not_needed_for_memo`
+
+Live refined synthesis result:
+
+- output path: `artifacts/decision_model_plan_completion/eggs_analyst_refined_live_synthesis_smoke_v3/memo.md`
+- synthesis status: `accepted`
+- missing mandatory count after synthesis: `1`
+- unresolved warning count after synthesis: `0`
+- targeted repair status: `accepted`
+- missing mandatory count after repair: `0`
+- unresolved warning count after repair: `0`
+
+Qualitative read:
+
+- The memo lead remains direct and readable.
+- The warning-obligation stage successfully turned raw excerpt warnings into memo-usable scope/context obligations.
+- The synthesis model still occasionally drops one load-bearing counterweight, but the existing targeted repair stage now fixes the remaining gap cleanly.
+
+## Implementation Update: Upstream Argument-Plan Slice
+
+The repair diagnosis showed that targeted repair was working only as retention patching. It could insert a missing counterweight, but it could not rebalance the argument because it saw only the failed retention item after the memo had already been written.
+
+This slice moves that coherence work upstream:
+
+- `analyst_packet_refinement.json` now includes an `argument_plan` field.
+- The refinement prompt asks the model to plan ordered reasoning moves before memo writing:
+  - direct answer;
+  - primary support;
+  - strongest counterweight and how it bounds the answer;
+  - decision cruxes;
+  - scope/context obligations;
+  - practical implication.
+- `analyst_synthesis_packet.json` now carries `argument_plan`.
+- `analyst_memo_ready_packet.json` exposes the same plan as `analyst_argument_plan`.
+- `build_memo_ready_packet_synthesis_prompt` now tells the memo model to use `analyst_argument_plan` as the controlling argument order and to place the strongest counterweight where it is weighed, not as a late addendum.
+- Prompt-backend runs get a deterministic fallback argument plan derived from evidence groups and warning obligations.
+
+Validation added:
+
+- Refinement tests verify that model-returned argument plans parse and persist.
+- Packet tests verify that argument plans pass through synthesis and memo-ready packets.
+- Prompt tests verify the memo synthesis prompt explicitly surfaces the argument plan as the controlling order.
+
+This should reduce the need for repair to perform argument rebalancing. Repair remains a safety net for missed obligations, but the intended reasoning structure now lives before synthesis.
+
+### Revised Near-Term Priority
+
+The next implementation priority is no longer basic packet assembly or warning-obligation conversion. It is broader validation and comparison:
+
+1. Compare the analyst packet memo against the previous memo-ready path and the flat-source baseline.
+2. Run the full analyst-refined path on at least one non-eggs case.
+3. Inspect whether the remaining mandatory item count is still too high on non-eggs cases.
+4. If the memo still reads like an inventory on other cases, improve the analyst grouping pass before changing final prose prompts.
+5. Keep the old memo-ready path as fallback until the analyst path wins on both readability and evidence accounting.
+
 ## Inventory And Dependency Map
 
 ### Current Owner Artifacts To Reuse
@@ -384,6 +513,13 @@ Changes:
   - source-backed grouping suggestion;
   - downgrade reason when not foregrounded;
   - `covered_by` IDs when compressed.
+- Run adjudication in bounded chunks when the ledger is larger than the model can reliably return as one strict JSON object.
+- Normalize repairable JSON defects before schema validation:
+  - fenced JSON;
+  - trailing commas;
+  - `null` list fields;
+  - missing optional list fields.
+- Keep raw output, repaired payload status, and chunk-level parse reports.
 
 Artifacts:
 
@@ -391,23 +527,29 @@ Artifacts:
 - `analyst_adjudication_raw.txt`
 - `analyst_adjudication.json`
 - `analyst_adjudication_parse_report.json`
+- `analyst_adjudication_chunk_reports.json`
 
 Validation:
 
 - Every ledger item must be adjudicated or included in a repair request.
 - Every high-priority item must have `memo_use != not_decision_relevant` unless rationale is source-grounded and accepted.
 - Every `covered_by` target must exist.
+- Chunk merge must preserve one adjudication row per ledger ID.
+- A model response with all required rows plus repairable JSON syntax defects should be repaired and accepted, not discarded.
 
 QA:
 
 - Golden packet cases for support, counterweight, scope, background, duplicate, warning, and off-question evidence.
 - Metamorphic test: renaming source labels should not alter memo-use decisions.
 - Adversarial mutation: swapped deterministic roles should be corrected or flagged by model adjudication.
+- Live eggs adjudication with a weaker local backend should produce a valid adjudication report or explicit chunk-level failures, not a silent scaffold.
 
 Risks:
 
 - Model drops rows. Mitigation: deterministic row coverage and repair.
 - Model over-foregrounds everything. Mitigation: require rank and `background_only` budget telemetry.
+- Chunking can lose global comparison context. Mitigation: pass global question, allowed labels, summary counts, and later run a synthesis-packet assembly pass that ranks across chunks.
+- Tolerant parsing can hide substantive schema failures. Mitigation: only repair syntax/list-shape defects; unknown IDs, missing rows, and invalid labels remain report-visible.
 
 ### 4. Deterministic Accounting And Targeted Repair
 
@@ -568,6 +710,8 @@ Validation:
 - Mandatory memo obligations are limited to load-bearing evidence, not all relevant evidence.
 - Background evidence is available but not forced into prose.
 - The packet includes a concise answer hierarchy.
+- Individual quantity rows are grouped under evidence propositions unless a quantity itself is the decision-critical evidence.
+- Incidental evidence, such as substitution or guideline context, cannot become the bottom-line lead unless the answer frame explicitly makes it central.
 
 QA:
 
@@ -620,15 +764,20 @@ Risks:
 
 1. Add `analyst_evidence_ledger` and tests.
 2. Add Pydantic schemas and parse/repair scaffolding.
-3. Implement LLM analyst adjudication with prompt backend support and saved prompts/raw outputs.
+3. Implement robust LLM analyst adjudication:
+   - chunked calls;
+   - tolerant JSON repair;
+   - chunk reports;
+   - merged ledger accounting.
 4. Add deterministic adjudication accounting and targeted repair.
-5. Implement analyst answer-frame generation and validation.
-6. Implement evidence grouping and compression with stable ID accounting.
-7. Assemble `analyst_synthesis_packet`.
-8. Route memo synthesis through the analyst packet behind a feature flag or quality-gated default.
-9. Run eggs end-to-end with prompt backend and live backend.
-10. Run one unrelated case end-to-end.
-11. Produce completion audit with before/after memo comparison.
+5. Evaluate live adjudication quality before building the synthesis packet.
+6. Implement analyst answer-frame generation and validation.
+7. Implement evidence grouping and compression with stable ID accounting.
+8. Assemble `analyst_synthesis_packet`.
+9. Route memo synthesis through the analyst packet behind a feature flag or quality-gated default.
+10. Run eggs end-to-end with prompt backend and live backend.
+11. Run one unrelated case end-to-end.
+12. Produce completion audit with before/after memo comparison.
 
 ## Bounded Slice Protocol
 
@@ -650,6 +799,8 @@ Stop and diagnose before continuing if:
 - Pydantic schemas require broad coercion to parse model output;
 - ledger-to-adjudication accounting cannot identify missing evidence by stable IDs;
 - the model routinely drops rows even after repair;
+- chunked adjudication cannot produce complete row coverage on the eggs ledger with an available live backend;
+- tolerant repair has to alter semantic fields such as labels, claims, rationales, source IDs, or memo-use values;
 - warning or quantity accounting regresses relative to the current path;
 - full suite or maintainability gate fails;
 - the new analyst packet produces a memo that is less direct and no more complete than the current memo;
@@ -700,6 +851,8 @@ No vague TODOs and no invisible fallback paths.
 
 - `analyst_evidence_ledger.json` exists and accounts for retained bundles, warnings, and top quantities.
 - `analyst_adjudication.json` validates and covers every ledger row or produces targeted repair.
+- Live adjudication can produce complete row coverage on the eggs ledger using chunking and tolerant syntax repair.
+- `analyst_adjudication_chunk_reports.json` exposes chunk-level parse and coverage status.
 - `analyst_answer_frame.json` directly answers the question without incidental evidence contamination.
 - `analyst_synthesis_packet.json` has a compact reasoning hierarchy.
 - Mandatory memo obligations are fewer and more load-bearing than the current `memo_ready_packet` obligations.

@@ -317,6 +317,48 @@ def _attach_decision_briefing_packet(
             ],
         }
         scaffold.update(build_quality_synthesis_packet_bundle(packet))
+        from epistemic_case_mapper.map_briefing_analyst_adjudication import run_analyst_adjudication
+
+        ledger = scaffold.get("analyst_evidence_ledger", {})
+        if isinstance(ledger, dict):
+            scaffold.update(
+                run_analyst_adjudication(
+                    ledger,
+                    backend=backend_config.backend,
+                    backend_timeout=backend_config.timeout,
+                    backend_retries=backend_config.retries,
+                )
+            )
+            from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
+
+            scaffold.update(
+                build_analyst_packet_bundle(
+                    packet=packet,
+                    ledger=ledger,
+                    adjudication=scaffold.get("analyst_adjudication", {}),
+                    memo_warning_packet=scaffold.get("memo_warning_packet", {}),
+                )
+            )
+            from epistemic_case_mapper.map_briefing_analyst_refinement import run_analyst_packet_refinement
+
+            scaffold.update(
+                run_analyst_packet_refinement(
+                    synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
+                    warning_packet=scaffold.get("memo_warning_packet", {}),
+                    backend=backend_config.backend,
+                    backend_timeout=backend_config.timeout,
+                    backend_retries=backend_config.retries,
+                )
+            )
+            scaffold.update(
+                build_analyst_packet_bundle(
+                    packet=packet,
+                    ledger=ledger,
+                    adjudication=scaffold.get("analyst_adjudication", {}),
+                    memo_warning_packet=scaffold.get("memo_warning_packet", {}),
+                    refinement=scaffold.get("analyst_packet_refinement", {}),
+                )
+            )
 
 
 def _attach_model_context_audit(

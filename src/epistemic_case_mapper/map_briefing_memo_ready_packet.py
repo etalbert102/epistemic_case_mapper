@@ -45,9 +45,8 @@ MANDATORY_ROLES = {
     "decision_crux",
 }
 
-
 def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Build claim-map-to-packet assembly artifacts from the decision packet."""
+    from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_evidence_ledger
     packet = packet if isinstance(packet, dict) else {}
     clusters = build_packet_assembly_clusters(packet)
     role_report = build_packet_role_assignment_report(packet, clusters)
@@ -83,6 +82,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         "evidence_profile_report": evidence_profile,
         "packet_assembly_audit": assembly_audit,
         "memo_warning_packet": memo_warning_packet,
+        "analyst_evidence_ledger": build_analyst_evidence_ledger(packet, memo_warning_packet=memo_warning_packet),
         "memo_ready_packet": memo_ready,
         "memo_ready_selection_report": memo_ready.get("selection_report", {}),
         "decision_crux_reconstruction_report": memo_ready.get("decision_crux_reconstruction_report", {}),
@@ -406,7 +406,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record for this memo.\n\n"
-        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan.\n"
+        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan. If analyst_argument_plan is present, use it as the controlling argument order: write each planned reasoning move once, integrate required points, and place the strongest counterweight where it is weighed.\n"
         "If memo_warning_packet contains warnings, treat them as actionable evidence that was at risk of omission.\n"
         "Incorporate each warning naturally when it affects the answer; otherwise use it to bound scope, confidence, or uncertainty.\n"
         "Do not merely summarize or list evidence. Produce a decision read: default stance, why it is supported, strongest counterweight, scope/conditions, and practical implication.\n\n"

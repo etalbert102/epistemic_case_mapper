@@ -1,0 +1,449 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+from typing import Any
+
+from epistemic_case_mapper.map_briefing_analyst_schemas import (
+    AnalystAdjudication,
+    build_analyst_adjudication_parse_report,
+)
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
+    dict_value as _dict,
+    list_value as _list,
+    short_text as _short_text,
+    norm as _norm,
+    string_list as _string_list,
+)
+from epistemic_case_mapper.model_backends import run_model_backend
+
+DEFAULT_CHUNK_SIZE = 6
+
+
+def run_analyst_adjudication(
+    ledger: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    prompt = build_analyst_adjudication_prompt(ledger)
+    scaffold = deterministic_adjudication_scaffold(ledger)
+    if backend.strip() == "prompt":
+        parse_report = build_analyst_adjudication_parse_report(scaffold, ledger)
+        return {
+            "analyst_adjudication": scaffold,
+            "analyst_adjudication_prompt": prompt,
+            "analyst_adjudication_raw": "",
+            "analyst_adjudication_parse_report": parse_report,
+            "analyst_adjudication_chunk_reports": _chunk_report_bundle(
+                [_chunk_report(1, 1, "prompt_backend_scaffold", parse_report)],
+                scaffold_chunk_count=1,
+            ),
+            "analyst_adjudication_report": _report("prompt_backend_scaffold", parse_report),
+        }
+    return _run_live_adjudication(
+        ledger,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        scaffold=scaffold,
+    )
+
+
+def _run_live_adjudication(
+    ledger: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    ledger_rows = [row for row in _list(ledger.get("rows")) if isinstance(row, dict)]
+    all_ids = [str(row.get("evidence_item_id")) for row in ledger_rows if str(row.get("evidence_item_id") or "")]
+    chunks = _chunks(ledger_rows, _chunk_size())
+    prompts: list[str] = []
+    raws: list[str] = []
+    merged_rows: list[dict[str, Any]] = []
+    chunk_reports: list[dict[str, Any]] = []
+    scaffold_chunk_count = 0
+    for index, rows in enumerate(chunks, start=1):
+        chunk_ledger = _chunk_ledger(ledger, rows, index=index, total=len(chunks))
+        chunk_prompt = build_analyst_adjudication_prompt(chunk_ledger)
+        prompts.append(f"<!-- analyst adjudication chunk {index}/{len(chunks)} -->\n{chunk_prompt}")
+        try:
+            result = run_model_backend(chunk_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+            raw = result.text
+        except RuntimeError as exc:
+            raw = ""
+            chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
+            parse_report = build_analyst_adjudication_parse_report(chunk_scaffold, chunk_ledger)
+            merged_rows.extend(chunk_scaffold.get("rows", []))
+            scaffold_chunk_count += 1
+            raws.append(f"<!-- chunk {index} backend error: {exc} -->")
+            chunk_reports.append(_chunk_report(index, len(chunks), "backend_error_scaffold", parse_report, issues=[str(exc)]))
+            continue
+        raws.append(f"<!-- analyst adjudication chunk {index}/{len(chunks)} -->\n{raw}")
+        payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
+        expected_ids = [str(row.get("evidence_item_id")) for row in rows if str(row.get("evidence_item_id") or "")]
+        parse_report = build_analyst_adjudication_parse_report(
+            payload,
+            chunk_ledger,
+            expected_evidence_item_ids=expected_ids,
+            known_evidence_item_ids=all_ids,
+        )
+        if parse_report.get("valid"):
+            parsed = AnalystAdjudication.model_validate(payload).model_dump()
+            merged_rows.extend(parsed.get("rows", []))
+            chunk_reports.append(_chunk_report(index, len(chunks), "accepted", parse_report))
+            continue
+        chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
+        merged_rows.extend(chunk_scaffold.get("rows", []))
+        scaffold_chunk_count += 1
+        chunk_reports.append(
+            _chunk_report(
+                index,
+                len(chunks),
+                "model_output_invalid_scaffold",
+                parse_report,
+                issues=["chunk failed schema or ledger accounting checks"],
+            )
+        )
+    merged = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": ledger.get("decision_question", ""),
+        "rows": _order_rows_by_ledger(_dedupe_adjudication_rows(merged_rows), all_ids),
+        "overall_rationale": _merged_rationale(chunk_reports),
+    }
+    parse_report = build_analyst_adjudication_parse_report(merged, ledger)
+    status = "accepted" if parse_report.get("valid") and scaffold_chunk_count == 0 else (
+        "accepted_with_chunk_scaffold" if parse_report.get("valid") else "model_output_invalid_scaffold"
+    )
+    return {
+        "analyst_adjudication": merged if parse_report.get("valid") else scaffold,
+        "analyst_adjudication_prompt": "\n\n".join(prompts),
+        "analyst_adjudication_raw": "\n\n".join(raws),
+        "analyst_adjudication_parse_report": parse_report,
+        "analyst_adjudication_chunk_reports": {
+            "schema_id": "analyst_adjudication_chunk_reports_v1",
+            "chunk_count": len(chunks),
+            "scaffold_chunk_count": scaffold_chunk_count,
+            "chunks": chunk_reports,
+        },
+        "analyst_adjudication_report": _report(
+            status,
+            parse_report,
+            issues=["one_or_more_chunks_used_scaffold"] if scaffold_chunk_count else [],
+        ),
+    }
+
+
+def run_analyst_adjudication_single_call_for_test(
+    ledger: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    prompt = build_analyst_adjudication_prompt(ledger)
+    scaffold = deterministic_adjudication_scaffold(ledger)
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        parse_report = build_analyst_adjudication_parse_report(scaffold, ledger)
+        return {
+            "analyst_adjudication": scaffold,
+            "analyst_adjudication_prompt": prompt,
+            "analyst_adjudication_raw": "",
+            "analyst_adjudication_parse_report": parse_report,
+            "analyst_adjudication_chunk_reports": _chunk_report_bundle(
+                [_chunk_report(1, 1, "backend_error_scaffold", parse_report, issues=[str(exc)])],
+                scaffold_chunk_count=1,
+            ),
+            "analyst_adjudication_report": _report("backend_error_scaffold", parse_report, issues=[str(exc)]),
+        }
+    raw = result.text
+    payload = _repair_covered_by_aliases(_extract_json(raw), _ledger_ids(ledger))
+    parse_report = build_analyst_adjudication_parse_report(payload, ledger)
+    if not parse_report.get("valid"):
+        return {
+            "analyst_adjudication": scaffold,
+            "analyst_adjudication_prompt": prompt,
+            "analyst_adjudication_raw": raw,
+            "analyst_adjudication_parse_report": parse_report,
+            "analyst_adjudication_chunk_reports": _chunk_report_bundle(
+                [_chunk_report(1, 1, "model_output_invalid_scaffold", parse_report)],
+                scaffold_chunk_count=1,
+            ),
+            "analyst_adjudication_report": _report(
+                "model_output_invalid_scaffold",
+                parse_report,
+                issues=["model adjudication failed schema or ledger accounting checks"],
+            ),
+        }
+    parsed = AnalystAdjudication.model_validate(payload).model_dump()
+    return {
+        "analyst_adjudication": parsed,
+        "analyst_adjudication_prompt": prompt,
+        "analyst_adjudication_raw": raw,
+        "analyst_adjudication_parse_report": parse_report,
+        "analyst_adjudication_chunk_reports": _chunk_report_bundle(
+            [_chunk_report(1, 1, "accepted", parse_report)],
+            scaffold_chunk_count=0,
+        ),
+        "analyst_adjudication_report": _report("accepted", parse_report),
+    }
+
+
+def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
+    packet = {
+        "decision_question": ledger.get("decision_question"),
+        "instructions": [
+            "Classify every evidence row for its actual use in a decision memo.",
+            "Use semantic judgment: decide whether the item is load-bearing, background, covered by another item, or not decision-relevant.",
+            "Do not drop rows. Return one row for every evidence_item_id.",
+            "Use covered_by only when another evidence item or future group explicitly covers the item.",
+            "Do not invent source IDs, quantities, or claims.",
+            "Use [] for empty covered_by, source_ids, and quantity_values. Do not use null.",
+            "Do not use trailing commas.",
+        ],
+        "chunk": ledger.get("adjudication_chunk", {}),
+        "allowed_memo_use": [
+            "load_bearing_primary_support",
+            "load_bearing_counterweight",
+            "quantitative_anchor",
+            "scope_or_applicability",
+            "decision_crux",
+            "mechanism_or_context",
+            "background_only",
+            "covered_by_group",
+            "not_decision_relevant",
+            "needs_human_or_model_review",
+        ],
+        "required_output_schema": {
+            "schema_id": "analyst_adjudication_v1",
+            "decision_question": ledger.get("decision_question"),
+            "rows": [
+                {
+                    "evidence_item_id": "stable ID from the ledger",
+                    "memo_use": "one allowed_memo_use value",
+                    "importance_rank": "integer 1-100, where 1 is most important",
+                    "rationale": "short source-grounded reason",
+                    "covered_by": ["optional evidence_item_id or group_id"],
+                    "source_ids": ["optional source IDs copied from ledger"],
+                    "quantity_values": ["optional quantities copied from ledger"],
+                    "downgrade_reason": "required when memo_use is background_only or not_decision_relevant",
+                }
+            ],
+            "overall_rationale": "brief explanation of the adjudication strategy",
+        },
+        "evidence_ledger_rows": [_prompt_row(row) for row in _list(ledger.get("rows")) if isinstance(row, dict)],
+    }
+    return (
+        "You are an analyst adjudicating evidence for a decision-support memo.\n"
+        "Return strict JSON only. Do not return Markdown.\n\n"
+        f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def deterministic_adjudication_scaffold(ledger: dict[str, Any]) -> dict[str, Any]:
+    rows = []
+    for index, row in enumerate(_list(ledger.get("rows"))):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "evidence_item_id": str(row.get("evidence_item_id") or ""),
+                "memo_use": _memo_use_for_row(row),
+                "importance_rank": min(100, index + 1),
+                "rationale": _scaffold_rationale(row),
+                "covered_by": [],
+                "source_ids": _string_list(row.get("source_ids")),
+                "quantity_values": _string_list(row.get("quantity_values")),
+                "downgrade_reason": "scaffold only; live model adjudication not run" if _memo_use_for_row(row) == "background_only" else "",
+            }
+        )
+    return {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": ledger.get("decision_question", ""),
+        "rows": rows,
+        "overall_rationale": "Prompt-backend scaffold preserves one adjudication row per ledger item; it is not a semantic substitute for live model adjudication.",
+    }
+
+
+def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "evidence_item_id": row.get("evidence_item_id"),
+        "input_kind": row.get("input_kind"),
+        "current_role": row.get("current_role"),
+        "current_priority": row.get("current_priority"),
+        "source_labels": row.get("source_labels", []),
+        "quantity_values": row.get("quantity_values", []),
+        "claim": _short_text(str(row.get("claim") or ""), 360),
+        "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 180),
+        "existing_warning_codes": row.get("existing_warning_codes", []),
+    }
+
+
+def _memo_use_for_row(row: dict[str, Any]) -> str:
+    role = str(row.get("current_role") or "").lower()
+    input_kind = str(row.get("input_kind") or "")
+    if input_kind == "memo_warning":
+        return "needs_human_or_model_review"
+    if "quant" in role:
+        return "quantitative_anchor"
+    if "counter" in role:
+        return "load_bearing_counterweight"
+    if "scope" in role:
+        return "scope_or_applicability"
+    if "crux" in role:
+        return "decision_crux"
+    if "support" in role:
+        return "load_bearing_primary_support"
+    if "mechanism" in role:
+        return "mechanism_or_context"
+    return "background_only"
+
+
+def _scaffold_rationale(row: dict[str, Any]) -> str:
+    role = str(row.get("current_role") or "unknown role")
+    priority = str(row.get("current_priority") or "unknown priority")
+    return f"Scaffold assignment from current role {role} and priority {priority}."
+
+
+def _extract_json(raw: str) -> Any:
+    text = str(raw or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text).strip()
+    match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if match:
+        text = match.group(0)
+    for candidate in (text, _repair_json_syntax(text)):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    return {}
+
+
+def _repair_json_syntax(text: str) -> str:
+    return re.sub(r",\s*([\]}])", r"\1", text)
+
+
+def _repair_covered_by_aliases(payload: Any, known_ids: list[str]) -> Any:
+    if not isinstance(payload, dict) or not isinstance(payload.get("rows"), list):
+        return payload
+    aliases: dict[str, str] = {}
+    for known_id in known_ids:
+        aliases.setdefault(_id_alias(known_id), known_id)
+    for row in payload["rows"]:
+        if not isinstance(row, dict) or not isinstance(row.get("covered_by"), list):
+            continue
+        repaired = []
+        for target in row["covered_by"]:
+            text = str(target).strip()
+            repaired.append(aliases.get(_id_alias(text), text))
+        row["covered_by"] = repaired
+    return payload
+
+
+def _id_alias(value: str) -> str:
+    return _norm(str(value).replace("-", "_"))
+
+
+def _report(status: str, parse_report: dict[str, Any], *, issues: list[str] | None = None) -> dict[str, Any]:
+    return {
+        "schema_id": "analyst_adjudication_report_v1",
+        "status": status,
+        "accepted": status in {"accepted", "accepted_with_chunk_scaffold"},
+        "parse_status": parse_report.get("status"),
+        "row_count": parse_report.get("row_count", 0),
+        "ledger_row_count": parse_report.get("ledger_row_count", 0),
+        "issues": [*(issues or []), *[str(issue) for issue in parse_report.get("issues", [])]],
+    }
+
+
+def _chunk_size() -> int:
+    try:
+        return max(1, int(os.environ.get("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", DEFAULT_CHUNK_SIZE)))
+    except ValueError:
+        return DEFAULT_CHUNK_SIZE
+
+
+def _chunks(rows: list[dict[str, Any]], size: int) -> list[list[dict[str, Any]]]:
+    return [rows[index : index + size] for index in range(0, len(rows), size)] or [[]]
+
+
+def _chunk_ledger(ledger: dict[str, Any], rows: list[dict[str, Any]], *, index: int, total: int) -> dict[str, Any]:
+    return {
+        **ledger,
+        "row_count": len(rows),
+        "rows": rows,
+        "adjudication_chunk": {"index": index, "total": total, "row_count": len(rows)},
+    }
+
+
+def _chunk_report(
+    index: int,
+    total: int,
+    status: str,
+    parse_report: dict[str, Any],
+    *,
+    issues: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "chunk_index": index,
+        "chunk_count": total,
+        "status": status,
+        "parse_status": parse_report.get("status"),
+        "valid": parse_report.get("valid", False),
+        "row_count": parse_report.get("row_count", 0),
+        "ledger_row_count": parse_report.get("ledger_row_count", 0),
+        "missing_evidence_item_ids": parse_report.get("missing_evidence_item_ids", []),
+        "unknown_evidence_item_ids": parse_report.get("unknown_evidence_item_ids", []),
+        "invalid_covered_by": parse_report.get("invalid_covered_by", []),
+        "errors": parse_report.get("errors", []),
+        "issues": [*(issues or []), *[str(issue) for issue in parse_report.get("issues", [])]],
+    }
+
+
+def _chunk_report_bundle(chunks: list[dict[str, Any]], *, scaffold_chunk_count: int) -> dict[str, Any]:
+    return {
+        "schema_id": "analyst_adjudication_chunk_reports_v1",
+        "chunk_count": len(chunks),
+        "scaffold_chunk_count": scaffold_chunk_count,
+        "chunks": chunks,
+    }
+
+
+def _dedupe_adjudication_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    seen = set()
+    for row in rows:
+        row_id = str(row.get("evidence_item_id") or "")
+        if not row_id or row_id in seen:
+            continue
+        seen.add(row_id)
+        result.append(row)
+    return result
+
+
+def _order_rows_by_ledger(rows: list[dict[str, Any]], ledger_ids: list[str]) -> list[dict[str, Any]]:
+    by_id = {str(row.get("evidence_item_id")): row for row in rows if str(row.get("evidence_item_id") or "")}
+    return [by_id[row_id] for row_id in ledger_ids if row_id in by_id]
+
+
+def _merged_rationale(chunk_reports: list[dict[str, Any]]) -> str:
+    accepted = sum(1 for row in chunk_reports if row.get("status") == "accepted")
+    scaffolded = sum(1 for row in chunk_reports if "scaffold" in str(row.get("status")))
+    return f"Chunked analyst adjudication merged {accepted} accepted chunks and {scaffolded} scaffold fallback chunks."
+
+
+def _ledger_ids(ledger: dict[str, Any]) -> list[str]:
+    return [
+        str(row.get("evidence_item_id"))
+        for row in _list(ledger.get("rows"))
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "")
+    ]

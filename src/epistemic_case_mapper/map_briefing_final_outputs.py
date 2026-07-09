@@ -157,7 +157,7 @@ def write_final_reader_outputs(
 
 
 def _should_use_memo_ready_packet(scaffold: dict[str, Any]) -> bool:
-    packet = scaffold.get("memo_ready_packet", {})
+    packet = scaffold.get("analyst_memo_ready_packet", {}) if isinstance(scaffold.get("analyst_memo_ready_packet"), dict) else scaffold.get("memo_ready_packet", {})
     return isinstance(packet, dict) and bool(packet.get("evidence_items"))
 
 
@@ -181,7 +181,9 @@ def _run_memo_ready_final_output_path(
         run_memo_ready_packet_synthesis,
     )
 
-    packet = memo_package["scaffold"].get("memo_ready_packet")
+    packet = memo_package["scaffold"].get("analyst_memo_ready_packet")
+    if not isinstance(packet, dict) or not packet.get("evidence_items"):
+        packet = memo_package["scaffold"].get("memo_ready_packet")
     memo_ready_packet = packet if isinstance(packet, dict) else {}
     synthesis = run_memo_ready_packet_synthesis(
         memo_ready_packet,
@@ -203,6 +205,10 @@ def _run_memo_ready_final_output_path(
     )
     rewrite_result["memo"] = repair["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_repair_status"] = repair.get("report", {}).get("status")
+    rewrite_result.setdefault("report", {})["analyst_memo_ready_packet_path"] = bool(
+        isinstance(memo_package["scaffold"].get("analyst_memo_ready_packet"), dict)
+        and memo_package["scaffold"].get("analyst_memo_ready_packet", {}).get("evidence_items")
+    )
     final_polish = run_memo_ready_final_polish(
         str(rewrite_result["memo"]),
         memo_ready_packet,
@@ -795,7 +801,9 @@ def _build_packet_retention_for_final_memo(reader_memo: str, scaffold: dict[str,
     if _should_use_memo_ready_packet(scaffold):
         from epistemic_case_mapper.map_briefing_memo_ready_finalization import build_memo_ready_packet_retention_report
 
-        packet = scaffold.get("memo_ready_packet")
+        packet = scaffold.get("analyst_memo_ready_packet")
+        if not isinstance(packet, dict) or not packet.get("evidence_items"):
+            packet = scaffold.get("memo_ready_packet")
         return build_memo_ready_packet_retention_report(reader_memo, packet if isinstance(packet, dict) else {})
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 
