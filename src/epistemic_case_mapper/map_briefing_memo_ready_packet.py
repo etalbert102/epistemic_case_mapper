@@ -18,6 +18,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_binding_report
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
+from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
 
 
 MEMO_READY_ROLES = {
@@ -71,6 +72,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         assembly_audit=assembly_audit,
     )
     quality = build_memo_ready_packet_quality_report(memo_ready, assembly_audit)
+    packet_qa = build_packet_qa_report(packet, memo_ready_packet=memo_ready)
     return {
         "packet_assembly_clusters": clusters,
         "packet_role_assignment_report": role_report,
@@ -80,6 +82,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         "packet_assembly_audit": assembly_audit,
         "memo_ready_packet": memo_ready,
         "memo_ready_packet_quality_report": quality,
+        "packet_qa_report": packet_qa,
     }
 
 

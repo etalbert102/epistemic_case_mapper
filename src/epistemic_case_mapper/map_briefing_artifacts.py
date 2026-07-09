@@ -97,6 +97,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("quantity_binding_report", "quantity_binding_report.json", "json", _scaffold_value("quantity_binding_report"), review_label="Quantity binding report"),
         ArtifactSpec("evidence_profile_report", "evidence_profile_report.json", "json", _scaffold_value("evidence_profile_report"), review_label="Evidence profile report"),
         ArtifactSpec("packet_assembly_audit", "packet_assembly_audit.json", "json", _scaffold_value("packet_assembly_audit"), review_label="Packet assembly audit"),
+        ArtifactSpec("packet_qa_report", "packet_qa_report.json", "json", _scaffold_value("packet_qa_report"), review_label="Packet QA report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_packet_quality_report", "memo_ready_packet_quality_report.json", "json", _scaffold_value("memo_ready_packet_quality_report"), review_label="Memo-ready packet quality"),
         ArtifactSpec("memo_ready_packet_synthesis_prompt", "memo_ready_packet_synthesis_prompt.txt", "markdown", lambda ctx: build_memo_ready_packet_synthesis_prompt(_scaffold_dict(ctx.scaffold, "memo_ready_packet"))),
