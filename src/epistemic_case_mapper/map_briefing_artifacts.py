@@ -85,6 +85,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("source_evidence_graph", "source_evidence_graph.json", "json", _scaffold_value("source_evidence_graph"), review_label="Source evidence graph"),
         ArtifactSpec("decision_obligation_graph", "decision_obligation_graph.json", "json", _scaffold_value("decision_obligation_graph"), review_label="Decision obligation graph"),
         ArtifactSpec("evidence_answer_matrix", "evidence_answer_matrix.json", "json", _scaffold_value("evidence_answer_matrix"), review_label="Evidence-answer matrix"),
+        ArtifactSpec("evidence_answer_matrix_quality_report", "evidence_answer_matrix_quality_report.json", "json", _scaffold_value("evidence_answer_matrix_quality_report"), review_label="Evidence-answer matrix quality"),
         ArtifactSpec("decision_slots", "decision_slots.json", "json", _scaffold_value("decision_slots"), review_label="Decision slots"),
         ArtifactSpec("packet_budget_allocation_report", "packet_budget_allocation_report.json", "json", _scaffold_value("packet_budget_allocation_report"), review_label="Packet budget allocation"),
         ArtifactSpec("packet_compression_report", "packet_compression_report.json", "json", _scaffold_value("packet_compression_report"), review_label="Packet compression report"),

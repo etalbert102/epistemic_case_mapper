@@ -77,6 +77,11 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         decision_obligation_graph=decision_obligations,
         source_evidence_graph=source_evidence_graph,
     )
+    evidence_answer_matrix_quality_report = (
+        evidence_answer_matrix.get("quality_report", {})
+        if isinstance(evidence_answer_matrix.get("quality_report"), dict)
+        else {}
+    )
     decision_slots = build_decision_slot_inventory(
         decision_obligation_graph=decision_obligations,
         evidence_answer_matrix=evidence_answer_matrix,
@@ -99,6 +104,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "source_evidence_graph": source_evidence_graph,
         "decision_obligation_graph": decision_obligations,
         "evidence_answer_matrix": evidence_answer_matrix,
+        "evidence_answer_matrix_quality_report": evidence_answer_matrix_quality_report,
         "decision_slots": decision_slots,
         "packet_budget_allocation_report": budget_report,
         "packet_compression_report": compression_report,
@@ -120,6 +126,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "source_evidence_graph": source_evidence_graph,
         "decision_obligation_graph": decision_obligations,
         "evidence_answer_matrix": evidence_answer_matrix,
+        "evidence_answer_matrix_quality_report": evidence_answer_matrix_quality_report,
         "decision_slots": decision_slots,
         "packet_budget_allocation_report": budget_report,
         "packet_compression_report": compression_report,

@@ -68,5 +68,7 @@ def test_decision_packet_embeds_obligation_graph_and_evidence_answer_matrix() ->
 
     assert result["decision_obligation_graph"]["schema_id"] == "decision_obligation_graph_v1"
     assert result["evidence_answer_matrix"]["schema_id"] == "evidence_answer_matrix_v1"
+    assert result["evidence_answer_matrix_quality_report"]["schema_id"] == "evidence_answer_matrix_quality_report_v1"
     assert packet["decision_obligation_graph"] == result["decision_obligation_graph"]
     assert packet["evidence_answer_matrix"] == result["evidence_answer_matrix"]
+    assert packet["evidence_answer_matrix_quality_report"] == result["evidence_answer_matrix_quality_report"]

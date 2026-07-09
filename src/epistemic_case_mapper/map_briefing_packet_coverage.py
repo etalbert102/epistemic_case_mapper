@@ -20,6 +20,16 @@ def build_packet_coverage_report(
         and str(row.get("candidate_card_id")) not in retained_ids
         and "appendix" not in str(row.get("inclusion_recommendation", "")).lower()
     ]
+    represented_omissions = [
+        _omission_representation(row, bundles)
+        for row in high_priority_omitted
+    ]
+    represented_omissions = [row for row in represented_omissions if row.get("represented")]
+    truly_lost_omissions = [
+        row
+        for row in high_priority_omitted
+        if not any(item.get("candidate_card_id") == str(row.get("candidate_card_id")) for item in represented_omissions)
+    ]
     source_bottom_line_candidates = [
         row for row in candidate_pool if str(row.get("pretrim_kind")) == "source_bottom_line" and row.get("candidate_card_id")
     ]
@@ -33,6 +43,10 @@ def build_packet_coverage_report(
         "evidence_bundle_count": len(bundles),
         "must_retain_count": len(retain_ledger),
         "high_priority_omitted_count": len(high_priority_omitted),
+        "high_priority_represented_elsewhere_count": len(represented_omissions),
+        "high_priority_truly_lost_count": len(truly_lost_omissions),
+        "high_priority_represented_elsewhere": represented_omissions[:20],
+        "high_priority_truly_lost_ids": [str(row.get("candidate_card_id")) for row in truly_lost_omissions[:20]],
         "source_bottom_line_candidate_count": len(source_bottom_line_candidates),
         "source_bottom_line_retained_count": len(source_bottom_line_candidates) - len(omitted_source_bottom_lines),
         "omitted_source_bottom_line_ids": [str(row.get("candidate_card_id")) for row in omitted_source_bottom_lines[:20]],
@@ -44,6 +58,7 @@ def build_packet_coverage_report(
         "warnings": _dedupe(
             [
                 *(["high_priority_omitted_after_trimming"] if high_priority_omitted else []),
+                *(["high_priority_truly_lost_after_trimming"] if truly_lost_omissions else []),
                 *(["source_bottom_lines_omitted_after_trimming"] if omitted_source_bottom_lines else []),
                 *(["primary_bundles_low_question_fit"] if low_fit_primary else []),
                 *(["no_must_retain_items"] if not retain_ledger else []),
@@ -67,6 +82,44 @@ def _retained_candidate_ids(bundles: list[dict[str, Any]]) -> set[str]:
         for card_id in _string_list(bundle.get("candidate_card_ids"))
         if card_id
     }
+
+
+def _omission_representation(row: dict[str, Any], bundles: list[dict[str, Any]]) -> dict[str, Any]:
+    candidate_id = str(row.get("candidate_card_id", ""))
+    for bundle in bundles:
+        reason = _representation_reason(row, bundle)
+        if reason:
+            return {
+                "candidate_card_id": candidate_id,
+                "represented": True,
+                "representing_bundle_id": bundle.get("bundle_id"),
+                "reason": reason,
+            }
+    return {"candidate_card_id": candidate_id, "represented": False}
+
+
+def _representation_reason(row: dict[str, Any], bundle: dict[str, Any]) -> str:
+    if _overlap(row, bundle, "claim_ids"):
+        return "shared_claim_id"
+    if _overlap(row, bundle, "source_card_ids"):
+        return "shared_source_card_id"
+    if _overlap(row, bundle, "quantity_values"):
+        return "shared_quantity_value"
+    row_sources = set(_string_list(row.get("source_ids")))
+    bundle_sources = set(_string_list(bundle.get("source_ids")))
+    if row_sources and row_sources & bundle_sources and _normalized_claim_overlap(row, bundle) >= 4:
+        return "shared_source_and_claim_terms"
+    return ""
+
+
+def _overlap(left: dict[str, Any], right: dict[str, Any], key: str) -> bool:
+    return bool(set(_string_list(left.get(key))) & set(_string_list(right.get(key))))
+
+
+def _normalized_claim_overlap(row: dict[str, Any], bundle: dict[str, Any]) -> int:
+    left = {token for token in str(row.get("claim", "")).lower().split() if len(token) > 4}
+    right = {token for token in str(bundle.get("claim", "")).lower().split() if len(token) > 4}
+    return len(left & right)
 
 
 def _candidate_priority(row: dict[str, Any]) -> int:
