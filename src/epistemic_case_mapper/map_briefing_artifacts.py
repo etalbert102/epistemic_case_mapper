@@ -103,6 +103,8 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("packet_qa_report", "packet_qa_report.json", "json", _scaffold_value("packet_qa_report"), review_label="Packet QA report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
+        ArtifactSpec("decision_crux_reconstruction_report", "decision_crux_reconstruction_report.json", "json", _scaffold_value("decision_crux_reconstruction_report"), review_label="Decision crux reconstruction"),
+        ArtifactSpec("quantity_slot_report", "quantity_slot_report.json", "json", _scaffold_value("quantity_slot_report"), review_label="Quantity slot report"),
         ArtifactSpec("memo_ready_packet_quality_report", "memo_ready_packet_quality_report.json", "json", _scaffold_value("memo_ready_packet_quality_report"), review_label="Memo-ready packet quality"),
         ArtifactSpec("memo_ready_packet_synthesis_prompt", "memo_ready_packet_synthesis_prompt.txt", "markdown", lambda ctx: build_memo_ready_packet_synthesis_prompt(_scaffold_dict(ctx.scaffold, "memo_ready_packet"))),
         ArtifactSpec("before_after_briefing_comparison", "before_after_briefing_comparison.md", "markdown", lambda ctx: render_before_after_briefing_comparison(ctx.scaffold), review_label="Before/after briefing comparison"),

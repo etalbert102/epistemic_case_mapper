@@ -20,6 +20,8 @@ from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_b
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
 from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
+from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
+from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 
 
 MEMO_READY_ROLES = {
@@ -73,6 +75,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         assembly_audit=assembly_audit,
     )
     quality = build_memo_ready_packet_quality_report(memo_ready, assembly_audit)
+    quantity_slot_report = build_quantity_slot_report(memo_ready)
     packet_qa = build_packet_qa_report(packet, memo_ready_packet=memo_ready)
     return {
         "packet_assembly_clusters": clusters,
@@ -83,6 +86,8 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         "packet_assembly_audit": assembly_audit,
         "memo_ready_packet": memo_ready,
         "memo_ready_selection_report": memo_ready.get("selection_report", {}),
+        "decision_crux_reconstruction_report": memo_ready.get("decision_crux_reconstruction_report", {}),
+        "quantity_slot_report": quantity_slot_report,
         "memo_ready_packet_quality_report": quality,
         "packet_qa_report": packet_qa,
     }
@@ -317,6 +322,7 @@ def build_memo_ready_packet(
         )
         if item:
             items.append(item)
+    items, crux_report = reconstruct_decision_crux_items(items)
     mandatory = [item for item in items if item.get("must_use")]
     context = [item for item in items if not item.get("must_use")]
     selected, selection_report = select_memo_ready_items(mandatory, context)
@@ -328,6 +334,7 @@ def build_memo_ready_packet(
         "evidence_groups": _evidence_groups(selected),
         "source_trail": _source_trail(packet),
         "selection_report": selection_report,
+        "decision_crux_reconstruction_report": crux_report,
         "assembly_summary": {
             "cluster_count": clusters.get("cluster_count", 0),
             "mandatory_item_count": sum(1 for item in selected if item.get("must_use")),
@@ -580,6 +587,7 @@ def _memo_ready_item(
         "source_label": source_label,
         "source_labels": _string_list(cluster.get("source_labels")),
         "quantities": quantities,
+        "quantity_slots": build_quantity_slots(quantities),
         "quantity_tuples": quantity_tuples,
         "quantity_warnings": quantity_warnings,
         "decision_relevance": _decision_relevance(role, cluster, diagnosticity),
