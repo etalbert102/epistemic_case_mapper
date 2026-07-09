@@ -13,7 +13,8 @@ def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: di
     for claim in prioritized_map.get("claims", []) if isinstance(prioritized_map.get("claims"), list) else []:
         if not isinstance(claim, dict):
             continue
-        bottom_line = str(claim.get("source_bottom_line") or "").strip()
+        source_card = claim.get("whole_doc_source_card") if isinstance(claim.get("whole_doc_source_card"), dict) else {}
+        bottom_line = str(claim.get("source_bottom_line") or source_card.get("source_bottom_line") or "").strip()
         source_id = str(claim.get("source_id") or "").strip()
         if not bottom_line or not source_id:
             continue
@@ -29,7 +30,7 @@ def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: di
                 "claim_ids": [str(claim.get("claim_id"))] if claim.get("claim_id") else [],
                 "source_bottom_line": bottom_line,
                 "decision_importance_level": str(claim.get("decision_importance_level") or ""),
-                "decision_function": str(claim.get("decision_function") or ""),
+                "decision_function": str(claim.get("decision_function") or source_card.get("source_card_role") or ""),
             }
         )
     return {
@@ -86,9 +87,37 @@ def source_bottom_line_candidates(
 def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
     text = f"{card.get('source_bottom_line', '')} {card.get('decision_function', '')}".lower()
     hints: list[str] = []
-    if any(term in text for term in ("not associated", "no association", "neutral", "lower risk", "reduced risk", "benefit")):
+    if any(
+        term in text
+        for term in (
+            "not associated",
+            "no association",
+            "not strongly linked",
+            "unlikely to adversely affect",
+            "neutral",
+            "lower risk",
+            "reduced risk",
+            "benefit",
+            "tolerable",
+            "acceptable",
+            "safe",
+        )
+    ):
         hints.append("support")
-    if any(term in text for term in ("higher risk", "increased", "harm", "adverse", "mortality", "positive association")):
+    if any(
+        term in text
+        for term in (
+            "higher risk",
+            "increased",
+            "increases",
+            "adversely affect",
+            "harm",
+            "adverse",
+            "mortality",
+            "positive association",
+            "restrict",
+        )
+    ):
         hints.append("counterweight")
     if any(term in text for term in ("subgroup", "specific", "except", "only", "scope", "population", "context")):
         hints.append("scope")
@@ -97,8 +126,36 @@ def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
 
 def _source_bottom_line_decision_role(card: dict[str, Any]) -> str:
     text = str(card.get("source_bottom_line") or "").lower()
-    support_pos = _first_signal_position(text, ("not associated", "no association", "neutral", "lower risk", "reduced risk", "benefit"))
-    counter_pos = _first_signal_position(text, ("higher risk", "increased", "harm", "adverse", "mortality", "positive association"))
+    support_pos = _first_signal_position(
+        text,
+        (
+            "not associated",
+            "no association",
+            "not strongly linked",
+            "unlikely to adversely affect",
+            "neutral",
+            "lower risk",
+            "reduced risk",
+            "benefit",
+            "tolerable",
+            "acceptable",
+            "safe",
+        ),
+    )
+    counter_pos = _first_signal_position(
+        text,
+        (
+            "higher risk",
+            "increased",
+            "increases",
+            "adversely affect",
+            "harm",
+            "adverse",
+            "mortality",
+            "positive association",
+            "restrict",
+        ),
+    )
     scope_pos = _first_signal_position(text, ("though", "however", "except", "specific", "subgroup", "only", "scope", "population", "context"))
     if support_pos >= 0 and (counter_pos < 0 or support_pos < counter_pos):
         return "strongest_support"
