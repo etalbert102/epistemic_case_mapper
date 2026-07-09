@@ -389,6 +389,8 @@ def build_memo_ready_packet_quality_report(
     issues: list[dict[str, Any]] = []
     if not memo_ready_packet.get("answer_spine"):
         issues.append({"severity": "high", "issue_type": "missing_answer_spine"})
+    if not any(item.get("role") == "strongest_support" for item in mandatory):
+        issues.append({"severity": "warning", "issue_type": "missing_strongest_support"})
     if not any(item.get("role") == "strongest_counterweight" for item in mandatory):
         issues.append({"severity": "warning", "issue_type": "missing_strongest_counterweight"})
     if not assembly_audit or assembly_audit.get("status") not in {"ready", "warning"}:

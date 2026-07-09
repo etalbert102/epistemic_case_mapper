@@ -560,16 +560,26 @@ def _packet_coverage_report(
         and str(row.get("candidate_card_id")) not in retained_ids
         and "appendix" not in str(row.get("inclusion_recommendation", "")).lower()
     ]
+    source_bottom_line_candidates = [
+        row for row in candidate_pool if str(row.get("pretrim_kind")) == "source_bottom_line" and row.get("candidate_card_id")
+    ]
+    omitted_source_bottom_lines = [
+        row for row in source_bottom_line_candidates if str(row.get("candidate_card_id")) not in retained_ids
+    ]
     return {
         "candidate_pool_count": len(candidate_pool),
         "evidence_bundle_count": len(bundles),
         "must_retain_count": len(retain_ledger),
         "high_priority_omitted_count": len(high_priority_omitted),
+        "source_bottom_line_candidate_count": len(source_bottom_line_candidates),
+        "source_bottom_line_retained_count": len(source_bottom_line_candidates) - len(omitted_source_bottom_lines),
+        "omitted_source_bottom_line_ids": [str(row.get("candidate_card_id")) for row in omitted_source_bottom_lines[:20]],
         "source_label_missing_count": sum(1 for row in source_trail if not row.get("source_label")),
         "quantity_missing_count": len(packet_quantity_retention({"must_retain_ledger": retain_ledger}, candidate_pool)["missing_top_quantities"]),
         "warnings": _dedupe(
             [
                 *([ "high_priority_omitted_after_trimming" ] if high_priority_omitted else []),
+                *([ "source_bottom_lines_omitted_after_trimming" ] if omitted_source_bottom_lines else []),
                 *([ "no_must_retain_items" ] if not retain_ledger else []),
                 *([ "no_evidence_bundles" ] if not bundles else []),
             ]

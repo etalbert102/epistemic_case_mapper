@@ -202,6 +202,33 @@ def test_quantity_binding_preserves_source_local_effect_interval_tuples() -> Non
     assert result["quantity_binding_report"]["unsafe_quantity_pairing_count"] >= 1
 
 
+def test_memo_ready_quality_warns_when_default_support_is_missing() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "answer_frame": {"default_answer": "Option A is promising.", "confidence": "medium"},
+        "source_trail": [{"source_id": "s2", "source_label": "Counter Study", "appears_in_packet": True}],
+        "evidence_bundles": [
+            {
+                "bundle_id": "bundle_counter",
+                "decision_role": "counterweight",
+                "claim": "Option A failed when maintenance budgets were cut.",
+                "source_ids": ["s2"],
+                "source_labels": ["Counter Study"],
+                "claim_ids": ["c2"],
+                "weight": "high",
+                "source_grounded": True,
+            }
+        ],
+    }
+
+    result = build_quality_synthesis_packet_bundle(packet)
+
+    assert any(
+        issue["issue_type"] == "missing_strongest_support"
+        for issue in result["memo_ready_packet_quality_report"]["issues"]
+    )
+
+
 def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]

@@ -271,6 +271,38 @@ def test_packet_promotes_source_bottom_lines_as_first_class_evidence() -> None:
     assert "Source-level bottom line" in source_summary[0]["why_it_matters"]
 
 
+def test_packet_reports_omitted_source_bottom_lines_after_trimming() -> None:
+    scaffold = _scaffold()
+    for index in range(12):
+        source_id = f"sbl_source_{index}"
+        scaffold["source_display_names"][source_id] = f"Source Bottom Line {index}"
+    scaffold["source_bottom_line_cards"] = {
+        "schema_id": "source_bottom_line_cards_v1",
+        "cards": [
+            {
+                "source_bottom_line_id": f"sbl{index:04d}",
+                "source_id": f"sbl_source_{index}",
+                "source_label": f"Source Bottom Line {index}",
+                "claim_ids": [f"sbl_claim_{index}"],
+                "source_bottom_line": f"Option A was not associated with worse outcomes in source {index}.",
+                "decision_importance_level": "high",
+                "decision_function": "answer_bearing",
+            }
+            for index in range(12)
+        ],
+    }
+
+    result = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+    coverage = result["decision_briefing_packet"]["coverage_report"]
+    sufficiency = result["packet_sufficiency_report"]
+
+    assert coverage["source_bottom_line_candidate_count"] == 12
+    assert coverage["omitted_source_bottom_line_ids"]
+    assert "source_bottom_lines_omitted_after_trimming" in coverage["warnings"]
+    assert sufficiency["source_bottom_line_retention"]["missing_count"] >= 1
+    assert "source_bottom_lines_missing" in sufficiency["issues"]
+
+
 def test_packet_does_not_promote_empty_quantity_rows_to_quantitative_anchors() -> None:
     scaffold = _scaffold()
     scaffold["argument_model"]["quantitative_anchors"] = [

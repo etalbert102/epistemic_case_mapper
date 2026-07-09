@@ -30,6 +30,7 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
     role_coverage = _role_coverage(candidate_pool, bundles)
     quantity_retention = _quantity_retention(packet, candidate_pool)
     source_diversity = _source_diversity(packet, candidate_pool)
+    source_bottom_lines = _source_bottom_line_retention(candidate_pool, bundles)
     counterweight = _counterweight_preservation(candidate_pool, bundles)
     directionality = _directionality_consistency(bundles)
     grounding = _source_grounding_precedence(bundles)
@@ -43,6 +44,7 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
         *(["counterweights_not_preserved"] if not counterweight["preserved"] and counterweight["available_count"] else []),
         *(["directionality_warnings"] if directionality["warnings"] else []),
         *(["source_grounding_warnings"] if grounding["warnings"] else []),
+        *(["source_bottom_lines_missing"] if source_bottom_lines["missing_source_bottom_line_ids"] else []),
         *(["compression_loss"] if compression["loss_rows"] else []),
         *(["weakly_anchored_bundles"] if weak["bundle_ids"] else []),
         *(["over_merge_risk"] if over_merge["rows"] else []),
@@ -56,6 +58,7 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
         "role_coverage": role_coverage,
         "quantity_retention": quantity_retention,
         "source_diversity": source_diversity,
+        "source_bottom_line_retention": source_bottom_lines,
         "counterweight_preservation": counterweight,
         "directionality_consistency": directionality,
         "source_grounding_precedence": grounding,
@@ -121,6 +124,37 @@ def _source_diversity(packet: dict[str, Any], candidate_pool: list[dict[str, Any
         "retained_source_count": len(retained),
         "retained_fraction": round(len(retained) / len(available), 3) if available else 1.0,
         "retained_source_ids": sorted(retained)[:30],
+    }
+
+
+def _source_bottom_line_retention(candidate_pool: list[dict[str, Any]], bundles: list[dict[str, Any]]) -> dict[str, Any]:
+    available = [
+        row
+        for row in candidate_pool
+        if str(row.get("pretrim_kind")) == "source_bottom_line" and row.get("candidate_card_id")
+    ]
+    retained_ids = {
+        card_id
+        for bundle in bundles
+        for card_id in _string_list(bundle.get("candidate_card_ids"))
+    }
+    missing = [
+        {
+            "candidate_card_id": row.get("candidate_card_id"),
+            "source_ids": _string_list(row.get("source_ids")),
+            "source_labels": _string_list(row.get("source_labels")),
+            "decision_role": row.get("decision_role"),
+            "claim": _short_text(str(row.get("claim", "")), 180),
+        }
+        for row in available
+        if str(row.get("candidate_card_id")) not in retained_ids
+    ]
+    return {
+        "available_count": len(available),
+        "retained_count": len(available) - len(missing),
+        "missing_count": len(missing),
+        "missing_source_bottom_line_ids": [str(row.get("candidate_card_id")) for row in missing],
+        "missing_rows": missing[:20],
     }
 
 
