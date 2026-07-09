@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from epistemic_case_mapper.map_briefing_packet_eligibility import question_overlap_count
+from epistemic_case_mapper.map_briefing_packet_eligibility import decision_relevance_assessment, question_overlap_count
 
 
 def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
@@ -57,7 +57,7 @@ def source_bottom_line_candidates(
         source_id = str(card.get("source_id") or "").strip()
         if not bottom_line or not source_id:
             continue
-        role = _source_bottom_line_decision_role(card)
+        source_summary_role = _source_bottom_line_decision_role(card)
         importance = str(card.get("decision_importance_level") or "").lower()
         score = {"critical": 10, "high": 9, "medium": 7}.get(importance, 7)
         rows.append(
@@ -70,17 +70,25 @@ def source_bottom_line_candidates(
                     "source_labels": _source_labels(scaffold, [source_id], fallback=_string_list(card.get("source_label"))),
                     "claim": _short_text(bottom_line, 420),
                     "source_excerpt": _short_text(bottom_line, 520),
-                    "decision_role": role,
+                    "decision_role": "context",
+                    "source_summary_decision_role": source_summary_role,
+                    "evidence_track": "source_bottom_line",
                     "raw_roles": ["source_bottom_line", *_source_bottom_line_role_hints(card)],
                     "decision_polarity": str(card.get("decision_polarity") or ""),
                     "decision_relevance_score": score,
                     "quality": "source_summary",
                     "inclusion_recommendation": "main_text",
                     "why_it_matters": "Source-level bottom line; use to keep the packet faithful to the source's overall contribution.",
-                    "directionality": _directionality_for_role(role),
+                    "directionality": "contextualizes",
+                    "source_summary_directionality": _directionality_for_role(source_summary_role),
                     "source_grounded": True,
                     "pretrim_kind": "source_bottom_line",
                     "question_overlap_count": question_overlap_count(bottom_line, question_terms or []),
+                    "decision_relevance_assessment": decision_relevance_assessment(
+                        bottom_line,
+                        question_terms=question_terms or [],
+                        decision_role="context",
+                    ),
                 }
             )
         )

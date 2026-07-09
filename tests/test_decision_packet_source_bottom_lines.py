@@ -32,7 +32,9 @@ def test_packet_promotes_source_bottom_lines_as_first_class_evidence() -> None:
     source_summary = [row for row in bundles if row.get("pretrim_kind") == "source_bottom_line"]
 
     assert source_summary
-    assert source_summary[0]["decision_role"] == "strongest_support"
+    assert source_summary[0]["decision_role"] == "context"
+    assert source_summary[0]["source_summary_decision_role"] == "strongest_support"
+    assert source_summary[0]["evidence_track"] == "source_bottom_line"
     assert "Source-level bottom line" in source_summary[0]["why_it_matters"]
 
 
@@ -195,13 +197,13 @@ def test_source_bottom_line_uses_explicit_decision_polarity_roles() -> None:
 
     result = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
     roles = {
-        row["candidate_card_ids"][0]: row["decision_role"]
+        row["candidate_card_ids"][0]: (row["decision_role"], row.get("source_summary_decision_role"))
         for row in result["decision_briefing_packet"]["evidence_bundles"]
         if row.get("pretrim_kind") == "source_bottom_line"
     }
 
-    assert roles["sbl_support"] == "strongest_support"
-    assert roles["sbl_counter"] == "counterweight"
+    assert roles["sbl_support"] == ("context", "strongest_support")
+    assert roles["sbl_counter"] == ("context", "counterweight")
 
 
 def test_source_bottom_line_does_not_treat_answer_bearing_as_support() -> None:
