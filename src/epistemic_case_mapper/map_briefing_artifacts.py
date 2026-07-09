@@ -90,6 +90,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("packet_budget_allocation_report", "packet_budget_allocation_report.json", "json", _scaffold_value("packet_budget_allocation_report"), review_label="Packet budget allocation"),
         ArtifactSpec("packet_compression_report", "packet_compression_report.json", "json", _scaffold_value("packet_compression_report"), review_label="Packet compression report"),
         ArtifactSpec("decision_model_vertical_slice_report", "decision_model_vertical_slice_report.json", "json", _scaffold_value("decision_model_vertical_slice_report"), review_label="Decision-model vertical slice report"),
+        ArtifactSpec("packet_views", "packet_views.json", "json", _scaffold_value("packet_views"), review_label="Decision packet views"),
         ArtifactSpec("decision_briefing_packet", "decision_briefing_packet.json", "json", _scaffold_value("decision_briefing_packet"), review_label="Decision briefing packet"),
         ArtifactSpec("decision_briefing_packet_report", "decision_briefing_packet_report.json", "json", _scaffold_value("decision_briefing_packet_report"), review_label="Decision briefing packet report"),
         ArtifactSpec("packet_sufficiency_report_pre_refinement", "packet_sufficiency_report_pre_refinement.json", "json", _scaffold_value("packet_sufficiency_report_pre_refinement"), review_label="Packet sufficiency before refinement"),

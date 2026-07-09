@@ -10,9 +10,7 @@ from epistemic_case_mapper.map_briefing_packet_eligibility import (
     question_content_terms,
     question_overlap_count,
 )
-from epistemic_case_mapper.map_briefing_packet_sufficiency import (
-    build_packet_sufficiency_report,
-)
+from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
 from epistemic_case_mapper.map_briefing_packet_coverage import build_packet_coverage_report
 from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_section_views import build_section_views
@@ -28,6 +26,7 @@ from epistemic_case_mapper.map_briefing_packet_budget import (
     build_packet_budget_allocation_report,
     build_packet_compression_report,
 )
+from epistemic_case_mapper.map_briefing_packet_views import build_decision_packet_views
 from epistemic_case_mapper.map_briefing_source_evidence_graph import build_source_evidence_graph
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
@@ -116,6 +115,8 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     }
     vertical_slice_report = build_decision_model_vertical_slice_report(packet)
     packet["decision_model_vertical_slice_report"] = vertical_slice_report
+    packet_views = build_decision_packet_views(packet)
+    packet["packet_views"] = packet_views
     sufficiency = build_packet_sufficiency_report(packet, candidate_pool=candidate_pool)
     report = _packet_builder_report(candidate_pool, packet, sufficiency)
     return {
@@ -131,6 +132,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "packet_budget_allocation_report": budget_report,
         "packet_compression_report": compression_report,
         "decision_model_vertical_slice_report": vertical_slice_report,
+        "packet_views": packet_views,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
