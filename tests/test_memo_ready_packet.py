@@ -152,6 +152,25 @@ def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     assert "Counter Study" in result["memo"]
 
 
+def test_memo_ready_synthesis_fallback_renders_all_bound_quantities() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    item = next(item for item in packet["evidence_items"] if item["role"] == "quantitative_anchor")
+    item["quantities"].extend(
+        [
+            {"value": "10 years", "interpretation": "follow-up duration"},
+            {"value": "4 sites", "interpretation": "applicability breadth"},
+            {"value": "1,200 participants", "interpretation": "sample size"},
+        ]
+    )
+
+    result = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)
+
+    assert "10 years" in result["memo"]
+    assert "4 sites" in result["memo"]
+    assert "1,200 participants" in result["memo"]
+
+
 def test_memo_ready_synthesis_fallback_renders_structured_spine_text() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]

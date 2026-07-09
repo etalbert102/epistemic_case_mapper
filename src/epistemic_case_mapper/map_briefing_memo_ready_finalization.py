@@ -276,7 +276,7 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
 
 def _quantity_clause(item: dict[str, Any]) -> str:
     quantities = []
-    for quantity in _list(item.get("quantities"))[:3]:
+    for quantity in _list(item.get("quantities")):
         if not isinstance(quantity, dict):
             continue
         value = str(quantity.get("value") or "").strip()
