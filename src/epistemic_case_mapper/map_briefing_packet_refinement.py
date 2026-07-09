@@ -334,8 +334,9 @@ def run_packet_critique_and_refinement(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
-    candidate_pool = _candidate_pool_from_packet(packet)
+    candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
     post_sufficiency = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
+    _sync_packet_coverage_with_sufficiency(refined["packet"], post_sufficiency)
     return {
         "decision_briefing_packet": refined["packet"],
         "packet_sufficiency_report_pre_refinement": pre_sufficiency,
@@ -766,6 +767,52 @@ def _apply_retain_update(target: dict[str, Any], update: dict[str, Any]) -> list
         target["required_terms"] = _dedupe([*_string_list(target.get("required_terms")), *terms])[:12]
         changed.append("required_terms")
     return changed
+
+
+def _post_refinement_candidate_pool(packet: dict[str, Any], pre_sufficiency: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = _candidate_pool_from_packet(packet)
+    rows.extend(_quantity_obligation_candidates(pre_sufficiency))
+    return rows
+
+
+def _quantity_obligation_candidates(pre_sufficiency: dict[str, Any]) -> list[dict[str, Any]]:
+    ledger = pre_sufficiency.get("quantity_obligation_ledger")
+    obligations = ledger.get("obligations", []) if isinstance(ledger, dict) else []
+    rows: list[dict[str, Any]] = []
+    for index, obligation in enumerate(obligations if isinstance(obligations, list) else []):
+        if not isinstance(obligation, dict):
+            continue
+        quantity = str(obligation.get("quantity", "")).strip()
+        if not quantity:
+            continue
+        fallback_id = f"prior_quantity_obligation_{index:03d}"
+        rows.append(
+            {
+                "pool_id": obligation.get("pool_id") or fallback_id,
+                "candidate_card_id": obligation.get("candidate_card_id") or fallback_id,
+                "decision_role": "quantitative_anchor",
+                "decision_relevance_score": 10,
+                "source_ids": _string_list(obligation.get("source_ids")),
+                "source_labels": _string_list(obligation.get("source_labels")),
+                "quantity_values": [quantity],
+                "claim_ids": _string_list(obligation.get("claim_ids")),
+                "source_grounded": True,
+                "claim": obligation.get("claim"),
+            }
+        )
+    return rows
+
+
+def _sync_packet_coverage_with_sufficiency(packet: dict[str, Any], sufficiency: dict[str, Any]) -> None:
+    ledger = sufficiency.get("quantity_obligation_ledger")
+    if not isinstance(ledger, dict):
+        return
+    coverage = packet.get("coverage_report", {}) if isinstance(packet.get("coverage_report"), dict) else {}
+    packet["coverage_report"] = {
+        **coverage,
+        "quantity_missing_count": int(ledger.get("missing_count", 0) or 0),
+        "quantity_obligation_count": int(ledger.get("obligation_count", 0) or 0),
+    }
 
 
 def _candidate_pool_from_packet(packet: dict[str, Any]) -> list[dict[str, Any]]:
