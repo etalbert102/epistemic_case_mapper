@@ -20,7 +20,7 @@ def build_decision_model_vertical_slice_report(packet: dict[str, Any]) -> dict[s
         "evidence_answer_matrix_row_count": _count(matrix, "row_count"),
         "decision_slot_count": _count(slots, "slot_count"),
         "quantitative_anchor_bundle_count": len(quantity_bundles),
-        "protected_top_quantity_bundle_count": sum(1 for row in quantity_bundles if row.get("pretrim_kind") == "quantity_ledger.top_quantitative_anchor"),
+        "top_quantity_represented_bundle_count": len([row for row in quantity_bundles if row.get("quantity_values")]),
         "compression_missing_invariant_count": _count(compression, "missing_invariant_count"),
     }
     return {
