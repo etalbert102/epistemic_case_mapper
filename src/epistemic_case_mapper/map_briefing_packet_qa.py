@@ -28,7 +28,8 @@ def build_packet_qa_report(
         "blocker_count": blocker_count,
         "checks": checks,
         "summary": {
-            "answer_frame_clean": not any(check["check_id"] == "answer_frame_not_plain_text" for check in checks),
+            "answer_frame_clean": not any(check["check_id"].startswith("answer_frame_") and check["status"] != "pass" for check in checks),
+            "generic_answer_frame_warning_count": sum(1 for check in checks if check["check_id"] == "answer_frame_generic_or_artifact_language"),
             "missing_source_lineage_count": sum(1 for check in checks if check["check_id"] == "missing_source_lineage"),
             "truncated_claim_count": sum(1 for check in checks if check["check_id"] == "truncated_or_broken_claim"),
             "role_dominance_warning_count": sum(1 for check in checks if check["check_id"] == "unjustified_role_dominance"),
@@ -47,6 +48,16 @@ def _answer_frame_checks(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 "answer_frame_not_plain_text",
                 "warning",
                 "answer_frame.default_answer appears to contain a stringified or malformed structure.",
+                target="answer_frame.default_answer",
+                excerpt=default[:220],
+            )
+        ]
+    if _looks_like_generic_answer_frame(default):
+        return [
+            _check(
+                "answer_frame_generic_or_artifact_language",
+                "warning",
+                "answer_frame.default_answer uses generic artifact language rather than answering the decision question.",
                 target="answer_frame.default_answer",
                 excerpt=default[:220],
             )
@@ -162,6 +173,27 @@ def _looks_like_stringified_structure(text: str) -> bool:
     if not stripped:
         return False
     return stripped.startswith("{") or any(token in stripped for token in ("'classification'", '"classification"', "'current_read'", '"current_read"'))
+
+
+def _looks_like_generic_answer_frame(text: str) -> bool:
+    lowered = " ".join(text.lower().split())
+    if not lowered:
+        return True
+    artifact_terms = (
+        "default answer",
+        "current answer",
+        "source packet",
+        "evidence packet",
+        "decision question",
+        "stated conditions",
+        "available evidence",
+    )
+    if lowered in {"unclear", "mixed", "uncertain", "insufficient evidence"}:
+        return True
+    if "default answer" in lowered and any(term in lowered for term in ("supports", "under stated conditions", "available evidence")):
+        return True
+    artifact_count = sum(1 for term in artifact_terms if term in lowered)
+    return artifact_count >= 2 and len(lowered.split()) <= 24
 
 
 def _is_truncated_or_broken(text: str) -> bool:

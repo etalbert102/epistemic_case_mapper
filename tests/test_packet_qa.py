@@ -38,6 +38,54 @@ def test_packet_qa_flags_stringified_answer_frame_and_missing_lineage() -> None:
     assert "missing_source_lineage" in check_ids
 
 
+def test_packet_qa_flags_generic_answer_frame_without_repairing_it() -> None:
+    report = build_packet_qa_report(
+        {
+            "answer_frame": {
+                "default_answer": "The available evidence supports the default answer under stated conditions."
+            },
+            "evidence_bundles": [
+                {
+                    "bundle_id": "b1",
+                    "claim": "Option A has a narrower but source-grounded benefit claim.",
+                    "source_ids": ["s1"],
+                }
+            ],
+        }
+    )
+
+    check_ids = {check["check_id"] for check in report["checks"]}
+
+    assert report["status"] == "warning"
+    assert report["summary"]["answer_frame_clean"] is False
+    assert report["summary"]["generic_answer_frame_warning_count"] == 1
+    assert "answer_frame_generic_or_artifact_language" in check_ids
+
+
+def test_packet_qa_accepts_concrete_answer_frame() -> None:
+    report = build_packet_qa_report(
+        {
+            "answer_frame": {
+                "default_answer": (
+                    "Option A is conditionally favorable when maintenance funding is protected "
+                    "and flood exposure remains high."
+                )
+            },
+            "evidence_bundles": [
+                {
+                    "bundle_id": "b1",
+                    "claim": "Option A has a narrower but source-grounded benefit claim.",
+                    "source_ids": ["s1"],
+                }
+            ],
+        }
+    )
+
+    assert report["status"] == "pass"
+    assert report["summary"]["answer_frame_clean"] is True
+    assert report["summary"]["generic_answer_frame_warning_count"] == 0
+
+
 def test_packet_qa_flags_role_dominance_weak_crux_and_quantity_blob() -> None:
     packet = {
         "answer_frame": {"default_answer": "Option A is conditionally favorable."},
