@@ -71,3 +71,23 @@ def test_relation_value_report_marks_connectivity_not_computable_without_endpoin
     assert report["connectivity_status"] == "not_computable_missing_endpoint_ids"
     assert report["missing_endpoint_relation_count"] == 1
     assert any(issue["issue_type"] == "relation_connectivity_not_computable" for issue in report["issues"])
+
+
+def test_relation_value_report_accepts_source_claim_endpoint_ids_when_known() -> None:
+    report = build_relation_value_report(
+        {
+            "claims": [{"claim_id": "c1"}, {"claim_id": "c2"}],
+            "relations": [
+                {
+                    "source_claim": "c1",
+                    "target_claim": "c2",
+                    "relation_type": "supports",
+                    "rationale": "The first claim supports the second because they describe the same decision-relevant mechanism.",
+                }
+            ],
+        }
+    )
+
+    assert report["connectivity_status"] == "computed"
+    assert report["missing_endpoint_relation_count"] == 0
+    assert report["connected_claim_count"] == 2

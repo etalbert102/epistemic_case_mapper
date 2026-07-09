@@ -33,6 +33,46 @@ def test_packet_retention_normalizes_numeric_terms_and_reports_match_method() ->
     assert match["match_method"] == "normalized_text"
 
 
+def test_packet_retention_uses_source_aliases_for_bundle_source_labels() -> None:
+    packet = {
+        "must_retain_ledger": [
+            {
+                "item_id": "retain_1",
+                "importance": "critical",
+                "omission_policy": "must_include",
+                "statement": "The guideline permits option A.",
+                "required_terms": ["guideline permits option"],
+                "source_ids": ["guideline_a"],
+                "bundle_ids": ["bundle_1"],
+            }
+        ],
+        "evidence_bundles": [
+            {
+                "bundle_id": "bundle_1",
+                "claim": "The guideline permits option A.",
+                "weight": "high",
+                "source_labels": ["Short Guideline Label"],
+            }
+        ],
+        "source_trail": [
+            {
+                "source_id": "guideline_a",
+                "source_label": "Short Guideline Label",
+                "display_label": "Full Guideline Title",
+                "source_url": "https://example.test/guideline",
+            }
+        ],
+    }
+    memo = "The guideline permits option A according to Full Guideline Title."
+
+    report = build_memo_packet_retention_report(memo, packet)
+
+    assert report["status"] == "ready"
+    assert report["checked_bundle_count"] == 1
+    assert report["retained_items"][0]["source_label_matches"][0]["match_method"] == "exact_alias"
+    assert report["bundle_items"][0]["source_label_matches"][0]["match_method"] == "exact_alias"
+
+
 def test_source_lineage_flags_sources_list_that_exceeds_packet_sources() -> None:
     scaffold = {
         "decision_briefing_packet": {

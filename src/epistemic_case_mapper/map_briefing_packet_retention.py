@@ -17,7 +17,7 @@ def build_memo_packet_retention_report(memo_markdown: str, packet: dict[str, Any
     bundle_lookup = {str(row.get("bundle_id", "")).strip(): row for row in bundle_rows if str(row.get("bundle_id", "")).strip()}
     source_aliases = _source_alias_lookup(packet)
     retained_items = [_retain_item_status(row, memo_markdown, bundle_lookup, source_aliases) for row in retain_rows]
-    bundle_items = [_bundle_status(row, memo_markdown) for row in bundle_rows if _bundle_requires_surface_check(row)]
+    bundle_items = [_bundle_status(row, memo_markdown, source_aliases) for row in bundle_rows if _bundle_requires_surface_check(row)]
     issues = _retention_issues(retained_items, bundle_items)
     status = "ready" if not issues else "warning"
     if any(issue.get("severity") == "critical" for issue in issues):
@@ -48,6 +48,7 @@ def _retain_item_status(
     source_ids = _string_list(row.get("source_ids"))
     source_names = [source_aliases[source_id][0] for source_id in source_ids if source_aliases.get(source_id)]
     source_match_inputs = [(source_aliases[source_id][0], source_aliases[source_id]) for source_id in source_ids if source_aliases.get(source_id)]
+    alias_by_label = _source_aliases_by_label(source_aliases)
     required_terms = _string_list(row.get("required_terms"))
     bundle_ids = _bundle_ids_for_retain_item(row, bundle_lookup)
     bundle_sources = [
@@ -56,7 +57,8 @@ def _retain_item_status(
         for label in _string_list(bundle_lookup.get(bundle_id, {}).get("source_labels"))
     ]
     source_names = _dedupe(source_names + bundle_sources)
-    source_match_inputs.extend((label, [label]) for label in bundle_sources)
+    source_match_inputs.extend((label, alias_by_label.get(_normalize_for_match(label), [label])) for label in bundle_sources)
+    source_match_inputs = _dedupe_source_match_inputs(source_match_inputs)
     bundle_quantities = [
         quantity
         for bundle_id in bundle_ids
@@ -84,12 +86,13 @@ def _retain_item_status(
     }
 
 
-def _bundle_status(row: dict[str, Any], memo: str) -> dict[str, Any]:
+def _bundle_status(row: dict[str, Any], memo: str, source_aliases: dict[str, list[str]]) -> dict[str, Any]:
     claim = str(row.get("claim", "")).strip()
     quantities = _string_list(row.get("quantity_values"))
     source_labels = _string_list(row.get("source_labels"))
     quantity_matches = [_required_term_match(memo, quantity) for quantity in quantities]
-    source_label_matches = [_source_label_match(memo, label, [label]) for label in source_labels]
+    alias_by_label = _source_aliases_by_label(source_aliases)
+    source_label_matches = [_source_label_match(memo, label, alias_by_label.get(_normalize_for_match(label), [label])) for label in source_labels]
     missing_quantities = [row["term"] for row in quantity_matches if not row["retained"]]
     missing_sources = [row["label"] for row in source_label_matches if not row["retained"]]
     claim_retained = _mentions_enough_content_terms(memo, claim, minimum=3)
@@ -199,6 +202,28 @@ def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
         if source_id and row_aliases:
             aliases[source_id] = row_aliases
     return aliases
+
+
+def _source_aliases_by_label(source_aliases: dict[str, list[str]]) -> dict[str, list[str]]:
+    by_label: dict[str, list[str]] = {}
+    for aliases in source_aliases.values():
+        for alias in aliases:
+            normalized = _normalize_for_match(alias)
+            if normalized:
+                by_label[normalized] = aliases
+    return by_label
+
+
+def _dedupe_source_match_inputs(inputs: list[tuple[str, list[str]]]) -> list[tuple[str, list[str]]]:
+    result: list[tuple[str, list[str]]] = []
+    seen = set()
+    for label, aliases in inputs:
+        key = _normalize_for_match(label)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append((label, aliases))
+    return result
 
 
 def _contains_text(text: str, needle: str) -> bool:

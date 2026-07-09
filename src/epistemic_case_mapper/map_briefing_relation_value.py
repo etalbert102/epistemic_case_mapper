@@ -11,12 +11,13 @@ VALUABLE_RELATION_TYPES = {"supports", "challenges", "in_tension_with", "depends
 def build_relation_value_report(candidate_map: dict[str, Any]) -> dict[str, Any]:
     claims = _claims(candidate_map)
     relations = _relations(candidate_map)
+    claim_ids = {claim_id for claim in claims if (claim_id := _claim_id(claim))}
     type_counts = Counter(_relation_type(row) for row in relations)
-    endpoint_report = _endpoint_report(relations)
+    endpoint_report = _endpoint_report(relations, claim_ids)
     connected_claim_ids = {
         claim_id
         for relation in relations
-        for claim_id in (_source_id(relation), _target_id(relation))
+        for claim_id in (_source_id(relation, claim_ids), _target_id(relation, claim_ids))
         if claim_id
     }
     grounded = [row for row in relations if _relation_has_rationale(row)]
@@ -86,20 +87,35 @@ def _relations(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in relations if isinstance(row, dict)] if isinstance(relations, list) else []
 
 
+def _claim_id(row: dict[str, Any]) -> str:
+    return str(row.get("claim_id") or row.get("id") or "").strip()
+
+
 def _relation_type(row: dict[str, Any]) -> str:
     return str(row.get("relation_type") or row.get("type") or "").strip() or "unknown"
 
 
-def _source_id(row: dict[str, Any]) -> str:
-    return str(row.get("source_claim_id") or row.get("claim_a_id") or row.get("from") or row.get("source") or "").strip()
+def _source_id(row: dict[str, Any], claim_ids: set[str]) -> str:
+    return _endpoint_id(row, ("source_claim_id", "claim_a_id", "from", "source", "source_claim"), claim_ids)
 
 
-def _target_id(row: dict[str, Any]) -> str:
-    return str(row.get("target_claim_id") or row.get("claim_b_id") or row.get("to") or row.get("target") or "").strip()
+def _target_id(row: dict[str, Any], claim_ids: set[str]) -> str:
+    return _endpoint_id(row, ("target_claim_id", "claim_b_id", "to", "target", "target_claim"), claim_ids)
 
 
-def _endpoint_report(relations: list[dict[str, Any]]) -> dict[str, Any]:
-    missing = [row for row in relations if not (_source_id(row) and _target_id(row))]
+def _endpoint_id(row: dict[str, Any], keys: tuple[str, ...], claim_ids: set[str]) -> str:
+    for key in keys:
+        value = str(row.get(key) or "").strip()
+        if not value:
+            continue
+        if key in {"source_claim", "target_claim"} and claim_ids and value not in claim_ids:
+            continue
+        return value
+    return ""
+
+
+def _endpoint_report(relations: list[dict[str, Any]], claim_ids: set[str]) -> dict[str, Any]:
+    missing = [row for row in relations if not (_source_id(row, claim_ids) and _target_id(row, claim_ids))]
     if not relations:
         status = "no_relations"
     elif missing:
