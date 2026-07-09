@@ -8,7 +8,8 @@ from epistemic_case_mapper.config_profiles import config_profile_from_manifest_p
 from epistemic_case_mapper.io import write_json
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
-from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason, region_decision_question
+from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
+from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit
 from epistemic_case_mapper.staged_semantic_sources import (
     _normalize_claim_proposal,
     _normalize_text,
@@ -71,6 +72,9 @@ def _extract_whole_doc_claims(
         "accepted_claim_count": 0,
         "rejected_claim_count": 0,
         "claim_alignment_status_counts": {},
+        "relevance_validation_warning_counts": {},
+        "label_audit_bucket_counts": {},
+        "label_audit_warning_counts": {},
         "current_chunk_id": "",
         "complete": False,
         "claim_extractor": "whole-doc",
@@ -113,10 +117,13 @@ def _extract_whole_doc_claims(
             if claim is None:
                 rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": reason, "proposal": proposal})
                 continue
-            relevance_reason = claim_decision_relevance_rejection_reason(claim, selected_question)
+            relevance_reason = attach_decision_relevance_validation(claim, selected_question)
             if relevance_reason:
-                rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": relevance_reason, "proposal": proposal})
-                continue
+                _increment_progress_count(progress, "relevance_validation_warning_counts", relevance_reason)
+            audit = attach_label_audit(claim)
+            _increment_progress_count(progress, "label_audit_bucket_counts", str(audit.get("synthesis_bucket", "unknown")))
+            for warning in audit.get("warnings", []):
+                _increment_progress_count(progress, "label_audit_warning_counts", str(warning))
             key = _claim_dedupe_key(claim)
             if key in seen:
                 rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "duplicate_claim", "proposal": proposal})

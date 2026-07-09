@@ -20,7 +20,8 @@ from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_EN
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
 from epistemic_case_mapper.staged_semantic_claim_extractors import claim_payload_for_extractor
-from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason, region_decision_question
+from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
+from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit, label_audit_bucket_counts, label_audit_warning_counts
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
@@ -617,6 +618,8 @@ def _staged_run_summary(
         "failures": failures,
         "quality_status": quality_report["status"],
         "quality_score": quality_report["score"],
+        "label_audit_bucket_counts": label_audit_bucket_counts(final_claims),
+        "label_audit_warning_counts": label_audit_warning_counts(final_claims),
         "quality_report": _relative(repo_root, artifacts / "map_quality_report.json"),
         "quality_repair_prompt": _relative(repo_root, artifacts / "map_quality_repair_prompt.txt"),
         "quality_repair": _summary_repair_info(repo_root, repair_info),
@@ -668,6 +671,9 @@ def _extract_claims(
         "accepted_claim_count": 0,
         "rejected_claim_count": 0,
         "claim_alignment_status_counts": {},
+        "relevance_validation_warning_counts": {},
+        "label_audit_bucket_counts": {},
+        "label_audit_warning_counts": {},
         "current_chunk_id": "",
         "complete": False,
         "claim_extractor": claim_extractor,
@@ -737,10 +743,7 @@ def _extract_claims(
             if claim is None:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": reason, "proposal": proposal})
                 continue
-            relevance_reason = claim_decision_relevance_rejection_reason(claim, selected_question)
-            if relevance_reason:
-                rejected.append({"chunk_id": chunk.chunk_id, "reason": relevance_reason, "proposal": proposal})
-                continue
+            _attach_claim_routing_metadata(claim, progress, selected_question)
             key = _claim_dedupe_key(claim)
             if key in seen:
                 rejected.append({"chunk_id": chunk.chunk_id, "reason": "duplicate_claim", "proposal": proposal})
@@ -759,6 +762,14 @@ def _extract_claims(
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
 
+def _attach_claim_routing_metadata(claim: dict[str, Any], progress: dict[str, Any], selected_question: str) -> None:
+    relevance_reason = attach_decision_relevance_validation(claim, selected_question)
+    if relevance_reason:
+        _increment_progress_count(progress, "relevance_validation_warning_counts", relevance_reason)
+    audit = attach_label_audit(claim)
+    _increment_progress_count(progress, "label_audit_bucket_counts", str(audit.get("synthesis_bucket", "unknown")))
+    for warning in audit.get("warnings", []):
+        _increment_progress_count(progress, "label_audit_warning_counts", str(warning))
 
 def _claim_dedupe_key(claim: dict[str, Any]) -> tuple[str, str, str]:
     return (

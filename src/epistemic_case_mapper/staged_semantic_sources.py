@@ -260,9 +260,15 @@ def _normalize_claim_proposal(
             "decision_function": importance["decision_function"],
             "default_use": importance["default_use"],
             "importance_rationale": importance["rationale"],
+            "source_acronym_expansions": _metadata_dict(proposal.get("source_acronym_expansions")),
+            "whole_doc_source_card": _metadata_dict(proposal.get("whole_doc_source_card")),
         },
         "",
     )
+
+
+def _metadata_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 def _proposal_source_quote(proposal: dict[str, Any]) -> str:
     direct = str(proposal.get("source_quote", proposal.get("sourceQuote", "")) or "").strip()

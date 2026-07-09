@@ -326,6 +326,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
     quote_count = 0
     exact_quote_count = 0
     short_quote_count = 0
+    acronym_expansions = _source_acronym_expansions(source_text)
     for claim in source_card["canonical_claims"]:
         quotes = claim.get("supporting_quotes", [])
         quote = str(quotes[0].get("quote", "") if quotes else "").strip()
@@ -348,6 +349,10 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 "decision_function": decision_function,
                 "default_use": _default_use_for_importance(importance),
                 "importance_rationale": claim.get("why_it_matters", ""),
+                "source_acronym_expansions": _used_acronym_expansions(
+                    acronym_expansions,
+                    text=" ".join([claim["claim"], quote]),
+                ),
                 "whole_doc_source_card": {
                     "source_card_role": claim["role"],
                     "source_bottom_line": source_card.get("source_bottom_line", ""),
@@ -361,7 +366,65 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
         "source_card_quote_count": quote_count,
         "source_card_exact_quote_count": exact_quote_count,
         "source_card_short_quote_count": short_quote_count,
+        "source_card_acronym_expansion_count": len(acronym_expansions),
     }
+
+
+def _source_acronym_expansions(source_text: str) -> dict[str, str]:
+    expansions: dict[str, str] = {}
+    pattern = re.compile(r"([A-Za-z][A-Za-z0-9 ,;:/\-]{3,140}?)\s*\(([A-Z][A-Z0-9-]{1,10}s?)\)")
+    for match in pattern.finditer(source_text):
+        acronym = _clean_acronym(match.group(2))
+        expansion = _best_acronym_expansion(match.group(1), acronym)
+        if acronym and expansion:
+            expansions.setdefault(acronym, expansion)
+    return expansions
+
+
+def _used_acronym_expansions(expansions: dict[str, str], *, text: str) -> dict[str, str]:
+    return {
+        acronym: expansion
+        for acronym, expansion in expansions.items()
+        if re.search(rf"\b{re.escape(acronym)}s?\b", text, flags=re.IGNORECASE)
+    }
+
+
+def _clean_acronym(value: str) -> str:
+    acronym = re.sub(r"[^A-Za-z0-9-]", "", value).strip("-").upper()
+    if acronym.endswith("S") and len(acronym) > 2:
+        acronym = acronym[:-1]
+    if not re.fullmatch(r"[A-Z][A-Z0-9-]{1,10}", acronym):
+        return ""
+    return acronym
+
+
+def _best_acronym_expansion(text: str, acronym: str) -> str:
+    if not acronym:
+        return ""
+    segment = re.split(r"[.;:\n?!]", text)[-1]
+    words = re.findall(r"[A-Za-z][A-Za-z0-9/-]*", segment)
+    words = [word.strip("-/") for word in words if word.strip("-/")]
+    if not words:
+        return ""
+    for size in range(1, min(8, len(words)) + 1):
+        phrase_words = words[-size:]
+        phrase = " ".join(phrase_words)
+        if _acronym_matches_phrase(acronym, phrase):
+            return _compact(phrase)
+    return ""
+
+
+def _acronym_matches_phrase(acronym: str, phrase: str) -> bool:
+    compact_phrase = re.sub(r"[^A-Za-z0-9]", "", phrase).upper()
+    if not compact_phrase:
+        return False
+    position = 0
+    for char in acronym.replace("-", ""):
+        position = compact_phrase.find(char, position)
+        if position < 0:
+            return False
+        position += 1
+    return True
 
 
 def _quote_rows(item: dict[str, Any]) -> list[dict[str, str]]:

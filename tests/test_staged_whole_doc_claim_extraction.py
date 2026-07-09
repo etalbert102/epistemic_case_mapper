@@ -148,3 +148,66 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
     progress = (tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8")
     assert '"stage": "whole_doc_claim_extraction"' in progress
     assert '"claim_extractor": "whole-doc"' in progress
+
+
+def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_path: Path) -> None:
+    _write_transfer_fixture(tmp_path)
+    manifest, region, case_manifest = _load_context(tmp_path, "submission_manifest.yaml", "demo_region_json")
+
+    def fake_whole_doc_payload_for_source(**kwargs):
+        quote = "Alpha line." if kwargs["source_id"] == "demo_source_1" else "Gamma line."
+        return (
+            {
+                "claims": [
+                    {
+                        "claim": "The retrofit increased the risk of equipment discoloration.",
+                        "source_quote": quote,
+                        "span_id": "",
+                        "entailed_by_excerpt": "yes",
+                        "role": "conclusion_support",
+                        "question_relevance": "direct",
+                        "relevance_rationale": "The model judged this source-card claim relevant.",
+                        "scope_flags": ["none"],
+                        "decision_importance": "high",
+                        "decision_function": "answer_bearing",
+                        "default_use": "main_map",
+                        "importance_rationale": "It is a canonical source claim.",
+                    }
+                ],
+                "extractor": "whole-doc",
+            },
+            False,
+            "",
+        )
+
+    monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
+
+    claims, rejected = _extract_claims(
+        tmp_path,
+        manifest,
+        region,
+        case_manifest,
+        [],
+        backend="ollama:fake-model",
+        backend_timeout=5,
+        backend_retries=0,
+        artifact_dir=tmp_path / "artifacts",
+        max_claims_per_chunk=6,
+        reuse_claim_cache=False,
+        claim_extractor="whole-doc",
+        decision_question="Should the retrofit reduce hospital admissions?",
+    )
+
+    assert len(claims) == 2
+    assert rejected == []
+    assert claims[0]["deterministic_relevance_validation"] == {
+        "status": "warning",
+        "reason": "question_outcome_mismatch",
+        "blocking": False,
+        "method": "deterministic_question_fit_check_v1",
+    }
+    assert claims[0]["label_audit"]["synthesis_bucket"] == "supporting"
+    assert claims[0]["label_audit"]["routing_default_use"] == "supporting_map"
+    progress = json.loads((tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8"))
+    assert progress["relevance_validation_warning_counts"] == {"question_outcome_mismatch": 2}
+    assert progress["label_audit_bucket_counts"] == {"supporting": 2}

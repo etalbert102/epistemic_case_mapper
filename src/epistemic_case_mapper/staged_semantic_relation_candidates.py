@@ -161,6 +161,7 @@ def _candidate_endpoint_telemetry(claim: Any) -> dict[str, Any]:
         "claim_id": claim.get("claim_id"),
         "source_id": claim.get("source_id"),
         "role": claim.get("role"),
+        "label_audit": _label_audit_telemetry(claim),
         "question_fit": _question_fit_status(claim),
         "decision_importance": _decision_importance_level(claim),
         "decision_function": _decision_function(claim),
@@ -209,7 +210,7 @@ def _relation_claim_pool_limit(max_pairs: int) -> int:
 
 
 def _relation_pool_bucket(claim: dict[str, Any]) -> tuple[str, str]:
-    return (str(claim.get("source_id", "")), _relation_role_family(str(claim.get("role", ""))))
+    return (str(claim.get("source_id", "")), _relation_role_family(_routing_role(claim)))
 
 
 def _relation_role_family(role: str) -> str:
@@ -264,7 +265,7 @@ def _relation_endpoint_rank(claim: dict[str, Any]) -> tuple[int, int, int, int, 
 
 
 def _relation_endpoint_priority(claim: dict[str, Any]) -> int:
-    role = str(claim.get("role", ""))
+    role = _routing_role(claim)
     role_scores = {
         "crux": 14,
         "conclusion_support": 11,
@@ -277,6 +278,13 @@ def _relation_endpoint_priority(claim: dict[str, Any]) -> int:
     }
     text = _normalize_text(f"{claim.get('claim', '')} {claim.get('excerpt', '')}")
     score = role_scores.get(role, 4)
+    audit = _label_audit(claim)
+    if audit:
+        score += max(-8, min(8, (int(audit.get("core_decision_priority", 50) or 50) - 50) // 6))
+        if audit.get("synthesis_bucket") == "appendix":
+            score -= 5
+        elif audit.get("synthesis_bucket") == "core":
+            score += 3
     if claim.get("supporting_claim_ids"):
         score += min(5, 2 + len(claim.get("supporting_claim_ids", [])) // 3)
     if str(claim.get("consolidation_method", "")).strip():
@@ -403,6 +411,10 @@ def _question_fit_status(claim: dict[str, Any]) -> str:
     return str(question_fit.get("status", "")).strip().lower()
 
 def _decision_importance_level(claim: dict[str, Any]) -> str:
+    audit = _label_audit(claim)
+    routed = str(audit.get("routing_importance_level", "")).strip().lower()
+    if routed in {"critical", "high", "medium", "low"}:
+        return routed
     importance = claim.get("decision_importance") if isinstance(claim.get("decision_importance"), dict) else {}
     level = str(importance.get("calibrated_level") or claim.get("decision_importance_level") or claim.get("importance") or "").strip().lower()
     if level in {"critical", "high", "medium", "low"}:
@@ -424,8 +436,32 @@ def _decision_function(claim: dict[str, Any]) -> str:
     return str(importance.get("decision_function") or claim.get("decision_function") or "").strip().lower()
 
 def _default_use(claim: dict[str, Any]) -> str:
+    audit = _label_audit(claim)
+    routed = str(audit.get("routing_default_use", "")).strip().lower()
+    if routed in {"main_map", "supporting_map", "appendix", "exclude_unless_gap"}:
+        return routed
     importance = claim.get("decision_importance") if isinstance(claim.get("decision_importance"), dict) else {}
     return str(importance.get("default_use") or claim.get("default_use") or "").strip().lower()
+
+def _routing_role(claim: dict[str, Any]) -> str:
+    audit = _label_audit(claim)
+    routed = str(audit.get("routing_role", "")).strip()
+    return routed or str(claim.get("role", ""))
+
+def _label_audit(claim: dict[str, Any]) -> dict[str, Any]:
+    return claim.get("label_audit") if isinstance(claim.get("label_audit"), dict) else {}
+
+def _label_audit_telemetry(claim: dict[str, Any]) -> dict[str, Any]:
+    audit = _label_audit(claim)
+    if not audit:
+        return {}
+    return {
+        "core_decision_priority": audit.get("core_decision_priority"),
+        "synthesis_bucket": audit.get("synthesis_bucket"),
+        "routing_role": audit.get("routing_role"),
+        "routing_default_use": audit.get("routing_default_use"),
+        "warnings": audit.get("warnings", []),
+    }
 
 def _decision_importance_priority(claim: dict[str, Any]) -> int:
     level = _decision_importance_level(claim)

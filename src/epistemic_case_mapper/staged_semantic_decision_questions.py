@@ -18,7 +18,7 @@ def region_decision_question(region: Any, case_manifest: CaseManifest, override:
 
 def claim_decision_relevance_rejection_reason(claim: dict[str, Any], decision_question: str) -> str:
     question = _normalize_text(decision_question)
-    claim_text = _normalize_text(f"{claim.get('claim', '')} {claim.get('excerpt', '')}")
+    claim_text = _normalize_text(_claim_text_with_source_aliases(claim))
     flags = {str(flag).strip().lower() for flag in claim.get("scope_flags", []) if str(flag).strip()}
     if "administrative_context" in flags:
         return "question_administrative_context"
@@ -35,6 +35,26 @@ def claim_decision_relevance_rejection_reason(claim: dict[str, Any], decision_qu
     if _mentions_child_population(claim_text) and not _mentions_child_population(question):
         return "question_population_mismatch"
     return ""
+
+
+def decision_relevance_validation(claim: dict[str, Any], decision_question: str) -> dict[str, Any]:
+    reason = claim_decision_relevance_rejection_reason(claim, decision_question)
+    return {
+        "status": "warning" if reason else "ok",
+        "reason": reason,
+        "blocking": False,
+        "method": "deterministic_question_fit_check_v1",
+    }
+
+
+def attach_decision_relevance_validation(claim: dict[str, Any], decision_question: str) -> str:
+    validation = decision_relevance_validation(claim, decision_question)
+    claim["deterministic_relevance_validation"] = validation
+    if validation["reason"]:
+        warnings = claim.setdefault("validation_warnings", [])
+        if isinstance(warnings, list):
+            warnings.append(validation["reason"])
+    return str(validation["reason"])
 
 
 def _question_allows_population_mismatch(question: str, claim_text: str) -> bool:
@@ -65,7 +85,7 @@ def _inferred_outcome_mismatch_without_bridge(claim: dict[str, Any], question: s
     target_terms = _decision_target_terms(question)
     if not target_terms:
         return False
-    claim_statement = _normalize_text(str(claim.get("claim", ""))) or claim_text
+    claim_statement = _normalize_text(_claim_statement_with_source_aliases(claim)) or claim_text
     claim_outcome_terms = _claim_outcome_terms(claim_statement)
     if not claim_outcome_terms:
         return False
@@ -83,7 +103,7 @@ def _claim_has_explicit_question_bridge(claim: dict[str, Any], question: str) ->
     bridge_text = _normalize_text(
         " ".join(
             [
-                str(claim.get("claim", "")),
+                _claim_statement_with_source_aliases(claim),
                 str(claim.get("relevance_rationale", "")),
             ]
         )
@@ -199,6 +219,46 @@ def _target_content_terms(text: str) -> set[str]:
         "with",
     }
     return {token for token in re.findall(r"[a-z0-9]{4,}", text.lower()) if token not in stopwords}
+
+
+def _claim_text_with_source_aliases(claim: dict[str, Any]) -> str:
+    return _append_source_aliases(
+        " ".join(str(claim.get(key, "")) for key in ("claim", "excerpt", "source_quote")),
+        claim,
+    )
+
+
+def _claim_statement_with_source_aliases(claim: dict[str, Any]) -> str:
+    return _append_source_aliases(str(claim.get("claim", "")), claim)
+
+
+def _append_source_aliases(text: str, claim: dict[str, Any]) -> str:
+    expansions = _claim_source_acronym_expansions(claim)
+    if not expansions:
+        return text
+    additions = [
+        expansion
+        for acronym, expansion in expansions.items()
+        if re.search(rf"\b{re.escape(acronym)}s?\b", text, flags=re.IGNORECASE)
+    ]
+    return " ".join([text, *additions])
+
+
+def _claim_source_acronym_expansions(claim: dict[str, Any]) -> dict[str, str]:
+    rows: dict[str, str] = {}
+    direct = claim.get("source_acronym_expansions")
+    if isinstance(direct, dict):
+        rows.update({str(key): str(value) for key, value in direct.items() if str(key).strip() and str(value).strip()})
+    card = claim.get("whole_doc_source_card")
+    if isinstance(card, dict) and isinstance(card.get("source_acronym_expansions"), dict):
+        rows.update(
+            {
+                str(key): str(value)
+                for key, value in card["source_acronym_expansions"].items()
+                if str(key).strip() and str(value).strip()
+            }
+        )
+    return rows
 
 
 def _mentions_child_population(text: str) -> bool:

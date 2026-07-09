@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing import (
     validate_briefing_against_scaffold,
 )
 from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason
+from epistemic_case_mapper.staged_semantic_whole_doc import _source_acronym_expansions
 
 
 def test_claim_relevance_keeps_population_mismatch_when_it_bounds_decision_question() -> None:
@@ -76,6 +77,37 @@ def test_claim_relevance_rejects_different_outcome_without_explicit_bridge() -> 
     )
 
     assert reason == "question_outcome_mismatch"
+
+
+def test_claim_relevance_uses_source_defined_acronym_expansion_for_outcome_match() -> None:
+    claim = {
+        "claim": "Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD.",
+        "excerpt": "Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD.",
+        "role": "conclusion_support",
+        "question_relevance": "direct",
+        "scope_flags": ["none"],
+        "source_acronym_expansions": {"CVD": "cardiovascular disease"},
+    }
+
+    reason = claim_decision_relevance_rejection_reason(
+        claim,
+        "For generally healthy adults, should eggs be treated as harmful, neutral, or beneficial for cardiovascular risk?",
+    )
+
+    assert reason == ""
+
+
+def test_source_acronym_expansions_are_derived_from_source_text() -> None:
+    source_text = (
+        "Is consuming dietary cholesterol or eggs associated with incident cardiovascular disease (CVD) "
+        "and all-cause mortality? Hazard ratio (HR) and absolute risk difference (ARD) were reported."
+    )
+
+    expansions = _source_acronym_expansions(source_text)
+
+    assert expansions["CVD"] == "cardiovascular disease"
+    assert expansions["HR"] == "Hazard ratio"
+    assert expansions["ARD"] == "absolute risk difference"
 
 
 def test_claim_relevance_keeps_different_outcome_when_rationale_bridges_to_target() -> None:
