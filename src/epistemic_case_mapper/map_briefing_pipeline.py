@@ -136,7 +136,7 @@ def run_map_briefing(
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
-    _attach_decision_briefing_packet(scaffold, question=question, backend_config=backend_config)
+    _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
     prompt = build_map_briefing_prompt(
         candidate_map=prioritized_map,
         quality_report=quality_report,
@@ -273,9 +273,16 @@ def _attach_decision_spine_bundle(
         )
 
 
-def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str, backend_config: ModelBackendConfig) -> None:
+def _attach_decision_briefing_packet(
+    prioritized_map: dict[str, Any],
+    scaffold: dict[str, Any],
+    *,
+    question: str,
+    backend_config: ModelBackendConfig,
+) -> None:
     from epistemic_case_mapper.map_briefing_readiness import build_packet_quality_gate_report
 
+    scaffold["source_bottom_line_cards"] = _source_bottom_line_cards(prioritized_map, scaffold)
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
     scaffold.update(
         run_packet_critique_and_refinement(
@@ -302,6 +309,39 @@ def _attach_decision_briefing_packet(scaffold: dict[str, Any], *, question: str,
             ],
         }
         scaffold.update(build_quality_synthesis_packet_bundle(packet))
+
+
+def _source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
+    source_lookup = scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for claim in prioritized_map.get("claims", []) if isinstance(prioritized_map.get("claims"), list) else []:
+        if not isinstance(claim, dict):
+            continue
+        bottom_line = str(claim.get("source_bottom_line") or "").strip()
+        source_id = str(claim.get("source_id") or "").strip()
+        if not bottom_line or not source_id:
+            continue
+        key = (source_id, bottom_line)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "source_bottom_line_id": f"sbl{len(rows)+1:04d}",
+                "source_id": source_id,
+                "source_label": str(source_lookup.get(source_id) or source_id),
+                "claim_ids": [str(claim.get("claim_id"))] if claim.get("claim_id") else [],
+                "source_bottom_line": bottom_line,
+                "decision_importance_level": str(claim.get("decision_importance_level") or ""),
+                "decision_function": str(claim.get("decision_function") or ""),
+            }
+        )
+    return {
+        "schema_id": "source_bottom_line_cards_v1",
+        "card_count": len(rows),
+        "cards": rows,
+    }
 
 
 def _attach_model_context_audit(

@@ -51,6 +51,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("argument_model", "argument_model.json", "json", _scaffold_value("argument_model"), review_label="Argument model"),
         ArtifactSpec("graph_synthesis_packet", "graph_synthesis_packet.json", "json", _scaffold_value("graph_synthesis_packet"), review_label="Graph synthesis packet"),
         ArtifactSpec("source_evidence_cards", "source_evidence_cards.json", "json", _scaffold_value("source_evidence_cards"), review_label="Source evidence cards"),
+        ArtifactSpec("source_bottom_line_cards", "source_bottom_line_cards.json", "json", _scaffold_value("source_bottom_line_cards"), review_label="Source bottom-line cards"),
         ArtifactSpec("source_sufficiency_report", "source_sufficiency_report.json", "json", _scaffold_value("source_sufficiency_report"), review_label="Source sufficiency report"),
         ArtifactSpec("evidence_quality_report", "evidence_quality_report.json", "json", _scaffold_value("evidence_quality_report"), review_label="Evidence quality report"),
         ArtifactSpec("candidate_evidence_cards", "candidate_evidence_cards.json", "json", _scaffold_value("candidate_evidence_cards"), review_label="Candidate evidence cards"),

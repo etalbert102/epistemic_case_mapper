@@ -139,6 +139,69 @@ def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
     assert "Option A" in packet["answer_spine"]["default_read"]
 
 
+def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    built["decision_briefing_packet"]["answer_frame"]["default_answer"] = (
+        "{'classification': 'neutral_or_low_concern_under_stated_conditions'}"
+    )
+    built["decision_briefing_packet"]["evidence_bundles"].insert(
+        0,
+        {
+            "bundle_id": "bundle_counter_quantity",
+            "decision_role": "quantitative_anchor",
+            "claim": "Option A had a higher risk of pump failure in poorly maintained sites.",
+            "source_ids": ["s2"],
+            "source_labels": ["Counter Study"],
+            "claim_ids": ["c2"],
+            "quantity_values": ["RR 1.40", "95% CI 1.10-1.70"],
+            "source_excerpt": "Option A had a higher risk of pump failure (RR 1.40, 95% CI 1.10-1.70).",
+            "weight": "high",
+            "source_grounded": True,
+        },
+    )
+
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    assert "Option A reduced flood losses" in packet["answer_spine"]["default_read"]
+    assert "higher risk of pump failure" not in packet["answer_spine"]["default_read"]
+
+
+def test_quantity_binding_preserves_source_local_effect_interval_tuples() -> None:
+    packet = {
+        "decision_question": "Should the policy treat the exposure as harmful or neutral?",
+        "answer_frame": {"default_answer": "The default answer is neutral but bounded.", "confidence": "medium"},
+        "source_trail": [{"source_id": "s1", "source_label": "Meta Analysis", "appears_in_packet": True}],
+        "evidence_bundles": [
+            {
+                "bundle_id": "bundle_001",
+                "decision_role": "quantitative_anchor",
+                "claim": "There is a dose-response relationship where each additional 4 units per week increases risk.",
+                "source_ids": ["s1"],
+                "source_labels": ["Meta Analysis"],
+                "claim_ids": ["c1"],
+                "quantity_values": ["RR 2.00", "95% CI 1.02-1.38", "95% CI 1.42-2.37"],
+                "source_excerpt": (
+                    "The pooled RRs for highest vs lowest intake were 1.19 (95% CI 1.02-1.38), "
+                    "1.83 (95% CI 1.42-2.37), and 1.68 (95% CI 1.41-2.00), respectively. "
+                    "Subgroup analyses showed higher risk in other countries than the USA "
+                    "(RR 2.00, 95% CI 1.14 to 3.51 vs 1.13, 95% CI 0.98 to 1.30)."
+                ),
+                "weight": "high",
+                "source_grounded": True,
+            }
+        ],
+    }
+
+    result = build_quality_synthesis_packet_bundle(packet)
+    binding = result["quantity_binding_report"]["bindings"][0]
+    tuples = binding["quantity_tuples"]
+    rr_200 = next(row for row in tuples if row["estimate"] == "RR 2.00")
+
+    assert rr_200["interval"] == "95% CI 1.14 to 3.51"
+    assert all(not (row["estimate"] == "RR 2.00" and row["interval"] == "95% CI 1.02-1.38") for row in tuples)
+    assert result["quantity_binding_report"]["unsafe_quantity_pairing_count"] >= 1
+
+
 def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]

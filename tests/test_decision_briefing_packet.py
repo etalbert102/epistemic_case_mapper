@@ -242,6 +242,35 @@ def test_packet_resolves_argument_quantity_anchor_sources_from_claim_ids() -> No
     assert result["packet_sufficiency_report"]["unsupported_or_weakly_anchored_bundles"]["count"] == 0
 
 
+def test_packet_promotes_source_bottom_lines_as_first_class_evidence() -> None:
+    scaffold = _scaffold()
+    scaffold["source_bottom_line_cards"] = {
+        "schema_id": "source_bottom_line_cards_v1",
+        "cards": [
+            {
+                "source_bottom_line_id": "sbl0001",
+                "source_id": "s1",
+                "source_label": "Outcome Study",
+                "claim_ids": ["c1"],
+                "source_bottom_line": (
+                    "Option A was not associated with higher downstream flood losses overall, "
+                    "though the result may not apply when maintenance funding is cut."
+                ),
+                "decision_importance_level": "high",
+                "decision_function": "answer_bearing",
+            }
+        ],
+    }
+
+    result = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+    bundles = result["decision_briefing_packet"]["evidence_bundles"]
+    source_summary = [row for row in bundles if row.get("pretrim_kind") == "source_bottom_line"]
+
+    assert source_summary
+    assert source_summary[0]["decision_role"] == "strongest_support"
+    assert "Source-level bottom line" in source_summary[0]["why_it_matters"]
+
+
 def test_packet_does_not_promote_empty_quantity_rows_to_quantitative_anchors() -> None:
     scaffold = _scaffold()
     scaffold["argument_model"]["quantitative_anchors"] = [
