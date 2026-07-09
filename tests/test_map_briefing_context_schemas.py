@@ -346,6 +346,32 @@ def test_context_bundle_preserves_counterweight_role_on_narrower_scope_cards() -
     assert "Practical Scope and Exceptions" in cards["c2"]["section_candidates"]
 
 
+def test_context_bundle_does_not_infer_counterweight_from_claim_text_without_explicit_role() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c1",
+                "claim": "High use increased risk in a narrower subgroup.",
+                "source_id": "s1",
+                "source_span": "lines 1-2",
+                "excerpt": "High use increased risk in a narrower subgroup.",
+                "decision_relevance_score": 9,
+            }
+        ]
+    }
+
+    bundle = build_decision_ready_context_bundle(
+        candidate_map,
+        scaffold={"map_sufficiency_report": {}, "evidence_weighting_ledger": {"all_evidence": []}},
+        question="Should moderate use be adopted for the default adult population?",
+        source_lookup={"s1": "Subgroup Study"},
+    )
+    card = bundle["candidate_evidence_cards"]["cards"][0]
+
+    assert card["role"] == "context"
+    assert card["evidence_roles"] == ["context"]
+
+
 def test_scope_labeled_quantitative_cards_remain_evidence_carrying() -> None:
     candidate_map = {
         "claims": [

@@ -649,10 +649,7 @@ def _role_for_claim(claim: dict[str, Any]) -> str:
         str(claim.get(key, ""))
         for key in ("role", "evidence_role", "section", "relation_type", "claim_type", "tags", "evidence_slots")
     ).lower()
-    text = _claim_text(claim).lower()
     if any(term in values for term in ("challenge", "counter", "conflict", "tension")):
-        return "challenges"
-    if any(term in text for term in ("higher risk", "increased risk", "increase in risk", "worse outcome", "harm", "adverse")):
         return "challenges"
     if any(term in values for term in ("scope", "limit", "boundary", "exception", "constraint", "crux")):
         return "scopes"

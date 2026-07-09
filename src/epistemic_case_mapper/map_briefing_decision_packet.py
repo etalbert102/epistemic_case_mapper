@@ -674,7 +674,13 @@ def _retained_candidate_ids(bundles: list[dict[str, Any]]) -> set[str]:
 
 
 def _decision_role(card: dict[str, Any], *, quantity_values: list[str]) -> str:
-    text = " ".join([str(card.get("role", "")), " ".join(_string_list(card.get("evidence_roles"))), " ".join(_string_list(card.get("scope_tags"))), str(card.get("inclusion_reason", ""))]).lower()
+    text = " ".join(
+        [
+            str(card.get("role", "")),
+            " ".join(_string_list(card.get("evidence_roles"))),
+            " ".join(_string_list(card.get("scope_tags"))),
+        ]
+    ).lower()
     if any(term in text for term in ("counter", "challenge", "conflict", "tension", "contrary")):
         return "counterweight"
     if any(term in text for term in ("scope", "boundary", "exception", "limit", "population", "subgroup", "comparator")):

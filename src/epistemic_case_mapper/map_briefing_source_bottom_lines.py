@@ -85,86 +85,21 @@ def source_bottom_line_candidates(
 
 
 def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
-    text = f"{card.get('source_bottom_line', '')} {card.get('decision_function', '')}".lower()
+    text = " ".join(
+        str(card.get(key) or "")
+        for key in ("decision_function", "source_card_role", "role", "evidence_role")
+    ).lower()
     hints: list[str] = []
-    if any(
-        term in text
-        for term in (
-            "not associated",
-            "no association",
-            "not strongly linked",
-            "unlikely to adversely affect",
-            "neutral",
-            "lower risk",
-            "reduced risk",
-            "benefit",
-            "tolerable",
-            "acceptable",
-            "safe",
-        )
-    ):
+    if any(term in text for term in ("support", "answer_bearing", "main_finding", "conclusion")):
         hints.append("support")
-    if any(
-        term in text
-        for term in (
-            "higher risk",
-            "increased",
-            "increases",
-            "adversely affect",
-            "harm",
-            "adverse",
-            "mortality",
-            "positive association",
-            "restrict",
-        )
-    ):
+    if any(term in text for term in ("counter", "challenge", "conflict", "tension", "contrary")):
         hints.append("counterweight")
-    if any(term in text for term in ("subgroup", "specific", "except", "only", "scope", "population", "context")):
+    if any(term in text for term in ("scope", "boundary", "exception", "limit", "population", "subgroup")):
         hints.append("scope")
     return hints or ["context"]
 
 
 def _source_bottom_line_decision_role(card: dict[str, Any]) -> str:
-    text = str(card.get("source_bottom_line") or "").lower()
-    support_pos = _first_signal_position(
-        text,
-        (
-            "not associated",
-            "no association",
-            "not strongly linked",
-            "unlikely to adversely affect",
-            "neutral",
-            "lower risk",
-            "reduced risk",
-            "benefit",
-            "tolerable",
-            "acceptable",
-            "safe",
-        ),
-    )
-    counter_pos = _first_signal_position(
-        text,
-        (
-            "higher risk",
-            "increased",
-            "increases",
-            "adversely affect",
-            "harm",
-            "adverse",
-            "mortality",
-            "positive association",
-            "restrict",
-        ),
-    )
-    scope_pos = _first_signal_position(text, ("though", "however", "except", "specific", "subgroup", "only", "scope", "population", "context"))
-    if support_pos >= 0 and (counter_pos < 0 or support_pos < counter_pos):
-        return "strongest_support"
-    if counter_pos >= 0 and support_pos < 0:
-        return "counterweight"
-    if support_pos >= 0 and counter_pos >= 0 and scope_pos >= 0:
-        return "scope_boundary"
-    if scope_pos >= 0:
-        return "scope_boundary"
     return _decision_role_fallback(card)
 
 

@@ -270,24 +270,21 @@ def _appendix_only(card: dict[str, Any], score: int, quality: dict[str, Any], ba
 
 def _candidate_profile(card: dict[str, Any]) -> dict[str, list[str] | str]:
     source_role = str(card.get("supports_challenges_or_scopes") or "").lower()
-    text = " ".join(
-        [
-            source_role,
-            str(card.get("source_quote_or_excerpt") or ""),
-            str(card.get("evidence_type") or ""),
-            str(card.get("endpoint_match") or ""),
-        ]
+    explicit = " ".join(
+        str(card.get(key) or "")
+        for key in ("role", "evidence_role", "claim_type", "decision_function", "source_card_role")
     ).lower()
+    text = " ".join([source_role, explicit]).lower()
     roles: list[str] = []
-    if _has_counterweight_signal(source_role, text):
+    if _explicit_counterweight_signal(source_role, text):
         roles.append("counterweight")
     if _string_list(card.get("quantity_values")) or _has_quantity_signal(text):
         roles.append("quantity")
-    if _string_list(card.get("limitations")) or _has_limitation_signal(text):
+    if _string_list(card.get("limitations")) or _explicit_limitation_signal(text):
         roles.append("limitation")
-    if _has_support_signal(source_role, text):
+    if _explicit_support_signal(source_role, text):
         roles.append("support")
-    if "scope" in source_role or _has_scope_signal(text):
+    if "scope" in source_role or _explicit_scope_signal(text):
         roles.append("scope")
     roles = _dedupe(roles) or ["context"]
     primary = _primary_role(roles)
@@ -307,34 +304,29 @@ def _primary_role(roles: list[str]) -> str:
     return "context"
 
 
-def _has_counterweight_signal(source_role: str, text: str) -> bool:
+def _explicit_counterweight_signal(source_role: str, text: str) -> bool:
     return any(marker in source_role for marker in ("challenge", "counter", "tension", "conflict")) or any(
         marker in text
         for marker in (
-            "higher risk",
-            "increased risk",
-            "increase in risk",
-            "positive association",
-            "worse outcome",
-            "harm",
-            "adverse",
-            "conflicting",
-            "in tension",
+            "challenge",
+            "counter",
+            "counterweight",
+            "conflict",
+            "tension",
+            "contrary",
+            "conflicting_evidence",
         )
     )
 
 
-def _has_support_signal(source_role: str, text: str) -> bool:
+def _explicit_support_signal(source_role: str, text: str) -> bool:
     return "support" in source_role or any(
         marker in text
         for marker in (
-            "lower risk",
-            "lower mortality",
-            "reduced risk",
-            "benefit",
-            "not associated with",
-            "no significant association",
-            "neutral",
+            "support",
+            "conclusion_support",
+            "answer_bearing",
+            "main_finding",
         )
     )
 
@@ -343,25 +335,19 @@ def _has_quantity_signal(text: str) -> bool:
     return bool(re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|fold|mg/dl|mmol/l|ci|rr|or|hr|i2|p\s*[<=>])\b", text))
 
 
-def _has_limitation_signal(text: str) -> bool:
-    return any(marker in text for marker in ("uncertain", "heterogeneity", "low confidence", "limited", "observational", "cross-sectional"))
+def _explicit_limitation_signal(text: str) -> bool:
+    return any(marker in text for marker in ("limit", "limitation", "uncertainty", "source_quality_caveat"))
 
 
-def _has_scope_signal(text: str) -> bool:
+def _explicit_scope_signal(text: str) -> bool:
     return any(
         marker in text
         for marker in (
             "subgroup",
-            "population",
-            "adult",
-            "children",
-            "older",
-            "diabetes",
-            "dose",
-            "per week",
-            "per day",
-            "comparator",
-            "substitution",
+            "population_or_subgroup",
+            "scope",
+            "scope_limit",
+            "boundary",
             "exception",
         )
     )
