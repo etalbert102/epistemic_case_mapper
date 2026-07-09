@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
 )
 from epistemic_case_mapper.map_briefing_top_quantity_candidates import build_top_quantity_anchor_candidates
+from epistemic_case_mapper.map_briefing_vertical_slice_report import build_decision_model_vertical_slice_report
 
 
 ROLE_ORDER = (
@@ -107,6 +108,8 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "source_trail": source_trail,
         "coverage_report": build_packet_coverage_report(candidate_pool, bundles, retain_ledger, source_trail),
     }
+    vertical_slice_report = build_decision_model_vertical_slice_report(packet)
+    packet["decision_model_vertical_slice_report"] = vertical_slice_report
     sufficiency = build_packet_sufficiency_report(packet, candidate_pool=candidate_pool)
     report = _packet_builder_report(candidate_pool, packet, sufficiency)
     return {
@@ -120,6 +123,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "decision_slots": decision_slots,
         "packet_budget_allocation_report": budget_report,
         "packet_compression_report": compression_report,
+        "decision_model_vertical_slice_report": vertical_slice_report,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
