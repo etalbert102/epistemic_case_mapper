@@ -16,7 +16,7 @@ from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
-from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
 from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.staged_semantic_relation_quality import relation_semantic_rejection_reason
@@ -555,71 +555,25 @@ def _run_quality_repair(
     artifact_dir: Path,
     decision_question: str | None = None,
 ) -> dict[str, Any]:
-    if quality_report.get("status") == "usable_with_review":
-        return {"ran": False, "accepted": False, "reason": "quality_already_usable"}
-    prompt = _map_quality_repair_prompt(region, case_manifest, candidate_map, quality_report, decision_question=decision_question)
-    prompt_path = artifact_dir / "map_quality_repair_prompt.txt"
-    write_markdown(prompt_path, prompt)
-    info: dict[str, Any] = {
-        "ran": True,
-        "accepted": False,
-        "reason": "",
-        "prompt_path": prompt_path,
-    }
-    try:
-        result = run_model_backend(
-            prompt,
-            backend,
-            timeout_seconds=backend_timeout,
-            max_retries=backend_retries,
-        )
-        raw = result.text
-    except (RuntimeError, ValueError) as exc:
-        info["reason"] = "backend_error"
-        info["error"] = str(exc)
-        return info
-    raw_path = artifact_dir / "map_quality_repair_raw.txt"
-    write_markdown(raw_path, raw)
-    info["raw_path"] = raw_path
-    repaired = _parse_model_json(raw)
-    canonical_path = artifact_dir / "map_quality_repaired_candidate.json"
-    write_json(canonical_path, repaired or {})
-    info["candidate_path"] = canonical_path
-    if not isinstance(repaired, dict):
-        info["reason"] = "invalid_json"
-        return info
-    validation_failures = validate_map_candidate(repo_root, manifest_path, region.region_id, canonical_path)
-    write_json(artifact_dir / "map_quality_repair_validation.json", {"failures": validation_failures})
-    info["validation_failures"] = validation_failures
-    if validation_failures:
-        info["reason"] = "validation_failed"
-        return info
-    repaired_quality = evaluate_staged_map_quality(
+    return run_map_critique_repair_loop(
+        repo_root=repo_root,
+        manifest_path=manifest_path,
         manifest=manifest,
         region=region,
         case_manifest=case_manifest,
         all_chunks=all_chunks,
         selected_chunks=selected_chunks,
         skipped_chunks=skipped_chunks,
-        candidate_map=repaired,
+        candidate_map=candidate_map,
+        quality_report=quality_report,
         rejected_claims=rejected_claims,
         rejected_relations=rejected_relations,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        artifact_dir=artifact_dir,
         decision_question=decision_question,
     )
-    write_json(artifact_dir / "map_quality_repaired_report.json", repaired_quality)
-    write_markdown(artifact_dir / "MAP_QUALITY_REPAIRED_REPORT.md", _quality_markdown(repaired_quality))
-    info["initial_status"] = quality_report.get("status")
-    info["initial_score"] = quality_report.get("score")
-    info["repaired_status"] = repaired_quality.get("status")
-    info["repaired_score"] = repaired_quality.get("score")
-    if not _repair_improves_or_preserves_quality(quality_report, repaired_quality):
-        info["reason"] = "quality_not_improved_or_preserved"
-        return info
-    info["accepted"] = True
-    info["reason"] = "accepted"
-    info["candidate_map"] = repaired
-    info["quality_report"] = repaired_quality
-    return info
 
 def _repair_improves_or_preserves_quality(original: dict[str, Any], repaired: dict[str, Any]) -> bool:
     original_rank = _quality_status_rank(str(original.get("status", "")))
@@ -636,15 +590,7 @@ def _quality_status_rank(status: str) -> int:
     }.get(status, -1)
 
 def _summary_repair_info(repo_root: Path, repair_info: dict[str, Any]) -> dict[str, Any]:
-    summary = {
-        key: value
-        for key, value in repair_info.items()
-        if key not in {"candidate_map", "quality_report"}
-    }
-    for key, value in list(summary.items()):
-        if isinstance(value, Path):
-            summary[key] = _relative(repo_root, value)
-    return summary
+    return summarize_repair_info(repo_root, repair_info)
 
 def _extract_relations(
     manifest: SubmissionManifest,
@@ -849,11 +795,9 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
 from epistemic_case_mapper.staged_semantic_quality import (
     _classify_singleton_relations,
     _counts,
-    _map_quality_repair_prompt,
-    _quality_markdown,
     _text_overlap_ratio,
-    evaluate_staged_map_quality,
 )
+from epistemic_case_mapper.staged_semantic_map_repair_loop import run_map_critique_repair_loop, summarize_repair_info
 from epistemic_case_mapper.staged_semantic_relation_candidates import (
     _candidate_relation_pairs,
     _relation_candidate_pool_report,
