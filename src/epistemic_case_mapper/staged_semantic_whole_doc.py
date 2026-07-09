@@ -10,8 +10,8 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import json_schema_block, render_prompt
 
-WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v1_json"
-WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v1_json"
+WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v3_json"
+WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v3_json"
 
 SOURCE_CARD_ROLES = {
     "main_finding",
@@ -20,6 +20,14 @@ SOURCE_CARD_ROLES = {
     "mechanism",
     "source_quality_caveat",
     "guidance_context",
+}
+
+DECISION_POLARITIES = {
+    "supports_current_answer",
+    "challenges_current_answer",
+    "scopes_current_answer",
+    "mixed_or_unclear",
+    "context",
 }
 
 
@@ -57,6 +65,7 @@ def whole_doc_claim_payload_for_source(
             backend,
             timeout_seconds=backend_timeout,
             max_retries=backend_retries,
+            response_schema=source_card_json_schema(max_claims=max_claims),
         )
         raw = result.text
     except (RuntimeError, ValueError) as exc:
@@ -141,6 +150,7 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                     "properties": {
                         "claim": {"type": "string"},
                         "role": {"type": "string", "enum": sorted(SOURCE_CARD_ROLES)},
+                        "decision_polarity": {"type": "string", "enum": sorted(DECISION_POLARITIES)},
                         "decision_importance": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
                         "why_it_matters": {"type": "string"},
                         "supporting_quotes": {
@@ -160,6 +170,7 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                     "required": [
                         "claim",
                         "role",
+                        "decision_polarity",
                         "decision_importance",
                         "why_it_matters",
                         "supporting_quotes",
@@ -198,6 +209,9 @@ def _source_card_prompt(
                 "- Do not turn isolated table cells, headings, reference list entries, or one-word labels into standalone claims.",
                 "- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.",
                 "- Preserve key quantities inside the relevant canonical claim rather than as separate claims.",
+                "- For every canonical claim, set decision_polarity only relative to an explicit provisional answer if one is stated. This prompt does not provide a provisional answer, so most answer-bearing findings should use mixed_or_unclear unless they are pure applicability boundaries.",
+                "- Do not use role=main_finding to mean support; main_finding only means a main finding of the source.",
+                "- Use supports_current_answer or challenges_current_answer only when a claim clearly supports or weakens an explicitly stated provisional answer. Otherwise use mixed_or_unclear for answer-bearing evidence and scopes_current_answer for applicability boundaries.",
                 "- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.",
                 "- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.",
                 "- Output JSON only.",
@@ -218,6 +232,7 @@ def _repair_prompt(*, source_id: str, decision_question: str, raw_extraction: st
                 "- Do not add new factual claims.",
                 "- Preserve useful claims from the raw extraction unless they are clearly off-question.",
                 "- Use only the role values allowed by the schema.",
+                "- Preserve decision_polarity only when the raw extraction clearly names it. Do not infer support/challenge from role=main_finding, decision_importance, answer_bearing, or source_bottom_line.",
                 "- Use only decision_importance values: critical, high, medium, low.",
                 "- Convert each supporting quote string into an object with quote and line_hint.",
                 "- If a line hint is present outside the quote object, copy it into each relevant quote object.",
@@ -309,10 +324,12 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
     if not exact_quotes:
         return None
     role = _normalize_source_card_role(item.get("role"))
+    polarity = _normalize_decision_polarity(item.get("decision_polarity"))
     importance = _normalize_importance(item.get("decision_importance"))
     return {
         "claim": claim,
         "role": role,
+        "decision_polarity": polarity,
         "decision_importance": importance,
         "why_it_matters": _compact(str(item.get("why_it_matters") or item.get("relevance_rationale") or "")),
         "supporting_quotes": exact_quotes[:3],
@@ -333,7 +350,10 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
         quote_count += len(quotes)
         exact_quote_count += sum(1 for row in quotes if _quote_matches_source(str(row.get("quote", "")), source_text))
         short_quote_count += sum(1 for row in quotes if len(str(row.get("quote", "")).strip()) < 25)
-        role, question_relevance, decision_function, scope_flags = _map_source_card_role(claim["role"])
+        role, question_relevance, decision_function, scope_flags = _map_source_card_role(
+            claim["role"],
+            decision_polarity=str(claim.get("decision_polarity") or ""),
+        )
         importance = claim["decision_importance"]
         proposals.append(
             {
@@ -342,6 +362,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 "span_id": _span_id_from_line_hint(source_id, str(quotes[0].get("line_hint", "") if quotes else "")),
                 "entailed_by_excerpt": "yes",
                 "role": role,
+                "decision_polarity": claim.get("decision_polarity", "mixed_or_unclear"),
                 "question_relevance": question_relevance,
                 "relevance_rationale": claim.get("why_it_matters", ""),
                 "scope_flags": scope_flags,
@@ -355,6 +376,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 ),
                 "whole_doc_source_card": {
                     "source_card_role": claim["role"],
+                    "decision_polarity": claim.get("decision_polarity", "mixed_or_unclear"),
                     "source_bottom_line": source_card.get("source_bottom_line", ""),
                     "quantities": claim.get("quantities", []),
                     "scope_conditions": claim.get("scope_conditions", []),
@@ -469,6 +491,30 @@ def _normalize_source_card_role(value: Any) -> str:
     return role if role in SOURCE_CARD_ROLES else "main_finding"
 
 
+def _normalize_decision_polarity(value: Any) -> str:
+    polarity = str(value or "").strip().lower()
+    aliases = {
+        "support": "supports_current_answer",
+        "supports": "supports_current_answer",
+        "supports_answer": "supports_current_answer",
+        "supports_current_read": "supports_current_answer",
+        "challenge": "challenges_current_answer",
+        "challenges": "challenges_current_answer",
+        "counter": "challenges_current_answer",
+        "counterfinding": "challenges_current_answer",
+        "counterweight": "challenges_current_answer",
+        "scopes": "scopes_current_answer",
+        "scope": "scopes_current_answer",
+        "scope_limit": "scopes_current_answer",
+        "boundary": "scopes_current_answer",
+        "mixed": "mixed_or_unclear",
+        "unclear": "mixed_or_unclear",
+        "unknown": "mixed_or_unclear",
+    }
+    polarity = aliases.get(polarity, polarity)
+    return polarity if polarity in DECISION_POLARITIES else "mixed_or_unclear"
+
+
 def _normalize_importance(value: Any) -> str:
     if isinstance(value, bool):
         return "high" if value else "low"
@@ -476,9 +522,14 @@ def _normalize_importance(value: Any) -> str:
     return importance if importance in {"critical", "high", "medium", "low"} else "medium"
 
 
-def _map_source_card_role(role: str) -> tuple[str, str, str, list[str]]:
-    if role == "counterfinding":
-        return "crux", "direct", "crux", ["none"]
+def _map_source_card_role(role: str, *, decision_polarity: str = "") -> tuple[str, str, str, list[str]]:
+    polarity = _normalize_decision_polarity(decision_polarity)
+    if polarity == "supports_current_answer":
+        return "conclusion_support", "direct", "answer_bearing", ["none"]
+    if polarity == "challenges_current_answer":
+        return "crux", "direct", "answer_bearing", ["none"]
+    if polarity == "scopes_current_answer":
+        return "scope_limit", "scope_limit", "scope_boundary", ["none"]
     if role == "scope_limit":
         return "scope_limit", "scope_limit", "scope_boundary", ["none"]
     if role == "source_quality_caveat":
@@ -487,7 +538,9 @@ def _map_source_card_role(role: str) -> tuple[str, str, str, list[str]]:
         return "scope_limit", "indirect", "mechanism", ["mechanism_only"]
     if role == "guidance_context":
         return "background", "indirect", "background_context", ["none"]
-    return "conclusion_support", "direct", "answer_bearing", ["none"]
+    if role == "counterfinding":
+        return "crux", "direct", "answer_bearing", ["none"]
+    return "other", "direct", "answer_bearing", ["none"]
 
 
 def _default_use_for_importance(importance: str) -> str:

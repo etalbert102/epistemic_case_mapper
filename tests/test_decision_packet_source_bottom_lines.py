@@ -22,6 +22,7 @@ def test_packet_promotes_source_bottom_lines_as_first_class_evidence() -> None:
                 ),
                 "decision_importance_level": "high",
                 "decision_function": "answer_bearing",
+                "decision_polarity": "supports_current_answer",
             }
         ],
     }
@@ -83,6 +84,7 @@ def test_source_bottom_line_cards_read_whole_doc_source_card_shape() -> None:
                 "whole_doc_source_card": {
                     "source_bottom_line": "Moderate use is acceptable in the population named by the source.",
                     "source_card_role": "main_finding",
+                    "decision_polarity": "supports_current_answer",
                 },
             }
         ]
@@ -93,6 +95,8 @@ def test_source_bottom_line_cards_read_whole_doc_source_card_shape() -> None:
     assert cards["card_count"] == 1
     assert cards["cards"][0]["source_bottom_line"] == "Moderate use is acceptable in the population named by the source."
     assert cards["cards"][0]["decision_function"] == "main_finding"
+    assert cards["cards"][0]["decision_polarity"] == "supports_current_answer"
+    assert cards["cards"][0]["source_card_role"] == "main_finding"
 
 
 def test_source_bottom_line_text_does_not_assign_semantic_roles_without_explicit_label() -> None:
@@ -125,7 +129,48 @@ def test_source_bottom_line_text_does_not_assign_semantic_roles_without_explicit
     assert roles["sbl_counter"] == "context"
 
 
-def test_source_bottom_line_preserves_explicit_decision_function_roles() -> None:
+def test_candidate_card_conclusion_support_requires_decision_polarity_for_support_role() -> None:
+    scaffold = _scaffold()
+    scaffold["candidate_evidence_cards"] = {
+        "cards": [
+            {
+                "candidate_card_id": "ec_context",
+                "claim_ids": ["c_context"],
+                "source_ids": ["s1"],
+                "source_titles": ["Outcome Study"],
+                "claim": "The source reports an answer-bearing main finding.",
+                "role": "conclusion_support",
+                "decision_relevance_score": 9,
+                "inclusion_recommendation": "main_text",
+                "anchor_confidence": "exact",
+            },
+            {
+                "candidate_card_id": "ec_support",
+                "claim_ids": ["c_support"],
+                "source_ids": ["s1"],
+                "source_titles": ["Outcome Study"],
+                "claim": "The source reports a finding that supports the current answer.",
+                "role": "conclusion_support",
+                "decision_polarity": "supports_current_answer",
+                "decision_relevance_score": 9,
+                "inclusion_recommendation": "main_text",
+                "anchor_confidence": "exact",
+            },
+        ]
+    }
+
+    packet = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])["decision_briefing_packet"]
+    roles = {
+        row["candidate_card_ids"][0]: row["decision_role"]
+        for row in packet["evidence_bundles"]
+        if row.get("candidate_card_ids")
+    }
+
+    assert roles["ec_context"] == "context"
+    assert roles["ec_support"] == "strongest_support"
+
+
+def test_source_bottom_line_uses_explicit_decision_polarity_roles() -> None:
     scaffold = _scaffold()
     scaffold["source_bottom_line_cards"] = {
         "cards": [
@@ -135,13 +180,15 @@ def test_source_bottom_line_preserves_explicit_decision_function_roles() -> None
                 "source_bottom_line": "Moderate use is tolerable and not strongly linked to worse outcomes.",
                 "decision_importance_level": "high",
                 "decision_function": "answer_bearing",
+                "decision_polarity": "supports_current_answer",
             },
             {
                 "source_bottom_line_id": "sbl_counter",
                 "source_id": "s2",
                 "source_bottom_line": "Longer exposure increases an intermediate risk marker, so restriction may be warranted.",
                 "decision_importance_level": "high",
-                "decision_function": "counterweight",
+                "decision_function": "answer_bearing",
+                "decision_polarity": "challenges_current_answer",
             },
         ]
     }
@@ -155,3 +202,28 @@ def test_source_bottom_line_preserves_explicit_decision_function_roles() -> None
 
     assert roles["sbl_support"] == "strongest_support"
     assert roles["sbl_counter"] == "counterweight"
+
+
+def test_source_bottom_line_does_not_treat_answer_bearing_as_support() -> None:
+    scaffold = _scaffold()
+    scaffold["source_bottom_line_cards"] = {
+        "cards": [
+            {
+                "source_bottom_line_id": "sbl_main",
+                "source_id": "s1",
+                "source_bottom_line": "The source reports an important main finding for the decision.",
+                "decision_importance_level": "high",
+                "decision_function": "answer_bearing",
+                "source_card_role": "main_finding",
+            }
+        ]
+    }
+
+    result = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+    roles = {
+        row["candidate_card_ids"][0]: row["decision_role"]
+        for row in result["decision_briefing_packet"]["evidence_bundles"]
+        if row.get("pretrim_kind") == "source_bottom_line"
+    }
+
+    assert roles["sbl_main"] == "context"

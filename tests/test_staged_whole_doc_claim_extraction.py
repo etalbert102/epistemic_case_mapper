@@ -46,6 +46,7 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
                         {
                             "claim": "The program reduced target risk by 20 percent.",
                             "role": "main_finding",
+                            "decision_polarity": "supports_current_answer",
                             "decision_importance": "high",
                             "why_it_matters": "It directly bears on the decision question.",
                             "supporting_quotes": [
@@ -87,11 +88,14 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert payload["claims"][0]["claim"] == "The program reduced target risk by 20 percent."
     assert payload["claims"][0]["source_quote"] == "The program reduced target risk by 20 percent."
     assert payload["claims"][0]["role"] == "conclusion_support"
+    assert payload["claims"][0]["decision_polarity"] == "supports_current_answer"
     assert payload["claims"][0]["whole_doc_source_card"]["quantities"] == ["20 percent"]
+    assert payload["claims"][0]["whole_doc_source_card"]["decision_polarity"] == "supports_current_answer"
     report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
-    assert report["repair_used"] is True
+    assert report["repair_used"] is False
     assert report["source_card_exact_quote_count"] == 1
-    assert len(calls) == 2
+    assert len(calls) == 1
+    assert calls[0]["response_schema"] is not None
 
 
 def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Path) -> None:

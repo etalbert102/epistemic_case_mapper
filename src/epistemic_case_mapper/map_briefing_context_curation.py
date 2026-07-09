@@ -270,21 +270,22 @@ def _appendix_only(card: dict[str, Any], score: int, quality: dict[str, Any], ba
 
 def _candidate_profile(card: dict[str, Any]) -> dict[str, list[str] | str]:
     source_role = str(card.get("supports_challenges_or_scopes") or "").lower()
+    decision_polarity = str(card.get("decision_polarity") or "").lower()
     explicit = " ".join(
         str(card.get(key) or "")
-        for key in ("role", "evidence_role", "claim_type", "decision_function", "source_card_role")
+        for key in ("role", "evidence_role", "claim_type")
     ).lower()
-    text = " ".join([source_role, explicit]).lower()
+    text = " ".join([source_role, decision_polarity, explicit]).lower()
     roles: list[str] = []
-    if _explicit_counterweight_signal(source_role, text):
+    if decision_polarity == "challenges_current_answer" or _explicit_counterweight_signal(source_role, text):
         roles.append("counterweight")
     if _string_list(card.get("quantity_values")) or _has_quantity_signal(text):
         roles.append("quantity")
     if _string_list(card.get("limitations")) or _explicit_limitation_signal(text):
         roles.append("limitation")
-    if _explicit_support_signal(source_role, text):
+    if decision_polarity == "supports_current_answer" or _explicit_support_signal(source_role, text):
         roles.append("support")
-    if "scope" in source_role or _explicit_scope_signal(text):
+    if decision_polarity == "scopes_current_answer" or "scope" in source_role or _explicit_scope_signal(text):
         roles.append("scope")
     roles = _dedupe(roles) or ["context"]
     primary = _primary_role(roles)
@@ -320,15 +321,13 @@ def _explicit_counterweight_signal(source_role: str, text: str) -> bool:
 
 
 def _explicit_support_signal(source_role: str, text: str) -> bool:
-    return "support" in source_role or any(
-        marker in text
-        for marker in (
-            "support",
-            "conclusion_support",
-            "answer_bearing",
-            "main_finding",
-        )
+    return source_role in {"support", "supports", "strongest_support"} or bool(
+        _explicit_label_set(text) & {"support", "supports", "strongest_support"}
     )
+
+
+def _explicit_label_set(text: str) -> set[str]:
+    return {token for token in re.split(r"[^a-zA-Z0-9_]+", text.lower()) if token}
 
 
 def _has_quantity_signal(text: str) -> bool:

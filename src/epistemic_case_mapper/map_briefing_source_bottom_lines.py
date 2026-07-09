@@ -31,6 +31,8 @@ def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: di
                 "source_bottom_line": bottom_line,
                 "decision_importance_level": str(claim.get("decision_importance_level") or ""),
                 "decision_function": str(claim.get("decision_function") or source_card.get("source_card_role") or ""),
+                "decision_polarity": str(claim.get("decision_polarity") or source_card.get("decision_polarity") or ""),
+                "source_card_role": str(source_card.get("source_card_role") or ""),
             }
         )
     return {
@@ -70,6 +72,7 @@ def source_bottom_line_candidates(
                     "source_excerpt": _short_text(bottom_line, 520),
                     "decision_role": role,
                     "raw_roles": ["source_bottom_line", *_source_bottom_line_role_hints(card)],
+                    "decision_polarity": str(card.get("decision_polarity") or ""),
                     "decision_relevance_score": score,
                     "quality": "source_summary",
                     "inclusion_recommendation": "main_text",
@@ -87,14 +90,14 @@ def source_bottom_line_candidates(
 def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
     text = " ".join(
         str(card.get(key) or "")
-        for key in ("decision_function", "source_card_role", "role", "evidence_role")
+        for key in ("decision_polarity", "role", "evidence_role")
     ).lower()
     hints: list[str] = []
-    if any(term in text for term in ("support", "answer_bearing", "main_finding", "conclusion")):
+    if any(term in text for term in ("supports_current_answer", "strongest_support", "support")):
         hints.append("support")
-    if any(term in text for term in ("counter", "challenge", "conflict", "tension", "contrary")):
+    if any(term in text for term in ("challenges_current_answer", "counter", "challenge", "conflict", "tension", "contrary")):
         hints.append("counterweight")
-    if any(term in text for term in ("scope", "boundary", "exception", "limit", "population", "subgroup")):
+    if any(term in text for term in ("scopes_current_answer", "scope", "boundary", "exception", "limit", "population", "subgroup")):
         hints.append("scope")
     return hints or ["context"]
 
@@ -104,11 +107,17 @@ def _source_bottom_line_decision_role(card: dict[str, Any]) -> str:
 
 
 def _decision_role_fallback(card: dict[str, Any]) -> str:
+    polarity = str(card.get("decision_polarity") or "").strip().lower()
+    if polarity in {"supports_current_answer", "support", "supports"}:
+        return "strongest_support"
+    if polarity in {"challenges_current_answer", "challenge", "challenges", "counterweight", "counter"}:
+        return "counterweight"
+    if polarity in {"scopes_current_answer", "scope", "scopes", "scope_boundary"}:
+        return "scope_boundary"
     text = " ".join(
         [
             "source_bottom_line",
             " ".join(_source_bottom_line_role_hints(card)),
-            str(card.get("decision_function") or ""),
         ]
     ).lower()
     if any(term in text for term in ("counter", "challenge", "conflict", "tension", "contrary")):

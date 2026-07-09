@@ -251,6 +251,7 @@ def _normalize_claim_proposal(
             "source_alignment": quote_alignment_metadata(alignment),
             "entailed_by_excerpt": entailed,
             "role": role,
+            "decision_polarity": _compact_metadata_text(proposal.get("decision_polarity")),
             "question_relevance": question_relevance,
             "question_fit": question_fit_from_relevance(question_relevance, scope_flags),
             "relevance_rationale": _compact_metadata_text(proposal.get("relevance_rationale")),
