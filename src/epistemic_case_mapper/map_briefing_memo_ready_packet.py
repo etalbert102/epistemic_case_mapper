@@ -19,6 +19,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_binding_report
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
+from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
 
 
 MEMO_READY_ROLES = {
@@ -81,6 +82,7 @@ def build_quality_synthesis_packet_bundle(packet: dict[str, Any]) -> dict[str, d
         "evidence_profile_report": evidence_profile,
         "packet_assembly_audit": assembly_audit,
         "memo_ready_packet": memo_ready,
+        "memo_ready_selection_report": memo_ready.get("selection_report", {}),
         "memo_ready_packet_quality_report": quality,
         "packet_qa_report": packet_qa,
     }
@@ -317,17 +319,19 @@ def build_memo_ready_packet(
             items.append(item)
     mandatory = [item for item in items if item.get("must_use")]
     context = [item for item in items if not item.get("must_use")]
+    selected, selection_report = select_memo_ready_items(mandatory, context)
     memo_ready_packet = {
         "schema_id": "memo_ready_packet_v1",
         "decision_question": str(packet.get("decision_question") or "").strip(),
-        "answer_spine": _answer_spine(packet, diagnosticity, mandatory),
-        "evidence_items": mandatory[:18] + context[:8],
-        "evidence_groups": _evidence_groups(mandatory[:18] + context[:8]),
+        "answer_spine": _answer_spine(packet, diagnosticity, selected),
+        "evidence_items": selected,
+        "evidence_groups": _evidence_groups(selected),
         "source_trail": _source_trail(packet),
+        "selection_report": selection_report,
         "assembly_summary": {
             "cluster_count": clusters.get("cluster_count", 0),
-            "mandatory_item_count": len(mandatory[:18]),
-            "context_item_count": len(context[:8]),
+            "mandatory_item_count": sum(1 for item in selected if item.get("must_use")),
+            "context_item_count": sum(1 for item in selected if not item.get("must_use")),
             "assembly_status": assembly_audit.get("status"),
             "assembly_warnings": assembly_audit.get("warnings", []),
         },

@@ -35,6 +35,7 @@ from epistemic_case_mapper.map_briefing_context_curation import build_decision_r
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
+from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
@@ -294,6 +295,12 @@ def _attach_decision_briefing_packet(
             backend_retries=backend_config.retries,
         )
     )
+    adjudicated_packet, role_adjudication = adjudicate_packet_roles(
+        scaffold.get("decision_briefing_packet", {}) if isinstance(scaffold.get("decision_briefing_packet"), dict) else {}
+    )
+    scaffold["decision_briefing_packet"] = adjudicated_packet
+    scaffold["packet_role_adjudication_report"] = role_adjudication
+    scaffold["role_conflict_candidates"] = {"schema_id": "role_conflict_candidates_v1", "candidates": role_adjudication.get("role_conflict_candidates", [])}
     scaffold["packet_quality_gate_report"] = build_packet_quality_gate_report(scaffold)
     packet = scaffold.get("decision_briefing_packet")
     if isinstance(packet, dict):
