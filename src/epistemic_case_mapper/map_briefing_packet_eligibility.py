@@ -10,6 +10,7 @@ def packet_candidate_eligibility(row: dict[str, Any]) -> dict[str, Any]:
     """Return whether a broad candidate should be eligible for the reader memo."""
 
     reasons: list[str] = []
+    warnings: list[str] = []
     inclusion = str(row.get("inclusion_recommendation") or "").strip().lower()
     limits = {item.lower() for item in _string_list(row.get("limits")) + _string_list(row.get("limitations"))}
     claim = str(row.get("claim") or "").strip()
@@ -27,10 +28,11 @@ def packet_candidate_eligibility(row: dict[str, Any]) -> dict[str, Any]:
     if _looks_like_table_or_figure_caption(claim):
         reasons.append("table_or_figure_caption")
     if _quantity_anchor_off_question(row):
-        reasons.append("quantity_anchor_question_mismatch")
+        warnings.append("quantity_anchor_question_mismatch")
     return {
         "main_memo_eligible": not reasons,
         "reasons": _dedupe(reasons),
+        "warnings": _dedupe(warnings),
         "noise_kind": noise.get("kind"),
         "noise_penalty": noise.get("penalty", 0),
     }

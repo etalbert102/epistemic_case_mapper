@@ -32,6 +32,7 @@ from epistemic_case_mapper.map_briefing_source_evidence_graph import build_sourc
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
 )
+from epistemic_case_mapper.map_briefing_top_quantity_candidates import build_top_quantity_anchor_candidates
 
 
 ROLE_ORDER = (
@@ -200,6 +201,13 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
     pool.extend(_source_bottom_line_candidates(scaffold, len(pool), question_terms=question_terms))
     pool.extend(_argument_item_candidates(scaffold, len(pool), question_terms=question_terms))
     pool.extend(_quantity_card_candidates(scaffold, len(pool), question_terms=question_terms))
+    pool.extend(
+        build_top_quantity_anchor_candidates(
+            _top_quantity_anchor_groups(scaffold),
+            offset=len(pool),
+            question_terms=question_terms,
+        )
+    )
     return _dedupe_pool(pool)
 
 
@@ -497,6 +505,7 @@ def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[st
     eligibility = [packet_candidate_eligibility(row) for row in candidate_pool]
     suppressed = [row for row in eligibility if not row["main_memo_eligible"]]
     suppressed_reason_counts = Counter(reason for row in suppressed for reason in row.get("reasons", []))
+    warning_counts = Counter(warning for row in eligibility for warning in row.get("warnings", []))
     return {
         "schema_id": "decision_briefing_packet_report_v1",
         "method": "broad_candidate_inventory_then_decision_role_trimming",
@@ -506,6 +515,7 @@ def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[st
         "section_view_count": len(packet.get("section_views", [])),
         "main_memo_suppressed_candidate_count": len(suppressed),
         "main_memo_suppressed_reason_counts": dict(sorted(suppressed_reason_counts.items())),
+        "main_memo_warning_counts": dict(sorted(warning_counts.items())),
         "pretrim_kind_counts": dict(Counter(str(row.get("pretrim_kind", "unknown")) for row in candidate_pool)),
         "bundle_role_counts": dict(Counter(str(row.get("decision_role", "unknown")) for row in bundles)),
         "sufficiency_status": sufficiency.get("status"),
@@ -653,6 +663,12 @@ def _importance_for_bundle(bundle: dict[str, Any]) -> str:
 
 
 def _candidate_identity(row: dict[str, Any]) -> str:
+    pretrim_kind = str(row.get("pretrim_kind", ""))
+    if pretrim_kind.startswith("argument_model."):
+        claim_ids = _string_list(row.get("claim_ids"))
+        if claim_ids:
+            return f"{pretrim_kind}:claim_ids:{'|'.join(claim_ids)}"
+        return f"{pretrim_kind}:{_norm(str(row.get('claim', '')))[:120]}"
     for key in ("candidate_card_id", "claim_ids", "source_card_ids"):
         values = _string_list(row.get(key))
         if values:
@@ -830,15 +846,29 @@ def _dedupe_dicts(rows: list[dict[str, Any]], *, key_fields: tuple[str, ...]) ->
 
 
 def _dedupe_pool(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    result = []
-    seen: set[str] = set()
+    by_key: dict[str, dict[str, Any]] = {}
     for row in rows:
         key = _candidate_identity(row)
-        if not key or key in seen:
+        if not key:
             continue
-        seen.add(key)
-        result.append(row)
-    return result
+        current = by_key.get(key)
+        if current is None or _candidate_richness(row) > _candidate_richness(current):
+            by_key[key] = row
+    return list(by_key.values())
+
+
+def _candidate_richness(row: dict[str, Any]) -> tuple[int, int, int, int, int, int, int, int, str]:
+    return (
+        1 if row.get("protected_candidate") else 0,
+        1 if row.get("decision_role") == "quantitative_anchor" else 0,
+        len(_string_list(row.get("quantity_values"))),
+        1 if row.get("source_grounded") else 0,
+        len(_string_list(row.get("source_ids"))) + len(_string_list(row.get("source_labels"))),
+        len(_string_list(row.get("source_excerpt"))),
+        _candidate_priority(row),
+        len(str(row.get("claim", ""))),
+        str(row.get("pretrim_kind", "")),
+    )
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

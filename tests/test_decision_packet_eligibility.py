@@ -76,7 +76,7 @@ def test_decision_packet_excludes_table_caption_and_fragment_candidates() -> Non
     assert "table_or_figure_caption" in result["decision_briefing_packet_report"]["main_memo_suppressed_reason_counts"]
 
 
-def test_decision_packet_excludes_question_mismatched_quantity_rows() -> None:
+def test_decision_packet_warns_without_blocking_question_mismatched_quantity_rows() -> None:
     scaffold = _scaffold()
     scaffold["quantity_ledger"]["evidence_cards"].append(
         {
@@ -92,9 +92,11 @@ def test_decision_packet_excludes_question_mismatched_quantity_rows() -> None:
     )
 
     result = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+    bundles = result["decision_briefing_packet"]["evidence_bundles"]
+    warning_counts = result["decision_briefing_packet_report"]["main_memo_warning_counts"]
 
-    assert "Unrelated cancer incidence" not in str(result["decision_briefing_packet"]["evidence_bundles"])
-    assert "quantity_anchor_question_mismatch" in result["decision_briefing_packet_report"]["main_memo_suppressed_reason_counts"]
+    assert "Unrelated cancer incidence" in str(bundles)
+    assert "quantity_anchor_question_mismatch" in warning_counts
 
 
 def test_question_overlap_ignores_connective_stopwords_for_quantities() -> None:
