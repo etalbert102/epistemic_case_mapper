@@ -77,6 +77,18 @@ def test_packet_assembly_keeps_cross_source_near_duplicates_separate() -> None:
     assert any(row["reason"] == "kept_separate_due_to_distinct_blocking_key" for row in kept_separate)
 
 
+def test_memo_ready_packet_demotes_challenge_language_from_support() -> None:
+    scaffold = _scaffold()
+    scaffold["argument_model"]["strongest_support"][0]["statement"] = "A technical critique challenges whether the main stopping argument applies."
+    built = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    challenge_items = [item for item in packet["evidence_items"] if "challenges" in item["reader_claim"]]
+
+    assert challenge_items
+    assert all(item["role"] == "strongest_counterweight" for item in challenge_items)
+
+
 def test_quantity_binding_excludes_unbound_quantities_from_mandatory_obligations() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = built["decision_briefing_packet"]
@@ -114,6 +126,19 @@ def test_synthesis_prompt_uses_memo_ready_packet_not_legacy_section_contract() -
     assert "Counter Study" in prompt
 
 
+def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    built["decision_briefing_packet"]["answer_frame"]["default_answer"] = (
+        "{'classification': 'neutral_or_low_concern_under_stated_conditions', "
+        "'current_read': 'State the default as neutral or low-concern under the stated conditions.'..."
+    )
+
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    assert "{'classification'" not in packet["answer_spine"]["default_read"]
+    assert "Option A" in packet["answer_spine"]["default_read"]
+
+
 def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
@@ -125,6 +150,20 @@ def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     assert retention["missing_mandatory_count"] == 0
     assert "25%" in result["memo"]
     assert "Counter Study" in result["memo"]
+
+
+def test_memo_ready_synthesis_fallback_renders_structured_spine_text() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    packet["answer_spine"]["default_read"] = {
+        "classification": "conditional_support",
+        "current_read": "Option A is promising if maintenance funding is protected.",
+    }
+
+    result = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)
+
+    assert "Option A is promising if maintenance funding is protected." in result["memo"]
+    assert "{'classification'" not in result["memo"]
 
 
 def test_memo_ready_retention_report_flags_missing_source_and_quantity() -> None:

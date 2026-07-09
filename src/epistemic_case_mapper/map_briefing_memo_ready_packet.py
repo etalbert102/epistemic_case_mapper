@@ -599,6 +599,8 @@ def _memo_ready_item(
     claim = str(cluster.get("representative_claim") or "").strip()
     if not claim:
         return {}
+    if role == "strongest_support" and any(term in claim.lower() for term in ("challenge", "challenges", "objection", "objects", "critique", "criticizes", "targets")):
+        role = "strongest_counterweight"
     source_label = _first(_string_list(cluster.get("source_labels")))
     diagnosticity = diagnosticity if isinstance(diagnosticity, dict) else {}
     quantities = _list(quantity_binding.get("quantities")) if isinstance(quantity_binding, dict) else []
@@ -642,13 +644,16 @@ def _memo_ready_item(
 
 def _answer_spine(packet: dict[str, Any], diagnosticity: dict[str, Any], mandatory: list[dict[str, Any]]) -> dict[str, Any]:
     answer = _dict(packet.get("answer_frame"))
+    default_read = str(answer.get("default_answer") or "").strip()
+    if default_read.startswith("{") or "neutral_or_low_concern" in default_read:
+        default_read = _why_this_read(mandatory)
     decisive = [
         item["item_id"]
         for item in mandatory
         if _dict(item.get("diagnosticity")).get("high_diagnosticity")
     ][:8]
     return {
-        "default_read": str(answer.get("default_answer") or "").strip(),
+        "default_read": default_read,
         "confidence": str(answer.get("confidence") or "medium").strip(),
         "why_this_read": _why_this_read(mandatory),
         "why_not_stronger": str(answer.get("main_uncertainty") or "").strip() or _why_not_stronger(mandatory),
@@ -830,10 +835,12 @@ def _sensitivity_note(role: str, cluster: dict[str, Any]) -> str:
 def _why_this_read(mandatory: list[dict[str, Any]]) -> str:
     support = [item for item in mandatory if item.get("role") in {"strongest_support", "quantitative_anchor"}]
     counter = [item for item in mandatory if item.get("role") == "strongest_counterweight"]
+    support_claim = _short_text(str(support[0].get("reader_claim", "")), 180) if support else ""
+    counter_claim = _short_text(str(counter[0].get("reader_claim", "")), 180) if counter else ""
     if support and counter:
-        return "The default read is driven by the strongest support and quantitative anchors, while counterweights bound confidence."
+        return f"The default read rests on {support_claim}, while {counter_claim} bounds confidence."
     if support:
-        return "The default read is driven by the strongest support and quantitative anchors."
+        return f"The default read rests on {support_claim}."
     if counter:
         return "The default read is weak because counterweights dominate the assembled evidence."
     return "The packet does not identify a strong default read."

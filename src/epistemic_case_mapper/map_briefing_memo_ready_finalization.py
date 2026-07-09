@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import re
 from typing import Any
@@ -67,7 +68,7 @@ def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:
         "",
         f"**Decision question:** {question or 'not specified'}",
         "",
-        str(spine.get("default_read") or "The packet does not establish a clear default read.").strip(),
+        _spine_text(spine.get("default_read")) or "The packet does not establish a clear default read.",
     ]
     confidence = str(spine.get("confidence") or "").strip()
     if confidence:
@@ -285,6 +286,33 @@ def _quantity_clause(item: dict[str, Any]) -> str:
         elif value:
             quantities.append(value)
     return f" ({'; '.join(quantities)})" if quantities else ""
+
+
+def _spine_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return _best_spine_field(value)
+    text = str(value or "").strip()
+    parsed = _parse_python_literal(text)
+    if isinstance(parsed, dict):
+        return _best_spine_field(parsed)
+    return text
+
+
+def _best_spine_field(value: dict[str, Any]) -> str:
+    for key in ("current_read", "default_read", "primary_answer", "answer_stance", "classification"):
+        text = str(value.get(key) or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _parse_python_literal(text: str) -> Any:
+    if not text.startswith("{"):
+        return None
+    try:
+        return ast.literal_eval(text)
+    except (SyntaxError, ValueError):
+        return None
 
 
 def _mandatory_items(packet: dict[str, Any]) -> list[dict[str, Any]]:
