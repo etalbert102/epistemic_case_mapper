@@ -3,7 +3,7 @@ from __future__ import annotations
 from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
 
 
-def test_role_adjudication_relabels_no_association_counterweight_as_support() -> None:
+def test_role_adjudication_reports_no_association_counterweight_without_relabeling() -> None:
     packet = {
         "answer_frame": {"default_answer": "The default read is neutral because clear harm is not established."},
         "evidence_bundles": [
@@ -18,13 +18,15 @@ def test_role_adjudication_relabels_no_association_counterweight_as_support() ->
 
     updated, report = adjudicate_packet_roles(packet)
 
-    assert updated["evidence_bundles"][0]["decision_role"] == "strongest_support"
-    assert updated["evidence_bundles"][0]["directionality"] == "supports"
-    assert report["applied_count"] == 1
-    assert report["applied_role_updates"][0]["current_role"] == "counterweight"
+    assert updated["evidence_bundles"][0]["decision_role"] == "counterweight"
+    assert report["status"] == "report_only_warning"
+    assert report["applied_count"] == 0
+    assert report["applied_role_updates"] == []
+    assert report["role_conflict_candidates"][0]["current_role"] == "counterweight"
+    assert report["role_conflict_candidates"][0]["recommended_role"] == "strongest_support"
 
 
-def test_role_adjudication_relabels_conditional_support_as_scope_boundary() -> None:
+def test_role_adjudication_reports_conditional_support_without_relabeling() -> None:
     packet = {
         "answer_frame": {"default_answer": "Option A is promising in the default case."},
         "evidence_bundles": [
@@ -39,8 +41,10 @@ def test_role_adjudication_relabels_conditional_support_as_scope_boundary() -> N
 
     updated, report = adjudicate_packet_roles(packet)
 
-    assert updated["evidence_bundles"][0]["decision_role"] == "scope_boundary"
-    assert report["status"] == "changed"
+    assert updated["evidence_bundles"][0]["decision_role"] == "strongest_support"
+    assert report["status"] == "report_only_warning"
+    assert report["applied_count"] == 0
+    assert report["role_conflict_candidates"][0]["recommended_role"] == "scope_boundary"
 
 
 def test_role_adjudication_does_not_flip_negated_support_with_risk_terms() -> None:
@@ -60,3 +64,4 @@ def test_role_adjudication_does_not_flip_negated_support_with_risk_terms() -> No
 
     assert updated["evidence_bundles"][0]["decision_role"] == "strongest_support"
     assert report["applied_count"] == 0
+    assert report["role_conflict_candidates"] == []

@@ -9,7 +9,6 @@ def adjudicate_packet_roles(packet: dict[str, Any]) -> tuple[dict[str, Any], dic
     answer = packet.get("answer_frame") if isinstance(packet.get("answer_frame"), dict) else {}
     answer_text = " ".join(str(answer.get(key) or "") for key in ("default_answer", "classification", "scope")).lower()
     candidates = []
-    applied = []
     for bundle in packet.get("evidence_bundles", []) if isinstance(packet.get("evidence_bundles"), list) else []:
         if not isinstance(bundle, dict):
             continue
@@ -27,21 +26,15 @@ def adjudicate_packet_roles(packet: dict[str, Any]) -> tuple[dict[str, Any], dic
             "confidence": "high",
         }
         candidates.append(candidate)
-        bundle["decision_role"] = recommended
-        bundle["role_adjudicated_from"] = current_role
-        bundle["role_adjudication_reason"] = reason
-        bundle["directionality"] = _directionality_for_role(recommended)
-        bundle["section_use"] = _section_use_for_role(recommended)
-        bundle["section_targets"] = _section_targets_for_role(recommended)
-        applied.append(candidate)
     return packet, {
         "schema_id": "packet_role_adjudication_report_v1",
-        "status": "changed" if applied else "unchanged",
-        "method": "high_confidence_generic_role_conflict_rules",
+        "status": "report_only_warning" if candidates else "unchanged",
+        "method": "report_only_role_conflict_detection_no_semantic_mutation",
         "candidate_count": len(candidates),
-        "applied_count": len(applied),
+        "applied_count": 0,
         "role_conflict_candidates": candidates,
-        "applied_role_updates": applied,
+        "applied_role_updates": [],
+        "semantic_boundary": "deterministic code reports suspicious role labels but does not change them",
     }
 
 
