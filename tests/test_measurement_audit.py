@@ -66,6 +66,41 @@ Use option A.
     assert report["unused_memo_sources"][0]["source_label"] == "Unused Background"
 
 
+def test_source_lineage_treats_known_nonpacket_sources_as_unused() -> None:
+    scaffold = {
+        "decision_briefing_packet": {
+            "source_trail": [
+                {
+                    "source_id": "study_a",
+                    "source_label": "Study A",
+                    "display_label": "Trial Report",
+                    "source_url": "https://example.test/study-a",
+                    "appears_in_packet": True,
+                },
+                {
+                    "source_id": "background_b",
+                    "source_label": "Background B",
+                    "display_label": "Background Report",
+                    "source_url": "https://example.test/background-b",
+                    "appears_in_packet": False,
+                },
+            ]
+        }
+    }
+    memo = """
+## Sources
+
+- [Trial Report](https://example.test/study-a)
+- [Background Report](https://example.test/background-b)
+"""
+
+    report = build_final_source_lineage_report(memo, scaffold)
+
+    assert report["matched_packet_source_count"] == 1
+    assert report["unused_memo_source_count"] == 1
+    assert report["unused_memo_sources"][0]["packet_match_status"] == "known_source_not_in_packet"
+
+
 def test_measurement_audit_combines_scoped_metrics_and_noncomputable_warnings() -> None:
     scaffold = {
         "input_map_scope_counts": {"claim_count": 10, "relation_count": 5},

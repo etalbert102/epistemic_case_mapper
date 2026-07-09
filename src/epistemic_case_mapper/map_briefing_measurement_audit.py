@@ -53,11 +53,11 @@ def build_final_source_lineage_report(memo_markdown: str, scaffold: dict[str, An
     memo_rows = []
     for entry in memo_sources:
         match = _match_memo_source(entry, packet_sources)
-        if match.get("source_id"):
+        if match.get("packet_match_status") == "matched":
             matched_source_ids.add(str(match["source_id"]))
         memo_rows.append({**entry, **match})
     packet_ids = {str(row.get("source_id")) for row in packet_sources if row.get("appears_in_packet")}
-    unused_memo_sources = [row for row in memo_rows if row.get("packet_match_status") == "not_in_packet"]
+    unused_memo_sources = [row for row in memo_rows if row.get("packet_match_status") != "matched"]
     missing_packet_sources = sorted(packet_ids - matched_source_ids)
     status = "warning" if unused_memo_sources or missing_packet_sources else "aligned"
     return {
@@ -161,10 +161,16 @@ def _match_memo_source(entry: dict[str, str], packet_sources: list[dict[str, Any
     for row in packet_sources:
         aliases = _source_aliases(row)
         if url and url in aliases:
-            return {"packet_match_status": "matched", "match_method": "url", "source_id": row.get("source_id")}
+            return _source_match(row, "url")
         if any(_normalize(alias) == _normalize(label) for alias in aliases if alias):
-            return {"packet_match_status": "matched", "match_method": "label_alias", "source_id": row.get("source_id")}
+            return _source_match(row, "label_alias")
     return {"packet_match_status": "not_in_packet", "match_method": "not_found", "source_id": ""}
+
+
+def _source_match(row: dict[str, Any], match_method: str) -> dict[str, Any]:
+    if row.get("appears_in_packet"):
+        return {"packet_match_status": "matched", "match_method": match_method, "source_id": row.get("source_id")}
+    return {"packet_match_status": "known_source_not_in_packet", "match_method": match_method, "source_id": row.get("source_id")}
 
 
 def _source_aliases(row: dict[str, Any]) -> list[str]:
