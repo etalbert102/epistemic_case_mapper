@@ -97,6 +97,11 @@ def _global_harm_claim(claim: str) -> bool:
 
 
 def _contrary_claim(claim: str) -> bool:
+    if any(
+        term in claim
+        for term in ("not associated", "no association", "unlikely to adversely", "does not show", "does not appear")
+    ):
+        return False
     return any(
         term in claim
         for term in (

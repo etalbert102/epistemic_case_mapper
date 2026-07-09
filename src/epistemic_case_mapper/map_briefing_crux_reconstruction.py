@@ -28,7 +28,7 @@ def _crux_item(support: dict[str, Any], counter: dict[str, Any]) -> dict[str, An
             f"Whether the counterevidence that {counter_claim} should outweigh the default-case evidence "
             f"that {support_claim} for the decision-relevant population, endpoint, and scope."
         ),
-        "source_label": "; ".join(source_labels[:2]),
+        "source_label": source_labels[0] if source_labels else "",
         "source_labels": source_labels[:4],
         "must_use": True,
         "decision_relevance": "Names the evidence update most likely to change the default answer.",

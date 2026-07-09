@@ -227,6 +227,24 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     section_plan_risks: list[str] = Field(default_factory=list, max_length=8)
     recommended_packet_edits: list[RecommendedPacketEdit] = Field(default_factory=list, max_length=16)
 
+    @field_validator("missing_decision_functions", mode="before")
+    @classmethod
+    def coerce_missing_decision_functions(cls, value: Any) -> Any:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            rows: list[Any] = []
+            for item in value:
+                if isinstance(item, dict):
+                    rows.append(item)
+                    continue
+                text = _note_to_text(item)
+                if text:
+                    rows.append({"decision_function": text})
+            return rows
+        text = _note_to_text(value)
+        return [{"decision_function": text}] if text else []
+
     @field_validator("missing_or_weak_cruxes", "section_plan_risks", mode="before")
     @classmethod
     def coerce_note_rows(cls, value: Any) -> Any:
