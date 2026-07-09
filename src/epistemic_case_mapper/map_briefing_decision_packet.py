@@ -21,6 +21,7 @@ from epistemic_case_mapper.map_briefing_decision_problem import (
     build_candidate_answer_set,
     build_decision_problem_report,
 )
+from epistemic_case_mapper.map_briefing_source_evidence_graph import build_source_evidence_graph
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
 )
@@ -55,12 +56,14 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     answer_frame, answer_frame_report = _answer_frame(scaffold, question=question)
     decision_problem = build_decision_problem_report(scaffold, question=question)
     candidate_answers = build_candidate_answer_set(scaffold, question=question)
+    source_evidence_graph = build_source_evidence_graph(scaffold)
     packet = {
         "schema_id": "decision_briefing_packet_v1",
         "decision_question": question or str(scaffold.get("question", "")),
         "answer_frame": answer_frame,
         "decision_problem_report": decision_problem,
         "candidate_answer_set": candidate_answers,
+        "source_evidence_graph": source_evidence_graph,
         "must_retain_ledger": retain_ledger,
         "evidence_bundles": bundles,
         "section_views": section_views,
@@ -74,6 +77,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "answer_frame_normalization_report": answer_frame_report,
         "decision_problem_report": decision_problem,
         "candidate_answer_set": candidate_answers,
+        "source_evidence_graph": source_evidence_graph,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
