@@ -18,6 +18,7 @@ from epistemic_case_mapper.map_briefing_spine_audit import (
     render_spine_completion_audit,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
 
 
 @dataclass(frozen=True)
@@ -272,6 +273,17 @@ def write_run_summary(
 ) -> Path:
     summary_path = artifacts / "briefing_summary.json"
     final_review_packet_path = artifacts / "FINAL_REVIEW_PACKET.md"
+    comparison_path = artifacts / "pipeline_simplification_comparison.json"
+    write_json(
+        comparison_path,
+        build_pipeline_simplification_comparison(
+            scaffold=scaffold,
+            final_outputs=final_outputs,
+            briefing_path=str(briefing_path),
+            evidence_appendix_path=str(evidence_appendix_path),
+        ),
+    )
+    final_outputs.setdefault("summary_paths", {})["pipeline_simplification_comparison"] = comparison_path
     write_map_briefing_summary(
         summary_path,
         repo_root=repo_root,
@@ -368,6 +380,7 @@ def write_final_review_packet(
         f"- Prose edit report: `{_rel(repo_root, final_outputs['summary_paths'].get('memo_prose_edits'))}`",
         f"- Pipeline migration ledger: `{_rel(repo_root, final_outputs['summary_paths'].get('pipeline_migration_ledger'))}`",
         f"- Runtime budget report: `{_rel(repo_root, final_outputs['summary_paths'].get('runtime_budget_report'))}`",
+        f"- Pipeline simplification comparison: `{_rel(repo_root, final_outputs['summary_paths'].get('pipeline_simplification_comparison'))}`",
         f"- Final brief evaluation: `{_rel(repo_root, final_outputs['summary_paths'].get('final_brief_evaluation'))}`",
         f"- Model context audit: `{_rel(repo_root, final_outputs['summary_paths'].get('model_context_audit'))}`",
         f"- Gap diagnosis: `{_rel(repo_root, telemetry_paths.get('gap_diagnosis'))}`",

@@ -309,6 +309,8 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["paths"]["scoped_metric_report"].endswith("scoped_metric_report.json")
     assert summary["paths"]["final_source_lineage_report"].endswith("final_source_lineage_report.json")
     assert summary["paths"]["pipeline_measurement_audit"].endswith("pipeline_measurement_audit.json")
+    assert summary["paths"]["pipeline_simplification_comparison"].endswith("pipeline_simplification_comparison.json")
+    assert (tmp_path / summary["paths"]["pipeline_simplification_comparison"]).exists()
     assert summary["source_evidence_card_count"] == 1
     assert summary["source_sufficiency_status"] in {
         "sufficient_for_decision_ready_answer",

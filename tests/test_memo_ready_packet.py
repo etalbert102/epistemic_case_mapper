@@ -14,6 +14,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )
+from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -192,3 +193,32 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert paths["memo_ready_repair_report"].exists()
     assert paths["memo_ready_final_polish_report"].exists()
     assert "25%" in result["briefing_path"].read_text()
+
+
+def test_pipeline_simplification_comparison_summarizes_completion_audit() -> None:
+    scaffold = _scaffold()
+    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
+    scaffold.update(build_quality_synthesis_packet_bundle(scaffold["decision_briefing_packet"]))
+    final_outputs = {
+        "rewrite_result": {"report": {"memo_ready_packet_path": True, "status": "memo_ready_synthesis_deterministic_fallback"}},
+        "diagnostics": {
+            "packet_retention": {"status": "ready", "must_retain_count": 3, "retained_must_retain_count": 3},
+            "source_lineage": {"status": "ready", "matched_source_count": 3, "expected_source_count": 3},
+            "runtime_budget": {"model_call_count": 1, "stages": [{"stage": "reader_memo_rewrite"}]},
+            "final_eval": {"status": "ready"},
+            "memo_coherence": {"status": "ready"},
+        },
+        "summary_paths": {"section_rewrite_report": Path("section_rewrite_report.json")},
+    }
+
+    report = build_pipeline_simplification_comparison(
+        scaffold=scaffold,
+        final_outputs=final_outputs,
+        briefing_path="BRIEFING.md",
+        evidence_appendix_path="EVIDENCE_APPENDIX.md",
+    )
+
+    assert report["schema_id"] == "pipeline_simplification_comparison_v1"
+    assert report["synthesis_path"] == "memo_ready_packet"
+    assert report["retention_metrics"]["retained_must_retain_count"] == 3
+    assert report["provenance_lineage_completeness"]["claim_lineage_coverage"] >= 0.9

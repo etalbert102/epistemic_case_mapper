@@ -139,6 +139,7 @@ def write_final_reader_outputs(
         "briefing_validation": diagnostics["validation"],
         "polish_report": diagnostics["polish_report"],
         "rewrite_result": rewrite_result,
+        "diagnostics": diagnostics,
         "summary_paths": _final_reader_summary_paths(
             paths,
             rewrite_result=rewrite_result,
