@@ -18,7 +18,7 @@ def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]
     elif sufficiency.get("issues"):
         issues.append(_issue("warning", "packet_sufficiency_warnings", sufficiency.get("issues", [])))
     if critique.get("status") == "parse_failed":
-        issues.append(_issue("blocker", "packet_critique_parse_failed", _parse_errors(critique)))
+        issues.append(_issue("warning", "packet_critique_parse_failed", _parse_errors(critique)))
     elif critique.get("status") in {"skipped", "skipped_prompt_backend"}:
         issues.append(_issue("warning", "packet_critique_not_run", critique.get("status")))
     if _int(adjudication.get("rejected_count")):

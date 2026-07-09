@@ -24,6 +24,34 @@ def test_packet_quality_gate_blocks_unparsed_critique_and_missing_packet() -> No
     issue_types = {issue["issue_type"] for issue in report["issues"]}
     assert "packet_has_no_evidence_bundles" in issue_types
     assert "packet_critique_parse_failed" in issue_types
+    parse_issue = next(issue for issue in report["issues"] if issue["issue_type"] == "packet_critique_parse_failed")
+    assert parse_issue["severity"] == "warning"
+
+
+def test_packet_quality_gate_does_not_block_on_parse_failure_alone() -> None:
+    report = build_packet_quality_gate_report(
+        {
+            "decision_briefing_packet": {
+                "evidence_bundles": [{"bundle_id": "bundle_001"}],
+                "must_retain_ledger": [{"item_id": "retain_001"}],
+            },
+            "packet_sufficiency_report": {"status": "ready", "issues": []},
+            "packet_critique_report": {
+                "status": "parse_failed",
+                "parse_report": {"errors": [{"path": "misleading_synthesis_risks", "message": "expected array"}]},
+            },
+            "packet_critique_adjudication_report": {
+                "status": "accepted",
+                "accepted_count": 0,
+                "rejected_count": 0,
+                "warning_only_count": 0,
+            },
+        }
+    )
+
+    assert report["status"] == "warning"
+    assert report["packet_ready_for_synthesis"] is True
+    assert report["issues"][0]["issue_type"] == "packet_critique_parse_failed"
 
 
 def test_packet_quality_gate_allows_warning_only_adjudication() -> None:

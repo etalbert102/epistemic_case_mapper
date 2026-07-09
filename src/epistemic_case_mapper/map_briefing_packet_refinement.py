@@ -227,6 +227,26 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     section_plan_risks: list[str] = Field(default_factory=list, max_length=8)
     recommended_packet_edits: list[RecommendedPacketEdit] = Field(default_factory=list, max_length=16)
 
+    @field_validator(
+        "bundle_role_checks",
+        "bad_answer_frame_risks",
+        "answer_frame_issues",
+        "answer_frame_challenges",
+        "misleading_synthesis_risks",
+        "misleading_risks",
+        "insufficiency_warnings",
+        "claim_quality_issues",
+        "section_routing_issues",
+        "misassigned_roles",
+        "overweighted_bundles",
+        "underweighted_bundles",
+        "recommended_packet_edits",
+        mode="before",
+    )
+    @classmethod
+    def coerce_optional_list_fields(cls, value: Any) -> Any:
+        return _coerce_list_field(value)
+
     @field_validator("missing_decision_functions", mode="before")
     @classmethod
     def coerce_missing_decision_functions(cls, value: Any) -> Any:
@@ -248,12 +268,18 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     @field_validator("missing_or_weak_cruxes", "section_plan_risks", mode="before")
     @classmethod
     def coerce_note_rows(cls, value: Any) -> Any:
-        if value is None:
-            return []
-        if isinstance(value, list):
-            return [text for item in value if (text := _note_to_text(item))]
-        text = _note_to_text(value)
-        return [text] if text else []
+        return [text for item in _coerce_list_field(value) if (text := _note_to_text(item))]
+
+
+def _coerce_list_field(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        return [value]
+    text = _note_to_text(value)
+    return [text] if text else []
 
 
 class BundleRefinement(BaseModel):
