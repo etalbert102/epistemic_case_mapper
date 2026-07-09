@@ -162,6 +162,8 @@ def test_case_init_can_store_recommended_config(monkeypatch, tmp_path: Path) -> 
             "safety_case_initial_region",
             "--backend",
             "prompt",
+            "--claim-extractor",
+            "native",
             "--chunk-lines",
             "2",
             "--max-relation-pairs",

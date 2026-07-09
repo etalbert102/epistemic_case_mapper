@@ -36,6 +36,7 @@ FIELDNAMES = (
     "max_chunks_per_source",
     "max_total_chunks",
     "max_claims_per_chunk",
+    "claim_extractor",
     "max_relation_pairs",
     "relation_batch_size",
     "runtime_seconds",
@@ -83,6 +84,7 @@ def main() -> int:
     parser.add_argument("--max-chunks-per-source", type=int, default=0, help="0 means no per-source cap.")
     parser.add_argument("--max-total-chunks", type=int, default=0, help="0 means no total cap.")
     parser.add_argument("--max-claims-per-chunk", type=int, default=3)
+    parser.add_argument("--claim-extractor", choices=["whole-doc", "native", "langextract"], default="whole-doc")
     parser.add_argument(
         "--max-sources",
         type=int,
@@ -131,6 +133,7 @@ def main() -> int:
                                     max_chunks_per_source=args.max_chunks_per_source,
                                     max_total_chunks=args.max_total_chunks,
                                     max_claims_per_chunk=args.max_claims_per_chunk,
+                                    claim_extractor=args.claim_extractor,
                                 )
                                 rows.append(row)
                                 jsonl_file.write(json.dumps(row, sort_keys=True) + "\n")
@@ -204,6 +207,7 @@ def _run_one(
     max_chunks_per_source: int,
     max_total_chunks: int,
     max_claims_per_chunk: int,
+    claim_extractor: str,
 ) -> dict[str, Any]:
     run_id = "_".join(
         (
@@ -232,6 +236,7 @@ def _run_one(
         "max_chunks_per_source": max_chunks_per_source,
         "max_total_chunks": max_total_chunks,
         "max_claims_per_chunk": max_claims_per_chunk,
+        "claim_extractor": claim_extractor,
         "max_relation_pairs": relation_pairs,
         "relation_batch_size": relation_batch_size,
         "workspace": package_root.as_posix(),
@@ -257,6 +262,7 @@ def _run_one(
             max_chunks_per_source=max_chunks_per_source or None,
             max_total_chunks=max_total_chunks or None,
             max_claims_per_chunk=max_claims_per_chunk,
+            claim_extractor=claim_extractor,
             max_relation_pairs=relation_pairs,
             relation_batch_size=relation_batch_size,
             backend_timeout=timeout,

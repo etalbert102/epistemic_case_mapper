@@ -23,6 +23,8 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     run_staged_map,
 )
 
+from epistemic_case_mapper.staged_semantic_whole_doc_pipeline import _whole_doc_source_chunks
+
 from epistemic_case_mapper.staged_semantic_claims_relations import (
     _CONCEPT_FAMILY_PRIORITY,
     _canonical_claim_for_group,
@@ -242,6 +244,7 @@ __all__ = [
     "_text_overlap_ratio",
     "_validate_staged_map_options",
     "_weak_relation_rationale_ids",
+    "_whole_doc_source_chunks",
     "_write_staged_map_outputs",
     "_write_staged_run_summary",
     "consolidate_claims_for_map",

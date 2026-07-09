@@ -17,18 +17,15 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
-from epistemic_case_mapper.staged_semantic_claim_cache import claim_payload_for_chunk, write_claim_progress
+from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
+from epistemic_case_mapper.staged_semantic_claim_extractors import claim_payload_for_extractor
 from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason, region_decision_question
-from epistemic_case_mapper.staged_semantic_langextract import langextract_claim_payload_for_chunk
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
-
 RELATION_PROMPT_VERSION = "staged_relation_prompt_v2_contract_json"
-
 RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v2_contract_json"
-
 VALID_CLAIM_ROLES = {
     "conclusion_support",
     "crux",
@@ -37,9 +34,7 @@ VALID_CLAIM_ROLES = {
     "background",
     "other",
 }
-
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
-
 CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
 
 @dataclass(frozen=True)
@@ -93,7 +88,7 @@ def run_staged_map(
     validate: bool = True,
     repair_quality: bool = False,
     reuse_claim_cache: bool = True,
-    claim_extractor: str = "native",
+    claim_extractor: str = "whole-doc",
     claim_consolidation: str = "deterministic",
     decision_question: str | None = None,
 ) -> StagedMapResult:
@@ -251,8 +246,8 @@ def _validate_staged_map_options(
         raise ValueError("max_total_chunks must be positive when supplied")
     if relation_batch_size < 1:
         raise ValueError("relation_batch_size must be positive")
-    if claim_extractor not in {"native", "langextract"}:
-        raise ValueError("claim_extractor must be native or langextract")
+    if claim_extractor not in {"whole-doc", "native", "langextract"}:
+        raise ValueError("claim_extractor must be whole-doc, native, or langextract")
     if claim_consolidation not in {"deterministic", "vector-llm"}:
         raise ValueError("claim_consolidation must be deterministic or vector-llm")
 
@@ -642,6 +637,21 @@ def _extract_claims(
     claim_extractor: str = "native",
     decision_question: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if claim_extractor == "whole-doc":
+        from epistemic_case_mapper.staged_semantic_whole_doc_pipeline import _extract_whole_doc_claims
+
+        return _extract_whole_doc_claims(
+            repo_root=repo_root,
+            region=region,
+            case_manifest=case_manifest,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            artifact_dir=artifact_dir,
+            max_claims_per_source=max_claims_per_chunk,
+            reuse_claim_cache=reuse_claim_cache,
+            decision_question=decision_question,
+        )
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -666,36 +676,26 @@ def _extract_claims(
 
     for chunk_index, chunk in enumerate(chunks, start=1):
         span_lookup = {span.span_id: span for span in chunk.spans}
-        chunk_accept_count = 0
         selected_question = region_decision_question(region, case_manifest, decision_question)
         prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk, decision_question=selected_question)
         chunk_dir = artifact_dir / "claim_chunks"
         canonical_suffix = "canonical" if claim_extractor == "native" else f"{claim_extractor}_canonical"
         canonical_path = chunk_dir / f"{chunk.chunk_id}_{canonical_suffix}.json"
         write_markdown(chunk_dir / f"{chunk.chunk_id}_prompt.txt", prompt)
-        if claim_extractor == "native":
-            payload, cache_hit, backend_error = claim_payload_for_chunk(
-                prompt=prompt,
-                backend=backend,
-                backend_timeout=backend_timeout,
-                backend_retries=backend_retries,
-                canonical_path=canonical_path,
-                raw_path=chunk_dir / f"{chunk.chunk_id}_raw.txt",
-                reuse_claim_cache=reuse_claim_cache,
-            )
-        elif claim_extractor == "langextract":
-            payload, cache_hit, backend_error = langextract_claim_payload_for_chunk(
-                chunk=chunk,
-                case_question=selected_question,
-                role_options=sorted(valid_roles),
-                backend=backend,
-                max_claims=max_claims_per_chunk,
-                canonical_path=canonical_path,
-                report_path=chunk_dir / f"{chunk.chunk_id}_langextract_report.json",
-                reuse_claim_cache=reuse_claim_cache,
-            )
-        else:
-            raise ValueError(f"unknown claim_extractor={claim_extractor!r}")
+        payload, cache_hit, backend_error = claim_payload_for_extractor(
+            claim_extractor=claim_extractor,
+            prompt=prompt,
+            chunk=chunk,
+            selected_question=selected_question,
+            valid_roles=valid_roles,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            max_claims_per_chunk=max_claims_per_chunk,
+            canonical_path=canonical_path,
+            chunk_dir=chunk_dir,
+            reuse_claim_cache=reuse_claim_cache,
+        )
         if cache_hit:
             progress["cache_hit_count"] += 1
         else:
@@ -747,16 +747,18 @@ def _extract_claims(
                 continue
             seen.add(key)
             claim_index = _record_accepted_claim(claim, accepted, progress, region.id_prefix, claim_index)
-            chunk_accept_count += 1
         write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-    progress["complete"] = True
-    progress["current_chunk_id"] = ""
-    progress["processed_chunks"] = len(chunks)
-    progress["accepted_claim_count"] = len(accepted)
-    progress["rejected_claim_count"] = len(rejected)
+    progress.update(
+        complete=True,
+        current_chunk_id="",
+        processed_chunks=len(chunks),
+        accepted_claim_count=len(accepted),
+        rejected_claim_count=len(rejected),
+    )
     write_json(progress_path, progress)
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     return accepted, rejected
+
 
 def _claim_dedupe_key(claim: dict[str, Any]) -> tuple[str, str, str]:
     return (

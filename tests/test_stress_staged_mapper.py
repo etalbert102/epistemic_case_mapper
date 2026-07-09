@@ -68,6 +68,8 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
             "0",
             "--relation-pairs",
             "1",
+            "--claim-extractor",
+            "native",
             "--output-dir",
             str(output_dir),
             "--fail-on-failure",

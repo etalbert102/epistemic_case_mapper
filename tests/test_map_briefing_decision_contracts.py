@@ -433,6 +433,8 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor",
+            "native",
             "--question",
             decision_question,
             "--briefing-dir",

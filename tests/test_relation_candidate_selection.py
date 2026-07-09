@@ -108,7 +108,6 @@ def test_relation_candidate_pool_prefers_canonical_claims_with_source_role_cover
     assert "doc_c_crux" in endpoint_ids
     assert "doc_b_scope" in pool_ids
 
-
 def test_relation_candidate_pool_report_records_pool_and_skipped_claims() -> None:
     claims = [
         {
@@ -158,9 +157,15 @@ def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
     assert "different outcome than the decision question" in prompt
     assert "source_quote as an exact substring" in prompt
     assert "question_relevance" in prompt
+    assert "decision_importance" in prompt
+    assert "decision_function" in prompt
+    assert "default_use" in prompt
     assert "source_quote" in schema["properties"]["claims"]["items"]["properties"]
     assert "source_quote" in schema["properties"]["claims"]["items"]["required"]
     assert "scope_flags" in schema["properties"]["claims"]["items"]["properties"]
+    assert "decision_importance" in schema["properties"]["claims"]["items"]["properties"]
+    assert "decision_function" in schema["properties"]["claims"]["items"]["properties"]
+    assert "default_use" in schema["properties"]["claims"]["items"]["properties"]
 
 def test_prompt_builders_honor_explicit_decision_question_override() -> None:
     manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
@@ -228,6 +233,10 @@ def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -
             "question_relevance": "direct",
             "relevance_rationale": "It reports the target outcome.",
             "scope_flags": ["none"],
+            "decision_importance": "critical",
+            "decision_function": "answer_bearing",
+            "default_use": "main_map",
+            "importance_rationale": "It directly bears on the decision answer.",
         },
         span_lookup,
     )
@@ -247,7 +256,12 @@ def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -
     assert reason == ""
     assert accepted is not None
     assert accepted["question_relevance"] == "direct"
+    assert accepted["question_fit"]["status"] == "match"
     assert accepted["scope_flags"] == ["none"]
+    assert accepted["decision_importance"]["model_level"] == "critical"
+    assert accepted["decision_importance"]["calibrated_level"] in {"critical", "high"}
+    assert accepted["decision_function"] == "answer_bearing"
+    assert accepted["default_use"] == "main_map"
     assert accepted["source_alignment"]["status"] == "exact_match"
     assert accepted["source_quote"] == "intervention changed the decision-relevant outcome"
     assert rejected is None

@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.schema import CaseManifest
@@ -262,6 +261,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor", "native",
         ],
     )
     assert cli.main() == 0
@@ -344,6 +344,7 @@ def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tm
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor", "native",
             "--backend-retries",
             "0",
         ],
@@ -418,6 +419,7 @@ def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Pa
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor", "native",
             "--max-total-chunks",
             "1",
             "--repair-quality",
@@ -477,6 +479,7 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor", "native",
             "--chunk-lines",
             "1",
             "--chunk-overlap-lines",
@@ -630,6 +633,7 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
+            "--claim-extractor", "native",
             "--max-relation-pairs",
             "2",
             "--relation-batch-size",

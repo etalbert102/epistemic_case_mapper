@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_claim_importance import normalized_decision_importance, question_fit_from_relevance
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_quote_alignment import align_source_quote_to_span, quote_alignment_metadata
 from epistemic_case_mapper.staged_semantic_prompt_schemas import (
@@ -231,6 +232,14 @@ def _normalize_claim_proposal(
     if question_relevance == "irrelevant":
         return None, "question_irrelevant"
     scope_flags = _normalized_scope_flags(proposal.get("scope_flags"))
+    importance = normalized_decision_importance(
+        proposal,
+        claim_text=claim_text,
+        excerpt=span.text,
+        role=role,
+        question_relevance=question_relevance,
+        scope_flags=scope_flags,
+    )
     return (
         {
             "claim_id": "",
@@ -243,8 +252,14 @@ def _normalize_claim_proposal(
             "entailed_by_excerpt": entailed,
             "role": role,
             "question_relevance": question_relevance,
+            "question_fit": question_fit_from_relevance(question_relevance, scope_flags),
             "relevance_rationale": _compact_metadata_text(proposal.get("relevance_rationale")),
             "scope_flags": scope_flags,
+            "decision_importance": importance,
+            "decision_importance_level": importance["calibrated_level"],
+            "decision_function": importance["decision_function"],
+            "default_use": importance["default_use"],
+            "importance_rationale": importance["rationale"],
         },
         "",
     )

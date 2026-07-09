@@ -162,6 +162,9 @@ def _candidate_endpoint_telemetry(claim: Any) -> dict[str, Any]:
         "source_id": claim.get("source_id"),
         "role": claim.get("role"),
         "question_fit": _question_fit_status(claim),
+        "decision_importance": _decision_importance_level(claim),
+        "decision_function": _decision_function(claim),
+        "default_use": _default_use(claim),
         "appendix_only": bool(claim.get("appendix_only") or eligibility.get("appendix_only")),
         "noise_kind": noise.get("kind", "none"),
         "claim": str(claim.get("claim", ""))[:180],
@@ -282,6 +285,7 @@ def _relation_endpoint_priority(claim: dict[str, Any]) -> int:
         score += 2
     if _question_fit_status(claim) in {"match", "partial"}:
         score += 4
+    score += _decision_importance_priority(claim)
     if _has_support_signal(text) or _has_limit_or_challenge_signal(text):
         score += 3
     if re.search(r"\b(?:risk|effect|outcome|association|recommend|compared|depends|uncertain|confidence|evidence)\b", text):
@@ -309,6 +313,8 @@ def _relation_endpoint_rejection_reason(claim: dict[str, Any]) -> str:
     noise_kind = str(noise.get("kind", "none"))
     if claim.get("appendix_only") or eligibility.get("appendix_only"):
         return "appendix_only"
+    if _default_use(claim) == "exclude_unless_gap" and _decision_importance_level(claim) in {"low", "medium"}:
+        return "exclude_unless_gap"
     if noise_kind not in {"", "none"} and str(noise.get("severity", "high")) in {"medium", "high"}:
         return f"noise:{noise_kind}"
     if _question_fit_status(claim) == "mismatch":
@@ -396,6 +402,50 @@ def _question_fit_status(claim: dict[str, Any]) -> str:
         question_fit = eligibility["question_fit"]
     return str(question_fit.get("status", "")).strip().lower()
 
+def _decision_importance_level(claim: dict[str, Any]) -> str:
+    importance = claim.get("decision_importance") if isinstance(claim.get("decision_importance"), dict) else {}
+    level = str(importance.get("calibrated_level") or claim.get("decision_importance_level") or claim.get("importance") or "").strip().lower()
+    if level in {"critical", "high", "medium", "low"}:
+        return level
+    relevance = str(claim.get("question_relevance", "")).strip().lower()
+    role = str(claim.get("role", "")).strip()
+    if role == "crux":
+        return "critical"
+    if role in {"conclusion_support", "scope_limit", "implementation_constraint"} and relevance in {"direct", "scope_limit"}:
+        return "high"
+    if role in {"conclusion_support", "scope_limit", "implementation_constraint"} and not relevance:
+        return "medium"
+    if relevance in {"direct", "indirect", "scope_limit"}:
+        return "medium"
+    return "low"
+
+def _decision_function(claim: dict[str, Any]) -> str:
+    importance = claim.get("decision_importance") if isinstance(claim.get("decision_importance"), dict) else {}
+    return str(importance.get("decision_function") or claim.get("decision_function") or "").strip().lower()
+
+def _default_use(claim: dict[str, Any]) -> str:
+    importance = claim.get("decision_importance") if isinstance(claim.get("decision_importance"), dict) else {}
+    return str(importance.get("default_use") or claim.get("default_use") or "").strip().lower()
+
+def _decision_importance_priority(claim: dict[str, Any]) -> int:
+    level = _decision_importance_level(claim)
+    default_use = _default_use(claim)
+    decision_function = _decision_function(claim)
+    score = {"critical": 8, "high": 5, "medium": 2, "low": -2}.get(level, 0)
+    if default_use == "main_map":
+        score += 3
+    elif default_use == "supporting_map":
+        score += 1
+    elif default_use == "appendix":
+        score -= 3
+    elif default_use == "exclude_unless_gap":
+        score -= 6
+    if decision_function in {"crux", "answer_bearing", "scope_boundary", "confounder_or_bias", "implementation_constraint", "source_quality_caveat"}:
+        score += 2
+    elif decision_function == "background_context":
+        score -= 2
+    return score
+
 
 def _looks_like_title_or_heading(text: str) -> bool:
     compact = re.sub(r"\s+", " ", text).strip()
@@ -457,6 +507,10 @@ def _pair_score(
     if {left_role, right_role} & {"conclusion_support"}:
         score += 2
         reasons.append("support_pair")
+    importance_score, importance_reason = _pair_importance_score(left, right)
+    if importance_score:
+        score += importance_score
+        reasons.append(importance_reason)
     left_text = _normalize_text(f"{left.get('claim', '')} {left.get('excerpt', '')}")
     right_text = _normalize_text(f"{right.get('claim', '')} {right.get('excerpt', '')}")
     if _looks_like_tension(left_text, right_text):
@@ -485,6 +539,36 @@ def _pair_score(
         score -= 12
         reasons.append("weak_support_pair_overlap")
     return score, "+".join(reasons) or "low_signal"
+
+def _pair_importance_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, str]:
+    levels = {_decision_importance_level(left), _decision_importance_level(right)}
+    uses = {_default_use(left), _default_use(right)}
+    explicit_low_use = bool(uses & {"appendix", "exclude_unless_gap"}) and uses <= {"appendix", "exclude_unless_gap", ""}
+    explicit_background = {
+        str(left.get("question_relevance", "")).strip().lower(),
+        str(right.get("question_relevance", "")).strip().lower(),
+    } == {"background"}
+    if levels == {"low"} and (explicit_low_use or explicit_background):
+        return -10, "low_importance_background_pair_penalty"
+    score = 0
+    reasons: list[str] = []
+    if "critical" in levels:
+        score += 6
+        reasons.append("critical_importance_pair")
+    elif "high" in levels:
+        score += 4
+        reasons.append("high_importance_pair")
+    if uses and uses <= {"main_map"}:
+        score += 3
+        reasons.append("main_map_pair")
+    elif "main_map" in uses:
+        score += 2
+        reasons.append("main_map_endpoint")
+    functions = {_decision_function(left), _decision_function(right)}
+    if "answer_bearing" in functions and functions & {"scope_boundary", "crux", "confounder_or_bias", "implementation_constraint", "source_quality_caveat"}:
+        score += 4
+        reasons.append("answer_to_interpretive_condition_pair")
+    return score, "+".join(reasons) if reasons else ""
 
 
 def _semantic_pair_score(

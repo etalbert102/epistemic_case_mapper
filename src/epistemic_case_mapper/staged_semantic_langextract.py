@@ -120,12 +120,15 @@ def _prompt_description(case_question: str, role_options: list[str], max_claims:
     return (
         "Extract decision-relevant evidence spans for an epistemic decision map.\n"
         "Use exact text from the input as extraction_text. Do not extract titles, citations, boilerplate, or purely topical mentions.\n"
-        "For each extracted span, add attributes: claim, role, question_relevance, relevance_rationale, scope_flags, entailed_by_excerpt.\n"
+        "For each extracted span, add attributes: claim, role, question_relevance, relevance_rationale, scope_flags, entailed_by_excerpt, decision_importance, decision_function, default_use, importance_rationale.\n"
         "The claim attribute should be a concise faithful paraphrase of only the extracted span.\n"
         f"Decision question: {case_question}\n"
         f"Allowed role values: {roles}\n"
         "Allowed question_relevance values: direct, indirect, scope_limit, background, irrelevant.\n"
         "Allowed scope_flags values: target_population_mismatch, outcome_mismatch, intervention_or_exposure_mismatch, mechanism_only, administrative_context, none.\n"
+        "Allowed decision_importance values: critical, high, medium, low. Importance means how much this span should affect the decision map.\n"
+        "Allowed decision_function values: answer_bearing, crux, scope_boundary, mechanism, confounder_or_bias, implementation_constraint, source_quality_caveat, background_context.\n"
+        "Allowed default_use values: main_map, supporting_map, appendix, exclude_unless_gap.\n"
         f"Return at most {max_claims} high-value extractions from this chunk."
     )
 
@@ -145,6 +148,10 @@ def _examples(lx: Any) -> list[Any]:
                         "relevance_rationale": "The span reports an outcome directly relevant to the decision.",
                         "scope_flags": ["none"],
                         "entailed_by_excerpt": "yes",
+                        "decision_importance": "high",
+                        "decision_function": "answer_bearing",
+                        "default_use": "main_map",
+                        "importance_rationale": "It reports a target outcome and should shape the main map.",
                     },
                 )
             ],
@@ -178,6 +185,10 @@ def _proposals_from_extractions(result: Any, chunk: Any, *, max_claims: int) -> 
                 "question_relevance": str(attrs.get("question_relevance") or "unspecified").strip().lower(),
                 "relevance_rationale": str(attrs.get("relevance_rationale") or "").strip(),
                 "scope_flags": _scope_flags(attrs.get("scope_flags")),
+                "decision_importance": str(attrs.get("decision_importance") or attrs.get("importance") or "").strip().lower(),
+                "decision_function": str(attrs.get("decision_function") or "").strip().lower(),
+                "default_use": str(attrs.get("default_use") or "").strip().lower(),
+                "importance_rationale": str(attrs.get("importance_rationale") or "").strip(),
                 "langextract": {
                     "extraction_text": extraction_text,
                     "char_interval": _interval_dict(interval),
