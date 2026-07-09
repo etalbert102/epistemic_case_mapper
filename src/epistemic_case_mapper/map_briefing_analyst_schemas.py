@@ -127,6 +127,7 @@ class AnalystSynthesisPacket(BaseModel):
     warnings_to_address: list[str] = Field(default_factory=list)
     warning_obligations: list[dict[str, Any]] = Field(default_factory=list)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
+    decision_logic: dict[str, Any] = Field(default_factory=dict)
     source_notes: list[dict[str, Any]] = Field(default_factory=list)
     evidence_accounting_summary: dict[str, Any] = Field(default_factory=dict)
 
@@ -160,6 +161,29 @@ class AnalystWarningObligation(BaseModel):
         return [text] if text else []
 
 
+class AnalystDecisionLogic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bounded_bottom_line: str = ""
+    support_summary: str = ""
+    strongest_counterweight: str = ""
+    counterweight_weighting: str = ""
+    reconciled_cruxes: list[str] = Field(default_factory=list)
+    scope_boundaries: list[str] = Field(default_factory=list)
+    practical_implications: list[str] = Field(default_factory=list)
+    do_not_overstate: list[str] = Field(default_factory=list)
+
+    @field_validator("reconciled_cruxes", "scope_boundaries", "practical_implications", "do_not_overstate", mode="before")
+    @classmethod
+    def _list_field(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
+
 class AnalystPacketRefinement(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -167,6 +191,7 @@ class AnalystPacketRefinement(BaseModel):
     decision_question: str
     direct_answer: str = Field(min_length=1)
     answer_rationale: str = Field(min_length=1)
+    decision_logic: AnalystDecisionLogic = Field(default_factory=AnalystDecisionLogic)
     warning_obligations: list[AnalystWarningObligation] = Field(default_factory=list)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
 

@@ -178,6 +178,7 @@ def _run_memo_ready_final_output_path(
         build_memo_ready_packet_retention_report,
         run_memo_ready_final_polish,
         run_memo_ready_packet_repair,
+        run_memo_ready_presentation_normalization,
         run_memo_ready_packet_synthesis,
     )
 
@@ -218,6 +219,10 @@ def _run_memo_ready_final_output_path(
     )
     rewrite_result["memo"] = final_polish["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_final_polish_status"] = final_polish.get("report", {}).get("status")
+    presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), memo_ready_packet)
+    rewrite_result["memo"] = presentation["memo"]
+    rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_status"] = presentation.get("report", {}).get("status")
+    rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_changes"] = presentation.get("report", {}).get("changes", [])
     return {
         "section_rewrite_result": section_rewrite_result,
         "rewrite_result": rewrite_result,

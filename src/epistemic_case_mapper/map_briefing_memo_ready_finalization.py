@@ -95,11 +95,13 @@ def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:
 
 
 def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
-    statuses = [_item_retention_status(memo, item) for item in _mandatory_items(packet)]
+    source_aliases = _source_alias_lookup(packet)
+    statuses = [_item_retention_status(memo, item, source_aliases) for item in _mandatory_items(packet)]
     item_issues = [row for row in statuses if not row["retained"]]
     warning_resolution = build_warning_resolution_report(
         memo,
         _dict(packet.get("memo_warning_packet")),
+        source_aliases=source_aliases,
     )
     warning_issues = [
         {
@@ -257,6 +259,37 @@ def run_memo_ready_final_polish(
     return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
 
 
+def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+    """Apply deterministic presentation-only fixes without changing analysis."""
+    question = str(packet.get("decision_question") or "").strip()
+    source_aliases = _source_alias_replacements(packet)
+    normalized = str(memo or "").strip()
+    changes: list[str] = []
+    if question:
+        next_memo = _ensure_decision_question(normalized, question)
+        if next_memo != normalized:
+            changes.append("inserted_decision_question")
+            normalized = next_memo
+    next_memo = _replace_source_aliases(normalized, source_aliases)
+    if next_memo != normalized:
+        changes.append("normalized_source_labels")
+        normalized = next_memo
+    normalized = normalized.rstrip() + "\n"
+    return {
+        "memo": normalized,
+        "prompt": "",
+        "raw": "",
+        "report": {
+            "schema_id": "memo_ready_presentation_normalization_report_v1",
+            "status": "changed" if changes else "no_changes",
+            "accepted": True,
+            "changes": changes,
+            "source_alias_count": len(source_aliases),
+            "issues": [],
+        },
+    }
+
+
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
     protected = {
         "decision_question": packet.get("decision_question"),
@@ -310,6 +343,110 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
     return _dedupe(rows)
 
 
+def _ensure_decision_question(memo: str, question: str) -> str:
+    if _contains_text(memo, question):
+        return memo
+    line = f"**Decision question:** {question}"
+    lines = memo.splitlines()
+    if not lines:
+        return f"## Decision Brief\n\n{line}\n"
+    for index, existing in enumerate(lines):
+        if existing.strip().lower() == "## decision brief":
+            insert_at = index + 1
+            while insert_at < len(lines) and not lines[insert_at].strip():
+                insert_at += 1
+            return "\n".join([*lines[: index + 1], "", line, "", *lines[insert_at:]])
+    return f"## Decision Brief\n\n{line}\n\n{memo.strip()}"
+
+
+def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
+    normalized = memo
+    for source_label, display in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
+        if source_label and display and source_label != display:
+            normalized = normalized.replace(source_label, display)
+    return normalized
+
+
+def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
+    labels = [
+        str(source.get("source_label") or "").strip()
+        for source in _list(packet.get("source_trail"))
+        if isinstance(source, dict) and str(source.get("source_label") or "").strip()
+    ]
+    common_prefix = _common_token_prefix(labels)
+    replacements: dict[str, str] = {}
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        source_label = str(source.get("source_label") or "").strip()
+        if not source_label:
+            continue
+        display = _preferred_source_display(source, common_prefix=common_prefix)
+        if display and display != source_label:
+            replacements[source_label] = display
+    return replacements
+
+
+def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
+    replacements = _source_alias_replacements(packet)
+    aliases: dict[str, list[str]] = {}
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        source_label = str(source.get("source_label") or "").strip()
+        if not source_label:
+            continue
+        values = [
+            source_label,
+            replacements.get(source_label, ""),
+            str(source.get("display_label") or "").strip(),
+            str(source.get("citation_label") or "").strip(),
+        ]
+        aliases[source_label] = _dedupe(value for value in values if value)
+    return aliases
+
+
+def _source_aliases_for_label(source_label: str, source_aliases: dict[str, list[str]]) -> list[str]:
+    if source_label in source_aliases:
+        return source_aliases[source_label]
+    normalized = _norm(source_label)
+    for label, aliases in source_aliases.items():
+        if _norm(label) == normalized:
+            return aliases
+    return []
+
+
+def _preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]) -> str:
+    label = str(source.get("source_label") or "").strip()
+    for key in ("citation_label", "display_label"):
+        value = str(source.get(key) or "").strip()
+        if value and value != label:
+            return value
+    if common_prefix:
+        tokens = label.split()
+        if [token.lower() for token in tokens[: len(common_prefix)]] == [token.lower() for token in common_prefix]:
+            stripped = " ".join(tokens[len(common_prefix) :]).strip()
+            if stripped:
+                return stripped
+    return label
+
+
+def _common_token_prefix(labels: list[str]) -> list[str]:
+    tokenized = [label.split() for label in labels if label.strip()]
+    if len(tokenized) < 2:
+        return []
+    prefix: list[str] = []
+    for tokens in zip(*tokenized):
+        lowered = {token.lower() for token in tokens}
+        if len(lowered) != 1:
+            break
+        prefix.append(tokens[0])
+    if len(prefix) < 2:
+        return []
+    shortest_remainder = min((len(tokens) - len(prefix) for tokens in tokenized), default=0)
+    return prefix if shortest_remainder >= 2 else []
+
+
 def _quantity_clause(item: dict[str, Any]) -> str:
     quantities = []
     for quantity in _list(item.get("quantities")):
@@ -355,7 +492,7 @@ def _mandatory_items(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return [item for item in _list(packet.get("evidence_items")) if isinstance(item, dict) and item.get("must_use")]
 
 
-def _item_retention_status(memo: str, item: dict[str, Any]) -> dict[str, Any]:
+def _item_retention_status(memo: str, item: dict[str, Any], source_aliases: dict[str, list[str]] | None = None) -> dict[str, Any]:
     claim = str(item.get("reader_claim") or "").strip()
     source = str(item.get("source_label") or "").strip()
     quantities = [
@@ -364,7 +501,8 @@ def _item_retention_status(memo: str, item: dict[str, Any]) -> dict[str, Any]:
         if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
     ]
     missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
-    source_retained = not source or _contains_text(memo, source)
+    aliases = _dedupe([source, *(_source_aliases_for_label(source, source_aliases or {}) if source else [])])
+    source_retained = not source or any(_contains_text(memo, alias) for alias in aliases)
     claim_retained = _mentions_enough_content_terms(memo, claim, minimum=4)
     retained = source_retained and claim_retained and not missing_quantities
     return {

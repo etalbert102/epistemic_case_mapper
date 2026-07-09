@@ -406,7 +406,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record for this memo.\n\n"
-        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan. If analyst_argument_plan is present, use it as the controlling argument order: write each planned reasoning move once, integrate required points, and place the strongest counterweight where it is weighed.\n"
+        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan. If analyst_decision_logic is present, treat it as the controlling analytical frame: use its bounded bottom line, counterweight weighting, reconciled cruxes, scope boundaries, practical implications, and do-not-overstate guardrails. If analyst_argument_plan is present, use it as the controlling argument order: write each planned reasoning move once, integrate required points, and place the strongest counterweight where it is weighed.\n"
         "If memo_warning_packet contains warnings, treat them as actionable evidence that was at risk of omission.\n"
         "Incorporate each warning naturally when it affects the answer; otherwise use it to bound scope, confidence, or uncertainty.\n"
         "Do not merely summarize or list evidence. Produce a decision read: default stance, why it is supported, strongest counterweight, scope/conditions, and practical implication.\n\n"

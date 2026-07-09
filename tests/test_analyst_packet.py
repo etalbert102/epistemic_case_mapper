@@ -139,6 +139,16 @@ def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
         "decision_question": "Should option A be adopted?",
         "direct_answer": "Adopt option A only if operating risk is bounded.",
         "answer_rationale": "Support is strong, but operating risk is the limiting condition.",
+        "decision_logic": {
+            "bounded_bottom_line": "Adopt option A only where operating risk is bounded.",
+            "support_summary": "The loss-reduction evidence supports adoption.",
+            "strongest_counterweight": "Operating-budget risk can erase the benefit.",
+            "counterweight_weighting": "The counterweight bounds the recommendation but does not erase the outcome signal.",
+            "reconciled_cruxes": ["The answer changes if operating risk cannot be bounded."],
+            "scope_boundaries": ["Applies only where maintenance capacity is reliable."],
+            "practical_implications": ["Recommend adoption with an operating-risk condition."],
+            "do_not_overstate": ["Do not recommend unconditional adoption."],
+        },
         "warning_obligations": [
             {
                 "warning_id": "memo_warning_001",
@@ -179,6 +189,8 @@ def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
     )
 
     assert result["analyst_synthesis_packet"]["bottom_line"] == "Adopt option A only if operating risk is bounded."
+    assert result["analyst_synthesis_packet"]["decision_logic"]["bounded_bottom_line"] == "Adopt option A only where operating risk is bounded."
+    assert result["analyst_memo_ready_packet"]["analyst_decision_logic"]["counterweight_weighting"].startswith("The counterweight")
     assert result["analyst_synthesis_packet"]["argument_plan"][0]["step_id"] == "weigh_risk"
     assert result["analyst_memo_ready_packet"]["analyst_argument_plan"][0]["writing_goal"].startswith("State the support")
     assert len(result["analyst_synthesis_packet"]["warning_obligations"]) == 2
@@ -205,6 +217,16 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
         refinement={
             "direct_answer": "Adopt option A only if operating risk is bounded.",
             "answer_rationale": "The counterweight bounds the support.",
+            "decision_logic": {
+                "bounded_bottom_line": "Adopt option A only if operating risk is bounded.",
+                "support_summary": "The support shows losses fall.",
+                "strongest_counterweight": "Operating risk can erase benefits.",
+                "counterweight_weighting": "This bounds the recommendation rather than eliminating it.",
+                "reconciled_cruxes": ["The answer changes if risk cannot be bounded."],
+                "scope_boundaries": ["Applies to comparable sites."],
+                "practical_implications": ["Use a risk condition."],
+                "do_not_overstate": ["Do not imply unconditional adoption."],
+            },
             "argument_plan": [
                 {
                     "step_id": "weigh_risk",
@@ -222,6 +244,8 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     prompt = build_memo_ready_packet_synthesis_prompt(result["analyst_memo_ready_packet"])
 
     assert "analyst_argument_plan" in prompt
+    assert "analyst_decision_logic" in prompt
+    assert "controlling analytical frame" in prompt
     assert "controlling argument order" in prompt
     assert "weigh_risk" in prompt
 

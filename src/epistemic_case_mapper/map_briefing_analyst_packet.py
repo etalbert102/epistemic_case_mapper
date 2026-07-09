@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
+from epistemic_case_mapper.map_briefing_analyst_decision_logic import analyst_decision_logic
 from epistemic_case_mapper.map_briefing_analyst_schemas import AnalystSynthesisPacket
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -257,6 +258,7 @@ def _build_synthesis_packet(
         "warnings_to_address": _warnings_to_address(warning_packet, adjudication, warning_obligations=warning_obligations),
         "warning_obligations": warning_obligations,
         "argument_plan": _argument_plan(refinement, groups, warning_obligations),
+        "decision_logic": analyst_decision_logic(refinement, answer_frame, groups, warning_obligations),
         "source_notes": _source_notes(packet),
         "evidence_accounting_summary": _evidence_accounting_summary(ledger, adjudication, groups, group_accounting),
     }
@@ -299,6 +301,7 @@ def _build_analyst_memo_ready_packet(
         "memo_warning_packet": warning_packet,
         "analyst_synthesis_packet": synthesis_packet,
         "analyst_argument_plan": synthesis_packet.get("argument_plan", []),
+        "analyst_decision_logic": synthesis_packet.get("decision_logic", {}),
         "analyst_packet_quality_report": quality,
         "evidence_items": evidence_items,
     }

@@ -81,10 +81,13 @@ def build_analyst_packet_refinement_prompt(
         "task": [
             "Produce a direct answer frame and clean memo obligations for warnings.",
             "Produce an ordered argument plan for the memo.",
+            "Produce a compact decision_logic object that tells the final writer how to weigh evidence, reconcile cruxes, bound scope, and state practical implications.",
             "Do not write the memo.",
             "Do not invent evidence or sources.",
             "Use the evidence hierarchy to answer the decision question in one sentence.",
             "Plan how the memo should integrate the strongest support, strongest counterweight, scope, cruxes, and practical implication.",
+            "Explain why the strongest counterweight does or does not change the bottom-line answer.",
+            "Reconcile apparent tensions among cruxes instead of listing conflicting claims side by side.",
             "Convert raw warning excerpts into analyst obligations: what the memo should do with the warning.",
         ],
         "current_bottom_line": synthesis_packet.get("bottom_line"),
@@ -115,6 +118,16 @@ def build_analyst_packet_refinement_prompt(
             "decision_question": synthesis_packet.get("decision_question"),
             "direct_answer": "one sentence that directly answers the decision question",
             "answer_rationale": "why that answer follows from primary support, counterweights, scope, and cruxes",
+            "decision_logic": {
+                "bounded_bottom_line": "specific answer with population, dose/context, and confidence boundary",
+                "support_summary": "the load-bearing support in one or two sentences",
+                "strongest_counterweight": "the strongest evidence or consideration against the bottom line",
+                "counterweight_weighting": "why that counterweight bounds, weakens, or changes the answer",
+                "reconciled_cruxes": ["what would change the answer, written without unresolved contradiction"],
+                "scope_boundaries": ["population, comparator, dose, duration, or context boundaries"],
+                "practical_implications": ["advice/action implications that follow from the weighted read"],
+                "do_not_overstate": ["claims the memo must not imply"],
+            },
             "warning_obligations": [
                 {
                     "warning_id": "warning ID copied exactly",
@@ -156,6 +169,7 @@ def deterministic_packet_refinement_scaffold(
         "decision_question": str(synthesis_packet.get("decision_question") or "").strip(),
         "direct_answer": direct or "Use the analyst synthesis packet to answer the decision question directly.",
         "answer_rationale": "Scaffold only; live model refinement was not accepted.",
+        "decision_logic": _scaffold_decision_logic(synthesis_packet),
         "warning_obligations": [
             _scaffold_warning_obligation(warning)
             for warning in _list(warning_packet.get("warnings"))
@@ -163,6 +177,34 @@ def deterministic_packet_refinement_scaffold(
         ],
         "argument_plan": _scaffold_argument_plan(synthesis_packet, warning_packet),
     }
+
+
+def _scaffold_decision_logic(synthesis_packet: dict[str, Any]) -> dict[str, Any]:
+    support = _first_group_text(synthesis_packet, "primary_reasoning_chain")
+    counter = _first_group_text(synthesis_packet, "main_counterweights")
+    scope = [_short_text(str(group.get("proposition") or ""), 220) for group in _list(synthesis_packet.get("scope_and_applicability"))[:3] if isinstance(group, dict)]
+    cruxes = [_short_text(str(group.get("proposition") or ""), 220) for group in _list(synthesis_packet.get("decision_cruxes"))[:3] if isinstance(group, dict)]
+    bottom = str(synthesis_packet.get("bottom_line") or "").strip()
+    return {
+        "bounded_bottom_line": bottom or "Answer the decision question from the weighted support and counterweights.",
+        "support_summary": support,
+        "strongest_counterweight": counter,
+        "counterweight_weighting": "Weigh the strongest counterweight against the support; use it to bound the answer if it does not overturn it.",
+        "reconciled_cruxes": cruxes,
+        "scope_boundaries": scope,
+        "practical_implications": [
+            "State the practical implication that follows from the weighted read.",
+            "Translate scope boundaries into conditions on the recommendation.",
+        ],
+        "do_not_overstate": _string_list(synthesis_packet.get("must_not_overstate"))[:6],
+    }
+
+
+def _first_group_text(synthesis_packet: dict[str, Any], key: str) -> str:
+    for group in _list(synthesis_packet.get(key)):
+        if isinstance(group, dict) and str(group.get("proposition") or "").strip():
+            return _short_text(str(group.get("proposition") or ""), 260)
+    return ""
 
 
 def build_analyst_packet_refinement_parse_report(payload: Any, warning_packet: dict[str, Any]) -> dict[str, Any]:

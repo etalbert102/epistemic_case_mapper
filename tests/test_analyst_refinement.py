@@ -59,6 +59,8 @@ def test_refinement_prompt_contains_warning_ids_and_answer_task() -> None:
     )
 
     assert "Produce a direct answer frame" in prompt
+    assert "decision_logic" in prompt
+    assert "counterweight_weighting" in prompt
     assert "memo_warning_001" in prompt
     assert "strict JSON" in prompt
 
@@ -69,6 +71,16 @@ def test_refinement_accepts_valid_live_backend(monkeypatch) -> None:
         "decision_question": "Should option A be adopted?",
         "direct_answer": "Adopt option A only if operating risk is bounded.",
         "answer_rationale": "Outcome gains are real, but operating risk limits adoption.",
+        "decision_logic": {
+            "bounded_bottom_line": "Adopt option A only when operating risk is bounded.",
+            "support_summary": "Outcome gains support adoption.",
+            "strongest_counterweight": "Operating risk can erase the benefit.",
+            "counterweight_weighting": "The counterweight bounds implementation rather than overturning the effect.",
+            "reconciled_cruxes": ["The decision changes if operating risk cannot be bounded."],
+            "scope_boundaries": ["Applies where maintenance capacity is reliable."],
+            "practical_implications": ["Adopt with an operating-risk condition."],
+            "do_not_overstate": ["Do not claim unconditional adoption."],
+        },
         "warning_obligations": [
             {
                 "warning_id": "memo_warning_001",
@@ -107,6 +119,7 @@ def test_refinement_accepts_valid_live_backend(monkeypatch) -> None:
 
     assert result["analyst_packet_refinement_report"]["status"] == "accepted"
     assert result["analyst_packet_refinement"]["direct_answer"].startswith("Adopt option A")
+    assert result["analyst_packet_refinement"]["decision_logic"]["counterweight_weighting"].startswith("The counterweight")
     assert result["analyst_packet_refinement"]["argument_plan"][0]["step_id"] == "counterweight"
 
 

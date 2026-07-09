@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_decision_packet import build_decision_br
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_retention_report,
     run_memo_ready_final_polish,
+    run_memo_ready_presentation_normalization,
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
 )
@@ -138,6 +139,50 @@ def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
 
     assert "{'classification'" not in packet["answer_spine"]["default_read"]
     assert "Option A" in packet["answer_spine"]["default_read"]
+
+
+def test_presentation_normalization_adds_question_and_cleans_source_labels() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "source_trail": [
+            {
+                "source_id": "s1",
+                "source_label": "Deep Research Flood Sources Outcome Study 2025",
+                "appears_in_packet": True,
+            },
+            {
+                "source_id": "s2",
+                "source_label": "Deep Research Flood Sources Counter Study 2024",
+                "appears_in_packet": True,
+            },
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Option A reduced flood losses by 25%.",
+                "source_label": "Deep Research Flood Sources Outcome Study 2025",
+                "quantities": [{"value": "25%"}],
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "Option A reduced flood losses by 25% (Deep Research Flood Sources Outcome Study 2025).\n\n"
+        "## Sources\n"
+        "* Deep Research Flood Sources Outcome Study 2025\n"
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+    retention = build_memo_ready_packet_retention_report(result["memo"], packet)
+
+    assert "**Decision question:** Should the city adopt option A?" in result["memo"]
+    assert "Outcome Study 2025" in result["memo"]
+    assert "Deep Research Flood Sources Outcome Study 2025" not in result["memo"]
+    assert result["report"]["status"] == "changed"
+    assert retention["missing_mandatory_count"] == 0
 
 
 def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support() -> None:

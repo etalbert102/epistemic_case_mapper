@@ -54,9 +54,14 @@ def build_memo_warning_packet(packet: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_warning_resolution_report(memo: str, memo_warning_packet: dict[str, Any]) -> dict[str, Any]:
+def build_warning_resolution_report(
+    memo: str,
+    memo_warning_packet: dict[str, Any],
+    *,
+    source_aliases: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     warnings = [row for row in _list(memo_warning_packet.get("warnings")) if isinstance(row, dict)]
-    statuses = [_warning_status(memo, warning) for warning in warnings]
+    statuses = [_warning_status(memo, warning, source_aliases=source_aliases or {}) for warning in warnings]
     unresolved = [row for row in statuses if row.get("status") == "unresolved"]
     possible = [row for row in statuses if row.get("status") == "possibly_addressed"]
     needs_repair = [*unresolved, *possible]
@@ -143,14 +148,18 @@ def _warning_from_omitted_row(
     }
 
 
-def _warning_status(memo: str, warning: dict[str, Any]) -> dict[str, Any]:
+def _warning_status(memo: str, warning: dict[str, Any], *, source_aliases: dict[str, list[str]]) -> dict[str, Any]:
     warning_id = str(warning.get("warning_id") or "")
     labels = _string_list(warning.get("source_labels"))
     claim = str(warning.get("claim") or "")
     quantities = _string_list(warning.get("quantity_values"))
     anchors = _string_list(warning.get("anchor_terms")) or _content_terms(claim)
     memo_body = _memo_without_sources(memo)
-    source_retained = not labels or any(_contains_text(memo_body, label) for label in labels)
+    source_retained = not labels or any(
+        _contains_text(memo_body, alias)
+        for label in labels
+        for alias in _dedupe([label, *source_aliases.get(label, [])])
+    )
     retained_quantities = [value for value in quantities if _contains_quantity(memo, value)]
     missing_quantities = [value for value in quantities if value not in retained_quantities]
     present_anchors = [term for term in anchors if _contains_text(memo, term)]
