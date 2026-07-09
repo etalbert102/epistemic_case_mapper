@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_quantity_tuples import quantity_tuples as _quantity_tuples
+
 
 QUANTITY_PATTERNS: tuple[tuple[str, str], ...] = (
     ("confidence_interval", r"\b(?:95\s*%\s*)?(?:CI|confidence interval)\s*[:=]?\s*[\[(]?\s*[-+]?\d+(?:\.\d+)?\s*(?:-|–|—|to)\s*[-+]?\d+(?:\.\d+)?\s*[\])]?\b"),
@@ -47,7 +49,7 @@ def build_quantity_ledger(candidate_map: dict[str, Any], source_lookup: dict[str
         "quantity_count": len(rows),
         "quantitative_card_count": len(cards),
         "type_counts": type_counts,
-        "top_quantitative_anchors": top_quantity_anchors(rows),
+        "top_quantitative_anchors": _top_quantity_anchors_from_cards(cards) or top_quantity_anchors(rows),
         "evidence_cards": cards,
         "quantities": rows,
     }
@@ -157,7 +159,10 @@ def _quantity_card(index: int, rows: list[dict[str, Any]]) -> dict[str, Any]:
     ordered = sorted(rows, key=lambda row: (-int(row.get("relevance_score", 0)), TYPE_PRIORITY.get(str(row.get("quantity_type", "")), 0)))
     best = ordered[0] if ordered else {}
     by_type = {quantity_type: _unique(row.get("quantity_text", "") for row in ordered if row.get("quantity_type") == quantity_type) for quantity_type, _ in QUANTITY_PATTERNS}
-    key_quantities = _card_key_quantities(by_type)
+    local_tuples = _local_quantity_tuples(best, ordered)
+    primary_tuples = _primary_quantity_tuples(local_tuples, str(best.get("claim", "")))
+    memo_tuples = primary_tuples or local_tuples[:1]
+    key_quantities = _safe_card_key_quantities(by_type, memo_tuples)
     return {
         "card_id": f"qc{index:04d}",
         "claim_id": best.get("claim_id"),
@@ -168,6 +173,7 @@ def _quantity_card(index: int, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "evidence_use": _evidence_use(ordered),
         "direction": _dominant_direction(ordered),
         "key_quantities": key_quantities,
+        "quantity_tuples": memo_tuples or local_tuples[:4],
         "effect_estimates": by_type.get("effect_size", [])[:4],
         "uncertainty_intervals": by_type.get("confidence_interval", [])[:4],
         "p_values": by_type.get("p_value", [])[:3],
@@ -176,9 +182,48 @@ def _quantity_card(index: int, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "duration": by_type.get("duration", [])[:3],
         "biomarker_or_mean_change": by_type.get("biomarker_or_mean_change", [])[:4],
         "context": _short_text(str(best.get("context_window", "")), 420),
-        "interpretation_hint": _interpretation_hint(by_type, ordered),
+        "interpretation_hint": _interpretation_hint(by_type, ordered, primary_tuples=memo_tuples),
         "card_score": max((int(row.get("relevance_score", 0)) for row in ordered), default=0) + _card_bonus(by_type),
     }
+
+
+def _local_quantity_tuples(best: dict[str, Any], ordered: list[dict[str, Any]]) -> list[dict[str, str]]:
+    contexts = _unique(row.get("context_window", "") for row in ordered)
+    cluster = {
+        "representative_claim": best.get("claim"),
+        "source_excerpt": " ".join(contexts[:6]),
+    }
+    quantities = _unique(row.get("quantity_text", "") for row in ordered)
+    return _quantity_tuples(cluster, quantities)
+
+
+def _primary_quantity_tuples(tuples: list[dict[str, str]], claim: str) -> list[dict[str, str]]:
+    claim_norm = _quantity_norm_text(claim)
+    primary = []
+    for row in tuples:
+        values = [
+            _quantity_norm_text(str(row.get("estimate", ""))),
+            _quantity_norm_text(str(row.get("interval", ""))),
+            _quantity_norm_text(str(row.get("source_text", ""))),
+        ]
+        if any(value and value in claim_norm for value in values):
+            primary.append(row)
+    return primary[:4]
+
+
+def _safe_card_key_quantities(by_type: dict[str, list[str]], primary_tuples: list[dict[str, str]]) -> list[str]:
+    if not primary_tuples:
+        return _card_key_quantities(by_type)
+    paired_values = _dedupe(
+        value
+        for row in primary_tuples
+        for value in (str(row.get("estimate", "")).strip(), str(row.get("interval", "")).strip())
+        if value
+    )
+    context_values: list[str] = []
+    for quantity_type in ("p_value", "sample_size", "exposure_threshold", "duration", "biomarker_or_mean_change"):
+        context_values.extend(by_type.get(quantity_type, [])[:2])
+    return _dedupe([*paired_values, *context_values])[:8]
 
 
 def _card_key_quantities(by_type: dict[str, list[str]]) -> list[str]:
@@ -204,10 +249,17 @@ def _evidence_use(rows: list[dict[str, Any]]) -> str:
     return "quantitative context"
 
 
-def _interpretation_hint(by_type: dict[str, list[str]], rows: list[dict[str, Any]]) -> str:
-    effect = (by_type.get("effect_size") or [""])[0]
-    interval = (by_type.get("confidence_interval") or [""])[0]
-    null = _null_value_for_effect(effect)
+def _interpretation_hint(
+    by_type: dict[str, list[str]],
+    rows: list[dict[str, Any]],
+    *,
+    primary_tuples: list[dict[str, str]] | None = None,
+) -> str:
+    tuple_row = (primary_tuples or [{}])[0] if primary_tuples else {}
+    effect = str(tuple_row.get("estimate") or (by_type.get("effect_size") or [""])[0])
+    interval = str(tuple_row.get("interval") or (by_type.get("confidence_interval") or [""])[0])
+    label = str(tuple_row.get("label") or tuple_row.get("source_text") or "")
+    null = _null_value_for_effect(" ".join([label, effect]))
     bounds = _interval_bounds(interval)
     if effect and bounds and null is not None:
         if bounds[0] <= null <= bounds[1]:
@@ -224,6 +276,35 @@ def _interpretation_hint(by_type: dict[str, list[str]], rows: list[dict[str, Any
     if by_type.get("exposure_threshold"):
         return "Describes a dose or exposure boundary; use to define scope."
     return "Use as quantitative context, not as a standalone conclusion."
+
+
+def _top_quantity_anchors_from_cards(cards: list[dict[str, Any]], *, limit: int = 12) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        for quantity in _unique(card.get("key_quantities", [])):
+            rows.append(
+                {
+                    "quantity_text": quantity,
+                    "quantity_type": _quantity_type_for_text(quantity),
+                    "source": card.get("source"),
+                    "claim_id": card.get("claim_id"),
+                    "claim": card.get("claim"),
+                    "context_window": card.get("context"),
+                    "relevance_score": card.get("card_score", 0),
+                }
+            )
+            if len(rows) >= limit:
+                return rows
+    return rows
+
+
+def _quantity_type_for_text(quantity: str) -> str:
+    for quantity_type, pattern in QUANTITY_PATTERNS:
+        if re.search(pattern, str(quantity), flags=re.IGNORECASE):
+            return quantity_type
+    return "numeric"
 
 
 def _card_bonus(by_type: dict[str, list[str]]) -> int:
@@ -266,6 +347,14 @@ def _unique(values: Any) -> list[str]:
             seen.add(key)
             kept.append(cleaned)
     return kept
+
+
+def _dedupe(values: Any) -> list[str]:
+    return _unique(values)
+
+
+def _quantity_norm_text(text: str) -> str:
+    return re.sub(r"[^a-z0-9.]+", " ", str(text).lower()).strip()
 
 
 def _dominant_direction(rows: list[dict[str, Any]]) -> str:

@@ -89,6 +89,38 @@ def test_quantity_cards_pair_effect_interval_and_scale() -> None:
     assert not any(str(row["context_window"]).startswith("efore") for row in ledger["quantities"])
 
 
+def test_quantity_cards_use_claim_local_tuple_over_unrelated_excerpt_quantities() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The pooled relative risk of CVD for the highest vs lowest intake was 1.19 (95% CI 1.02-1.38).",
+                "excerpt": (
+                    "The pooled RRs of the risk of CVD, CVD for separated diabetes patients, and diabetes "
+                    "for the highest vs lowest intake were 1.19 (95% CI 1.02-1.38), "
+                    "1.83 (95% CI 1.42-2.37), 1.68 (95% CI 1.41-2.00), respectively. "
+                    "Subgroup analyses showed higher risk in other countries than the USA "
+                    "(RR 2.00, 95% CI 1.14 to 3.51 vs 1.13, 95% CI 0.98 to 1.30)."
+                ),
+                "source_id": "source_a",
+                "role": "conclusion_support",
+            }
+        ],
+        "relations": [],
+    }
+
+    ledger = build_quantity_ledger(candidate_map, {"source_a": "Source A"}, question="Should intake affect CVD risk?")
+    card = ledger["evidence_cards"][0]
+
+    assert "1.19" in card["key_quantities"]
+    assert "95% CI 1.02-1.38" in card["key_quantities"]
+    assert "RR 2.00" not in card["key_quantities"]
+    assert "95% CI 1.42-2.37" not in card["key_quantities"]
+    assert any(row["estimate"] == "1.19" and row["interval"] == "95% CI 1.02-1.38" for row in card["quantity_tuples"])
+    top_anchor_text = " ".join(str(row["quantity_text"]) for row in ledger["top_quantitative_anchors"])
+    assert "95% CI 1.42-2.37" not in top_anchor_text
+
+
 def test_top_quantity_anchors_preserve_rank_with_claim_diversity() -> None:
     rows = [
         {
