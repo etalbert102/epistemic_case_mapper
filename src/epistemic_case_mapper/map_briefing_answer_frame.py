@@ -46,12 +46,35 @@ def normalize_answer_frame(
     *,
     canonical_decision_spine: dict[str, Any],
     argument_model: dict[str, Any],
+    question: str = "",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     default = _dict(canonical_decision_spine.get("default_answer"))
     proposed = argument_model.get("proposed_answer")
     raw_current = proposed.get("current_read") or proposed.get("classification") if isinstance(proposed, dict) else proposed
-    raw_current = raw_current or default.get("claim") or ""
+    default_claim = default.get("claim") or ""
+    raw_current = raw_current or default_claim or _grounded_answer_frame_fallback(
+        canonical_decision_spine=canonical_decision_spine,
+        argument_model=argument_model,
+        question=question,
+    )
     normalized, status = _clean_structured_text(raw_current)
+    default_normalized, _default_status = _clean_structured_text(default_claim)
+    if (
+        is_weak_answer_frame(normalized, question=question)
+        and default_normalized
+        and not is_weak_answer_frame(default_normalized, question=question)
+    ):
+        normalized = default_normalized
+        status = f"{status}_used_canonical_default"
+    if is_weak_answer_frame(normalized, question=question):
+        fallback = _grounded_answer_frame_fallback(
+            canonical_decision_spine=canonical_decision_spine,
+            argument_model=argument_model,
+            question=question,
+        )
+        if fallback and fallback != normalized:
+            normalized = fallback
+            status = f"{status}_grounded_fallback"
     frame = _drop_empty(
         {
             "default_answer": _short_text(normalized, 420),
@@ -68,6 +91,52 @@ def normalize_answer_frame(
         "normalized_default_answer": frame.get("default_answer", ""),
         "changed": str(raw_current or "").strip() != frame.get("default_answer", ""),
     }
+
+
+def is_weak_answer_frame(text: str, *, question: str = "") -> bool:
+    lowered = " ".join(str(text or "").lower().split())
+    if not lowered:
+        return True
+    if lowered in {"unclear", "mixed", "uncertain", "insufficient evidence"}:
+        return True
+    if _looks_like_structure(lowered):
+        return True
+    weak_phrases = (
+        "neutral or low-concern default under the stated conditions",
+        "neutral or low concern default under the stated conditions",
+        "default answer under stated conditions",
+        "bounded answer frame",
+        "current answer frame",
+        "the source packet supports a bounded",
+        "the current map supports a",
+        "current answer is bounded by the source-backed finding",
+        "bounded answer to the decision question",
+        "source-backed support for the decision question",
+        "does not yet contain a clean source-backed answer",
+        "the available evidence supports the default answer",
+        "evidence supports the default answer",
+    )
+    if any(phrase in lowered for phrase in weak_phrases):
+        return True
+    artifact_terms = (
+        "answer frame",
+        "default answer",
+        "current answer",
+        "source packet",
+        "evidence packet",
+        "decision question",
+        "stated conditions",
+        "available evidence",
+    )
+    artifact_count = sum(1 for term in artifact_terms if term in lowered)
+    if artifact_count >= 2 and len(lowered.split()) <= 28:
+        return True
+    question_terms = _content_terms(question)
+    if question_terms and len(lowered.split()) <= 18:
+        overlap = set(_content_terms(lowered)) & set(question_terms)
+        if not overlap and any(term in lowered for term in ("evidence", "default", "current", "answer", "frame")):
+            return True
+    return False
 
 
 def _default_case_read(
@@ -138,6 +207,38 @@ def _classification(proposed: Any, raw_current: Any) -> str:
     return str(parsed.get("classification") or "").strip() if parsed else ""
 
 
+def _grounded_answer_frame_fallback(
+    *,
+    canonical_decision_spine: dict[str, Any],
+    argument_model: dict[str, Any],
+    question: str,
+) -> str:
+    support = _first_statement(
+        _dicts(argument_model.get("strongest_support"))
+        + _dicts(argument_model.get("quantitative_anchors"))
+        + _dicts(canonical_decision_spine.get("strongest_support"))
+    )
+    counter = _first_statement(
+        _dicts(argument_model.get("strongest_counterarguments"))
+        + _dicts(canonical_decision_spine.get("strongest_counterevidence"))
+    )
+    if support:
+        return _short_text(f"The packet supports only a bounded answer to the decision question, anchored by this source-backed finding: {support}", 520)
+    if counter:
+        return _short_text(f"The packet does not support a clean default answer; the most decision-relevant counterweight is: {counter}", 520)
+    if question:
+        return f"The packet does not yet contain a clean source-backed answer to: {question}"
+    return "The packet does not yet contain a clean source-backed answer."
+
+
+def _first_statement(rows: list[dict[str, Any]]) -> str:
+    for row in rows:
+        text = str(row.get("claim") or row.get("statement") or row.get("proposition") or "").strip()
+        if text and not is_weak_answer_frame(text):
+            return _sentence(text)
+    return ""
+
+
 def _parse_dict_like(text: str) -> dict[str, Any]:
     stripped = text.strip()
     if not stripped.startswith("{"):
@@ -156,6 +257,49 @@ def _regex_field(text: str, field: str) -> str:
 
 def _looks_like_structure(text: str) -> bool:
     return text.strip().startswith("{") or any(token in text for token in ("'classification'", '"classification"', "'current_read'", '"current_read"'))
+
+
+def _content_terms(text: str) -> list[str]:
+    generic = {
+        "about",
+        "advice",
+        "answer",
+        "available",
+        "because",
+        "bounded",
+        "clean",
+        "conditions",
+        "current",
+        "decision",
+        "default",
+        "evidence",
+        "frame",
+        "generally",
+        "meaningfully",
+        "question",
+        "source",
+        "stated",
+        "supports",
+        "treated",
+        "under",
+        "with",
+    }
+    terms: list[str] = []
+    for term in re.findall(r"[a-z][a-z0-9\-]{3,}", str(text).lower()):
+        if term not in generic and term not in terms:
+            terms.append(term)
+    return terms
+
+
+def _dicts(value: Any) -> list[dict[str, Any]]:
+    return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+
+def _sentence(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(text)).strip()
+    if not cleaned:
+        return ""
+    return cleaned if cleaned.endswith((".", "?", "!")) else cleaned + "."
 
 
 def _dict(value: Any) -> dict[str, Any]:

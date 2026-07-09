@@ -339,7 +339,8 @@ def test_spine_does_not_use_title_like_claim_as_default_answer_carrier() -> None
 
     assert "title_card" not in spine["default_answer"]["candidate_card_ids"]
     assert spine["default_answer"]["candidate_card_ids"][0] == "substantive_card"
-    assert "neutral or low concern" in spine["default_answer"]["claim"]
+    assert "not associated with higher adverse-event risk" in spine["default_answer"]["claim"]
+    assert "neutral or low concern" not in spine["default_answer"]["claim"].lower()
     assert all("Cardiovascular Harm From Intervention" not in row["claim"] for row in spine["strongest_support"])
     assert spine["strongest_support"][0]["candidate_card_ids"] == ["substantive_card"]
 

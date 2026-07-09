@@ -56,7 +56,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     bundles = _trimmed_bundles(candidate_pool)
     retain_ledger = _must_retain_ledger(scaffold, bundles)
     section_views = _section_views(scaffold, bundles, retain_ledger)
-    answer_frame, answer_frame_report = _answer_frame(scaffold)
+    answer_frame, answer_frame_report = _answer_frame(scaffold, question=question)
     packet = {
         "schema_id": "decision_briefing_packet_v1",
         "decision_question": question or str(scaffold.get("question", "")),
@@ -519,10 +519,11 @@ def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[st
     }
 
 
-def _answer_frame(scaffold: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+def _answer_frame(scaffold: dict[str, Any], *, question: str) -> tuple[dict[str, Any], dict[str, Any]]:
     return normalize_answer_frame(
         canonical_decision_spine=_dict(scaffold.get("canonical_decision_spine")),
         argument_model=_dict(scaffold.get("argument_model")),
+        question=question or str(scaffold.get("question", "")),
     )
 
 

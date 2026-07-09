@@ -4,6 +4,8 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
+
 
 def normalized_critique_issues(critique: dict[str, Any], packet: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     deterministic = deterministic_packet_quality_issues(packet)
@@ -243,6 +245,16 @@ def _deterministic_answer_frame_issues(packet: dict[str, Any]) -> list[dict[str,
                     "critique": "Answer-frame field appears to be a truncated or stringified structure rather than clean decision-ready text.",
                     "risk": value[:180],
                     "recommended_action": "Normalize the answer frame into plain text before synthesis.",
+                    "source": "deterministic_answer_frame_scan",
+                }
+            )
+        elif component == "default_answer" and is_weak_answer_frame(value, question=str(packet.get("decision_question") or "")):
+            issues.append(
+                {
+                    "component": component,
+                    "critique": "Answer-frame field is too generic or artifact-like to serve as the packet's decision headline.",
+                    "risk": value[:180],
+                    "recommended_action": "Use the evidence-backed spine fields to write a direct answer, or expose the answer as unresolved when no direct answer is supported.",
                     "source": "deterministic_answer_frame_scan",
                 }
             )

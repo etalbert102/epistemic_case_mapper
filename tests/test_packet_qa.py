@@ -41,6 +41,7 @@ def test_packet_qa_flags_stringified_answer_frame_and_missing_lineage() -> None:
 def test_packet_qa_flags_generic_answer_frame_without_repairing_it() -> None:
     report = build_packet_qa_report(
         {
+            "decision_question": "Should the city adopt option A for flood protection?",
             "answer_frame": {
                 "default_answer": "The available evidence supports the default answer under stated conditions."
             },
@@ -60,6 +61,31 @@ def test_packet_qa_flags_generic_answer_frame_without_repairing_it() -> None:
     assert report["summary"]["answer_frame_clean"] is False
     assert report["summary"]["generic_answer_frame_warning_count"] == 1
     assert "answer_frame_generic_or_artifact_language" in check_ids
+
+
+def test_packet_qa_flags_clean_but_weak_answer_frame() -> None:
+    report = build_packet_qa_report(
+        {
+            "decision_question": (
+                "For generally healthy adults, should eggs be treated as meaningfully harmful, "
+                "neutral, or beneficial in dietary advice?"
+            ),
+            "answer_frame": {
+                "default_answer": "Evidence supports a neutral or low-concern default under the stated conditions."
+            },
+            "evidence_bundles": [
+                {
+                    "bundle_id": "b1",
+                    "claim": "Moderate egg consumption was not associated with incident cardiovascular disease.",
+                    "source_ids": ["s1"],
+                }
+            ],
+        }
+    )
+
+    assert report["status"] == "warning"
+    assert report["summary"]["answer_frame_clean"] is False
+    assert any(check["check_id"] == "answer_frame_generic_or_artifact_language" for check in report["checks"])
 
 
 def test_packet_qa_accepts_concrete_answer_frame() -> None:

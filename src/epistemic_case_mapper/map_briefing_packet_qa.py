@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
+
 
 def build_packet_qa_report(
     decision_packet: dict[str, Any],
@@ -28,7 +30,7 @@ def build_packet_qa_report(
         "blocker_count": blocker_count,
         "checks": checks,
         "summary": {
-            "answer_frame_clean": not any(check["check_id"].startswith("answer_frame_") and check["status"] != "pass" for check in checks),
+            "answer_frame_clean": not any(_is_answer_frame_issue(check) for check in checks),
             "generic_answer_frame_warning_count": sum(1 for check in checks if check["check_id"] == "answer_frame_generic_or_artifact_language"),
             "missing_source_lineage_count": sum(1 for check in checks if check["check_id"] == "missing_source_lineage"),
             "truncated_claim_count": sum(1 for check in checks if check["check_id"] == "truncated_or_broken_claim"),
@@ -37,6 +39,14 @@ def build_packet_qa_report(
             "quantity_blob_warning_count": sum(1 for check in checks if check["check_id"] == "unstructured_quantity_blob"),
         },
     }
+
+
+def _is_answer_frame_issue(check: dict[str, Any]) -> bool:
+    if check.get("status") == "pass":
+        return False
+    check_id = str(check.get("check_id") or "")
+    target = str(check.get("target") or "")
+    return check_id.startswith("answer_frame_") or target.startswith("answer_frame.")
 
 
 def _answer_frame_checks(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -52,7 +62,17 @@ def _answer_frame_checks(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 excerpt=default[:220],
             )
         ]
-    if _looks_like_generic_answer_frame(default):
+    if _is_truncated_or_broken(default):
+        return [
+            _check(
+                "truncated_or_broken_claim",
+                "warning",
+                "answer_frame.default_answer appears truncated or syntactically broken.",
+                target="answer_frame.default_answer",
+                excerpt=default[:220],
+            )
+        ]
+    if _looks_like_generic_answer_frame(default, question=str(packet.get("decision_question") or "")):
         return [
             _check(
                 "answer_frame_generic_or_artifact_language",
@@ -175,9 +195,9 @@ def _looks_like_stringified_structure(text: str) -> bool:
     return stripped.startswith("{") or any(token in stripped for token in ("'classification'", '"classification"', "'current_read'", '"current_read"'))
 
 
-def _looks_like_generic_answer_frame(text: str) -> bool:
+def _looks_like_generic_answer_frame(text: str, *, question: str = "") -> bool:
     lowered = " ".join(text.lower().split())
-    if not lowered:
+    if is_weak_answer_frame(text, question=question):
         return True
     artifact_terms = (
         "default answer",
@@ -188,8 +208,6 @@ def _looks_like_generic_answer_frame(text: str) -> bool:
         "stated conditions",
         "available evidence",
     )
-    if lowered in {"unclear", "mixed", "uncertain", "insufficient evidence"}:
-        return True
     if "default answer" in lowered and any(term in lowered for term in ("supports", "under stated conditions", "available evidence")):
         return True
     artifact_count = sum(1 for term in artifact_terms if term in lowered)
@@ -201,6 +219,8 @@ def _is_truncated_or_broken(text: str) -> bool:
     if not stripped:
         return False
     if stripped.endswith(("(", "[", "{", "approx.", "approx")):
+        return True
+    if stripped.endswith("..."):
         return True
     return stripped.count("(") > stripped.count(")") or stripped.count("[") > stripped.count("]")
 

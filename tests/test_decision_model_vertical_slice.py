@@ -108,6 +108,33 @@ def test_argument_model_preserves_load_bearing_anchors_and_quantities() -> None:
     assert validated.audit["method"] == "deterministic_argument_model_from_briefing_scaffold_v1"
 
 
+def test_argument_model_extracts_current_read_from_bottom_line_dict() -> None:
+    candidate_map = _arbitrary_candidate_map()
+    scaffold = briefing_scaffold(
+        candidate_map,
+        _quality_report(),
+        {"audit": "Permit Office Audit", "survey": "Applicant Survey", "security": "Security Review"},
+        {"items": []},
+        question="Should the city pilot remote permitting for small building projects?",
+    )
+    scaffold["decision_synthesis_model"] = {
+        "bottom_line": {
+            "classification": "conditional",
+            "current_read": "Remote permitting is conditionally favorable when security review and applicant support are maintained.",
+        }
+    }
+
+    model = build_argument_model(
+        candidate_map,
+        _quality_report(),
+        scaffold,
+        question="Should the city pilot remote permitting for small building projects?",
+    )
+
+    assert model["proposed_answer"].startswith("Remote permitting is conditionally favorable")
+    assert "{'classification'" not in model["proposed_answer"]
+
+
 def test_argument_model_bounds_large_traceability_id_lists() -> None:
     candidate_map = {
         "case_id": "many_claims",

@@ -45,3 +45,28 @@ def test_decision_packet_emits_clean_answer_frame_and_report() -> None:
     assert packet["answer_frame"]["classification"] == "conditional"
     assert report["schema_id"] == "answer_frame_normalization_report_v1"
     assert report["changed"] is True
+
+
+def test_answer_frame_replaces_weak_generic_answer_with_grounded_fallback() -> None:
+    frame, report = normalize_answer_frame(
+        canonical_decision_spine={
+            "confidence": "medium",
+            "default_answer": {"claim": "Evidence supports a neutral or low-concern default under the stated conditions."},
+            "strongest_support": [
+                {
+                    "claim": "Moderate egg consumption was not associated with incident cardiovascular disease in the pooled cohort evidence."
+                }
+            ],
+            "strongest_counterevidence": [
+                {"claim": "Some cohort evidence associated higher dietary cholesterol with higher cardiovascular risk."}
+            ],
+        },
+        argument_model={
+            "proposed_answer": "Evidence supports a neutral or low-concern default under the stated conditions."
+        },
+        question="Should eggs be treated as harmful, neutral, or beneficial dietary advice?",
+    )
+
+    assert "neutral or low-concern default under the stated conditions" not in frame["default_answer"]
+    assert "Moderate egg consumption" in frame["default_answer"]
+    assert report["status"].endswith("grounded_fallback")

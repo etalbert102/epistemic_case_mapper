@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
+from epistemic_case_mapper.map_briefing_packet_eligibility import question_content_terms, question_overlap_count
 from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_source_category
 from epistemic_case_mapper.map_briefing_spine_validation import validate_canonical_decision_spine
 
@@ -59,7 +61,7 @@ def _default_answer_field(scaffold: dict[str, Any], question: str, cards: list[d
     bottom_line = synthesis.get("bottom_line", {}) if isinstance(synthesis.get("bottom_line"), dict) else {}
     decision_model = scaffold.get("decision_model", {}) if isinstance(scaffold.get("decision_model"), dict) else {}
     default_answer = decision_model.get("default_answer", {}) if isinstance(decision_model.get("default_answer"), dict) else {}
-    top_cards = _default_answer_cards(cards)
+    top_cards = _default_answer_cards(cards, question=question)
     if not top_cards:
         return {
             "field_id": "default_answer",
@@ -73,11 +75,11 @@ def _default_answer_field(scaffold: dict[str, Any], question: str, cards: list[d
             "limits": ["no_usable_candidate_cards"],
         }
     claim = (
-        _bottom_line_default_claim(bottom_line)
-        or str(default_answer.get("plain_language_instruction", "")).strip()
+        _bottom_line_default_claim(bottom_line, question=question)
         or _default_from_cards(question, top_cards)
+        or str(default_answer.get("plain_language_instruction", "")).strip()
     )
-    if _looks_like_answer_instruction(claim):
+    if _looks_like_answer_instruction(claim) or is_weak_answer_frame(claim, question=question):
         claim = _default_from_cards(question, top_cards)
     return _field_from_cards("default_answer", claim, "default_answer", top_cards)
 
@@ -133,7 +135,7 @@ def _fallback_evidence_carrier_cards(cards: list[dict[str, Any]], role: str) -> 
     ][:2]
 
 
-def _default_answer_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _default_answer_cards(cards: list[dict[str, Any]], *, question: str) -> list[dict[str, Any]]:
     role_preferred = [
         card
         for card in cards
@@ -141,20 +143,45 @@ def _default_answer_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
         and _eligible_load_bearing_card(card)
     ]
     if role_preferred:
-        return role_preferred[:3]
+        return [row[4] for row in sorted(
+            (
+                (
+                    _answer_relevance_score(card),
+                    _question_overlap_score(card, question),
+                    int(card.get("decision_relevance_score", 0) or 0),
+                    str(card.get("candidate_card_id", "")),
+                    card,
+                )
+                for card in role_preferred
+            ),
+            reverse=True,
+        )[:3]]
     scored = [
-        (_answer_relevance_score(card), int(card.get("decision_relevance_score", 0) or 0), str(card.get("candidate_card_id", "")), card)
+        (
+            _answer_relevance_score(card),
+            _question_overlap_score(card, question),
+            int(card.get("decision_relevance_score", 0) or 0),
+            str(card.get("candidate_card_id", "")),
+            card,
+        )
         for card in cards
         if _eligible_load_bearing_card(card)
     ]
-    scored = [row for row in scored if row[0] > 0 or row[1] > 0]
+    scored = [row for row in scored if row[0] > 0 or row[1] > 0 or row[2] > 0]
     if scored:
-        return [row[3] for row in sorted(scored, reverse=True)[:3]]
+        return [row[4] for row in sorted(scored, reverse=True)[:3]]
     return [
         dict(card, spine_fallback_reason="no_clean_load_bearing_default_card")
         for card in cards
         if _minimally_usable_card(card)
     ][:2]
+
+def _question_overlap_score(card: dict[str, Any], question: str) -> int:
+    terms = question_content_terms(question)
+    return max(
+        question_overlap_count(str(card.get("claim", "")), terms),
+        question_overlap_count(str(card.get("source_excerpt", "")), terms),
+    )
 
 
 def _load_bearing_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -166,6 +193,8 @@ def _eligible_load_bearing_card(card: dict[str, Any]) -> bool:
         return False
     claim = str(card.get("claim", "")).strip()
     if _looks_like_title_or_heading(claim):
+        return False
+    if _looks_like_truncated_claim(claim):
         return False
     if _looks_like_methods_only(claim):
         return False
@@ -452,9 +481,9 @@ def _source_anchors(cards: list[dict[str, Any]], scaffold: dict[str, Any]) -> li
     return list(anchors.values())[:20]
 
 
-def _bottom_line_default_claim(bottom_line: dict[str, Any]) -> str:
+def _bottom_line_default_claim(bottom_line: dict[str, Any], *, question: str) -> str:
     current_read = str(bottom_line.get("current_read", "")).strip()
-    if current_read and not _looks_like_answer_instruction(current_read):
+    if current_read and not _looks_like_answer_instruction(current_read) and not is_weak_answer_frame(current_read, question=question):
         return current_read
     classification = str(bottom_line.get("classification", "")).strip()
     why = str(bottom_line.get("why_this_frame", "")).strip()
@@ -463,7 +492,7 @@ def _bottom_line_default_claim(bottom_line: dict[str, Any]) -> str:
         claim = f"The source packet supports a bounded {label} read."
         if why and not _looks_like_answer_instruction(why):
             claim += f" {why}"
-        return claim
+        return "" if is_weak_answer_frame(claim, question=question) else claim
     return ""
 
 
@@ -538,6 +567,11 @@ def _looks_like_source_metadata(text: str) -> bool:
             "publication year:",
         )
     )
+
+
+def _looks_like_truncated_claim(text: str) -> bool:
+    stripped = re.sub(r"\s+", " ", str(text)).strip()
+    return stripped.endswith("...") or stripped.endswith(("although", "because", "while", "whereas", "including"))
 
 
 def _evidence_markers() -> tuple[str, ...]:

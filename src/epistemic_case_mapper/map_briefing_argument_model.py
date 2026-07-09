@@ -8,6 +8,7 @@ from epistemic_case_mapper.map_briefing_text_cleanup import (
     reader_facing_unresolved_family,
     reader_facing_unresolved_slot,
 )
+from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
 from epistemic_case_mapper.model_schemas import ArgumentEvidenceItem, ArgumentModelOutput
 
 
@@ -22,7 +23,7 @@ def build_argument_model(
     claim_lookup = {str(claim.get("claim_id", "")): claim for claim in _claims(candidate_map)}
     relation_lookup = {str(relation.get("relation_id", "")): relation for relation in _relations(candidate_map)}
     decision_model = _dict(scaffold.get("decision_model"))
-    deterministic_answer = _proposed_answer(scaffold, decision_model)
+    deterministic_answer = _proposed_answer(scaffold, decision_model, question=resolved_question)
     model = ArgumentModelOutput(
         decision_question=resolved_question,
         proposed_answer=deterministic_answer,
@@ -48,18 +49,53 @@ def build_argument_model(
     return model.model_dump()
 
 
-def _proposed_answer(scaffold: dict[str, Any], decision_model: dict[str, Any]) -> str:
+def _proposed_answer(scaffold: dict[str, Any], decision_model: dict[str, Any], *, question: str) -> str:
     synthesis = _dict(scaffold.get("decision_synthesis_model"))
     for key in ("bottom_line", "answer", "decision_read"):
-        value = str(synthesis.get(key, "")).strip()
-        if value:
+        value = _answer_text(synthesis.get(key))
+        if value and not is_weak_answer_frame(value, question=question):
             return _first_sentence(value)
     default = _dict(decision_model.get("default_answer"))
     instruction = str(default.get("plain_language_instruction", "")).strip()
-    if instruction and not instruction.lower().startswith(("state ", "do not ", "phrase ")):
+    if instruction and not instruction.lower().startswith(("state ", "do not ", "phrase ")) and not is_weak_answer_frame(instruction, question=question):
         return _first_sentence(instruction)
+    source_backed = _source_backed_proposed_answer(scaffold, question=question)
+    if source_backed:
+        return source_backed
     classification = str(default.get("classification", "mixed_or_context_dependent")).replace("_", " ")
-    return f"The current map supports a {classification} answer frame."
+    return f"The current map does not yet contain a clean source-backed answer; its provisional classification is {classification}."
+
+
+def _answer_text(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("current_read", "primary_answer", "default_read", "claim", "answer"):
+            text = str(value.get(key, "")).strip()
+            if text:
+                return text
+        return ""
+    return str(value or "").strip()
+
+
+def _source_backed_proposed_answer(scaffold: dict[str, Any], *, question: str) -> str:
+    support = _first_evidence_statement(scaffold, "main_support")
+    counter = _first_evidence_statement(scaffold, "conflicting_evidence")
+    if support and counter:
+        return _first_sentence(f"The current map gives only a bounded answer to the decision question: {support} The main counterweight is {counter}")
+    if support:
+        return _first_sentence(f"The current map's strongest source-backed support for the decision question is: {support}")
+    if counter:
+        return _first_sentence(f"The current map does not support a clean default answer; the main counterweight is: {counter}")
+    if question:
+        return f"The current map does not yet contain a clean source-backed answer to: {question}"
+    return ""
+
+
+def _first_evidence_statement(scaffold: dict[str, Any], key: str) -> str:
+    for row in _top_section_rows(scaffold, key):
+        text = str(row.get("proposition") or row.get("claim") or row.get("statement") or "").strip()
+        if text:
+            return text
+    return ""
 
 
 def _confidence(scaffold: dict[str, Any], quality_report: dict[str, Any]) -> str:

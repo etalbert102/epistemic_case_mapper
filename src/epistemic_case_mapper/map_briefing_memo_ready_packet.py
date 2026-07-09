@@ -22,6 +22,7 @@ from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
 from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
 from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
+from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
 
 
 MEMO_READY_ROLES = {
@@ -513,6 +514,8 @@ def _blocking_key(bundle: dict[str, Any]) -> dict[str, str]:
 def _answer_hypotheses(packet: dict[str, Any], clusters: dict[str, Any]) -> list[dict[str, Any]]:
     answer = _dict(packet.get("answer_frame"))
     default = str(answer.get("default_answer") or "the default read is best supported").strip()
+    if _answer_frame_needs_rebuild(default):
+        default = "The default answer is not settled until the source-backed evidence is weighed."
     hypotheses = [
         {"hypothesis_id": "h_default", "kind": "default", "statement": default},
         {"hypothesis_id": "h_counter", "kind": "counter", "statement": "A major counterweight changes or substantially weakens the default read."},
@@ -827,9 +830,7 @@ def _why_this_read(mandatory: list[dict[str, Any]]) -> str:
 
 def _answer_frame_needs_rebuild(default_read: str) -> bool:
     text = str(default_read or "").strip()
-    if not text:
-        return True
-    return text.startswith("{") or "neutral_or_low_concern" in text or "State the default" in text
+    return is_weak_answer_frame(text) or "State the default" in text
 
 
 def _item_supports_default(item: dict[str, Any]) -> bool:
