@@ -13,6 +13,10 @@ from epistemic_case_mapper.map_briefing_packet_sufficiency import (
     build_packet_sufficiency_report,
     packet_quantity_retention,
 )
+from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
+from epistemic_case_mapper.map_briefing_source_bottom_lines import (
+    source_bottom_line_candidates as _source_bottom_line_candidates,
+)
 
 
 SECTION_ORDER = [
@@ -67,31 +71,6 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "decision_briefing_packet": packet,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
-    }
-
-
-def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -> dict[str, Any]:
-    """Return a compact, model-facing view for critique/refinement/writing."""
-
-    bundles = [
-        row
-        for row in packet.get("evidence_bundles", [])
-        if isinstance(row, dict) and not row.get("synthesis_suppressed")
-    ]
-    retain_rows = [
-        row
-        for row in packet.get("must_retain_ledger", [])
-        if isinstance(row, dict) and not row.get("synthesis_suppressed")
-    ]
-    return {
-        "schema_id": "decision_briefing_packet_model_view_v1",
-        "decision_question": packet.get("decision_question"),
-        "answer_frame": packet.get("answer_frame", {}),
-        "must_retain_ledger": retain_rows[:18],
-        "evidence_bundles": bundles[:max_bundles],
-        "section_views": packet.get("section_views", []),
-        "source_trail": packet.get("source_trail", [])[:24],
-        "coverage_report": packet.get("coverage_report", {}),
     }
 
 
@@ -165,86 +144,6 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
     pool.extend(_argument_item_candidates(scaffold, len(pool), question_terms=question_terms))
     pool.extend(_quantity_card_candidates(scaffold, len(pool), question_terms=question_terms))
     return _dedupe_pool(pool)
-
-
-def _source_bottom_line_candidates(scaffold: dict[str, Any], offset: int, *, question_terms: list[str] | None = None) -> list[dict[str, Any]]:
-    report = scaffold.get("source_bottom_line_cards", {}) if isinstance(scaffold.get("source_bottom_line_cards"), dict) else {}
-    rows: list[dict[str, Any]] = []
-    for card in report.get("cards", []) if isinstance(report.get("cards"), list) else []:
-        if not isinstance(card, dict):
-            continue
-        bottom_line = str(card.get("source_bottom_line") or "").strip()
-        source_id = str(card.get("source_id") or "").strip()
-        if not bottom_line or not source_id:
-            continue
-        role = _source_bottom_line_decision_role(card)
-        importance = str(card.get("decision_importance_level") or "").lower()
-        score = {"critical": 10, "high": 9, "medium": 7}.get(importance, 7)
-        rows.append(
-            _drop_empty(
-                {
-                    "pool_id": f"pool_{offset+len(rows)+1:04d}",
-                    "candidate_card_id": str(card.get("source_bottom_line_id") or f"source_bottom_line:{source_id}"),
-                    "claim_ids": _string_list(card.get("claim_ids"))[:8],
-                    "source_ids": [source_id],
-                    "source_labels": _source_labels(scaffold, [source_id], fallback=_string_list(card.get("source_label"))),
-                    "claim": _short_text(bottom_line, 420),
-                    "source_excerpt": _short_text(bottom_line, 520),
-                    "decision_role": role,
-                    "raw_roles": ["source_bottom_line", *_source_bottom_line_role_hints(card)],
-                    "decision_relevance_score": score,
-                    "quality": "source_summary",
-                    "inclusion_recommendation": "main_text",
-                    "why_it_matters": "Source-level bottom line; use to keep the packet faithful to the source's overall contribution.",
-                    "directionality": _directionality_for_role(role),
-                    "source_grounded": True,
-                    "pretrim_kind": "source_bottom_line",
-                    "question_overlap_count": question_overlap_count(bottom_line, question_terms or []),
-                }
-            )
-        )
-    return rows
-
-
-def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
-    text = f"{card.get('source_bottom_line', '')} {card.get('decision_function', '')}".lower()
-    hints: list[str] = []
-    if any(term in text for term in ("not associated", "no association", "neutral", "lower risk", "reduced risk", "benefit")):
-        hints.append("support")
-    if any(term in text for term in ("higher risk", "increased", "harm", "adverse", "mortality", "positive association")):
-        hints.append("counterweight")
-    if any(term in text for term in ("subgroup", "specific", "except", "only", "scope", "population", "context")):
-        hints.append("scope")
-    return hints or ["context"]
-
-
-def _source_bottom_line_decision_role(card: dict[str, Any]) -> str:
-    text = str(card.get("source_bottom_line") or "").lower()
-    support_pos = _first_signal_position(text, ("not associated", "no association", "neutral", "lower risk", "reduced risk", "benefit"))
-    counter_pos = _first_signal_position(text, ("higher risk", "increased", "harm", "adverse", "mortality", "positive association"))
-    scope_pos = _first_signal_position(text, ("though", "however", "except", "specific", "subgroup", "only", "scope", "population", "context"))
-    if support_pos >= 0 and (counter_pos < 0 or support_pos < counter_pos):
-        return "strongest_support"
-    if counter_pos >= 0 and support_pos < 0:
-        return "counterweight"
-    if support_pos >= 0 and counter_pos >= 0 and scope_pos >= 0:
-        return "scope_boundary"
-    if scope_pos >= 0:
-        return "scope_boundary"
-    return _decision_role(
-        {
-            "role": "source_bottom_line",
-            "evidence_roles": _source_bottom_line_role_hints(card),
-            "inclusion_reason": text,
-            "scope_tags": [],
-        },
-        quantity_values=[],
-    )
-
-
-def _first_signal_position(text: str, signals: tuple[str, ...]) -> int:
-    positions = [text.find(signal) for signal in signals if signal in text]
-    return min(positions) if positions else -1
 
 
 def _source_cards_by_claim(scaffold: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:

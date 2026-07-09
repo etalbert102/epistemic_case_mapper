@@ -48,6 +48,7 @@ from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger,
 from epistemic_case_mapper.map_briefing_relation_value import build_relation_value_report
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
+from epistemic_case_mapper.map_briefing_source_bottom_lines import build_source_bottom_line_cards
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_family, reader_facing_unresolved_slot
 ROLE_PRIORITY = {
@@ -282,7 +283,7 @@ def _attach_decision_briefing_packet(
 ) -> None:
     from epistemic_case_mapper.map_briefing_readiness import build_packet_quality_gate_report
 
-    scaffold["source_bottom_line_cards"] = _source_bottom_line_cards(prioritized_map, scaffold)
+    scaffold["source_bottom_line_cards"] = build_source_bottom_line_cards(prioritized_map, scaffold)
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
     scaffold.update(
         run_packet_critique_and_refinement(
@@ -309,39 +310,6 @@ def _attach_decision_briefing_packet(
             ],
         }
         scaffold.update(build_quality_synthesis_packet_bundle(packet))
-
-
-def _source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
-    source_lookup = scaffold.get("source_display_names", {}) if isinstance(scaffold.get("source_display_names"), dict) else {}
-    rows: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
-    for claim in prioritized_map.get("claims", []) if isinstance(prioritized_map.get("claims"), list) else []:
-        if not isinstance(claim, dict):
-            continue
-        bottom_line = str(claim.get("source_bottom_line") or "").strip()
-        source_id = str(claim.get("source_id") or "").strip()
-        if not bottom_line or not source_id:
-            continue
-        key = (source_id, bottom_line)
-        if key in seen:
-            continue
-        seen.add(key)
-        rows.append(
-            {
-                "source_bottom_line_id": f"sbl{len(rows)+1:04d}",
-                "source_id": source_id,
-                "source_label": str(source_lookup.get(source_id) or source_id),
-                "claim_ids": [str(claim.get("claim_id"))] if claim.get("claim_id") else [],
-                "source_bottom_line": bottom_line,
-                "decision_importance_level": str(claim.get("decision_importance_level") or ""),
-                "decision_function": str(claim.get("decision_function") or ""),
-            }
-        )
-    return {
-        "schema_id": "source_bottom_line_cards_v1",
-        "card_count": len(rows),
-        "cards": rows,
-    }
 
 
 def _attach_model_context_audit(

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
-import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -17,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
     topic_key as _topic_key,
 )
+from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_binding_report
 
 
 MEMO_READY_ROLES = {
@@ -185,55 +185,6 @@ def build_diagnosticity_matrix(packet: dict[str, Any], clusters: dict[str, Any])
         "high_diagnosticity_cluster_ids": [
             str(row["cluster_id"]) for row in rows if row.get("high_diagnosticity")
         ],
-    }
-
-
-def build_quantity_binding_report(packet: dict[str, Any], clusters: dict[str, Any]) -> dict[str, Any]:
-    bindings = []
-    unbound = []
-    unsafe_pairings = []
-    for cluster in _clusters(clusters):
-        quantities = _string_list(cluster.get("quantity_values"))
-        if not quantities:
-            continue
-        if not cluster.get("representative_claim") or not cluster.get("source_labels"):
-            unbound.append(
-                {
-                    "cluster_id": cluster.get("cluster_id"),
-                    "quantity_values": quantities,
-                    "reason": "missing_claim_or_source_label",
-                }
-            )
-            continue
-        parsed = [_quantity_object(quantity, cluster) for quantity in quantities]
-        quantity_tuples = _quantity_tuples(cluster, quantities)
-        cluster_unsafe_pairings = _unsafe_quantity_pairings(cluster, parsed, quantity_tuples)
-        unsafe_pairings.extend(cluster_unsafe_pairings)
-        bindings.append(
-            {
-                "cluster_id": cluster.get("cluster_id"),
-                "bundle_ids": _string_list(cluster.get("bundle_ids")),
-                "claim_ids": _string_list(cluster.get("claim_ids")),
-                "source_ids": _string_list(cluster.get("source_ids")),
-                "source_labels": _string_list(cluster.get("source_labels")),
-                "reader_claim": cluster.get("representative_claim"),
-                "quantities": parsed,
-                "quantity_tuples": quantity_tuples,
-                "unsafe_quantity_pairings": cluster_unsafe_pairings,
-                "binding_confidence": "high" if parsed else "low",
-            }
-        )
-    total = len(bindings) + len(unbound)
-    return {
-        "schema_id": "quantity_binding_report_v1",
-        "method": "bind_bundle_quantities_to_claim_source_and_interpretation",
-        "binding_count": len(bindings),
-        "unbound_quantity_group_count": len(unbound),
-        "safe_binding_rate": round(len(bindings) / total, 3) if total else 1.0,
-        "bindings": bindings,
-        "unbound_quantities": unbound,
-        "unsafe_quantity_pairings": unsafe_pairings,
-        "unsafe_quantity_pairing_count": len(unsafe_pairings),
     }
 
 
@@ -576,170 +527,6 @@ def _diagnosticity_score(role: str, cluster: dict[str, Any], stance_by_hypothesi
     if cluster.get("quantity_values"):
         score += 1
     return max(0, min(10, score))
-
-
-def _quantity_object(quantity: str, cluster: dict[str, Any]) -> dict[str, str]:
-    quantity = str(quantity).strip()
-    obj = {
-        "value": quantity,
-        "quantity_type": _quantity_type([quantity]),
-        "direction": _quantity_direction(quantity, str(cluster.get("representative_claim") or "")),
-        "interpretation": _quantity_interpretation(quantity, cluster),
-    }
-    tuple_row = _tuple_for_quantity(quantity, _quantity_tuples(cluster, _string_list(cluster.get("quantity_values"))))
-    if tuple_row:
-        obj["tuple_id"] = str(tuple_row.get("tuple_id") or "")
-        obj["tuple_label"] = str(tuple_row.get("label") or "")
-    elif _is_effect_or_interval(quantity):
-        obj["binding_warning"] = "not_locally_paired_in_source_excerpt"
-        obj["interpretation"] = "source quantity; do not pair with another estimate or interval unless a local tuple says to"
-    return obj
-
-
-def _quantity_interpretation(quantity: str, cluster: dict[str, Any]) -> str:
-    claim = str(cluster.get("representative_claim") or "")
-    role = _memo_ready_role(str(cluster.get("source_decision_role") or ""))
-    if "ci" in quantity.lower() or "confidence interval" in quantity.lower():
-        return "uncertainty interval for the associated estimate"
-    if role == "strongest_counterweight":
-        return "quantifies evidence that weakens or qualifies the default read"
-    if role == "scope_boundary":
-        return "quantifies a boundary or applicability condition"
-    if role == "quantitative_anchor":
-        return "load-bearing numerical anchor for the decision"
-    if any(term in claim.lower() for term in ("reduced", "lower", "decreased")):
-        return "quantifies a lower or reduced outcome in the source claim"
-    if any(term in claim.lower() for term in ("increased", "higher", "greater")):
-        return "quantifies a higher or increased outcome in the source claim"
-    return "quantifies the associated source-backed claim"
-
-
-def _quantity_tuples(cluster: dict[str, Any], quantities: list[str]) -> list[dict[str, str]]:
-    context = _quantity_context(cluster)
-    if not context:
-        return []
-    rows: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    patterns = [
-        re.compile(
-            r"(?P<label>.{0,140}?)(?P<estimate>\b(?:adjusted\s+)?(?:pooled\s+)?(?:hazard ratio|relative risk|HR|RR|OR)\s*(?:=|,)?\s*\d+(?:\.\d+)?)\s*(?:\(|,)?\s*(?P<interval>95\s*%?\s*(?:confidence interval|CI)[\s,:]*(?:\[)?[−-]?\d+(?:\.\d+)?\s*(?:to|[-–])\s*[−-]?\d+(?:\.\d+)?)",
-            re.IGNORECASE,
-        ),
-        re.compile(
-            r"(?P<label>.{0,140}?)(?P<estimate>\b\d+(?:\.\d+)?)\s*\(\s*(?P<interval>95\s*%?\s*(?:confidence interval|CI)[\s,:]*[−-]?\d+(?:\.\d+)?\s*(?:to|[-–])\s*[−-]?\d+(?:\.\d+)?)\s*\)",
-            re.IGNORECASE,
-        ),
-    ]
-    for pattern in patterns:
-        for match in pattern.finditer(context):
-            estimate = _clean_quantity(match.group("estimate"))
-            interval = _clean_quantity(match.group("interval"))
-            if not estimate or not interval:
-                continue
-            key = (_norm(estimate), _norm(interval))
-            if key in seen:
-                continue
-            seen.add(key)
-            label = _quantity_tuple_label(match.group("label"))
-            rows.append(
-                {
-                    "tuple_id": f"qt{len(rows)+1:03d}",
-                    "label": label or "source-local estimate",
-                    "estimate": estimate,
-                    "interval": interval,
-                    "source_text": _short_text(match.group(0), 280),
-                    "binding_rule": "estimate_and_interval_adjacent_in_source_excerpt",
-                }
-            )
-    if not rows:
-        return []
-    requested = {_norm(quantity) for quantity in quantities}
-    if not requested:
-        return rows[:12]
-    matching = [
-        row
-        for row in rows
-        if _norm(row["estimate"]) in requested or _norm(row["interval"]) in requested
-    ]
-    return (matching or rows)[:12]
-
-
-def _quantity_context(cluster: dict[str, Any]) -> str:
-    return " ".join(
-        text
-        for text in (
-            str(cluster.get("source_excerpt") or ""),
-            str(cluster.get("representative_claim") or ""),
-        )
-        if text
-    )
-
-
-def _quantity_tuple_label(label: str) -> str:
-    cleaned = re.sub(r"\s+", " ", str(label or "")).strip(" ;,.:")
-    if not cleaned:
-        return ""
-    fragments = re.split(r"(?:\.|;|\brespectively\b|\bwere\b|\bwas\b)", cleaned)
-    candidate = fragments[-1].strip(" ;,.:") if fragments else cleaned
-    return _short_text(candidate or cleaned, 120)
-
-
-def _clean_quantity(value: str) -> str:
-    cleaned = re.sub(r"\s+", " ", str(value or "")).strip(" ,.;()[]")
-    cleaned = cleaned.replace("confidence interval", "CI")
-    cleaned = re.sub(r"95\s*%?\s*CI", "95% CI", cleaned, flags=re.IGNORECASE)
-    cleaned = cleaned.replace("−", "-").replace("–", "-")
-    return cleaned
-
-
-def _tuple_for_quantity(quantity: str, tuples: list[dict[str, str]]) -> dict[str, str]:
-    q = _norm(_clean_quantity(quantity))
-    for row in tuples:
-        if q and q in {_norm(row.get("estimate", "")), _norm(row.get("interval", ""))}:
-            return row
-    return {}
-
-
-def _unsafe_quantity_pairings(
-    cluster: dict[str, Any],
-    quantities: list[dict[str, str]],
-    quantity_tuples: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    paired = {
-        _norm(value)
-        for row in quantity_tuples
-        for value in (row.get("estimate"), row.get("interval"))
-        if value
-    }
-    warnings = []
-    for quantity in quantities:
-        value = str(quantity.get("value") or "")
-        if not _is_effect_or_interval(value):
-            continue
-        if _norm(value) in paired:
-            continue
-        warnings.append(
-            {
-                "cluster_id": cluster.get("cluster_id"),
-                "quantity": value,
-                "warning": "quantity_not_locally_paired_in_source_excerpt",
-                "instruction": "Do not combine this quantity with another estimate or interval in prose unless the source-local tuple is explicit.",
-            }
-        )
-    if len(quantity_tuples) >= 2 and any(_is_effect_or_interval(str(row.get("value") or "")) for row in quantities):
-        warnings.append(
-            {
-                "cluster_id": cluster.get("cluster_id"),
-                "warning": "multiple_source_local_quantity_tuples",
-                "instruction": "Use tuple labels or describe the result as multiple reported estimates rather than selecting an arbitrary estimate/interval pair.",
-            }
-        )
-    return warnings[:8]
-
-
-def _is_effect_or_interval(quantity: str) -> bool:
-    text = str(quantity or "").lower()
-    return bool(re.search(r"\b(hr|rr|or)\b|hazard ratio|relative risk|confidence interval|\bci\b", text))
 
 
 def _memo_ready_item(
