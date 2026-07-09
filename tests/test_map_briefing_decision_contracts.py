@@ -325,6 +325,7 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["final_brief_evaluation_path"].endswith("final_brief_evaluation.json")
     assert summary["paths"]["briefing_validation_report"].endswith("briefing_validation_report.json")
     assert summary["paths"]["gap_diagnosis"].endswith("telemetry/gap_diagnosis.json")
+    assert summary["paths"]["direct_source_synthesis_comparison"].endswith("telemetry/direct_source_synthesis_comparison.json")
     assert sufficiency["schema_id"] == "map_sufficiency_report_v1"
     assert validation["schema_id"] == "briefing_validation_report_v1"
     assert summary["briefing_validation_status"] == validation["status"]

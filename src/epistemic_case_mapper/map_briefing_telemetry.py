@@ -7,6 +7,9 @@ from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.decision_argument_artifacts import evaluate_traceability_against_memo
+from epistemic_case_mapper.map_briefing_direct_synthesis_comparison import (
+    build_direct_source_synthesis_comparison_report,
+)
 from epistemic_case_mapper.main_memo_obligations import (
     build_unified_requirement_ledger,
     build_main_memo_obligation_ledger,
@@ -55,6 +58,7 @@ def write_gap_telemetry(
     obligation_md_path = telemetry_dir / "MAIN_MEMO_OBLIGATION_LEDGER.md"
     unified_path = telemetry_dir / "unified_requirement_ledger.json"
     unified_md_path = telemetry_dir / "UNIFIED_REQUIREMENT_LEDGER.md"
+    direct_comparison_path = telemetry_dir / "direct_source_synthesis_comparison.json"
     write_json(json_path, diagnosis)
     write_markdown(md_path, render_gap_diagnosis_markdown(diagnosis))
     obligation_ledger = diagnosis.get("main_memo_obligation_ledger", {})
@@ -63,6 +67,18 @@ def write_gap_telemetry(
     write_markdown(obligation_md_path, render_main_memo_obligation_ledger_markdown(obligation_ledger))
     write_json(unified_path, unified_ledger)
     write_markdown(unified_md_path, render_unified_requirement_ledger_markdown(unified_ledger))
+    write_json(
+        direct_comparison_path,
+        build_direct_source_synthesis_comparison_report(
+            question=question,
+            packet=scaffold.get("decision_briefing_packet", {})
+            if isinstance(scaffold.get("decision_briefing_packet"), dict)
+            else {},
+            briefing_text=briefing_text,
+            baseline_path=str(baseline_path) if baseline_path else None,
+            baseline_text=baseline_text,
+        ),
+    )
     return {
         "gap_diagnosis": json_path,
         "gap_diagnosis_markdown": md_path,
@@ -70,6 +86,7 @@ def write_gap_telemetry(
         "main_memo_obligation_ledger_markdown": obligation_md_path,
         "unified_requirement_ledger": unified_path,
         "unified_requirement_ledger_markdown": unified_md_path,
+        "direct_source_synthesis_comparison": direct_comparison_path,
     }
 
 
