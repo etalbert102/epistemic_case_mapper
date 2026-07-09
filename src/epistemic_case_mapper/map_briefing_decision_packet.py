@@ -22,7 +22,12 @@ from epistemic_case_mapper.map_briefing_decision_problem import (
     build_decision_problem_report,
 )
 from epistemic_case_mapper.map_briefing_decision_obligations import build_decision_obligation_graph
+from epistemic_case_mapper.map_briefing_decision_slots import build_decision_slot_inventory
 from epistemic_case_mapper.map_briefing_evidence_answer_matrix import build_evidence_answer_matrix
+from epistemic_case_mapper.map_briefing_packet_budget import (
+    build_packet_budget_allocation_report,
+    build_packet_compression_report,
+)
 from epistemic_case_mapper.map_briefing_source_evidence_graph import build_source_evidence_graph
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
@@ -70,6 +75,19 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         decision_obligation_graph=decision_obligations,
         source_evidence_graph=source_evidence_graph,
     )
+    decision_slots = build_decision_slot_inventory(
+        decision_obligation_graph=decision_obligations,
+        evidence_answer_matrix=evidence_answer_matrix,
+    )
+    budget_report = build_packet_budget_allocation_report(
+        candidate_answer_set=candidate_answers,
+        decision_slot_inventory=decision_slots,
+        evidence_answer_matrix=evidence_answer_matrix,
+    )
+    compression_report = build_packet_compression_report(
+        decision_slot_inventory=decision_slots,
+        evidence_answer_matrix=evidence_answer_matrix,
+    )
     packet = {
         "schema_id": "decision_briefing_packet_v1",
         "decision_question": question or str(scaffold.get("question", "")),
@@ -79,6 +97,9 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "source_evidence_graph": source_evidence_graph,
         "decision_obligation_graph": decision_obligations,
         "evidence_answer_matrix": evidence_answer_matrix,
+        "decision_slots": decision_slots,
+        "packet_budget_allocation_report": budget_report,
+        "packet_compression_report": compression_report,
         "must_retain_ledger": retain_ledger,
         "evidence_bundles": bundles,
         "section_views": section_views,
@@ -95,6 +116,9 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "source_evidence_graph": source_evidence_graph,
         "decision_obligation_graph": decision_obligations,
         "evidence_answer_matrix": evidence_answer_matrix,
+        "decision_slots": decision_slots,
+        "packet_budget_allocation_report": budget_report,
+        "packet_compression_report": compression_report,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
