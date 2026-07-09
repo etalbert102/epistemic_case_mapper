@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from epistemic_case_mapper.map_briefing_packet_sufficiency import packet_quantity_retention
+from epistemic_case_mapper.map_briefing_packet_sufficiency import build_quantity_obligation_ledger
 
 
 def build_packet_coverage_report(
@@ -27,6 +27,7 @@ def build_packet_coverage_report(
         row for row in source_bottom_line_candidates if str(row.get("candidate_card_id")) not in retained_ids
     ]
     low_fit_primary = [row for row in bundles if _low_question_fit_primary_bundle(row)]
+    quantity_ledger = build_quantity_obligation_ledger({"evidence_bundles": bundles, "must_retain_ledger": retain_ledger}, candidate_pool)
     return {
         "candidate_pool_count": len(candidate_pool),
         "evidence_bundle_count": len(bundles),
@@ -38,7 +39,8 @@ def build_packet_coverage_report(
         "source_label_missing_count": sum(1 for row in source_trail if not row.get("source_label")),
         "low_question_fit_primary_bundle_count": len(low_fit_primary),
         "low_question_fit_primary_bundle_ids": [str(row.get("bundle_id")) for row in low_fit_primary[:20]],
-        "quantity_missing_count": len(packet_quantity_retention({"must_retain_ledger": retain_ledger}, candidate_pool)["missing_top_quantities"]),
+        "quantity_missing_count": quantity_ledger["missing_count"],
+        "quantity_obligation_count": quantity_ledger["obligation_count"],
         "warnings": _dedupe(
             [
                 *(["high_priority_omitted_after_trimming"] if high_priority_omitted else []),

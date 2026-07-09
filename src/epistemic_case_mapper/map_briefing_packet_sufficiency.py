@@ -29,6 +29,7 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
     ]
     role_coverage = _role_coverage(candidate_pool, bundles)
     quantity_retention = _quantity_retention(packet, candidate_pool)
+    quantity_obligations = build_quantity_obligation_ledger(packet, candidate_pool)
     source_diversity = _source_diversity(packet, candidate_pool)
     source_bottom_lines = _source_bottom_line_retention(candidate_pool, bundles)
     counterweight = _counterweight_preservation(candidate_pool, bundles)
@@ -57,6 +58,7 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
         "high_priority_omitted_evidence": high_priority_omitted[:30],
         "role_coverage": role_coverage,
         "quantity_retention": quantity_retention,
+        "quantity_obligation_ledger": quantity_obligations,
         "source_diversity": source_diversity,
         "source_bottom_line_retention": source_bottom_lines,
         "counterweight_preservation": counterweight,
@@ -71,6 +73,37 @@ def build_packet_sufficiency_report(packet: dict[str, Any], *, candidate_pool: l
 
 def packet_quantity_retention(packet: dict[str, Any], candidate_pool: list[dict[str, Any]]) -> dict[str, Any]:
     return _quantity_retention(packet, candidate_pool)
+
+
+def build_quantity_obligation_ledger(packet: dict[str, Any], candidate_pool: list[dict[str, Any]]) -> dict[str, Any]:
+    top_quantities = _top_quantity_obligations(candidate_pool)
+    retained_bundle_quantities = {
+        _norm(quantity)
+        for bundle in packet.get("evidence_bundles", [])
+        if isinstance(bundle, dict)
+        for quantity in _string_list(bundle.get("quantity_values"))
+    }
+    retained_terms = _must_retain_terms(packet)
+    obligations = []
+    for row in top_quantities:
+        quantity_norm = _norm(str(row.get("quantity", "")))
+        obligations.append(
+            {
+                **row,
+                "retained_in_evidence_bundles": quantity_norm in retained_bundle_quantities,
+                "retained_in_must_retain": quantity_norm in retained_terms,
+                "status": "retained" if quantity_norm in retained_terms else "missing_from_must_retain",
+            }
+        )
+    missing = [row for row in obligations if row["status"] != "retained"]
+    return {
+        "schema_id": "quantity_obligation_ledger_v1",
+        "obligation_count": len(obligations),
+        "retained_count": len(obligations) - len(missing),
+        "missing_count": len(missing),
+        "obligations": obligations,
+        "missing_quantities": [str(row.get("quantity")) for row in missing],
+    }
 
 
 def _role_coverage(candidate_pool: list[dict[str, Any]], bundles: list[dict[str, Any]]) -> dict[str, Any]:
@@ -88,26 +121,51 @@ def _role_coverage(candidate_pool: list[dict[str, Any]], bundles: list[dict[str,
 
 
 def _quantity_retention(packet: dict[str, Any], candidate_pool: list[dict[str, Any]]) -> dict[str, Any]:
-    retain_terms = {
-        _norm(term)
-        for row in packet.get("must_retain_ledger", [])
-        if isinstance(row, dict)
-        for term in _string_list(row.get("required_terms")) + _string_list(row.get("statement"))
-    }
-    top = []
-    for row in sorted(candidate_pool, key=_candidate_rank):
-        if row.get("decision_role") != "quantitative_anchor":
-            continue
-        for quantity in _string_list(row.get("quantity_values")):
-            if quantity and quantity not in top:
-                top.append(quantity)
-        if len(top) >= 12:
-            break
-    missing = [quantity for quantity in top if _norm(quantity) not in retain_terms]
+    ledger = build_quantity_obligation_ledger(packet, candidate_pool)
+    top = [str(row.get("quantity")) for row in ledger["obligations"]]
+    missing = ledger["missing_quantities"]
     return {
         "top_quantities": top,
         "retained_top_quantities": [quantity for quantity in top if quantity not in missing],
         "missing_top_quantities": missing,
+    }
+
+
+def _top_quantity_obligations(candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in sorted(candidate_pool, key=_candidate_rank):
+        if row.get("decision_role") != "quantitative_anchor":
+            continue
+        for quantity in _string_list(row.get("quantity_values")):
+            quantity_norm = _norm(quantity)
+            if not quantity or quantity_norm in seen:
+                continue
+            seen.add(quantity_norm)
+            rows.append(
+                _drop_empty(
+                    {
+                        "quantity": quantity,
+                        "candidate_card_id": row.get("candidate_card_id"),
+                        "pool_id": row.get("pool_id"),
+                        "claim_ids": _string_list(row.get("claim_ids"))[:8],
+                        "source_ids": _string_list(row.get("source_ids"))[:8],
+                        "source_labels": _string_list(row.get("source_labels"))[:4],
+                        "claim": _short_text(str(row.get("claim", "")), 220),
+                    }
+                )
+            )
+        if len(rows) >= 12:
+            break
+    return rows
+
+
+def _must_retain_terms(packet: dict[str, Any]) -> set[str]:
+    return {
+        _norm(term)
+        for row in packet.get("must_retain_ledger", [])
+        if isinstance(row, dict)
+        for term in _string_list(row.get("required_terms")) + _string_list(row.get("statement"))
     }
 
 
