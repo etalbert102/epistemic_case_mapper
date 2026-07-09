@@ -15,21 +15,12 @@ from epistemic_case_mapper.map_briefing_packet_sufficiency import (
 )
 from epistemic_case_mapper.map_briefing_packet_coverage import build_packet_coverage_report
 from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
+from epistemic_case_mapper.map_briefing_section_views import build_section_views
 from epistemic_case_mapper.map_briefing_answer_frame import normalize_answer_frame
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
 )
 
-
-SECTION_ORDER = [
-    "Decision Brief",
-    "Why This Read",
-    "Evidence Carrying the Conclusion",
-    "Practical Read",
-    "Practical Scope and Exceptions",
-    "Decision Cruxes",
-    "Limits of the Current Map",
-]
 
 ROLE_ORDER = (
     "strongest_support",
@@ -56,7 +47,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     source_trail = _source_trail(scaffold, candidate_pool)
     bundles = _trimmed_bundles(candidate_pool)
     retain_ledger = _must_retain_ledger(scaffold, bundles)
-    section_views = _section_views(scaffold, bundles, retain_ledger)
+    section_views = build_section_views(bundles, retain_ledger)
     answer_frame, answer_frame_report = _answer_frame(scaffold, question=question)
     packet = {
         "schema_id": "decision_briefing_packet_v1",
@@ -420,40 +411,6 @@ def _retain_quantity_group_item(index: int, quantity_group: dict[str, Any]) -> d
     )
 
 
-def _section_views(scaffold: dict[str, Any], bundles: list[dict[str, Any]], retain_ledger: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    bundles_by_id = {str(row.get("bundle_id")): row for row in bundles}
-    by_section: dict[str, dict[str, list[str]]] = {
-        title: {"primary_bundle_ids": [], "contrast_bundle_ids": [], "boundary_bundle_ids": [], "context_bundle_ids": [], "must_retain_item_ids": []}
-        for title in SECTION_ORDER
-    }
-    for bundle in bundles:
-        bundle_id = str(bundle.get("bundle_id"))
-        for section in _string_list(bundle.get("section_targets")) or _default_sections_for_role(str(bundle.get("decision_role", ""))):
-            slot = _section_slot_for_role(str(bundle.get("decision_role", "")))
-            if section not in by_section:
-                by_section[section] = {"primary_bundle_ids": [], "contrast_bundle_ids": [], "boundary_bundle_ids": [], "context_bundle_ids": [], "must_retain_item_ids": []}
-            by_section[section][slot].append(bundle_id)
-    for item in retain_ledger:
-        for section in _string_list(item.get("section_targets")) or ["Evidence Carrying the Conclusion"]:
-            if section not in by_section:
-                by_section[section] = {"primary_bundle_ids": [], "contrast_bundle_ids": [], "boundary_bundle_ids": [], "context_bundle_ids": [], "must_retain_item_ids": []}
-            by_section[section]["must_retain_item_ids"].append(str(item.get("item_id")))
-    views = []
-    for title, rows in by_section.items():
-        view = {
-            "section": title,
-            "section_job": _section_job(title),
-            "primary_bundle_ids": _dedupe(rows["primary_bundle_ids"])[:8],
-            "contrast_bundle_ids": _dedupe(rows["contrast_bundle_ids"])[:5],
-            "boundary_bundle_ids": _dedupe(rows["boundary_bundle_ids"])[:5],
-            "context_bundle_ids": _dedupe(rows["context_bundle_ids"])[:4],
-            "must_retain_item_ids": _dedupe(rows["must_retain_item_ids"])[:8],
-        }
-        if any(view[key] for key in ("primary_bundle_ids", "contrast_bundle_ids", "boundary_bundle_ids", "context_bundle_ids", "must_retain_item_ids")):
-            views.append(view)
-    return views
-
-
 def _source_trail(scaffold: dict[str, Any], candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
     source_lookup = _dict(scaffold.get("source_display_names"))
     source_urls = _dict(scaffold.get("source_urls"))
@@ -712,34 +669,6 @@ def _default_sections_for_role(role: str) -> list[str]:
     if role == "decision_crux":
         return ["Decision Cruxes"]
     return ["Why This Read"]
-
-
-def _section_slot_for_role(role: str) -> str:
-    if role == "counterweight":
-        return "contrast_bundle_ids"
-    if role == "scope_boundary":
-        return "boundary_bundle_ids"
-    if role == "context":
-        return "context_bundle_ids"
-    return "primary_bundle_ids"
-
-
-def _section_job(title: str) -> str:
-    if title == "Decision Brief":
-        return "State the answer, confidence, and central reason."
-    if title == "Why This Read":
-        return "Explain the reasoning path and most important tension."
-    if title == "Evidence Carrying the Conclusion":
-        return "Identify the evidence doing the most work and its quantitative anchors."
-    if title == "Practical Read":
-        return "Translate the answer into decision-relevant practical implications."
-    if title == "Practical Scope and Exceptions":
-        return "Bound the answer and name exceptions or population limits."
-    if title == "Decision Cruxes":
-        return "Name what would change the answer."
-    if title == "Limits of the Current Map":
-        return "Name missing evidence and robustness limits."
-    return "Use packet evidence to advance this section's distinct decision function."
 
 
 def _default_why_it_matters(role: str) -> str:
