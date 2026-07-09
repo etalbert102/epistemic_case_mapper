@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     topic_key as _topic_key,
 )
 from epistemic_case_mapper.map_briefing_quantity_binding import build_quantity_binding_report
+from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 
 
 MEMO_READY_ROLES = {
@@ -313,7 +314,7 @@ def build_memo_ready_packet(
             items.append(item)
     mandatory = [item for item in items if item.get("must_use")]
     context = [item for item in items if not item.get("must_use")]
-    return {
+    memo_ready_packet = {
         "schema_id": "memo_ready_packet_v1",
         "decision_question": str(packet.get("decision_question") or "").strip(),
         "answer_spine": _answer_spine(packet, diagnosticity, mandatory),
@@ -328,6 +329,8 @@ def build_memo_ready_packet(
             "assembly_warnings": assembly_audit.get("warnings", []),
         },
     }
+    memo_ready_packet["decision_synthesis_contract"] = build_memo_ready_decision_synthesis_contract(memo_ready_packet)
+    return memo_ready_packet
 
 
 def build_memo_ready_packet_quality_report(
@@ -388,15 +391,25 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record for this memo.\n\n"
+        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan.\n"
+        "Do not merely summarize or list evidence. Produce a decision read: default stance, why it is supported, strongest counterweight, scope/conditions, and practical implication.\n\n"
         "Rules:\n"
-        "- Answer the decision question directly.\n"
+        "- Answer the decision question directly in the first paragraph.\n"
         "- Preserve source labels and load-bearing quantities from mandatory evidence items.\n"
         "- When quantity_tuples are present, use those tuple labels instead of pairing estimates and intervals yourself.\n"
         "- If a quantity is marked ambiguous or unpaired, describe it without inventing an estimate/interval pair.\n"
         "- Explain what the key quantities mean for the decision; do not dump bare numbers.\n"
-        "- Include the strongest support, strongest counterweight, scope boundary, and decision cruxes when present.\n"
+        "- Explain why the strongest support does or does not outweigh the strongest counterweight.\n"
+        "- Name the conditions, subgroups, contexts, or assumptions that change the answer.\n"
+        "- Include decision cruxes when present and translate uncertainty into a practical implication.\n"
         "- Do not mention packet schemas, item IDs, validation, telemetry, or internal pipeline machinery.\n"
         "- Use natural Markdown and choose headings that fit the decision question.\n\n"
+        "Suggested memo shape when it fits the case:\n"
+        "## Decision Brief\n"
+        "## Why This Is the Best Current Read\n"
+        "## What Could Change the Answer\n"
+        "## Decision-Relevant Evidence\n"
+        "## Sources\n\n"
         "Memo-ready packet:\n"
         f"{json.dumps(memo_ready_packet, indent=2, ensure_ascii=False)}\n"
     )

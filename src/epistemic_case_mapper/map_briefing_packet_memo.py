@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import ast
-import json
 import re
 from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_reader_packet_contract import (
+    build_decision_synthesis_contract,
+    build_reader_facing_packet_synthesis_prompt,
+)
 
 
 def build_packet_memo_plan(packet: dict[str, Any]) -> dict[str, Any]:
@@ -56,7 +59,7 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
     )
     support_roles = {"strongest_support", "quantitative_anchor", "mechanism"}
     limit_roles = {"counterweight", "scope_boundary"}
-    return {
+    reader_packet = {
         "schema_id": "reader_facing_decision_packet_v1",
         "decision_question": str(packet.get("decision_question") or "").strip(),
         "answer": _clean_answer_frame(packet.get("answer_frame", {})),
@@ -69,33 +72,8 @@ def build_reader_facing_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "source_trail": _reader_source_trail(packet),
         "reader_limits": _reader_limits(packet),
     }
-
-
-def build_reader_facing_packet_synthesis_prompt(reader_packet: dict[str, Any]) -> str:
-    return (
-        "You are a senior decision analyst writing for a thoughtful human decision-maker.\n"
-        "Write a polished, decision-ready briefing memo from the reader-facing evidence packet below.\n"
-        "Use the packet as the evidence record, but synthesize across rows into natural prose.\n\n"
-        "Rules:\n"
-        "- Answer the decision question directly.\n"
-        "- Preserve load-bearing numbers, uncertainty, exceptions, and source labels.\n"
-        "- Treat `must_retain_obligations` and evidence cards marked `required_in_memo` as mandatory content unless a packet warning says the evidence is unsafe to use.\n"
-        "- Use `synthesis_warnings` to bound confidence and avoid overclaiming; do not name the warning machinery.\n"
-        "- Every evidence paragraph or bullet must include bracketed source labels copied from the packet's `source` fields.\n"
-        "- Include the exact decision question near the top of the memo.\n"
-        "- Do not add parenthetical examples or named conditions unless the same example or condition appears in an evidence card.\n"
-        "- Do not add facts, sources, populations, causal interpretations, or recommendations beyond the packet.\n"
-        "- Do not mention packet schema, IDs, validation, repair reports, or internal pipeline status.\n"
-        "- Write like an analyst, not like a checklist renderer.\n\n"
-        "Use this memo shape unless the evidence clearly calls for a small adjustment:\n"
-        "## Decision Brief\n"
-        "## What the Evidence Supports\n"
-        "## What Limits the Inference\n"
-        "## Decision Cruxes\n"
-        "## Sources\n\n"
-        "Reader-facing evidence packet:\n"
-        f"{json.dumps(reader_packet, indent=2, ensure_ascii=False)}\n"
-    )
+    reader_packet["decision_synthesis_contract"] = build_decision_synthesis_contract(reader_packet)
+    return reader_packet
 
 
 def render_packet_first_draft(memo_plan: dict[str, Any]) -> str:
