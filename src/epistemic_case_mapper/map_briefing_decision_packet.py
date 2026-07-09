@@ -21,6 +21,8 @@ from epistemic_case_mapper.map_briefing_decision_problem import (
     build_candidate_answer_set,
     build_decision_problem_report,
 )
+from epistemic_case_mapper.map_briefing_decision_obligations import build_decision_obligation_graph
+from epistemic_case_mapper.map_briefing_evidence_answer_matrix import build_evidence_answer_matrix
 from epistemic_case_mapper.map_briefing_source_evidence_graph import build_source_evidence_graph
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
     source_bottom_line_candidates as _source_bottom_line_candidates,
@@ -57,6 +59,17 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     decision_problem = build_decision_problem_report(scaffold, question=question)
     candidate_answers = build_candidate_answer_set(scaffold, question=question)
     source_evidence_graph = build_source_evidence_graph(scaffold)
+    decision_obligations = build_decision_obligation_graph(
+        question=question or str(scaffold.get("question", "")),
+        decision_problem_report=decision_problem,
+        candidate_answer_set=candidate_answers,
+        source_evidence_graph=source_evidence_graph,
+    )
+    evidence_answer_matrix = build_evidence_answer_matrix(
+        candidate_answer_set=candidate_answers,
+        decision_obligation_graph=decision_obligations,
+        source_evidence_graph=source_evidence_graph,
+    )
     packet = {
         "schema_id": "decision_briefing_packet_v1",
         "decision_question": question or str(scaffold.get("question", "")),
@@ -64,6 +77,8 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "decision_problem_report": decision_problem,
         "candidate_answer_set": candidate_answers,
         "source_evidence_graph": source_evidence_graph,
+        "decision_obligation_graph": decision_obligations,
+        "evidence_answer_matrix": evidence_answer_matrix,
         "must_retain_ledger": retain_ledger,
         "evidence_bundles": bundles,
         "section_views": section_views,
@@ -78,6 +93,8 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "decision_problem_report": decision_problem,
         "candidate_answer_set": candidate_answers,
         "source_evidence_graph": source_evidence_graph,
+        "decision_obligation_graph": decision_obligations,
+        "evidence_answer_matrix": evidence_answer_matrix,
         "packet_sufficiency_report": sufficiency,
         "decision_briefing_packet_report": report,
     }
