@@ -87,6 +87,43 @@ def question_content_terms(text: str) -> list[str]:
     return terms
 
 
+def decision_relevance_assessment(text: str, *, question_terms: list[str], decision_role: str = "") -> dict[str, Any]:
+    overlap = question_overlap_count(text, question_terms)
+    role = str(decision_role or "").strip()
+    primary_roles = {"strongest_support", "counterweight", "quantitative_anchor", "decision_crux"}
+    if not question_terms:
+        status = "not_assessed"
+    elif overlap >= min(2, len(question_terms)):
+        status = "direct_question_overlap"
+    elif overlap == 1:
+        status = "partial_question_overlap"
+    else:
+        status = "low_question_overlap"
+    warnings: list[str] = []
+    if status == "low_question_overlap" and role in primary_roles:
+        warnings.append("primary_evidence_low_question_overlap")
+    return {
+        "schema_id": "decision_relevance_assessment_v1",
+        "method": "deterministic_question_term_overlap_report_only",
+        "question_overlap_count": overlap,
+        "question_relevance_status": status,
+        "decision_axis": _decision_axis_for_role(role),
+        "warnings": warnings,
+    }
+
+
+def _decision_axis_for_role(role: str) -> str:
+    return {
+        "strongest_support": "default_answer_support",
+        "counterweight": "counterevidence",
+        "scope_boundary": "scope_boundary",
+        "decision_crux": "answer_changing_uncertainty",
+        "quantitative_anchor": "quantitative_anchor",
+        "mechanism": "mechanism_or_proxy",
+        "context": "context",
+    }.get(role, "unclassified")
+
+
 def _looks_like_table_or_figure_caption(text: str) -> bool:
     stripped = text.strip()
     return bool(re.match(r"^(?:e?table|e?figure|fig\.?|table)\s+\d+[.:]", stripped, flags=re.IGNORECASE))

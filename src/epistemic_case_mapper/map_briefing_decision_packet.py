@@ -5,14 +5,15 @@ from collections import Counter, defaultdict
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_packet_eligibility import (
+    decision_relevance_assessment,
     packet_candidate_eligibility,
     question_content_terms,
     question_overlap_count,
 )
 from epistemic_case_mapper.map_briefing_packet_sufficiency import (
     build_packet_sufficiency_report,
-    packet_quantity_retention,
 )
+from epistemic_case_mapper.map_briefing_packet_coverage import build_packet_coverage_report
 from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_answer_frame import normalize_answer_frame
 from epistemic_case_mapper.map_briefing_source_bottom_lines import (
@@ -65,7 +66,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
         "evidence_bundles": bundles,
         "section_views": section_views,
         "source_trail": source_trail,
-        "coverage_report": _packet_coverage_report(candidate_pool, bundles, retain_ledger, source_trail),
+        "coverage_report": build_packet_coverage_report(candidate_pool, bundles, retain_ledger, source_trail),
     }
     sufficiency = build_packet_sufficiency_report(packet, candidate_pool=candidate_pool)
     report = _packet_builder_report(candidate_pool, packet, sufficiency)
@@ -109,6 +110,7 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
         )
         role = _decision_role(card, quantity_values=quantity_values)
         source_excerpt = _best_source_excerpt(card, source_cards)
+        claim_text = _short_text(str(card.get("claim", "")), 420)
         pool.append(
             _drop_empty(
                 {
@@ -123,7 +125,7 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
                     "claim_ids": claim_ids,
                     "source_ids": source_ids,
                     "source_labels": source_labels,
-                    "claim": _short_text(str(card.get("claim", "")), 420),
+                    "claim": claim_text,
                     "source_excerpt": _short_text(source_excerpt, 520),
                     "decision_role": role,
                     "decision_polarity": str(card.get("decision_polarity") or ""),
@@ -141,6 +143,11 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
                     "source_grounded": bool(source_cards) or str(card.get("anchor_confidence", "")).lower() not in {"", "missing"},
                     "pretrim_kind": "candidate_evidence_card",
                     "question_overlap_count": question_overlap_count(str(card.get("claim", "")), question_terms),
+                    "decision_relevance_assessment": decision_relevance_assessment(
+                        " ".join([claim_text, source_excerpt]),
+                        question_terms=question_terms,
+                        decision_role=role,
+                    ),
                 }
             )
         )
@@ -192,6 +199,7 @@ def _argument_item_candidates(scaffold: dict[str, Any], offset: int, *, question
             if role == "quantitative_anchor" and not quantities:
                 continue
             source_ids = _source_ids_for_argument_item(scaffold, item, source_by_claim=source_by_claim, quantity_by_id=quantity_by_id)
+            statement = _short_text(str(item.get("statement", "")), 420)
             rows.append(
                 _drop_empty(
                     {
@@ -202,7 +210,7 @@ def _argument_item_candidates(scaffold: dict[str, Any], offset: int, *, question
                         "source_labels": _source_labels(scaffold, source_ids, fallback=_string_list(item.get("sources"))),
                         "relation_ids": _string_list(item.get("relation_ids"))[:8],
                         "quantity_ids": quantity_ids,
-                        "claim": _short_text(str(item.get("statement", "")), 420),
+                        "claim": statement,
                         "decision_role": role,
                         "raw_roles": [key],
                         "quantity_values": quantities,
@@ -215,6 +223,11 @@ def _argument_item_candidates(scaffold: dict[str, Any], offset: int, *, question
                         "source_grounded": bool(source_ids or claim_ids),
                         "pretrim_kind": f"argument_model.{key}",
                         "question_overlap_count": question_overlap_count(str(item.get("statement", "")), question_terms or []),
+                        "decision_relevance_assessment": decision_relevance_assessment(
+                            statement,
+                            question_terms=question_terms or [],
+                            decision_role=role,
+                        ),
                     }
                 )
             )
@@ -231,6 +244,8 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int, *, question
         source_ids = _source_ids_for_quantity_row(scaffold, card)
         if not source_ids and _is_relation_rationale_source(card):
             continue
+        claim_text = _short_text(str(card.get("claim", "")), 420)
+        context_text = _short_text(str(card.get("context", "")), 520)
         rows.append(
             _drop_empty(
                 {
@@ -240,8 +255,8 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int, *, question
                     "quantity_ids": [str(card.get("card_id", ""))] if str(card.get("card_id", "")).strip() else [],
                     "source_ids": source_ids,
                     "source_labels": _source_labels(scaffold, source_ids, fallback=_string_list(card.get("source"))),
-                    "claim": _short_text(str(card.get("claim", "")), 420),
-                    "source_excerpt": _short_text(str(card.get("context", "")), 520),
+                    "claim": claim_text,
+                    "source_excerpt": context_text,
                     "decision_role": "quantitative_anchor",
                     "raw_roles": ["quantity_ledger.evidence_cards"],
                     "quantity_values": quantities[:8],
@@ -255,6 +270,11 @@ def _quantity_card_candidates(scaffold: dict[str, Any], offset: int, *, question
                     "question_overlap_count": max(
                         question_overlap_count(str(card.get("claim", "")), question_terms or []),
                         question_overlap_count(str(card.get("context", "")), question_terms or []),
+                    ),
+                    "decision_relevance_assessment": decision_relevance_assessment(
+                        " ".join([claim_text, context_text]),
+                        question_terms=question_terms or [],
+                        decision_role="quantitative_anchor",
                     ),
                 }
             )
@@ -328,6 +348,7 @@ def _bundle_from_candidate(index: int, row: dict[str, Any]) -> dict[str, Any]:
             "pretrim_pool_id": row.get("pool_id"),
             "pretrim_kind": row.get("pretrim_kind"),
             "eligibility": row.get("packet_eligibility"),
+            "decision_relevance_assessment": row.get("decision_relevance_assessment"),
         }
     )
 
@@ -454,48 +475,6 @@ def _source_trail(scaffold: dict[str, Any], candidate_pool: list[dict[str, Any]]
             }
         )
     return rows
-
-
-def _packet_coverage_report(
-    candidate_pool: list[dict[str, Any]],
-    bundles: list[dict[str, Any]],
-    retain_ledger: list[dict[str, Any]],
-    source_trail: list[dict[str, Any]],
-) -> dict[str, Any]:
-    retained_ids = _retained_candidate_ids(bundles)
-    high_priority_omitted = [
-        row
-        for row in candidate_pool
-        if _candidate_priority(row) >= 7
-        and row.get("candidate_card_id")
-        and str(row.get("candidate_card_id")) not in retained_ids
-        and "appendix" not in str(row.get("inclusion_recommendation", "")).lower()
-    ]
-    source_bottom_line_candidates = [
-        row for row in candidate_pool if str(row.get("pretrim_kind")) == "source_bottom_line" and row.get("candidate_card_id")
-    ]
-    omitted_source_bottom_lines = [
-        row for row in source_bottom_line_candidates if str(row.get("candidate_card_id")) not in retained_ids
-    ]
-    return {
-        "candidate_pool_count": len(candidate_pool),
-        "evidence_bundle_count": len(bundles),
-        "must_retain_count": len(retain_ledger),
-        "high_priority_omitted_count": len(high_priority_omitted),
-        "source_bottom_line_candidate_count": len(source_bottom_line_candidates),
-        "source_bottom_line_retained_count": len(source_bottom_line_candidates) - len(omitted_source_bottom_lines),
-        "omitted_source_bottom_line_ids": [str(row.get("candidate_card_id")) for row in omitted_source_bottom_lines[:20]],
-        "source_label_missing_count": sum(1 for row in source_trail if not row.get("source_label")),
-        "quantity_missing_count": len(packet_quantity_retention({"must_retain_ledger": retain_ledger}, candidate_pool)["missing_top_quantities"]),
-        "warnings": _dedupe(
-            [
-                *([ "high_priority_omitted_after_trimming" ] if high_priority_omitted else []),
-                *([ "source_bottom_lines_omitted_after_trimming" ] if omitted_source_bottom_lines else []),
-                *([ "no_must_retain_items" ] if not retain_ledger else []),
-                *([ "no_evidence_bundles" ] if not bundles else []),
-            ]
-        ),
-    }
 
 
 def _packet_builder_report(candidate_pool: list[dict[str, Any]], packet: dict[str, Any], sufficiency: dict[str, Any]) -> dict[str, Any]:
@@ -664,15 +643,6 @@ def _candidate_identity(row: dict[str, Any]) -> str:
         if values:
             return f"{key}:{'|'.join(values)}"
     return _norm(str(row.get("claim", "")))[:120]
-
-
-def _retained_candidate_ids(bundles: list[dict[str, Any]]) -> set[str]:
-    return {
-        card_id
-        for bundle in bundles
-        for card_id in _string_list(bundle.get("candidate_card_ids"))
-        if card_id
-    }
 
 
 def _decision_role(card: dict[str, Any], *, quantity_values: list[str]) -> str:

@@ -164,6 +164,31 @@ def test_packet_qa_flags_role_dominance_weak_crux_and_quantity_blob() -> None:
     assert "unstructured_quantity_blob" in check_ids
 
 
+def test_packet_qa_flags_primary_bundle_with_low_question_fit() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A for flood protection?",
+        "answer_frame": {"default_answer": "Option A is conditionally favorable when maintenance funding is protected."},
+        "evidence_bundles": [
+            {
+                "bundle_id": "b_low_fit",
+                "decision_role": "strongest_support",
+                "claim": "Cancer screening participation increased in unrelated clinic settings.",
+                "source_ids": ["s1"],
+                "decision_relevance_assessment": {
+                    "question_relevance_status": "low_question_overlap",
+                    "question_overlap_count": 0,
+                },
+            }
+        ],
+    }
+
+    report = build_packet_qa_report(packet)
+
+    assert report["status"] == "warning"
+    assert report["summary"]["primary_low_question_fit_warning_count"] == 1
+    assert any(check["check_id"] == "primary_bundle_low_question_fit" for check in report["checks"])
+
+
 def test_packet_qa_flags_truncated_claims() -> None:
     report = build_packet_qa_report(
         {

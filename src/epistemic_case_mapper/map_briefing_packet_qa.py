@@ -37,6 +37,7 @@ def build_packet_qa_report(
             "role_dominance_warning_count": sum(1 for check in checks if check["check_id"] == "unjustified_role_dominance"),
             "weak_crux_warning_count": sum(1 for check in checks if check["check_id"] == "weak_or_topical_crux"),
             "quantity_blob_warning_count": sum(1 for check in checks if check["check_id"] == "unstructured_quantity_blob"),
+            "primary_low_question_fit_warning_count": sum(1 for check in checks if check["check_id"] == "primary_bundle_low_question_fit"),
         },
     }
 
@@ -120,9 +121,31 @@ def _bundle_checks(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     excerpt=claim[:220],
                 )
             )
+        assessment = bundle.get("decision_relevance_assessment") if isinstance(bundle.get("decision_relevance_assessment"), dict) else {}
+        if _primary_low_question_fit(bundle, assessment):
+            checks.append(
+                _check(
+                    "primary_bundle_low_question_fit",
+                    "warning",
+                    "Primary evidence bundle has low lexical overlap with the decision question; review before treating it as answer-bearing.",
+                    target=target,
+                    excerpt=claim[:220],
+                    details={
+                        "decision_role": str(bundle.get("decision_role") or ""),
+                        "question_relevance_status": assessment.get("question_relevance_status", ""),
+                        "question_overlap_count": assessment.get("question_overlap_count", 0),
+                    },
+                )
+            )
     if not checks:
         checks.append(_pass("evidence_bundles_basic_semantics", target="evidence_bundles"))
     return checks
+
+
+def _primary_low_question_fit(bundle: dict[str, Any], assessment: dict[str, Any]) -> bool:
+    if str(bundle.get("decision_role") or "") not in {"strongest_support", "counterweight", "quantitative_anchor", "decision_crux"}:
+        return False
+    return str(assessment.get("question_relevance_status") or "") == "low_question_overlap"
 
 
 def _memo_ready_checks(packet: dict[str, Any]) -> list[dict[str, Any]]:
