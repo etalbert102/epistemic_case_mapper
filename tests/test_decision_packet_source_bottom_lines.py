@@ -35,7 +35,7 @@ def test_packet_promotes_source_bottom_lines_as_first_class_evidence() -> None:
     assert "Source-level bottom line" in source_summary[0]["why_it_matters"]
 
 
-def test_packet_reports_omitted_source_bottom_lines_after_trimming() -> None:
+def test_packet_preserves_all_source_bottom_lines_through_trimming() -> None:
     scaffold = _scaffold()
     for index in range(12):
         source_id = f"sbl_source_{index}"
@@ -48,7 +48,11 @@ def test_packet_reports_omitted_source_bottom_lines_after_trimming() -> None:
                 "source_id": f"sbl_source_{index}",
                 "source_label": f"Source Bottom Line {index}",
                 "claim_ids": [f"sbl_claim_{index}"],
-                "source_bottom_line": f"Option A was not associated with worse outcomes in source {index}.",
+                "source_bottom_line": (
+                    f"Option A was not associated with worse outcomes in source {index}."
+                    if index != 0
+                    else "Table 1 still contains the source-level bottom line and should survive generic eligibility filters."
+                ),
                 "decision_importance_level": "high",
                 "decision_function": "answer_bearing",
             }
@@ -61,10 +65,11 @@ def test_packet_reports_omitted_source_bottom_lines_after_trimming() -> None:
     sufficiency = result["packet_sufficiency_report"]
 
     assert coverage["source_bottom_line_candidate_count"] == 12
-    assert coverage["omitted_source_bottom_line_ids"]
-    assert "source_bottom_lines_omitted_after_trimming" in coverage["warnings"]
-    assert sufficiency["source_bottom_line_retention"]["missing_count"] >= 1
-    assert "source_bottom_lines_missing" in sufficiency["issues"]
+    assert coverage["source_bottom_line_retained_count"] == 12
+    assert coverage["omitted_source_bottom_line_ids"] == []
+    assert "source_bottom_lines_omitted_after_trimming" not in coverage["warnings"]
+    assert sufficiency["source_bottom_line_retention"]["missing_count"] == 0
+    assert "source_bottom_lines_missing" not in sufficiency["issues"]
 
 
 def test_source_bottom_line_cards_read_whole_doc_source_card_shape() -> None:

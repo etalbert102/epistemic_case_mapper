@@ -262,7 +262,7 @@ def _trimmed_bundles(candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any
     by_role: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in candidate_pool:
         eligibility = packet_candidate_eligibility(row)
-        if not eligibility["main_memo_eligible"]:
+        if not eligibility["main_memo_eligible"] and row.get("pretrim_kind") != "source_bottom_line":
             continue
         retained = dict(row)
         retained["packet_eligibility"] = eligibility
@@ -278,14 +278,22 @@ def _trimmed_bundles(candidate_pool: list[dict[str, Any]]) -> list[dict[str, Any
     }
     selected: list[dict[str, Any]] = []
     seen_keys: set[str] = set()
+    for row in sorted((row for rows in by_role.values() for row in rows if row.get("pretrim_kind") == "source_bottom_line"), key=_candidate_rank):
+        key = _candidate_identity(row)
+        if key not in seen_keys:
+            seen_keys.add(key)
+            selected.append(row)
+    source_bottom_line_count = len(selected)
     for role in ROLE_ORDER:
         for row in sorted(by_role.get(role, []), key=_candidate_rank)[: budgets.get(role, 4)]:
+            if row.get("pretrim_kind") == "source_bottom_line":
+                continue
             key = _candidate_identity(row)
             if key in seen_keys:
                 continue
             seen_keys.add(key)
             selected.append(row)
-    selected = sorted(selected, key=_candidate_rank)[:42]
+    selected = selected[:source_bottom_line_count] + sorted(selected[source_bottom_line_count:], key=_candidate_rank)[: max(0, 42 - source_bottom_line_count)]
     return [_bundle_from_candidate(index, row) for index, row in enumerate(selected, start=1)]
 
 
