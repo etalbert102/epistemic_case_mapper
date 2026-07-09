@@ -4,7 +4,6 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     list_value as _list,
-    quantity_direction as _quantity_direction,
     quantity_type as _quantity_type,
     string_list as _string_list,
 )
@@ -70,48 +69,17 @@ def _quantity_object(quantity: str, cluster: dict[str, Any]) -> dict[str, str]:
     obj = {
         "value": quantity,
         "quantity_type": _quantity_type([quantity]),
-        "direction": _quantity_direction(quantity, str(cluster.get("representative_claim") or "")),
-        "interpretation": _quantity_interpretation(quantity, cluster),
+        "interpretation": "source quantity preserved without deterministic semantic interpretation",
     }
     tuple_row = _tuple_for_quantity(quantity, _quantity_tuples(cluster, _string_list(cluster.get("quantity_values"))))
     if tuple_row:
         obj["tuple_id"] = str(tuple_row.get("tuple_id") or "")
         obj["tuple_label"] = str(tuple_row.get("label") or "")
+        obj["interpretation"] = "source-local quantity tuple member"
     elif _is_effect_or_interval(quantity):
         obj["binding_warning"] = "not_locally_paired_in_source_excerpt"
-        obj["interpretation"] = "source quantity; do not pair with another estimate or interval unless a local tuple says to"
+        obj["interpretation"] = "unpaired source quantity; do not infer direction, pairing, or effect meaning"
     return obj
-
-
-def _quantity_interpretation(quantity: str, cluster: dict[str, Any]) -> str:
-    claim = str(cluster.get("representative_claim") or "")
-    role = _memo_ready_role(str(cluster.get("source_decision_role") or ""))
-    if "ci" in quantity.lower() or "confidence interval" in quantity.lower():
-        return "uncertainty interval for the associated estimate"
-    if role == "strongest_counterweight":
-        return "quantifies evidence that weakens or qualifies the default read"
-    if role == "scope_boundary":
-        return "quantifies a boundary or applicability condition"
-    if role == "quantitative_anchor":
-        return "load-bearing numerical anchor for the decision"
-    if any(term in claim.lower() for term in ("reduced", "lower", "decreased")):
-        return "quantifies a lower or reduced outcome in the source claim"
-    if any(term in claim.lower() for term in ("increased", "higher", "greater")):
-        return "quantifies a higher or increased outcome in the source claim"
-    return "quantifies the associated source-backed claim"
-
-
-def _memo_ready_role(role: str) -> str:
-    role = str(role or "").strip()
-    return {
-        "strongest_support": "strongest_support",
-        "counterweight": "strongest_counterweight",
-        "scope_boundary": "scope_boundary",
-        "decision_crux": "decision_crux",
-        "quantitative_anchor": "quantitative_anchor",
-        "mechanism": "mechanism_or_explanation",
-        "context": "context_only",
-    }.get(role, "uncertain_role")
 
 
 def _clusters(clusters: dict[str, Any]) -> list[dict[str, Any]]:

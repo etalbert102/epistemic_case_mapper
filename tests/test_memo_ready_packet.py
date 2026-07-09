@@ -200,6 +200,40 @@ def test_quantity_binding_preserves_source_local_effect_interval_tuples() -> Non
     assert rr_200["interval"] == "95% CI 1.14 to 3.51"
     assert all(not (row["estimate"] == "RR 2.00" and row["interval"] == "95% CI 1.02-1.38") for row in tuples)
     assert result["quantity_binding_report"]["unsafe_quantity_pairing_count"] >= 1
+    assert all("direction" not in quantity for quantity in binding["quantities"])
+
+
+def test_quantity_binding_does_not_interpret_unpaired_quantities_directionally() -> None:
+    packet = {
+        "decision_question": "Should the policy treat the exposure as harmful or neutral?",
+        "answer_frame": {"default_answer": "The default answer is neutral but bounded.", "confidence": "medium"},
+        "source_trail": [{"source_id": "s1", "source_label": "Meta Analysis", "appears_in_packet": True}],
+        "evidence_bundles": [
+            {
+                "bundle_id": "bundle_001",
+                "decision_role": "quantitative_anchor",
+                "claim": "The source reports an exposure-outcome association.",
+                "source_ids": ["s1"],
+                "source_labels": ["Meta Analysis"],
+                "claim_ids": ["c1"],
+                "quantity_values": ["RR 2.00", "95% CI 1.02-1.38"],
+                "source_excerpt": "The source discusses the result elsewhere without a local estimate tuple.",
+                "weight": "high",
+                "source_grounded": True,
+            }
+        ],
+    }
+
+    result = build_quality_synthesis_packet_bundle(packet)
+    binding = result["quantity_binding_report"]["bindings"][0]
+    unpaired = [
+        quantity
+        for quantity in binding["quantities"]
+        if quantity.get("binding_warning") == "not_locally_paired_in_source_excerpt"
+    ]
+    assert unpaired
+    assert all("direction" not in quantity for quantity in unpaired)
+    assert all("do not infer direction" in quantity["interpretation"] for quantity in unpaired)
 
 
 def test_memo_ready_quality_warns_when_default_support_is_missing() -> None:
