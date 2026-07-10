@@ -34,6 +34,6 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
 
     assert "decision_synthesis_contract" in prompt
     assert "Treat these as guidance for what matters" in prompt
-    assert "Do not merely summarize or list evidence" in prompt
+    assert "Produce a decision read: answer, reason, counterweight, scope, uncertainty, and practical implication." in prompt
     assert "## Why This Is the Best Current Read" in prompt
     assert "quantity_tuples" in prompt

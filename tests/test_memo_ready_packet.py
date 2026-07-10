@@ -229,6 +229,53 @@ def test_presentation_normalization_cleans_source_label_underscore_variants() ->
     assert "Deep Research Flood_Sources Outcome Study 2025" not in result["memo"]
 
 
+def test_presentation_normalization_replaces_model_sources_with_cited_sources() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "source_trail": [
+            {"source_id": "s1", "source_label": "Deep Research Flood Sources Outcome Study 2025"},
+            {"source_id": "s2", "source_label": "Deep Research Flood Sources Missed Study 2024"},
+            {"source_id": "s3", "source_label": "Deep Research Flood Sources Uncited Study 2023"},
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Option A reduced flood losses by 25%.",
+                "source_label": "Deep Research Flood Sources Outcome Study 2025",
+                "source_labels": ["Deep Research Flood Sources Outcome Study 2025"],
+                "quantities": [{"value": "25%"}],
+            },
+            {
+                "item_id": "item_002",
+                "must_use": True,
+                "role": "strongest_counterweight",
+                "reader_claim": "Option A had implementation failures.",
+                "source_label": "Deep Research Flood Sources Missed Study 2024",
+                "source_labels": ["Deep Research Flood Sources Missed Study 2024"],
+            },
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "Option A reduced losses by 25% (Deep Research Flood Sources Outcome Study 2025), "
+        "but implementation failures remain relevant (Deep Research Flood Sources Missed Study 2024).\n\n"
+        "## Sources\n\n"
+        "* Outcome Study 2025\n"
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "* Outcome Study 2025" in result["memo"]
+    assert "* Missed Study 2024" in result["memo"]
+    assert "Uncited Study 2023" not in result["memo"]
+    assert result["memo"].count("## Sources") == 1
+    assert result["memo"].index("* Outcome Study 2025") < result["memo"].index("* Missed Study 2024")
+    assert "deterministic_sources" in result["report"]["changes"]
+
+
 def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     built["decision_briefing_packet"]["answer_frame"]["default_answer"] = (

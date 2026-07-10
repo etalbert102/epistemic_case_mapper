@@ -36,7 +36,7 @@ def build_memo_obligation_packet(
         "optional_count": sum(1 for row in obligations if not row.get("required")),
         "obligations": obligations,
         "guidance": [
-            "Use required obligations to preserve decision-relevant reasoning, not to force literal evidence-card prose.",
+            "Use required obligations to preserve decision-relevant reasoning in natural prose.",
             "Use optional obligations only when they improve scope, calibration, or reader auditability.",
             "Keep the full evidence packet available for audit even when the memo compresses low-value detail.",
         ],
@@ -110,7 +110,7 @@ def _obligation_from_warning(index: int, warning: dict[str, Any]) -> dict[str, A
         "prose_instruction": (
             "Incorporate if it changes the decision read; otherwise use it as a limitation."
             if required
-            else "Do not force this into the memo unless it improves the decision read."
+            else "Use this only when it improves the decision read."
         ),
         "source_labels": _string_list(warning.get("source_labels")),
         "source_label": _first(_string_list(warning.get("source_labels"))),
@@ -126,7 +126,7 @@ def _obligation_statement(role: str, claim: str) -> str:
     if role == "scope_boundary":
         return "Bound the answer's applicability using this source-backed scope boundary."
     if role == "decision_crux":
-        return f"Evaluate this decision crux without overstating it: {claim}"
+        return f"Evaluate this decision crux with calibrated language: {claim}"
     if role == "strongest_counterweight":
         return f"Weigh this counterweight against the default answer: {claim}"
     if role == "quantitative_anchor":
@@ -138,7 +138,7 @@ def _obligation_statement(role: str, claim: str) -> str:
 
 def _prose_instruction(role: str) -> str:
     if role == "scope_boundary":
-        return "State the practical boundary or population/scope limitation; do not dump raw study descriptors unless they change the decision."
+        return "State the practical boundary or population/scope limitation when it changes the decision."
     if role == "decision_crux":
         return "Name the uncertainty or distinction that could change the answer."
     if role == "strongest_counterweight":

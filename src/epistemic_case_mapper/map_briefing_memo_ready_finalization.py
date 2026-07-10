@@ -225,15 +225,15 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
     }
     return (
         "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"
-        "Rewrite the affected paragraph or section naturally; do not append orphan facts.\n\n"
+        "Rewrite the affected paragraph or section naturally so missing evidence is integrated into the reasoning.\n\n"
         "Rules:\n"
-        "- Return the full revised memo in Markdown, not JSON.\n"
+        "- Return the full revised memo in Markdown.\n"
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
-        "- Repair missing obligations by improving the reasoning, not by appending orphan facts.\n"
-        "- Use only the missing obligations or legacy missing items in the repair packet; do not introduce new evidence.\n"
+        "- Repair missing obligations by improving the reasoning around the affected point.\n"
+        "- Use only the missing obligations or legacy missing items in the repair packet.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"
-        "- Do not mention packet IDs, validation, telemetry, or internal pipeline machinery.\n\n"
+        "- Keep packet IDs, validation, telemetry, and internal pipeline machinery out of the prose.\n\n"
         f"Repair packet:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
         f"Current memo:\n{memo.strip()}\n"
     )
@@ -298,6 +298,10 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
     if next_memo != normalized:
         changes.append("normalized_source_labels")
         normalized = next_memo
+    next_memo = _replace_sources_section(normalized, packet)
+    if next_memo != normalized:
+        changes.append("deterministic_sources")
+        normalized = next_memo
     normalized = normalized.rstrip() + "\n"
     return {
         "memo": normalized,
@@ -340,11 +344,11 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "You are doing a final prose polish on a source-grounded decision memo.\n"
         "Improve flow and remove awkward wording while preserving every protected source-backed item.\n\n"
         "Rules:\n"
-        "- Return the full revised memo in Markdown, not JSON.\n"
-        "- Do not drop protected obligations, quantities, source labels, caveats, counterweights, or scope boundaries.\n"
+        "- Return the full revised memo in Markdown.\n"
+        "- Preserve protected obligations, quantities, source labels, caveats, counterweights, and scope boundaries.\n"
         "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
-        "- Do not add facts or sources beyond the memo and protected item list.\n"
-        "- Make the memo read like decision-ready analysis, not a checklist.\n\n"
+        "- Use facts and sources already present in the memo or protected item list.\n"
+        "- Make the memo read like decision-ready analysis.\n\n"
         f"Protected item list:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
         f"Memo:\n{memo.strip()}\n"
     )
@@ -374,6 +378,75 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
         elif label:
             rows.append(f"- {label}")
     return _dedupe(rows)
+
+
+def _replace_sources_section(memo: str, packet: dict[str, Any]) -> str:
+    body = _strip_sources_section(memo).rstrip()
+    sources = _cited_source_lines(body, packet)
+    if not sources:
+        return body + "\n"
+    return "\n".join([body, "", "## Sources", "", *sources]).rstrip() + "\n"
+
+
+def _strip_sources_section(memo: str) -> str:
+    lines = str(memo or "").splitlines()
+    for index, line in enumerate(lines):
+        if line.strip().lower() == "## sources":
+            return "\n".join(lines[:index]).rstrip()
+    return str(memo or "").rstrip()
+
+
+def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
+    entries = _canonical_source_entries(packet)
+    cited = []
+    lowered = body.lower()
+    for entry in entries:
+        display = entry["display"]
+        if display and _contains_text(body, display):
+            cited.append((lowered.find(display.lower()), _source_line_for_entry(entry)))
+    return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
+
+
+def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
+    urls = _source_url_lookup(packet)
+    entries = []
+    for label in _packet_source_labels(packet):
+        display = _preferred_source_display({"source_label": label}, common_prefix=_common_token_prefix(_packet_source_labels(packet)))
+        if not display:
+            continue
+        entries.append({"display": display, "url": urls.get(label, "")})
+    return _dedupe_entries(entries)
+
+
+def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
+    urls = {}
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        label = str(source.get("source_label") or "").strip()
+        url = str(source.get("source_url") or "").strip()
+        if label and url:
+            for variant in _source_label_variants(label):
+                urls[variant] = url
+    return urls
+
+
+def _source_line_for_entry(entry: dict[str, str]) -> str:
+    display = entry.get("display", "")
+    url = entry.get("url", "")
+    return f"* [{display}]({url})" if display and url else f"* {display}"
+
+
+def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
+    seen = set()
+    deduped = []
+    for entry in entries:
+        key = _norm(entry.get("display", ""))
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(entry)
+    return deduped
 
 
 def _ensure_decision_question(memo: str, question: str) -> str:
