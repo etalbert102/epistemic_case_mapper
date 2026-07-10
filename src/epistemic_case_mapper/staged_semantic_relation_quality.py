@@ -66,23 +66,38 @@ def relation_semantic_rejection_reason(relation: dict[str, Any], packet: dict[st
     if relation_type in {"refines", "depends_on"} and _cross_source_study_scope_relation(source, target):
         return "cross_source_study_scope_relation"
     intent = relation_pair_intent(source, target)
+    semantic_text = _normalize(
+        " ".join(
+            value
+            for value in (
+                str(relation.get("rationale", "")),
+                _relation_contract_field(relation, "why_decision_relevant"),
+            )
+            if value
+        )
+    )
     if intent.get("intent") == "cross_source_mechanism_scope_to_finding" and relation_type == "refines":
         return "cross_source_mechanism_scope_refines"
-    if relation_type == "in_tension_with" and _sounds_supportive(rationale) and not _has_contrast_marker(rationale):
+    if relation_type == "in_tension_with" and _sounds_supportive(semantic_text) and not _has_contrast_marker(semantic_text):
         return "relation_type_rationale_mismatch"
-    if relation_type == "supports" and _has_challenge_marker(rationale):
+    if relation_type == "supports" and _has_challenge_marker(semantic_text):
         return "relation_type_rationale_mismatch"
-    if relation_type == "supports" and not _has_support_contract(rationale, source, target):
+    if relation_type == "supports" and not _has_support_contract(semantic_text, source, target):
         return "weak_support_contract"
-    if relation_type == "challenges" and not _has_challenge_marker(rationale):
+    if relation_type == "challenges" and not _has_challenge_marker(semantic_text):
         return "missing_challenge_contract"
-    if relation_type == "depends_on" and not _has_dependency_marker(rationale):
+    if relation_type == "depends_on" and not _has_dependency_marker(semantic_text):
         return "missing_dependency_contract"
-    if relation_type == "refines" and not _has_refinement_marker(rationale):
+    if relation_type == "refines" and not _has_refinement_marker(semantic_text):
         return "missing_refinement_contract"
-    if relation_type == "crux_for" and not _has_crux_marker(rationale):
+    if relation_type == "crux_for" and not _has_crux_marker(semantic_text):
         return "missing_crux_contract"
     return ""
+
+
+def _relation_contract_field(relation: dict[str, Any], key: str) -> str:
+    contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
+    return str(contract.get(key, "")).strip()
 
 
 def relation_quality_issue_rows(relations: list[dict[str, Any]], claims: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -227,7 +242,26 @@ def _has_dependency_marker(text: str) -> bool:
 
 
 def _has_refinement_marker(text: str) -> bool:
-    return any(marker in text for marker in ("refines", "scope", "boundary", "population", "endpoint", "condition", "specific", "limits", "applies", "generalizability"))
+    return any(
+        marker in text
+        for marker in (
+            "refines",
+            "refining",
+            "narrows",
+            "narrowing",
+            "scope",
+            "boundary",
+            "population",
+            "subgroup",
+            "endpoint",
+            "condition",
+            "specific",
+            "specifies",
+            "limits",
+            "applies",
+            "generalizability",
+        )
+    )
 
 
 def _has_crux_marker(text: str) -> bool:

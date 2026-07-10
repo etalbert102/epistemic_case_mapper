@@ -23,8 +23,8 @@ from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_METHOD = "whole_doc_source_card"
-RELATION_PROMPT_VERSION = "staged_relation_prompt_v2_contract_json"
-RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v2_contract_json"
+RELATION_PROMPT_VERSION = "staged_relation_prompt_v3_semantic_contract_json"
+RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v3_semantic_contract_json"
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
 CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
 

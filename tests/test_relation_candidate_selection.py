@@ -144,6 +144,10 @@ def test_prompt_builders_honor_explicit_decision_question_override() -> None:
     relation_prompt = _relation_pair_prompt(manifest, region, case_manifest, packet, decision_question=override)
 
     assert f"Decision question: {override}" in relation_prompt
+    assert "# Relation Type Semantics" in relation_prompt
+    assert "depends_on: The force of one claim depends on a condition" in relation_prompt
+    assert "suggested_relation_types as the default decision menu" in relation_prompt
+    assert "selection_rule: First try to choose the strongest relation from suggested_relation_types" in relation_prompt
 
 def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -> None:
     span = SourceSpan(

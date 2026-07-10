@@ -44,7 +44,7 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
         "    payload = {'source_id': source_id, 'source_bottom_line': 'Selected source-grounded fixture claim.', 'canonical_claims': [\n"
         "        {'claim': 'Selected source-grounded fixture claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the stress fixture map.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "    ], 'excluded_as_not_decision_relevant': []}\n"
-        "elif 'staged_relation_prompt_v2_contract_json' in prompt:\n"
+        "elif 'staged_relation_prompt_v3_semantic_contract_json' in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
         "    payload = {'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'in_tension_with', 'rationale': 'The fixture claims are in tension because one favors the interpretation whereas the other challenges it.', 'crux_candidates': ['fixture tension'], 'similar_but_not_identical': []}\n"

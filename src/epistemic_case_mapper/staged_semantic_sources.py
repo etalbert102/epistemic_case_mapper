@@ -25,6 +25,7 @@ from epistemic_case_mapper.staged_semantic_prompt_schemas import (
     relation_examples,
     relation_prompt_schema,
 )
+from epistemic_case_mapper.staged_semantic_relation_prompting import relation_type_semantics
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 SOURCE_EXTRACTED_ROLE = "source_claim"
@@ -44,6 +45,7 @@ def _relation_pair_prompt(
     return render_prompt(
         ("Task", "You are classifying one possible relation between two already-validated claim cards."),
         ("Metadata", f"Prompt version: {RELATION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nPair ID: {packet['pair_id']}\nDecision question: {question}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Relation Type Semantics", relation_type_semantics(manifest, case_manifest)),
         ("Rules", _relation_rules(profile_rules)),
         ("Output Schema", json_schema_block(relation_prompt_schema(packet["pair_id"], relation_types))),
         ("Examples", examples_block(relation_examples())),
@@ -75,6 +77,7 @@ def _relation_batch_prompt(
     return render_prompt(
         ("Task", "You are classifying possible relations between already-validated claim cards."),
         ("Metadata", f"Prompt version: {RELATION_BATCH_PROMPT_VERSION}\nRegion ID: {region.region_id}\nBatch ID: {batch_id}\nDecision question: {question}\nCase question: {case_manifest.question}\nAllowed relation types:\n{relation_types}"),
+        ("Relation Type Semantics", relation_type_semantics(manifest, case_manifest)),
         ("Rules", ["- Return exactly one object for each pair ID in this batch.", *_relation_rules(profile_rules)]),
         ("Output Schema", json_schema_block(relation_batch_prompt_schema(pair_ids, relation_types))),
         ("Examples", examples_block(relation_examples())),
@@ -89,8 +92,9 @@ def _relation_rules(profile_rules: str) -> list[str]:
         "- Do not include relation_id. Deterministic code assigns IDs later.",
         "- Use only the claim IDs shown in the pair.",
         '- Use only allowed relation types, or use relation_type "none".',
-        "- Treat each pair's relation_intent and suggested_relation_types as routing guidance, not a hard limit.",
-        "- You may use any allowed relation type when the exact evidence quotes support it; explain the override in the rationale.",
+        "- Treat each pair's relation_intent and suggested_relation_types as the default decision menu.",
+        "- Choose from suggested_relation_types unless another allowed relation type is clearly better supported by the exact quotes.",
+        "- When overriding suggested_relation_types, explain the override in the rationale.",
         "- Prefer no relation over a plausible but weak topical association.",
         "- Use only the two claim cards, exact evidence quotes, relation intent, and pair contract shown for each pair.",
         "- Prefer decision-relevant relations over generic links.",
@@ -157,6 +161,7 @@ def _relation_pair_contract(packet: dict[str, Any]) -> str:
             f"- suggested_relation_types: {', '.join(suggested)}",
             f"- routing_metadata_only: candidate reason and score explain why this pair was shown; they are not evidence for an edge.",
             f"- decision_rule: {_relation_intent_decision_rule(intent_name)}",
+            f"- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type \"none\" when none fit.",
             f"- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.",
             f"- no_edge_rule: Use relation_type \"none\" unless the exact evidence quotes support a clear relation.",
         ]
@@ -176,7 +181,7 @@ def _relation_intent_decision_rule(intent_name: str) -> str:
         "same_source_disagreement": "Use in_tension_with only when the source itself contains a real internal tension.",
         "mechanism_to_outcome": "Use supports, depends_on, or in_tension_with only when the mechanism changes the interpretation of the outcome claim.",
         "outcome_disagreement": "Use in_tension_with or challenges only when the two findings point in different directions on the same decision-relevant proposition.",
-        "scope_bounds_outcome": "Use refines or depends_on when the scope claim names where an outcome finding applies; use in_tension_with only for a real subgroup exception.",
+        "scope_bounds_outcome": "Use refines or depends_on when the scope claim names where an outcome finding applies. Use in_tension_with when the subgroup or boundary points in a materially different direction from the broad finding.",
         "method_limits_headline": "Use challenges or refines when the method claim changes how strongly the headline finding should be used.",
         "comparator_contextualizes_outcome": "Use refines or supports only when the comparator changes the interpretation of the outcome claim; do not imply absolute benefit from relative substitution evidence.",
         "guidance_supported_or_bounded_by_evidence": "Use supports when the evidence directly backs the guidance, and refines or depends_on when it narrows the guidance.",

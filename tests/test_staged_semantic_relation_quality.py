@@ -71,6 +71,38 @@ def test_relation_semantic_validator_requires_crux_contract_but_allows_valid_cru
     assert _semantic_reason("crux_for", "If the mechanism is true, it implies the target finding drives the decision.", packet) == ""
 
 
+def test_relation_semantic_validator_accepts_subgroup_refinement_language() -> None:
+    left = _claim("demo_c001", "An inverse association was observed in a specific subgroup.", "a", "scope_limit")
+    right = _claim("demo_c002", "The broader evidence found no association in the general population.", "a", "conclusion_support")
+    packet = {"pair_id": "pair_001", "left": left, "right": right}
+
+    assert _semantic_reason(
+        "refines",
+        "demo_c001 specifies a subgroup where the broader finding in demo_c002 is narrowed.",
+        packet,
+    ) == ""
+
+
+def test_relation_semantic_validator_uses_contract_text_for_edge_markers() -> None:
+    left = _claim("demo_c001", "The exposure is commonly consumed with a confounding factor.", "a", "scope_limit")
+    right = _claim("demo_c002", "Moderate exposure is unlikely to increase overall disease risk.", "b", "conclusion_support")
+    packet = {"pair_id": "pair_001", "left": left, "right": right}
+
+    assert relation_semantic_rejection_reason(
+        {
+            "source_claim": "demo_c001",
+            "target_claim": "demo_c002",
+            "relation_type": "challenges",
+            "rationale": "demo_c001 complicates the interpretation of demo_c002.",
+            "relation_contract": {
+                "why_decision_relevant": "It casts doubt on whether the apparent safety finding is due to the exposure itself.",
+                "failure_condition": "The edge weakens if the confounder is fully adjusted away.",
+            },
+        },
+        packet,
+    ) == ""
+
+
 def test_relation_quality_rows_report_crux_overuse() -> None:
     claims = [
         _claim("demo_c001", "Decision crux.", "a", "crux"),
