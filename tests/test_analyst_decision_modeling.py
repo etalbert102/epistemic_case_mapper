@@ -207,6 +207,8 @@ def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) ->
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     run_analyst_decision_model(
         ledger=_ledger(),
@@ -268,6 +270,7 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_ledger(),
@@ -311,32 +314,33 @@ def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> 
         "decision_logic": {"bounded_bottom_line": "Adopt if risk is acceptable."},
         "argument_plan": [],
     }
-    repaired_payload = {
-        **initial_payload,
-        "overall_rationale": "The outcome signal supports adoption, but the risk row bounds the answer.",
-        "evidence_groups": [
-            *initial_payload["evidence_groups"],
+    assignment_payload = {
+        "assignments": [
             {
-                "group_id": "risk_group",
-                "proposition": "Operating-budget risk bounds adoption.",
-                "memo_role": "load_bearing_counterweight",
-                "importance_rank": 2,
-                "covered_evidence_item_ids": ["bundle:risk"],
-                "rationale": "The risk row is the main counterweight.",
-                "answer_impact": "Bounds adoption.",
+                "evidence_item_id": "bundle:risk",
+                "action": "create_group",
+                "new_group": {
+                    "group_id": "risk_group",
+                    "proposition": "Operating-budget risk bounds adoption.",
+                    "memo_role": "load_bearing_counterweight",
+                    "importance_rank": 2,
+                    "rationale": "The risk row is the main counterweight.",
+                    "answer_impact": "Bounds adoption.",
+                },
+                "rationale": "Risk is a counterweight and should be foregrounded.",
             },
         ],
-        "evidence_dispositions": [],
     }
     calls = []
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         calls.append(prompt)
-        if "Repair a valid analyst decision model" in prompt:
-            return ModelBackendResult(text=json.dumps(repaired_payload), backend="fake")
+        if "Assign each repair_row" in prompt:
+            return ModelBackendResult(text=json.dumps(assignment_payload), backend="fake")
         return ModelBackendResult(text=json.dumps(initial_payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_ledger(),
@@ -350,6 +354,7 @@ def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> 
     assert result["analyst_decision_model_report"]["status"] == "accepted_after_repair"
     assert result["analyst_decision_model_repair_report"]["accepted"] is True
     assert result["analyst_decision_model"]["evidence_groups"][-1]["covered_evidence_item_ids"] == ["bundle:risk"]
+    assert result["analyst_decision_model_repair_report"]["batch_count"] == 1
     assert result["analyst_decision_model_initial_parse_report"]["obligation_omissions"]["ungrouped_counterweight_ids"] == ["bundle:risk"]
 
 

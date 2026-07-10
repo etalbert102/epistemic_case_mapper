@@ -11,6 +11,10 @@ from pydantic import ValidationError
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize_decision_logic_payload
+from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
+    compact_decision_model_repair_report,
+    run_analyst_decision_model_repair,
+)
 from epistemic_case_mapper.map_briefing_analyst_schemas import (
     AnalystDecisionModel,
     analyst_decision_retention_obligations,
@@ -84,7 +88,7 @@ def run_analyst_decision_model(
         }
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
     parsed["decision_logic"] = naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
-    repair = _maybe_repair_decision_model(
+    repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
         context=context,
@@ -92,6 +96,7 @@ def run_analyst_decision_model(
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
+        num_predict=analyst_decision_model_num_predict(context),
     )
     final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
     final_parse_report = repair.get("analyst_decision_model_parse_report", parse_report) if repair.get("accepted") else parse_report
@@ -110,7 +115,7 @@ def run_analyst_decision_model(
         "analyst_decision_model_repair_prompt": repair.get("analyst_decision_model_repair_prompt", ""),
         "analyst_decision_model_repair_raw": repair.get("analyst_decision_model_repair_raw", ""),
         "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
-        "analyst_decision_model_repair_report": _compact_decision_model_repair_report(repair),
+        "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
     }
 
 
@@ -120,225 +125,6 @@ def analyst_decision_model_num_predict(context: dict[str, Any] | None = None) ->
         return max(2048, int(os.environ.get("ECM_ANALYST_DECISION_MODEL_NUM_PREDICT", DEFAULT_DECISION_MODEL_NUM_PREDICT)))
     except ValueError:
         return DEFAULT_DECISION_MODEL_NUM_PREDICT
-
-
-def _maybe_repair_decision_model(
-    *,
-    initial_model: dict[str, Any],
-    initial_parse_report: dict[str, Any],
-    context: dict[str, Any],
-    ledger: dict[str, Any],
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
-) -> dict[str, Any]:
-    repair_packet = _decision_model_repair_packet(initial_parse_report, context)
-    if not repair_packet.get("omitted_obligations"):
-        return _repair_report("not_needed", initial_parse_report, accepted=False)
-    if backend.strip() == "prompt":
-        return _repair_report("skipped_prompt_backend", initial_parse_report, accepted=False, issues=["prompt backend cannot run repair"])
-    prompt = build_analyst_decision_model_repair_prompt(
-        current_model=initial_model,
-        parse_report=initial_parse_report,
-        repair_packet=repair_packet,
-        decision_question=str(context.get("decision_question") or ""),
-    )
-    try:
-        result = run_model_backend(
-            prompt,
-            backend,
-            timeout_seconds=backend_timeout,
-            max_retries=backend_retries,
-            num_predict=analyst_decision_model_num_predict(context),
-        )
-    except RuntimeError as exc:
-        report = _repair_report("backend_error_kept_initial", initial_parse_report, accepted=False, issues=[str(exc)])
-        report["analyst_decision_model_repair_prompt"] = prompt
-        return report
-    payload = _extract_json(result.text)
-    candidate_parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
-    report = _repair_report(
-        "candidate_invalid_kept_initial" if not candidate_parse_report.get("valid") else "candidate_evaluated",
-        candidate_parse_report,
-        accepted=False,
-    )
-    report["analyst_decision_model_repair_prompt"] = prompt
-    report["analyst_decision_model_repair_raw"] = result.text
-    report["analyst_decision_model_repair_parse_report"] = candidate_parse_report
-    if not candidate_parse_report.get("valid"):
-        return report
-    candidate = AnalystDecisionModel.model_validate(payload).model_dump()
-    candidate["decision_logic"] = naturalize_decision_logic_payload(_dict(candidate.get("decision_logic")))
-    before_score = _decision_model_warning_score(initial_parse_report)
-    after_score = _decision_model_warning_score(candidate_parse_report)
-    report["before_warning_score"] = before_score
-    report["after_warning_score"] = after_score
-    if after_score >= before_score:
-        report["status"] = "no_improvement_kept_initial"
-        report["issues"] = ["repair did not reduce decision-model warning score"]
-        return report
-    report["status"] = "accepted"
-    report["accepted"] = True
-    report["analyst_decision_model"] = candidate
-    report["analyst_decision_model_parse_report"] = candidate_parse_report
-    report["issues"] = []
-    return report
-
-
-def build_analyst_decision_model_repair_prompt(
-    *,
-    current_model: dict[str, Any],
-    parse_report: dict[str, Any],
-    repair_packet: dict[str, Any],
-    decision_question: str,
-) -> str:
-    packet = {
-        "decision_question": decision_question,
-        "task": [
-            "Repair a valid analyst decision model that omitted decision-relevant obligations from evidence_groups.",
-            "Return a complete analyst_decision_model_v1 JSON object, not a patch.",
-            "Use the current model as the base; preserve its answer unless the omitted obligations require a bounded correction.",
-            "For each omitted obligation, either add its evidence_item_id to the most appropriate evidence_group, create a new group, or add an explicit evidence_disposition explaining why it stays background.",
-            "Do not remove already useful groups unless merging improves the argument.",
-            "Keep support, counterweight, crux, quantity, and scope evidence analytically distinguishable.",
-            "Return strict JSON only.",
-        ],
-        "current_model": current_model,
-        "parse_report": {
-            "issues": parse_report.get("issues", []),
-            "missing_accounting_ids": parse_report.get("missing_accounting_ids", []),
-            "obligation_omissions": parse_report.get("obligation_omissions", {}),
-        },
-        "repair_packet": repair_packet,
-        "required_output_schema": {
-            "schema_id": "analyst_decision_model_v1",
-            "decision_question": decision_question,
-            "direct_answer": "one sentence answering the decision question",
-            "confidence": "low | medium | high | not_specified",
-            "overall_rationale": "why the evidence groups support this answer",
-            "evidence_groups": [
-                {
-                    "group_id": "stable group label",
-                    "proposition": "decision-relevant proposition synthesized across covered evidence",
-                    "memo_role": "one allowed memo role",
-                    "importance_rank": "integer 1-100; 1 is most important globally",
-                    "covered_evidence_item_ids": ["evidence IDs from current model or repair packet"],
-                    "rationale": "why this group matters to the decision",
-                    "evidence_strength": "brief strength assessment",
-                    "answer_impact": "how this group supports, weakens, bounds, or changes the answer",
-                    "uncertainty_type": "measurement, external validity, confounding, missing evidence, implementation, none, or other",
-                    "applicability_limits": ["scope/population/context limits"],
-                    "conflict_note": "how this group relates to conflicting evidence, if any",
-                }
-            ],
-            "evidence_dispositions": [
-                {
-                    "evidence_item_id": "evidence ID from current model or repair packet",
-                    "disposition": "foreground | background | not_decision_relevant | covered_by_group | needs_review",
-                    "group_id": "group that uses or covers this item, if applicable",
-                    "rationale": "why it is backgrounded, excluded, or needs review",
-                }
-            ],
-            "quantitative_anchors": ["quantities that should survive final synthesis"],
-            "what_would_change_the_answer": ["cruxes or missing evidence that would change the answer"],
-            "decision_logic": "same object shape as current_model.decision_logic",
-            "argument_plan": "same list shape as current_model.argument_plan",
-        },
-    }
-    return (
-        "You are repairing an intermediate analyst decision model for source-grounded memo synthesis.\n"
-        "The model is already schema-valid; your job is only to account for omitted decision-relevant obligations.\n\n"
-        f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
-    )
-
-
-def _decision_model_repair_packet(parse_report: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-    omitted = {
-        obligation_type: _string_list(ids)
-        for obligation_type, ids in _dict(parse_report.get("obligation_omissions")).items()
-        if _string_list(ids)
-    }
-    missing_accounting_ids = set(_string_list(parse_report.get("missing_accounting_ids")))
-    all_omitted_ids = _dedupe([evidence_id for ids in omitted.values() for evidence_id in ids])
-    row_lookup = {str(row.get("evidence_item_id") or ""): row for row in _list(context.get("evidence_rows")) if isinstance(row, dict)}
-    return {
-        "schema_id": "analyst_decision_model_repair_packet_v1",
-        "omitted_obligations": {
-            obligation_type: [_repair_context_row(row_lookup.get(evidence_id, {}), obligation_type) for evidence_id in ids]
-            for obligation_type, ids in omitted.items()
-        },
-        "missing_accounting_rows": [
-            _repair_context_row(row_lookup.get(evidence_id, {}), "missing_accounting")
-            for evidence_id in sorted(missing_accounting_ids - set(all_omitted_ids))
-        ][:12],
-    }
-
-
-def _repair_context_row(row: dict[str, Any], obligation_type: str) -> dict[str, Any]:
-    return _drop_empty(
-        {
-            "evidence_item_id": row.get("evidence_item_id"),
-            "obligation_type": obligation_type,
-            "claim_id": row.get("claim_id"),
-            "current_role": row.get("current_role"),
-            "adjudicated_memo_use": row.get("adjudicated_memo_use"),
-            "quantity_values": row.get("quantity_values", []),
-            "source_labels": row.get("source_labels", []),
-            "claim": _short_text(str(row.get("claim") or ""), 420),
-            "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 260),
-            "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 220),
-            "relation_context": row.get("relation_context", [])[:3] if isinstance(row.get("relation_context"), list) else [],
-        }
-    )
-
-
-def _decision_model_warning_score(parse_report: dict[str, Any]) -> int:
-    omissions = sum(len(_string_list(ids)) for ids in _dict(parse_report.get("obligation_omissions")).values())
-    missing = len(_string_list(parse_report.get("missing_accounting_ids")))
-    fatal = 1000 if not parse_report.get("valid") else 0
-    issue_penalty = len(_list(parse_report.get("issues")))
-    covered = int(parse_report.get("covered_evidence_item_count") or 0)
-    return fatal + omissions * 100 + missing * 10 + issue_penalty - covered
-
-
-def _repair_report(
-    status: str,
-    parse_report: dict[str, Any],
-    *,
-    accepted: bool,
-    issues: list[str] | None = None,
-) -> dict[str, Any]:
-    return {
-        "schema_id": "analyst_decision_model_repair_report_v1",
-        "status": status,
-        "accepted": accepted,
-        "parse_status": parse_report.get("status"),
-        "valid": parse_report.get("valid", False),
-        "covered_evidence_item_count": parse_report.get("covered_evidence_item_count", 0),
-        "missing_accounting_count": len(_string_list(parse_report.get("missing_accounting_ids"))),
-        "obligation_omission_count": sum(len(_string_list(ids)) for ids in _dict(parse_report.get("obligation_omissions")).values()),
-        "issues": issues or [],
-    }
-
-
-def _compact_decision_model_repair_report(repair: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: repair.get(key)
-        for key in (
-            "schema_id",
-            "status",
-            "accepted",
-            "parse_status",
-            "valid",
-            "covered_evidence_item_count",
-            "missing_accounting_count",
-            "obligation_omission_count",
-            "before_warning_score",
-            "after_warning_score",
-            "issues",
-        )
-        if key in repair
-    }
 
 
 def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:
