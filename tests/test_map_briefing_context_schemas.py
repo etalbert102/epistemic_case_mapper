@@ -151,6 +151,27 @@ def test_source_role_assignment_does_not_treat_lower_mortality_as_challenge() ->
     assert source_cards["cards"][0]["supports_challenges_or_scopes"] != "challenges"
 
 
+def test_source_evidence_cards_ignore_extraction_claim_role_for_semantic_classification() -> None:
+    source_cards = build_source_evidence_cards(
+        {
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "claim": "The source reports a decision-relevant outcome.",
+                    "source_id": "s1",
+                    "source_span": "lines 1-2",
+                    "excerpt": "The source reports a decision-relevant outcome.",
+                    "role": "conclusion_support",
+                    "decision_relevance_score": 8,
+                }
+            ]
+        },
+        source_lookup={"s1": "Study"},
+    )
+
+    assert source_cards["cards"][0]["supports_challenges_or_scopes"] == "uncategorized"
+
+
 def test_source_sufficiency_reconciles_counterweight_relations() -> None:
     candidate_map = {
         "claims": [
@@ -306,7 +327,8 @@ def test_context_bundle_preserves_counterweight_role_on_narrower_scope_cards() -
                 "source_id": "s2",
                 "source_span": "lines 3-4",
                 "excerpt": "High use increased risk in a narrower high-risk subgroup.",
-                "role": "conflicting_evidence",
+                "role": "source_claim",
+                "evidence_role": "conflicting_evidence",
                 "decision_relevance_score": 9,
             },
         ]
@@ -381,7 +403,8 @@ def test_scope_labeled_quantitative_cards_remain_evidence_carrying() -> None:
                 "source_id": "s1",
                 "source_span": "lines 1-2",
                 "excerpt": "In adults, the default option changed the decision outcome by 18 percent.",
-                "role": "scope_limit",
+                "role": "source_claim",
+                "evidence_role": "scope_limit",
                 "decision_relevance_score": 8,
                 "quantity_values": ["18 percent"],
             }

@@ -27,6 +27,8 @@ from epistemic_case_mapper.staged_semantic_prompt_schemas import (
 )
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
+SOURCE_EXTRACTED_ROLE = "source_claim"
+
 def _relation_pair_prompt(
     manifest: SubmissionManifest,
     region: WorkedRegion,
@@ -222,12 +224,8 @@ def _normalize_claim_proposal(
     entailed = str(proposal.get("entailed_by_excerpt", "uncertain")).strip().lower()
     if entailed not in VALID_ENTAILMENT:
         entailed = "uncertain"
-    role = str(proposal.get("role", "other")).strip()
-    allowed_roles = valid_roles or VALID_CLAIM_ROLES
-    if role not in allowed_roles:
-        role = "other"
-    if role not in allowed_roles:
-        role = sorted(allowed_roles)[0] if allowed_roles else "other"
+    legacy_model_role = str(proposal.get("role", "")).strip()
+    role = SOURCE_EXTRACTED_ROLE
     question_relevance = _normalized_question_relevance(proposal.get("question_relevance"))
     if question_relevance == "irrelevant":
         return None, "question_irrelevant"
@@ -236,7 +234,6 @@ def _normalize_claim_proposal(
         proposal,
         claim_text=claim_text,
         excerpt=span.text,
-        role=role,
         question_relevance=question_relevance,
         scope_flags=scope_flags,
     )
@@ -251,7 +248,7 @@ def _normalize_claim_proposal(
             "source_alignment": quote_alignment_metadata(alignment),
             "entailed_by_excerpt": entailed,
             "role": role,
-            "decision_polarity": _compact_metadata_text(proposal.get("decision_polarity")),
+            "legacy_extraction_role": legacy_model_role,
             "question_relevance": question_relevance,
             "question_fit": question_fit_from_relevance(question_relevance, scope_flags),
             "relevance_rationale": _compact_metadata_text(proposal.get("relevance_rationale")),
@@ -317,7 +314,7 @@ def _fallback_claim_for_chunk(chunk: SourceChunk) -> dict[str, Any] | None:
         "excerpt": span.text,
         "source_quote": span.text,
         "entailed_by_excerpt": "yes",
-        "role": _fallback_role(span.text),
+        "role": SOURCE_EXTRACTED_ROLE,
         "span_id": span.span_id,
         "source_alignment": {
             "status": "deterministic_fallback_span",
@@ -330,6 +327,7 @@ def _fallback_claim_for_chunk(chunk: SourceChunk) -> dict[str, Any] | None:
             "density": 1.0,
         },
         "extraction_method": "deterministic_fallback_span",
+        "legacy_extraction_role": _fallback_role(span.text),
     }
 
 def _best_fallback_span(chunk: SourceChunk) -> SourceSpan | None:

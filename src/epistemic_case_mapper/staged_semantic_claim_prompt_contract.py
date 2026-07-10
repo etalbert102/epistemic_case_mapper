@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def claim_prompt_schema(role_options: str) -> dict[str, Any]:
+def claim_prompt_schema() -> dict[str, Any]:
     return {
         "claims": [
             {
@@ -11,13 +11,10 @@ def claim_prompt_schema(role_options: str) -> dict[str, Any]:
                 "claim": "one concise claim supported by the excerpt",
                 "span_id": "the model's best span_id from the catalog; deterministic code verifies this from source_quote",
                 "entailed_by_excerpt": "yes|no|uncertain",
-                "role": role_options,
                 "question_relevance": "direct|indirect|scope_limit|background|irrelevant",
                 "relevance_rationale": "one sentence explaining how this claim bears on the case question",
                 "scope_flags": ["target_population_mismatch|outcome_mismatch|intervention_or_exposure_mismatch|mechanism_only|administrative_context|none"],
                 "decision_importance": "critical|high|medium|low",
-                "decision_function": "answer_bearing|crux|scope_boundary|mechanism|confounder_or_bias|implementation_constraint|source_quality_caveat|background_context",
-                "default_use": "main_map|supporting_map|appendix|exclude_unless_gap",
                 "importance_rationale": "one sentence explaining how strongly this claim should affect the decision map",
             }
         ]
@@ -37,28 +34,13 @@ def claim_prompt_json_schema() -> dict[str, Any]:
                         "source_quote": {"type": "string"},
                         "span_id": {"type": "string"},
                         "entailed_by_excerpt": {"type": "string", "enum": ["yes", "no", "uncertain"]},
-                        "role": {"type": "string"},
                         "question_relevance": {"type": "string", "enum": ["direct", "indirect", "scope_limit", "background", "irrelevant"]},
                         "relevance_rationale": {"type": "string"},
                         "scope_flags": {"type": "array", "items": {"type": "string"}},
                         "decision_importance": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
-                        "decision_function": {
-                            "type": "string",
-                            "enum": [
-                                "answer_bearing",
-                                "crux",
-                                "scope_boundary",
-                                "mechanism",
-                                "confounder_or_bias",
-                                "implementation_constraint",
-                                "source_quality_caveat",
-                                "background_context",
-                            ],
-                        },
-                        "default_use": {"type": "string", "enum": ["main_map", "supporting_map", "appendix", "exclude_unless_gap"]},
                         "importance_rationale": {"type": "string"},
                     },
-                    "required": ["source_quote", "claim", "span_id", "entailed_by_excerpt", "role"],
+                    "required": ["source_quote", "claim", "span_id", "entailed_by_excerpt"],
                 },
             }
         },
@@ -77,13 +59,10 @@ def claim_prompt_examples() -> list[dict[str, Any]]:
                         "claim": "The program reduced processing time for the target cases.",
                         "span_id": "doc_s0001",
                         "entailed_by_excerpt": "yes",
-                        "role": "conclusion_support",
                         "question_relevance": "direct",
                         "relevance_rationale": "The span reports an outcome that directly changes the decision read.",
                         "scope_flags": ["none"],
                         "decision_importance": "high",
-                        "decision_function": "answer_bearing",
-                        "default_use": "main_map",
                         "importance_rationale": "It reports a target outcome and should shape the main map.",
                     }
                 ]

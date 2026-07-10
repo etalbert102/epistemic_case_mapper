@@ -647,7 +647,7 @@ def _anchor_confidence(claim: dict[str, Any], excerpt: str) -> str:
 def _role_for_claim(claim: dict[str, Any]) -> str:
     values = " ".join(
         str(claim.get(key, ""))
-        for key in ("role", "evidence_role", "section", "relation_type", "claim_type", "tags", "evidence_slots")
+        for key in ("evidence_role", "section", "relation_type", "evidence_slots")
     ).lower()
     if any(term in values for term in ("challenge", "counter", "conflict", "tension")):
         return "challenges"

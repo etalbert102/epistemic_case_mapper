@@ -40,7 +40,7 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
         "if 'staged_claim_extraction_prompt_v1_json' in prompt:\n"
         "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
         "    payload = {'claims': [{'claim': 'Selected source-grounded fixture claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
-        "elif 'staged_relation_prompt_v1_json' in prompt:\n"
+        "elif 'staged_relation_prompt_v2_contract_json' in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
         "    payload = {'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'The fixture claims should be read together.', 'crux_candidates': ['fixture crux'], 'similar_but_not_identical': []}\n"

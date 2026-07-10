@@ -13,7 +13,7 @@ def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
     if question:
         memo = remove_standalone_question_restatement(memo, question)
         memo = ensure_decision_question_line(memo, question)
-    source_lines = source_list_lines(scaffold)
+    source_lines = cited_source_list_lines(memo, scaffold) or source_list_lines(scaffold)
     if source_lines:
         memo = _replace_sources_section(memo, source_lines)
     if question:
@@ -86,18 +86,16 @@ def remove_standalone_question_restatement(markdown: str, question: str) -> str:
 
 
 def source_list_lines(scaffold: dict[str, Any]) -> list[str]:
-    source_lookup = scaffold.get("source_display_names", {})
-    if not isinstance(source_lookup, dict) or not source_lookup:
-        return []
-    source_urls = scaffold.get("source_urls", {})
-    if not isinstance(source_urls, dict):
-        source_urls = {}
-    rows = []
-    for source_id, display in sorted(source_lookup.items(), key=lambda item: str(item[1]).lower()):
-        label = str(display).strip() or str(source_id).strip()
-        if label:
-            url = str(source_urls.get(source_id, "")).strip()
-            rows.append(f"- [{label}]({url})" if _is_linkable_url(url) else f"- {label}")
+    rows = [
+        _source_list_row(entry)
+        for entry in sorted(_source_entries(scaffold), key=lambda entry: entry["display"].lower())
+    ]
+    return ["", "## Sources", "", *rows] if rows else []
+
+
+def cited_source_list_lines(markdown: str, scaffold: dict[str, Any]) -> list[str]:
+    body = _body_without_sources(markdown)
+    rows = [_source_list_row(entry) for entry in _cited_source_entries(body, scaffold)]
     return ["", "## Sources", "", *rows] if rows else []
 
 
@@ -144,6 +142,73 @@ def _replace_sources_section(markdown: str, source_lines: list[str]) -> str:
     if pattern.search(markdown):
         return pattern.sub("\n" + source_block, markdown.rstrip())
     return markdown.rstrip() + "\n" + source_block
+
+
+def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, str]]:
+    source_lookup = scaffold.get("source_display_names", {})
+    if not isinstance(source_lookup, dict) or not source_lookup:
+        return []
+    source_urls = scaffold.get("source_urls", {})
+    if not isinstance(source_urls, dict):
+        source_urls = {}
+    source_citations = scaffold.get("source_citation_labels", {})
+    if not isinstance(source_citations, dict):
+        source_citations = {}
+    entries = []
+    for source_id, display in source_lookup.items():
+        label = str(display).strip() or str(source_id).strip()
+        if not label:
+            continue
+        entries.append(
+            {
+                "source_id": str(source_id).strip(),
+                "display": label,
+                "url": str(source_urls.get(source_id, "")).strip(),
+                "citation_label": str(source_citations.get(source_id, "")).strip(),
+            }
+        )
+    return entries
+
+
+def _cited_source_entries(body: str, scaffold: dict[str, Any]) -> list[dict[str, str]]:
+    cited = []
+    for entry in _source_entries(scaffold):
+        position = _source_mention_position(body, entry)
+        if position >= 0:
+            cited.append((position, entry))
+    return [entry for _, entry in sorted(cited, key=lambda row: row[0])]
+
+
+def _source_mention_position(body: str, entry: dict[str, str]) -> int:
+    positions = [
+        _source_label_position(body, label)
+        for label in (entry.get("display", ""), entry.get("citation_label", ""))
+        if label
+    ]
+    positions = [position for position in positions if position >= 0]
+    return min(positions) if positions else -1
+
+
+def _source_label_position(body: str, label: str) -> int:
+    pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(label)}(?![A-Za-z0-9])", flags=re.IGNORECASE)
+    match = pattern.search(body)
+    if match:
+        return match.start()
+    normalized_body = _normalize_source_label(body)
+    normalized_label = _normalize_source_label(label)
+    if len(normalized_label) >= 12 and normalized_label in normalized_body:
+        return normalized_body.find(normalized_label)
+    return -1
+
+
+def _source_list_row(entry: dict[str, str]) -> str:
+    label = entry["display"]
+    url = entry["url"]
+    return f"- [{label}]({url})" if _is_linkable_url(url) else f"- {label}"
+
+
+def _body_without_sources(markdown: str) -> str:
+    return re.split(r"\n## Sources\n", str(markdown), maxsplit=1)[0]
 
 
 def _smooth_generic_answer_frame(markdown: str) -> str:

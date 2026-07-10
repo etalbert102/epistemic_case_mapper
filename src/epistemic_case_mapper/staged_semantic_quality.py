@@ -731,7 +731,6 @@ def _claim_prompt(
         for span in chunk.spans
     )
     scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk, decision_question=decision_question), indent=2)
-    role_options = "|".join(_configured_claim_roles(case_manifest))
     selected_decision_question = region_decision_question(region, case_manifest, decision_question)
     return render_prompt(
         ("Task", "You are selecting source-grounded claim candidates that help answer the specific decision question from one bounded source-span catalog."),
@@ -754,16 +753,16 @@ def _claim_prompt(
                 "- For every returned claim, include source_quote as an exact substring copied from one catalog span.",
                 "- Use only span IDs shown in the catalog. Deterministic code will verify span_id from source_quote and may override your span_id if the quote points elsewhere.",
                 "- Keep claim as a concise interpretation of source_quote; do not use claim to introduce facts absent from source_quote.",
+                "- Do not classify claims as support, counterweight, crux, scope role, or final map section. Later stages assign those roles after an overall answer frame exists.",
                 "- For every returned claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
-                "- For every returned claim, also judge decision_importance, decision_function, default_use, and importance_rationale. Importance means how much the claim should affect the final decision map, not how interesting the topic is.",
+                "- For every returned claim, also judge decision_importance and importance_rationale. Importance means how much the claim may affect the final decision map, not how interesting the topic is.",
                 "- Mark a claim critical/high only if it changes the answer, a load-bearing uncertainty, an applicability boundary, or a source-quality caveat for the decision question.",
-                "- Use appendix or exclude_unless_gap for background, bibliographic, administrative, or merely topical claims even if they mention the case topic.",
-                "- Use the map-quality scaffold to diversify claim roles and preserve source limitations.",
-                "- If a source limitation changes the answer, use the sharpest configured role available.",
+                "- Exclude background, bibliographic, administrative, or merely topical claims even if they mention the case topic.",
+                "- Use the map-quality scaffold only to preserve source limitations and coverage gaps, not to assign evidence roles.",
                 '- If the chunk has no useful claim, return {"claims": []}.',
             ],
         ),
-        ("Output Schema", json_schema_block(claim_prompt_schema(role_options))),
+        ("Output Schema", json_schema_block(claim_prompt_schema())),
         ("Examples", examples_block(claim_prompt_examples())),
         (
             "Context",

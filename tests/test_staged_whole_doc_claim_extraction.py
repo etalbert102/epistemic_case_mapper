@@ -43,12 +43,12 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
                     "source_id": "demo_source",
                     "source_bottom_line": "The source supports the intervention.",
                     "canonical_claims": [
-                        {
-                            "claim": "The program reduced target risk by 20 percent.",
-                            "role": "main_finding",
-                            "decision_polarity": "supports_current_answer",
-                            "decision_importance": "high",
-                            "why_it_matters": "It directly bears on the decision question.",
+                            {
+                                "claim": "The program reduced target risk by 20 percent.",
+                                "question_relevance": "direct",
+                                "scope_flags": ["none"],
+                                "decision_importance": "high",
+                                "why_it_matters": "It directly bears on the decision question.",
                             "supporting_quotes": [
                                 {
                                     "quote": "The program reduced target risk by 20 percent.",
@@ -87,10 +87,10 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert payload is not None
     assert payload["claims"][0]["claim"] == "The program reduced target risk by 20 percent."
     assert payload["claims"][0]["source_quote"] == "The program reduced target risk by 20 percent."
-    assert payload["claims"][0]["role"] == "conclusion_support"
-    assert payload["claims"][0]["decision_polarity"] == "supports_current_answer"
+    assert payload["claims"][0]["role"] == "source_claim"
+    assert payload["claims"][0]["question_relevance"] == "direct"
     assert payload["claims"][0]["whole_doc_source_card"]["quantities"] == ["20 percent"]
-    assert payload["claims"][0]["whole_doc_source_card"]["decision_polarity"] == "supports_current_answer"
+    assert "decision_polarity" not in payload["claims"][0]["whole_doc_source_card"]
     report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
     assert report["repair_used"] is False
     assert report["source_card_exact_quote_count"] == 1

@@ -51,6 +51,32 @@ def test_source_list_lines_ignores_unlinkable_urls() -> None:
     assert "javascript:" not in "\n".join(lines)
 
 
+def test_reader_memo_metadata_rebuilds_sources_from_body_citations() -> None:
+    memo = """## Decision Brief
+
+The support comes from Study A. The old source section should not keep uncited sources.
+
+## Sources
+
+- Study A
+- Study B
+- Study C
+"""
+    scaffold = {
+        "source_display_names": {
+            "a": "Study A",
+            "b": "Study B",
+            "c": "Study C",
+        },
+    }
+
+    updated = ensure_reader_memo_metadata(memo, scaffold)
+
+    assert "\n## Sources\n\n- Study A\n" in updated
+    assert "- Study B" not in updated
+    assert "- Study C" not in updated
+
+
 def test_reader_memo_metadata_layout_separates_question_and_confidence() -> None:
     question = "Should this option be treated as beneficial, neutral, or harmful?"
     memo = (

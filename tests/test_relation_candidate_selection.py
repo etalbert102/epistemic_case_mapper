@@ -158,14 +158,14 @@ def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
     assert "source_quote as an exact substring" in prompt
     assert "question_relevance" in prompt
     assert "decision_importance" in prompt
-    assert "decision_function" in prompt
-    assert "default_use" in prompt
+    assert "Do not classify claims as support, counterweight, crux, scope role" in prompt
+    assert "decision_function" not in schema["properties"]["claims"]["items"]["properties"]
+    assert "default_use" not in schema["properties"]["claims"]["items"]["properties"]
+    assert "role" not in schema["properties"]["claims"]["items"]["properties"]
     assert "source_quote" in schema["properties"]["claims"]["items"]["properties"]
     assert "source_quote" in schema["properties"]["claims"]["items"]["required"]
     assert "scope_flags" in schema["properties"]["claims"]["items"]["properties"]
     assert "decision_importance" in schema["properties"]["claims"]["items"]["properties"]
-    assert "decision_function" in schema["properties"]["claims"]["items"]["properties"]
-    assert "default_use" in schema["properties"]["claims"]["items"]["properties"]
 
 def test_prompt_builders_honor_explicit_decision_question_override() -> None:
     manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
@@ -255,6 +255,8 @@ def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -
 
     assert reason == ""
     assert accepted is not None
+    assert accepted["role"] == "source_claim"
+    assert accepted["legacy_extraction_role"] == "conclusion_support"
     assert accepted["question_relevance"] == "direct"
     assert accepted["question_fit"]["status"] == "match"
     assert accepted["scope_flags"] == ["none"]

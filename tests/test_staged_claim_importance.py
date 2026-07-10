@@ -95,3 +95,30 @@ def test_normalize_claim_calibrates_overstated_background_importance() -> None:
     assert accepted["decision_importance"]["model_level"] == "critical"
     assert accepted["decision_importance"]["calibrated_level"] == "medium"
     assert accepted["default_use"] == "supporting_map"
+
+
+def test_normalize_claim_keeps_unspecified_relevance_available_for_later_classification() -> None:
+    span = SourceSpan(
+        span_id="demo_s0001",
+        source_id="demo_source",
+        source_span="lines 1-1",
+        text="The trial found a decision-relevant outcome changed after the intervention.",
+    )
+
+    accepted, reason = _normalize_claim_proposal(
+        {
+            "source_quote": "decision-relevant outcome changed",
+            "claim": "The trial found a decision-relevant outcome changed after the intervention.",
+            "span_id": "demo_s0001",
+            "entailed_by_excerpt": "yes",
+        },
+        {span.span_id: span},
+    )
+
+    assert reason == ""
+    assert accepted is not None
+    assert accepted["role"] == "source_claim"
+    assert accepted["question_relevance"] == "unspecified"
+    assert accepted["decision_function"] == "unclassified_evidence"
+    assert accepted["default_use"] == "supporting_map"
+    assert accepted["decision_importance_level"] in {"medium", "high"}

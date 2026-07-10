@@ -27,20 +27,18 @@ def normalized_decision_importance(
     *,
     claim_text: str,
     excerpt: str,
-    role: str,
     question_relevance: str,
     scope_flags: list[str],
 ) -> dict[str, Any]:
     model_level = _normalized_importance_level(proposal.get("decision_importance") or proposal.get("importance"))
-    model_function = _normalized_decision_function(proposal.get("decision_function"), role=role, question_relevance=question_relevance, scope_flags=scope_flags)
-    default_use = _normalized_default_use(proposal.get("default_use"), model_level=model_level, role=role, question_relevance=question_relevance)
+    model_function = _derived_decision_function(question_relevance=question_relevance, scope_flags=scope_flags)
+    default_use = _derived_default_use(model_level=model_level, question_relevance=question_relevance)
     calibrated_level, calibration_reasons = _calibrated_importance_level(
         model_level=model_level,
         decision_function=model_function,
         default_use=default_use,
         claim_text=claim_text,
         excerpt=excerpt,
-        role=role,
         question_relevance=question_relevance,
         scope_flags=scope_flags,
     )
@@ -67,40 +65,22 @@ def _normalized_importance_level(value: Any) -> str:
     return "medium"
 
 
-def _normalized_decision_function(value: Any, *, role: str, question_relevance: str, scope_flags: list[str]) -> str:
-    function = str(value or "").strip().lower()
-    allowed = {
-        "answer_bearing",
-        "crux",
-        "scope_boundary",
-        "mechanism",
-        "confounder_or_bias",
-        "implementation_constraint",
-        "source_quality_caveat",
-        "background_context",
-    }
-    if function in allowed:
-        return function
-    if role == "crux":
-        return "crux"
-    if role in {"scope_limit", "external_validity"} or question_relevance == "scope_limit":
-        if "mechanism_only" in scope_flags:
-            return "mechanism"
+def _derived_decision_function(*, question_relevance: str, scope_flags: list[str]) -> str:
+    if "mechanism_only" in scope_flags:
+        return "mechanism"
+    if question_relevance == "scope_limit" or any(flag != "none" for flag in scope_flags):
         return "scope_boundary"
-    if role in {"measurement_validity"}:
-        return "source_quality_caveat"
-    if role == "implementation_constraint":
-        return "implementation_constraint"
-    if role == "conclusion_support":
+    if question_relevance in {"direct", "indirect"}:
         return "answer_bearing"
+    if question_relevance == "unspecified":
+        return "unclassified_evidence"
     return "background_context"
 
 
-def _normalized_default_use(value: Any, *, model_level: str, role: str, question_relevance: str) -> str:
-    default_use = str(value or "").strip().lower()
-    if default_use in {"main_map", "supporting_map", "appendix", "exclude_unless_gap"}:
-        return default_use
-    if question_relevance in {"background", "unspecified"} or role in {"background", "other"}:
+def _derived_default_use(*, model_level: str, question_relevance: str) -> str:
+    if question_relevance == "unspecified":
+        return "supporting_map" if model_level in {"low", "medium"} else "main_map"
+    if question_relevance == "background":
         return "appendix" if model_level in {"low", "medium"} else "supporting_map"
     if model_level in {"critical", "high"}:
         return "main_map"
@@ -116,7 +96,6 @@ def _calibrated_importance_level(
     default_use: str,
     claim_text: str,
     excerpt: str,
-    role: str,
     question_relevance: str,
     scope_flags: list[str],
 ) -> tuple[str, list[str]]:
@@ -131,15 +110,14 @@ def _calibrated_importance_level(
     elif question_relevance == "scope_limit":
         score += 1
         reasons.append("scope_limit_question_relevance")
-    else:
+    elif question_relevance == "background":
         score -= 1
         reasons.append("weak_question_relevance")
-    if role in {"crux", "conclusion_support", "scope_limit", "implementation_constraint", "measurement_validity", "external_validity"}:
-        score += 1
-        reasons.append(f"decision_role:{role}")
+    elif question_relevance == "unspecified":
+        reasons.append("unclassified_question_relevance")
     else:
         score -= 1
-        reasons.append(f"low_decision_role:{role}")
+        reasons.append("unknown_question_relevance")
     if decision_function in {"answer_bearing", "crux", "scope_boundary", "confounder_or_bias", "implementation_constraint", "source_quality_caveat"}:
         score += 1
         reasons.append(f"decision_function:{decision_function}")
@@ -161,16 +139,13 @@ def _calibrated_importance_level(
     if "administrative_context" in scope_flags:
         score -= 1
         reasons.append("administrative_context")
-    if role in {"background", "other"} and question_relevance not in {"direct", "scope_limit"}:
-        score = min(score, 1)
-        reasons.append("background_cap")
-    if question_relevance in {"background", "unspecified"}:
+    if question_relevance == "background":
         score = min(score, 1)
         reasons.append("question_relevance_cap")
     if default_use in {"appendix", "exclude_unless_gap"}:
         score = min(score, 1)
         reasons.append("default_use_cap")
-    if score >= 6 and _critical_importance_allowed(text=text, role=role, decision_function=decision_function, question_relevance=question_relevance, scope_flags=scope_flags):
+    if score >= 6 and _critical_importance_allowed(text=text, decision_function=decision_function, question_relevance=question_relevance, scope_flags=scope_flags):
         return "critical", reasons
     if score >= 3:
         return "high", reasons
@@ -195,12 +170,11 @@ def _has_quantity_signal(text: str) -> bool:
 def _critical_importance_allowed(
     *,
     text: str,
-    role: str,
     decision_function: str,
     question_relevance: str,
     scope_flags: list[str],
 ) -> bool:
-    if role == "crux" or decision_function == "crux":
+    if decision_function == "crux":
         return True
     if decision_function in {"source_quality_caveat", "confounder_or_bias"}:
         return True

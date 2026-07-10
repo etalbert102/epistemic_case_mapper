@@ -55,7 +55,26 @@ def test_label_audit_keeps_direct_grounded_cvd_claim_core() -> None:
 
     assert audit["synthesis_bucket"] == "core"
     assert audit["routing_default_use"] == "main_map"
-    assert audit["routing_role"] == "conclusion_support"
+    assert audit["routing_role"] == "source_claim"
+    assert audit["warnings"] == []
+
+
+def test_label_audit_keeps_unclassified_source_claim_in_supporting_map() -> None:
+    claim = {
+        "claim": "The trial found a decision-relevant outcome changed after the intervention.",
+        "role": "source_claim",
+        "question_relevance": "unspecified",
+        "decision_importance_level": "medium",
+        "decision_function": "unclassified_evidence",
+        "default_use": "supporting_map",
+        "deterministic_relevance_validation": {"status": "ok", "reason": "", "blocking": False},
+    }
+
+    audit = claim_label_audit(claim)
+
+    assert audit["synthesis_bucket"] == "supporting"
+    assert audit["routing_role"] == "source_claim"
+    assert audit["routing_default_use"] == "supporting_map"
     assert audit["warnings"] == []
 
 
@@ -78,7 +97,7 @@ def test_label_audit_preserves_mechanism_warning_as_supporting_context() -> None
     audit = attach_label_audit(claim)
 
     assert audit["synthesis_bucket"] == "supporting"
-    assert audit["routing_role"] == "scope_limit"
+    assert audit["routing_role"] == "source_claim"
     assert audit["routing_default_use"] == "supporting_map"
     assert "deterministic_relevance:question_outcome_mismatch" in claim["validation_warnings"]
     assert "model_main_map_demoted_by_audit" in claim["validation_warnings"]

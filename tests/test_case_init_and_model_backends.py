@@ -274,7 +274,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert generated["relations"][0]["relation_provenance"] == "model_classified"
     assert generated["relations"][0]["relation_contract"]["source_anchor_a"] == "Alpha line."
     assert generated["relations"][0]["relation_contract"]["failure_condition"]
-    assert "crux" in generated["relations"][0]["candidate_pair"]["reason"]
+    assert "neutral_source_claim_pair" in generated["relations"][0]["candidate_pair"]["reason"]
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
     assert summary["rejected_relations"] == []
@@ -283,7 +283,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     quality_report = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_report.json").read_text(encoding="utf-8"))
     assert quality_report["schema_id"] == "staged_map_quality_report_v1"
     assert quality_report["source_claim_counts"] == {"demo_case_doc_a": 1, "demo_case_doc_b": 1}
-    assert "conclusion_support" in quality_report["claim_role_counts"]
+    assert quality_report["claim_role_counts"] == {"source_claim": 2}
     assert quality_report["summary"]["relation_contract_count"] == 1
     assert quality_report["relation_confidence_counts"]["medium"] == 1
     assert quality_report["scaffold"]["required_sources"] == ["demo_case_doc_a", "demo_case_doc_b"]
