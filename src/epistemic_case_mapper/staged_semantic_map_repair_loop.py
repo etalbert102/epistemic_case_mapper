@@ -493,7 +493,9 @@ def _label_audit_findings(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _duplicate_findings(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
     findings = []
-    for left, right, score in near_duplicate_claim_pairs(claims)[:8]:
+    for pair in near_duplicate_claim_pairs(claims)[:8]:
+        left, right = pair[:2]
+        score = pair[2] if len(pair) > 2 else None
         findings.append(
             _finding(
                 len(findings) + 1,
