@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ from epistemic_case_mapper.prompt_templates import json_schema_block, render_pro
 WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v5_decision_ranked_json"
 WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v5_decision_ranked_json"
 SOURCE_EXTRACTED_ROLE = "source_claim"
+DEFAULT_WHOLE_DOC_NUM_PREDICT = 8192
+DEFAULT_WHOLE_DOC_NUM_PREDICT_MAX = 16384
 
 
 def whole_doc_claim_payload_for_source(
@@ -35,12 +38,14 @@ def whole_doc_claim_payload_for_source(
         cached = _read_cached_payload(canonical_path)
         if cached is not None:
             return cached, True, ""
+    effective_max_claims = effective_whole_doc_claim_cap(source_text, max_claims)
+    num_predict = whole_doc_num_predict(source_text, effective_max_claims)
     prompt = _source_card_prompt(
         source_id=source_id,
         source_title=source_title,
         source_text=source_text,
         decision_question=decision_question,
-        max_claims=max_claims,
+        max_claims=effective_max_claims,
     )
     write_markdown(raw_path.with_name(raw_path.name.replace("_raw.txt", "_prompt.txt")), prompt)
     try:
@@ -49,7 +54,8 @@ def whole_doc_claim_payload_for_source(
             backend,
             timeout_seconds=backend_timeout,
             max_retries=backend_retries,
-            response_schema=source_card_json_schema(max_claims=max_claims),
+            response_schema=source_card_json_schema(max_claims=effective_max_claims),
+            num_predict=num_predict,
         )
         raw = result.text
     except (RuntimeError, ValueError) as exc:
@@ -66,7 +72,7 @@ def whole_doc_claim_payload_for_source(
             source_id=source_id,
             decision_question=decision_question,
             raw_extraction=raw,
-            max_claims=max_claims,
+            max_claims=effective_max_claims,
         )
         write_markdown(repair_raw_path.with_name(repair_raw_path.name.replace("_repair_raw.txt", "_repair_prompt.txt")), repair_prompt)
         try:
@@ -75,7 +81,8 @@ def whole_doc_claim_payload_for_source(
                 backend,
                 timeout_seconds=backend_timeout,
                 max_retries=backend_retries,
-                response_schema=source_card_json_schema(max_claims=max_claims),
+                response_schema=source_card_json_schema(max_claims=effective_max_claims),
+                num_predict=num_predict,
             )
             repair_raw = repair_result.text
         except (RuntimeError, ValueError) as exc:
@@ -96,7 +103,15 @@ def whole_doc_claim_payload_for_source(
                 allow_common_variants=True,
             )
     if source_card is None:
-        report = {"schema_id": "whole_doc_claim_extraction_report_v1", "status": "error", "source_id": source_id, "reason": "no_usable_source_card"}
+        report = {
+            "schema_id": "whole_doc_claim_extraction_report_v1",
+            "status": "error",
+            "source_id": source_id,
+            "reason": "no_usable_source_card",
+            "requested_max_claims": max_claims,
+            "effective_max_claims": effective_max_claims,
+            "num_predict": num_predict,
+        }
         write_json(report_path, report)
         write_json(canonical_path, {})
         return None, False, "whole-doc extraction produced no usable source card"
@@ -112,12 +127,48 @@ def whole_doc_claim_payload_for_source(
         "status": "ok",
         "source_id": source_id,
         "claim_count": len(proposals),
+        "requested_max_claims": max_claims,
+        "effective_max_claims": effective_max_claims,
+        "num_predict": num_predict,
         **repair_info,
         **proposal_report,
     }
     write_json(canonical_path, payload)
     write_json(report_path, report)
     return payload, False, ""
+
+
+def effective_whole_doc_claim_cap(source_text: str, requested_max_claims: int) -> int:
+    """Allow longer documents to return more source-level claims.
+
+    The CLI option remains the floor requested by the caller. Long documents
+    often need extra slots to preserve distinct endpoint, population, and
+    subgroup claims without forcing the model into oversized claims.
+    """
+
+    base = max(1, int(requested_max_claims))
+    hard_cap = max(base, _int_env("ECM_WHOLE_DOC_MAX_CLAIMS_CAP", 24))
+    extra = (max(0, len(source_text)) // 20_000) * 2
+    return min(hard_cap, base + extra)
+
+
+def whole_doc_num_predict(source_text: str, effective_max_claims: int) -> int:
+    override = _int_env("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT", 0)
+    if override > 0:
+        return override
+    global_default = _int_env("ECM_OLLAMA_NUM_PREDICT", 2048)
+    max_budget = max(DEFAULT_WHOLE_DOC_NUM_PREDICT, _int_env("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT_MAX", DEFAULT_WHOLE_DOC_NUM_PREDICT_MAX))
+    long_doc_extra = (max(0, len(source_text)) // 50_000) * 2048
+    claim_extra = max(0, int(effective_max_claims) - 8) * 512
+    budget = max(DEFAULT_WHOLE_DOC_NUM_PREDICT, global_default) + long_doc_extra + claim_extra
+    return min(max_budget, max(1024, budget))
+
+
+def _int_env(key: str, default: int) -> int:
+    try:
+        return int(os.environ.get(key, str(default)))
+    except ValueError:
+        return default
 
 
 def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:

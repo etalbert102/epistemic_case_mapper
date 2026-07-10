@@ -75,6 +75,7 @@ def run_model_backend(
     timeout_seconds: int | None = None,
     max_retries: int = 1,
     response_schema: dict | None = None,
+    num_predict: int | None = None,
 ) -> ModelBackendResult:
     spec = backend.strip()
     if not spec or spec == "prompt":
@@ -93,7 +94,7 @@ def run_model_backend(
         if not model:
             raise ValueError("empty ollama model")
         text, attempts = _run_with_retries(
-            lambda: _run_ollama(model, prompt, timeout_seconds, response_schema=response_schema),
+            lambda: _run_ollama(model, prompt, timeout_seconds, response_schema=response_schema, num_predict=num_predict),
             max_retries=max_retries,
         )
         return ModelBackendResult(text=text, backend=spec, attempts=attempts)
@@ -135,11 +136,18 @@ def _run_command(command: str, prompt: str, timeout_seconds: int | None) -> str:
     return result.stdout
 
 
-def _run_ollama(model: str, prompt: str, timeout_seconds: int | None, *, response_schema: dict | None = None) -> str:
+def _run_ollama(
+    model: str,
+    prompt: str,
+    timeout_seconds: int | None,
+    *,
+    response_schema: dict | None = None,
+    num_predict: int | None = None,
+) -> str:
     if os.environ.get("ECM_OLLAMA_BACKEND", "http").strip().lower() == "cli":
         return _run_ollama_cli(model, prompt, timeout_seconds)
     try:
-        return _run_ollama_http(model, prompt, timeout_seconds, response_schema=response_schema)
+        return _run_ollama_http(model, prompt, timeout_seconds, response_schema=response_schema, num_predict=num_predict)
     except RuntimeError as exc:
         if not _should_fallback_to_ollama_cli(exc):
             raise
@@ -152,6 +160,7 @@ def _run_ollama_http(
     timeout_seconds: int | None,
     *,
     response_schema: dict | None = None,
+    num_predict: int | None = None,
 ) -> str:
     host = _ollama_host()
     payload = {
@@ -162,7 +171,7 @@ def _run_ollama_http(
         "think": False,
         "options": {
             "temperature": float(os.environ.get("ECM_OLLAMA_TEMPERATURE", "0")),
-            "num_predict": int(os.environ.get("ECM_OLLAMA_NUM_PREDICT", "2048")),
+            "num_predict": int(num_predict or os.environ.get("ECM_OLLAMA_NUM_PREDICT", "2048")),
         },
     }
     body = json.dumps(payload).encode("utf-8")

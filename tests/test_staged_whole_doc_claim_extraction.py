@@ -7,6 +7,7 @@ from pathlib import Path
 import epistemic_case_mapper.staged_semantic_whole_doc as whole_doc_adapter
 import epistemic_case_mapper.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
 from epistemic_case_mapper.staged_semantic_pipeline import _extract_claims, _load_context
+from epistemic_case_mapper.staged_semantic_whole_doc import effective_whole_doc_claim_cap, whole_doc_num_predict
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts"))
 from test_submission_manifest_generalization import _write_transfer_fixture
@@ -19,7 +20,7 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
         def __init__(self, text: str):
             self.text = text
 
-    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None):
+    def fake_backend(prompt: str, backend: str, timeout_seconds=None, max_retries=0, response_schema=None, num_predict=None):
         calls.append({"prompt": prompt, "response_schema": response_schema})
         if response_schema is None:
             return Result(
@@ -96,6 +97,24 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert report["source_card_exact_quote_count"] == 1
     assert len(calls) == 1
     assert calls[0]["response_schema"] is not None
+
+
+def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypatch) -> None:
+    monkeypatch.delenv("ECM_WHOLE_DOC_MAX_CLAIMS_CAP", raising=False)
+    monkeypatch.delenv("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT", raising=False)
+    monkeypatch.delenv("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT_MAX", raising=False)
+    monkeypatch.delenv("ECM_OLLAMA_NUM_PREDICT", raising=False)
+
+    assert effective_whole_doc_claim_cap("short source", 8) == 8
+    assert effective_whole_doc_claim_cap("x" * 60_000, 8) == 14
+    assert whole_doc_num_predict("short source", 8) == 8192
+    assert whole_doc_num_predict("x" * 60_000, 14) == 13_312
+
+    monkeypatch.setenv("ECM_WHOLE_DOC_MAX_CLAIMS_CAP", "10")
+    assert effective_whole_doc_claim_cap("x" * 60_000, 8) == 10
+
+    monkeypatch.setenv("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT", "9000")
+    assert whole_doc_num_predict("x" * 60_000, 14) == 9000
 
 
 def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Path) -> None:
