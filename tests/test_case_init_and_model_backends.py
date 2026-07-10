@@ -231,7 +231,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
         "            {'claim': 'Gamma supplies a staged crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It changes how Alpha is read.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "        ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
-        "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim changes how the Alpha claim should be read.', 'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'], 'similar_but_not_identical': []}\n"
+        "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim is a crux because it would change how the Alpha claim should be read.', 'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'], 'similar_but_not_identical': []}\n"
         "else:\n"
         "    payload = {}\n"
         "print(json.dumps(payload))\n",
@@ -266,7 +266,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert generated["relations"][0]["relation_provenance"] == "model_classified"
     assert generated["relations"][0]["relation_contract"]["source_anchor_a"] == "Alpha line."
     assert generated["relations"][0]["relation_contract"]["failure_condition"]
-    assert "source_extracted_claim_pair" in generated["relations"][0]["candidate_pair"]["reason"]
+    assert "outcome_disagreement" in generated["relations"][0]["candidate_pair"]["reason"]
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     source_report = json.loads(
         (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_sources/demo_case_doc_a_whole_doc_report.json").read_text(
@@ -458,7 +458,7 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
-        "    payload = {'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'crux_for', 'rationale': 'The two budgeted chunks should be compared.', 'crux_candidates': ['budgeted crux'], 'similar_but_not_identical': []}\n"
+        "    payload = {'pair_id': pair_id, 'source_claim': ids[0], 'target_claim': ids[1], 'relation_type': 'supports', 'rationale': 'The two budgeted chunks support the same proposition for the fixture decision.', 'crux_candidates': [], 'similar_but_not_identical': []}\n"
         "else:\n"
         "    payload = {}\n"
         "print(json.dumps(payload))\n",

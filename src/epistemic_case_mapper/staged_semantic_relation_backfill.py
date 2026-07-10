@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from epistemic_case_mapper.staged_semantic_sources import _fallback_relation
 from epistemic_case_mapper.submission_manifest import WorkedRegion
 
 
@@ -16,8 +15,11 @@ def finalize_sparse_relation_graph(
     relation_index: int,
     seen: set[tuple[str, str, str]],
     min_relation_count: int = 0,
+    allow_deterministic_fallback: bool = True,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
-    if not accepted:
+    if not accepted and allow_deterministic_fallback:
+        from epistemic_case_mapper.staged_semantic_sources import _fallback_relation
+
         fallback = _fallback_relation(pair_packets, permitted_types)
         if fallback is not None:
             fallback["relation_id"] = f"{region.id_prefix}_r{relation_index:03d}"
@@ -32,15 +34,18 @@ def finalize_sparse_relation_graph(
                     "relation_type": fallback["relation_type"],
                 }
             )
-    accepted, relation_index, densification_rows = _densify_sparse_fallback_relations(
-        accepted=accepted,
-        pair_packets=pair_packets,
-        permitted_types=permitted_types,
-        region=region,
-        relation_index=relation_index,
-        seen=seen,
-        min_relation_count=min_relation_count,
-    )
+    if allow_deterministic_fallback:
+        accepted, relation_index, densification_rows = _densify_sparse_fallback_relations(
+            accepted=accepted,
+            pair_packets=pair_packets,
+            permitted_types=permitted_types,
+            region=region,
+            relation_index=relation_index,
+            seen=seen,
+            min_relation_count=min_relation_count,
+        )
+    else:
+        densification_rows = []
     if densification_rows:
         rejected.append(
             {
@@ -86,6 +91,8 @@ def _densify_sparse_fallback_relations(
     for packet in ordered_packets:
         if len(accepted) >= target_count:
             break
+        from epistemic_case_mapper.staged_semantic_sources import _fallback_relation
+
         fallback = _fallback_relation([packet], permitted_types)
         if fallback is None:
             continue

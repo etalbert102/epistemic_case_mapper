@@ -64,6 +64,7 @@ def build_analyst_map_evidence_ledger(
         for index, claim in enumerate(_list(candidate_map.get("claims")), start=1)
         if isinstance(claim, dict) and str(claim.get("claim_id") or "").strip()
     ]
+    rows.extend(_decision_edge_rows(candidate_map, source_labels=source_labels))
     rows.extend(_warning_rows(warning_packet))
     rows = _dedupe_rows(rows)
     return {
@@ -140,6 +141,114 @@ def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dic
         if right:
             context.setdefault(right, []).append({**row, "other_claim_id": left, "other_claim": _short_text(claim_lookup.get(left, ""), 180)})
     return context
+
+
+def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[str, str]) -> list[dict[str, Any]]:
+    claim_lookup = {
+        str(claim.get("claim_id") or ""): claim
+        for claim in _list(candidate_map.get("claims"))
+        if isinstance(claim, dict)
+    }
+    rows: list[dict[str, Any]] = []
+    for relation in _list(candidate_map.get("relations")):
+        if not isinstance(relation, dict):
+            continue
+        relation_id = str(relation.get("relation_id") or "").strip()
+        if not relation_id:
+            continue
+        source_claim_id = str(relation.get("source_claim") or "").strip()
+        target_claim_id = str(relation.get("target_claim") or "").strip()
+        source_claim = claim_lookup.get(source_claim_id, {})
+        target_claim = claim_lookup.get(target_claim_id, {})
+        source_ids = _dedupe(
+            [
+                str(source_claim.get("source_id") or ""),
+                str(target_claim.get("source_id") or ""),
+            ]
+        )
+        contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
+        rows.append(
+            _drop_empty(
+                {
+                    "evidence_item_id": f"relation:{relation_id}",
+                    "input_kind": "candidate_decision_edge",
+                    "current_packet_location": "generated_map.relations",
+                    "relation_id": relation_id,
+                    "claim_ids": _dedupe([source_claim_id, target_claim_id]),
+                    "source_ids": source_ids,
+                    "source_labels": [source_labels.get(source_id, source_id) for source_id in source_ids if source_id],
+                    "claim": _short_text(_decision_edge_statement(relation, source_claim, target_claim), 620),
+                    "source_excerpt": _short_text(_decision_edge_excerpt(source_claim, target_claim), 620),
+                    "current_role": _relation_current_role(str(relation.get("relation_type") or "")),
+                    "current_priority": _relation_priority(relation),
+                    "current_weight": str(relation.get("relation_confidence") or "medium"),
+                    "quality": str(relation.get("relation_provenance") or "model_classified"),
+                    "directionality": str(relation.get("relation_type") or ""),
+                    "why_it_matters": _short_text(str(contract.get("why_decision_relevant") or relation.get("why_decision_relevant") or relation.get("rationale") or ""), 320),
+                    "failure_condition": _short_text(str(contract.get("failure_condition") or relation.get("failure_condition") or ""), 260),
+                    "existing_warning_codes": _relation_warning_codes(relation),
+                }
+            )
+        )
+    return rows
+
+
+def _decision_edge_statement(relation: dict[str, Any], source_claim: dict[str, Any], target_claim: dict[str, Any]) -> str:
+    relation_type = str(relation.get("relation_type") or "relates_to").replace("_", " ")
+    rationale = str(relation.get("rationale") or "").strip()
+    left = str(source_claim.get("claim") or relation.get("source_claim") or "").strip()
+    right = str(target_claim.get("claim") or relation.get("target_claim") or "").strip()
+    if rationale:
+        return f"{relation_type}: {rationale}"
+    return " ".join(part for part in (left, relation_type, right) if part)
+
+
+def _decision_edge_excerpt(source_claim: dict[str, Any], target_claim: dict[str, Any]) -> str:
+    left = str(source_claim.get("source_quote") or source_claim.get("excerpt") or "").strip()
+    right = str(target_claim.get("source_quote") or target_claim.get("excerpt") or "").strip()
+    return " | ".join(part for part in (_short_text(left, 280), _short_text(right, 280)) if part)
+
+
+def _relation_current_role(relation_type: str) -> str:
+    if relation_type in {"in_tension_with", "challenges"}:
+        return "load_bearing_counterweight"
+    if relation_type in {"depends_on", "refines"}:
+        return "scope_or_applicability"
+    if relation_type == "crux_for":
+        return "decision_crux"
+    if relation_type == "supports":
+        return "load_bearing_primary_support"
+    return "mechanism_or_context"
+
+
+def _relation_priority(relation: dict[str, Any]) -> int:
+    relation_type = str(relation.get("relation_type") or "")
+    confidence = str(relation.get("relation_confidence") or "").lower()
+    score = {
+        "crux_for": 10,
+        "in_tension_with": 9,
+        "challenges": 9,
+        "depends_on": 8,
+        "refines": 7,
+        "supports": 7,
+        "similar_to": 3,
+    }.get(relation_type, 5)
+    if confidence == "high":
+        score += 1
+    elif confidence == "low":
+        score -= 2
+    return max(1, min(10, score))
+
+
+def _relation_warning_codes(relation: dict[str, Any]) -> list[str]:
+    warnings = []
+    if str(relation.get("relation_confidence") or "").lower() == "low":
+        warnings.append("low_confidence_relation")
+    if relation.get("requires_review"):
+        warnings.append("requires_relation_review")
+    if not str(relation.get("rationale") or "").strip():
+        warnings.append("missing_relation_rationale")
+    return warnings
 
 
 def _source_labels_from_scaffold(scaffold: dict[str, Any]) -> dict[str, str]:

@@ -175,6 +175,13 @@ def _relation_intent_decision_rule(intent_name: str) -> str:
         "cross_source_disagreement": "Use in_tension_with or challenges only when the exact quotes point in conflicting directions on the same decision-relevant proposition.",
         "same_source_disagreement": "Use in_tension_with only when the source itself contains a real internal tension.",
         "mechanism_to_outcome": "Use supports, depends_on, or in_tension_with only when the mechanism changes the interpretation of the outcome claim.",
+        "outcome_disagreement": "Use in_tension_with or challenges only when the two findings point in different directions on the same decision-relevant proposition.",
+        "scope_bounds_outcome": "Use refines or depends_on when the scope claim names where an outcome finding applies; use in_tension_with only for a real subgroup exception.",
+        "method_limits_headline": "Use challenges or refines when the method claim changes how strongly the headline finding should be used.",
+        "comparator_contextualizes_outcome": "Use refines or supports only when the comparator changes the interpretation of the outcome claim; do not imply absolute benefit from relative substitution evidence.",
+        "guidance_supported_or_bounded_by_evidence": "Use supports when the evidence directly backs the guidance, and refines or depends_on when it narrows the guidance.",
+        "scope_bounds_guidance": "Use depends_on or refines when the scope claim names the population or condition where the guidance holds.",
+        "method_limits_guidance": "Use challenges or refines when the method limitation changes confidence in the guidance.",
     }
     return rules.get(intent_name, "Use a relation only when the exact evidence quotes establish a clear decision-relevant edge.")
 

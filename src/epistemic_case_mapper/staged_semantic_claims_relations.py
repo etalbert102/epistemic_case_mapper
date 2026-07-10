@@ -16,6 +16,12 @@ from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
+from epistemic_case_mapper.staged_semantic_decision_edges import (
+    build_decision_edge_relation_inputs,
+    decision_edge_quality_report,
+    low_confidence_decision_edge_reason,
+    prepare_claim_decision_edge_roles,
+)
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from epistemic_case_mapper.staged_semantic_relation_batches import run_relation_batch_backend, write_relation_batch_report
@@ -608,11 +614,24 @@ def _extract_relations(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
         return [], [], [{"reason": "too_few_claims"}]
-    effective_max_relation_pairs = _relation_pair_budget(claims, max_relation_pairs)
-    pair_packets = _candidate_relation_pairs(claims, effective_max_relation_pairs)
-    _write_relation_candidate_pool_report(artifact_dir, claims, pair_packets, max_relation_pairs, effective_max_relation_pairs)
+    relation_claims, role_prep_report = prepare_claim_decision_edge_roles(
+        claims,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        decision_question=decision_question,
+    )
+    write_json(artifact_dir / "claim_relation_model_role_prep_report.json", role_prep_report)
+    pair_packets, claim_role_report, decision_edge_candidate_report = build_decision_edge_relation_inputs(
+        relation_claims,
+        requested_max_pairs=max_relation_pairs,
+    )
+    effective_max_relation_pairs = int(decision_edge_candidate_report.get("effective_max_pairs", len(pair_packets)) or len(pair_packets))
+    _write_relation_candidate_pool_report(artifact_dir, relation_claims, pair_packets, max_relation_pairs, effective_max_relation_pairs)
+    write_json(artifact_dir / "claim_relation_role_report.json", claim_role_report)
+    write_json(artifact_dir / "decision_edge_candidate_report.json", decision_edge_candidate_report)
     batches = list(_batches(pair_packets, relation_batch_size))
-    _start_relation_progress(progress, claims, pair_packets, batches, max_relation_pairs, effective_max_relation_pairs, backend)
+    _start_relation_progress(progress, relation_claims, pair_packets, batches, max_relation_pairs, effective_max_relation_pairs, backend)
     claim_ids = {claim["claim_id"] for claim in claims}
     permitted_types = manifest.relation_ontology.permitted_types()
     accepted: list[dict[str, Any]] = []
@@ -684,6 +703,10 @@ def _extract_relations(
             if relation is None:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": reason, "proposal": proposal})
                 continue
+            decision_edge_reason = low_confidence_decision_edge_reason(relation, packet)
+            if decision_edge_reason:
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": decision_edge_reason, "proposal": proposal})
+                continue
             if _append_semantic_relation_rejection(rejected, relation, packet, batch_id, proposal):
                 continue
             key = (relation["source_claim"], relation["target_claim"], relation["relation_type"])
@@ -698,6 +721,10 @@ def _extract_relations(
             if packet["pair_id"] not in proposed_pair_ids:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
     accepted, rejected = _finalize_and_write_relations(accepted, rejected, pair_packets, permitted_types, region, relation_index, seen, claims, artifact_dir)
+    write_json(
+        artifact_dir / "decision_edge_quality_report.json",
+        decision_edge_quality_report(pair_packets=pair_packets, accepted=accepted, rejected=rejected),
+    )
     _finish_relation_progress(progress, pair_packets, batches, accepted, rejected)
     return accepted, payloads, rejected
 
@@ -794,6 +821,7 @@ def _finalize_and_write_relations(
         relation_index=relation_index,
         seen=seen,
         min_relation_count=max(2, len(claims) // 20) if len(claims) >= 20 else 0,
+        allow_deterministic_fallback=False,
     )
     write_json(artifact_dir / "accepted_relations.json", {"relations": accepted, "rejected": rejected})
     return accepted, rejected

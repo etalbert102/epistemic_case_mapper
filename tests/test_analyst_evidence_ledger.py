@@ -98,8 +98,10 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
 
     assert ledger["method"] == "retained_claim_map_inventory_for_llm_adjudicated_packet_construction"
     assert ledger["coverage_checks"]["retained_map_claim_rows"] == 2
-    assert [row["evidence_item_id"] for row in ledger["rows"]] == ["claim:c001", "claim:c002"]
+    assert [row["evidence_item_id"] for row in ledger["rows"]] == ["claim:c001", "claim:c002", "relation:r001"]
     assert ledger["rows"][0]["source_labels"] == ["Benefit Study"]
     assert ledger["rows"][0]["quantity_values"] == ["20 percent"]
     assert ledger["rows"][1]["existing_warning_codes"] == ["question_scope_mismatch"]
     assert ledger["rows"][1]["relation_context"][0]["relation_type"] == "in_tension_with"
+    assert ledger["rows"][2]["input_kind"] == "candidate_decision_edge"
+    assert ledger["rows"][2]["current_role"] == "load_bearing_counterweight"
