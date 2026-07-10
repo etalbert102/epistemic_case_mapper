@@ -26,14 +26,14 @@ def test_memo_ready_packet_includes_general_decision_synthesis_contract() -> Non
     assert "egg" not in str(contract).lower()
 
 
-def test_memo_ready_synthesis_prompt_uses_contract_as_writing_plan() -> None:
+def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert "decision_synthesis_contract" in prompt
-    assert "Use that contract as the writing plan" in prompt
+    assert "Treat these as guidance for what matters" in prompt
     assert "Do not merely summarize or list evidence" in prompt
     assert "## Why This Is the Best Current Read" in prompt
     assert "quantity_tuples" in prompt

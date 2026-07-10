@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -346,7 +347,64 @@ def test_memo_warning_packet_routes_truly_lost_evidence_into_synthesis_prompt() 
     assert result["memo_warning_packet"]["critical_warning_count"] == 1
     assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
     assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
-    assert "If memo_warning_packet contains warnings" in prompt
+    assert "memo_warning_packet" in prompt
+    assert "explaining its decision relevance" in prompt
+
+
+def test_memo_obligations_make_moderate_context_optional() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    decision_packet = built["decision_briefing_packet"]
+    decision_packet["source_trail"].append({"source_id": "s4", "source_label": "Context Review"})
+    decision_packet["coverage_report"]["truly_lost_moderate_context"] = [
+        {
+            "candidate_card_id": "ec_context",
+            "decision_role": "scope_boundary",
+            "priority": 4,
+            "source_ids": ["s4"],
+            "claim": "Specify the demographic characteristics of the study population.",
+        }
+    ]
+
+    packet = build_quality_synthesis_packet_bundle(decision_packet)["memo_ready_packet"]
+    obligations = packet["memo_obligations"]["obligations"]
+    optional = [row for row in obligations if row.get("role") == "source_warning"]
+    memo = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert optional and optional[0]["required"] is False
+    assert report["validation_basis"] == "memo_obligations"
+    assert report["unresolved_warning_count"] == 0
+
+
+def test_scope_obligation_does_not_force_raw_demographic_quantities() -> None:
+    item = {
+        "item_id": "scope_001",
+        "must_use": True,
+        "role": "scope_boundary",
+        "reader_claim": "RESULTS: 140 patients were randomized; median age 66 years; 51% women; 24% with diabetes mellitus.",
+        "source_label": "Population Study",
+        "source_labels": ["Population Study"],
+        "quantities": [{"value": "51%"}, {"value": "24%"}],
+    }
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "evidence_items": [item],
+        "memo_obligations": build_memo_obligation_packet([item], {"warnings": []}),
+        "memo_warning_packet": {"warnings": []},
+        "source_trail": [{"source_label": "Population Study", "appears_in_packet": True}],
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "The answer applies to the studied population and should not be generalized beyond that scope.\n\n"
+        "## Sources\n\n"
+        "* Population Study\n"
+    )
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["status"] == "ready"
+    assert report["missing_quantity_count"] == 0
+    assert report["missing_evidence_item_count"] == 1
 
 
 def test_warning_resolution_report_flags_unresolved_warning_evidence() -> None:
@@ -465,9 +523,10 @@ def test_memo_ready_repair_accepts_warning_resolution(monkeypatch) -> None:
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert before["unresolved_warning_count"] == 1
+    assert before["unresolved_warning_count"] == 0
+    assert any(issue["issue_type"] == "missing_memo_obligation" for issue in before["issues"])
     assert result["report"]["status"] == "accepted"
-    assert result["report"]["final_unresolved_warning_count"] == 0
+    assert result["report"]["final_missing_mandatory_count"] == 0
     assert "Equity Review" in result["memo"]
 
 

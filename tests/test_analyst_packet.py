@@ -245,8 +245,8 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
 
     assert "analyst_argument_plan" in prompt
     assert "analyst_decision_logic" in prompt
-    assert "controlling analytical frame" in prompt
-    assert "controlling argument order" in prompt
+    assert "not as a rigid outline" in prompt
+    assert "Exercise analyst judgment" in prompt
     assert "weigh_risk" in prompt
 
 

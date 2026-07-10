@@ -14,6 +14,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_obligations import (
+    all_memo_obligations,
+    required_memo_obligations,
+)
 from epistemic_case_mapper.map_briefing_memo_warning_packet import (
     build_warning_resolution_report,
     unresolved_warning_repair_items,
@@ -96,14 +100,22 @@ def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:
 
 def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
     source_aliases = _source_alias_lookup(packet)
-    statuses = [_item_retention_status(memo, item, source_aliases) for item in _mandatory_items(packet)]
+    obligations = required_memo_obligations(packet)
+    uses_obligations = bool(obligations)
+    evidence_statuses = [_item_retention_status(memo, item, source_aliases) for item in _mandatory_items(packet)]
+    statuses = (
+        [_obligation_retention_status(memo, obligation, source_aliases) for obligation in obligations]
+        if uses_obligations
+        else evidence_statuses
+    )
     item_issues = [row for row in statuses if not row["retained"]]
+    evidence_item_issues = [row for row in evidence_statuses if not row["retained"]]
     warning_resolution = build_warning_resolution_report(
         memo,
         _dict(packet.get("memo_warning_packet")),
         source_aliases=source_aliases,
     )
-    warning_issues = [
+    warning_issues = [] if uses_obligations else [
         {
             "issue_type": "unresolved_memo_warning",
             "warning_status": row.get("status"),
@@ -120,6 +132,7 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
     issues = [*item_issues, *warning_issues]
     return {
         "schema_id": "memo_ready_packet_retention_report_v1",
+        "validation_basis": "memo_obligations" if uses_obligations else "mandatory_evidence_items",
         "status": "ready" if not issues else "warning",
         "must_retain_count": len(statuses),
         "retained_must_retain_count": sum(1 for row in statuses if row["retained"]),
@@ -132,6 +145,10 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "unresolved_warning_count": len(warning_issues),
         "warning_resolution_report": warning_resolution,
         "item_statuses": statuses,
+        "evidence_item_statuses": evidence_statuses,
+        "missing_evidence_item_count": len(evidence_item_issues),
+        "memo_obligation_count": len(all_memo_obligations(packet)),
+        "required_memo_obligation_count": len(obligations),
         "warning_issues": warning_issues,
         "issues": issues,
     }
@@ -193,6 +210,11 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
     warning_resolution = _dict(retention_report.get("warning_resolution_report"))
     repair_packet = {
         "decision_question": packet.get("decision_question"),
+        "missing_obligations": [
+            _repair_obligation(packet, issue)
+            for issue in _list(retention_report.get("issues"))[:8]
+            if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_obligation"
+        ],
         "missing_items": [
             _repair_item(packet, issue)
             for issue in _list(retention_report.get("issues"))[:8]
@@ -206,7 +228,8 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "Rules:\n"
         "- Return the full revised memo in Markdown, not JSON.\n"
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
-        "- Use only the missing items in the repair packet; do not introduce new evidence.\n"
+        "- Repair missing obligations by improving the reasoning, not by appending orphan facts.\n"
+        "- Use only the missing obligations or legacy missing items in the repair packet; do not introduce new evidence.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"
         "- Do not mention packet IDs, validation, telemetry, or internal pipeline machinery.\n\n"
@@ -293,14 +316,23 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
     protected = {
         "decision_question": packet.get("decision_question"),
-        "mandatory_items": [
+        "required_obligations": [
+            {
+                "obligation_type": obligation.get("obligation_type"),
+                "statement": obligation.get("statement"),
+                "source_labels": obligation.get("source_labels", []),
+                "quantities": obligation.get("quantities", []),
+            }
+            for obligation in required_memo_obligations(packet)[:18]
+        ],
+        "legacy_mandatory_items": [
             {
                 "source_label": item.get("source_label"),
                 "reader_claim": item.get("reader_claim"),
                 "quantities": item.get("quantities", []),
             }
             for item in _mandatory_items(packet)[:18]
-        ],
+        ] if not required_memo_obligations(packet) else [],
         "memo_warnings": _list(_dict(packet.get("memo_warning_packet")).get("warnings"))[:8],
     }
     return (
@@ -308,7 +340,7 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "Improve flow and remove awkward wording while preserving every protected source-backed item.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown, not JSON.\n"
-        "- Do not drop protected quantities, source labels, caveats, counterweights, or scope boundaries.\n"
+        "- Do not drop protected obligations, quantities, source labels, caveats, counterweights, or scope boundaries.\n"
         "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
         "- Do not add facts or sources beyond the memo and protected item list.\n"
         "- Make the memo read like decision-ready analysis, not a checklist.\n\n"
@@ -519,6 +551,51 @@ def _item_retention_status(memo: str, item: dict[str, Any], source_aliases: dict
     }
 
 
+def _obligation_retention_status(
+    memo: str,
+    obligation: dict[str, Any],
+    source_aliases: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
+    statement = str(obligation.get("statement") or "").strip()
+    source_labels = _string_list(obligation.get("source_labels"))
+    quantities = [
+        str(quantity.get("value") or "").strip()
+        for quantity in _list(obligation.get("quantities"))
+        if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
+    ]
+    missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
+    source_retained = not source_labels or any(
+        _contains_text(memo, alias)
+        for source in source_labels
+        for alias in _source_aliases_for_label(source, source_aliases or {})
+    )
+    if not source_retained and source_labels:
+        source_retained = any(_contains_text(memo, source) for source in source_labels)
+    mode = str(obligation.get("validation_mode") or "claim_terms")
+    if mode == "scope_signal":
+        source_retained = True
+    terms = _string_list(obligation.get("validation_terms")) or _content_terms(statement)
+    if mode == "scope_signal":
+        claim_retained = any(_contains_text(memo, term) for term in terms)
+    else:
+        claim_retained = _mentions_enough_terms(memo, terms, minimum=min(4, max(2, len(terms) // 2)))
+    retained = source_retained and claim_retained and not missing_quantities
+    return {
+        "obligation_id": obligation.get("obligation_id"),
+        "severity": "critical",
+        "issue_type": "missing_memo_obligation",
+        "obligation_type": obligation.get("obligation_type"),
+        "role": obligation.get("role"),
+        "retained": retained,
+        "source_retained": source_retained,
+        "claim_retained": claim_retained,
+        "missing_quantities": missing_quantities,
+        "statement": statement,
+        "source_labels": source_labels,
+        "validation_terms": terms,
+    }
+
+
 def _repair_item(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any]:
     item_id = str(issue.get("item_id") or "")
     item = next((row for row in _mandatory_items(packet) if str(row.get("item_id") or "") == item_id), {})
@@ -530,6 +607,24 @@ def _repair_item(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any
         "quantities": item.get("quantities", []),
         "decision_relevance": item.get("decision_relevance"),
         "caveat": item.get("caveat"),
+        "missing_quantities": issue.get("missing_quantities", []),
+    }
+
+
+def _repair_obligation(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any]:
+    obligation_id = str(issue.get("obligation_id") or "")
+    obligation = next(
+        (row for row in required_memo_obligations(packet) if str(row.get("obligation_id") or "") == obligation_id),
+        {},
+    )
+    return {
+        "obligation_id": obligation_id,
+        "obligation_type": obligation.get("obligation_type") or issue.get("obligation_type"),
+        "role": obligation.get("role") or issue.get("role"),
+        "statement": obligation.get("statement") or issue.get("statement"),
+        "prose_instruction": obligation.get("prose_instruction"),
+        "source_labels": obligation.get("source_labels", issue.get("source_labels", [])),
+        "quantities": obligation.get("quantities", []),
         "missing_quantities": issue.get("missing_quantities", []),
     }
 
@@ -598,9 +693,15 @@ def _mentions_enough_content_terms(text: str, statement: str, *, minimum: int) -
     terms = _content_terms(statement)
     if not terms:
         return True
+    return _mentions_enough_terms(text, terms, minimum=minimum)
+
+
+def _mentions_enough_terms(text: str, terms: list[str], *, minimum: int) -> bool:
+    if not terms:
+        return True
     required = min(minimum, len(terms))
     lowered = text.lower()
-    return sum(1 for term in terms if term in lowered) >= required
+    return sum(1 for term in terms if term and term.lower() in lowered) >= required
 
 
 def _content_terms(text: str) -> list[str]:

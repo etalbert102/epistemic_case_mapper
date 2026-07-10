@@ -21,6 +21,8 @@ from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo
 from epistemic_case_mapper.map_briefing_packet_qa import build_packet_qa_report
 from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
@@ -326,6 +328,7 @@ def build_memo_ready_packet(
     mandatory = [item for item in items if item.get("must_use")]
     context = [item for item in items if not item.get("must_use")]
     selected, selection_report = select_memo_ready_items(mandatory, context)
+    warning_packet = memo_warning_packet if isinstance(memo_warning_packet, dict) else build_memo_warning_packet(packet)
     memo_ready_packet = {
         "schema_id": "memo_ready_packet_v1",
         "decision_question": str(packet.get("decision_question") or "").strip(),
@@ -333,7 +336,8 @@ def build_memo_ready_packet(
         "evidence_items": selected,
         "evidence_groups": _evidence_groups(selected),
         "source_trail": _source_trail(packet),
-        "memo_warning_packet": memo_warning_packet if isinstance(memo_warning_packet, dict) else build_memo_warning_packet(packet),
+        "memo_warning_packet": warning_packet,
+        "memo_obligations": build_memo_obligation_packet(selected, warning_packet),
         "selection_report": selection_report,
         "decision_crux_reconstruction_report": crux_report,
         "assembly_summary": {
@@ -398,38 +402,6 @@ def build_memo_ready_packet_quality_report(
         "bound_quantitative_anchor_count": sum(1 for item in quantitative if item.get("quantities")),
         "issues": issues,
     }
-
-
-def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
-    import json
-
-    return (
-        "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
-        "Use the packet as the complete evidence record for this memo.\n\n"
-        "The packet includes a decision_synthesis_contract. Use that contract as the writing plan. If analyst_decision_logic is present, treat it as the controlling analytical frame: use its bounded bottom line, counterweight weighting, reconciled cruxes, scope boundaries, practical implications, and do-not-overstate guardrails. If analyst_argument_plan is present, use it as the controlling argument order: write each planned reasoning move once, integrate required points, and place the strongest counterweight where it is weighed.\n"
-        "If memo_warning_packet contains warnings, treat them as actionable evidence that was at risk of omission.\n"
-        "Incorporate each warning naturally when it affects the answer; otherwise use it to bound scope, confidence, or uncertainty.\n"
-        "Do not merely summarize or list evidence. Produce a decision read: default stance, why it is supported, strongest counterweight, scope/conditions, and practical implication.\n\n"
-        "Rules:\n"
-        "- Answer the decision question directly in the first paragraph.\n"
-        "- Preserve source labels and load-bearing quantities from mandatory evidence items.\n"
-        "- When quantity_tuples are present, use those tuple labels instead of pairing estimates and intervals yourself.\n"
-        "- If a quantity is marked ambiguous or unpaired, describe it without inventing an estimate/interval pair.\n"
-        "- Explain what the key quantities mean for the decision; do not dump bare numbers.\n"
-        "- Explain why the strongest support does or does not outweigh the strongest counterweight.\n"
-        "- Name the conditions, subgroups, contexts, or assumptions that change the answer.\n"
-        "- Include decision cruxes when present and translate uncertainty into a practical implication.\n"
-        "- Do not mention packet schemas, item IDs, validation, telemetry, or internal pipeline machinery.\n"
-        "- Use natural Markdown and choose headings that fit the decision question.\n\n"
-        "Suggested memo shape when it fits the case:\n"
-        "## Decision Brief\n"
-        "## Why This Is the Best Current Read\n"
-        "## What Could Change the Answer\n"
-        "## Decision-Relevant Evidence\n"
-        "## Sources\n\n"
-        "Memo-ready packet:\n"
-        f"{json.dumps(memo_ready_packet, indent=2, ensure_ascii=False)}\n"
-    )
 
 
 def _cluster_from_bundle(cluster_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
