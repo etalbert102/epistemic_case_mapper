@@ -47,6 +47,11 @@ class EvidenceAdjudicationRow(BaseModel):
     def _strip_required_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
+    @field_validator("downgrade_reason", mode="before")
+    @classmethod
+    def _strip_optional_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
     @field_validator("memo_use", mode="before")
     @classmethod
     def _normalize_memo_use(cls, value: Any) -> str:

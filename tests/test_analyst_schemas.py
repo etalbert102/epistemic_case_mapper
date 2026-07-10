@@ -53,6 +53,15 @@ def test_analyst_adjudication_schema_accepts_valid_rows() -> None:
     assert report["valid"] is True
 
 
+def test_analyst_adjudication_schema_normalizes_nullable_downgrade_reason() -> None:
+    payload = _valid_payload()
+    payload["rows"][0]["downgrade_reason"] = None
+
+    parsed = AnalystAdjudication.model_validate(payload)
+
+    assert parsed.rows[0].downgrade_reason == ""
+
+
 def test_analyst_adjudication_schema_rejects_invalid_memo_use() -> None:
     payload = _valid_payload()
     payload["rows"][0]["memo_use"] = "strong_vibes"
