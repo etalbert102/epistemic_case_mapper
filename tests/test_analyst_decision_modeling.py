@@ -283,6 +283,74 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
         "bundle:support",
         "bundle:support_duplicate",
     ]
+    assert result["analyst_decision_model_repair_report"]["status"] == "not_needed"
+
+
+def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> None:
+    initial_payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A if risks are acceptable.",
+        "confidence": "medium",
+        "overall_rationale": "The outcome signal supports adoption.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support", "bundle:support_duplicate"],
+                "rationale": "The main study supports adoption.",
+            }
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:risk", "disposition": "background", "rationale": "Not foregrounded."},
+        ],
+        "quantitative_anchors": ["25% reduction"],
+        "what_would_change_the_answer": [],
+        "decision_logic": {"bounded_bottom_line": "Adopt if risk is acceptable."},
+        "argument_plan": [],
+    }
+    repaired_payload = {
+        **initial_payload,
+        "overall_rationale": "The outcome signal supports adoption, but the risk row bounds the answer.",
+        "evidence_groups": [
+            *initial_payload["evidence_groups"],
+            {
+                "group_id": "risk_group",
+                "proposition": "Operating-budget risk bounds adoption.",
+                "memo_role": "load_bearing_counterweight",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["bundle:risk"],
+                "rationale": "The risk row is the main counterweight.",
+                "answer_impact": "Bounds adoption.",
+            },
+        ],
+        "evidence_dispositions": [],
+    }
+    calls = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if "Repair a valid analyst decision model" in prompt:
+            return ModelBackendResult(text=json.dumps(repaired_payload), backend="fake")
+        return ModelBackendResult(text=json.dumps(initial_payload), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+
+    result = run_analyst_decision_model(
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert len(calls) == 2
+    assert result["analyst_decision_model_report"]["status"] == "accepted_after_repair"
+    assert result["analyst_decision_model_repair_report"]["accepted"] is True
+    assert result["analyst_decision_model"]["evidence_groups"][-1]["covered_evidence_item_ids"] == ["bundle:risk"]
+    assert result["analyst_decision_model_initial_parse_report"]["obligation_omissions"]["ungrouped_counterweight_ids"] == ["bundle:risk"]
 
 
 def test_run_analyst_decision_model_invalid_backend_falls_back(monkeypatch) -> None:
