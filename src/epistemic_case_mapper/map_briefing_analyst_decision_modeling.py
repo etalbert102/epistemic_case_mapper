@@ -114,12 +114,14 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
         cluster_id = clusters.get(str(row.get("evidence_item_id") or ""))
         if cluster_id:
             row["similarity_cluster_id"] = cluster_id
+    retention_obligations = _retention_obligation_context(ledger, rows)
     return {
         "schema_id": "analyst_decision_context_v1",
         "decision_question": str(ledger.get("decision_question") or "").strip(),
         "row_count": len(rows),
         "evidence_rows": rows,
-        "retention_obligations": _retention_obligation_context(ledger, rows),
+        "retention_obligations": retention_obligations,
+        "obligation_group_skeleton": _obligation_group_skeleton(retention_obligations),
         "model_hints": {
             "method": "tfidf_near_duplicate_hints_plus_relation_graph_centrality",
             "near_duplicate_pairs": [
@@ -142,13 +144,15 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
         "task": [
             "Construct a global decision model from the evidence ledger.",
             "Use evidence IDs to form higher-level evidence groups; do not merely classify rows one by one.",
+            "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
+            "You may merge skeleton groups or move an item to a better group when the reasoning calls for it, but every skeleton evidence_item_id should either be covered by an evidence_group or explicitly dispositioned.",
             "Rank groups by how much they should affect the answer.",
             "Use model_hints as clues only: centrality and similarity are not semantic decisions.",
             "Treat candidate_decision_edge rows as provisional analytic links; use their anchors, confidence, failure conditions, and endpoint claims to decide whether they reconcile, bound, weaken, or should be backgrounded.",
             "Do not preserve a proposed relation label when its rationale or anchors imply a different decision role; explain downgrades in evidence_dispositions or group rationale.",
             "Put redundant or subordinate rows into the same group when they support the same proposition.",
             "Include counterweights, scope boundaries, cruxes, mechanisms, and quantitative anchors when they materially change the decision read.",
-            "Before compressing evidence, check retention_obligations. Quantitative anchors, counterweights, cruxes, and scope boundaries listed there should normally appear in evidence_groups; if one is backgrounded or excluded, make that decision explicit in evidence_dispositions with a rationale.",
+            "Before compressing evidence, check retention_obligations and obligation_group_skeleton. Quantitative anchors, counterweights, cruxes, and scope boundaries listed there should normally appear in evidence_groups; if one is backgrounded or excluded, make that decision explicit in evidence_dispositions with a rationale.",
             "Keep support and counterweight evidence analytically separate unless the proposition explicitly explains how the tension is resolved. Do not bury contrary evidence inside a support group.",
             "Preserve actionable quantities as quantities, not just as generic prose.",
             "Use covered_evidence_item_ids inside evidence_groups for foreground accounting.",
@@ -382,6 +386,62 @@ def _retention_obligation_context(ledger: dict[str, Any], rows: list[dict[str, A
         "cruxes": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["crux_ids"]],
         "scope_boundaries": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["scope_boundary_ids"]],
     }
+
+
+def _obligation_group_skeleton(retention_obligations: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    obligation_types = (
+        ("cruxes", "must_account_decision_cruxes", "decision_crux", "Evidence that would most change or resolve the answer."),
+        ("counterweights", "must_account_counterweights", "load_bearing_counterweight", "Evidence that weakens, reverses, or materially bounds the answer."),
+        ("quantitative_anchors", "must_account_quantitative_anchors", "quantitative_anchor", "Actionable quantities, thresholds, effect sizes, or numeric guidance that should survive synthesis."),
+        ("scope_boundaries", "must_account_scope_boundaries", "scope_or_applicability", "Evidence that determines where the answer applies or does not apply."),
+    )
+    assignments: dict[str, list[str]] = {}
+    row_lookup: dict[str, dict[str, Any]] = {}
+    for obligation_type, *_unused in obligation_types:
+        for row in retention_obligations.get(obligation_type, []):
+            if not isinstance(row, dict):
+                continue
+            evidence_id = str(row.get("evidence_item_id") or "").strip()
+            if not evidence_id:
+                continue
+            assignments.setdefault(evidence_id, []).append(obligation_type)
+            row_lookup.setdefault(evidence_id, row)
+
+    used: set[str] = set()
+    skeleton: list[dict[str, Any]] = []
+    for obligation_type, group_id, memo_role, purpose in obligation_types:
+        selected_ids = [
+            evidence_id
+            for evidence_id, types in assignments.items()
+            if evidence_id not in used and types and types[0] == obligation_type
+        ]
+        if not selected_ids:
+            continue
+        used.update(selected_ids)
+        skeleton.append(
+            {
+                "skeleton_group_id": group_id,
+                "target_memo_role": memo_role,
+                "primary_obligation_type": obligation_type,
+                "purpose": purpose,
+                "evidence_item_ids": selected_ids,
+                "evidence_summaries": [_obligation_skeleton_row(row_lookup[evidence_id], assignments[evidence_id]) for evidence_id in selected_ids],
+                "model_action": "Use this as a starting group, merge into a better group, or explicitly disposition each item with rationale.",
+            }
+        )
+    return skeleton
+
+
+def _obligation_skeleton_row(row: dict[str, Any], obligation_types: list[str]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "evidence_item_id": row.get("evidence_item_id"),
+            "obligation_types": obligation_types,
+            "claim": _short_text(str(row.get("claim") or ""), 220),
+            "quantity_values": row.get("quantity_values", []),
+            "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 160),
+        }
+    )
 
 
 def _obligation_row(row: dict[str, Any]) -> dict[str, Any]:

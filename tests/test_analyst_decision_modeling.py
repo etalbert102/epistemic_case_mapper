@@ -145,6 +145,9 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
     assert context["retention_obligations"]["quantitative_anchors"][0]["evidence_item_id"] == "bundle:support"
     assert context["retention_obligations"]["counterweights"][0]["evidence_item_id"] == "bundle:risk"
+    skeleton_ids = {row["skeleton_group_id"] for row in context["obligation_group_skeleton"]}
+    assert "must_account_quantitative_anchors" in skeleton_ids
+    assert "must_account_counterweights" in skeleton_ids
 
 
 def test_decision_context_and_prompt_expose_candidate_relation_metadata() -> None:
@@ -169,6 +172,8 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "evidence_dispositions" in prompt
     assert "model_hints" in prompt
     assert "retention_obligations" in prompt
+    assert "obligation_group_skeleton" in prompt
+    assert "Start from obligation_group_skeleton" in prompt
     assert "Do not bury contrary evidence inside a support group" in prompt
 
 
