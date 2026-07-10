@@ -21,6 +21,7 @@ from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_pr
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_duplicate_quality import lexically_similar_opposite_direction_pairs, near_duplicate_claim_pairs
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
+from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_relation_quality import relation_quality_issue_rows, relation_semantic_rejection_reason
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -40,6 +41,7 @@ def _classify_singleton_relations(
     batch_id: str,
     batch_error: str,
     decision_question: str | None = None,
+    progress: PipelineProgress | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int]:
     accepted: list[dict[str, Any]] = []
     payloads: list[dict[str, Any]] = []
@@ -54,6 +56,14 @@ def _classify_singleton_relations(
     for packet in batch:
         prompt = _relation_pair_prompt(manifest, region, case_manifest, packet, decision_question=decision_question)
         write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_prompt.txt", prompt)
+        if progress:
+            progress.start_backend_call(
+                stage="relation_extraction",
+                item_id=f"{batch_id}:{packet['pair_id']}",
+                timeout_seconds=backend_timeout,
+                pair_count=1,
+                fallback_from_batch=batch_id,
+            )
         try:
             result = run_model_backend(
                 prompt,
@@ -63,7 +73,11 @@ def _classify_singleton_relations(
                 response_schema=relation_json_schema(batch=False),
             )
             raw = result.text
+            if progress:
+                progress.finish_backend_call(status="completed", singleton_fallback=True)
         except (RuntimeError, ValueError) as exc:
+            if progress:
+                progress.finish_backend_call(status="backend_error", error=str(exc), singleton_fallback=True)
             rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
             continue
         write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_raw.txt", raw)

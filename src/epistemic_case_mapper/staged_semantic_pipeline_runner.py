@@ -13,15 +13,12 @@ from epistemic_case_mapper.config_profiles import (
     profile_vocabulary,
 )
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
-from epistemic_case_mapper.model_backends import run_model_backend
-from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
-from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
-from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
+from epistemic_case_mapper.semantic_pipeline import validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
-from epistemic_case_mapper.staged_semantic_claim_extractors import claim_payload_for_extractor
-from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
-from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit, label_audit_bucket_counts, label_audit_warning_counts
+from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
+from epistemic_case_mapper.staged_semantic_label_audit import label_audit_bucket_counts, label_audit_warning_counts
+from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
@@ -107,103 +104,74 @@ def run_staged_map(
     artifacts.mkdir(parents=True, exist_ok=True)
     config_profile = _case_config_profile(case_manifest)
     selected_decision_question = region_decision_question(region, case_manifest, decision_question)
+    progress = PipelineProgress(
+        artifacts / "pipeline_progress.json",
+        backend_timeout=backend_timeout,
+        metadata={
+            "region_id": region.region_id,
+            "backend": backend,
+            "claim_extractor": claim_extractor,
+            "claim_consolidation": claim_consolidation,
+            "decision_question": selected_decision_question,
+        },
+    )
 
-    all_chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines, chunk_overlap_lines)
-    chunks, skipped_chunks = _budget_chunks(all_chunks, max_chunks_per_source, max_total_chunks)
-    claim_stage = _extract_consolidated_claims(
-        repo_root=repo_root,
-        manifest=manifest,
-        region=region,
-        case_manifest=case_manifest,
-        all_chunks=all_chunks,
-        chunks=chunks,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
-        artifacts=artifacts,
-        max_claims_per_chunk=max_claims_per_chunk,
-        config_profile_id=config_profile.profile_id,
-        reuse_claim_cache=reuse_claim_cache,
-        claim_extractor=claim_extractor,
-        claim_consolidation=claim_consolidation,
-        decision_question=selected_decision_question,
-    )
-    claims = claim_stage["claims"]
-    rejected_claims = claim_stage["rejected_claims"]
-    initial_map_stage = _build_initial_staged_map(
-        manifest=manifest,
-        region=region,
-        case_manifest=case_manifest,
-        claims=claims,
-        all_chunks=all_chunks,
-        chunks=chunks,
-        skipped_chunks=skipped_chunks,
-        rejected_claims=rejected_claims,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
-        artifacts=artifacts,
-        max_relation_pairs=max_relation_pairs,
-        relation_batch_size=relation_batch_size,
-        decision_question=selected_decision_question,
-    )
-    relations = initial_map_stage["relations"]
-    rejected_relations = initial_map_stage["rejected_relations"]
-    final_map = initial_map_stage["final_map"]
-    quality_report = initial_map_stage["quality_report"]
-    repair_stage = _maybe_repair_staged_map_quality(
-        repair_quality=repair_quality,
-        repo_root=repo_root,
-        manifest_path=manifest_path,
-        manifest=manifest,
-        region=region,
-        case_manifest=case_manifest,
-        all_chunks=all_chunks,
-        chunks=chunks,
-        skipped_chunks=skipped_chunks,
-        final_map=final_map,
-        quality_report=quality_report,
-        rejected_claims=rejected_claims,
-        rejected_relations=rejected_relations,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
-        artifacts=artifacts,
-        decision_question=selected_decision_question,
-    )
-    final_map = repair_stage["final_map"]
-    quality_report = repair_stage["quality_report"]
-    repair_info = repair_stage["repair_info"]
-    final_outputs = _write_staged_map_outputs(
-        repo_root=repo_root,
-        manifest_path=manifest_path,
-        region_id=region_id,
-        region=region,
-        case_manifest=case_manifest,
-        artifacts=artifacts,
-        output_path=output_path,
-        final_map=final_map,
-        quality_report=quality_report,
-        validate=validate,
-        decision_question=selected_decision_question,
-    )
-    _write_staged_run_summary(
-        repo_root=repo_root, region=region, backend=backend, decision_question=selected_decision_question,
-        chunk_lines=chunk_lines, chunk_overlap_lines=chunk_overlap_lines,
-        max_chunks_per_source=max_chunks_per_source, max_total_chunks=max_total_chunks,
-        max_claims_per_chunk=max_claims_per_chunk, claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
-        max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
-        backend_timeout=backend_timeout, backend_retries=backend_retries,
-        config_profile_id=config_profile.profile_id,
-        all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
-        claim_stage=claim_stage, claims=claims, relations=relations, final_outputs=final_outputs,
-        rejected_claims=rejected_claims, rejected_relations=rejected_relations,
-        quality_report=quality_report, repair_info=repair_info, artifacts=artifacts,
-    )
-    return _staged_map_result(
-        final_outputs=final_outputs, artifacts=artifacts, rejected_claims=rejected_claims,
-        rejected_relations=rejected_relations, quality_report=quality_report, repair_info=repair_info,
-    )
+    try:
+        progress.start_stage("chunk_selection")
+        all_chunks = _source_chunks(repo_root, case_manifest, region, chunk_lines, chunk_overlap_lines)
+        chunks, skipped_chunks = _budget_chunks(all_chunks, max_chunks_per_source, max_total_chunks)
+        progress.finish_stage(
+            "chunk_selection",
+            all_chunk_count=len(all_chunks),
+            selected_chunk_count=len(chunks),
+            skipped_chunk_count=len(skipped_chunks),
+        )
+        outputs = _run_mapping_stages(
+            repo_root=repo_root, manifest_path=manifest_path, region_id=region_id,
+            manifest=manifest, region=region, case_manifest=case_manifest,
+            all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
+            backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
+            artifacts=artifacts, max_claims_per_chunk=max_claims_per_chunk,
+            config_profile_id=config_profile.profile_id, reuse_claim_cache=reuse_claim_cache,
+            claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
+            max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
+            repair_quality=repair_quality, validate=validate, output_path=output_path,
+            decision_question=selected_decision_question, progress=progress,
+        )
+        return _complete_staged_map_run(
+            repo_root=repo_root,
+            region=region,
+            backend=backend,
+            decision_question=selected_decision_question,
+            chunk_options={
+                "chunk_lines": chunk_lines,
+                "chunk_overlap_lines": chunk_overlap_lines,
+                "max_chunks_per_source": max_chunks_per_source,
+                "max_total_chunks": max_total_chunks,
+                "max_claims_per_chunk": max_claims_per_chunk,
+                "max_relation_pairs": max_relation_pairs,
+                "relation_batch_size": relation_batch_size,
+            },
+            backend_options={"backend_timeout": backend_timeout, "backend_retries": backend_retries},
+            extraction_options={"claim_extractor": claim_extractor, "claim_consolidation": claim_consolidation},
+            config_profile_id=config_profile.profile_id,
+            all_chunks=all_chunks,
+            chunks=chunks,
+            skipped_chunks=skipped_chunks,
+            claim_stage=outputs["claim_stage"],
+            claims=outputs["claims"],
+            relations=outputs["relations"],
+            final_outputs=outputs["final_outputs"],
+            rejected_claims=outputs["rejected_claims"],
+            rejected_relations=outputs["rejected_relations"],
+            quality_report=outputs["quality_report"],
+            repair_info=outputs["repair_info"],
+            artifacts=artifacts,
+            progress=progress,
+        )
+    except Exception as exc:
+        progress.fail(str(exc))
+        raise
 
 def _staged_map_result(
     *,
@@ -225,6 +193,133 @@ def _staged_map_result(
         quality_status=str(quality_report["status"]),
         quality_repair_ran=bool(repair_info.get("ran")),
         quality_repaired=bool(repair_info.get("accepted")),
+    )
+
+
+def _run_mapping_stages(
+    *,
+    repo_root: Path,
+    manifest_path: str,
+    region_id: str,
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    all_chunks: list[SourceChunk],
+    chunks: list[SourceChunk],
+    skipped_chunks: list[dict[str, Any]],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    artifacts: Path,
+    max_claims_per_chunk: int,
+    config_profile_id: str,
+    reuse_claim_cache: bool,
+    claim_extractor: str,
+    claim_consolidation: str,
+    max_relation_pairs: int,
+    relation_batch_size: int,
+    repair_quality: bool,
+    validate: bool,
+    output_path: str | Path | None,
+    decision_question: str,
+    progress: PipelineProgress,
+) -> dict[str, Any]:
+    claim_stage = _extract_consolidated_claims(
+        repo_root=repo_root, manifest=manifest, region=region, case_manifest=case_manifest,
+        all_chunks=all_chunks, chunks=chunks, backend=backend, backend_timeout=backend_timeout,
+        backend_retries=backend_retries, artifacts=artifacts, max_claims_per_chunk=max_claims_per_chunk,
+        config_profile_id=config_profile_id, reuse_claim_cache=reuse_claim_cache,
+        claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
+        decision_question=decision_question, progress=progress,
+    )
+    claims = claim_stage["claims"]
+    rejected_claims = claim_stage["rejected_claims"]
+    initial = _build_initial_staged_map(
+        manifest=manifest, region=region, case_manifest=case_manifest, claims=claims,
+        all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
+        rejected_claims=rejected_claims, backend=backend, backend_timeout=backend_timeout,
+        backend_retries=backend_retries, artifacts=artifacts, max_relation_pairs=max_relation_pairs,
+        relation_batch_size=relation_batch_size, decision_question=decision_question, progress=progress,
+    )
+    progress.start_stage("quality_repair", requested=repair_quality)
+    repair = _maybe_repair_staged_map_quality(
+        repair_quality=repair_quality, repo_root=repo_root, manifest_path=manifest_path,
+        manifest=manifest, region=region, case_manifest=case_manifest,
+        all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
+        final_map=initial["final_map"], quality_report=initial["quality_report"],
+        rejected_claims=rejected_claims, rejected_relations=initial["rejected_relations"],
+        backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
+        artifacts=artifacts, decision_question=decision_question,
+    )
+    progress.finish_stage("quality_repair", requested=repair_quality, accepted=bool(repair["repair_info"].get("accepted")))
+    progress.start_stage("write_outputs", validate=validate)
+    final_outputs = _write_staged_map_outputs(
+        repo_root=repo_root, manifest_path=manifest_path, region_id=region_id,
+        region=region, case_manifest=case_manifest, artifacts=artifacts, output_path=output_path,
+        final_map=repair["final_map"], quality_report=repair["quality_report"],
+        validate=validate, decision_question=decision_question,
+    )
+    progress.finish_stage("write_outputs", failure_count=len(final_outputs["failures"]), output_path=str(final_outputs["target"]))
+    return {
+        "claim_stage": claim_stage,
+        "claims": claims,
+        "relations": initial["relations"],
+        "rejected_claims": rejected_claims,
+        "rejected_relations": initial["rejected_relations"],
+        "quality_report": repair["quality_report"],
+        "repair_info": repair["repair_info"],
+        "final_outputs": final_outputs,
+    }
+
+
+def _complete_staged_map_run(
+    *,
+    repo_root: Path,
+    region: WorkedRegion,
+    backend: str,
+    decision_question: str,
+    chunk_options: dict[str, Any],
+    backend_options: dict[str, Any],
+    extraction_options: dict[str, Any],
+    config_profile_id: str,
+    all_chunks: list[SourceChunk],
+    chunks: list[SourceChunk],
+    skipped_chunks: list[dict[str, Any]],
+    claim_stage: dict[str, Any],
+    claims: list[dict[str, Any]],
+    relations: list[dict[str, Any]],
+    final_outputs: dict[str, Any],
+    rejected_claims: list[dict[str, Any]],
+    rejected_relations: list[dict[str, Any]],
+    quality_report: dict[str, Any],
+    repair_info: dict[str, Any],
+    artifacts: Path,
+    progress: PipelineProgress,
+) -> StagedMapResult:
+    _write_staged_run_summary(
+        repo_root=repo_root, region=region, backend=backend, decision_question=decision_question,
+        chunk_lines=int(chunk_options["chunk_lines"]), chunk_overlap_lines=int(chunk_options["chunk_overlap_lines"]),
+        max_chunks_per_source=chunk_options["max_chunks_per_source"], max_total_chunks=chunk_options["max_total_chunks"],
+        max_claims_per_chunk=int(chunk_options["max_claims_per_chunk"]),
+        claim_extractor=str(extraction_options["claim_extractor"]), claim_consolidation=str(extraction_options["claim_consolidation"]),
+        max_relation_pairs=int(chunk_options["max_relation_pairs"]), relation_batch_size=int(chunk_options["relation_batch_size"]),
+        backend_timeout=backend_options["backend_timeout"], backend_retries=int(backend_options["backend_retries"]),
+        config_profile_id=config_profile_id,
+        all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
+        claim_stage=claim_stage, claims=claims, relations=relations, final_outputs=final_outputs,
+        rejected_claims=rejected_claims, rejected_relations=rejected_relations,
+        quality_report=quality_report, repair_info=repair_info, artifacts=artifacts,
+    )
+    progress.complete(
+        claim_count=len(final_outputs["final_claims"]),
+        relation_count=len(final_outputs["final_relations"]),
+        rejected_claim_count=len(rejected_claims),
+        rejected_relation_count=len(rejected_relations),
+        quality_status=str(quality_report["status"]),
+    )
+    return _staged_map_result(
+        final_outputs=final_outputs, artifacts=artifacts, rejected_claims=rejected_claims,
+        rejected_relations=rejected_relations, quality_report=quality_report, repair_info=repair_info,
     )
 
 def _validate_staged_map_options(
@@ -343,6 +438,7 @@ def _extract_consolidated_claims(
     claim_extractor: str,
     claim_consolidation: str,
     decision_question: str,
+    progress: PipelineProgress | None = None,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
@@ -358,8 +454,11 @@ def _extract_consolidated_claims(
         reuse_claim_cache=reuse_claim_cache,
         claim_extractor=claim_extractor,
         decision_question=decision_question,
+        pipeline_progress=progress,
     )
     llm_claim_count = len(claims)
+    if progress:
+        progress.start_stage("coverage_backfill", existing_claim_count=len(claims), all_chunk_count=len(all_chunks))
     coverage_claims, coverage_report = _coverage_backfill_claims(
         all_chunks=all_chunks,
         selected_chunks=chunks,
@@ -369,16 +468,36 @@ def _extract_consolidated_claims(
     )
     if coverage_claims:
         claims.extend(coverage_claims)
+    if progress:
+        progress.finish_stage("coverage_backfill", coverage_claim_count=len(coverage_claims), claim_count=len(claims))
     pre_consolidation_claim_count = len(claims)
     write_json(artifacts / "coverage_backfill_claims.json", coverage_report)
+    if progress:
+        progress.start_stage("claim_consolidation", method=claim_consolidation, claim_count=len(claims))
     if claim_consolidation == "vector-llm":
+        if progress:
+            progress.start_backend_call(
+                stage="claim_consolidation",
+                item_id="vector_llm_claim_consolidation",
+                timeout_seconds=backend_timeout,
+                input_claim_count=len(claims),
+            )
         claims, consolidation_report = consolidate_claims_with_vector_llm(
             claims, backend=backend, artifact_dir=artifacts, decision_question=decision_question,
             backend_timeout=backend_timeout, backend_retries=backend_retries,
             min_claims=max(2, region.thresholds.min_claims),
         )
+        if progress:
+            progress.finish_backend_call(status="completed", output_claim_count=len(claims))
     else:
         claims, consolidation_report = consolidate_claims_for_map(claims, min_claims=max(2, region.thresholds.min_claims))
+    if progress:
+        progress.finish_stage(
+            "claim_consolidation",
+            method=claim_consolidation,
+            pre_consolidation_claim_count=pre_consolidation_claim_count,
+            post_consolidation_claim_count=len(claims),
+        )
     write_json(artifacts / "claim_consolidation_report.json", consolidation_report)
     return {
         "claims": claims,
@@ -461,6 +580,7 @@ def _build_initial_staged_map(
     max_relation_pairs: int,
     relation_batch_size: int,
     decision_question: str,
+    progress: PipelineProgress | None = None,
 ) -> dict[str, Any]:
     relations, relation_payloads, rejected_relations = _extract_relations(
         manifest=manifest,
@@ -474,6 +594,7 @@ def _build_initial_staged_map(
         max_relation_pairs=max_relation_pairs,
         relation_batch_size=relation_batch_size,
         decision_question=decision_question,
+        progress=progress,
     )
     final_map = _assemble_map(
         region=region,
@@ -482,6 +603,8 @@ def _build_initial_staged_map(
         relations=relations,
         relation_payloads=relation_payloads,
     )
+    if progress:
+        progress.start_stage("map_quality", claim_count=len(claims), relation_count=len(relations))
     quality_report = evaluate_staged_map_quality(
         manifest=manifest,
         region=region,
@@ -494,6 +617,8 @@ def _build_initial_staged_map(
         rejected_relations=rejected_relations,
         decision_question=decision_question,
     )
+    if progress:
+        progress.finish_stage("map_quality", status=quality_report["status"], score=quality_report["score"])
     write_json(artifacts / "candidate_map_initial.json", final_map)
     write_json(artifacts / "map_quality_report_initial.json", quality_report)
     write_markdown(artifacts / "MAP_QUALITY_REPORT_INITIAL.md", _quality_markdown(quality_report))
@@ -625,185 +750,6 @@ def _staged_run_summary(
         "quality_repair": _summary_repair_info(repo_root, repair_info),
     }
 
-def _extract_claims(
-    repo_root: Path,
-    manifest: SubmissionManifest,
-    region: WorkedRegion,
-    case_manifest: CaseManifest,
-    chunks: list[SourceChunk],
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
-    artifact_dir: Path,
-    max_claims_per_chunk: int,
-    reuse_claim_cache: bool = True,
-    claim_extractor: str = "native",
-    decision_question: str | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    if claim_extractor == "whole-doc":
-        from epistemic_case_mapper.staged_semantic_whole_doc_pipeline import _extract_whole_doc_claims
-
-        return _extract_whole_doc_claims(
-            repo_root=repo_root,
-            region=region,
-            case_manifest=case_manifest,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-            artifact_dir=artifact_dir,
-            max_claims_per_source=max_claims_per_chunk,
-            reuse_claim_cache=reuse_claim_cache,
-            decision_question=decision_question,
-        )
-    accepted: list[dict[str, Any]] = []
-    rejected: list[dict[str, Any]] = []
-    seen: set[tuple[str, str, str]] = set()
-    claim_index = 1
-    valid_roles = set(_configured_claim_roles(case_manifest))
-    progress = {
-        "schema_id": "claim_extraction_progress_v1",
-        "stage": "claim_extraction",
-        "total_chunks": len(chunks),
-        "processed_chunks": 0,
-        "cache_hit_count": 0,
-        "backend_call_count": 0,
-        "fallback_claim_count": 0,
-        "accepted_claim_count": 0,
-        "rejected_claim_count": 0,
-        "claim_alignment_status_counts": {},
-        "relevance_validation_warning_counts": {},
-        "label_audit_bucket_counts": {},
-        "label_audit_warning_counts": {},
-        "current_chunk_id": "",
-        "complete": False,
-        "claim_extractor": claim_extractor,
-    }
-    progress_path = artifact_dir / "claim_extraction_progress.json"
-
-    for chunk_index, chunk in enumerate(chunks, start=1):
-        span_lookup = {span.span_id: span for span in chunk.spans}
-        selected_question = region_decision_question(region, case_manifest, decision_question)
-        prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims_per_chunk, decision_question=selected_question)
-        chunk_dir = artifact_dir / "claim_chunks"
-        canonical_suffix = "canonical" if claim_extractor == "native" else f"{claim_extractor}_canonical"
-        canonical_path = chunk_dir / f"{chunk.chunk_id}_{canonical_suffix}.json"
-        write_markdown(chunk_dir / f"{chunk.chunk_id}_prompt.txt", prompt)
-        payload, cache_hit, backend_error = claim_payload_for_extractor(
-            claim_extractor=claim_extractor,
-            prompt=prompt,
-            chunk=chunk,
-            selected_question=selected_question,
-            valid_roles=valid_roles,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-            max_claims_per_chunk=max_claims_per_chunk,
-            canonical_path=canonical_path,
-            chunk_dir=chunk_dir,
-            reuse_claim_cache=reuse_claim_cache,
-        )
-        if cache_hit:
-            progress["cache_hit_count"] += 1
-        else:
-            progress["backend_call_count"] += 1
-        if backend_error:
-            fallback = _fallback_claim_for_chunk(chunk)
-            if fallback is not None:
-                key = _claim_dedupe_key(fallback)
-                if key not in seen:
-                    seen.add(key)
-                    claim_index = _record_accepted_claim(fallback, accepted, progress, region.id_prefix, claim_index)
-                    progress["fallback_claim_count"] += 1
-                    rejected.append(
-                        {
-                            "chunk_id": chunk.chunk_id,
-                            "reason": "backend_error_used_deterministic_fallback",
-                            "error": backend_error,
-                            "span_id": fallback["span_id"],
-                        }
-                    )
-                    write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-                    continue
-            rejected.append({"chunk_id": chunk.chunk_id, "reason": "backend_error", "error": backend_error})
-            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-            continue
-        if not isinstance(payload, dict):
-            rejected.append({"chunk_id": chunk.chunk_id, "reason": "invalid_json"})
-            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-            continue
-        proposals = payload.get("claims", [])
-        if not isinstance(proposals, list) and "claim" in payload:
-            proposals = [payload]
-        if not isinstance(proposals, list):
-            rejected.append({"chunk_id": chunk.chunk_id, "reason": "claims_not_list"})
-            write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-            continue
-        for proposal in proposals:
-            claim, reason = _normalize_claim_proposal(proposal, span_lookup, valid_roles)
-            if claim is None:
-                rejected.append({"chunk_id": chunk.chunk_id, "reason": reason, "proposal": proposal})
-                continue
-            _attach_claim_routing_metadata(claim, progress, selected_question)
-            key = _claim_dedupe_key(claim)
-            if key in seen:
-                rejected.append({"chunk_id": chunk.chunk_id, "reason": "duplicate_claim", "proposal": proposal})
-                continue
-            seen.add(key)
-            claim_index = _record_accepted_claim(claim, accepted, progress, region.id_prefix, claim_index)
-        write_claim_progress(progress_path, progress, chunk_index, chunk.chunk_id, accepted, rejected)
-    progress.update(
-        complete=True,
-        current_chunk_id="",
-        processed_chunks=len(chunks),
-        accepted_claim_count=len(accepted),
-        rejected_claim_count=len(rejected),
-    )
-    write_json(progress_path, progress)
-    write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
-    return accepted, rejected
-
-def _attach_claim_routing_metadata(claim: dict[str, Any], progress: dict[str, Any], selected_question: str) -> None:
-    relevance_reason = attach_decision_relevance_validation(claim, selected_question)
-    if relevance_reason:
-        _increment_progress_count(progress, "relevance_validation_warning_counts", relevance_reason)
-    audit = attach_label_audit(claim)
-    _increment_progress_count(progress, "label_audit_bucket_counts", str(audit.get("synthesis_bucket", "unknown")))
-    for warning in audit.get("warnings", []):
-        _increment_progress_count(progress, "label_audit_warning_counts", str(warning))
-
-def _claim_dedupe_key(claim: dict[str, Any]) -> tuple[str, str, str]:
-    return (
-        str(claim.get("source_id", "")),
-        _normalize_text(str(claim.get("excerpt", ""))),
-        _normalize_text(str(claim.get("claim", ""))),
-    )
-
-
-def _record_accepted_claim(
-    claim: dict[str, Any],
-    accepted: list[dict[str, Any]],
-    progress: dict[str, Any],
-    id_prefix: str,
-    claim_index: int,
-) -> int:
-    claim["claim_id"] = f"{id_prefix}_c{claim_index:03d}"
-    accepted.append(claim)
-    _increment_progress_count(
-        progress,
-        "claim_alignment_status_counts",
-        str(claim.get("source_alignment", {}).get("status", "unknown")),
-    )
-    return claim_index + 1
-
-
-def _increment_progress_count(progress: dict[str, Any], key: str, value: str) -> None:
-    bucket = progress.setdefault(key, {})
-    if not isinstance(bucket, dict):
-        bucket = {}
-        progress[key] = bucket
-    label = value or "unknown"
-    bucket[label] = int(bucket.get(label, 0)) + 1
-
 def _coverage_backfill_claims(
     *,
     all_chunks: list[SourceChunk],
@@ -873,12 +819,11 @@ from epistemic_case_mapper.staged_semantic_claims_relations import (
     _summary_repair_info,
     consolidate_claims_for_map,
 )
+from epistemic_case_mapper.staged_semantic_native_claim_extraction import _extract_claims
 from epistemic_case_mapper.staged_semantic_quality import (
     _assemble_map,
     _case_config_profile,
-    _claim_prompt,
     _claim_prompt_json_schema,
-    _configured_claim_roles,
     _map_quality_repair_prompt,
     _quality_markdown,
     _relation_sharpening_summary,
@@ -892,8 +837,6 @@ from epistemic_case_mapper.staged_semantic_sources import (
     _chunk_summary,
     _fallback_claim_for_chunk,
     _load_context,
-    _normalize_claim_proposal,
-    _normalize_text,
     _parse_model_json,
     _relative,
     _source_chunks,

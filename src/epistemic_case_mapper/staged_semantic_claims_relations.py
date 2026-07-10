@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
+from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.staged_semantic_relation_quality import relation_semantic_rejection_reason
@@ -604,12 +605,15 @@ def _extract_relations(
     max_relation_pairs: int,
     relation_batch_size: int,
     decision_question: str | None = None,
+    progress: PipelineProgress | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
         return [], [], [{"reason": "too_few_claims"}]
     effective_max_relation_pairs = _relation_pair_budget(claims, max_relation_pairs)
     pair_packets = _candidate_relation_pairs(claims, effective_max_relation_pairs)
     _write_relation_candidate_pool_report(artifact_dir, claims, pair_packets, max_relation_pairs, effective_max_relation_pairs)
+    batches = list(_batches(pair_packets, relation_batch_size))
+    _start_relation_progress(progress, claims, pair_packets, batches, max_relation_pairs, effective_max_relation_pairs)
     claim_ids = {claim["claim_id"] for claim in claims}
     permitted_types = manifest.relation_ontology.permitted_types()
     accepted: list[dict[str, Any]] = []
@@ -618,7 +622,7 @@ def _extract_relations(
     seen: set[tuple[str, str, str]] = set()
     relation_index = 1
 
-    for batch_index, batch in enumerate(_batches(pair_packets, relation_batch_size), start=1):
+    for batch_index, batch in enumerate(batches, start=1):
         batch_id = f"batch_{batch_index:03d}"
         prompt = (
             _relation_pair_prompt(manifest, region, case_manifest, batch[0], decision_question=decision_question)
@@ -628,6 +632,7 @@ def _extract_relations(
         artifact_subdir = "relation_pairs" if len(batch) == 1 else "relation_batches"
         artifact_stem = batch[0]["pair_id"] if len(batch) == 1 else batch_id
         write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_prompt.txt", prompt)
+        _start_relation_batch_progress(progress, batch_id, batch_index, batches, batch, backend_timeout)
         try:
             result = run_model_backend(
                 prompt,
@@ -637,28 +642,17 @@ def _extract_relations(
                 response_schema=relation_json_schema(batch=len(batch) > 1),
             )
             raw = result.text
+            if progress:
+                progress.finish_backend_call(status="completed", pair_count=len(batch))
         except (RuntimeError, ValueError) as exc:
+            if progress:
+                progress.finish_backend_call(status="backend_error", error=str(exc), pair_count=len(batch))
             if len(batch) > 1:
-                singleton_relations, singleton_payloads, singleton_rejected, relation_index = _classify_singleton_relations(
-                    manifest=manifest,
-                    region=region,
-                    case_manifest=case_manifest,
-                    batch=batch,
-                    claim_ids=claim_ids,
-                    permitted_types=permitted_types,
-                    seen=seen,
-                    relation_index=relation_index,
-                    backend=backend,
-                    backend_timeout=backend_timeout,
-                    backend_retries=backend_retries,
-                    artifact_dir=artifact_dir,
-                    batch_id=batch_id,
-                    batch_error=str(exc),
-                    decision_question=decision_question,
+                relation_index = _append_singleton_fallback(
+                    accepted, payloads, rejected, relation_index,
+                    manifest, region, case_manifest, batch, claim_ids, permitted_types, seen,
+                    backend, backend_timeout, backend_retries, artifact_dir, batch_id, str(exc), decision_question, progress,
                 )
-                accepted.extend(singleton_relations)
-                payloads.extend(singleton_payloads)
-                rejected.extend(singleton_rejected)
                 continue
             for packet in batch:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
@@ -668,26 +662,11 @@ def _extract_relations(
         write_json(artifact_dir / artifact_subdir / f"{artifact_stem}_canonical.json", payload or {})
         if not isinstance(payload, dict):
             if len(batch) > 1:
-                singleton_relations, singleton_payloads, singleton_rejected, relation_index = _classify_singleton_relations(
-                    manifest=manifest,
-                    region=region,
-                    case_manifest=case_manifest,
-                    batch=batch,
-                    claim_ids=claim_ids,
-                    permitted_types=permitted_types,
-                    seen=seen,
-                    relation_index=relation_index,
-                    backend=backend,
-                    backend_timeout=backend_timeout,
-                    backend_retries=backend_retries,
-                    artifact_dir=artifact_dir,
-                    batch_id=batch_id,
-                    batch_error="invalid_json",
-                    decision_question=decision_question,
+                relation_index = _append_singleton_fallback(
+                    accepted, payloads, rejected, relation_index,
+                    manifest, region, case_manifest, batch, claim_ids, permitted_types, seen,
+                    backend, backend_timeout, backend_retries, artifact_dir, batch_id, "invalid_json", decision_question, progress,
                 )
-                accepted.extend(singleton_relations)
-                payloads.extend(singleton_payloads)
-                rejected.extend(singleton_rejected)
                 continue
             for packet in batch:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "invalid_json"})
@@ -725,7 +704,98 @@ def _extract_relations(
             if packet["pair_id"] not in proposed_pair_ids:
                 rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "missing_relation_proposal"})
     accepted, rejected = _finalize_and_write_relations(accepted, rejected, pair_packets, permitted_types, region, relation_index, seen, claims, artifact_dir)
+    _finish_relation_progress(progress, pair_packets, batches, accepted, rejected)
     return accepted, payloads, rejected
+
+
+def _append_singleton_fallback(
+    accepted: list[dict[str, Any]],
+    payloads: list[dict[str, Any]],
+    rejected: list[dict[str, Any]],
+    relation_index: int,
+    manifest: SubmissionManifest,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    batch: list[dict[str, Any]],
+    claim_ids: set[str],
+    permitted_types: set[str],
+    seen: set[tuple[str, str, str]],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    artifact_dir: Path,
+    batch_id: str,
+    batch_error: str,
+    decision_question: str | None,
+    progress: PipelineProgress | None,
+) -> int:
+    singleton_relations, singleton_payloads, singleton_rejected, relation_index = _classify_singleton_relations(
+        manifest=manifest, region=region, case_manifest=case_manifest, batch=batch,
+        claim_ids=claim_ids, permitted_types=permitted_types, seen=seen, relation_index=relation_index,
+        backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
+        artifact_dir=artifact_dir, batch_id=batch_id, batch_error=batch_error,
+        decision_question=decision_question, progress=progress,
+    )
+    accepted.extend(singleton_relations)
+    payloads.extend(singleton_payloads)
+    rejected.extend(singleton_rejected)
+    return relation_index
+
+
+def _start_relation_progress(
+    progress: PipelineProgress | None,
+    claims: list[dict[str, Any]],
+    pair_packets: list[dict[str, Any]],
+    batches: list[list[dict[str, Any]]],
+    requested_max_pairs: int,
+    effective_max_pairs: int,
+) -> None:
+    if progress:
+        progress.start_stage(
+            "relation_extraction",
+            claim_count=len(claims),
+            selected_pair_count=len(pair_packets),
+            total_batches=len(batches),
+            requested_max_pairs=requested_max_pairs,
+            effective_max_pairs=effective_max_pairs,
+        )
+
+
+def _start_relation_batch_progress(
+    progress: PipelineProgress | None,
+    batch_id: str,
+    batch_index: int,
+    batches: list[list[dict[str, Any]]],
+    batch: list[dict[str, Any]],
+    backend_timeout: int | None,
+) -> None:
+    if progress:
+        progress.start_backend_call(
+            stage="relation_extraction",
+            item_id=batch_id,
+            item_index=batch_index,
+            total_items=len(batches),
+            timeout_seconds=backend_timeout,
+            pair_count=len(batch),
+            pair_ids=[packet["pair_id"] for packet in batch],
+        )
+
+
+def _finish_relation_progress(
+    progress: PipelineProgress | None,
+    pair_packets: list[dict[str, Any]],
+    batches: list[list[dict[str, Any]]],
+    accepted: list[dict[str, Any]],
+    rejected: list[dict[str, Any]],
+) -> None:
+    if progress:
+        progress.finish_stage(
+            "relation_extraction",
+            selected_pair_count=len(pair_packets),
+            total_batches=len(batches),
+            accepted_relation_count=len(accepted),
+            rejected_relation_count=len(rejected),
+        )
 
 
 def _finalize_and_write_relations(

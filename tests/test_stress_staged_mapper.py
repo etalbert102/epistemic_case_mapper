@@ -82,5 +82,11 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
     assert rows[0]["status"] == "validated"
     assert rows[0]["claim_count"] == 2
     assert rows[0]["relation_count"] == 1
+    progress = json.loads((Path(rows[0]["artifact_dir"]) / "pipeline_progress.json").read_text(encoding="utf-8"))
+    assert progress["status"] == "completed"
+    assert progress["active_backend_call"] == {}
+    assert progress["backend_timeout_seconds"] == 5
+    assert progress["stages"]["claim_extraction"]["status"] == "completed"
+    assert progress["stages"]["relation_extraction"]["accepted_relation_count"] == 1
     summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["validated_count"] == 1

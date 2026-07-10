@@ -10,6 +10,7 @@ from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
 from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit
+from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_sources import (
     _normalize_claim_proposal,
     _normalize_text,
@@ -54,6 +55,7 @@ def _extract_whole_doc_claims(
     max_claims_per_source: int,
     reuse_claim_cache: bool,
     decision_question: str | None,
+    progress: PipelineProgress | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
@@ -61,7 +63,7 @@ def _extract_whole_doc_claims(
     claim_index = 1
     valid_roles = set(_configured_claim_roles(case_manifest))
     source_chunks = _whole_doc_source_chunks(repo_root, case_manifest, region)
-    progress = {
+    claim_progress = {
         "schema_id": "claim_extraction_progress_v1",
         "stage": "whole_doc_claim_extraction",
         "total_chunks": len(source_chunks),
@@ -82,9 +84,21 @@ def _extract_whole_doc_claims(
     progress_path = artifact_dir / "claim_extraction_progress.json"
     selected_question = region_decision_question(region, case_manifest, decision_question)
     source_dir = artifact_dir / "claim_sources"
+    if progress:
+        progress.start_stage("claim_extraction", extractor="whole-doc", total_items=len(source_chunks), total_sources=len(source_chunks))
     for source_index, chunk in enumerate(source_chunks, start=1):
         span_lookup = {span.span_id: span for span in chunk.spans}
         canonical_path = source_dir / f"{chunk.chunk_id}_whole_doc_canonical.json"
+        if progress:
+            progress.start_backend_call(
+                stage="claim_extraction",
+                item_id=chunk.chunk_id,
+                item_index=source_index,
+                total_items=len(source_chunks),
+                timeout_seconds=backend_timeout,
+                source_id=chunk.source_id,
+                extractor="whole-doc",
+            )
         payload, cache_hit, backend_error = whole_doc_claim_payload_for_source(
             source_id=chunk.source_id,
             source_title=chunk.title,
@@ -100,17 +114,23 @@ def _extract_whole_doc_claims(
             report_path=source_dir / f"{chunk.chunk_id}_whole_doc_report.json",
             reuse_claim_cache=reuse_claim_cache,
         )
+        if progress:
+            progress.finish_backend_call(
+                status="cache_hit" if cache_hit else ("backend_error" if backend_error else "completed"),
+                error=backend_error,
+                cache_hit=cache_hit,
+            )
         if cache_hit:
-            progress["cache_hit_count"] += 1
+            claim_progress["cache_hit_count"] += 1
         else:
-            progress["backend_call_count"] += 1
+            claim_progress["backend_call_count"] += 1
         if backend_error:
             rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "backend_error", "error": backend_error})
-            write_claim_progress(progress_path, progress, source_index, chunk.chunk_id, accepted, rejected)
+            write_claim_progress(progress_path, claim_progress, source_index, chunk.chunk_id, accepted, rejected)
             continue
         if not isinstance(payload, dict) or not isinstance(payload.get("claims"), list):
             rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "invalid_whole_doc_payload"})
-            write_claim_progress(progress_path, progress, source_index, chunk.chunk_id, accepted, rejected)
+            write_claim_progress(progress_path, claim_progress, source_index, chunk.chunk_id, accepted, rejected)
             continue
         for proposal in payload["claims"]:
             claim, reason = _normalize_claim_proposal(proposal, span_lookup, valid_roles)
@@ -119,26 +139,28 @@ def _extract_whole_doc_claims(
                 continue
             relevance_reason = attach_decision_relevance_validation(claim, selected_question)
             if relevance_reason:
-                _increment_progress_count(progress, "relevance_validation_warning_counts", relevance_reason)
+                _increment_progress_count(claim_progress, "relevance_validation_warning_counts", relevance_reason)
             audit = attach_label_audit(claim)
-            _increment_progress_count(progress, "label_audit_bucket_counts", str(audit.get("synthesis_bucket", "unknown")))
+            _increment_progress_count(claim_progress, "label_audit_bucket_counts", str(audit.get("synthesis_bucket", "unknown")))
             for warning in audit.get("warnings", []):
-                _increment_progress_count(progress, "label_audit_warning_counts", str(warning))
+                _increment_progress_count(claim_progress, "label_audit_warning_counts", str(warning))
             key = _claim_dedupe_key(claim)
             if key in seen:
                 rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "duplicate_claim", "proposal": proposal})
                 continue
             seen.add(key)
             claim["extraction_method"] = "whole_doc_source_card"
-            claim_index = _record_accepted_claim(claim, accepted, progress, region.id_prefix, claim_index)
-        write_claim_progress(progress_path, progress, source_index, chunk.chunk_id, accepted, rejected)
-    progress["complete"] = True
-    progress["current_chunk_id"] = ""
-    progress["processed_chunks"] = len(source_chunks)
-    progress["accepted_claim_count"] = len(accepted)
-    progress["rejected_claim_count"] = len(rejected)
-    write_json(progress_path, progress)
+            claim_index = _record_accepted_claim(claim, accepted, claim_progress, region.id_prefix, claim_index)
+        write_claim_progress(progress_path, claim_progress, source_index, chunk.chunk_id, accepted, rejected)
+    claim_progress["complete"] = True
+    claim_progress["current_chunk_id"] = ""
+    claim_progress["processed_chunks"] = len(source_chunks)
+    claim_progress["accepted_claim_count"] = len(accepted)
+    claim_progress["rejected_claim_count"] = len(rejected)
+    write_json(progress_path, claim_progress)
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
+    if progress:
+        progress.finish_stage("claim_extraction", accepted_claim_count=len(accepted), rejected_claim_count=len(rejected), total_sources=len(source_chunks))
     return accepted, rejected
 
 
