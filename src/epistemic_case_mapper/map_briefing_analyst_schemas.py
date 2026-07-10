@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -350,9 +351,47 @@ def build_analyst_adjudication_parse_report(
     }
 
 
-def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, Any]) -> dict[str, Any]:
+def analyst_decision_retention_obligations(ledger: dict[str, Any]) -> dict[str, list[str]]:
+    rows = [row for row in ledger.get("rows", []) if isinstance(row, dict)]
+    obligations = {
+        "quantitative_anchor_ids": [],
+        "counterweight_ids": [],
+        "crux_ids": [],
+        "scope_boundary_ids": [],
+    }
+    for row in rows:
+        evidence_id = str(row.get("evidence_item_id") or "").strip()
+        if not evidence_id:
+            continue
+        role_text = " ".join(
+            str(value or "")
+            for value in (
+                row.get("current_role"),
+                row.get("directionality"),
+                row.get("relation_semantic_role"),
+            )
+        ).lower()
+        relation_type = str(row.get("relation_semantic_role") or row.get("directionality") or "").lower()
+        if _has_quantity(row):
+            obligations["quantitative_anchor_ids"].append(evidence_id)
+        if "counterweight" in role_text or "challenge" in role_text or relation_type in {"in_tension_with", "challenges"}:
+            obligations["counterweight_ids"].append(evidence_id)
+        if "crux" in role_text or relation_type == "crux_for":
+            obligations["crux_ids"].append(evidence_id)
+        if "scope" in role_text or "applicability" in role_text or relation_type in {"depends_on", "refines"}:
+            obligations["scope_boundary_ids"].append(evidence_id)
+    return {key: _dedupe_ids(values) for key, values in obligations.items()}
+
+
+def build_analyst_decision_model_parse_report(
+    payload: Any,
+    ledger: dict[str, Any],
+    *,
+    retention_obligations: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     expected_ids = _ledger_ids(ledger)
     known_ids = set(expected_ids)
+    obligations = _normalize_retention_obligations(retention_obligations) or analyst_decision_retention_obligations(ledger)
     try:
         parsed = AnalystDecisionModel.model_validate(payload)
     except ValidationError as exc:
@@ -365,8 +404,15 @@ def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, An
             "covered_evidence_item_count": 0,
             "unknown_evidence_item_ids": [],
             "missing_disposition_ids": expected_ids,
+            "missing_accounting_ids": expected_ids,
             "unknown_disposition_ids": [],
             "invalid_disposition_group_ids": [],
+            "obligation_omissions": {
+                "ungrouped_quantitative_anchor_ids": obligations["quantitative_anchor_ids"],
+                "ungrouped_counterweight_ids": obligations["counterweight_ids"],
+                "ungrouped_crux_ids": obligations["crux_ids"],
+                "ungrouped_scope_boundary_ids": obligations["scope_boundary_ids"],
+            },
             "issues": ["invalid_schema"],
         }
     group_ids = {group.group_id for group in parsed.evidence_groups}
@@ -378,7 +424,9 @@ def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, An
     disposition_ids = {row.evidence_item_id for row in parsed.evidence_dispositions}
     unknown_ids = sorted(covered_ids - known_ids)
     unknown_disposition_ids = sorted(disposition_ids - known_ids)
+    accounted_ids = covered_ids | disposition_ids
     missing_disposition_ids = sorted(known_ids - disposition_ids)
+    missing_accounting_ids = sorted(known_ids - accounted_ids)
     invalid_disposition_group_ids = sorted(
         {
             row.group_id
@@ -386,13 +434,23 @@ def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, An
             if row.group_id and row.group_id not in group_ids
         }
     )
+    obligation_omissions = {
+        "ungrouped_quantitative_anchor_ids": sorted(set(obligations["quantitative_anchor_ids"]) - covered_ids),
+        "ungrouped_counterweight_ids": sorted(set(obligations["counterweight_ids"]) - covered_ids),
+        "ungrouped_crux_ids": sorted(set(obligations["crux_ids"]) - covered_ids),
+        "ungrouped_scope_boundary_ids": sorted(set(obligations["scope_boundary_ids"]) - covered_ids),
+    }
     fatal_issues = [
         *(["unknown_evidence_item_ids"] if unknown_ids else []),
         *(["invalid_disposition_group_ids"] if invalid_disposition_group_ids else []),
     ]
     warning_issues = [
         *(["unknown_disposition_ids"] if unknown_disposition_ids else []),
-        *(["missing_dispositions"] if missing_disposition_ids else []),
+        *(["missing_dispositions"] if missing_accounting_ids else []),
+        *(["quantitative_anchor_not_grouped"] if obligation_omissions["ungrouped_quantitative_anchor_ids"] else []),
+        *(["counterweight_not_grouped"] if obligation_omissions["ungrouped_counterweight_ids"] else []),
+        *(["crux_not_grouped"] if obligation_omissions["ungrouped_crux_ids"] else []),
+        *(["scope_boundary_not_grouped"] if obligation_omissions["ungrouped_scope_boundary_ids"] else []),
         *(["no_evidence_groups"] if not parsed.evidence_groups else []),
     ]
     issues = [*fatal_issues, *warning_issues]
@@ -406,8 +464,11 @@ def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, An
         "covered_evidence_item_count": len(covered_ids & known_ids),
         "unknown_evidence_item_ids": unknown_ids,
         "missing_disposition_ids": missing_disposition_ids,
+        "missing_accounting_ids": missing_accounting_ids,
         "unknown_disposition_ids": unknown_disposition_ids,
         "invalid_disposition_group_ids": invalid_disposition_group_ids,
+        "retention_obligations": obligations,
+        "obligation_omissions": obligation_omissions,
         "issues": issues,
     }
 
@@ -418,6 +479,62 @@ def _ledger_ids(ledger: dict[str, Any]) -> list[str]:
         for row in ledger.get("rows", [])
         if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
     ]
+
+
+def _has_quantity(row: dict[str, Any]) -> bool:
+    values = row.get("quantity_values")
+    if isinstance(values, list):
+        return any(_looks_quantitative(str(value)) for value in values)
+    return _looks_quantitative(str(values or ""))
+
+
+def _looks_quantitative(text: str) -> bool:
+    normalized = text.strip().lower()
+    if not normalized:
+        return False
+    if re.search(r"\d|%|<|>|=", normalized):
+        return True
+    return bool(
+        re.search(
+            r"\b(one|two|three|four|five|six|seven|eight|nine|ten|half|per|daily|weekly|monthly|annual|ratio|risk|hazard|confidence interval|ci|hr|rr|mg/dl)\b",
+            normalized,
+        )
+    )
+
+
+def _dedupe_ids(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
+def _normalize_retention_obligations(value: dict[str, Any] | None) -> dict[str, list[str]]:
+    if not isinstance(value, dict):
+        return {}
+    aliases = {
+        "quantitative_anchor_ids": ("quantitative_anchor_ids", "quantitative_anchors"),
+        "counterweight_ids": ("counterweight_ids", "counterweights"),
+        "crux_ids": ("crux_ids", "cruxes"),
+        "scope_boundary_ids": ("scope_boundary_ids", "scope_boundaries"),
+    }
+    normalized: dict[str, list[str]] = {}
+    for target, keys in aliases.items():
+        values: list[str] = []
+        for key in keys:
+            raw = value.get(key)
+            if isinstance(raw, list):
+                for item in raw:
+                    if isinstance(item, dict):
+                        values.append(str(item.get("evidence_item_id") or ""))
+                    else:
+                        values.append(str(item or ""))
+        normalized[target] = _dedupe_ids(values)
+    return normalized
 
 
 def _normalize_adjudication_payload(payload: Any) -> Any:

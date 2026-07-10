@@ -287,3 +287,96 @@ def test_analyst_decision_model_parse_report_normalizes_none_group_alias() -> No
 
     assert parsed.evidence_dispositions[0].group_id == ""
     assert "invalid_disposition_group_ids" not in report["issues"]
+
+
+def test_analyst_decision_model_parse_report_counts_grouped_rows_as_accounted() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A.",
+        "overall_rationale": "The known rows are covered by a foreground group.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Known evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:one", "warning:two"],
+                "rationale": "Both rows are used by the group.",
+            },
+        ],
+        "evidence_dispositions": [],
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert report["missing_accounting_ids"] == []
+    assert "missing_dispositions" not in report["issues"]
+    assert report["status"] == "ready"
+
+
+def test_analyst_decision_model_parse_report_warns_on_ungrouped_retention_obligations() -> None:
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "rows": [
+            {"evidence_item_id": "claim:quantity", "quantity_values": ["25% reduction"], "current_role": "load_bearing_primary_support"},
+            {"evidence_item_id": "claim:risk", "current_role": "load_bearing_counterweight"},
+            {"evidence_item_id": "claim:ordinary", "current_role": "mechanism_or_context"},
+        ],
+    }
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only with the risk bounded.",
+        "overall_rationale": "The ordinary mechanism is grouped but key obligations are only dispositioned.",
+        "evidence_groups": [
+            {
+                "group_id": "ordinary_group",
+                "proposition": "The mechanism provides context.",
+                "memo_role": "mechanism_or_context",
+                "covered_evidence_item_ids": ["claim:ordinary"],
+                "rationale": "Context.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "claim:quantity", "disposition": "background", "rationale": "Not foregrounded."},
+            {"evidence_item_id": "claim:risk", "disposition": "background", "rationale": "Not foregrounded."},
+        ],
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, ledger)
+
+    assert report["valid"] is True
+    assert report["missing_accounting_ids"] == []
+    assert report["obligation_omissions"]["ungrouped_quantitative_anchor_ids"] == ["claim:quantity"]
+    assert report["obligation_omissions"]["ungrouped_counterweight_ids"] == ["claim:risk"]
+    assert "quantitative_anchor_not_grouped" in report["issues"]
+    assert "counterweight_not_grouped" in report["issues"]
+
+
+def test_analyst_decision_model_parse_report_accepts_model_facing_retention_obligations() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A.",
+        "overall_rationale": "The model omitted the adjudicated crux.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Known evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Known support.",
+            },
+        ],
+        "evidence_dispositions": [{"evidence_item_id": "warning:two", "disposition": "background"}],
+    }
+    obligations = {
+        "cruxes": [
+            {"evidence_item_id": "warning:two", "claim": "This warning would change the answer."},
+        ],
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, _ledger(), retention_obligations=obligations)
+
+    assert report["obligation_omissions"]["ungrouped_crux_ids"] == ["warning:two"]
+    assert "crux_not_grouped" in report["issues"]

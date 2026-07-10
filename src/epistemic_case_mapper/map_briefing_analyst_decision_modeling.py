@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministi
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize_decision_logic_payload
 from epistemic_case_mapper.map_briefing_analyst_schemas import (
     AnalystDecisionModel,
+    analyst_decision_retention_obligations,
     build_analyst_decision_model_parse_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -39,7 +40,7 @@ def run_analyst_decision_model(
     prompt = build_analyst_decision_model_prompt(context)
     scaffold = deterministic_decision_model_scaffold(ledger=ledger, adjudication=adjudication, context=context)
     if backend.strip() == "prompt":
-        parse_report = build_analyst_decision_model_parse_report(scaffold, ledger)
+        parse_report = build_analyst_decision_model_parse_report(scaffold, ledger, retention_obligations=context.get("retention_obligations"))
         return {
             "analyst_decision_context": context,
             "analyst_decision_model": scaffold,
@@ -57,7 +58,7 @@ def run_analyst_decision_model(
             num_predict=analyst_decision_model_num_predict(context),
         )
     except RuntimeError as exc:
-        parse_report = build_analyst_decision_model_parse_report(scaffold, ledger)
+        parse_report = build_analyst_decision_model_parse_report(scaffold, ledger, retention_obligations=context.get("retention_obligations"))
         return {
             "analyst_decision_context": context,
             "analyst_decision_model": scaffold,
@@ -67,7 +68,7 @@ def run_analyst_decision_model(
             "analyst_decision_model_report": _report("backend_error_scaffold", parse_report, issues=[str(exc)]),
         }
     payload = _extract_json(result.text)
-    parse_report = build_analyst_decision_model_parse_report(payload, ledger)
+    parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
     if not parse_report.get("valid"):
         return {
             "analyst_decision_context": context,
@@ -118,6 +119,7 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
         "decision_question": str(ledger.get("decision_question") or "").strip(),
         "row_count": len(rows),
         "evidence_rows": rows,
+        "retention_obligations": _retention_obligation_context(ledger, rows),
         "model_hints": {
             "method": "tfidf_near_duplicate_hints_plus_relation_graph_centrality",
             "near_duplicate_pairs": [
@@ -146,6 +148,9 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Do not preserve a proposed relation label when its rationale or anchors imply a different decision role; explain downgrades in evidence_dispositions or group rationale.",
             "Put redundant or subordinate rows into the same group when they support the same proposition.",
             "Include counterweights, scope boundaries, cruxes, mechanisms, and quantitative anchors when they materially change the decision read.",
+            "Before compressing evidence, check retention_obligations. Quantitative anchors, counterweights, cruxes, and scope boundaries listed there should normally appear in evidence_groups; if one is backgrounded or excluded, make that decision explicit in evidence_dispositions with a rationale.",
+            "Keep support and counterweight evidence analytically separate unless the proposition explicitly explains how the tension is resolved. Do not bury contrary evidence inside a support group.",
+            "Preserve actionable quantities as quantities, not just as generic prose.",
             "Use covered_evidence_item_ids inside evidence_groups for foreground accounting.",
             "Keep evidence_dispositions short: include only rows not covered by any evidence group or rows whose exclusion/backgrounding/review status needs to be explicit.",
             "Use ordinary analyst language for direct_answer, proposition, rationale, answer_impact, and decision_logic.",
@@ -354,6 +359,45 @@ def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str,
     }
 
 
+def _retention_obligation_context(ledger: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    obligations = analyst_decision_retention_obligations(ledger)
+    row_by_id = {str(row.get("evidence_item_id") or ""): row for row in rows}
+    for row in rows:
+        evidence_id = str(row.get("evidence_item_id") or "").strip()
+        if not evidence_id:
+            continue
+        adjudicated = str(row.get("adjudicated_memo_use") or "").strip()
+        if adjudicated == "quantitative_anchor":
+            obligations.setdefault("quantitative_anchor_ids", []).append(evidence_id)
+        elif adjudicated == "load_bearing_counterweight":
+            obligations.setdefault("counterweight_ids", []).append(evidence_id)
+        elif adjudicated == "decision_crux":
+            obligations.setdefault("crux_ids", []).append(evidence_id)
+        elif adjudicated == "scope_or_applicability":
+            obligations.setdefault("scope_boundary_ids", []).append(evidence_id)
+    obligations = {key: _dedupe(values) for key, values in obligations.items()}
+    return {
+        "quantitative_anchors": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["quantitative_anchor_ids"]],
+        "counterweights": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["counterweight_ids"]],
+        "cruxes": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["crux_ids"]],
+        "scope_boundaries": [_obligation_row(row_by_id.get(evidence_id, {})) for evidence_id in obligations["scope_boundary_ids"]],
+    }
+
+
+def _obligation_row(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "evidence_item_id": row.get("evidence_item_id"),
+            "claim_id": row.get("claim_id"),
+            "adjudicated_memo_use": row.get("adjudicated_memo_use"),
+            "current_role": row.get("current_role"),
+            "quantity_values": row.get("quantity_values", []),
+            "claim": _short_text(str(row.get("claim") or ""), 260),
+            "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 180),
+        }
+    )
+
+
 def _ledger_centrality(rows: list[dict[str, Any]]) -> dict[str, float]:
     claim_to_evidence = {
         str(row.get("claim_id") or ""): str(row.get("evidence_item_id") or "")
@@ -482,6 +526,14 @@ def _compact_relation_context(rows: Any) -> list[dict[str, Any]]:
             }
         )
     return compact
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in row.items()
+        if value not in ("", None, [], {})
+    }
 
 
 def _foreground_memo_uses() -> set[str]:

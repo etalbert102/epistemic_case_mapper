@@ -21,6 +21,7 @@ def _ledger() -> dict:
                 "evidence_item_id": "bundle:support",
                 "claim_id": "support",
                 "claim": "Option A reduced losses in the main outcome study.",
+                "current_role": "load_bearing_primary_support",
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
                 "quantity_values": ["25% reduction"],
@@ -36,6 +37,7 @@ def _ledger() -> dict:
                 "evidence_item_id": "bundle:support_duplicate",
                 "claim_id": "support_duplicate",
                 "claim": "The main outcome study found that option A reduced losses.",
+                "current_role": "covered_by_group",
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
             },
@@ -43,6 +45,7 @@ def _ledger() -> dict:
                 "evidence_item_id": "bundle:risk",
                 "claim_id": "risk",
                 "claim": "Option A shifts risk to the operating budget.",
+                "current_role": "load_bearing_counterweight",
                 "source_ids": ["s2"],
                 "source_labels": ["Risk Review"],
             },
@@ -140,6 +143,8 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["row_count"] == 3
     assert context["model_hints"]["top_central_evidence_item_ids"]
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
+    assert context["retention_obligations"]["quantitative_anchors"][0]["evidence_item_id"] == "bundle:support"
+    assert context["retention_obligations"]["counterweights"][0]["evidence_item_id"] == "bundle:risk"
 
 
 def test_decision_context_and_prompt_expose_candidate_relation_metadata() -> None:
@@ -163,6 +168,8 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "evidence_groups" in prompt
     assert "evidence_dispositions" in prompt
     assert "model_hints" in prompt
+    assert "retention_obligations" in prompt
+    assert "Do not bury contrary evidence inside a support group" in prompt
 
 
 def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) -> None:
