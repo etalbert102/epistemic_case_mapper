@@ -297,7 +297,7 @@ def _build_analyst_memo_ready_packet(
             "confidence": _dict(packet.get("answer_frame")).get("confidence", "not_specified"),
             "synthesis_strategy": "Write from the compact analyst synthesis packet; background evidence is accounted for but not mandatory prose.",
         },
-        "source_trail": _list(packet.get("source_trail")),
+        "source_trail": _memo_ready_source_trail(packet, evidence_items),
         "memo_warning_packet": warning_packet,
         "analyst_synthesis_packet": synthesis_packet,
         "analyst_argument_plan": synthesis_packet.get("argument_plan", []),
@@ -307,6 +307,95 @@ def _build_analyst_memo_ready_packet(
     }
     memo_ready["decision_synthesis_contract"] = build_memo_ready_decision_synthesis_contract(memo_ready)
     return memo_ready
+
+
+def _memo_ready_source_trail(packet: dict[str, Any], evidence_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    source_lookup = _source_metadata_lookup(packet)
+    rows_by_key: dict[str, dict[str, Any]] = {}
+    for item in evidence_items:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "context").strip() or "context"
+        for source_ref in _source_refs_for_item(item):
+            metadata = _lookup_source_metadata(source_lookup, source_ref)
+            key = _source_row_key(metadata, source_ref)
+            if not key:
+                continue
+            row = rows_by_key.setdefault(
+                key,
+                {
+                    "source_id": metadata.get("source_id") or source_ref,
+                    "source_label": metadata.get("source_label") or source_ref,
+                    "display_label": metadata.get("display_label") or "",
+                    "citation_label": metadata.get("citation_label") or "",
+                    "source_url": metadata.get("source_url") or "",
+                    "used_for": [],
+                    "appears_in_packet": True,
+                },
+            )
+            row["used_for"] = _dedupe([*row.get("used_for", []), role])
+    return [
+        _drop_empty(row)
+        for row in sorted(
+            rows_by_key.values(),
+            key=lambda row: (str(row.get("source_label") or ""), str(row.get("source_id") or "")),
+        )
+    ]
+
+
+def _source_metadata_lookup(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+    for row in _list(packet.get("source_trail")):
+        if not isinstance(row, dict):
+            continue
+        metadata = {
+            "source_id": str(row.get("source_id") or row.get("id") or "").strip(),
+            "source_label": str(row.get("source_label") or row.get("label") or row.get("citation_label") or row.get("display_label") or "").strip(),
+            "display_label": str(row.get("display_label") or "").strip(),
+            "citation_label": str(row.get("citation_label") or "").strip(),
+            "source_url": str(row.get("source_url") or row.get("url") or "").strip(),
+        }
+        for alias in _source_aliases(metadata):
+            lookup[_source_key(alias)] = metadata
+    return lookup
+
+
+def _source_refs_for_item(item: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            *_string_list(item.get("source_ids")),
+            *_string_list(item.get("source_labels")),
+            str(item.get("source_label") or "").strip(),
+        ]
+    )
+
+
+def _lookup_source_metadata(lookup: dict[str, dict[str, Any]], source_ref: str) -> dict[str, str]:
+    return lookup.get(_source_key(source_ref), {})
+
+
+def _source_row_key(metadata: dict[str, Any], source_ref: str) -> str:
+    return _source_key(str(metadata.get("source_id") or metadata.get("source_label") or source_ref or ""))
+
+
+def _source_aliases(metadata: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            str(metadata.get("source_id") or ""),
+            str(metadata.get("source_label") or ""),
+            str(metadata.get("display_label") or ""),
+            str(metadata.get("citation_label") or ""),
+            str(metadata.get("source_url") or ""),
+        ]
+    )
+
+
+def _source_key(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in (None, "", [], {})}
 
 
 def _mandatory_group_ids(synthesis_packet: dict[str, Any]) -> set[str]:

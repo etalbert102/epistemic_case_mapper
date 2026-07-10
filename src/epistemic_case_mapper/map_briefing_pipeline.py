@@ -359,6 +359,53 @@ def _attach_decision_briefing_packet(
                     refinement=scaffold.get("analyst_packet_refinement", {}),
                 )
             )
+            _promote_analyst_packet_as_active(scaffold)
+
+
+def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
+    analyst_packet = scaffold.get("analyst_memo_ready_packet")
+    if not isinstance(analyst_packet, dict) or not analyst_packet.get("evidence_items"):
+        scaffold["active_memo_ready_packet_report"] = {
+            "schema_id": "active_memo_ready_packet_report_v1",
+            "status": "legacy_active",
+            "active_packet": "memo_ready_packet",
+            "reason": "analyst_memo_ready_packet_missing_or_empty",
+        }
+        return
+    if isinstance(scaffold.get("memo_ready_packet"), dict):
+        scaffold["legacy_deterministic_memo_ready_packet"] = scaffold["memo_ready_packet"]
+    if isinstance(scaffold.get("memo_ready_packet_quality_report"), dict):
+        scaffold["legacy_deterministic_memo_ready_packet_quality_report"] = scaffold["memo_ready_packet_quality_report"]
+    analyst_quality = scaffold.get("analyst_packet_quality_report")
+    scaffold["memo_ready_packet"] = analyst_packet
+    if isinstance(analyst_quality, dict):
+        scaffold["memo_ready_packet_quality_report"] = {
+            **analyst_quality,
+            "active_packet": "analyst_memo_ready_packet",
+        }
+    scaffold["active_memo_ready_packet_report"] = {
+        "schema_id": "active_memo_ready_packet_report_v1",
+        "status": "analyst_active",
+        "active_packet": "analyst_memo_ready_packet",
+        "legacy_packet_retained_as": "legacy_deterministic_memo_ready_packet",
+        "evidence_item_count": len(analyst_packet.get("evidence_items", [])),
+        "source_trail_count": len(analyst_packet.get("source_trail", [])),
+        "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
+    }
+
+
+def _analyst_downgraded_evidence_ids(scaffold: dict[str, Any]) -> list[str]:
+    synthesis = scaffold.get("analyst_synthesis_packet")
+    if not isinstance(synthesis, dict):
+        return []
+    accounting = synthesis.get("evidence_accounting_summary")
+    if not isinstance(accounting, dict):
+        return []
+    return [
+        str(item)
+        for item in accounting.get("explicitly_downgraded_evidence_item_ids", [])
+        if str(item).strip()
+    ]
 
 
 def _attach_model_context_audit(

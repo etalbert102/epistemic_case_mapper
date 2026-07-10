@@ -5,6 +5,7 @@ from pathlib import Path
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
+from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
 
 from test_decision_briefing_packet import _scaffold
 
@@ -13,7 +14,12 @@ def _packet() -> dict:
     return {
         "decision_question": "Should option A be adopted?",
         "answer_frame": {"default_answer": "Adopt option A only if the cost exposure is bounded.", "confidence": "medium"},
-        "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}, {"source_id": "s2", "source_label": "Risk Review"}],
+        "source_trail": [
+            {"source_id": "s1", "source_label": "Outcome Study", "source_url": "https://example.test/outcome"},
+            {"source_id": "s2", "source_label": "Risk Review", "source_url": "https://example.test/risk"},
+            {"source_id": "s3", "source_label": "Off Question Review", "source_url": "https://example.test/off-question"},
+            {"source_id": "s4", "source_label": "Stale Context Review", "source_url": "https://example.test/stale"},
+        ],
     }
 
 
@@ -48,8 +54,8 @@ def _ledger() -> dict:
             {
                 "evidence_item_id": "bundle:off_question",
                 "input_kind": "retained_bundle",
-                "source_ids": ["s2"],
-                "source_labels": ["Risk Review"],
+                "source_ids": ["s3"],
+                "source_labels": ["Off Question Review"],
                 "claim": "A different population had a different outcome.",
             },
         ],
@@ -89,7 +95,7 @@ def _adjudication() -> dict:
                 "memo_use": "not_decision_relevant",
                 "importance_rank": 100,
                 "rationale": "This row is outside the decision population.",
-                "source_ids": ["s2"],
+                "source_ids": ["s3"],
                 "downgrade_reason": "Different decision population.",
             },
         ],
@@ -112,6 +118,14 @@ def test_analyst_packet_accounts_for_rows_and_groups_quantity_anchors() -> None:
     assert "bundle:off_question" in synthesis["evidence_accounting_summary"]["explicitly_downgraded_evidence_item_ids"]
     assert memo_ready["method"] == "analyst_adjudicated_packet_adapter"
     assert len([item for item in memo_ready["evidence_items"] if item["must_use"]]) == 2
+    assert not any(
+        "bundle:off_question" in item.get("lineage", {}).get("evidence_item_ids", [])
+        for item in memo_ready["evidence_items"]
+    )
+    source_ids = {row["source_id"] for row in memo_ready["source_trail"]}
+    assert source_ids == {"s1", "s2"}
+    assert "s3" not in source_ids
+    assert "s4" not in source_ids
 
 
 def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
@@ -248,6 +262,33 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     assert "Treat these as guidance for what matters" in prompt
     assert "Exercise analyst judgment" in prompt
     assert "weigh_risk" in prompt
+
+
+def test_analyst_packet_promotion_makes_analyst_packet_active_and_keeps_legacy_diagnostics() -> None:
+    analyst_packet = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+    )["analyst_memo_ready_packet"]
+    scaffold = {
+        "memo_ready_packet": {"schema_id": "memo_ready_packet_v1", "method": "deterministic_legacy", "evidence_items": []},
+        "memo_ready_packet_quality_report": {"schema_id": "memo_ready_packet_quality_report_v1", "status": "legacy"},
+        "analyst_memo_ready_packet": analyst_packet,
+        "analyst_packet_quality_report": {"schema_id": "analyst_packet_quality_report_v1", "status": "ready"},
+        "analyst_synthesis_packet": {
+            "evidence_accounting_summary": {
+                "explicitly_downgraded_evidence_item_ids": ["bundle:off_question"],
+            }
+        },
+    }
+
+    _promote_analyst_packet_as_active(scaffold)
+
+    assert scaffold["memo_ready_packet"]["method"] == "analyst_adjudicated_packet_adapter"
+    assert scaffold["legacy_deterministic_memo_ready_packet"]["method"] == "deterministic_legacy"
+    assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "analyst_memo_ready_packet"
+    assert scaffold["active_memo_ready_packet_report"]["status"] == "analyst_active"
+    assert scaffold["active_memo_ready_packet_report"]["downgraded_evidence_item_ids"] == ["bundle:off_question"]
 
 
 def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -> None:

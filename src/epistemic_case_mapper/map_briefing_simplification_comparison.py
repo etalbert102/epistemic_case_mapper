@@ -12,14 +12,16 @@ def build_pipeline_simplification_comparison(
 ) -> dict[str, Any]:
     diagnostics = _dict(final_outputs.get("diagnostics"))
     rewrite_report = _dict(_dict(final_outputs.get("rewrite_result")).get("report"))
-    packet = _dict(scaffold.get("memo_ready_packet"))
+    packet = _active_memo_ready_packet(scaffold)
     evidence_items = _list(packet.get("evidence_items"))
     mandatory_items = [item for item in evidence_items if isinstance(item, dict) and item.get("must_use")]
     warnings = _known_weaknesses(scaffold=scaffold, diagnostics=diagnostics, rewrite_report=rewrite_report)
+    active_packet_report = _dict(scaffold.get("active_memo_ready_packet_report"))
     return {
         "schema_id": "pipeline_simplification_comparison_v1",
         "status": "warning" if warnings else "ready_for_review",
-        "synthesis_path": "memo_ready_packet" if rewrite_report.get("memo_ready_packet_path") else "legacy_compatibility",
+        "synthesis_path": _synthesis_path(rewrite_report, active_packet_report),
+        "active_packet_report": active_packet_report,
         "reader_artifacts": {
             "briefing_path": briefing_path,
             "evidence_appendix_path": evidence_appendix_path,
@@ -48,6 +50,21 @@ def _retention_metrics(report: dict[str, Any]) -> dict[str, Any]:
         "missing_critical_count": _int(report.get("missing_critical_count") or report.get("missing_mandatory_count")),
         "missing_quantity_count": _int(report.get("missing_quantity_count")),
     }
+
+
+def _active_memo_ready_packet(scaffold: dict[str, Any]) -> dict[str, Any]:
+    analyst = _dict(scaffold.get("analyst_memo_ready_packet"))
+    if analyst.get("evidence_items"):
+        return analyst
+    return _dict(scaffold.get("memo_ready_packet"))
+
+
+def _synthesis_path(rewrite_report: dict[str, Any], active_packet_report: dict[str, Any]) -> str:
+    if rewrite_report.get("analyst_memo_ready_packet_path") or active_packet_report.get("active_packet") == "analyst_memo_ready_packet":
+        return "analyst_memo_ready_packet"
+    if rewrite_report.get("memo_ready_packet_path"):
+        return "memo_ready_packet"
+    return "legacy_compatibility"
 
 
 def _source_lineage_metrics(report: dict[str, Any]) -> dict[str, Any]:
