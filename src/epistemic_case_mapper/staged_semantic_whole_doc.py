@@ -59,6 +59,16 @@ def whole_doc_claim_payload_for_source(
         )
         raw = result.text
     except (RuntimeError, ValueError) as exc:
+        _write_backend_error_report(
+            canonical_path=canonical_path,
+            report_path=report_path,
+            source_id=source_id,
+            requested_max_claims=max_claims,
+            effective_max_claims=effective_max_claims,
+            num_predict=num_predict,
+            error=str(exc),
+            phase="initial_extraction",
+        )
         return None, False, str(exc)
     write_markdown(raw_path, raw)
     parsed = _parse_model_json(raw)
@@ -86,6 +96,16 @@ def whole_doc_claim_payload_for_source(
             )
             repair_raw = repair_result.text
         except (RuntimeError, ValueError) as exc:
+            _write_backend_error_report(
+                canonical_path=canonical_path,
+                report_path=report_path,
+                source_id=source_id,
+                requested_max_claims=max_claims,
+                effective_max_claims=effective_max_claims,
+                num_predict=num_predict,
+                error=str(exc),
+                phase="schema_repair",
+            )
             return None, False, str(exc)
         write_markdown(repair_raw_path, repair_raw)
         repaired = _parse_model_json(repair_raw)
@@ -136,6 +156,33 @@ def whole_doc_claim_payload_for_source(
     write_json(canonical_path, payload)
     write_json(report_path, report)
     return payload, False, ""
+
+
+def _write_backend_error_report(
+    *,
+    canonical_path: Path,
+    report_path: Path,
+    source_id: str,
+    requested_max_claims: int,
+    effective_max_claims: int,
+    num_predict: int,
+    error: str,
+    phase: str,
+) -> None:
+    write_json(canonical_path, {})
+    write_json(
+        report_path,
+        {
+            "schema_id": "whole_doc_claim_extraction_report_v1",
+            "status": "backend_error",
+            "source_id": source_id,
+            "phase": phase,
+            "error": error,
+            "requested_max_claims": requested_max_claims,
+            "effective_max_claims": effective_max_claims,
+            "num_predict": num_predict,
+        },
+    )
 
 
 def effective_whole_doc_claim_cap(source_text: str, requested_max_claims: int) -> int:

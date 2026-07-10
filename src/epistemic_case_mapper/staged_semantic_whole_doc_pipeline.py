@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,9 @@ def _extract_whole_doc_claims(
         "relevance_validation_warning_counts": {},
         "label_audit_bucket_counts": {},
         "label_audit_warning_counts": {},
+        "serial_retry_attempt_count": 0,
+        "serial_retry_recovered_count": 0,
+        "serial_retry_failed_count": 0,
         "current_chunk_id": "",
         "complete": False,
         "claim_extraction_method": "whole_doc_source_card",
@@ -85,8 +89,15 @@ def _extract_whole_doc_claims(
     progress_path = artifact_dir / "claim_extraction_progress.json"
     selected_question = region_decision_question(region, case_manifest, decision_question)
     source_dir = artifact_dir / "claim_sources"
+    parallelism = claim_extraction_parallelism(backend)
     if progress:
-        progress.start_stage("claim_extraction", extractor="whole-doc", total_items=len(source_chunks), total_sources=len(source_chunks))
+        progress.start_stage(
+            "claim_extraction",
+            extractor="whole-doc",
+            total_items=len(source_chunks),
+            total_sources=len(source_chunks),
+            parallelism=parallelism,
+        )
     extraction_results = run_parallel(
         list(enumerate(source_chunks, start=1)),
         lambda item: _fetch_whole_doc_payload(
@@ -99,9 +110,19 @@ def _extract_whole_doc_claims(
             source_dir=source_dir,
             reuse_claim_cache=reuse_claim_cache,
         ),
-        max_workers=model_parallelism(backend),
+        max_workers=parallelism,
     )
-    claim_progress["parallelism"] = model_parallelism(backend)
+    retry_report = _retry_failed_whole_doc_results_serially(
+        extraction_results,
+        selected_question=selected_question,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        max_claims_per_source=max_claims_per_source,
+        source_dir=source_dir,
+    )
+    claim_progress["parallelism"] = parallelism
+    claim_progress.update(retry_report)
     for result in extraction_results:
         source_index = int(result["source_index"])
         chunk = result["chunk"]
@@ -112,9 +133,13 @@ def _extract_whole_doc_claims(
         if cache_hit:
             claim_progress["cache_hit_count"] += 1
         else:
-            claim_progress["backend_call_count"] += 1
+            claim_progress["backend_call_count"] += int(result.get("backend_call_count") or 1)
         if backend_error:
-            rejected.append({"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "backend_error", "error": backend_error})
+            rejection = {"chunk_id": chunk.chunk_id, "source_id": chunk.source_id, "reason": "backend_error", "error": backend_error}
+            if result.get("serial_retry_attempted"):
+                rejection["serial_retry_attempted"] = True
+                rejection["initial_error"] = result.get("initial_backend_error", "")
+            rejected.append(rejection)
             write_claim_progress(progress_path, claim_progress, source_index, chunk.chunk_id, accepted, rejected)
             continue
         if not isinstance(payload, dict) or not isinstance(payload.get("claims"), list):
@@ -149,8 +174,73 @@ def _extract_whole_doc_claims(
     write_json(progress_path, claim_progress)
     write_json(artifact_dir / "accepted_claims.json", {"claims": accepted, "rejected": rejected})
     if progress:
-        progress.finish_stage("claim_extraction", accepted_claim_count=len(accepted), rejected_claim_count=len(rejected), total_sources=len(source_chunks))
+        progress.finish_stage(
+            "claim_extraction",
+            accepted_claim_count=len(accepted),
+            rejected_claim_count=len(rejected),
+            total_sources=len(source_chunks),
+            parallelism=parallelism,
+            serial_retry_attempt_count=retry_report["serial_retry_attempt_count"],
+            serial_retry_recovered_count=retry_report["serial_retry_recovered_count"],
+            serial_retry_failed_count=retry_report["serial_retry_failed_count"],
+        )
     return accepted, rejected
+
+
+def claim_extraction_parallelism(backend: str | None = None) -> int:
+    override = os.environ.get("ECM_CLAIM_EXTRACTION_PARALLELISM")
+    backend_parallelism = model_parallelism(backend)
+    if override is not None:
+        try:
+            return max(1, int(override))
+        except ValueError:
+            return min(backend_parallelism, 2) if str(backend or "").strip().startswith("ollama:") else backend_parallelism
+    if str(backend or "").strip().startswith("ollama:"):
+        return min(backend_parallelism, 2)
+    return backend_parallelism
+
+
+def _retry_failed_whole_doc_results_serially(
+    extraction_results: list[dict[str, Any]],
+    *,
+    selected_question: str,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    max_claims_per_source: int,
+    source_dir: Path,
+) -> dict[str, int]:
+    attempts = 0
+    recovered = 0
+    failed = 0
+    for index, result in enumerate(extraction_results):
+        initial_error = str(result.get("backend_error") or "")
+        if not initial_error:
+            continue
+        attempts += 1
+        retry = _fetch_whole_doc_payload(
+            (int(result["source_index"]), result["chunk"]),
+            selected_question=selected_question,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            max_claims_per_source=max_claims_per_source,
+            source_dir=source_dir,
+            reuse_claim_cache=False,
+        )
+        retry["serial_retry_attempted"] = True
+        retry["initial_backend_error"] = initial_error
+        retry["backend_call_count"] = int(result.get("backend_call_count") or 0) + int(retry.get("backend_call_count") or 0)
+        if retry.get("backend_error"):
+            failed += 1
+        else:
+            recovered += 1
+        extraction_results[index] = retry
+    return {
+        "serial_retry_attempt_count": attempts,
+        "serial_retry_recovered_count": recovered,
+        "serial_retry_failed_count": failed,
+    }
 
 
 def _fetch_whole_doc_payload(
@@ -188,6 +278,7 @@ def _fetch_whole_doc_payload(
         "payload": payload,
         "cache_hit": cache_hit,
         "backend_error": backend_error,
+        "backend_call_count": 0 if cache_hit else 1,
     }
 
 

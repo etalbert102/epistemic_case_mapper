@@ -117,6 +117,37 @@ def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypa
     assert whole_doc_num_predict("x" * 60_000, 14) == 9000
 
 
+def test_whole_doc_backend_error_writes_source_report(monkeypatch, tmp_path: Path) -> None:
+    def fake_backend(*args, **kwargs):
+        raise RuntimeError("backend timed out")
+
+    monkeypatch.setattr(whole_doc_adapter, "run_model_backend", fake_backend)
+    payload, cache_hit, error = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        source_id="demo_source",
+        source_title="Demo Source",
+        source_text="Alpha line.",
+        decision_question="What matters?",
+        backend="ollama:fake-model",
+        backend_timeout=5,
+        backend_retries=0,
+        max_claims=8,
+        canonical_path=tmp_path / "canonical.json",
+        raw_path=tmp_path / "raw.txt",
+        repair_raw_path=tmp_path / "repair_raw.txt",
+        report_path=tmp_path / "report.json",
+        reuse_claim_cache=False,
+    )
+
+    assert payload is None
+    assert cache_hit is False
+    assert error == "backend timed out"
+    assert json.loads((tmp_path / "canonical.json").read_text(encoding="utf-8")) == {}
+    report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
+    assert report["status"] == "backend_error"
+    assert report["phase"] == "initial_extraction"
+    assert report["source_id"] == "demo_source"
+
+
 def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Path) -> None:
     _write_transfer_fixture(tmp_path)
     manifest, region, case_manifest = _load_context(tmp_path, "submission_manifest.yaml", "demo_region_json")
@@ -169,7 +200,80 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
     progress = (tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8")
     assert '"stage": "whole_doc_claim_extraction"' in progress
     assert '"claim_extraction_method": "whole_doc_source_card"' in progress
-    assert '"parallelism": 4' in progress
+    assert '"parallelism": 2' in progress
+
+
+def test_claim_extraction_parallelism_uses_stage_override(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_PARALLELISM", "8")
+    monkeypatch.setenv("ECM_OLLAMA_PARALLELISM", "8")
+    monkeypatch.delenv("ECM_CLAIM_EXTRACTION_PARALLELISM", raising=False)
+
+    assert whole_doc_pipeline.claim_extraction_parallelism("ollama:fake-model") == 2
+    assert whole_doc_pipeline.claim_extraction_parallelism("command:fake") == 8
+
+    monkeypatch.setenv("ECM_CLAIM_EXTRACTION_PARALLELISM", "3")
+
+    assert whole_doc_pipeline.claim_extraction_parallelism("ollama:fake-model") == 3
+
+
+def test_whole_doc_claim_extraction_retries_backend_errors_serially(monkeypatch, tmp_path: Path) -> None:
+    _write_transfer_fixture(tmp_path)
+    manifest, region, case_manifest = _load_context(tmp_path, "submission_manifest.yaml", "demo_region_json")
+    call_counts: dict[str, int] = {}
+
+    def fake_whole_doc_payload_for_source(**kwargs):
+        source_id = kwargs["source_id"]
+        call_counts[source_id] = call_counts.get(source_id, 0) + 1
+        if source_id == "demo_source_2" and call_counts[source_id] == 1:
+            return None, False, "timed out"
+        quote = "Alpha line." if source_id == "demo_source_1" else "Gamma line."
+        return (
+            {
+                "claims": [
+                    {
+                        "claim": f"{quote} supports a recovered source-card claim.",
+                        "source_quote": quote,
+                        "span_id": "",
+                        "entailed_by_excerpt": "yes",
+                        "role": "conclusion_support",
+                        "question_relevance": "direct",
+                        "relevance_rationale": "It is included in the source-card output.",
+                        "scope_flags": ["none"],
+                        "decision_importance": "high",
+                        "decision_function": "answer_bearing",
+                        "default_use": "main_map",
+                        "importance_rationale": "It is a canonical source claim.",
+                    }
+                ],
+                "extractor": "whole-doc",
+            },
+            False,
+            "",
+        )
+
+    monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
+
+    claims, rejected = _extract_claims(
+        repo_root=tmp_path,
+        region=region,
+        case_manifest=case_manifest,
+        backend="ollama:fake-model",
+        backend_timeout=5,
+        backend_retries=0,
+        artifact_dir=tmp_path / "artifacts",
+        max_claims_per_source=6,
+        reuse_claim_cache=False,
+        decision_question="Can serial retry recover a required source?",
+    )
+
+    assert [claim["source_id"] for claim in claims] == ["demo_source_1", "demo_source_2"]
+    assert rejected == []
+    assert call_counts == {"demo_source_1": 1, "demo_source_2": 2}
+    progress = json.loads((tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8"))
+    assert progress["backend_call_count"] == 3
+    assert progress["serial_retry_attempt_count"] == 1
+    assert progress["serial_retry_recovered_count"] == 1
+    assert progress["serial_retry_failed_count"] == 0
 
 
 def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_path: Path) -> None:
