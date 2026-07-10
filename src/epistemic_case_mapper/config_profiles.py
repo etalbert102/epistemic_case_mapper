@@ -404,6 +404,12 @@ def _base_relations() -> list[RelationTypeConfig]:
             sharpness_markers=["same as", "duplicates", "substantially overlaps"],
         ),
         RelationTypeConfig(
+            relation_type="contextualizes",
+            description="One claim supplies interpretation context for another without directly supporting, challenging, or narrowing it.",
+            use_when="Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim but should not be treated as load-bearing support.",
+            sharpness_markers=["context", "compared with", "interpretation", "helps explain"],
+        ),
+        RelationTypeConfig(
             relation_type="depends_on",
             description="The force of one claim depends on a condition, implementation detail, or prerequisite.",
             use_when="Use for conditional recommendations, feasibility dependencies, and assumptions.",

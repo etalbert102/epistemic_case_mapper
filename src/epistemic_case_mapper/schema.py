@@ -89,6 +89,7 @@ class Relation(BaseModel):
         "challenges",
         "refines",
         "similar_to",
+        "contextualizes",
         "depends_on",
         "crux_for",
         "in_tension_with",

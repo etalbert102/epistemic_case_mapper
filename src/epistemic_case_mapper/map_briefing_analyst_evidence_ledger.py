@@ -180,6 +180,7 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
                     "claim": _short_text(_decision_edge_statement(relation, source_claim, target_claim), 620),
                     "source_excerpt": _short_text(_decision_edge_excerpt(source_claim, target_claim), 620),
                     "current_role": _relation_current_role(str(relation.get("relation_type") or "")),
+                    "relation_semantic_role": str(relation.get("relation_type") or ""),
                     "current_priority": _relation_priority(relation),
                     "current_weight": str(relation.get("relation_confidence") or "medium"),
                     "quality": str(relation.get("relation_provenance") or "model_classified"),
@@ -218,6 +219,8 @@ def _relation_current_role(relation_type: str) -> str:
         return "decision_crux"
     if relation_type == "supports":
         return "load_bearing_primary_support"
+    if relation_type == "contextualizes":
+        return "mechanism_or_context"
     return "mechanism_or_context"
 
 
@@ -231,6 +234,7 @@ def _relation_priority(relation: dict[str, Any]) -> int:
         "depends_on": 8,
         "refines": 7,
         "supports": 7,
+        "contextualizes": 4,
         "similar_to": 3,
     }.get(relation_type, 5)
     if confidence == "high":

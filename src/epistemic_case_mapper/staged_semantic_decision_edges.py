@@ -594,8 +594,8 @@ def _pair_intent_for_contract(contract: str) -> dict[str, Any]:
         "mechanism_to_outcome": ["supports", "depends_on", "in_tension_with", "challenges", "none"],
         "scope_bounds_outcome": ["refines", "depends_on", "in_tension_with", "none"],
         "method_limits_headline": ["challenges", "refines", "depends_on", "none"],
-        "comparator_contextualizes_outcome": ["refines", "supports", "in_tension_with", "none"],
-        "guidance_supported_or_bounded_by_evidence": ["supports", "refines", "depends_on", "none"],
+        "comparator_contextualizes_outcome": ["contextualizes", "refines", "supports", "in_tension_with", "none"],
+        "guidance_supported_or_bounded_by_evidence": ["supports", "contextualizes", "refines", "depends_on", "none"],
         "scope_bounds_guidance": ["depends_on", "refines", "none"],
         "method_limits_guidance": ["challenges", "refines", "none"],
     }.get(contract, ["none"])

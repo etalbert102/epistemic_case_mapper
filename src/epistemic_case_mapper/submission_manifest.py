@@ -14,6 +14,7 @@ DEFAULT_RELATION_TYPES = (
     "challenges",
     "refines",
     "similar_to",
+    "contextualizes",
     "depends_on",
     "crux_for",
     "in_tension_with",

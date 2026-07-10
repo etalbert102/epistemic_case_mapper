@@ -135,6 +135,7 @@ def _assemble_map(
     claims: list[dict[str, Any]],
     relations: list[dict[str, Any]],
     relation_payloads: list[dict[str, Any]],
+    decision_question: str | None = None,
 ) -> dict[str, Any]:
     cruxes = _payload_list_items(relation_payloads, "crux_candidates")
     if not cruxes and relations:
@@ -152,6 +153,7 @@ def _assemble_map(
     ]
     return {
         "title": f"{case_manifest.title} Staged Map",
+        "decision_question": (decision_question or case_manifest.question).strip(),
         "status": "human-review-needed",
         "prompt_procedure": MAP_PROMPT_VERSION,
         "pipeline": "staged_chunked_mapper_v1",
@@ -325,7 +327,7 @@ def _relation_rationale_and_type_issues(
     relation_types = set(relation_type_counts)
     if relation_types.isdisjoint({"crux_for", "in_tension_with", "challenges"}):
         issues.append(_quality_issue("risk", "missing_crux_or_tension_relation", "No accepted crux/tension/challenge relation."))
-    generic_relation_count = sum(relation_type_counts.get(kind, 0) for kind in ("similar_to", "refines", "supports"))
+    generic_relation_count = sum(relation_type_counts.get(kind, 0) for kind in ("similar_to", "refines", "supports", "contextualizes"))
     if relations and len(relations) >= 4 and generic_relation_count / len(relations) > 0.7:
         issues.append(
             _quality_issue(

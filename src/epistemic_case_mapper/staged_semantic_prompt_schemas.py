@@ -50,8 +50,7 @@ def relation_json_schema(batch: bool = False) -> dict[str, Any]:
     return {"type": "object", "properties": {"relations": {"type": "array", "items": item}}, "required": ["relations"]}
 
 
-def relation_examples() -> list[dict[str, Any]]:
-    return [
+RELATION_EXAMPLE_ROWS: list[dict[str, Any]] = [
         {
             "input_hint": "One claim states a condition required for another claim to hold.",
             "output": {
@@ -178,4 +177,26 @@ def relation_examples() -> list[dict[str, Any]]:
                 "similar_but_not_identical": [],
             },
         },
-    ]
+        {
+            "input_hint": "A comparator or background claim helps interpret another claim but does not support, challenge, or narrow it.",
+            "output": {
+                "pair_id": "pair_008",
+                "source_claim": "case_c014",
+                "target_claim": "case_c015",
+                "relation_type": "contextualizes",
+                "rationale": "case_c014 gives comparator context that helps interpret case_c015, but it does not directly strengthen, weaken, or narrow the target claim.",
+                "relation_confidence": "medium",
+                "edge_basis": "source_inferred",
+                "source_anchor_a": "comparator context",
+                "source_anchor_b": "target finding",
+                "why_decision_relevant": "The edge tells the reader how to interpret the claim without treating the context as load-bearing evidence.",
+                "failure_condition": "The edge weakens if the comparator is irrelevant to the decision question or changes the target claim's direction.",
+                "crux_candidates": [],
+                "similar_but_not_identical": [],
+            },
+        },
+]
+
+
+def relation_examples() -> list[dict[str, Any]]:
+    return list(RELATION_EXAMPLE_ROWS)

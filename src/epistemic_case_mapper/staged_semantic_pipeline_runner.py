@@ -16,6 +16,7 @@ from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
+from epistemic_case_mapper.staged_semantic_claim_metadata import claims_with_relation_role_metadata
 from epistemic_case_mapper.staged_semantic_claim_triage import triage_claims_for_relation_building
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_label_audit import label_audit_bucket_counts, label_audit_warning_counts
@@ -23,8 +24,8 @@ from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 CLAIM_EXTRACTION_METHOD = "whole_doc_source_card"
-RELATION_PROMPT_VERSION = "staged_relation_prompt_v3_semantic_contract_json"
-RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v3_semantic_contract_json"
+RELATION_PROMPT_VERSION = "staged_relation_prompt_v4_contextual_relation_json"
+RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v4_contextual_relation_json"
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
 CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
 
@@ -620,7 +621,7 @@ def _build_initial_staged_map(
     decision_question: str,
     progress: PipelineProgress | None = None,
 ) -> dict[str, Any]:
-    relations, relation_payloads, rejected_relations = _extract_relations(
+    relations, relation_payloads, rejected_relations, prepared_relation_claims = _extract_relations(
         manifest=manifest,
         region=region,
         case_manifest=case_manifest,
@@ -637,9 +638,10 @@ def _build_initial_staged_map(
     final_map = _assemble_map(
         region=region,
         case_manifest=case_manifest,
-        claims=claims,
+        claims=claims_with_relation_role_metadata(claims, prepared_relation_claims),
         relations=relations,
         relation_payloads=relation_payloads,
+        decision_question=decision_question,
     )
     if progress:
         progress.start_stage(

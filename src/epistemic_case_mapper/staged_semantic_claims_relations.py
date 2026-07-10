@@ -611,9 +611,9 @@ def _extract_relations(
     relation_batch_size: int,
     decision_question: str | None = None,
     progress: PipelineProgress | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     if len(claims) < 2:
-        return [], [], [{"reason": "too_few_claims"}]
+        return [], [], [{"reason": "too_few_claims"}], []
     relation_claims, role_prep_report = prepare_claim_decision_edge_roles(
         claims,
         backend=backend,
@@ -726,7 +726,7 @@ def _extract_relations(
         decision_edge_quality_report(pair_packets=pair_packets, accepted=accepted, rejected=rejected),
     )
     _finish_relation_progress(progress, pair_packets, batches, accepted, rejected)
-    return accepted, payloads, rejected
+    return accepted, payloads, rejected, relation_claims
 
 
 def _append_singleton_fallback(

@@ -129,6 +129,13 @@ def test_prompt_builders_honor_explicit_decision_question_override() -> None:
             "claim": "Egg intake was not associated with higher cardiovascular risk.",
             "source_id": "doc_a",
             "role": "conclusion_support",
+            "decision_edge_role": "outcome_finding",
+            "decision_edge_role_confidence": "high",
+            "decision_edge_role_source": "model",
+            "decision_edge_role_reasons": ["Directly answers the cardiovascular-risk question."],
+            "decision_function": "answer_bearing",
+            "question_relevance": "direct",
+            "decision_importance_level": "critical",
             "source_alignment": {"source_quote": "not associated with higher cardiovascular risk"},
         },
         "right": {
@@ -136,6 +143,13 @@ def test_prompt_builders_honor_explicit_decision_question_override() -> None:
             "claim": "The cohort design limits causal interpretation.",
             "source_id": "doc_b",
             "role": "scope_limit",
+            "decision_edge_role": "method_or_validity_limit",
+            "decision_edge_role_confidence": "medium",
+            "decision_edge_role_source": "model",
+            "decision_edge_role_reasons": ["Limits the strength of causal use."],
+            "decision_function": "source_quality_caveat",
+            "question_relevance": "direct",
+            "decision_importance_level": "high",
             "source_alignment": {"source_quote": "cohort design limits causal interpretation"},
         },
         "pair_intent": {"intent": "cross_source_general_scope_to_finding", "allowed_relation_types": ["refines", "none"]},
@@ -146,8 +160,13 @@ def test_prompt_builders_honor_explicit_decision_question_override() -> None:
     assert f"Decision question: {override}" in relation_prompt
     assert "# Relation Type Semantics" in relation_prompt
     assert "depends_on: The force of one claim depends on a condition" in relation_prompt
+    assert "contextualizes: One claim supplies interpretation context" in relation_prompt
     assert "suggested_relation_types as the default decision menu" in relation_prompt
     assert "selection_rule: First try to choose the strongest relation from suggested_relation_types" in relation_prompt
+    assert "Use contextualizes when a claim helps interpret another claim" in relation_prompt
+    assert '"decision_edge_role": "outcome_finding"' in relation_prompt
+    assert '"decision_edge_role": "method_or_validity_limit"' in relation_prompt
+    assert "exact evidence quotes carry the evidence for an edge" in relation_prompt
 
 def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -> None:
     span = SourceSpan(

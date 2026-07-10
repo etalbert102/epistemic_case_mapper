@@ -169,4 +169,5 @@ def relation_edge_weight(relation_type: str) -> float:
         "refines": 1.4,
         "supports": 1.2,
         "similar_to": 0.8,
+        "contextualizes": 0.7,
     }.get(relation_type, 1.0)

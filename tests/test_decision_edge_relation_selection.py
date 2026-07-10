@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
 from epistemic_case_mapper.model_backends import ModelBackendResult
+from epistemic_case_mapper.staged_semantic_claim_metadata import claims_with_relation_role_metadata
 from epistemic_case_mapper.staged_semantic_decision_edges import (
     ROLE_BACKGROUND,
     ROLE_COMPARATOR,
@@ -76,6 +77,7 @@ def test_decision_edge_candidates_respect_prepared_model_roles() -> None:
 
     assert pairs
     assert pairs[0]["decision_edge_contract"] == "comparator_contextualizes_outcome"
+    assert "contextualizes" in pairs[0]["pair_intent"]["allowed_relation_types"]
     assert report["eligible_role_counts"][ROLE_COMPARATOR] == 1
 
 
@@ -131,6 +133,34 @@ def test_model_role_prep_skips_prompt_backend() -> None:
 
     assert prepared[0]["decision_edge_role_source"] == "deterministic_fallback"
     assert report["status"] == "skipped_prompt_backend"
+
+
+def test_final_map_claims_carry_relation_role_metadata_without_overwriting_source_role() -> None:
+    claims = [
+        {**_claim("c001", "Outcome finding."), "role": "source_claim"},
+        {**_claim("c002", "Appendix context."), "role": "source_claim"},
+    ]
+    prepared = [
+        {
+            **claims[0],
+            "role": ROLE_OUTCOME,
+            "decision_edge_role": ROLE_OUTCOME,
+            "decision_edge_role_confidence": "high",
+            "decision_edge_role_source": "model",
+            "decision_edge_role_reasons": ["direct outcome"],
+            "decision_edge_role_deterministic": ROLE_BACKGROUND,
+            "decision_edge_role_deterministic_confidence": "low",
+            "decision_edge_role_deterministic_reasons": ["fallback"],
+        }
+    ]
+
+    enriched = claims_with_relation_role_metadata(claims, prepared)
+
+    assert enriched[0]["role"] == "source_claim"
+    assert enriched[0]["map_relation_role"] == ROLE_OUTCOME
+    assert enriched[0]["decision_edge_role"] == ROLE_OUTCOME
+    assert enriched[0]["decision_edge_role_source"] == "model"
+    assert enriched[1]["map_relation_role"] == "not_relation_eligible"
 
 
 def test_low_confidence_decision_edges_are_warning_only_not_accepted() -> None:
@@ -222,6 +252,31 @@ def test_analyst_ledger_exposes_accepted_relations_as_decision_edge_rows() -> No
     assert relation_rows[0]["relation_id"] == "r001"
     assert relation_rows[0]["current_role"] == "load_bearing_counterweight"
     assert "core evidence conflict" in relation_rows[0]["why_it_matters"]
+
+
+def test_analyst_ledger_preserves_contextualizes_relation_semantic_role() -> None:
+    candidate_map = {
+        "claims": [
+            _claim("c001", "Comparator evidence changes how the outcome should be interpreted.", source_id="s1"),
+            _claim("c002", "The outcome estimate is neutral under the observed comparison.", source_id="s2"),
+        ],
+        "relations": [
+            {
+                "relation_id": "r001",
+                "source_claim": "c001",
+                "target_claim": "c002",
+                "relation_type": "contextualizes",
+                "rationale": "The comparator frames the neutral outcome estimate without directly supporting it.",
+                "relation_confidence": "medium",
+            }
+        ],
+    }
+
+    ledger = build_analyst_map_evidence_ledger(candidate_map, {"source_display_names": {"s1": "Comparator Study", "s2": "Outcome Study"}}, question="What should we do?")
+    relation_rows = [row for row in ledger["rows"] if row.get("input_kind") == "candidate_decision_edge"]
+
+    assert relation_rows[0]["current_role"] == "mechanism_or_context"
+    assert relation_rows[0]["relation_semantic_role"] == "contextualizes"
 
 
 def _claim(

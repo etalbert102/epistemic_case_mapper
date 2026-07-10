@@ -25,6 +25,7 @@ from epistemic_case_mapper.staged_semantic_prompt_schemas import (
     relation_examples,
     relation_prompt_schema,
 )
+from epistemic_case_mapper.staged_semantic_relation_claim_cards import relation_routing_context_lines
 from epistemic_case_mapper.staged_semantic_relation_prompting import relation_type_semantics
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -104,6 +105,7 @@ def _relation_rules(profile_rules: str) -> list[str]:
         "- Use challenges only when the rationale names what proposition is weakened or contradicted.",
         "- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or condition being narrowed.",
         "- Use supports only when the rationale names same-proposition support, a mechanism that explains the target claim, or quantitative/statistical evidence that strengthens the target claim.",
+        "- Use contextualizes when a claim helps interpret another claim but does not directly support, challenge, narrow, or condition it.",
         "- Do not use supports merely because both claims lean harmful, neutral, or beneficial.",
         "- Do not use a study-specific population/scope claim to refine findings from a different source.",
         "- Fill the relation evidence contract for every non-none relation.",
@@ -141,6 +143,7 @@ def _relation_claim_card(claim: dict[str, Any], label: str) -> str:
             f"- claim: {_compact_relation_text(str(claim.get('claim', '')), max_chars=300)}",
             f"- source_id: {claim.get('source_id')}",
             f"- role: {claim.get('role')}",
+            *relation_routing_context_lines(claim),
             f"- source_span: {claim.get('source_span', '')}",
             f"- exact_evidence_quote_{label}: {_compact_relation_text(_relation_evidence_quote(claim), max_chars=520)}",
         ]
@@ -159,7 +162,7 @@ def _relation_pair_contract(packet: dict[str, Any]) -> str:
             f"- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type \"none\".",
             f"- relation_intent: {intent_name}",
             f"- suggested_relation_types: {', '.join(suggested)}",
-            f"- routing_metadata_only: candidate reason and score explain why this pair was shown; they are not evidence for an edge.",
+            f"- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.",
             f"- decision_rule: {_relation_intent_decision_rule(intent_name)}",
             f"- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type \"none\" when none fit.",
             f"- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.",
@@ -183,8 +186,8 @@ def _relation_intent_decision_rule(intent_name: str) -> str:
         "outcome_disagreement": "Use in_tension_with or challenges only when the two findings point in different directions on the same decision-relevant proposition.",
         "scope_bounds_outcome": "Use refines or depends_on when the scope claim names where an outcome finding applies. Use in_tension_with when the subgroup or boundary points in a materially different direction from the broad finding.",
         "method_limits_headline": "Use challenges or refines when the method claim changes how strongly the headline finding should be used.",
-        "comparator_contextualizes_outcome": "Use refines or supports only when the comparator changes the interpretation of the outcome claim; do not imply absolute benefit from relative substitution evidence.",
-        "guidance_supported_or_bounded_by_evidence": "Use supports when the evidence directly backs the guidance, and refines or depends_on when it narrows the guidance.",
+        "comparator_contextualizes_outcome": "Use contextualizes when comparator evidence helps interpret the outcome claim without directly supporting it; use refines only when it narrows the target claim, and supports only when it directly strengthens the target claim. Do not imply absolute benefit from relative substitution evidence.",
+        "guidance_supported_or_bounded_by_evidence": "Use supports when the evidence directly backs the guidance, contextualizes when it only frames the guidance, and refines or depends_on when it narrows the guidance.",
         "scope_bounds_guidance": "Use depends_on or refines when the scope claim names the population or condition where the guidance holds.",
         "method_limits_guidance": "Use challenges or refines when the method limitation changes confidence in the guidance.",
     }
