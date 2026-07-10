@@ -76,6 +76,61 @@ def _adjudication() -> dict:
     }
 
 
+def _relation_ledger() -> dict:
+    return {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "relation:r001",
+                "input_kind": "candidate_decision_edge",
+                "current_role": "load_bearing_primary_support",
+                "current_priority": 8,
+                "current_weight": "medium",
+                "directionality": "supports",
+                "relation_semantic_role": "supports",
+                "relation_contract": {
+                    "edge_basis": "source_inferred",
+                    "source_anchor_a": "mechanism changed",
+                    "source_anchor_b": "outcome improved",
+                    "why_decision_relevant": "The mechanism may explain the outcome.",
+                    "failure_condition": "The edge fails if the mechanism is not causally connected to the outcome.",
+                },
+                "candidate_pair": {
+                    "pair_id": "pair_001",
+                    "score": 11.0,
+                    "reason": "mechanism_to_outcome+cross_source",
+                    "decision_edge_contract": "mechanism_to_outcome",
+                    "pair_intent": {"intent": "mechanism_to_outcome", "allowed_relation_types": ["supports", "none"]},
+                },
+                "endpoint_claims": [
+                    {"endpoint": "source", "claim_id": "c001", "decision_edge_role": "mechanism_or_biomarker"},
+                    {"endpoint": "target", "claim_id": "c002", "decision_edge_role": "outcome_finding"},
+                ],
+                "claim": "supports: mechanism evidence may explain the outcome finding.",
+                "source_excerpt": "mechanism changed | outcome improved",
+                "why_it_matters": "The edge would make the outcome evidence more coherent if valid.",
+                "failure_condition": "The edge fails if the mechanism is not causally connected to the outcome.",
+            }
+        ],
+    }
+
+
+def _relation_adjudication() -> dict:
+    return {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "relation:r001",
+                "memo_use": "needs_human_or_model_review",
+                "importance_rank": 1,
+                "rationale": "The proposed support edge needs directionality review.",
+            }
+        ],
+    }
+
+
 def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     context = build_analyst_decision_context(ledger=_ledger(), adjudication=_adjudication())
 
@@ -83,6 +138,20 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["row_count"] == 3
     assert context["model_hints"]["top_central_evidence_item_ids"]
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
+
+
+def test_decision_context_and_prompt_expose_candidate_relation_metadata() -> None:
+    context = build_analyst_decision_context(ledger=_relation_ledger(), adjudication=_relation_adjudication())
+    row = context["evidence_rows"][0]
+    prompt = build_analyst_decision_model_prompt(context)
+
+    assert row["relation_semantic_role"] == "supports"
+    assert row["relation_contract"]["source_anchor_a"] == "mechanism changed"
+    assert row["candidate_pair"]["decision_edge_contract"] == "mechanism_to_outcome"
+    assert row["endpoint_claims"][1]["decision_edge_role"] == "outcome_finding"
+    assert "provisional analytic links" in prompt
+    assert "failure_condition" in prompt
+    assert "endpoint_claims" in prompt
 
 
 def test_decision_model_prompt_asks_for_global_groups() -> None:

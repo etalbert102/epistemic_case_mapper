@@ -38,6 +38,40 @@ def _ledger() -> dict:
     }
 
 
+def _relation_ledger() -> dict:
+    return {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "relation:r001",
+                "input_kind": "candidate_decision_edge",
+                "current_role": "load_bearing_primary_support",
+                "current_weight": "medium",
+                "directionality": "supports",
+                "relation_semantic_role": "supports",
+                "relation_contract": {
+                    "edge_basis": "source_inferred",
+                    "source_anchor_a": "mechanism changed",
+                    "source_anchor_b": "outcome improved",
+                    "failure_condition": "The edge fails if the mechanism does not apply to the outcome.",
+                },
+                "candidate_pair": {
+                    "pair_id": "pair_001",
+                    "decision_edge_contract": "mechanism_to_outcome",
+                    "pair_intent": {"intent": "mechanism_to_outcome", "allowed_relation_types": ["supports", "none"]},
+                },
+                "endpoint_claims": [
+                    {"endpoint": "source", "claim_id": "c001", "decision_edge_role": "mechanism_or_biomarker"},
+                    {"endpoint": "target", "claim_id": "c002", "decision_edge_role": "outcome_finding"},
+                ],
+                "claim": "supports: mechanism evidence may explain the outcome finding.",
+                "source_excerpt": "mechanism changed | outcome improved",
+            }
+        ],
+    }
+
+
 def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     prompt = build_analyst_adjudication_prompt(_ledger())
 
@@ -45,6 +79,17 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "bundle:one" in prompt
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
+
+
+def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> None:
+    prompt = build_analyst_adjudication_prompt(_relation_ledger())
+
+    assert "relation labels as provisional model proposals" in prompt
+    assert "relation_semantic_role" in prompt
+    assert "mechanism_to_outcome" in prompt
+    assert "source_anchor_a" in prompt
+    assert "failure_condition" in prompt
+    assert "endpoint_claims" in prompt
 
 
 def test_analyst_adjudication_prompt_backend_scaffolds_all_rows() -> None:

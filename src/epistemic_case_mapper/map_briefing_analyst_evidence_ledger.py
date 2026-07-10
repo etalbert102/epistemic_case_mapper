@@ -132,6 +132,9 @@ def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dic
         row = {
             "relation_id": relation.get("relation_id"),
             "relation_type": relation.get("relation_type"),
+            "relation_confidence": relation.get("relation_confidence"),
+            "relation_contract": _relation_contract_summary(relation),
+            "candidate_pair": _candidate_pair_summary(relation),
             "other_claim_id": "",
             "other_claim": "",
             "rationale": _short_text(str(relation.get("rationale") or ""), 220),
@@ -167,6 +170,7 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
             ]
         )
         contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
+        candidate_pair = _candidate_pair_summary(relation)
         rows.append(
             _drop_empty(
                 {
@@ -181,6 +185,9 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
                     "source_excerpt": _short_text(_decision_edge_excerpt(source_claim, target_claim), 620),
                     "current_role": _relation_current_role(str(relation.get("relation_type") or "")),
                     "relation_semantic_role": str(relation.get("relation_type") or ""),
+                    "relation_contract": _relation_contract_summary(relation),
+                    "candidate_pair": candidate_pair,
+                    "endpoint_claims": _endpoint_claims_for_relation(source_claim_id, source_claim, target_claim_id, target_claim),
                     "current_priority": _relation_priority(relation),
                     "current_weight": str(relation.get("relation_confidence") or "medium"),
                     "quality": str(relation.get("relation_provenance") or "model_classified"),
@@ -192,6 +199,63 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
             )
         )
     return rows
+
+
+def _relation_contract_summary(relation: dict[str, Any]) -> dict[str, str]:
+    contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
+    return _drop_empty(
+        {
+            "edge_basis": str(contract.get("edge_basis") or ""),
+            "source_anchor_a": _short_text(str(contract.get("source_anchor_a") or ""), 180),
+            "source_anchor_b": _short_text(str(contract.get("source_anchor_b") or ""), 180),
+            "why_decision_relevant": _short_text(str(contract.get("why_decision_relevant") or ""), 240),
+            "failure_condition": _short_text(str(contract.get("failure_condition") or ""), 220),
+        }
+    )
+
+
+def _candidate_pair_summary(relation: dict[str, Any]) -> dict[str, Any]:
+    pair = relation.get("candidate_pair") if isinstance(relation.get("candidate_pair"), dict) else {}
+    intent = pair.get("pair_intent") if isinstance(pair.get("pair_intent"), dict) else {}
+    return _drop_empty(
+        {
+            "pair_id": str(pair.get("pair_id") or ""),
+            "score": pair.get("score"),
+            "reason": _short_text(str(pair.get("reason") or ""), 220),
+            "decision_edge_contract": str(pair.get("decision_edge_contract") or ""),
+            "pair_intent": _drop_empty(
+                {
+                    "intent": str(intent.get("intent") or ""),
+                    "allowed_relation_types": _string_list(intent.get("allowed_relation_types")),
+                }
+            ),
+        }
+    )
+
+
+def _endpoint_claims_for_relation(
+    source_claim_id: str,
+    source_claim: dict[str, Any],
+    target_claim_id: str,
+    target_claim: dict[str, Any],
+) -> list[dict[str, str]]:
+    return [
+        _endpoint_claim_summary("source", source_claim_id, source_claim),
+        _endpoint_claim_summary("target", target_claim_id, target_claim),
+    ]
+
+
+def _endpoint_claim_summary(endpoint: str, claim_id: str, claim: dict[str, Any]) -> dict[str, str]:
+    return _drop_empty(
+        {
+            "endpoint": endpoint,
+            "claim_id": claim_id,
+            "decision_edge_role": str(claim.get("decision_edge_role") or claim.get("map_relation_role") or ""),
+            "decision_function": str(claim.get("decision_function") or ""),
+            "question_relevance": str(claim.get("question_relevance") or ""),
+            "claim": _short_text(str(claim.get("claim") or ""), 220),
+        }
+    )
 
 
 def _decision_edge_statement(relation: dict[str, Any], source_claim: dict[str, Any], target_claim: dict[str, Any]) -> str:

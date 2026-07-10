@@ -576,6 +576,8 @@ def _candidate_pair_metadata(packet: dict[str, Any]) -> dict[str, Any]:
         "pair_id": str(packet.get("pair_id", "")),
         "score": packet.get("candidate_score"),
         "reason": str(packet.get("candidate_reason", "")),
+        "decision_edge_contract": packet.get("decision_edge_contract"),
+        "pair_intent": packet.get("pair_intent") if isinstance(packet.get("pair_intent"), dict) else {},
     }
 
 def _short_anchor(claim: dict[str, Any]) -> str:

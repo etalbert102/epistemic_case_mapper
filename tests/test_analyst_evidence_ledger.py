@@ -59,6 +59,7 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
                 "claim": "Option A reduces flood losses by 20 percent.",
                 "source_id": "s1",
                 "source_quote": "reduces flood losses by 20 percent",
+                "decision_edge_role": "outcome_finding",
                 "decision_importance_level": "high",
                 "decision_function": "answer_bearing",
                 "question_relevance": "direct",
@@ -69,6 +70,7 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
                 "claim": "Option A shifts maintenance costs to neighborhoods with lower tax capacity.",
                 "source_id": "s2",
                 "excerpt": "shifts maintenance costs to neighborhoods with lower tax capacity",
+                "decision_edge_role": "scope_or_subgroup_boundary",
                 "decision_importance_level": "medium",
                 "decision_function": "scope_boundary",
                 "question_relevance": "scope_limit",
@@ -82,6 +84,21 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
                 "target_claim": "c001",
                 "relation_type": "in_tension_with",
                 "rationale": "The distributional cost claim limits the apparent flood-loss benefit.",
+                "relation_confidence": "high",
+                "relation_contract": {
+                    "edge_basis": "source_inferred",
+                    "source_anchor_a": "shifts maintenance costs",
+                    "source_anchor_b": "reduces flood losses",
+                    "why_decision_relevant": "Costs limit the benefit claim.",
+                    "failure_condition": "The edge weakens if maintenance costs are already included in the benefit estimate.",
+                },
+                "candidate_pair": {
+                    "pair_id": "pair_001",
+                    "score": 12.5,
+                    "reason": "scope_bounds_outcome+cross_source",
+                    "decision_edge_contract": "scope_bounds_outcome",
+                    "pair_intent": {"intent": "scope_bounds_outcome", "allowed_relation_types": ["refines", "depends_on", "none"]},
+                },
             }
         ],
     }
@@ -103,5 +120,9 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     assert ledger["rows"][0]["quantity_values"] == ["20 percent"]
     assert ledger["rows"][1]["existing_warning_codes"] == ["question_scope_mismatch"]
     assert ledger["rows"][1]["relation_context"][0]["relation_type"] == "in_tension_with"
+    assert ledger["rows"][1]["relation_context"][0]["relation_contract"]["failure_condition"]
     assert ledger["rows"][2]["input_kind"] == "candidate_decision_edge"
     assert ledger["rows"][2]["current_role"] == "load_bearing_counterweight"
+    assert ledger["rows"][2]["relation_contract"]["source_anchor_a"] == "shifts maintenance costs"
+    assert ledger["rows"][2]["candidate_pair"]["decision_edge_contract"] == "scope_bounds_outcome"
+    assert ledger["rows"][2]["endpoint_claims"][0]["decision_edge_role"] == "scope_or_subgroup_boundary"
