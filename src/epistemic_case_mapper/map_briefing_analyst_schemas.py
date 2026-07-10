@@ -215,6 +215,11 @@ class AnalystDecisionModel(BaseModel):
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_payload_aliases(cls, value: Any) -> Any:
+        return _normalize_decision_model_payload(value)
+
     @field_validator("quantitative_anchors", "what_would_change_the_answer", mode="before")
     @classmethod
     def _list_field(cls, value: Any) -> list[str]:
@@ -392,6 +397,7 @@ def build_analyst_decision_model_parse_report(
     expected_ids = _ledger_ids(ledger)
     known_ids = set(expected_ids)
     obligations = _normalize_retention_obligations(retention_obligations) or analyst_decision_retention_obligations(ledger)
+    payload = _normalize_decision_model_payload(payload)
     try:
         parsed = AnalystDecisionModel.model_validate(payload)
     except ValidationError as exc:
@@ -556,6 +562,65 @@ def _normalize_adjudication_payload(payload: Any) -> Any:
         if row.get("downgrade_reason") is None:
             row["downgrade_reason"] = ""
     return normalized
+
+
+def _normalize_decision_model_payload(payload: Any) -> Any:
+    if not isinstance(payload, dict):
+        return payload
+    normalized = deepcopy(payload)
+    groups = normalized.get("evidence_groups")
+    if isinstance(groups, list):
+        for group in groups:
+            if not isinstance(group, dict):
+                continue
+            _normalize_decision_group_aliases(group)
+    group_ids = {
+        str(group.get("group_id") or "").strip()
+        for group in (groups if isinstance(groups, list) else [])
+        if isinstance(group, dict)
+    }
+    dispositions = normalized.get("evidence_dispositions")
+    if isinstance(dispositions, list):
+        for row in dispositions:
+            if not isinstance(row, dict):
+                continue
+            _normalize_decision_disposition_aliases(row, group_ids)
+    return normalized
+
+
+def _normalize_decision_group_aliases(group: dict[str, Any]) -> None:
+    if not group.get("memo_role"):
+        for alias in ("memo_relevance", "role", "evidence_role"):
+            if group.get(alias):
+                group["memo_role"] = group.get(alias)
+                break
+    for alias in ("memo_relevance", "role", "evidence_role"):
+        if alias in group:
+            group.pop(alias, None)
+
+
+def _normalize_decision_disposition_aliases(row: dict[str, Any], group_ids: set[str]) -> None:
+    group_id = str(row.get("group_id") or "").strip()
+    if not group_id:
+        return
+    normalized = _memo_use_alias(group_id)
+    if group_id not in group_ids and normalized in set(_allowed_decision_memo_uses()):
+        row["group_id"] = ""
+
+
+def _allowed_decision_memo_uses() -> tuple[str, ...]:
+    return (
+        "load_bearing_primary_support",
+        "load_bearing_counterweight",
+        "quantitative_anchor",
+        "scope_or_applicability",
+        "decision_crux",
+        "mechanism_or_context",
+        "background_only",
+        "covered_by_group",
+        "not_decision_relevant",
+        "needs_human_or_model_review",
+    )
 
 
 def _memo_use_alias(value: str) -> str:

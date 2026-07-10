@@ -289,6 +289,64 @@ def test_analyst_decision_model_parse_report_normalizes_none_group_alias() -> No
     assert "invalid_disposition_group_ids" not in report["issues"]
 
 
+def test_analyst_decision_model_normalizes_group_memo_relevance_alias() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A with scope limits.",
+        "overall_rationale": "The scope evidence bounds the answer.",
+        "evidence_groups": [
+            {
+                "group_id": "scope_group",
+                "proposition": "The answer is bounded by applicability.",
+                "memo_relevance": "scope_or_applicability",
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Scope matters.",
+            },
+        ],
+    }
+
+    parsed = AnalystDecisionModel.model_validate(payload)
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert parsed.evidence_groups[0].memo_role == "scope_or_applicability"
+    assert report["valid"] is True
+    assert "invalid_schema" not in report["issues"]
+
+
+def test_analyst_decision_model_clears_role_label_disposition_group_ids() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A with scope limits.",
+        "overall_rationale": "The support group covers the main row.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Known evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Known support.",
+            },
+        ],
+        "evidence_dispositions": [
+            {
+                "evidence_item_id": "warning:two",
+                "disposition": "background",
+                "group_id": "scope_or_applicability",
+                "rationale": "Model confused group id with memo role.",
+            },
+        ],
+    }
+
+    parsed = AnalystDecisionModel.model_validate(payload)
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert parsed.evidence_dispositions[0].group_id == ""
+    assert report["valid"] is True
+    assert "invalid_disposition_group_ids" not in report["issues"]
+
+
 def test_analyst_decision_model_parse_report_counts_grouped_rows_as_accounted() -> None:
     payload = {
         "schema_id": "analyst_decision_model_v1",
