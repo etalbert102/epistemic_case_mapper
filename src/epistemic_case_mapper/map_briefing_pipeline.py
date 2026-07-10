@@ -36,7 +36,7 @@ from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
-from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_evidence_ledger
+from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
@@ -318,8 +318,10 @@ def _attach_decision_briefing_packet(
             ],
         }
         scaffold["memo_warning_packet"] = build_memo_warning_packet(packet)
-        scaffold["analyst_evidence_ledger"] = build_analyst_evidence_ledger(
-            packet,
+        scaffold["analyst_evidence_ledger"] = build_analyst_map_evidence_ledger(
+            prioritized_map,
+            scaffold,
+            question=question,
             memo_warning_packet=scaffold["memo_warning_packet"],
         )
         from epistemic_case_mapper.map_briefing_analyst_adjudication import run_analyst_adjudication
@@ -542,6 +544,7 @@ def briefing_scaffold(
         source_lookup=source_lookup,
         question=question,
     )
+    scaffold["source_display_names"] = dict(source_lookup)
     if source_urls:
         scaffold["source_urls"] = {
             str(source_id): str(url).strip()

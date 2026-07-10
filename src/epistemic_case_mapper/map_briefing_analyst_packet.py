@@ -223,7 +223,7 @@ def _build_answer_frame(
     )
     question = str(ledger.get("decision_question") or packet.get("decision_question") or "").strip()
     if not direct_answer or is_weak_answer_frame(direct_answer, question=question):
-        direct_answer = "Synthesize the answer from the adjudicated evidence hierarchy; do not treat any single evidence row as the answer."
+        direct_answer = _why_this_read(groups)
     refined_answer = str(refinement.get("direct_answer") or "").strip()
     if refined_answer and not is_weak_answer_frame(refined_answer, question=question):
         direct_answer = _short_text(refined_answer, 420)
@@ -828,4 +828,3 @@ def _background_groups(groups: list[dict[str, Any]], *, limit: int) -> list[dict
         for group in groups
         if group.get("memo_role") in {"mechanism_or_context", "background_only", "needs_human_or_model_review"}
     ][:limit]
-

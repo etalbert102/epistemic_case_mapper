@@ -280,8 +280,12 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
         "current_priority": row.get("current_priority"),
         "source_labels": row.get("source_labels", []),
         "quantity_values": row.get("quantity_values", []),
+        "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 260),
         "claim": _short_text(str(row.get("claim") or ""), 360),
         "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 180),
+        "claim_ids": row.get("claim_ids") or _string_list(row.get("claim_id")),
+        "relation_ids": row.get("relation_ids", []),
+        "relation_context": row.get("relation_context", []),
         "existing_warning_codes": row.get("existing_warning_codes", []),
     }
 
@@ -295,14 +299,16 @@ def _memo_use_for_row(row: dict[str, Any]) -> str:
         return "quantitative_anchor"
     if "counter" in role:
         return "load_bearing_counterweight"
-    if "scope" in role:
+    if "scope" in role or "boundary" in role:
         return "scope_or_applicability"
     if "crux" in role:
         return "decision_crux"
-    if "support" in role:
+    if "support" in role or "answer_bearing" in role or "main_map" in role or role == "core":
         return "load_bearing_primary_support"
-    if "mechanism" in role:
+    if "mechanism" in role or "context" in role:
         return "mechanism_or_context"
+    if "appendix" in role or "background" in role:
+        return "background_only"
     return "background_only"
 
 
