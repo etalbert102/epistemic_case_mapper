@@ -61,6 +61,8 @@ def test_refinement_prompt_contains_warning_ids_and_answer_task() -> None:
     assert "Produce a direct answer frame" in prompt
     assert "decision_logic" in prompt
     assert "counterweight_weighting" in prompt
+    assert "natural analyst guidance" in prompt
+    assert "calibrated language" in prompt
     assert "memo_warning_001" in prompt
     assert "strict JSON" in prompt
 

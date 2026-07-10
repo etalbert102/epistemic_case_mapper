@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -11,6 +12,18 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 
 
+_NATURAL_LANGUAGE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    (r"\bcrux\s+for\b", "relevant to"),
+    (r"\bthe\s+primary\s+driver\b", "a plausible important driver"),
+    (r"\bprimary\s+driver\b", "plausible important driver"),
+    (r"\bconsistently\s+neutralized\b", "less decisive after adjustment"),
+    (r"\bneutralized\b", "weakened"),
+    (r"\bbyproduct\s+of\b", "partly explained by"),
+    (r"\binherent\s+property\s+of\b", "effect specific to"),
+    (r"\bfundamentally\s+changing\b", "shifting"),
+)
+
+
 def analyst_decision_logic(
     refinement: dict[str, Any],
     answer_frame: dict[str, Any],
@@ -18,25 +31,52 @@ def analyst_decision_logic(
     warning_obligations: list[dict[str, Any]],
 ) -> dict[str, Any]:
     refined = _dict(refinement.get("decision_logic"))
-    if any(str(refined.get(key) or "").strip() for key in ("bounded_bottom_line", "support_summary", "counterweight_weighting")):
+    if any(
+        str(refined.get(key) or "").strip()
+        for key in ("bounded_bottom_line", "support_summary", "counterweight_weighting")
+    ):
         return _normalize_decision_logic(refined, answer_frame)
     return _deterministic_decision_logic(answer_frame, groups, warning_obligations)
 
 
+def naturalize_decision_logic_payload(logic: dict[str, Any]) -> dict[str, Any]:
+    result = dict(logic or {})
+    for key in ("bounded_bottom_line", "support_summary", "strongest_counterweight", "counterweight_weighting"):
+        if key in result:
+            result[key] = naturalize_decision_logic_text(str(result.get(key) or ""))
+    for key in ("reconciled_cruxes", "scope_boundaries", "practical_implications", "do_not_overstate"):
+        if key in result:
+            result[key] = [naturalize_decision_logic_text(value) for value in _string_list(result.get(key))]
+    return result
+
+
+def naturalize_decision_logic_text(value: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(value or "")).strip()
+    for pattern, replacement in _NATURAL_LANGUAGE_REPLACEMENTS:
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\ba plausible important driver\b", "a plausible important driver", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
+    return cleaned
+
+
 def _normalize_decision_logic(logic: dict[str, Any], answer_frame: dict[str, Any]) -> dict[str, Any]:
+    logic = naturalize_decision_logic_payload(logic)
     return {
         "schema_id": "analyst_decision_logic_v1",
-        "bounded_bottom_line": _short_text(str(logic.get("bounded_bottom_line") or answer_frame.get("direct_answer") or ""), 520),
-        "support_summary": _short_text(str(logic.get("support_summary") or answer_frame.get("why_this_read") or ""), 520),
-        "strongest_counterweight": _short_text(str(logic.get("strongest_counterweight") or answer_frame.get("strongest_counterargument") or ""), 420),
-        "counterweight_weighting": _short_text(str(logic.get("counterweight_weighting") or answer_frame.get("why_counterargument_does_or_does_not_change_answer") or ""), 520),
+        "bounded_bottom_line": _natural_short(logic.get("bounded_bottom_line") or answer_frame.get("direct_answer"), 520),
+        "support_summary": _natural_short(logic.get("support_summary") or answer_frame.get("why_this_read"), 520),
+        "strongest_counterweight": _natural_short(logic.get("strongest_counterweight") or answer_frame.get("strongest_counterargument"), 420),
+        "counterweight_weighting": _natural_short(
+            logic.get("counterweight_weighting") or answer_frame.get("why_counterargument_does_or_does_not_change_answer"),
+            520,
+        ),
         "reconciled_cruxes": [_short_text(value, 280) for value in _string_list(logic.get("reconciled_cruxes"))[:6]],
         "scope_boundaries": [_short_text(value, 260) for value in _string_list(logic.get("scope_boundaries"))[:6]],
         "practical_implications": [_short_text(value, 260) for value in _string_list(logic.get("practical_implications"))[:6]],
         "do_not_overstate": _dedupe(
             [
                 *[_short_text(value, 240) for value in _string_list(logic.get("do_not_overstate"))[:8]],
-                *_string_list(answer_frame.get("must_not_overstate")),
+                *[naturalize_decision_logic_text(value) for value in _string_list(answer_frame.get("must_not_overstate"))],
             ]
         )[:8],
     }
@@ -70,24 +110,32 @@ def _deterministic_decision_logic(
     )
     return {
         "schema_id": "analyst_decision_logic_v1",
-        "bounded_bottom_line": _short_text(str(answer_frame.get("direct_answer") or ""), 520),
-        "support_summary": support or _short_text(str(answer_frame.get("why_this_read") or ""), 520),
-        "strongest_counterweight": counter or _short_text(str(answer_frame.get("strongest_counterargument") or ""), 420),
-        "counterweight_weighting": _short_text(
-            str(answer_frame.get("why_counterargument_does_or_does_not_change_answer") or "Explain whether the strongest counterweight changes the bottom line or only bounds it."),
+        "bounded_bottom_line": _natural_short(answer_frame.get("direct_answer"), 520),
+        "support_summary": naturalize_decision_logic_text(support) or _natural_short(answer_frame.get("why_this_read"), 520),
+        "strongest_counterweight": naturalize_decision_logic_text(counter)
+        or _natural_short(answer_frame.get("strongest_counterargument"), 420),
+        "counterweight_weighting": _natural_short(
+            str(
+                answer_frame.get("why_counterargument_does_or_does_not_change_answer")
+                or "Explain whether the strongest counterweight changes the bottom line or only bounds it."
+            ),
             520,
         ),
-        "reconciled_cruxes": cruxes,
-        "scope_boundaries": scope,
-        "practical_implications": _dedupe(implications)[:6],
+        "reconciled_cruxes": [naturalize_decision_logic_text(value) for value in cruxes],
+        "scope_boundaries": [naturalize_decision_logic_text(value) for value in scope],
+        "practical_implications": _dedupe([naturalize_decision_logic_text(value) for value in implications])[:6],
         "do_not_overstate": _dedupe(
             [
-                *_string_list(answer_frame.get("must_not_overstate")),
-                "Do not imply the answer travels outside the stated population, dose, comparator, or evidence base.",
-                "Do not treat a counterweight as decisive unless the packet explicitly says it changes the bottom line.",
+                *[naturalize_decision_logic_text(value) for value in _string_list(answer_frame.get("must_not_overstate"))],
+                "Keep the answer within the stated population, dose, comparator, and evidence base.",
+                "Treat a counterweight as decisive only when the packet says it changes the bottom line.",
             ]
         )[:8],
     }
+
+
+def _natural_short(value: Any, limit: int) -> str:
+    return _short_text(naturalize_decision_logic_text(str(value or "")), limit)
 
 
 def _first_group_text(groups: list[dict[str, Any]], memo_use: str) -> str:

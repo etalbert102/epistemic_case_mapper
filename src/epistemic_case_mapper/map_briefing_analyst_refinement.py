@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize_decision_logic_payload
 from epistemic_case_mapper.map_briefing_analyst_schemas import AnalystPacketRefinement
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dict_value as _dict,
@@ -62,6 +63,7 @@ def run_analyst_packet_refinement(
             ),
         }
     parsed = AnalystPacketRefinement.model_validate(payload).model_dump()
+    parsed["decision_logic"] = naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     return {
         "analyst_packet_refinement": parsed,
         "analyst_packet_refinement_prompt": prompt,
@@ -82,8 +84,9 @@ def build_analyst_packet_refinement_prompt(
             "Produce a direct answer frame and clean memo obligations for warnings.",
             "Produce an ordered argument plan for the memo.",
             "Produce a compact decision_logic object that tells the final writer how to weigh evidence, reconcile cruxes, bound scope, and state practical implications.",
-            "Do not write the memo.",
-            "Do not invent evidence or sources.",
+            "Write decision_logic fields as natural analyst guidance in ordinary prose, not as artifact labels, raw claim text, or map metadata.",
+            "Use calibrated language for causal and weighting claims.",
+            "Return planning JSON for a later writer, with every claim grounded in supplied packet evidence.",
             "Use the evidence hierarchy to answer the decision question in one sentence.",
             "Plan how the memo should integrate the strongest support, strongest counterweight, scope, cruxes, and practical implication.",
             "Explain why the strongest counterweight does or does not change the bottom-line answer.",
@@ -185,7 +188,7 @@ def _scaffold_decision_logic(synthesis_packet: dict[str, Any]) -> dict[str, Any]
     scope = [_short_text(str(group.get("proposition") or ""), 220) for group in _list(synthesis_packet.get("scope_and_applicability"))[:3] if isinstance(group, dict)]
     cruxes = [_short_text(str(group.get("proposition") or ""), 220) for group in _list(synthesis_packet.get("decision_cruxes"))[:3] if isinstance(group, dict)]
     bottom = str(synthesis_packet.get("bottom_line") or "").strip()
-    return {
+    return naturalize_decision_logic_payload({
         "bounded_bottom_line": bottom or "Answer the decision question from the weighted support and counterweights.",
         "support_summary": support,
         "strongest_counterweight": counter,
@@ -197,7 +200,7 @@ def _scaffold_decision_logic(synthesis_packet: dict[str, Any]) -> dict[str, Any]
             "Translate scope boundaries into conditions on the recommendation.",
         ],
         "do_not_overstate": _string_list(synthesis_packet.get("must_not_overstate"))[:6],
-    }
+    })
 
 
 def _first_group_text(synthesis_packet: dict[str, Any], key: str) -> str:
