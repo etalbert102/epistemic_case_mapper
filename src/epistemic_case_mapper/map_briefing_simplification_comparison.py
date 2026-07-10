@@ -38,7 +38,7 @@ def build_pipeline_simplification_comparison(
         "runtime_model_call_summary": _runtime_summary(_dict(diagnostics.get("runtime_budget"))),
         "manual_memo_quality_read": _manual_review_placeholder(diagnostics, rewrite_report),
         "remaining_known_weaknesses": warnings,
-        "retained_legacy_compatibility_paths": _retained_legacy_paths(final_outputs),
+        "active_architecture": _active_architecture_summary(scaffold, final_outputs),
     }
 
 
@@ -53,18 +53,15 @@ def _retention_metrics(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def _active_memo_ready_packet(scaffold: dict[str, Any]) -> dict[str, Any]:
-    analyst = _dict(scaffold.get("analyst_memo_ready_packet"))
-    if analyst.get("evidence_items"):
-        return analyst
     return _dict(scaffold.get("memo_ready_packet"))
 
 
 def _synthesis_path(rewrite_report: dict[str, Any], active_packet_report: dict[str, Any]) -> str:
-    if rewrite_report.get("analyst_memo_ready_packet_path") or active_packet_report.get("active_packet") == "analyst_memo_ready_packet":
-        return "analyst_memo_ready_packet"
     if rewrite_report.get("memo_ready_packet_path"):
         return "memo_ready_packet"
-    return "legacy_compatibility"
+    if active_packet_report.get("active_packet"):
+        return str(active_packet_report.get("active_packet"))
+    return "not_memo_ready_packet"
 
 
 def _source_lineage_metrics(report: dict[str, Any]) -> dict[str, Any]:
@@ -194,13 +191,16 @@ def _known_weaknesses(*, scaffold: dict[str, Any], diagnostics: dict[str, Any], 
     return weaknesses
 
 
-def _retained_legacy_paths(final_outputs: dict[str, Any]) -> list[dict[str, str]]:
+def _active_architecture_summary(scaffold: dict[str, Any], final_outputs: dict[str, Any]) -> dict[str, Any]:
     summary_paths = _dict(final_outputs.get("summary_paths"))
-    retained = []
-    for key in ("section_rewrite_report", "reader_memo_rewrite_report", "reader_packet_repair_report", "packet_repair_report"):
-        if summary_paths.get(key):
-            retained.append({"path_key": key, "reason": "compatibility artifact retained for diagnostics and existing consumers"})
-    return retained
+    packet = _active_memo_ready_packet(scaffold)
+    return {
+        "schema_id": "active_architecture_summary_v1",
+        "packet_key": "memo_ready_packet",
+        "packet_method": packet.get("method", ""),
+        "evidence_item_count": _list_len(packet.get("evidence_items")),
+        "diagnostic_output_count": sum(1 for value in summary_paths.values() if value),
+    }
 
 
 def _dict(value: Any) -> dict[str, Any]:

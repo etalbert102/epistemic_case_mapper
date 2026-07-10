@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import validate_map_candidate
 from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
+from epistemic_case_mapper.staged_semantic_claim_triage import triage_claims_for_relation_building
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_label_audit import label_audit_bucket_counts, label_audit_warning_counts
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
@@ -160,6 +162,7 @@ def run_staged_map(
             skipped_chunks=skipped_chunks,
             claim_stage=outputs["claim_stage"],
             claims=outputs["claims"],
+            relation_claims=outputs["relation_claims"],
             relations=outputs["relations"],
             final_outputs=outputs["final_outputs"],
             rejected_claims=outputs["rejected_claims"],
@@ -233,9 +236,23 @@ def _run_mapping_stages(
         decision_question=decision_question, progress=progress,
     )
     claims = claim_stage["claims"]
+    if progress:
+        progress.start_stage("claim_relation_triage", claim_count=len(claims))
+    claims, relation_claims, claim_relation_triage_report = triage_claims_for_relation_building(claims)
+    claim_stage["claims"] = claims
+    claim_stage["relation_claims"] = relation_claims
+    claim_stage["claim_relation_triage_report"] = claim_relation_triage_report
+    write_json(artifacts / "claim_relation_triage_report.json", claim_relation_triage_report)
+    if progress:
+        progress.finish_stage(
+            "claim_relation_triage",
+            eligible_claim_count=len(relation_claims),
+            excluded_claim_count=claim_relation_triage_report["excluded_claim_count"],
+            fallback_used=claim_relation_triage_report["fallback_used"],
+        )
     rejected_claims = claim_stage["rejected_claims"]
     initial = _build_initial_staged_map(
-        manifest=manifest, region=region, case_manifest=case_manifest, claims=claims,
+        manifest=manifest, region=region, case_manifest=case_manifest, claims=claims, relation_claims=relation_claims,
         all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
         rejected_claims=rejected_claims, backend=backend, backend_timeout=backend_timeout,
         backend_retries=backend_retries, artifacts=artifacts, max_relation_pairs=max_relation_pairs,
@@ -263,6 +280,7 @@ def _run_mapping_stages(
     return {
         "claim_stage": claim_stage,
         "claims": claims,
+        "relation_claims": relation_claims,
         "relations": initial["relations"],
         "rejected_claims": rejected_claims,
         "rejected_relations": initial["rejected_relations"],
@@ -287,6 +305,7 @@ def _complete_staged_map_run(
     skipped_chunks: list[dict[str, Any]],
     claim_stage: dict[str, Any],
     claims: list[dict[str, Any]],
+    relation_claims: list[dict[str, Any]],
     relations: list[dict[str, Any]],
     final_outputs: dict[str, Any],
     rejected_claims: list[dict[str, Any]],
@@ -306,7 +325,7 @@ def _complete_staged_map_run(
         backend_timeout=backend_options["backend_timeout"], backend_retries=int(backend_options["backend_retries"]),
         config_profile_id=config_profile_id,
         all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
-        claim_stage=claim_stage, claims=claims, relations=relations, final_outputs=final_outputs,
+        claim_stage=claim_stage, claims=claims, relation_claims=relation_claims, relations=relations, final_outputs=final_outputs,
         rejected_claims=rejected_claims, rejected_relations=rejected_relations,
         quality_report=quality_report, repair_info=repair_info, artifacts=artifacts,
     )
@@ -370,6 +389,7 @@ def _write_staged_run_summary(
     skipped_chunks: list[dict[str, Any]],
     claim_stage: dict[str, Any],
     claims: list[dict[str, Any]],
+    relation_claims: list[dict[str, Any]],
     relations: list[dict[str, Any]],
     final_outputs: dict[str, Any],
     rejected_claims: list[dict[str, Any]],
@@ -406,6 +426,7 @@ def _write_staged_run_summary(
             coverage_claims=claim_stage["coverage_claims"],
             pre_consolidation_claim_count=claim_stage["pre_consolidation_claim_count"],
             claims=claims,
+            relation_claims=relation_claims,
             relations=relations,
             final_claims=final_outputs["final_claims"],
             final_relations=final_outputs["final_relations"],
@@ -569,6 +590,7 @@ def _build_initial_staged_map(
     region: WorkedRegion,
     case_manifest: CaseManifest,
     claims: list[dict[str, Any]],
+    relation_claims: list[dict[str, Any]],
     all_chunks: list[SourceChunk],
     chunks: list[SourceChunk],
     skipped_chunks: list[dict[str, Any]],
@@ -586,7 +608,7 @@ def _build_initial_staged_map(
         manifest=manifest,
         region=region,
         case_manifest=case_manifest,
-        claims=claims,
+        claims=relation_claims,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
@@ -604,7 +626,12 @@ def _build_initial_staged_map(
         relation_payloads=relation_payloads,
     )
     if progress:
-        progress.start_stage("map_quality", claim_count=len(claims), relation_count=len(relations))
+        progress.start_stage(
+            "map_quality",
+            claim_count=len(claims),
+            relation_claim_count=len(relation_claims),
+            relation_count=len(relations),
+        )
     quality_report = evaluate_staged_map_quality(
         manifest=manifest,
         region=region,
@@ -692,6 +719,7 @@ def _staged_run_summary(
     coverage_claims: list[dict[str, Any]],
     pre_consolidation_claim_count: int,
     claims: list[dict[str, Any]],
+    relation_claims: list[dict[str, Any]],
     relations: list[dict[str, Any]],
     final_claims: list[dict[str, Any]],
     final_relations: list[dict[str, Any]],
@@ -731,11 +759,23 @@ def _staged_run_summary(
         "coverage_claim_count": len(coverage_claims),
         "pre_consolidation_claim_count": pre_consolidation_claim_count,
         "initial_claim_count": len(claims),
+        "relation_eligible_claim_count": len(relation_claims),
         "initial_relation_count": len(relations),
         "relation_sharpening": _relation_sharpening_summary(relations),
         "claim_count": len(final_claims),
         "relation_count": len(final_relations),
-        "relation_batch_count": _relation_batch_count(max_relation_pairs, relation_batch_size, claims),
+        "relation_batch_count": _relation_batch_count(max_relation_pairs, relation_batch_size, relation_claims),
+        "claim_relation_triage": {
+            "schema_id": "claim_relation_triage_summary_v1",
+            "artifact": _relative(repo_root, artifacts / "claim_relation_triage_report.json"),
+            "bucket_counts": dict(
+                sorted(
+                    Counter(str(claim.get("relation_triage_bucket", "unknown")) for claim in claims).items()
+                )
+            ),
+            "eligible_claim_count": len(relation_claims),
+            "excluded_claim_count": max(0, len(claims) - len(relation_claims)),
+        },
         "rejected_claims": rejected_claims,
         "rejected_relations": rejected_relations,
         "candidate_path": _relative(repo_root, validation_target),

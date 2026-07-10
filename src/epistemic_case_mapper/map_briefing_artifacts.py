@@ -131,8 +131,6 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_packet_quality_report", "analyst_packet_quality_report.json", "json", _scaffold_value("analyst_packet_quality_report"), review_label="Analyst packet quality"),
         ArtifactSpec("analyst_memo_ready_packet", "analyst_memo_ready_packet.json", "json", _scaffold_value("analyst_memo_ready_packet"), review_label="Analyst memo-ready packet"),
         ArtifactSpec("active_memo_ready_packet_report", "active_memo_ready_packet_report.json", "json", _scaffold_value("active_memo_ready_packet_report"), review_label="Active memo-ready packet report"),
-        ArtifactSpec("legacy_deterministic_memo_ready_packet", "legacy_deterministic_memo_ready_packet.json", "json", _scaffold_value("legacy_deterministic_memo_ready_packet"), review_label="Legacy deterministic memo-ready packet"),
-        ArtifactSpec("legacy_deterministic_memo_ready_packet_quality_report", "legacy_deterministic_memo_ready_packet_quality_report.json", "json", _scaffold_value("legacy_deterministic_memo_ready_packet_quality_report"), review_label="Legacy deterministic memo-ready packet quality"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
         ArtifactSpec("decision_crux_reconstruction_report", "decision_crux_reconstruction_report.json", "json", _scaffold_value("decision_crux_reconstruction_report"), review_label="Decision crux reconstruction"),

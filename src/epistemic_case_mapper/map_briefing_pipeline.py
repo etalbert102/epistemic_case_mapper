@@ -36,7 +36,8 @@ from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_evidence_ledger
+from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
@@ -316,7 +317,11 @@ def _attach_decision_briefing_packet(
                 if isinstance(issue, dict) and issue.get("issue_type")
             ],
         }
-        scaffold.update(build_quality_synthesis_packet_bundle(packet))
+        scaffold["memo_warning_packet"] = build_memo_warning_packet(packet)
+        scaffold["analyst_evidence_ledger"] = build_analyst_evidence_ledger(
+            packet,
+            memo_warning_packet=scaffold["memo_warning_packet"],
+        )
         from epistemic_case_mapper.map_briefing_analyst_adjudication import run_analyst_adjudication
 
         ledger = scaffold.get("analyst_evidence_ledger", {})
@@ -367,27 +372,23 @@ def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
     if not isinstance(analyst_packet, dict) or not analyst_packet.get("evidence_items"):
         scaffold["active_memo_ready_packet_report"] = {
             "schema_id": "active_memo_ready_packet_report_v1",
-            "status": "legacy_active",
+            "status": "missing_active_packet",
             "active_packet": "memo_ready_packet",
             "reason": "analyst_memo_ready_packet_missing_or_empty",
         }
         return
-    if isinstance(scaffold.get("memo_ready_packet"), dict):
-        scaffold["legacy_deterministic_memo_ready_packet"] = scaffold["memo_ready_packet"]
-    if isinstance(scaffold.get("memo_ready_packet_quality_report"), dict):
-        scaffold["legacy_deterministic_memo_ready_packet_quality_report"] = scaffold["memo_ready_packet_quality_report"]
     analyst_quality = scaffold.get("analyst_packet_quality_report")
     scaffold["memo_ready_packet"] = analyst_packet
     if isinstance(analyst_quality, dict):
         scaffold["memo_ready_packet_quality_report"] = {
             **analyst_quality,
-            "active_packet": "analyst_memo_ready_packet",
+            "active_packet": "memo_ready_packet",
         }
     scaffold["active_memo_ready_packet_report"] = {
         "schema_id": "active_memo_ready_packet_report_v1",
         "status": "analyst_active",
-        "active_packet": "analyst_memo_ready_packet",
-        "legacy_packet_retained_as": "legacy_deterministic_memo_ready_packet",
+        "active_packet": "memo_ready_packet",
+        "method": str(analyst_packet.get("method") or "analyst_adjudicated_packet_adapter"),
         "evidence_item_count": len(analyst_packet.get("evidence_items", [])),
         "source_trail_count": len(analyst_packet.get("source_trail", [])),
         "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),

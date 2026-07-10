@@ -264,7 +264,7 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     assert "weigh_risk" in prompt
 
 
-def test_analyst_packet_promotion_makes_analyst_packet_active_and_keeps_legacy_diagnostics() -> None:
+def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet() -> None:
     analyst_packet = build_analyst_packet_bundle(
         packet=_packet(),
         ledger=_ledger(),
@@ -285,9 +285,11 @@ def test_analyst_packet_promotion_makes_analyst_packet_active_and_keeps_legacy_d
     _promote_analyst_packet_as_active(scaffold)
 
     assert scaffold["memo_ready_packet"]["method"] == "analyst_adjudicated_packet_adapter"
-    assert scaffold["legacy_deterministic_memo_ready_packet"]["method"] == "deterministic_legacy"
-    assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "analyst_memo_ready_packet"
+    assert "legacy_deterministic_memo_ready_packet" not in scaffold
+    assert "legacy_deterministic_memo_ready_packet_quality_report" not in scaffold
+    assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "memo_ready_packet"
     assert scaffold["active_memo_ready_packet_report"]["status"] == "analyst_active"
+    assert scaffold["active_memo_ready_packet_report"]["active_packet"] == "memo_ready_packet"
     assert scaffold["active_memo_ready_packet_report"]["downgraded_evidence_item_ids"] == ["bundle:off_question"]
 
 
@@ -299,6 +301,7 @@ def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -
         ledger=_ledger(),
         adjudication=_adjudication(),
     )["analyst_memo_ready_packet"]
+    _promote_analyst_packet_as_active(scaffold)
 
     result = write_final_reader_outputs(
         rendered="## Decision Brief\n\nSeed memo.",
@@ -308,5 +311,6 @@ def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -
         backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
     )
 
-    assert result["rewrite_result"]["report"]["analyst_memo_ready_packet_path"] is True
+    assert result["rewrite_result"]["report"]["memo_ready_packet_path"] is True
+    assert result["rewrite_result"]["report"]["active_memo_ready_packet_method"] == "analyst_adjudicated_packet_adapter"
     assert "Should option A be adopted?" in result["briefing_path"].read_text()
