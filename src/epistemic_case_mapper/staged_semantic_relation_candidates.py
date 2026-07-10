@@ -545,7 +545,7 @@ def _pair_score(
         reasons.append("support_pair")
     if "source_claim" in {left_role, right_role}:
         score += 4
-        reasons.append("neutral_source_claim_pair")
+        reasons.append("source_extracted_claim_pair")
     importance_score, importance_reason = _pair_importance_score(left, right)
     if importance_score:
         score += importance_score

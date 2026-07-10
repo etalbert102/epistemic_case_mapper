@@ -274,7 +274,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert generated["relations"][0]["relation_provenance"] == "model_classified"
     assert generated["relations"][0]["relation_contract"]["source_anchor_a"] == "Alpha line."
     assert generated["relations"][0]["relation_contract"]["failure_condition"]
-    assert "neutral_source_claim_pair" in generated["relations"][0]["candidate_pair"]["reason"]
+    assert "source_extracted_claim_pair" in generated["relations"][0]["candidate_pair"]["reason"]
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
     assert summary["rejected_relations"] == []

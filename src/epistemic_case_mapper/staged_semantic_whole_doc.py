@@ -10,8 +10,8 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import json_schema_block, render_prompt
 
-WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v4_neutral_json"
-WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v4_neutral_json"
+WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v5_decision_ranked_json"
+WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v5_decision_ranked_json"
 SOURCE_EXTRACTED_ROLE = "source_claim"
 
 

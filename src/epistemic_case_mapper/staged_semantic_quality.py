@@ -390,7 +390,7 @@ def _quality_issues(
                 "Claims not marked entailed by excerpt: " + ", ".join(str(item) for item in uncertain_claims[:8]),
             )
         )
-    if not _uses_neutral_source_claim_contract(role_counts, len(claims), len(relations)):
+    if not _uses_source_extracted_claim_contract(role_counts, len(claims), len(relations)):
         for role in ("conclusion_support", "crux", "scope_limit"):
             if role_counts.get(role, 0) == 0:
                 issues.append(_quality_issue("risk", "missing_claim_role", f"No accepted claim with role {role}."))
@@ -473,7 +473,7 @@ def _quality_issues(
     return issues
 
 
-def _uses_neutral_source_claim_contract(role_counts: dict[str, int], claim_count: int, relation_count: int) -> bool:
+def _uses_source_extracted_claim_contract(role_counts: dict[str, int], claim_count: int, relation_count: int) -> bool:
     return claim_count > 0 and role_counts.get("source_claim", 0) == claim_count and relation_count > 0
 
 def _quality_issue(severity: str, issue_type: str, message: str) -> dict[str, str]:
