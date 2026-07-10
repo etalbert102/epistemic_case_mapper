@@ -30,21 +30,22 @@ def triage_claims_for_relation_building(
     """Annotate claims and return the subset that should enter relation extraction.
 
     The triage is deliberately deterministic over model-provided labels and
-    validation warnings. It may route a claim away from relation extraction, but
-    it preserves every claim in the returned full claim list and emits a report
-    so semantic exclusions are inspectable.
+    validation warnings. It preserves appendix claims for downstream review, but
+    claims that are clearly off-question are marked as routed away from the final
+    map and retained only in the triage report.
     """
     triaged = [_annotate_claim(claim) for claim in claims]
     eligible = [claim for claim in triaged if claim.get("relation_building_eligible") is True]
     fallback_used = False
     fallback_claim_ids: list[str] = []
-    if len(eligible) < minimum_relation_claims and len(triaged) >= minimum_relation_claims:
-        fallback_used = True
+    final_map_claims = [claim for claim in triaged if claim.get("included_in_final_map") is True]
+    if len(eligible) < minimum_relation_claims and len(final_map_claims) >= minimum_relation_claims:
         selected_ids = {str(claim.get("claim_id", "")) for claim in eligible}
-        for claim in sorted(triaged, key=_relation_priority_key):
+        for claim in sorted(final_map_claims, key=_relation_priority_key):
             claim_id = str(claim.get("claim_id", ""))
             if claim_id in selected_ids:
                 continue
+            fallback_used = True
             claim["relation_building_eligible"] = True
             claim["relation_triage_reasons"] = [
                 *_list_of_strings(claim.get("relation_triage_reasons")),
@@ -61,14 +62,15 @@ def triage_claims_for_relation_building(
 
 def _annotate_claim(claim: dict[str, Any]) -> dict[str, Any]:
     annotated = dict(claim)
-    bucket, eligible, reasons = _triage_bucket(claim)
+    bucket, relation_eligible, map_included, reasons = _triage_bucket(claim)
     annotated["relation_triage_bucket"] = bucket
-    annotated["relation_building_eligible"] = eligible
+    annotated["relation_building_eligible"] = relation_eligible
+    annotated["included_in_final_map"] = map_included
     annotated["relation_triage_reasons"] = reasons
     return annotated
 
 
-def _triage_bucket(claim: dict[str, Any]) -> tuple[str, bool, list[str]]:
+def _triage_bucket(claim: dict[str, Any]) -> tuple[str, bool, bool, list[str]]:
     labels = _claim_labels(claim)
     mismatch_reasons = labels["mismatch_reasons"]
     reasons: list[str] = []
@@ -92,14 +94,14 @@ def _triage_bucket(claim: dict[str, Any]) -> tuple[str, bool, list[str]]:
         reasons.append("low_relevance_or_importance")
 
     if _is_question_mismatch_appendix(labels):
-        return "excluded_from_relation_building", False, reasons or ["off_question_appendix"]
+        return "routed_away_extraneous", False, False, reasons or ["off_question_appendix"]
     if _has_core_signal(labels):
-        return "core", True, reasons or ["core_signal"]
+        return "core", True, True, reasons or ["core_signal"]
     if _has_supporting_signal(labels):
-        return "supporting", True, reasons or ["supporting_signal"]
+        return "supporting", True, True, reasons or ["supporting_signal"]
     if labels["relevance"] in LOW_RELEVANCE or labels["default_use"] in APPENDIX_USES or labels["bucket"] == "appendix":
-        return "appendix", False, reasons or ["appendix_signal"]
-    return "supporting", True, reasons or ["default_relation_eligible"]
+        return "appendix", False, True, reasons or ["appendix_signal"]
+    return "supporting", True, True, reasons or ["default_relation_eligible"]
 
 
 def _claim_labels(claim: dict[str, Any]) -> dict[str, Any]:
@@ -189,7 +191,7 @@ def _triage_report(
 ) -> dict[str, Any]:
     bucket_counts = Counter(str(claim.get("relation_triage_bucket", "unknown")) for claim in triaged)
     eligible_ids = [str(claim.get("claim_id", "")) for claim in eligible if str(claim.get("claim_id", "")).strip()]
-    excluded = [
+    relation_excluded = [
         {
             "claim_id": claim.get("claim_id"),
             "source_id": claim.get("source_id"),
@@ -204,18 +206,28 @@ def _triage_report(
         for claim in triaged
         if claim.get("relation_building_eligible") is not True
     ]
+    routed_away = [claim for claim in relation_excluded if _claim_routed_away(claim)]
     return {
         "schema_id": "claim_relation_triage_report_v1",
         "method": "deterministic_routing_over_model_claim_labels",
         "input_claim_count": len(triaged),
+        "final_map_claim_count": sum(1 for claim in triaged if claim.get("included_in_final_map") is True),
         "eligible_claim_count": len(eligible),
-        "excluded_claim_count": len(excluded),
+        "relation_excluded_claim_count": len(relation_excluded),
+        "routed_away_claim_count": len(routed_away),
+        "excluded_claim_count": len(routed_away),
         "bucket_counts": dict(sorted(bucket_counts.items())),
         "eligible_claim_ids": eligible_ids,
-        "excluded_claims": excluded,
+        "relation_excluded_claims": relation_excluded,
+        "routed_away_claims": routed_away,
+        "excluded_claims": routed_away,
         "fallback_used": fallback_used,
         "fallback_claim_ids": fallback_claim_ids,
     }
+
+
+def _claim_routed_away(claim: dict[str, Any]) -> bool:
+    return str(claim.get("bucket") or claim.get("relation_triage_bucket") or "") == "routed_away_extraneous"
 
 
 def _list_of_strings(value: Any) -> list[str]:

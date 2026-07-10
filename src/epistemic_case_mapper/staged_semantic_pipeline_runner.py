@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -235,12 +234,15 @@ def _run_mapping_stages(
         claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
         decision_question=decision_question, progress=progress,
     )
-    claims = claim_stage["claims"]
+    extracted_claims = claim_stage["claims"]
     if progress:
-        progress.start_stage("claim_relation_triage", claim_count=len(claims))
-    claims, relation_claims, claim_relation_triage_report = triage_claims_for_relation_building(claims)
+        progress.start_stage("claim_relation_triage", claim_count=len(extracted_claims))
+    triaged_claims, relation_claims, claim_relation_triage_report = triage_claims_for_relation_building(extracted_claims)
+    claims = [claim for claim in triaged_claims if claim.get("included_in_final_map") is True]
     claim_stage["claims"] = claims
+    claim_stage["triaged_claims"] = triaged_claims
     claim_stage["relation_claims"] = relation_claims
+    claim_stage["routed_away_claims"] = claim_relation_triage_report.get("routed_away_claims", [])
     claim_stage["claim_relation_triage_report"] = claim_relation_triage_report
     write_json(artifacts / "claim_relation_triage_report.json", claim_relation_triage_report)
     if progress:
@@ -248,6 +250,8 @@ def _run_mapping_stages(
             "claim_relation_triage",
             eligible_claim_count=len(relation_claims),
             excluded_claim_count=claim_relation_triage_report["excluded_claim_count"],
+            final_map_claim_count=len(claims),
+            routed_away_claim_count=claim_relation_triage_report.get("routed_away_claim_count", 0),
             fallback_used=claim_relation_triage_report["fallback_used"],
         )
     rejected_claims = claim_stage["rejected_claims"]
@@ -425,6 +429,7 @@ def _write_staged_run_summary(
             llm_claim_count=claim_stage["llm_claim_count"],
             coverage_claims=claim_stage["coverage_claims"],
             pre_consolidation_claim_count=claim_stage["pre_consolidation_claim_count"],
+            claim_relation_triage_report=claim_stage.get("claim_relation_triage_report", {}),
             claims=claims,
             relation_claims=relation_claims,
             relations=relations,
@@ -718,6 +723,7 @@ def _staged_run_summary(
     llm_claim_count: int,
     coverage_claims: list[dict[str, Any]],
     pre_consolidation_claim_count: int,
+    claim_relation_triage_report: dict[str, Any],
     claims: list[dict[str, Any]],
     relation_claims: list[dict[str, Any]],
     relations: list[dict[str, Any]],
@@ -758,6 +764,8 @@ def _staged_run_summary(
         "llm_claim_count": llm_claim_count,
         "coverage_claim_count": len(coverage_claims),
         "pre_consolidation_claim_count": pre_consolidation_claim_count,
+        "post_triage_extracted_claim_count": int(claim_relation_triage_report.get("input_claim_count", len(claims)) or len(claims)),
+        "routed_away_claim_count": int(claim_relation_triage_report.get("routed_away_claim_count", 0) or 0),
         "initial_claim_count": len(claims),
         "relation_eligible_claim_count": len(relation_claims),
         "initial_relation_count": len(relations),
@@ -768,13 +776,11 @@ def _staged_run_summary(
         "claim_relation_triage": {
             "schema_id": "claim_relation_triage_summary_v1",
             "artifact": _relative(repo_root, artifacts / "claim_relation_triage_report.json"),
-            "bucket_counts": dict(
-                sorted(
-                    Counter(str(claim.get("relation_triage_bucket", "unknown")) for claim in claims).items()
-                )
-            ),
+            "bucket_counts": dict(claim_relation_triage_report.get("bucket_counts", {})),
             "eligible_claim_count": len(relation_claims),
-            "excluded_claim_count": max(0, len(claims) - len(relation_claims)),
+            "relation_excluded_claim_count": int(claim_relation_triage_report.get("relation_excluded_claim_count", 0) or 0),
+            "routed_away_claim_count": int(claim_relation_triage_report.get("routed_away_claim_count", 0) or 0),
+            "excluded_claim_count": int(claim_relation_triage_report.get("excluded_claim_count", 0) or 0),
         },
         "rejected_claims": rejected_claims,
         "rejected_relations": rejected_relations,
