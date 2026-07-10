@@ -592,6 +592,7 @@ def test_coverage_backfill_reports_warnings_without_adding_claims() -> None:
 
 def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path) -> None:
     _init_three_doc_case(monkeypatch, tmp_path)
+    monkeypatch.setenv("ECM_MODEL_PARALLELISM", "2")
     fake_model = tmp_path / "batch_relation_model.py"
     fake_model.write_text(
         "import json, re, sys\n"
@@ -645,9 +646,12 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
     assert len(generated["relations"]) == 2
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
-    assert summary["relation_batch_size"] == 2
-    assert summary["relation_batch_count"] == 1
-    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_batches/batch_001_prompt.txt").exists()
+    artifact_dir = tmp_path / "artifacts/semantic/demo_case_initial_region/staged"
+    assert (summary["relation_batch_size"], summary["relation_batch_count"]) == (2, 1)
+    report = json.loads((artifact_dir / "relation_batch_report.json").read_text(encoding="utf-8"))
+    assert (report["parallelism"], report["batch_count"], report["batches"][0]["status"]) == (2, 1, "completed")
+    progress = json.loads((artifact_dir / "pipeline_progress.json").read_text(encoding="utf-8"))
+    assert progress["stages"]["relation_extraction"]["parallelism"] == 2
 
 def test_staged_map_quality_report_flags_missing_source_and_duplicates() -> None:
     class _Thresholds:

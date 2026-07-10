@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -12,14 +11,14 @@ from epistemic_case_mapper.config_profiles import (
     config_profile_from_manifest_payload,
     profile_vocabulary,
 )
-from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
-from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.io import read_yaml, write_json
+from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
-from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
+from epistemic_case_mapper.staged_semantic_relation_batches import run_relation_batch_backend, write_relation_batch_report
 from epistemic_case_mapper.staged_semantic_relation_quality import relation_semantic_rejection_reason
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
@@ -613,7 +612,7 @@ def _extract_relations(
     pair_packets = _candidate_relation_pairs(claims, effective_max_relation_pairs)
     _write_relation_candidate_pool_report(artifact_dir, claims, pair_packets, max_relation_pairs, effective_max_relation_pairs)
     batches = list(_batches(pair_packets, relation_batch_size))
-    _start_relation_progress(progress, claims, pair_packets, batches, max_relation_pairs, effective_max_relation_pairs)
+    _start_relation_progress(progress, claims, pair_packets, batches, max_relation_pairs, effective_max_relation_pairs, backend)
     claim_ids = {claim["claim_id"] for claim in claims}
     permitted_types = manifest.relation_ontology.permitted_types()
     accepted: list[dict[str, Any]] = []
@@ -622,44 +621,39 @@ def _extract_relations(
     seen: set[tuple[str, str, str]] = set()
     relation_index = 1
 
-    for batch_index, batch in enumerate(batches, start=1):
-        batch_id = f"batch_{batch_index:03d}"
-        prompt = (
-            _relation_pair_prompt(manifest, region, case_manifest, batch[0], decision_question=decision_question)
-            if len(batch) == 1
-            else _relation_batch_prompt(manifest, region, case_manifest, batch, batch_id, decision_question=decision_question)
-        )
-        artifact_subdir = "relation_pairs" if len(batch) == 1 else "relation_batches"
-        artifact_stem = batch[0]["pair_id"] if len(batch) == 1 else batch_id
-        write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_prompt.txt", prompt)
-        _start_relation_batch_progress(progress, batch_id, batch_index, batches, batch, backend_timeout)
-        try:
-            result = run_model_backend(
-                prompt,
-                backend,
-                timeout_seconds=backend_timeout,
-                max_retries=backend_retries,
-                response_schema=relation_json_schema(batch=len(batch) > 1),
-            )
-            raw = result.text
-            if progress:
-                progress.finish_backend_call(status="completed", pair_count=len(batch))
-        except (RuntimeError, ValueError) as exc:
-            if progress:
-                progress.finish_backend_call(status="backend_error", error=str(exc), pair_count=len(batch))
+    batch_results = run_parallel(
+        list(enumerate(batches, start=1)),
+        lambda item: run_relation_batch_backend(
+            item,
+            manifest=manifest,
+            region=region,
+            case_manifest=case_manifest,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            artifact_dir=artifact_dir,
+            decision_question=decision_question,
+        ),
+        max_workers=model_parallelism(backend),
+    )
+    write_relation_batch_report(artifact_dir, backend, batch_results)
+
+    for batch_result in batch_results:
+        batch = batch_result.batch
+        batch_id = batch_result.batch_id
+        if batch_result.backend_error:
             if len(batch) > 1:
                 relation_index = _append_singleton_fallback(
                     accepted, payloads, rejected, relation_index,
                     manifest, region, case_manifest, batch, claim_ids, permitted_types, seen,
-                    backend, backend_timeout, backend_retries, artifact_dir, batch_id, str(exc), decision_question, progress,
+                    backend, backend_timeout, backend_retries, artifact_dir, batch_id, batch_result.backend_error, decision_question, progress,
                 )
                 continue
             for packet in batch:
-                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
+                rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": batch_result.backend_error})
             continue
-        write_markdown(artifact_dir / artifact_subdir / f"{artifact_stem}_raw.txt", raw)
-        payload = _parse_relation_model_json(raw)
-        write_json(artifact_dir / artifact_subdir / f"{artifact_stem}_canonical.json", payload or {})
+
+        payload = batch_result.payload
         if not isinstance(payload, dict):
             if len(batch) > 1:
                 relation_index = _append_singleton_fallback(
@@ -749,6 +743,7 @@ def _start_relation_progress(
     batches: list[list[dict[str, Any]]],
     requested_max_pairs: int,
     effective_max_pairs: int,
+    backend: str,
 ) -> None:
     if progress:
         progress.start_stage(
@@ -758,26 +753,7 @@ def _start_relation_progress(
             total_batches=len(batches),
             requested_max_pairs=requested_max_pairs,
             effective_max_pairs=effective_max_pairs,
-        )
-
-
-def _start_relation_batch_progress(
-    progress: PipelineProgress | None,
-    batch_id: str,
-    batch_index: int,
-    batches: list[list[dict[str, Any]]],
-    batch: list[dict[str, Any]],
-    backend_timeout: int | None,
-) -> None:
-    if progress:
-        progress.start_backend_call(
-            stage="relation_extraction",
-            item_id=batch_id,
-            item_index=batch_index,
-            total_items=len(batches),
-            timeout_seconds=backend_timeout,
-            pair_count=len(batch),
-            pair_ids=[packet["pair_id"] for packet in batch],
+            parallelism=model_parallelism(backend),
         )
 
 
@@ -880,9 +856,6 @@ from epistemic_case_mapper.staged_semantic_sources import (
     _normalize_text,
     _non_evidence_text_reason,
     _parse_model_json,
-    _parse_relation_model_json,
-    _relation_batch_prompt,
-    _relation_pair_prompt,
     _relation_proposals,
     _relative,
     _span_signal_score,
