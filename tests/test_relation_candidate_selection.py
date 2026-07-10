@@ -1,20 +1,12 @@
 from __future__ import annotations
 
-import sys
-import types
 from pathlib import Path
 
-import epistemic_case_mapper.staged_semantic_langextract as langextract_adapter
-from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_prompt_examples
 from epistemic_case_mapper.staged_semantic_pipeline import (
-    SourceChunk,
     SourceSpan,
     _batches,
     _candidate_relation_pairs,
-    _claim_prompt,
-    _claim_prompt_json_schema,
     _concept_backfill_rejection_reason,
-    _extract_claims,
     _load_context,
     _normalize_claim_proposal,
     _non_evidence_text_reason,
@@ -127,67 +119,9 @@ def test_relation_candidate_pool_report_records_pool_and_skipped_claims() -> Non
     assert report["relation_pool_claims"]
     assert report["skipped_relation_pool_examples"]
 
-def test_claim_prompt_makes_decision_question_the_relevance_filter() -> None:
-    manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
-    chunk = SourceChunk(
-        chunk_id="demo_lines_1_1",
-        source_id="demo_source",
-        title="Demo Source",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: A bounded source span.",
-        plain_text="A bounded source span.",
-        spans=(
-            SourceSpan(
-                span_id="demo_s0001",
-                source_id="demo_source",
-                source_span="lines 1-1",
-                text="A bounded source span.",
-            ),
-        ),
-    )
-
-    prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims=2)
-    schema = _claim_prompt_json_schema()
-
-    assert "Decision question: How should a synthesis preserve the relationship between observational CVD outcome evidence" in prompt
-    assert "Treat the decision question as the governing extraction filter" in prompt
-    assert "Do not return claims merely because they mention the topic term" in prompt
-    assert "different outcome than the decision question" in prompt
-    assert "source_quote as an exact substring" in prompt
-    assert "question_relevance" in prompt
-    assert "decision_importance" in prompt
-    assert "Do not classify claims as support, counterweight, crux, scope role" in prompt
-    assert "decision_function" not in schema["properties"]["claims"]["items"]["properties"]
-    assert "default_use" not in schema["properties"]["claims"]["items"]["properties"]
-    assert "role" not in schema["properties"]["claims"]["items"]["properties"]
-    assert "source_quote" in schema["properties"]["claims"]["items"]["properties"]
-    assert "source_quote" in schema["properties"]["claims"]["items"]["required"]
-    assert "scope_flags" in schema["properties"]["claims"]["items"]["properties"]
-    assert "decision_importance" in schema["properties"]["claims"]["items"]["properties"]
-
 def test_prompt_builders_honor_explicit_decision_question_override() -> None:
     manifest, region, case_manifest = _load_context(Path("."), "submission_manifest.yaml", "eggs_observational_vs_rct")
     override = "Should generally healthy adults treat eggs as harmful, neutral, or beneficial for cardiovascular risk?"
-    chunk = SourceChunk(
-        chunk_id="demo_lines_1_1",
-        source_id="demo_source",
-        title="Demo Source",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: Egg intake was not associated with higher cardiovascular risk in this cohort.",
-        plain_text="Egg intake was not associated with higher cardiovascular risk in this cohort.",
-        spans=(
-            SourceSpan(
-                span_id="demo_s0001",
-                source_id="demo_source",
-                source_span="lines 1-1",
-                text="Egg intake was not associated with higher cardiovascular risk in this cohort.",
-            ),
-        ),
-    )
     packet = {
         "pair_id": "pair_001",
         "left": {
@@ -207,12 +141,9 @@ def test_prompt_builders_honor_explicit_decision_question_override() -> None:
         "pair_intent": {"intent": "cross_source_general_scope_to_finding", "allowed_relation_types": ["refines", "none"]},
     }
 
-    claim_prompt = _claim_prompt(manifest, region, case_manifest, chunk, max_claims=2, decision_question=override)
     relation_prompt = _relation_pair_prompt(manifest, region, case_manifest, packet, decision_question=override)
 
-    assert f"Decision question: {override}" in claim_prompt
     assert f"Decision question: {override}" in relation_prompt
-    assert "Decision question: How should a synthesis preserve the relationship" not in claim_prompt
 
 def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -> None:
     span = SourceSpan(
@@ -324,13 +255,6 @@ def test_normalize_claim_rejects_unaligned_source_quote() -> None:
 
     assert claim is None
     assert reason == "source_quote_unaligned"
-
-def test_claim_prompt_examples_have_grounded_source_quotes() -> None:
-    for example in claim_prompt_examples():
-        excerpt = str(example.get("input_excerpt", ""))
-        for claim in example.get("output", {}).get("claims", []):
-            assert claim["source_quote"] in excerpt
-
 
 def test_candidate_relation_pairs_use_graph_diversity_to_cover_more_claims() -> None:
     claims = [
@@ -613,248 +537,6 @@ def test_relation_claim_card_prefers_exact_source_quote_over_broad_excerpt() -> 
     assert "Broad background sentence" not in card
 
 
-def test_extract_claims_reuses_cached_chunk_payload(tmp_path: Path) -> None:
-    repo_root = Path(".")
-    manifest, region, case_manifest = _load_context(repo_root, "submission_manifest.yaml", "eggs_observational_vs_rct")
-    chunk = SourceChunk(
-        chunk_id="cache_demo_lines_1_1",
-        source_id="cache_demo",
-        title="Cache Demo",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: Cached evidence line.",
-        plain_text="Cached evidence line.",
-        spans=(
-            SourceSpan(
-                span_id="cache_demo_s0001",
-                source_id="cache_demo",
-                source_span="lines 1-1",
-                text="Cached evidence line.",
-            ),
-        ),
-    )
-    canonical = tmp_path / "claim_chunks" / "cache_demo_lines_1_1_canonical.json"
-    canonical.parent.mkdir(parents=True)
-    canonical.write_text(
-        '{"claims":[{"claim":"Cached claim from prior run.","span_id":"cache_demo_s0001","entailed_by_excerpt":"yes","role":"background"}]}',
-        encoding="utf-8",
-    )
-
-    claims, rejected = _extract_claims(
-        repo_root,
-        manifest,
-        region,
-        case_manifest,
-        [chunk],
-        backend="command:python3 -c 'raise SystemExit(99)'",
-        backend_timeout=1,
-        backend_retries=0,
-        artifact_dir=tmp_path,
-        max_claims_per_chunk=4,
-        reuse_claim_cache=True,
-    )
-    progress = (tmp_path / "claim_extraction_progress.json").read_text(encoding="utf-8")
-
-    assert [claim["claim"] for claim in claims] == ["Cached claim from prior run."]
-    assert rejected == []
-    assert '"cache_hit_count": 1' in progress
-    assert '"backend_call_count": 0' in progress
-
-
-def test_extract_claims_respects_valid_empty_model_response(tmp_path: Path) -> None:
-    repo_root = Path(".")
-    manifest, region, case_manifest = _load_context(repo_root, "submission_manifest.yaml", "eggs_observational_vs_rct")
-    chunk = SourceChunk(
-        chunk_id="empty_demo_lines_1_1",
-        source_id="empty_demo",
-        title="Empty Demo",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: Bibliographic metadata only.",
-        plain_text="Bibliographic metadata only.",
-        spans=(
-            SourceSpan(
-                span_id="empty_demo_s0001",
-                source_id="empty_demo",
-                source_span="lines 1-1",
-                text="Bibliographic metadata only.",
-            ),
-        ),
-    )
-    fake_model = tmp_path / "empty_claim_model.py"
-    fake_model.write_text("import json\nprint(json.dumps({'claims': []}))\n", encoding="utf-8")
-
-    claims, rejected = _extract_claims(
-        repo_root,
-        manifest,
-        region,
-        case_manifest,
-        [chunk],
-        backend=f"command:python3 {fake_model}",
-        backend_timeout=5,
-        backend_retries=0,
-        artifact_dir=tmp_path,
-        max_claims_per_chunk=4,
-        reuse_claim_cache=False,
-    )
-    progress = (tmp_path / "claim_extraction_progress.json").read_text(encoding="utf-8")
-
-    assert claims == []
-    assert rejected == []
-    assert '"fallback_claim_count": 0' in progress
-
-
-def test_extract_claims_can_use_langextract_grounded_payload(monkeypatch, tmp_path: Path) -> None:
-    repo_root = Path(".")
-    manifest, region, case_manifest = _load_context(repo_root, "submission_manifest.yaml", "eggs_observational_vs_rct")
-    chunk = SourceChunk(
-        chunk_id="langextract_demo_lines_1_1",
-        source_id="langextract_demo",
-        title="LangExtract Demo",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: The intervention reduced decision-relevant risk by 20 percent.",
-        plain_text="The intervention reduced decision-relevant risk by 20 percent.",
-        spans=(
-            SourceSpan(
-                span_id="langextract_demo_s0001",
-                source_id="langextract_demo",
-                source_span="lines 1-1",
-                text="The intervention reduced decision-relevant risk by 20 percent.",
-            ),
-        ),
-    )
-    _install_fake_langextract(
-        monkeypatch,
-        extraction_text="reduced decision-relevant risk by 20 percent",
-        attributes={
-            "claim": "The intervention reduced decision-relevant risk by 20 percent.",
-            "role": "conclusion_support",
-            "question_relevance": "direct",
-            "relevance_rationale": "It reports a decision-relevant outcome.",
-            "scope_flags": ["none"],
-            "entailed_by_excerpt": "yes",
-        },
-    )
-
-    claims, rejected = _extract_claims(
-        repo_root,
-        manifest,
-        region,
-        case_manifest,
-        [chunk],
-        backend="ollama:fake-model",
-        backend_timeout=5,
-        backend_retries=0,
-        artifact_dir=tmp_path,
-        max_claims_per_chunk=4,
-        reuse_claim_cache=False,
-        claim_extractor="langextract",
-    )
-    progress = (tmp_path / "claim_extraction_progress.json").read_text(encoding="utf-8")
-
-    assert [claim["claim"] for claim in claims] == ["The intervention reduced decision-relevant risk by 20 percent."]
-    assert claims[0]["source_span"] == "lines 1-1"
-    assert rejected == []
-    assert '"claim_extractor": "langextract"' in progress
-    report = (tmp_path / "claim_chunks" / "langextract_demo_lines_1_1_langextract_report.json").read_text(encoding="utf-8")
-    assert '"use_schema_constraints": false' in report
-
-
-def test_langextract_ollama_runtime_options_accept_fenced_json() -> None:
-    assert langextract_adapter._runtime_options("ollama:gemma4:12b-mlx") == {
-        "use_schema_constraints": False,
-        "resolver_params": {"suppress_parse_errors": True},
-    }
-    assert langextract_adapter._runtime_options("openai:gpt-5.2") == {}
-
-
-def test_langextract_span_resolution_prefers_exact_text_over_interval() -> None:
-    chunk = SourceChunk(
-        chunk_id="misaligned_lines_10_11",
-        source_id="misaligned",
-        title="Misaligned",
-        start_line=10,
-        end_line=11,
-        ordinal=1,
-        numbered_text="10: A meta-analysis found higher LDL.\n11: A different line discusses cohort outcomes.",
-        plain_text="A meta-analysis found higher LDL.\nA different line discusses cohort outcomes.",
-        spans=(
-            SourceSpan(
-                span_id="misaligned_s0010",
-                source_id="misaligned",
-                source_span="lines 10-10",
-                text="A meta-analysis found higher LDL.",
-            ),
-            SourceSpan(
-                span_id="misaligned_s0011",
-                source_id="misaligned",
-                source_span="lines 11-11",
-                text="A different line discusses cohort outcomes.",
-            ),
-        ),
-    )
-
-    span_id = langextract_adapter._span_id_for_extraction(
-        chunk,
-        "A meta-analysis found higher LDL.",
-        {"start_pos": 34, "end_pos": 54},
-    )
-
-    assert span_id == "misaligned_s0010"
-
-
-def test_langextract_mode_requires_optional_package(monkeypatch, tmp_path: Path) -> None:
-    def missing_import(name: str):
-        if name == "langextract":
-            raise ImportError("missing test module")
-        return __import__(name)
-
-    monkeypatch.setattr(langextract_adapter.importlib, "import_module", missing_import)
-    repo_root = Path(".")
-    manifest, region, case_manifest = _load_context(repo_root, "submission_manifest.yaml", "eggs_observational_vs_rct")
-    chunk = SourceChunk(
-        chunk_id="missing_langextract_lines_1_1",
-        source_id="missing_langextract",
-        title="Missing LangExtract",
-        start_line=1,
-        end_line=1,
-        ordinal=1,
-        numbered_text="1: The intervention reduced risk.",
-        plain_text="The intervention reduced risk.",
-        spans=(
-            SourceSpan(
-                span_id="missing_langextract_s0001",
-                source_id="missing_langextract",
-                source_span="lines 1-1",
-                text="The intervention reduced risk.",
-            ),
-        ),
-    )
-
-    claims, rejected = _extract_claims(
-        repo_root,
-        manifest,
-        region,
-        case_manifest,
-        [chunk],
-        backend="ollama:fake-model",
-        backend_timeout=5,
-        backend_retries=0,
-        artifact_dir=tmp_path,
-        max_claims_per_chunk=4,
-        reuse_claim_cache=False,
-        claim_extractor="langextract",
-    )
-
-    assert claims
-    assert rejected[0]["reason"] == "backend_error_used_deterministic_fallback"
-    assert "LangExtract is not installed" in rejected[0]["error"]
-
-
 def _claim(claim_id: str, claim: str, source_id: str, excerpt: str, role: str) -> dict[str, str]:
     return {
         "claim_id": claim_id,
@@ -863,37 +545,3 @@ def _claim(claim_id: str, claim: str, source_id: str, excerpt: str, role: str) -
         "excerpt": excerpt,
         "role": role,
     }
-
-
-def _install_fake_langextract(monkeypatch, *, extraction_text: str, attributes: dict[str, object]) -> None:
-    class Extraction:
-        def __init__(self, extraction_class="", extraction_text="", attributes=None):
-            self.extraction_class = extraction_class
-            self.extraction_text = extraction_text
-            self.attributes = attributes or {}
-            self.char_interval = {"start_pos": 17, "end_pos": 60}
-            self.alignment_status = "match_exact"
-
-    class ExampleData:
-        def __init__(self, text="", extractions=None):
-            self.text = text
-            self.extractions = extractions or []
-
-    def extract(**kwargs):
-        _ = kwargs
-        return types.SimpleNamespace(
-            extractions=[
-                types.SimpleNamespace(
-                    extraction_text=extraction_text,
-                    attributes=attributes,
-                    char_interval={"start_pos": 17, "end_pos": 60},
-                    alignment_status="match_exact",
-                )
-            ]
-        )
-
-    fake = types.SimpleNamespace(
-        data=types.SimpleNamespace(ExampleData=ExampleData, Extraction=Extraction),
-        extract=extract,
-    )
-    monkeypatch.setitem(sys.modules, "langextract", fake)

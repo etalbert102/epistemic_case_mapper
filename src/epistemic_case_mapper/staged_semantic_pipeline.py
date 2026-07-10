@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.staged_semantic_pipeline_runner import (
-    CLAIM_EXTRACTION_PROMPT_VERSION,
+    CLAIM_EXTRACTION_METHOD,
     CONSOLIDATION_OVERLAP_THRESHOLD,
     CONSOLIDATION_SIMILARITY_THRESHOLD,
     RELATION_BATCH_PROMPT_VERSION,
@@ -9,7 +9,6 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     SourceChunk,
     SourceSpan,
     StagedMapResult,
-    VALID_CLAIM_ROLES,
     _build_initial_staged_map,
     _coverage_backfill_claims,
     _extract_claims,
@@ -62,8 +61,6 @@ from epistemic_case_mapper.staged_semantic_claims_relations import (
 from epistemic_case_mapper.staged_semantic_quality import (
     _assemble_map,
     _case_config_profile,
-    _claim_prompt,
-    _claim_prompt_json_schema,
     _claim_source_coverage_ids,
     _classify_singleton_relations,
     _configured_claim_roles,
@@ -133,7 +130,7 @@ from epistemic_case_mapper.staged_semantic_sources import (
 )
 
 __all__ = [
-    "CLAIM_EXTRACTION_PROMPT_VERSION",
+    "CLAIM_EXTRACTION_METHOD",
     "CONSOLIDATION_OVERLAP_THRESHOLD",
     "CONSOLIDATION_SIMILARITY_THRESHOLD",
     "RELATION_BATCH_PROMPT_VERSION",
@@ -141,7 +138,6 @@ __all__ = [
     "SourceChunk",
     "SourceSpan",
     "StagedMapResult",
-    "VALID_CLAIM_ROLES",
     "_CONCEPT_FAMILY_PRIORITY",
     "_artifact_dir",
     "_assemble_map",
@@ -157,8 +153,6 @@ __all__ = [
     "_chunk_summary",
     "_claim_duplicate_components",
     "_claim_polarity",
-    "_claim_prompt",
-    "_claim_prompt_json_schema",
     "_claim_source_coverage_ids",
     "_claim_supporting_excerpts",
     "_claim_supporting_sources",

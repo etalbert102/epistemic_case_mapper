@@ -45,7 +45,6 @@ from epistemic_case_mapper.map_briefing import (
 from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
 from epistemic_case_mapper.map_briefing_evidence_tables import _reader_source_name
 from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
-from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 
 
 def test_confidence_calibration_caps_high_when_map_has_risks() -> None:

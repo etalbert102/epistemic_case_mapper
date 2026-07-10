@@ -7,7 +7,7 @@ Make whole-document source-card extraction the primary staged-map claim extracti
 Chunk-level extraction was reliable for schema control, but it encouraged fragmented claims, duplicate local observations, and weak source-level salience. Live probes showed that whole-document extraction produced better canonical claims, but first-pass model output often used nearby schemas such as top-level `claims` or bare arrays. The switch therefore needs a repair/normalization layer and deterministic quote validation rather than trusting a single strict model pass.
 
 ## Non-Goals
-- Do not remove the legacy chunk extractor; tests and debugging still need the `native` path.
+- Remove the legacy chunk extractors once whole-document extraction is the only intended path.
 - Do not use deterministic fallback claims for whole-document extraction; emit warnings and rejected records instead.
 - Do not overfit extraction prompts to the eggs case or any specific domain vocabulary.
 - Do not make final synthesis depend on raw unvalidated model claims.
@@ -28,11 +28,11 @@ Chunk-level extraction was reliable for schema control, but it encouraged fragme
    - Risks: Long documents may exceed backend context; this should fail visibly with backend errors rather than silently fabricating claims.
 
 2. Pipeline integration
-   - Purpose: Make `whole-doc` the default claim extractor while keeping `native` and `langextract`.
-   - Changes: CLI defaults switch to `whole-doc`; staged runner dispatches to a separate whole-document adapter; stress harness records extractor choice.
-   - Artifacts: `claim_sources/` outputs for whole-doc runs and unchanged `claim_chunks/` outputs for native/langextract runs.
-   - Validation: Existing chunk-path tests are pinned to `--claim-extractor native`; new tests exercise `whole-doc`.
-   - Risks: Fake-model tests can accidentally test the new default; explicit extractor flags prevent that ambiguity.
+   - Purpose: Make source-card extraction the only staged claim extraction path.
+   - Changes: The CLI no longer exposes extractor selection; staged runner calls the whole-document adapter directly; stress harness records `claim_extraction_method`.
+   - Artifacts: `claim_sources/` outputs for all staged runs.
+   - Validation: Regression tests exercise source-card extraction and no longer pin legacy chunk extractors.
+   - Risks: Fake-model tests can accidentally emit obsolete chunk-claim payloads; tests should return source-card-shaped JSON.
 
 3. Schema repair and deterministic validation
    - Purpose: Make useful model outputs salvageable without accepting ungrounded claims.
@@ -43,7 +43,7 @@ Chunk-level extraction was reliable for schema control, but it encouraged fragme
 
 4. Maintainability split
    - Purpose: Prevent the runner from accumulating semantic extraction complexity.
-   - Changes: Move whole-document extraction into `staged_semantic_whole_doc_pipeline.py` and chunk extractor dispatch into `staged_semantic_claim_extractors.py`.
+   - Changes: Keep whole-document extraction in `staged_semantic_whole_doc_pipeline.py`; remove alternate extractor dispatch modules.
    - Artifacts: Smaller runner and focused tests.
    - Validation: Static maintainability gate remains blocking.
    - Risks: Cross-module imports can create cycles; the runner imports whole-doc dispatch locally only when needed.
@@ -51,13 +51,13 @@ Chunk-level extraction was reliable for schema control, but it encouraged fragme
 ## Execution Order
 1. Probe whole-document extraction on representative sources to verify claim quality and identify schema drift.
 2. Implement the source-card adapter with repair and exact quote validation.
-3. Integrate it as the default staged claim extractor while preserving explicit legacy extractor choices.
-4. Add focused regression tests for the new path and pin old fake-model tests to `native`.
+3. Integrate it as the only staged claim extractor.
+4. Add focused regression tests for the source-card path and remove legacy fake-model tests.
 5. Run maintainability and full-suite verification.
 
 ## Acceptance Criteria
-- `semantic staged map` and `semantic staged brief` default to `--claim-extractor whole-doc`.
-- `--claim-extractor native` still exercises the chunk prompt and artifact path.
+- `semantic staged map` and `semantic staged brief` do not expose extractor selection.
+- Staged claim extraction always writes `claim_sources/` artifacts.
 - Whole-document extraction writes source-level prompts, raw output, repair output, canonical payload, report, progress, and accepted/rejected claim artifacts.
 - Claims accepted from whole-document extraction must include exact source alignment and `extraction_method: whole_doc_source_card`.
 - Static maintainability gate passes without raising file or function limits.
@@ -68,8 +68,8 @@ Chunk-level extraction was reliable for schema control, but it encouraged fragme
   - Detection: Repair path and report show `repair_used`; canonical payload remains schema-normalized.
 - Failure: The model invents or paraphrases source quotes.
   - Detection: Quote validation rejects claims without exact/normalized quote matches.
-- Failure: Existing tests silently stop testing chunk behavior.
-  - Detection: Legacy tests pass `--claim-extractor native` and inspect `claim_chunks/` prompts.
+- Failure: Legacy chunk extraction silently reappears.
+  - Detection: Static scans and tests reject selectable extractor flags, alternate extractor modules, and chunk-prompt artifact assumptions.
 - Failure: Import cycles creep back into the runner.
   - Detection: Focused imports and full pytest collection fail; maintainability gate catches runner growth.
 
@@ -78,4 +78,4 @@ Chunk-level extraction was reliable for schema control, but it encouraged fragme
 - Roles map from source-card roles into existing general claim roles.
 - Rejection reasons are generic: backend error, invalid payload, quote alignment failure, relevance rejection, duplicate claim.
 - Stress reports include the extractor choice so cross-case comparisons are interpretable.
-- Future unseen-case tests should compare whole-doc and native extraction on claim fragmentation, quote anchoring, duplicate rate, and briefing usefulness.
+- Future unseen-case tests should track source-card claim fragmentation, quote anchoring, duplicate rate, and briefing usefulness.

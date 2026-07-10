@@ -42,7 +42,6 @@ from epistemic_case_mapper.map_briefing import (
     validate_briefing_against_scaffold,
     _rewrite_mentions_anchor_row,
 )
-from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
 
 
 def test_decision_memo_slots_force_core_evidence_into_memo() -> None:

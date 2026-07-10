@@ -272,9 +272,6 @@ def _proposal_source_quote(proposal: dict[str, Any]) -> str:
     direct = str(proposal.get("source_quote", proposal.get("sourceQuote", "")) or "").strip()
     if direct:
         return direct
-    langextract = proposal.get("langextract")
-    if isinstance(langextract, dict):
-        return str(langextract.get("extraction_text", "") or "").strip()
     return str(proposal.get("extraction_text", "") or "").strip()
 
 def _normalized_question_relevance(value: Any) -> str:
@@ -872,6 +869,5 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     RELATION_PROMPT_VERSION,
     SourceChunk,
     SourceSpan,
-    VALID_CLAIM_ROLES,
 )
 from epistemic_case_mapper.staged_semantic_quality import _profile_relation_rule_text

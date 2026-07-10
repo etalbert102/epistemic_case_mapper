@@ -42,7 +42,8 @@ from epistemic_case_mapper.map_briefing import (
     validate_briefing_against_scaffold,
     _rewrite_mentions_anchor_row,
 )
-from epistemic_case_mapper.staged_semantic_pipeline import CLAIM_EXTRACTION_PROMPT_VERSION, RELATION_PROMPT_VERSION
+from epistemic_case_mapper.staged_semantic_pipeline import RELATION_PROMPT_VERSION
+from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 
 
 def test_decision_model_clusters_claims_into_neutral_default_with_subgroup_caution() -> None:
@@ -403,11 +404,15 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     fake_model.write_text(
         "import json, sys\n"
         "prompt = sys.stdin.read()\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
         "    if 'Source ID: demo_case_doc_a' in prompt:\n"
-        "        payload = {'claims': [{'claim': 'Alpha supports the decision.', 'span_id': 'demo_case_doc_a_s0001', 'entailed_by_excerpt': 'yes', 'role': 'conclusion_support'}]}\n"
+        "        payload = {'source_id': 'demo_case_doc_a', 'source_bottom_line': 'Alpha supports the decision.', 'canonical_claims': [\n"
+        "            {'claim': 'Alpha supports the decision.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Alpha bears on the decision.', 'supporting_quotes': [{'quote': 'Alpha line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        ], 'excluded_as_not_decision_relevant': []}\n"
         "    else:\n"
-        "        payload = {'claims': [{'claim': 'Gamma is the key crux.', 'span_id': 'demo_case_doc_b_s0001', 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        "        payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma is the key crux.', 'canonical_claims': [\n"
+        "            {'claim': 'Gamma is the key crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Gamma changes whether Alpha should guide the decision.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'Gamma changes whether Alpha should guide the decision.', 'crux_candidates': ['Gamma is a crux.'], 'similar_but_not_identical': []}\n"
         "elif 'Deterministic briefing scaffold:' in prompt:\n"
@@ -434,8 +439,6 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor",
-            "native",
             "--question",
             decision_question,
             "--briefing-dir",
@@ -457,7 +460,7 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     assert "Alpha supports the decision" in rendered
     assert "demo_case_doc_a" not in rendered
     run_summary = json.loads((tmp_path / "map_artifacts/run_summary.json").read_text(encoding="utf-8"))
-    claim_prompt = next((tmp_path / "map_artifacts/claim_chunks").glob("*_prompt.txt")).read_text(encoding="utf-8")
+    claim_prompt = next((tmp_path / "map_artifacts/claim_sources").glob("*_prompt.txt")).read_text(encoding="utf-8")
     assert run_summary["decision_question"] == decision_question
     assert f"Decision question: {decision_question}" in claim_prompt
 

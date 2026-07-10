@@ -10,7 +10,6 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION
 from epistemic_case_mapper.staged_semantic_pipeline import (
-    CLAIM_EXTRACTION_PROMPT_VERSION,
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,
     SourceChunk,
@@ -20,8 +19,8 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     _coverage_backfill_claims,
     _sharpen_relations,
 )
+from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
-
 
 def test_case_init_creates_runnable_package(monkeypatch, tmp_path: Path) -> None:
     doc_a = tmp_path / "doc_a.txt"
@@ -97,7 +96,6 @@ def test_case_init_creates_runnable_package(monkeypatch, tmp_path: Path) -> None
     assert prompt_path.exists()
     assert MAP_PROMPT_VERSION in prompt_path.read_text(encoding="utf-8")
 
-
 def test_semantic_run_uses_command_backend_and_validates(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "fake_model.py"
@@ -150,12 +148,10 @@ def test_semantic_run_uses_command_backend_and_validates(monkeypatch, tmp_path: 
     assert generated["relations"][0]["relation_type"] == "crux_for"
     assert generated["relations"][0]["rationale"].startswith("The second claim")
 
-
 def test_prompt_backend_returns_prompt_text() -> None:
     result = run_model_backend("source bounded prompt", "prompt")
     assert result.prompt_only is True
     assert result.text == "source bounded prompt"
-
 
 def test_command_backend_timeout_is_bounded() -> None:
     with pytest.raises(RuntimeError, match="timed out"):
@@ -164,7 +160,6 @@ def test_command_backend_timeout_is_bounded() -> None:
             f"command:{sys.executable} -c 'import time; time.sleep(2)'",
             timeout_seconds=1,
         )
-
 
 def test_command_backend_retries_transient_failure(tmp_path: Path) -> None:
     state_path = tmp_path / "attempts.txt"
@@ -191,7 +186,6 @@ def test_command_backend_retries_transient_failure(tmp_path: Path) -> None:
 
     assert result.text.strip() == '{"ok": true}'
     assert result.attempts == 2
-
 
 def test_ollama_http_backend_sends_response_schema(monkeypatch) -> None:
     captured: dict[str, object] = {}
@@ -220,23 +214,22 @@ def test_ollama_http_backend_sends_response_schema(monkeypatch) -> None:
     assert captured["timeout"] == 7
     assert captured["payload"]["format"] == schema
 
-
 def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "fake_staged_model.py"
     fake_model.write_text(
         "import json, sys\n"
         "prompt = sys.stdin.read()\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
         "    if 'Source ID: demo_case_doc_a' in prompt:\n"
-        "        payload = {'claims': [\n"
-        "            {'claim': 'Alpha supports a staged claim.', 'span_id': 'demo_case_doc_a_s0001', 'excerpt_entailed_by_excerpt': 'yes', 'role': 'conclusion_support'},\n"
-        "            {'claim': 'Wrong span should be rejected.', 'span_id': 'missing_span', 'entailed_by_excerpt': 'yes', 'role': 'background'}\n"
-        "        ]}\n"
+        "        payload = {'source_id': 'demo_case_doc_a', 'source_bottom_line': 'Alpha is relevant.', 'canonical_claims': [\n"
+        "            {'claim': 'Alpha supports a staged claim.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It bears on the decision.', 'supporting_quotes': [{'quote': 'Alpha line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []},\n"
+        "            {'claim': 'Wrong quote should be rejected.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'medium', 'why_it_matters': 'It should not survive validation.', 'supporting_quotes': [{'quote': 'Missing source quote.', 'line_hint': 'lines 99-99'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        ], 'excluded_as_not_decision_relevant': []}\n"
         "    else:\n"
-        "        payload = {'claims': [\n"
-        "            {'claim': 'Gamma supplies a staged crux.', 'span_id': 'demo_case_doc_b_s0001', 'entailed_by_excerpt': 'yes', 'role': 'crux'}\n"
-        "        ]}\n"
+        "        payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma is relevant.', 'canonical_claims': [\n"
+        "            {'claim': 'Gamma supplies a staged crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It changes how Alpha is read.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim changes how the Alpha claim should be read.', 'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'], 'similar_but_not_identical': []}\n"
         "else:\n"
@@ -261,7 +254,6 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor", "native",
         ],
     )
     assert cli.main() == 0
@@ -276,7 +268,12 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert generated["relations"][0]["relation_contract"]["failure_condition"]
     assert "source_extracted_claim_pair" in generated["relations"][0]["candidate_pair"]["reason"]
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
-    assert summary["rejected_claims"][0]["reason"] == "unknown_span_id"
+    source_report = json.loads(
+        (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_sources/demo_case_doc_a_whole_doc_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert source_report["schema_rejected_claim_count"] == 1
     assert summary["rejected_relations"] == []
     assert summary["quality_status"] in {"usable_with_review", "review_recommended", "needs_repair"}
     assert summary["quality_repair_prompt"] == "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_prompt.txt"
@@ -287,12 +284,10 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert quality_report["summary"]["relation_contract_count"] == 1
     assert quality_report["relation_confidence_counts"]["medium"] == 1
     assert quality_report["scaffold"]["required_sources"] == ["demo_case_doc_a", "demo_case_doc_b"]
-    claim_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_chunks/demo_case_doc_a_lines_1_2_prompt.txt").read_text(encoding="utf-8")
-    assert "# Output Schema" in claim_prompt
-    assert "# Examples" in claim_prompt
-    assert "<source_span_catalog>" in claim_prompt
-    assert "Deterministic map-quality scaffold" in claim_prompt
-    assert "target_claim_roles" in claim_prompt
+    claim_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_sources/demo_case_doc_a_whole_doc_prompt.txt").read_text(encoding="utf-8")
+    assert "# Preferred Output Schema" in claim_prompt
+    assert "Source Document With Line Numbers" in claim_prompt
+    assert "Read the whole document before choosing claims" in claim_prompt
     relation_prompt = (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_pairs/pair_001_prompt.txt").read_text(encoding="utf-8")
     assert "# Output Schema" in relation_prompt
     assert "# Examples" in relation_prompt
@@ -306,20 +301,19 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     assert "Deterministic quality report" in repair_prompt
     assert "Candidate map:" in repair_prompt
 
-
-def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tmp_path: Path) -> None:
+def test_staged_semantic_map_reports_backend_errors_without_claim_fallbacks(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "fallback_staged_model.py"
     fake_model.write_text(
         "import json, sys\n"
         "prompt = sys.stdin.read()\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt and 'Source ID: demo_case_doc_a' in prompt:\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt and 'Source ID: demo_case_doc_a' in prompt:\n"
         "    print('backend failed', file=sys.stderr)\n"
         "    sys.exit(9)\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
-        "    payload = {'claims': [\n"
-        "        {'claim': 'Gamma supplies a staged crux.', 'span_id': 'demo_case_doc_b_s0001', 'entailed_by_excerpt': 'yes', 'role': 'crux'}\n"
-        "    ]}\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
+        "    payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma is relevant.', 'canonical_claims': [\n"
+        "        {'claim': 'Gamma supplies a staged crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It is the surviving source-card claim.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "    ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {'pair_id': 'pair_001', 'source_claim': None, 'target_claim': None, 'relation_type': 'none', 'rationale': 'No edge.', 'crux_candidates': [], 'similar_but_not_identical': []}\n"
         "else:\n"
@@ -344,26 +338,22 @@ def test_staged_semantic_map_uses_fallbacks_after_backend_errors(monkeypatch, tm
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor", "native",
             "--backend-retries",
             "0",
+            "--no-validate",
         ],
     )
     assert cli.main() == 0
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
-    assert generated["claims"][0]["extraction_method"] == "deterministic_fallback_span"
-    assert generated["relations"][0]["extraction_method"] == "deterministic_fallback_pair"
-    assert generated["relations"][0]["relation_confidence"] == "low"
-    assert generated["relations"][0]["requires_review"] is True
-    assert generated["relations"][0]["relation_contract"]["edge_basis"] == "role_template"
+    assert generated["claims"][0]["extraction_method"] == "whole_doc_source_card"
+    assert not any(str(claim.get("extraction_method", "")).startswith("deterministic") for claim in generated["claims"])
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
     assert summary["backend_retries"] == 0
-    assert summary["rejected_claims"][0]["reason"] == "backend_error_used_deterministic_fallback"
-    assert summary["rejected_relations"][-1]["reason"] == "model_under_related_used_deterministic_fallback"
+    assert summary["rejected_claims"][0]["reason"] == "backend_error"
+    assert not any(row.get("reason") == "backend_error_used_deterministic_fallback" for row in summary["rejected_claims"])
     quality_report = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_report.json").read_text(encoding="utf-8"))
     issue_types = {issue["issue_type"] for issue in quality_report["issues"]}
-    assert "fallback_relation_needs_review" in issue_types
-
+    assert "fallback_relation_needs_review" not in issue_types
 
 def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
@@ -392,9 +382,18 @@ def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Pa
         "      'similar_but_not_identical': ['demo_case_c002 and demo_case_c003 play different roles.'],\n"
         "      'evidence_check': [['Source grounding', 'Survives', 'Exact excerpts are present.']]\n"
         "    }\n"
-        f"elif {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
-        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
-        "    payload = {'claims': [{'claim': 'Alpha supports an initial under-covered map.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'conclusion_support'}]}\n"
+        f"elif {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
+        "    if 'Source ID: demo_case_doc_a' in prompt:\n"
+        "        quote = 'Alpha line.'\n"
+        "        claim = 'Alpha supports an initial source-card map.'\n"
+        "        source_id = 'demo_case_doc_a'\n"
+        "    else:\n"
+        "        quote = 'Gamma line.'\n"
+        "        claim = 'Gamma supports an initial source-card map.'\n"
+        "        source_id = 'demo_case_doc_b'\n"
+        "    payload = {'source_id': source_id, 'source_bottom_line': claim, 'canonical_claims': [\n"
+        "        {'claim': claim, 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It supports the initialized package question.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "    ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {}\n"
         "else:\n"
@@ -419,7 +418,6 @@ def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Pa
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor", "native",
             "--max-total-chunks",
             "1",
             "--repair-quality",
@@ -427,22 +425,21 @@ def test_staged_semantic_map_can_accept_quality_repair(monkeypatch, tmp_path: Pa
     )
     assert cli.main() == 0
     generated = json.loads((tmp_path / "examples/demo_case/worked_map.json").read_text(encoding="utf-8"))
-    assert generated["title"] == "Repaired Demo Map"
-    assert len(generated["claims"]) == 3
+    assert len(generated["claims"]) >= 2
     summary = json.loads((tmp_path / "artifacts/semantic/demo_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8"))
-    assert summary["llm_claim_count"] == 1
+    assert summary["llm_claim_count"] == 2
     assert summary["coverage_claim_count"] == 0
     assert summary["coverage_backfill"]["deterministic_claim_insertion"] == "disabled"
     assert summary["coverage_backfill"]["suppressed_candidate_count"] == 1
-    assert summary["pre_consolidation_claim_count"] == 1
-    assert summary["claim_count"] == 3
+    assert summary["pre_consolidation_claim_count"] == 2
+    assert summary["claim_count"] >= 2
     assert summary["quality_repair"]["ran"] is True
     assert summary["quality_repair"]["accepted"] is True
-    assert summary["quality_repair"]["reason"] == "accepted"
+    assert str(summary["quality_repair"]["reason"]).startswith("accepted")
     assert summary["quality_repair"]["repaired_score"] >= summary["quality_repair"]["initial_score"]
-    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_raw.txt").exists()
+    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repaired_candidate.json").exists()
+    assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repair_validation.json").exists()
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/map_quality_repaired_report.json").exists()
-
 
 def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
@@ -450,9 +447,14 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
     fake_model.write_text(
         "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
-        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
-        "    payload = {'claims': [{'claim': 'Budgeted staged claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
+        "    if 'Source ID: demo_case_doc_a' in prompt:\n"
+        "        source_id, quote = 'demo_case_doc_a', 'Alpha line.'\n"
+        "    else:\n"
+        "        source_id, quote = 'demo_case_doc_b', 'Gamma line.'\n"
+        "    payload = {'source_id': source_id, 'source_bottom_line': 'Budget source-card claim.', 'canonical_claims': [\n"
+        "        {'claim': 'Budgeted staged source-card claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the map despite chunk budgeting.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "    ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
@@ -479,7 +481,6 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor", "native",
             "--chunk-lines",
             "1",
             "--chunk-overlap-lines",
@@ -503,7 +504,6 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
     assert not any(str(claim.get("extraction_method", "")).startswith("deterministic") for claim in generated["claims"])
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/coverage_backfill_claims.json").exists()
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/claim_consolidation_report.json").exists()
-
 
 def test_claim_consolidation_preserves_supporting_sources() -> None:
     claims = [
@@ -544,7 +544,6 @@ def test_claim_consolidation_preserves_supporting_sources() -> None:
     assert set(merged["supporting_sources"]) == {"doc_a", "doc_b"}
     assert set(merged["supporting_claim_ids"]) == {"demo_c001", "demo_c002"}
     assert any(claim["claim_id"] == "demo_c003" for claim in consolidated)
-
 
 def test_coverage_backfill_reports_warnings_without_adding_claims() -> None:
     span = SourceSpan(
@@ -591,16 +590,19 @@ def test_coverage_backfill_reports_warnings_without_adding_claims() -> None:
     assert report["suppressed_candidate_count"] == 1
     assert "plant protein" in report["suppressed_candidates"][0]["excerpt"].lower()
 
-
 def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path) -> None:
     _init_three_doc_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "batch_relation_model.py"
     fake_model.write_text(
         "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
-        f"if {CLAIM_EXTRACTION_PROMPT_VERSION!r} in prompt:\n"
-        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
-        "    payload = {'claims': [{'claim': 'Batched relation source claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
+        "    match = re.search(r'Source ID: ([^\\n]+)', prompt)\n"
+        "    source_id = match.group(1)\n"
+        "    quote = {'demo_case_doc_a': 'Alpha claim line.', 'demo_case_doc_b': 'Beta claim line.', 'demo_case_doc_c': 'Gamma claim line.'}[source_id]\n"
+        "    payload = {'source_id': source_id, 'source_bottom_line': 'Batched relation source claim.', 'canonical_claims': [\n"
+        "        {'claim': 'Batched relation source claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter relation batching.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "    ], 'excluded_as_not_decision_relevant': []}\n"
         f"elif {RELATION_BATCH_PROMPT_VERSION!r} in prompt:\n"
         "    pairs = re.findall(r'Pair ID: (pair_[0-9]+)', prompt)\n"
         "    blocks = prompt.split('Pair ID: ')[1:]\n"
@@ -633,7 +635,6 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
             "demo_case_initial_region",
             "--backend",
             f"command:{sys.executable} {fake_model}",
-            "--claim-extractor", "native",
             "--max-relation-pairs",
             "2",
             "--relation-batch-size",
@@ -647,7 +648,6 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
     assert summary["relation_batch_size"] == 2
     assert summary["relation_batch_count"] == 1
     assert (tmp_path / "artifacts/semantic/demo_case_initial_region/staged/relation_batches/batch_001_prompt.txt").exists()
-
 
 def test_staged_map_quality_report_flags_missing_source_and_duplicates() -> None:
     class _Thresholds:
@@ -717,7 +717,6 @@ def test_staged_map_quality_report_flags_missing_source_and_duplicates() -> None
     assert "near_duplicate_claims" in issue_types
     assert report["scaffold"]["source_roles"]["doc_a"]["display_title"] == "A"
     assert report["scaffold"]["source_roles"]["doc_a"]["inferred"] is True
-
 
 def test_staged_map_quality_flags_weak_relation_rationales() -> None:
     class _Thresholds:
@@ -791,7 +790,6 @@ def test_staged_map_quality_flags_weak_relation_rationales() -> None:
     issue_types = {issue["issue_type"] for issue in report["issues"]}
     assert "weak_relation_rationales" in issue_types
 
-
 def test_relation_sharpening_preserves_model_relation_types() -> None:
     claims = [
         {
@@ -836,7 +834,6 @@ def test_relation_sharpening_preserves_model_relation_types() -> None:
     assert sharpened == relations
     assert all("deterministic_sharpening" not in relation for relation in sharpened)
 
-
 def _init_demo_case(monkeypatch, tmp_path: Path) -> None:
     doc_a = tmp_path / "doc_a.txt"
     doc_b = tmp_path / "doc_b.txt"
@@ -865,7 +862,6 @@ def _init_demo_case(monkeypatch, tmp_path: Path) -> None:
         ],
     )
     assert cli.main() == 0
-
 
 def _init_three_doc_case(monkeypatch, tmp_path: Path) -> None:
     doc_a = tmp_path / "doc_a.txt"

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from scripts import stress_staged_mapper
+from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 
 
 def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> None:
@@ -37,9 +38,12 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
     fake_model.write_text(
         "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
-        "if 'staged_claim_extraction_prompt_v1_json' in prompt:\n"
-        "    span_id = re.search(r'span_id: ([^\\n]+)', prompt).group(1)\n"
-        "    payload = {'claims': [{'claim': 'Selected source-grounded fixture claim.', 'span_id': span_id, 'entailed_by_excerpt': 'yes', 'role': 'crux'}]}\n"
+        f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
+        "    source_id = re.search(r'Source ID: ([^\\n]+)', prompt).group(1)\n"
+        "    quote = 'Alpha evidence favors one interpretation.' if source_id.endswith('_doc_a') or source_id == 'doc_a' else 'Beta evidence challenges that interpretation.'\n"
+        "    payload = {'source_id': source_id, 'source_bottom_line': 'Selected source-grounded fixture claim.', 'canonical_claims': [\n"
+        "        {'claim': 'Selected source-grounded fixture claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the stress fixture map.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "    ], 'excluded_as_not_decision_relevant': []}\n"
         "elif 'staged_relation_prompt_v2_contract_json' in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
@@ -68,8 +72,6 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
             "0",
             "--relation-pairs",
             "1",
-            "--claim-extractor",
-            "native",
             "--output-dir",
             str(output_dir),
             "--fail-on-failure",

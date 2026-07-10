@@ -14,10 +14,8 @@ from epistemic_case_mapper.config_profiles import (
 from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
-from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt, xml_block
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
-from epistemic_case_mapper.staged_semantic_claim_prompt_contract import claim_prompt_examples, claim_prompt_json_schema, claim_prompt_schema
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_duplicate_quality import lexically_similar_opposite_direction_pairs, near_duplicate_claim_pairs
 from epistemic_case_mapper.staged_semantic_prompt_schemas import relation_json_schema
@@ -740,70 +738,7 @@ def _payload_list_items(payloads: list[dict[str, Any]], key: str) -> list[str]:
                 items.extend(str(item) for item in nested)
     return items
 
-def _claim_prompt(
-    manifest: SubmissionManifest,
-    region: WorkedRegion,
-    case_manifest: CaseManifest,
-    chunk: SourceChunk,
-    max_claims: int,
-    decision_question: str | None = None,
-) -> str:
-    span_catalog = "\n".join(
-        f"- span_id: {span.span_id}\n  source_span: {span.source_span}\n  text: {span.text}"
-        for span in chunk.spans
-    )
-    scaffold = json.dumps(_map_quality_scaffold(manifest, region, case_manifest, chunk, decision_question=decision_question), indent=2)
-    selected_decision_question = region_decision_question(region, case_manifest, decision_question)
-    return render_prompt(
-        ("Task", "You are selecting source-grounded claim candidates that help answer the specific decision question from one bounded source-span catalog."),
-        (
-            "Metadata",
-            f"Prompt version: {CLAIM_EXTRACTION_PROMPT_VERSION}\nRegion ID: {region.region_id}\nDecision question: {selected_decision_question}\nCase question: {case_manifest.question}\nSource ID: {chunk.source_id}\nSource title: {chunk.title}\nLine range: {chunk.start_line}-{chunk.end_line}",
-        ),
-        (
-            "Rules",
-            [
-                f"- Return at most {max_claims} claims.",
-                "- Treat the decision question as the governing extraction filter, not background metadata.",
-                "- Only return claims that are direct answers, indirect evidence, or necessary scope/method limits for the case question.",
-                "- Do not return claims merely because they mention the topic term; exclude claims about different populations, outcomes, mechanisms, or administrative context unless they bound the answer.",
-                "- Inclusion test: before returning a claim, ask whether its population, outcome, evidence type, and intervention/exposure are named by the decision question or would materially bound the answer. If neither is true, omit it.",
-                "- If a claim is about a different outcome than the decision question, include it only when relevance_rationale explicitly names how that outcome bears on the decision question's target outcome.",
-                "- Preserve population, subgroup, setting, endpoint, or exposure mismatches when they change how confidently the decision question can be answered; mark them with question_relevance=scope_limit and the relevant scope_flags.",
-                "- Do not include claim_id. Deterministic code assigns IDs later.",
-                "- Do not include source_id, source_span, or excerpt. Deterministic code derives them from span_id.",
-                "- For every returned claim, include source_quote as an exact substring copied from one catalog span.",
-                "- Use only span IDs shown in the catalog. Deterministic code will verify span_id from source_quote and may override your span_id if the quote points elsewhere.",
-                "- Keep claim as a concise interpretation of source_quote; do not use claim to introduce facts absent from source_quote.",
-                "- Do not classify claims as support, counterweight, crux, scope role, or final map section. Later stages assign those roles after an overall answer frame exists.",
-                "- For every returned claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
-                "- For every returned claim, also judge decision_importance and importance_rationale. Importance means how much the claim may affect the final decision map, not how interesting the topic is.",
-                "- Mark a claim critical/high only if it changes the answer, a load-bearing uncertainty, an applicability boundary, or a source-quality caveat for the decision question.",
-                "- Exclude background, bibliographic, administrative, or merely topical claims even if they mention the case topic.",
-                "- Use the map-quality scaffold only to preserve source limitations and coverage gaps, not to assign evidence roles.",
-                '- If the chunk has no useful claim, return {"claims": []}.',
-            ],
-        ),
-        ("Output Schema", json_schema_block(claim_prompt_schema())),
-        ("Examples", examples_block(claim_prompt_examples())),
-        (
-            "Context",
-            "\n\n".join(
-                (
-                    xml_block("source_span_catalog", span_catalog),
-                    xml_block("deterministic_map_quality_scaffold", f"Deterministic map-quality scaffold:\n{scaffold}"),
-                )
-            ),
-        ),
-    )
-
-def _claim_prompt_json_schema() -> dict[str, Any]:
-    return claim_prompt_json_schema()
-
-
-
 # Explicit cross-module dependencies for compatibility facade removal.
-from epistemic_case_mapper.staged_semantic_pipeline_runner import CLAIM_EXTRACTION_PROMPT_VERSION, SourceChunk
 from epistemic_case_mapper.staged_semantic_sources import (
     _content_terms,
     _normalize_relation_proposal,

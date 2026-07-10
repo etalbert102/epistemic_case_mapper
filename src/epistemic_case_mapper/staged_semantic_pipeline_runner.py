@@ -22,17 +22,9 @@ from epistemic_case_mapper.staged_semantic_label_audit import label_audit_bucket
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
-CLAIM_EXTRACTION_PROMPT_VERSION = "staged_claim_extraction_prompt_v1_json"
+CLAIM_EXTRACTION_METHOD = "whole_doc_source_card"
 RELATION_PROMPT_VERSION = "staged_relation_prompt_v2_contract_json"
 RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v2_contract_json"
-VALID_CLAIM_ROLES = {
-    "conclusion_support",
-    "crux",
-    "scope_limit",
-    "implementation_constraint",
-    "background",
-    "other",
-}
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
 CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
 
@@ -79,7 +71,7 @@ def run_staged_map(
     chunk_overlap_lines: int = 0,
     max_chunks_per_source: int | None = None,
     max_total_chunks: int | None = None,
-    max_claims_per_chunk: int = 4,
+    max_claims_per_source: int = 4,
     max_relation_pairs: int = 12,
     relation_batch_size: int = 4,
     backend_timeout: int | None = 90,
@@ -87,7 +79,6 @@ def run_staged_map(
     validate: bool = True,
     repair_quality: bool = False,
     reuse_claim_cache: bool = True,
-    claim_extractor: str = "whole-doc",
     claim_consolidation: str = "deterministic",
     decision_question: str | None = None,
 ) -> StagedMapResult:
@@ -96,7 +87,6 @@ def run_staged_map(
         chunk_overlap_lines=chunk_overlap_lines,
         max_chunks_per_source=max_chunks_per_source,
         max_total_chunks=max_total_chunks,
-        claim_extractor=claim_extractor,
         relation_batch_size=relation_batch_size,
         claim_consolidation=claim_consolidation,
     )
@@ -111,7 +101,7 @@ def run_staged_map(
         metadata={
             "region_id": region.region_id,
             "backend": backend,
-            "claim_extractor": claim_extractor,
+            "claim_extraction_method": CLAIM_EXTRACTION_METHOD,
             "claim_consolidation": claim_consolidation,
             "decision_question": selected_decision_question,
         },
@@ -132,9 +122,9 @@ def run_staged_map(
             manifest=manifest, region=region, case_manifest=case_manifest,
             all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
             backend=backend, backend_timeout=backend_timeout, backend_retries=backend_retries,
-            artifacts=artifacts, max_claims_per_chunk=max_claims_per_chunk,
+            artifacts=artifacts, max_claims_per_source=max_claims_per_source,
             config_profile_id=config_profile.profile_id, reuse_claim_cache=reuse_claim_cache,
-            claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
+            claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs, relation_batch_size=relation_batch_size,
             repair_quality=repair_quality, validate=validate, output_path=output_path,
             decision_question=selected_decision_question, progress=progress,
@@ -149,12 +139,12 @@ def run_staged_map(
                 "chunk_overlap_lines": chunk_overlap_lines,
                 "max_chunks_per_source": max_chunks_per_source,
                 "max_total_chunks": max_total_chunks,
-                "max_claims_per_chunk": max_claims_per_chunk,
+                "max_claims_per_source": max_claims_per_source,
                 "max_relation_pairs": max_relation_pairs,
                 "relation_batch_size": relation_batch_size,
             },
             backend_options={"backend_timeout": backend_timeout, "backend_retries": backend_retries},
-            extraction_options={"claim_extractor": claim_extractor, "claim_consolidation": claim_consolidation},
+            extraction_options={"claim_extraction_method": CLAIM_EXTRACTION_METHOD, "claim_consolidation": claim_consolidation},
             config_profile_id=config_profile.profile_id,
             all_chunks=all_chunks,
             chunks=chunks,
@@ -197,7 +187,6 @@ def _staged_map_result(
         quality_repaired=bool(repair_info.get("accepted")),
     )
 
-
 def _run_mapping_stages(
     *,
     repo_root: Path,
@@ -213,10 +202,9 @@ def _run_mapping_stages(
     backend_timeout: int | None,
     backend_retries: int,
     artifacts: Path,
-    max_claims_per_chunk: int,
+    max_claims_per_source: int,
     config_profile_id: str,
     reuse_claim_cache: bool,
-    claim_extractor: str,
     claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
@@ -229,9 +217,9 @@ def _run_mapping_stages(
     claim_stage = _extract_consolidated_claims(
         repo_root=repo_root, manifest=manifest, region=region, case_manifest=case_manifest,
         all_chunks=all_chunks, chunks=chunks, backend=backend, backend_timeout=backend_timeout,
-        backend_retries=backend_retries, artifacts=artifacts, max_claims_per_chunk=max_claims_per_chunk,
+        backend_retries=backend_retries, artifacts=artifacts, max_claims_per_source=max_claims_per_source,
         config_profile_id=config_profile_id, reuse_claim_cache=reuse_claim_cache,
-        claim_extractor=claim_extractor, claim_consolidation=claim_consolidation,
+        claim_consolidation=claim_consolidation,
         decision_question=decision_question, progress=progress,
     )
     extracted_claims = claim_stage["claims"]
@@ -293,7 +281,6 @@ def _run_mapping_stages(
         "final_outputs": final_outputs,
     }
 
-
 def _complete_staged_map_run(
     *,
     repo_root: Path,
@@ -323,8 +310,9 @@ def _complete_staged_map_run(
         repo_root=repo_root, region=region, backend=backend, decision_question=decision_question,
         chunk_lines=int(chunk_options["chunk_lines"]), chunk_overlap_lines=int(chunk_options["chunk_overlap_lines"]),
         max_chunks_per_source=chunk_options["max_chunks_per_source"], max_total_chunks=chunk_options["max_total_chunks"],
-        max_claims_per_chunk=int(chunk_options["max_claims_per_chunk"]),
-        claim_extractor=str(extraction_options["claim_extractor"]), claim_consolidation=str(extraction_options["claim_consolidation"]),
+        max_claims_per_source=int(chunk_options["max_claims_per_source"]),
+        claim_extraction_method=str(extraction_options["claim_extraction_method"]),
+        claim_consolidation=str(extraction_options["claim_consolidation"]),
         max_relation_pairs=int(chunk_options["max_relation_pairs"]), relation_batch_size=int(chunk_options["relation_batch_size"]),
         backend_timeout=backend_options["backend_timeout"], backend_retries=int(backend_options["backend_retries"]),
         config_profile_id=config_profile_id,
@@ -351,7 +339,6 @@ def _validate_staged_map_options(
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
-    claim_extractor: str,
     claim_consolidation: str,
     relation_batch_size: int,
 ) -> None:
@@ -365,8 +352,6 @@ def _validate_staged_map_options(
         raise ValueError("max_total_chunks must be positive when supplied")
     if relation_batch_size < 1:
         raise ValueError("relation_batch_size must be positive")
-    if claim_extractor not in {"whole-doc", "native", "langextract"}:
-        raise ValueError("claim_extractor must be whole-doc, native, or langextract")
     if claim_consolidation not in {"deterministic", "vector-llm"}:
         raise ValueError("claim_consolidation must be deterministic or vector-llm")
 
@@ -380,8 +365,8 @@ def _write_staged_run_summary(
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
-    max_claims_per_chunk: int,
-    claim_extractor: str,
+    max_claims_per_source: int,
+    claim_extraction_method: str,
     claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
@@ -413,8 +398,8 @@ def _write_staged_run_summary(
             chunk_overlap_lines=chunk_overlap_lines,
             max_chunks_per_source=max_chunks_per_source,
             max_total_chunks=max_total_chunks,
-            max_claims_per_chunk=max_claims_per_chunk,
-            claim_extractor=claim_extractor,
+            max_claims_per_source=max_claims_per_source,
+            claim_extraction_method=claim_extraction_method,
             claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
@@ -458,27 +443,23 @@ def _extract_consolidated_claims(
     backend_timeout: int | None,
     backend_retries: int,
     artifacts: Path,
-    max_claims_per_chunk: int,
+    max_claims_per_source: int,
     config_profile_id: str,
     reuse_claim_cache: bool,
-    claim_extractor: str,
     claim_consolidation: str,
     decision_question: str,
     progress: PipelineProgress | None = None,
 ) -> dict[str, Any]:
     claims, rejected_claims = _extract_claims(
         repo_root=repo_root,
-        manifest=manifest,
         region=region,
         case_manifest=case_manifest,
-        chunks=chunks,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         artifact_dir=artifacts,
-        max_claims_per_chunk=max_claims_per_chunk,
+        max_claims_per_source=max_claims_per_source,
         reuse_claim_cache=reuse_claim_cache,
-        claim_extractor=claim_extractor,
         decision_question=decision_question,
         pipeline_progress=progress,
     )
@@ -534,6 +515,36 @@ def _extract_consolidated_claims(
         "coverage_claims": coverage_claims,
         "pre_consolidation_claim_count": pre_consolidation_claim_count,
     }
+
+def _extract_claims(
+    *,
+    repo_root: Path,
+    region: WorkedRegion,
+    case_manifest: CaseManifest,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    artifact_dir: Path,
+    max_claims_per_source: int,
+    reuse_claim_cache: bool = True,
+    decision_question: str | None = None,
+    pipeline_progress: PipelineProgress | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    from epistemic_case_mapper.staged_semantic_whole_doc_pipeline import _extract_whole_doc_claims
+
+    return _extract_whole_doc_claims(
+        repo_root=repo_root,
+        region=region,
+        case_manifest=case_manifest,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        artifact_dir=artifact_dir,
+        max_claims_per_source=max_claims_per_source,
+        reuse_claim_cache=reuse_claim_cache,
+        decision_question=decision_question,
+        progress=pipeline_progress,
+    )
 
 def _maybe_repair_staged_map_quality(
     *,
@@ -707,8 +718,8 @@ def _staged_run_summary(
     chunk_overlap_lines: int,
     max_chunks_per_source: int | None,
     max_total_chunks: int | None,
-    max_claims_per_chunk: int,
-    claim_extractor: str,
+    max_claims_per_source: int,
+    claim_extraction_method: str,
     claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
@@ -746,8 +757,8 @@ def _staged_run_summary(
         "chunk_overlap_lines": chunk_overlap_lines,
         "max_chunks_per_source": max_chunks_per_source,
         "max_total_chunks": max_total_chunks,
-        "max_claims_per_chunk": max_claims_per_chunk,
-        "claim_extractor": claim_extractor,
+        "max_claims_per_source": max_claims_per_source,
+        "claim_extraction_method": claim_extraction_method,
         "claim_consolidation": claim_consolidation,
         "max_relation_pairs": max_relation_pairs,
         "relation_batch_size": relation_batch_size,
@@ -865,11 +876,9 @@ from epistemic_case_mapper.staged_semantic_claims_relations import (
     _summary_repair_info,
     consolidate_claims_for_map,
 )
-from epistemic_case_mapper.staged_semantic_native_claim_extraction import _extract_claims
 from epistemic_case_mapper.staged_semantic_quality import (
     _assemble_map,
     _case_config_profile,
-    _claim_prompt_json_schema,
     _map_quality_repair_prompt,
     _quality_markdown,
     _relation_sharpening_summary,

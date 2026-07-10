@@ -162,8 +162,6 @@ def test_case_init_can_store_recommended_config(monkeypatch, tmp_path: Path) -> 
             "safety_case_initial_region",
             "--backend",
             "prompt",
-            "--claim-extractor",
-            "native",
             "--chunk-lines",
             "2",
             "--max-relation-pairs",
@@ -174,11 +172,12 @@ def test_case_init_can_store_recommended_config(monkeypatch, tmp_path: Path) -> 
     assert cli.main() == 0
     prompt = (
         tmp_path
-        / "artifacts/semantic/safety_case_initial_region/staged/claim_chunks/safety_case_incident_lines_1_1_prompt.txt"
+        / "artifacts/semantic/safety_case_initial_region/staged/claim_sources/safety_case_incident_whole_doc_prompt.txt"
     ).read_text(encoding="utf-8")
-    assert "technical_safety_case" in prompt
-    assert "failure_mode" in prompt
+    assert "Extract a compact source-level claim card" in prompt
+    assert "Source Document With Line Numbers" in prompt
     summary = json.loads(
         (tmp_path / "artifacts/semantic/safety_case_initial_region/staged/run_summary.json").read_text(encoding="utf-8")
     )
     assert summary["epistemic_config_profile"] == "technical_safety_case"
+    assert summary["claim_extraction_method"] == "whole_doc_source_card"

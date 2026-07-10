@@ -131,18 +131,15 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
     monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
 
     claims, rejected = _extract_claims(
-        tmp_path,
-        manifest,
-        region,
-        case_manifest,
-        [],
+        repo_root=tmp_path,
+        region=region,
+        case_manifest=case_manifest,
         backend="ollama:fake-model",
         backend_timeout=5,
         backend_retries=0,
         artifact_dir=tmp_path / "artifacts",
-        max_claims_per_chunk=6,
+        max_claims_per_source=6,
         reuse_claim_cache=False,
-        claim_extractor="whole-doc",
         decision_question="Can the demo source-card extraction work?",
     )
 
@@ -151,7 +148,7 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
     assert rejected == []
     progress = (tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8")
     assert '"stage": "whole_doc_claim_extraction"' in progress
-    assert '"claim_extractor": "whole-doc"' in progress
+    assert '"claim_extraction_method": "whole_doc_source_card"' in progress
 
 
 def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_path: Path) -> None:
@@ -187,18 +184,15 @@ def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_
     monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
 
     claims, rejected = _extract_claims(
-        tmp_path,
-        manifest,
-        region,
-        case_manifest,
-        [],
+        repo_root=tmp_path,
+        region=region,
+        case_manifest=case_manifest,
         backend="ollama:fake-model",
         backend_timeout=5,
         backend_retries=0,
         artifact_dir=tmp_path / "artifacts",
-        max_claims_per_chunk=6,
+        max_claims_per_source=6,
         reuse_claim_cache=False,
-        claim_extractor="whole-doc",
         decision_question="Should the retrofit reduce hospital admissions?",
     )
 

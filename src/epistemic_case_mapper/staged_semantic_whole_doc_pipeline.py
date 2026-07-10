@@ -79,7 +79,7 @@ def _extract_whole_doc_claims(
         "label_audit_warning_counts": {},
         "current_chunk_id": "",
         "complete": False,
-        "claim_extractor": "whole-doc",
+        "claim_extraction_method": "whole_doc_source_card",
     }
     progress_path = artifact_dir / "claim_extraction_progress.json"
     selected_question = region_decision_question(region, case_manifest, decision_question)
@@ -88,7 +88,8 @@ def _extract_whole_doc_claims(
         progress.start_stage("claim_extraction", extractor="whole-doc", total_items=len(source_chunks), total_sources=len(source_chunks))
     for source_index, chunk in enumerate(source_chunks, start=1):
         span_lookup = {span.span_id: span for span in chunk.spans}
-        canonical_path = source_dir / f"{chunk.chunk_id}_whole_doc_canonical.json"
+        source_file_stem = _safe_filename(chunk.source_id)
+        canonical_path = source_dir / f"{source_file_stem}_whole_doc_canonical.json"
         if progress:
             progress.start_backend_call(
                 stage="claim_extraction",
@@ -109,9 +110,9 @@ def _extract_whole_doc_claims(
             backend_retries=backend_retries,
             max_claims=max_claims_per_source,
             canonical_path=canonical_path,
-            raw_path=source_dir / f"{chunk.chunk_id}_whole_doc_raw.txt",
-            repair_raw_path=source_dir / f"{chunk.chunk_id}_whole_doc_repair_raw.txt",
-            report_path=source_dir / f"{chunk.chunk_id}_whole_doc_report.json",
+            raw_path=source_dir / f"{source_file_stem}_whole_doc_raw.txt",
+            repair_raw_path=source_dir / f"{source_file_stem}_whole_doc_repair_raw.txt",
+            report_path=source_dir / f"{source_file_stem}_whole_doc_report.json",
             reuse_claim_cache=reuse_claim_cache,
         )
         if progress:

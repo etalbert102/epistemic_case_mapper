@@ -93,8 +93,7 @@ def _run_staged_semantic_map(
     chunk_overlap_lines: int,
     max_chunks_per_source: int,
     max_total_chunks: int,
-    max_claims_per_chunk: int,
-    claim_extractor: str,
+    max_claims_per_source: int,
     claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
@@ -116,8 +115,8 @@ def _run_staged_semantic_map(
     if max_total_chunks < 0:
         print("semantic_staged_failed max_total_chunks_must_be_nonnegative", file=sys.stderr)
         return 1
-    if max_claims_per_chunk < 1:
-        print("semantic_staged_failed max_claims_per_chunk_must_be_positive", file=sys.stderr)
+    if max_claims_per_source < 1:
+        print("semantic_staged_failed max_claims_per_source_must_be_positive", file=sys.stderr)
         return 1
     if max_relation_pairs < 1:
         print("semantic_staged_failed max_relation_pairs_must_be_positive", file=sys.stderr)
@@ -145,8 +144,7 @@ def _run_staged_semantic_map(
             chunk_overlap_lines=chunk_overlap_lines,
             max_chunks_per_source=max_chunks_per_source or None,
             max_total_chunks=max_total_chunks or None,
-            max_claims_per_chunk=max_claims_per_chunk,
-            claim_extractor=claim_extractor,
+            max_claims_per_source=max_claims_per_source,
             claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
@@ -163,7 +161,7 @@ def _run_staged_semantic_map(
         "Staged map wrote "
         f"{_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
-        f"claim_extractor={claim_extractor} "
+        "claim_extraction_method=whole_doc_source_card "
         f"claim_consolidation={claim_consolidation} "
         f"rejected_claims={result.rejected_claim_count} rejected_relations={result.rejected_relation_count} "
         f"quality={result.quality_status} "
@@ -255,8 +253,7 @@ def _run_staged_semantic_brief(
     chunk_overlap_lines: int,
     max_chunks_per_source: int,
     max_total_chunks: int,
-    max_claims_per_chunk: int,
-    claim_extractor: str,
+    max_claims_per_source: int,
     claim_consolidation: str,
     max_relation_pairs: int,
     relation_batch_size: int,
@@ -279,8 +276,8 @@ def _run_staged_semantic_brief(
     if max_total_chunks < 0:
         print("semantic_staged_brief_failed max_total_chunks_must_be_nonnegative", file=sys.stderr)
         return 1
-    if max_claims_per_chunk < 1:
-        print("semantic_staged_brief_failed max_claims_per_chunk_must_be_positive", file=sys.stderr)
+    if max_claims_per_source < 1:
+        print("semantic_staged_brief_failed max_claims_per_source_must_be_positive", file=sys.stderr)
         return 1
     if max_relation_pairs < 1:
         print("semantic_staged_brief_failed max_relation_pairs_must_be_positive", file=sys.stderr)
@@ -316,8 +313,7 @@ def _run_staged_semantic_brief(
             chunk_overlap_lines=chunk_overlap_lines,
             max_chunks_per_source=max_chunks_per_source or None,
             max_total_chunks=max_total_chunks or None,
-            max_claims_per_chunk=max_claims_per_chunk,
-            claim_extractor=claim_extractor,
+            max_claims_per_source=max_claims_per_source,
             claim_consolidation=claim_consolidation,
             max_relation_pairs=max_relation_pairs,
             relation_batch_size=relation_batch_size,
@@ -353,7 +349,7 @@ def _run_staged_semantic_brief(
         f"{_display_path(repo_root, briefing_result.briefing_path)} "
         f"map={_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
-        f"claim_extractor={claim_extractor} "
+        "claim_extraction_method=whole_doc_source_card "
         f"claim_consolidation={claim_consolidation} "
         f"quality={result.quality_status} "
         f"confidence={briefing_result.model_confidence}->{briefing_result.calibrated_confidence}"
