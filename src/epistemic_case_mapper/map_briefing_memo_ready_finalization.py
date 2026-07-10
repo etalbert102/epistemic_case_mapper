@@ -206,6 +206,7 @@ def run_memo_ready_packet_repair(
 
 
 def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], retention_report: dict[str, Any]) -> str:
+    uses_obligations = str(retention_report.get("validation_basis") or "") == "memo_obligations"
     warning_packet = _dict(packet.get("memo_warning_packet"))
     warning_resolution = _dict(retention_report.get("warning_resolution_report"))
     repair_packet = {
@@ -220,7 +221,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
             for issue in _list(retention_report.get("issues"))[:8]
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_ready_item"
         ],
-        "unresolved_warnings": unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
+        "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
     return (
         "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"
@@ -400,23 +401,49 @@ def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
 
 
 def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
+    labels = _packet_source_labels(packet)
+    common_prefix = _common_token_prefix(labels)
+    replacements: dict[str, str] = {}
+    for source_label in labels:
+        if not source_label:
+            continue
+        display = _preferred_source_display({"source_label": source_label}, common_prefix=common_prefix)
+        if display and display != source_label:
+            for alias in _source_label_variants(source_label):
+                replacements[alias] = display
+    return replacements
+
+
+def _packet_source_labels(packet: dict[str, Any]) -> list[str]:
     labels = [
         str(source.get("source_label") or "").strip()
         for source in _list(packet.get("source_trail"))
         if isinstance(source, dict) and str(source.get("source_label") or "").strip()
     ]
-    common_prefix = _common_token_prefix(labels)
-    replacements: dict[str, str] = {}
-    for source in _list(packet.get("source_trail")):
-        if not isinstance(source, dict):
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
             continue
-        source_label = str(source.get("source_label") or "").strip()
-        if not source_label:
-            continue
-        display = _preferred_source_display(source, common_prefix=common_prefix)
-        if display and display != source_label:
-            replacements[source_label] = display
-    return replacements
+        labels.extend(_string_list(item.get("source_labels")))
+        labels.append(str(item.get("source_label") or "").strip())
+    for obligation in all_memo_obligations(packet):
+        labels.extend(_string_list(obligation.get("source_labels")))
+        labels.append(str(obligation.get("source_label") or "").strip())
+    return _dedupe(label for label in labels if label)
+
+
+def _source_label_variants(source_label: str) -> list[str]:
+    variants = [source_label]
+    if "_" in source_label:
+        variants.append(source_label.replace("_", " "))
+    if " " in source_label:
+        variants.append(source_label.replace(" ", "_"))
+        variants.append(source_label.replace(" Sources ", "_Sources "))
+        variants.append(source_label.replace(" sources ", "_sources "))
+    if "_Sources " in source_label:
+        variants.append(source_label.replace("_Sources ", " Sources "))
+    if "_sources " in source_label:
+        variants.append(source_label.replace("_sources ", " sources "))
+    return list(dict.fromkeys(variant for variant in variants if variant))
 
 
 def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
@@ -455,16 +482,30 @@ def _preferred_source_display(source: dict[str, Any], *, common_prefix: list[str
         if value and value != label:
             return value
     if common_prefix:
-        tokens = label.split()
+        tokens = label.replace("_", " ").split()
         if [token.lower() for token in tokens[: len(common_prefix)]] == [token.lower() for token in common_prefix]:
             stripped = " ".join(tokens[len(common_prefix) :]).strip()
             if stripped:
                 return stripped
+    artifact_stripped = _strip_artifact_source_prefix(label)
+    if artifact_stripped != label:
+        return artifact_stripped
+    return label
+
+
+def _strip_artifact_source_prefix(label: str) -> str:
+    tokens = str(label or "").replace("_", " ").split()
+    lowered = [token.lower() for token in tokens]
+    if len(tokens) >= 5 and lowered[:2] == ["deep", "research"] and "sources" in lowered[2:5]:
+        source_index = lowered.index("sources", 2, 5)
+        stripped = " ".join(tokens[source_index + 1 :]).strip()
+        if len(stripped.split()) >= 2:
+            return stripped
     return label
 
 
 def _common_token_prefix(labels: list[str]) -> list[str]:
-    tokenized = [label.split() for label in labels if label.strip()]
+    tokenized = [label.replace("_", " ").split() for label in labels if label.strip()]
     if len(tokenized) < 2:
         return []
     prefix: list[str] = []

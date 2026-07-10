@@ -5,6 +5,7 @@ from pathlib import Path
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
     run_memo_ready_final_polish,
     run_memo_ready_presentation_normalization,
@@ -184,6 +185,48 @@ def test_presentation_normalization_adds_question_and_cleans_source_labels() -> 
     assert "Deep Research Flood Sources Outcome Study 2025" not in result["memo"]
     assert result["report"]["status"] == "changed"
     assert retention["missing_mandatory_count"] == 0
+
+
+def test_presentation_normalization_cleans_source_label_underscore_variants() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "source_trail": [
+            {
+                "source_id": "s1",
+                "source_label": "Deep Research Flood Sources Outcome Study 2025",
+                "appears_in_packet": True,
+            }
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Option A reduced flood losses by 25%.",
+                "source_label": "Deep Research Flood_Sources Outcome Study 2025",
+                "source_labels": ["Deep Research Flood_Sources Outcome Study 2025"],
+                "quantities": [{"value": "25%"}],
+            }
+        ],
+        "memo_obligations": {
+            "obligations": [
+                {
+                    "obligation_id": "memo_obligation_001",
+                    "required": True,
+                    "source_labels": ["Deep Research Flood_Sources Outcome Study 2025"],
+                    "statement": "Use this support.",
+                    "validation_terms": ["support"],
+                }
+            ]
+        },
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "## Decision Brief\n\nOption A reduced flood losses by 25% [Deep Research Flood_Sources Outcome Study 2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "Outcome Study 2025" in result["memo"]
+    assert "Deep Research Flood_Sources Outcome Study 2025" not in result["memo"]
 
 
 def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support() -> None:
@@ -374,6 +417,86 @@ def test_memo_obligations_make_moderate_context_optional() -> None:
     assert optional and optional[0]["required"] is False
     assert report["validation_basis"] == "memo_obligations"
     assert report["unresolved_warning_count"] == 0
+
+
+def test_obligation_repair_prompt_excludes_optional_warning_repairs() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "memo_obligations": {
+            "obligations": [
+                {
+                    "obligation_id": "memo_obligation_001",
+                    "required": True,
+                    "obligation_type": "must_weigh_support",
+                    "role": "strongest_support",
+                    "statement": "Use support for option A.",
+                    "source_labels": ["Outcome Study"],
+                    "quantities": [],
+                }
+            ]
+        },
+        "memo_warning_packet": {
+            "warnings": [
+                {
+                    "warning_id": "memo_warning_001",
+                    "severity": "moderate",
+                    "warning_type": "omitted_moderate_context",
+                    "claim": "Specify demographic characteristics.",
+                    "source_labels": ["Context Study"],
+                }
+            ]
+        },
+    }
+    retention = {
+        "validation_basis": "memo_obligations",
+        "issues": [
+            {
+                "issue_type": "missing_memo_obligation",
+                "obligation_id": "memo_obligation_001",
+                "obligation_type": "must_weigh_support",
+            }
+        ],
+        "warning_resolution_report": {
+            "warnings_needing_repair": [
+                {
+                    "warning_id": "memo_warning_001",
+                    "status": "possibly_addressed",
+                    "missing_anchor_terms": ["demographic"],
+                }
+            ]
+        },
+    }
+
+    prompt = build_memo_ready_packet_repair_prompt("## Decision Brief\n\nOption A may help.", packet, retention)
+
+    assert "missing_obligations" in prompt
+    assert '"unresolved_warnings": []' in prompt
+    assert "Specify demographic characteristics" not in prompt
+
+
+def test_memo_obligation_statements_sanitize_artifact_and_overclaim_language() -> None:
+    packet = build_memo_obligation_packet(
+        [
+            {
+                "item_id": "crux_001",
+                "must_use": True,
+                "role": "decision_crux",
+                "reader_claim": (
+                    "Cholesterol intake is the primary driver of risk. crux for daily egg consumption. "
+                    "These findings are consistently neutralized."
+                ),
+                "source_label": "Crux Study",
+                "source_labels": ["Crux Study"],
+            }
+        ],
+        {"warnings": []},
+    )
+    statement = packet["obligations"][0]["statement"].lower()
+
+    assert "crux for" not in statement
+    assert "primary driver" not in statement
+    assert "consistently neutralized" not in statement
+    assert "potentially important driver" in statement
 
 
 def test_scope_obligation_does_not_force_raw_demographic_quantities() -> None:

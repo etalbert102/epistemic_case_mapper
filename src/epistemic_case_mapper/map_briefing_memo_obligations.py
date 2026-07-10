@@ -61,7 +61,7 @@ def _memo_obligations(packet: dict[str, Any]) -> list[dict[str, Any]]:
 def _obligation_from_evidence_item(index: int, item: dict[str, Any]) -> dict[str, Any]:
     role = str(item.get("role") or "").strip()
     source_labels = _source_labels(item)
-    claim = str(item.get("reader_claim") or "").strip()
+    claim = _sanitize_claim(str(item.get("reader_claim") or "").strip())
     if not claim:
         return {}
     obligation_type = {
@@ -98,7 +98,7 @@ def _obligation_from_warning(index: int, warning: dict[str, Any]) -> dict[str, A
         for value in _string_list(warning.get("quantity_values"))
     ]
     required = severity == "critical" or bool(quantities)
-    claim = str(warning.get("claim") or "").strip()
+    claim = _sanitize_claim(str(warning.get("claim") or "").strip())
     if not claim:
         return {}
     return {
@@ -126,7 +126,7 @@ def _obligation_statement(role: str, claim: str) -> str:
     if role == "scope_boundary":
         return "Bound the answer's applicability using this source-backed scope boundary."
     if role == "decision_crux":
-        return f"Explain the decision crux without overstating it: {claim}"
+        return f"Evaluate this decision crux without overstating it: {claim}"
     if role == "strongest_counterweight":
         return f"Weigh this counterweight against the default answer: {claim}"
     if role == "quantitative_anchor":
@@ -148,6 +148,16 @@ def _prose_instruction(role: str) -> str:
     if role == "strongest_support":
         return "Connect the support directly to the answer."
     return "Use only if it improves the reader's decision."
+
+
+def _sanitize_claim(claim: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(claim or "")).strip()
+    cleaned = re.sub(r"\bcrux\s+for\b", "as it relates to", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bprimary driver\b", "potentially important driver", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bconsistently neutralized\b", "qualified", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bbyproduct of\b", "partly explained by", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\binherent property of\b", "effect unique to", cleaned, flags=re.IGNORECASE)
+    return cleaned
 
 
 def _validation_terms(role: str, claim: str, statement: str) -> list[str]:

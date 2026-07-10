@@ -23,6 +23,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
         "- Explain why the strongest support does or does not outweigh the strongest counterweight.\n"
         "- Name the conditions, subgroups, contexts, or assumptions that change the answer.\n"
         "- Include decision cruxes only when they sharpen the decision; translate uncertainty into a practical implication.\n"
+        "- Calibrate causal language: avoid phrases like 'byproduct', 'inherent property', or 'consistently neutralized' unless a source directly supports that exact strength of claim.\n"
         "- Do not mention packet schemas, item IDs, validation, telemetry, obligations, warnings, or internal pipeline machinery.\n"
         "- Avoid meta-commentary about what the memo needs to do; just make the point naturally.\n"
         "- Use natural Markdown and choose headings that fit the decision question.\n\n"
