@@ -6,8 +6,10 @@ from pydantic import ValidationError
 from epistemic_case_mapper.map_briefing_analyst_schemas import (
     AnalystAdjudication,
     AnalystAnswerFrame,
+    AnalystDecisionModel,
     AnalystSynthesisPacket,
     build_analyst_adjudication_parse_report,
+    build_analyst_decision_model_parse_report,
 )
 
 
@@ -152,3 +154,100 @@ def test_synthesis_packet_schema_accepts_compact_reasoning_packet() -> None:
 
     assert parsed.schema_id == "analyst_synthesis_packet_v1"
     assert parsed.primary_reasoning_chain[0].covered_evidence_item_ids == ["bundle:one"]
+
+
+def test_analyst_decision_model_parse_report_accepts_global_groups() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only with the risk condition.",
+        "confidence": "medium",
+        "overall_rationale": "Support is strong but the warning bounds the answer.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Main support.",
+                "evidence_strength": "moderate",
+                "answer_impact": "Supports adoption.",
+                "uncertainty_type": "none",
+            },
+            {
+                "group_id": "risk_group",
+                "proposition": "The warning limits unconditional adoption.",
+                "memo_role": "load_bearing_counterweight",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["warning:two"],
+                "rationale": "Main limiting evidence.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:one", "disposition": "foreground", "group_id": "support_group"},
+            {"evidence_item_id": "warning:two", "disposition": "foreground", "group_id": "risk_group"},
+        ],
+        "quantitative_anchors": [],
+        "what_would_change_the_answer": ["More direct implementation-risk evidence."],
+        "argument_plan": [],
+        "decision_logic": {"bounded_bottom_line": "Adopt option A only with the risk condition."},
+    }
+
+    parsed = AnalystDecisionModel.model_validate(payload)
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert parsed.evidence_groups[0].memo_role == "load_bearing_primary_support"
+    assert report["status"] == "ready"
+    assert report["valid"] is True
+    assert report["covered_evidence_item_count"] == 2
+
+
+def test_analyst_decision_model_parse_report_rejects_unknown_evidence_ids() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A.",
+        "overall_rationale": "The group uses an unknown row.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Unknown evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:missing"],
+                "rationale": "Unknown.",
+            },
+        ],
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert report["valid"] is False
+    assert report["unknown_evidence_item_ids"] == ["bundle:missing"]
+
+
+def test_analyst_decision_model_parse_report_warns_on_unknown_exception_dispositions() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A with the warning condition.",
+        "overall_rationale": "Known evidence is grouped; an unknown exception disposition should be diagnostic only.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Known evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Known support.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "coarse:unknown", "disposition": "background_only", "rationale": "Coarse model alias."},
+        ],
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert report["valid"] is True
+    assert report["status"] == "warning"
+    assert report["unknown_disposition_ids"] == ["coarse:unknown"]

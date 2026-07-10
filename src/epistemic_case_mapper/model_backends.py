@@ -4,7 +4,9 @@ import json
 import os
 import shlex
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from typing import Callable, Iterable, TypeVar, cast
 from urllib import error, request
 
 
@@ -14,6 +16,57 @@ class ModelBackendResult:
     backend: str
     prompt_only: bool = False
     attempts: int = 1
+
+
+T = TypeVar("T")
+R = TypeVar("R")
+
+
+def model_parallelism(backend: str | None = None) -> int:
+    """Return configured model-call parallelism.
+
+    ECM_OLLAMA_PARALLELISM is convenient for local Ollama-heavy runs.
+    ECM_MODEL_PARALLELISM is the generic override. The default is 8.
+    """
+
+    keys = ["ECM_MODEL_PARALLELISM"]
+    if str(backend or "").strip().startswith("ollama:"):
+        keys.insert(0, "ECM_OLLAMA_PARALLELISM")
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            return max(1, int(value))
+        except ValueError:
+            return 8
+    return 8
+
+
+def run_parallel(
+    items: Iterable[T],
+    worker: Callable[[T], R],
+    *,
+    max_workers: int | None = None,
+) -> list[R]:
+    rows = list(items)
+    if not rows:
+        return []
+    workers = max(1, int(max_workers or model_parallelism()))
+    if workers <= 1 or len(rows) <= 1:
+        return [worker(row) for row in rows]
+    missing = object()
+    results: list[R | object] = [missing] * len(rows)
+    with ThreadPoolExecutor(max_workers=min(workers, len(rows))) as executor:
+        futures = {executor.submit(worker, row): index for index, row in enumerate(rows)}
+        for future in as_completed(futures):
+            results[futures[future]] = future.result()
+    ordered: list[R] = []
+    for row in results:
+        if row is missing:
+            continue
+        ordered.append(cast(R, row))
+    return ordered
 
 
 def run_model_backend(

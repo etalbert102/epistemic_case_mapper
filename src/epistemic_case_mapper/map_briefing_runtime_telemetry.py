@@ -28,6 +28,7 @@ def build_runtime_budget_report(
         _runtime_stage_from_report("canonical_decision_spine_arbitration", scaffold.get("canonical_decision_spine_model_arbitration_report")),
         _runtime_stage_from_report("packet_critique", scaffold.get("packet_critique_report")),
         _runtime_stage_from_report("packet_refinement", scaffold.get("decision_briefing_packet_refinement_report")),
+        _runtime_stage_from_report("analyst_decision_model", scaffold.get("analyst_decision_model_report")),
         _runtime_stage_from_report("reader_packet_verbalization", _reader_packet_verbalization_runtime_report(packet_plan_report)),
         {"stage": "section_rewrite", "model_call_count": section_attempts},
         {"stage": "reader_memo_rewrite", "model_call_count": reader_model_calls},
@@ -63,6 +64,7 @@ def build_stage_value_report(
 ) -> dict[str, Any]:
     packet_critique_adjudication = _dict(scaffold.get("packet_critique_adjudication_report"))
     packet_refinement = _dict(scaffold.get("decision_briefing_packet_refinement_report"))
+    analyst_decision_model = _dict(scaffold.get("analyst_decision_model_report"))
     source_cards = _dict(scaffold.get("source_evidence_cards"))
     packet = _dict(scaffold.get("decision_briefing_packet"))
     rows = [
@@ -93,6 +95,20 @@ def build_stage_value_report(
                 report_status=str(packet_refinement.get("status", "")),
             ),
             "primary_signal": f"{_int_value(packet_refinement.get('applied_update_count'))} applied updates; status={packet_refinement.get('status', 'missing')}",
+        },
+        {
+            "stage": "analyst_decision_model",
+            "status": _value_status_from_counts(
+                accepted=_int_value(analyst_decision_model.get("group_count")),
+                warnings=_issue_count(analyst_decision_model),
+                report_status=str(analyst_decision_model.get("status", "")),
+            ),
+            "primary_signal": (
+                f"{_int_value(analyst_decision_model.get('group_count'))} global groups; "
+                f"{_int_value(analyst_decision_model.get('covered_evidence_item_count'))}/"
+                f"{_int_value(analyst_decision_model.get('ledger_row_count'))} evidence rows covered; "
+                f"status={analyst_decision_model.get('status', 'missing')}"
+            ),
         },
         {
             "stage": "reader_synthesis",

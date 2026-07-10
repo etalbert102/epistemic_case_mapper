@@ -6,6 +6,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import analyst_decision_logic
+from epistemic_case_mapper.map_briefing_analyst_decision_groups import build_groups_from_decision_model
 from epistemic_case_mapper.map_briefing_analyst_packet_helpers import (
     applicability_limits as _applicability_limits,
     clean_answer_text as _clean_answer_text,
@@ -67,6 +68,7 @@ def build_analyst_packet_bundle(
     packet: dict[str, Any],
     ledger: dict[str, Any],
     adjudication: dict[str, Any],
+    decision_model: dict[str, Any] | None = None,
     memo_warning_packet: dict[str, Any] | None = None,
     refinement: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
@@ -81,12 +83,16 @@ def build_analyst_packet_bundle(
         if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
     }
     adjudication_rows = _sorted_adjudication_rows(adjudication)
-    groups, group_accounting = _build_groups(adjudication_rows, ledger_by_id)
-    answer_frame = _build_answer_frame(packet, ledger, adjudication_rows, groups, refinement=refinement)
+    decision_model = decision_model if isinstance(decision_model, dict) else {}
+    groups, group_accounting = build_groups_from_decision_model(decision_model, ledger_by_id)
+    if not groups:
+        groups, group_accounting = _build_groups(adjudication_rows, ledger_by_id)
+    answer_frame = _build_answer_frame(packet, ledger, adjudication_rows, groups, refinement=refinement, decision_model=decision_model)
     synthesis_packet = _build_synthesis_packet(
         packet=packet,
         ledger=ledger,
         adjudication=adjudication,
+        decision_model=decision_model,
         groups=groups,
         answer_frame=answer_frame,
         group_accounting=group_accounting,
@@ -193,6 +199,7 @@ def _build_groups(adjudication_rows: list[dict[str, Any]], ledger_by_id: dict[st
         _attach_deferred_row(row, ledger_by_id, groups, group_by_evidence_id)
     return groups, {
         "schema_id": "analyst_group_accounting_v1",
+        "method": "row_adjudication_grouping",
         "grouped_quantity_row_ids": grouped_quantity_rows,
         "group_count": len(groups),
         "covered_evidence_item_ids": _dedupe(
@@ -213,6 +220,7 @@ def _build_answer_frame(
     groups: list[dict[str, Any]],
     *,
     refinement: dict[str, Any],
+    decision_model: dict[str, Any],
 ) -> dict[str, Any]:
     support_ids = _ids_for_roles(adjudication_rows, {"load_bearing_primary_support", "quantitative_anchor"}, limit=8)
     counter_ids = _ids_for_roles(adjudication_rows, {"load_bearing_counterweight"}, limit=5)
@@ -224,6 +232,9 @@ def _build_answer_frame(
     question = str(ledger.get("decision_question") or packet.get("decision_question") or "").strip()
     if not direct_answer or is_weak_answer_frame(direct_answer, question=question):
         direct_answer = _why_this_read(groups)
+    model_answer = str(decision_model.get("direct_answer") or "").strip()
+    if model_answer and not is_weak_answer_frame(model_answer, question=question):
+        direct_answer = _short_text(model_answer, 420)
     refined_answer = str(refinement.get("direct_answer") or "").strip()
     if refined_answer and not is_weak_answer_frame(refined_answer, question=question):
         direct_answer = _short_text(refined_answer, 420)
@@ -231,8 +242,8 @@ def _build_answer_frame(
         "schema_id": "analyst_answer_frame_v1",
         "decision_question": question,
         "direct_answer": direct_answer,
-        "confidence": str(_dict(packet.get("answer_frame")).get("confidence") or "not_specified"),
-        "why_this_read": _short_text(str(refinement.get("answer_rationale") or ""), 520) or _why_this_read(groups),
+        "confidence": str(decision_model.get("confidence") or _dict(packet.get("answer_frame")).get("confidence") or "not_specified"),
+        "why_this_read": _short_text(str(refinement.get("answer_rationale") or decision_model.get("overall_rationale") or ""), 620) or _why_this_read(groups),
         "strongest_counterargument": _first_group_text(groups, "load_bearing_counterweight"),
         "why_counterargument_does_or_does_not_change_answer": "Weigh the main counterweight against the primary support rather than listing both as independent facts.",
         "scope": _first_group_text(groups, "scope_or_applicability"),
@@ -249,6 +260,7 @@ def _build_synthesis_packet(
     packet: dict[str, Any],
     ledger: dict[str, Any],
     adjudication: dict[str, Any],
+    decision_model: dict[str, Any],
     groups: list[dict[str, Any]],
     answer_frame: dict[str, Any],
     group_accounting: dict[str, Any],
@@ -269,8 +281,8 @@ def _build_synthesis_packet(
         "must_not_overstate": _dedupe(_string_list(answer_frame.get("must_not_overstate"))),
         "warnings_to_address": _warnings_to_address(warning_packet, adjudication, warning_obligations=warning_obligations),
         "warning_obligations": warning_obligations,
-        "argument_plan": _argument_plan(refinement, groups, warning_obligations),
-        "decision_logic": analyst_decision_logic(refinement, answer_frame, groups, warning_obligations),
+        "argument_plan": _argument_plan(refinement, groups, warning_obligations, decision_model=decision_model),
+        "decision_logic": analyst_decision_logic(_merged_refinement(refinement, decision_model), answer_frame, groups, warning_obligations),
         "source_notes": _source_notes(packet),
         "evidence_accounting_summary": _evidence_accounting_summary(ledger, adjudication, groups, group_accounting),
     }
@@ -612,11 +624,13 @@ def _evidence_accounting_summary(
         for group in groups
         for evidence_id in _string_list(group.get("covered_evidence_item_ids"))
     }
+    accounted_ids.update(_string_list(group_accounting.get("accounted_evidence_item_ids")))
     explicitly_downgraded_ids = {
         str(row.get("evidence_item_id") or "")
         for row in adjudication_rows
         if str(row.get("memo_use") or "") == "not_decision_relevant" and str(row.get("evidence_item_id") or "").strip()
     }
+    explicitly_downgraded_ids.update(_string_list(group_accounting.get("explicitly_downgraded_evidence_item_ids")))
     accounted_ids.update(explicitly_downgraded_ids)
     return {
         "ledger_row_count": len(ledger_ids),
@@ -689,11 +703,33 @@ def _warning_obligations(refinement: dict[str, Any], warning_packet: dict[str, A
     return rows
 
 
-def _argument_plan(refinement: dict[str, Any], groups: list[dict[str, Any]], warning_obligations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _argument_plan(
+    refinement: dict[str, Any],
+    groups: list[dict[str, Any]],
+    warning_obligations: list[dict[str, Any]],
+    *,
+    decision_model: dict[str, Any],
+) -> list[dict[str, Any]]:
     refined = [row for row in _list(refinement.get("argument_plan")) if isinstance(row, dict)]
     if refined:
         return [_normalize_argument_plan_step(index + 1, row) for index, row in enumerate(refined)]
+    model_plan = [row for row in _list(decision_model.get("argument_plan")) if isinstance(row, dict)]
+    if model_plan:
+        return [_normalize_argument_plan_step(index + 1, row) for index, row in enumerate(model_plan)]
     return _deterministic_argument_plan(groups, warning_obligations)
+
+
+def _merged_refinement(refinement: dict[str, Any], decision_model: dict[str, Any]) -> dict[str, Any]:
+    if not decision_model:
+        return refinement
+    decision_logic = _dict(decision_model.get("decision_logic"))
+    merged = {
+        "direct_answer": decision_model.get("direct_answer"),
+        "answer_rationale": decision_model.get("overall_rationale"),
+        "decision_logic": decision_logic,
+        "argument_plan": decision_model.get("argument_plan", []),
+    }
+    return {**merged, **refinement}
 
 
 def _normalize_argument_plan_step(index: int, row: dict[str, Any]) -> dict[str, Any]:

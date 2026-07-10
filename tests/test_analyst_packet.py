@@ -128,6 +128,164 @@ def test_analyst_packet_accounts_for_rows_and_groups_quantity_anchors() -> None:
     assert "s4" not in source_ids
 
 
+def test_analyst_packet_prefers_global_decision_model_groups() -> None:
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only if operating risk is bounded.",
+        "confidence": "medium",
+        "overall_rationale": "The support and quantity should be read together, while risk bounds the answer.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence supports option A, with a 25% loss reduction as the key quantitative anchor.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "The model grouped the support claim with its quantity instead of creating isolated rows.",
+                "evidence_strength": "moderate",
+                "answer_impact": "Supports adoption.",
+                "uncertainty_type": "implementation",
+            },
+            {
+                "group_id": "risk_group",
+                "proposition": "Operating-budget risk is the main counterweight.",
+                "memo_role": "load_bearing_counterweight",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["bundle:risk"],
+                "rationale": "This bounds the recommendation.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:support", "disposition": "foreground", "group_id": "support_group"},
+            {"evidence_item_id": "bundle:risk", "disposition": "foreground", "group_id": "risk_group"},
+            {"evidence_item_id": "bundle:off_question", "disposition": "not_decision_relevant", "rationale": "Different population."},
+        ],
+        "quantitative_anchors": ["25% reduction"],
+        "what_would_change_the_answer": ["If operating risk cannot be bounded."],
+        "argument_plan": [
+            {
+                "step_id": "support_then_risk",
+                "section": "Decision Brief",
+                "writing_goal": "State the support, then show how risk bounds it.",
+                "required_points": ["Use the 25% reduction with the support.", "Bound the answer by operating risk."],
+                "evidence_item_ids": ["bundle:support", "quantity:support_25", "bundle:risk"],
+                "transition_from_previous": "Start with the answer.",
+            }
+        ],
+        "decision_logic": {
+            "bounded_bottom_line": "Adopt option A only if operating risk is bounded.",
+            "support_summary": "Outcome evidence supports option A.",
+            "strongest_counterweight": "Operating-budget risk.",
+            "counterweight_weighting": "The counterweight bounds rather than erases the support.",
+        },
+    }
+
+    result = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+        decision_model=decision_model,
+    )
+
+    synthesis = result["analyst_synthesis_packet"]
+    quality = result["analyst_packet_quality_report"]
+
+    assert synthesis["bottom_line"] == "Adopt option A only if operating risk is bounded."
+    assert synthesis["primary_reasoning_chain"][0]["group_id"] == "support_group"
+    assert synthesis["primary_reasoning_chain"][0]["covered_evidence_item_ids"] == ["bundle:support", "quantity:support_25"]
+    assert synthesis["primary_reasoning_chain"][0]["answer_impact"] == "Supports adoption."
+    assert quality["group_accounting"]["grouped_quantity_row_ids"] == ["quantity:support_25"]
+    assert quality["group_accounting"]["method"] == "global_analyst_decision_model_grouping"
+    assert quality["packet_accounted_row_count"] == 4
+    assert synthesis["argument_plan"][0]["step_id"] == "support_then_risk"
+
+
+def test_analyst_packet_binds_quantity_rows_by_source_label_when_source_id_is_missing() -> None:
+    ledger = _ledger()
+    ledger["rows"][1] = {
+        **ledger["rows"][1],
+        "source_ids": [],
+        "source_labels": ["Outcome Study final report"],
+    }
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only if operating risk is bounded.",
+        "confidence": "medium",
+        "overall_rationale": "The support group should inherit the source-matched quantity.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence reports a loss reduction that supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "Main support.",
+            },
+        ],
+    }
+
+    result = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=ledger,
+        adjudication=_adjudication(),
+        decision_model=decision_model,
+    )
+
+    group = result["analyst_synthesis_packet"]["primary_reasoning_chain"][0]
+    assert "quantity:support_25" in group["covered_evidence_item_ids"]
+    assert "quantity:support_25" not in result["analyst_packet_quality_report"]["missing_from_packet_accounting"]
+
+
+def test_analyst_packet_does_not_bind_source_matched_quantity_to_semantically_wrong_group() -> None:
+    ledger = _ledger()
+    ledger["rows"].append(
+        {
+            "evidence_item_id": "quantity:risk_ratio",
+            "input_kind": "top_quantity_anchor",
+            "source_ids": [],
+            "source_labels": ["Outcome Study extended report"],
+            "claim": "hazard ratio 1.15",
+            "quantity_values": ["hazard ratio 1.15"],
+            "quantity_type": "effect_size",
+        }
+    )
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only if operating risk is bounded.",
+        "confidence": "medium",
+        "overall_rationale": "The support group should not absorb a risk quantity only because labels overlap.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence reports a loss reduction that supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "Main support.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:risk", "disposition": "background", "rationale": "Not modeled in this fixture."},
+            {"evidence_item_id": "bundle:off_question", "disposition": "not_decision_relevant", "rationale": "Different population."},
+        ],
+    }
+
+    result = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=ledger,
+        adjudication=_adjudication(),
+        decision_model=decision_model,
+    )
+
+    group = result["analyst_synthesis_packet"]["primary_reasoning_chain"][0]
+    assert "quantity:risk_ratio" not in group["covered_evidence_item_ids"]
+    assert "quantity:risk_ratio" not in result["analyst_packet_quality_report"]["missing_from_packet_accounting"]
+    assert result["analyst_synthesis_packet"]["quantitative_anchors"][0]["covered_evidence_item_ids"] == ["quantity:risk_ratio"]
+
+
 def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
     warning_packet = {
         "schema_id": "memo_warning_packet_v1",

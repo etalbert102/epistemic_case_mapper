@@ -336,6 +336,17 @@ def _attach_decision_briefing_packet(
                     backend_retries=backend_config.retries,
                 )
             )
+            from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
+
+            scaffold.update(
+                run_analyst_decision_model(
+                    ledger=ledger,
+                    adjudication=scaffold.get("analyst_adjudication", {}),
+                    backend=backend_config.backend,
+                    backend_timeout=backend_config.timeout,
+                    backend_retries=backend_config.retries,
+                )
+            )
             from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
 
             scaffold.update(
@@ -343,6 +354,7 @@ def _attach_decision_briefing_packet(
                     packet=packet,
                     ledger=ledger,
                     adjudication=scaffold.get("analyst_adjudication", {}),
+                    decision_model=scaffold.get("analyst_decision_model", {}),
                     memo_warning_packet=scaffold.get("memo_warning_packet", {}),
                 )
             )
@@ -362,6 +374,7 @@ def _attach_decision_briefing_packet(
                     packet=packet,
                     ledger=ledger,
                     adjudication=scaffold.get("analyst_adjudication", {}),
+                    decision_model=scaffold.get("analyst_decision_model", {}),
                     memo_warning_packet=scaffold.get("memo_warning_packet", {}),
                     refinement=scaffold.get("analyst_packet_refinement", {}),
                 )

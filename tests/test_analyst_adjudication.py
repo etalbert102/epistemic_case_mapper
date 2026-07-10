@@ -86,11 +86,13 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
     monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", "1")
+    monkeypatch.setenv("ECM_MODEL_PARALLELISM", "2")
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
     assert result["analyst_adjudication_report"]["status"] == "accepted"
     assert result["analyst_adjudication_chunk_reports"]["chunk_count"] == 2
+    assert result["analyst_adjudication_chunk_reports"]["parallelism"] == 2
     assert len(calls) == 2
     assert result["analyst_adjudication_parse_report"]["valid"] is True
     assert result["analyst_adjudication"]["rows"][1]["memo_use"] == "load_bearing_counterweight"

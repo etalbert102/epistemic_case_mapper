@@ -16,7 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
-from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 
 DEFAULT_CHUNK_SIZE = 6
 
@@ -63,53 +63,33 @@ def _run_live_adjudication(
     ledger_rows = [row for row in _list(ledger.get("rows")) if isinstance(row, dict)]
     all_ids = [str(row.get("evidence_item_id")) for row in ledger_rows if str(row.get("evidence_item_id") or "")]
     chunks = _chunks(ledger_rows, _chunk_size())
-    prompts: list[str] = []
-    raws: list[str] = []
-    merged_rows: list[dict[str, Any]] = []
-    chunk_reports: list[dict[str, Any]] = []
-    scaffold_chunk_count = 0
-    for index, rows in enumerate(chunks, start=1):
-        chunk_ledger = _chunk_ledger(ledger, rows, index=index, total=len(chunks))
-        chunk_prompt = build_analyst_adjudication_prompt(chunk_ledger)
-        prompts.append(f"<!-- analyst adjudication chunk {index}/{len(chunks)} -->\n{chunk_prompt}")
-        try:
-            result = run_model_backend(chunk_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-            raw = result.text
-        except RuntimeError as exc:
-            raw = ""
-            chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
-            parse_report = build_analyst_adjudication_parse_report(chunk_scaffold, chunk_ledger)
-            merged_rows.extend(chunk_scaffold.get("rows", []))
-            scaffold_chunk_count += 1
-            raws.append(f"<!-- chunk {index} backend error: {exc} -->")
-            chunk_reports.append(_chunk_report(index, len(chunks), "backend_error_scaffold", parse_report, issues=[str(exc)]))
-            continue
-        raws.append(f"<!-- analyst adjudication chunk {index}/{len(chunks)} -->\n{raw}")
-        payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
-        expected_ids = [str(row.get("evidence_item_id")) for row in rows if str(row.get("evidence_item_id") or "")]
-        parse_report = build_analyst_adjudication_parse_report(
-            payload,
-            chunk_ledger,
-            expected_evidence_item_ids=expected_ids,
-            known_evidence_item_ids=all_ids,
-        )
-        if parse_report.get("valid"):
-            parsed = AnalystAdjudication.model_validate(payload).model_dump()
-            merged_rows.extend(parsed.get("rows", []))
-            chunk_reports.append(_chunk_report(index, len(chunks), "accepted", parse_report))
-            continue
-        chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
-        merged_rows.extend(chunk_scaffold.get("rows", []))
-        scaffold_chunk_count += 1
-        chunk_reports.append(
-            _chunk_report(
-                index,
-                len(chunks),
-                "model_output_invalid_scaffold",
-                parse_report,
-                issues=["chunk failed schema or ledger accounting checks"],
-            )
-        )
+    chunk_results = run_parallel(
+        list(enumerate(chunks, start=1)),
+        lambda item: _run_adjudication_chunk(
+            item,
+            ledger=ledger,
+            total=len(chunks),
+            all_ids=all_ids,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        ),
+        max_workers=model_parallelism(backend),
+    )
+    prompts = [str(row.get("prompt") or "") for row in chunk_results]
+    raws = [str(row.get("raw_block") or "") for row in chunk_results]
+    merged_rows = [
+        merged_row
+        for row in chunk_results
+        for merged_row in _list(row.get("rows"))
+        if isinstance(merged_row, dict)
+    ]
+    chunk_reports = [
+        row.get("chunk_report")
+        for row in chunk_results
+        if isinstance(row.get("chunk_report"), dict)
+    ]
+    scaffold_chunk_count = sum(1 for row in chunk_results if row.get("used_scaffold"))
     merged = {
         "schema_id": "analyst_adjudication_v1",
         "decision_question": ledger.get("decision_question", ""),
@@ -129,12 +109,73 @@ def _run_live_adjudication(
             "schema_id": "analyst_adjudication_chunk_reports_v1",
             "chunk_count": len(chunks),
             "scaffold_chunk_count": scaffold_chunk_count,
+            "parallelism": model_parallelism(backend),
             "chunks": chunk_reports,
         },
         "analyst_adjudication_report": _report(
             status,
             parse_report,
             issues=["one_or_more_chunks_used_scaffold"] if scaffold_chunk_count else [],
+        ),
+    }
+
+
+def _run_adjudication_chunk(
+    item: tuple[int, list[dict[str, Any]]],
+    *,
+    ledger: dict[str, Any],
+    total: int,
+    all_ids: list[str],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    index, rows = item
+    chunk_ledger = _chunk_ledger(ledger, rows, index=index, total=total)
+    chunk_prompt = build_analyst_adjudication_prompt(chunk_ledger)
+    prompt_block = f"<!-- analyst adjudication chunk {index}/{total} -->\n{chunk_prompt}"
+    try:
+        result = run_model_backend(chunk_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        raw = result.text
+    except RuntimeError as exc:
+        chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
+        parse_report = build_analyst_adjudication_parse_report(chunk_scaffold, chunk_ledger)
+        return {
+            "prompt": prompt_block,
+            "raw_block": f"<!-- chunk {index} backend error: {exc} -->",
+            "rows": chunk_scaffold.get("rows", []),
+            "used_scaffold": True,
+            "chunk_report": _chunk_report(index, total, "backend_error_scaffold", parse_report, issues=[str(exc)]),
+        }
+    payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
+    expected_ids = [str(row.get("evidence_item_id")) for row in rows if str(row.get("evidence_item_id") or "")]
+    parse_report = build_analyst_adjudication_parse_report(
+        payload,
+        chunk_ledger,
+        expected_evidence_item_ids=expected_ids,
+        known_evidence_item_ids=all_ids,
+    )
+    if parse_report.get("valid"):
+        parsed = AnalystAdjudication.model_validate(payload).model_dump()
+        return {
+            "prompt": prompt_block,
+            "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
+            "rows": parsed.get("rows", []),
+            "used_scaffold": False,
+            "chunk_report": _chunk_report(index, total, "accepted", parse_report),
+        }
+    chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
+    return {
+        "prompt": prompt_block,
+        "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
+        "rows": chunk_scaffold.get("rows", []),
+        "used_scaffold": True,
+        "chunk_report": _chunk_report(
+            index,
+            total,
+            "model_output_invalid_scaffold",
+            parse_report,
+            issues=["chunk failed schema or ledger accounting checks"],
         ),
     }
 

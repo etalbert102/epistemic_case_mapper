@@ -109,6 +109,9 @@ class AnalystEvidenceGroup(BaseModel):
     applicability_limits: list[str] = Field(default_factory=list)
     rationale: str = Field(min_length=1)
     conflict_note: str = ""
+    evidence_strength: str = ""
+    answer_impact: str = ""
+    uncertainty_type: str = ""
 
 
 class AnalystSynthesisPacket(BaseModel):
@@ -130,6 +133,98 @@ class AnalystSynthesisPacket(BaseModel):
     decision_logic: dict[str, Any] = Field(default_factory=dict)
     source_notes: list[dict[str, Any]] = Field(default_factory=list)
     evidence_accounting_summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class AnalystDecisionEvidenceGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    group_id: str
+    proposition: str = Field(min_length=1)
+    memo_role: MemoUse
+    importance_rank: int = Field(default=100, ge=1, le=100)
+    covered_evidence_item_ids: list[str] = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    evidence_strength: str = ""
+    answer_impact: str = ""
+    uncertainty_type: str = ""
+    applicability_limits: list[str] = Field(default_factory=list)
+    conflict_note: str = ""
+
+    @field_validator("covered_evidence_item_ids", "applicability_limits", mode="before")
+    @classmethod
+    def _list_field(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
+    @field_validator("memo_role", mode="before")
+    @classmethod
+    def _normalize_memo_role(cls, value: Any) -> str:
+        return _memo_use_alias(str(value or ""))
+
+
+class AnalystEvidenceDisposition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_item_id: str
+    disposition: Literal["foreground", "background", "not_decision_relevant", "covered_by_group", "needs_review"]
+    group_id: str = ""
+    rationale: str = ""
+
+    @field_validator("evidence_item_id", "group_id", "rationale", mode="before")
+    @classmethod
+    def _strip_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("disposition", mode="before")
+    @classmethod
+    def _normalize_disposition(cls, value: Any) -> str:
+        text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        return {
+            "background_only": "background",
+            "covered": "covered_by_group",
+            "review": "needs_review",
+            "needs_human_or_model_review": "needs_review",
+        }.get(text, text)
+
+
+class AnalystDecisionModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_id: Literal["analyst_decision_model_v1"] = "analyst_decision_model_v1"
+    decision_question: str
+    direct_answer: str = Field(min_length=1)
+    confidence: Literal["low", "medium", "high", "not_specified"] = "not_specified"
+    overall_rationale: str = Field(min_length=1)
+    evidence_groups: list[AnalystDecisionEvidenceGroup] = Field(default_factory=list)
+    evidence_dispositions: list[AnalystEvidenceDisposition] = Field(default_factory=list)
+    quantitative_anchors: list[str] = Field(default_factory=list)
+    what_would_change_the_answer: list[str] = Field(default_factory=list)
+    argument_plan: list[dict[str, Any]] = Field(default_factory=list)
+    decision_logic: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("quantitative_anchors", "what_would_change_the_answer", mode="before")
+    @classmethod
+    def _list_field(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
+    @model_validator(mode="after")
+    def _unique_group_and_disposition_ids(self) -> "AnalystDecisionModel":
+        group_ids = [group.group_id for group in self.evidence_groups]
+        if len(group_ids) != len(set(group_ids)):
+            raise ValueError("evidence_groups must have unique group_id values")
+        disposition_ids = [row.evidence_item_id for row in self.evidence_dispositions]
+        if len(disposition_ids) != len(set(disposition_ids)):
+            raise ValueError("evidence_dispositions must have unique evidence_item_id values")
+        return self
 
 
 WarningMemoAction = Literal[
@@ -243,6 +338,68 @@ def build_analyst_adjudication_parse_report(
         "missing_evidence_item_ids": missing,
         "unknown_evidence_item_ids": unknown,
         "invalid_covered_by": invalid_covered_by,
+        "issues": issues,
+    }
+
+
+def build_analyst_decision_model_parse_report(payload: Any, ledger: dict[str, Any]) -> dict[str, Any]:
+    expected_ids = _ledger_ids(ledger)
+    known_ids = set(expected_ids)
+    try:
+        parsed = AnalystDecisionModel.model_validate(payload)
+    except ValidationError as exc:
+        return {
+            "schema_id": "analyst_decision_model_parse_report_v1",
+            "status": "invalid_schema",
+            "valid": False,
+            "errors": _jsonable_errors(exc),
+            "ledger_row_count": len(expected_ids),
+            "covered_evidence_item_count": 0,
+            "unknown_evidence_item_ids": [],
+            "missing_disposition_ids": expected_ids,
+            "unknown_disposition_ids": [],
+            "invalid_disposition_group_ids": [],
+            "issues": ["invalid_schema"],
+        }
+    group_ids = {group.group_id for group in parsed.evidence_groups}
+    covered_ids = {
+        evidence_id
+        for group in parsed.evidence_groups
+        for evidence_id in group.covered_evidence_item_ids
+    }
+    disposition_ids = {row.evidence_item_id for row in parsed.evidence_dispositions}
+    unknown_ids = sorted(covered_ids - known_ids)
+    unknown_disposition_ids = sorted(disposition_ids - known_ids)
+    missing_disposition_ids = sorted(known_ids - disposition_ids)
+    invalid_disposition_group_ids = sorted(
+        {
+            row.group_id
+            for row in parsed.evidence_dispositions
+            if row.group_id and row.group_id not in group_ids
+        }
+    )
+    fatal_issues = [
+        *(["unknown_evidence_item_ids"] if unknown_ids else []),
+        *(["invalid_disposition_group_ids"] if invalid_disposition_group_ids else []),
+    ]
+    warning_issues = [
+        *(["unknown_disposition_ids"] if unknown_disposition_ids else []),
+        *(["missing_dispositions"] if missing_disposition_ids else []),
+        *(["no_evidence_groups"] if not parsed.evidence_groups else []),
+    ]
+    issues = [*fatal_issues, *warning_issues]
+    valid = not fatal_issues and bool(parsed.evidence_groups)
+    return {
+        "schema_id": "analyst_decision_model_parse_report_v1",
+        "status": "ready" if not issues else "warning" if valid else "invalid",
+        "valid": valid,
+        "ledger_row_count": len(expected_ids),
+        "group_count": len(parsed.evidence_groups),
+        "covered_evidence_item_count": len(covered_ids & known_ids),
+        "unknown_evidence_item_ids": unknown_ids,
+        "missing_disposition_ids": missing_disposition_ids,
+        "unknown_disposition_ids": unknown_disposition_ids,
+        "invalid_disposition_group_ids": invalid_disposition_group_ids,
         "issues": issues,
     }
 

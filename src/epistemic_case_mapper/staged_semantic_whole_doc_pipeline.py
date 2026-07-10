@@ -6,6 +6,7 @@ from typing import Any
 
 from epistemic_case_mapper.config_profiles import config_profile_from_manifest_payload
 from epistemic_case_mapper.io import write_json
+from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
@@ -86,41 +87,28 @@ def _extract_whole_doc_claims(
     source_dir = artifact_dir / "claim_sources"
     if progress:
         progress.start_stage("claim_extraction", extractor="whole-doc", total_items=len(source_chunks), total_sources=len(source_chunks))
-    for source_index, chunk in enumerate(source_chunks, start=1):
-        span_lookup = {span.span_id: span for span in chunk.spans}
-        source_file_stem = _safe_filename(chunk.source_id)
-        canonical_path = source_dir / f"{source_file_stem}_whole_doc_canonical.json"
-        if progress:
-            progress.start_backend_call(
-                stage="claim_extraction",
-                item_id=chunk.chunk_id,
-                item_index=source_index,
-                total_items=len(source_chunks),
-                timeout_seconds=backend_timeout,
-                source_id=chunk.source_id,
-                extractor="whole-doc",
-            )
-        payload, cache_hit, backend_error = whole_doc_claim_payload_for_source(
-            source_id=chunk.source_id,
-            source_title=chunk.title,
-            source_text=chunk.plain_text,
-            decision_question=selected_question,
+    extraction_results = run_parallel(
+        list(enumerate(source_chunks, start=1)),
+        lambda item: _fetch_whole_doc_payload(
+            item,
+            selected_question=selected_question,
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
-            max_claims=max_claims_per_source,
-            canonical_path=canonical_path,
-            raw_path=source_dir / f"{source_file_stem}_whole_doc_raw.txt",
-            repair_raw_path=source_dir / f"{source_file_stem}_whole_doc_repair_raw.txt",
-            report_path=source_dir / f"{source_file_stem}_whole_doc_report.json",
+            max_claims_per_source=max_claims_per_source,
+            source_dir=source_dir,
             reuse_claim_cache=reuse_claim_cache,
-        )
-        if progress:
-            progress.finish_backend_call(
-                status="cache_hit" if cache_hit else ("backend_error" if backend_error else "completed"),
-                error=backend_error,
-                cache_hit=cache_hit,
-            )
+        ),
+        max_workers=model_parallelism(backend),
+    )
+    claim_progress["parallelism"] = model_parallelism(backend)
+    for result in extraction_results:
+        source_index = int(result["source_index"])
+        chunk = result["chunk"]
+        span_lookup = {span.span_id: span for span in chunk.spans}
+        payload = result["payload"]
+        cache_hit = bool(result["cache_hit"])
+        backend_error = str(result["backend_error"])
         if cache_hit:
             claim_progress["cache_hit_count"] += 1
         else:
@@ -163,6 +151,44 @@ def _extract_whole_doc_claims(
     if progress:
         progress.finish_stage("claim_extraction", accepted_claim_count=len(accepted), rejected_claim_count=len(rejected), total_sources=len(source_chunks))
     return accepted, rejected
+
+
+def _fetch_whole_doc_payload(
+    item: tuple[int, WholeDocSourceChunk],
+    *,
+    selected_question: str,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    max_claims_per_source: int,
+    source_dir: Path,
+    reuse_claim_cache: bool,
+) -> dict[str, Any]:
+    source_index, chunk = item
+    source_file_stem = _safe_filename(chunk.source_id)
+    canonical_path = source_dir / f"{source_file_stem}_whole_doc_canonical.json"
+    payload, cache_hit, backend_error = whole_doc_claim_payload_for_source(
+        source_id=chunk.source_id,
+        source_title=chunk.title,
+        source_text=chunk.plain_text,
+        decision_question=selected_question,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        max_claims=max_claims_per_source,
+        canonical_path=canonical_path,
+        raw_path=source_dir / f"{source_file_stem}_whole_doc_raw.txt",
+        repair_raw_path=source_dir / f"{source_file_stem}_whole_doc_repair_raw.txt",
+        report_path=source_dir / f"{source_file_stem}_whole_doc_report.json",
+        reuse_claim_cache=reuse_claim_cache,
+    )
+    return {
+        "source_index": source_index,
+        "chunk": chunk,
+        "payload": payload,
+        "cache_hit": cache_hit,
+        "backend_error": backend_error,
+    }
 
 
 def _whole_doc_source_chunks(repo_root: Path, case_manifest: CaseManifest, region: WorkedRegion) -> list[WholeDocSourceChunk]:

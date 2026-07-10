@@ -129,6 +129,7 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
         )
 
     monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
+    monkeypatch.setenv("ECM_MODEL_PARALLELISM", "4")
 
     claims, rejected = _extract_claims(
         repo_root=tmp_path,
@@ -149,6 +150,7 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
     progress = (tmp_path / "artifacts" / "claim_extraction_progress.json").read_text(encoding="utf-8")
     assert '"stage": "whole_doc_claim_extraction"' in progress
     assert '"claim_extraction_method": "whole_doc_source_card"' in progress
+    assert '"parallelism": 4' in progress
 
 
 def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_path: Path) -> None:
