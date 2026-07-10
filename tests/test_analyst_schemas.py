@@ -260,3 +260,30 @@ def test_analyst_decision_model_parse_report_warns_on_unknown_exception_disposit
     assert report["valid"] is True
     assert report["status"] == "warning"
     assert report["unknown_disposition_ids"] == ["coarse:unknown"]
+
+
+def test_analyst_decision_model_parse_report_normalizes_none_group_alias() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A with review.",
+        "overall_rationale": "Known evidence is grouped; background rows can have no group.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Known evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "covered_evidence_item_ids": ["bundle:one"],
+                "rationale": "Known support.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "warning:two", "disposition": "background", "group_id": "none", "rationale": "Not foreground."},
+        ],
+    }
+
+    parsed = AnalystDecisionModel.model_validate(payload)
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert parsed.evidence_dispositions[0].group_id == ""
+    assert "invalid_disposition_group_ids" not in report["issues"]

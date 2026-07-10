@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.map_briefing_analyst_decision_modeling import (
+    DEFAULT_DECISION_MODEL_NUM_PREDICT,
+    analyst_decision_model_num_predict,
     build_analyst_decision_context,
     build_analyst_decision_model_prompt,
     run_analyst_decision_model,
@@ -161,6 +163,54 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "evidence_groups" in prompt
     assert "evidence_dispositions" in prompt
     assert "model_hints" in prompt
+
+
+def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only if operating risk is bounded.",
+        "confidence": "medium",
+        "overall_rationale": "The outcome signal supports adoption but risk bounds it.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "The main study supports adoption.",
+            }
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:support", "disposition": "foreground", "group_id": "support_group"},
+            {"evidence_item_id": "bundle:support_duplicate", "disposition": "covered_by_group", "group_id": "support_group"},
+            {"evidence_item_id": "bundle:risk", "disposition": "background", "group_id": ""},
+        ],
+    }
+    seen = {}
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        seen["num_predict"] = kwargs.get("num_predict")
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+
+    run_analyst_decision_model(
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert seen["num_predict"] == DEFAULT_DECISION_MODEL_NUM_PREDICT
+
+
+def test_decision_model_output_budget_has_env_override(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_ANALYST_DECISION_MODEL_NUM_PREDICT", "16000")
+
+    assert analyst_decision_model_num_predict({}) == 16_000
 
 
 def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:

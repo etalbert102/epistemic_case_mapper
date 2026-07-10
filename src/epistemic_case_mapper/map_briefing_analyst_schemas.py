@@ -182,7 +182,10 @@ class AnalystEvidenceDisposition(BaseModel):
     @field_validator("evidence_item_id", "group_id", "rationale", mode="before")
     @classmethod
     def _strip_text(cls, value: Any) -> str:
-        return str(value or "").strip()
+        text = str(value or "").strip()
+        if text.lower().replace("_", " ") in {"none", "no group", "n/a", "na", "null"}:
+            return ""
+        return text
 
     @field_validator("disposition", mode="before")
     @classmethod

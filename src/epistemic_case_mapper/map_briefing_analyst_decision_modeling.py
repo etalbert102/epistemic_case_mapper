@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from typing import Any
@@ -22,6 +23,8 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.model_backends import run_model_backend
+
+DEFAULT_DECISION_MODEL_NUM_PREDICT = 12_288
 
 
 def run_analyst_decision_model(
@@ -46,7 +49,13 @@ def run_analyst_decision_model(
             "analyst_decision_model_report": _report("prompt_backend_scaffold", parse_report),
         }
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=analyst_decision_model_num_predict(context),
+        )
     except RuntimeError as exc:
         parse_report = build_analyst_decision_model_parse_report(scaffold, ledger)
         return {
@@ -82,6 +91,14 @@ def run_analyst_decision_model(
         "analyst_decision_model_parse_report": parse_report,
         "analyst_decision_model_report": _report("accepted" if parse_report.get("status") == "ready" else "accepted_with_warnings", parse_report),
     }
+
+
+def analyst_decision_model_num_predict(context: dict[str, Any] | None = None) -> int:
+    del context
+    try:
+        return max(2048, int(os.environ.get("ECM_ANALYST_DECISION_MODEL_NUM_PREDICT", DEFAULT_DECISION_MODEL_NUM_PREDICT)))
+    except ValueError:
+        return DEFAULT_DECISION_MODEL_NUM_PREDICT
 
 
 def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:
