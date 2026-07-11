@@ -18,6 +18,7 @@ from epistemic_case_mapper.map_briefing_memo_obligations import (
     all_memo_obligations,
     required_memo_obligations,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_memo_warning_packet import (
     build_warning_resolution_report,
     unresolved_warning_repair_items,
@@ -67,11 +68,13 @@ def run_memo_ready_packet_synthesis(
         )
         return {"memo": draft, "prompt": prompt, "raw": raw, "report": report}
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
-    accepted = _acceptable_synthesis(candidate, retention)
+    strict_contract = _strict_packet_contract(memo_ready_packet)
+    accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     report.update(
         {
             "status": "accepted" if accepted else "accepted_with_retention_warnings",
-            "accepted": True,
+            "accepted": accepted if strict_contract else True,
+            "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "used_default_path": False,
             "retention_status": retention.get("status"),
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
@@ -203,36 +206,48 @@ def run_memo_ready_packet_repair(
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     after = build_memo_ready_packet_retention_report(candidate, packet)
     structure_issues = markdown_structure_issues(candidate, original=memo)
-    accepted = _retention_improved(retention_report, after) and not structure_issues
+    strict_contract = _strict_packet_contract(packet)
+    improved = _strict_retention_improved(retention_report, after) if strict_contract else _retention_improved(retention_report, after)
+    complete = _retention_complete(after)
+    accepted = improved and not structure_issues and (complete if strict_contract else True)
+    applied = accepted or (strict_contract and improved and not structure_issues)
+    status = "accepted" if accepted else "no_retention_improvement_kept_original"
+    if strict_contract and applied and not complete:
+        status = "partial_retention_improvement_applied_with_warnings"
     report.update(
         {
-            "status": "accepted" if accepted else "no_retention_improvement_kept_original",
+            "status": status,
             "accepted": accepted,
+            "applied": applied,
+            "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "final_missing_mandatory_count": after.get("missing_mandatory_count", 0),
             "final_retained_mandatory_count": after.get("retained_mandatory_count", 0),
             "final_unresolved_warning_count": after.get("unresolved_warning_count", 0),
             "final_retention_report": after,
             "structure_issues": structure_issues,
-            "issues": [] if accepted else ["repair did not improve packet retention without markdown damage"],
+            "issues": [] if accepted else [_repair_issue(strict_contract, improved=improved, complete=complete, structure_issues=structure_issues)],
         }
     )
-    return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+    return {"memo": candidate if applied else memo, "prompt": prompt, "raw": raw, "report": report}
 
 
 def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], retention_report: dict[str, Any]) -> str:
     uses_obligations = str(retention_report.get("validation_basis") or "") == "memo_obligations"
+    strict_contract = _strict_packet_contract(packet)
+    limit = 16 if strict_contract else 8
     warning_packet = _dict(packet.get("memo_warning_packet"))
     warning_resolution = _dict(retention_report.get("warning_resolution_report"))
     repair_packet = {
         "decision_question": packet.get("decision_question"),
+        "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
         "missing_obligations": [
             _repair_obligation(packet, issue)
-            for issue in _list(retention_report.get("issues"))[:8]
+            for issue in _list(retention_report.get("issues"))[:limit]
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_obligation"
         ],
         "missing_items": [
             _repair_item(packet, issue)
-            for issue in _list(retention_report.get("issues"))[:8]
+            for issue in _list(retention_report.get("issues"))[:limit]
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_ready_item"
         ],
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
@@ -245,6 +260,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
         "- Repair missing obligations by improving the reasoning around the affected point.\n"
         "- Use only the missing obligations or legacy missing items in the repair packet.\n"
+        "- For strict writer-packet repairs, every missing obligation in the repair packet is a required decision-writing obligation; include it, merge it with related prose, or explain the scope/uncertainty it creates.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"
         "- Keep packet IDs, validation, telemetry, and internal pipeline machinery out of the prose.\n\n"
@@ -295,41 +311,6 @@ def run_memo_ready_final_polish(
         }
     )
     return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
-
-
-def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
-    """Apply deterministic presentation-only fixes without changing analysis."""
-    question = str(packet.get("decision_question") or "").strip()
-    source_aliases = _source_alias_replacements(packet)
-    normalized = str(memo or "").strip()
-    changes: list[str] = []
-    if question:
-        next_memo = _ensure_decision_question(normalized, question)
-        if next_memo != normalized:
-            changes.append("inserted_decision_question")
-            normalized = next_memo
-    next_memo = _replace_source_aliases(normalized, source_aliases)
-    if next_memo != normalized:
-        changes.append("normalized_source_labels")
-        normalized = next_memo
-    next_memo = _replace_sources_section(normalized, packet)
-    if next_memo != normalized:
-        changes.append("deterministic_sources")
-        normalized = next_memo
-    normalized = normalized.rstrip() + "\n"
-    return {
-        "memo": normalized,
-        "prompt": "",
-        "raw": "",
-        "report": {
-            "schema_id": "memo_ready_presentation_normalization_report_v1",
-            "status": "changed" if changes else "no_changes",
-            "accepted": True,
-            "changes": changes,
-            "source_alias_count": len(source_aliases),
-            "issues": [],
-        },
-    }
 
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
@@ -392,99 +373,6 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
         elif label:
             rows.append(f"- {label}")
     return _dedupe(rows)
-
-
-def _replace_sources_section(memo: str, packet: dict[str, Any]) -> str:
-    body = _strip_sources_section(memo).rstrip()
-    sources = _cited_source_lines(body, packet)
-    if not sources:
-        return body + "\n"
-    return "\n".join([body, "", "## Sources", "", *sources]).rstrip() + "\n"
-
-
-def _strip_sources_section(memo: str) -> str:
-    lines = str(memo or "").splitlines()
-    for index, line in enumerate(lines):
-        if line.strip().lower() == "## sources":
-            return "\n".join(lines[:index]).rstrip()
-    return str(memo or "").rstrip()
-
-
-def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
-    entries = _canonical_source_entries(packet)
-    cited = []
-    lowered = body.lower()
-    for entry in entries:
-        display = entry["display"]
-        if display and _contains_text(body, display):
-            cited.append((lowered.find(display.lower()), _source_line_for_entry(entry)))
-    return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
-
-
-def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
-    urls = _source_url_lookup(packet)
-    entries = []
-    for label in _packet_source_labels(packet):
-        display = _preferred_source_display({"source_label": label}, common_prefix=_common_token_prefix(_packet_source_labels(packet)))
-        if not display:
-            continue
-        entries.append({"display": display, "url": urls.get(label, "")})
-    return _dedupe_entries(entries)
-
-
-def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
-    urls = {}
-    for source in _list(packet.get("source_trail")):
-        if not isinstance(source, dict):
-            continue
-        label = str(source.get("source_label") or "").strip()
-        url = str(source.get("source_url") or "").strip()
-        if label and url:
-            for variant in _source_label_variants(label):
-                urls[variant] = url
-    return urls
-
-
-def _source_line_for_entry(entry: dict[str, str]) -> str:
-    display = entry.get("display", "")
-    url = entry.get("url", "")
-    return f"* [{display}]({url})" if display and url else f"* {display}"
-
-
-def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
-    seen = set()
-    deduped = []
-    for entry in entries:
-        key = _norm(entry.get("display", ""))
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        deduped.append(entry)
-    return deduped
-
-
-def _ensure_decision_question(memo: str, question: str) -> str:
-    if _contains_text(memo, question):
-        return memo
-    line = f"**Decision question:** {question}"
-    lines = memo.splitlines()
-    if not lines:
-        return f"## Decision Brief\n\n{line}\n"
-    for index, existing in enumerate(lines):
-        if existing.strip().lower() == "## decision brief":
-            insert_at = index + 1
-            while insert_at < len(lines) and not lines[insert_at].strip():
-                insert_at += 1
-            return "\n".join([*lines[: index + 1], "", line, "", *lines[insert_at:]])
-    return f"## Decision Brief\n\n{line}\n\n{memo.strip()}"
-
-
-def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
-    normalized = memo
-    for source_label, display in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
-        if source_label and display and source_label != display:
-            normalized = normalized.replace(source_label, display)
-    return normalized
 
 
 def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
@@ -760,6 +648,7 @@ def _repair_obligation(packet: dict[str, Any], issue: dict[str, Any]) -> dict[st
         (row for row in required_memo_obligations(packet) if str(row.get("obligation_id") or "") == obligation_id),
         {},
     )
+    evidence_item = _evidence_item_for_obligation(packet, obligation)
     return {
         "obligation_id": obligation_id,
         "obligation_type": obligation.get("obligation_type") or issue.get("obligation_type"),
@@ -769,7 +658,20 @@ def _repair_obligation(packet: dict[str, Any], issue: dict[str, Any]) -> dict[st
         "source_labels": obligation.get("source_labels", issue.get("source_labels", [])),
         "quantities": obligation.get("quantities", []),
         "missing_quantities": issue.get("missing_quantities", []),
+        "decision_relevance": evidence_item.get("decision_relevance"),
+        "caveat": evidence_item.get("caveat"),
+        "reader_claim": evidence_item.get("reader_claim"),
     }
+
+
+def _evidence_item_for_obligation(packet: dict[str, Any], obligation: dict[str, Any]) -> dict[str, Any]:
+    item_ids = {str(item_id) for item_id in _string_list(obligation.get("evidence_item_ids")) if str(item_id).strip()}
+    if not item_ids:
+        return {}
+    for item in _list(packet.get("evidence_items")):
+        if isinstance(item, dict) and str(item.get("item_id") or "") in item_ids:
+            return item
+    return {}
 
 
 def _retention_quantities(row: dict[str, Any]) -> list[str]:
@@ -808,8 +710,12 @@ def _quantity_required_for_retention(quantity: dict[str, Any], row: dict[str, An
     return False
 
 
-def _acceptable_synthesis(memo: str, retention: dict[str, Any]) -> bool:
-    return bool(memo.strip()) and int(retention.get("missing_mandatory_count", 0) or 0) <= 2
+def _acceptable_synthesis(memo: str, retention: dict[str, Any], *, strict_contract: bool = False) -> bool:
+    if not memo.strip():
+        return False
+    if strict_contract:
+        return _retention_complete(retention)
+    return int(retention.get("missing_mandatory_count", 0) or 0) <= 2
 
 
 def _retention_improved(before: dict[str, Any], after: dict[str, Any]) -> bool:
@@ -822,6 +728,41 @@ def _retention_improved(before: dict[str, Any], after: dict[str, Any]) -> bool:
     if after_warnings < before_warnings:
         return True
     return int(after.get("missing_quantity_count", 0) or 0) < int(before.get("missing_quantity_count", 0) or 0)
+
+
+def _strict_retention_improved(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    before_missing = int(before.get("missing_mandatory_count", 0) or 0)
+    after_missing = int(after.get("missing_mandatory_count", 0) or 0)
+    if after_missing < before_missing:
+        return True
+    before_warnings = int(before.get("unresolved_warning_count", 0) or 0)
+    after_warnings = int(after.get("unresolved_warning_count", 0) or 0)
+    return after_warnings < before_warnings
+
+
+def _retention_complete(retention: dict[str, Any]) -> bool:
+    return (
+        int(retention.get("missing_mandatory_count", 0) or 0) == 0
+        and int(retention.get("unresolved_warning_count", 0) or 0) == 0
+    )
+
+
+def _strict_packet_contract(packet: dict[str, Any]) -> bool:
+    return str(packet.get("method") or "") == "global_decision_writer_packet_adapter" and isinstance(packet.get("writer_packet"), dict)
+
+
+def _repair_issue(
+    strict_contract: bool,
+    *,
+    improved: bool,
+    complete: bool,
+    structure_issues: list[str],
+) -> str:
+    if structure_issues:
+        return "repair damaged markdown structure"
+    if strict_contract and improved and not complete:
+        return "repair improved retention but did not satisfy all strict writer-packet obligations"
+    return "repair did not improve packet retention without markdown damage"
 
 
 def _retention_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:

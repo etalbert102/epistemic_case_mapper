@@ -4,6 +4,15 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_memo_ready_packet_repair_prompt,
+    build_memo_ready_packet_retention_report,
+    run_memo_ready_packet_repair,
+    run_memo_ready_packet_synthesis,
+)
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 def _ledger() -> dict:
@@ -131,3 +140,133 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["evidence_items"][0]["reader_claim"] == "Option A improves the main outcome."
     assert packet["evidence_items"][0]["must_use"] is True
     assert packet["evidence_items"][0]["quantities"][0]["value"] == "20% improvement"
+    assert packet["memo_obligations"]["required_count"] == 2
+    assert packet["decision_synthesis_contract"]["required_memo_obligations"]
+
+
+def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "Required obligation ledger" in prompt
+    assert "Use this as load-bearing support for the default answer" in prompt
+    assert "Bound the answer's applicability" in prompt
+    assert "analyst_synthesis_packet" not in prompt
+
+
+def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monkeypatch) -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(
+            text=(
+                "## Decision Brief\n\n"
+                "Outcome Review reports that Option A improves the main outcome by 20% improvement."
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["contract_mode"] == "strict_writer_packet"
+    assert result["report"]["status"] == "accepted_with_retention_warnings"
+    assert result["report"]["accepted"] is False
+    assert result["report"]["missing_mandatory_count"] == 1
+
+
+def test_decision_writer_packet_repair_partial_improvement_is_visible(monkeypatch) -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    weak_memo = "## Decision Brief\n\nOption A is plausible.\n"
+    before = build_memo_ready_packet_retention_report(weak_memo, packet)
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(
+            text=(
+                "## Decision Brief\n\n"
+                "Outcome Review reports that Option A improves the main outcome by 20% improvement."
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert before["missing_mandatory_count"] == 2
+    assert result["report"]["contract_mode"] == "strict_writer_packet"
+    assert result["report"]["status"] == "partial_retention_improvement_applied_with_warnings"
+    assert result["report"]["accepted"] is False
+    assert result["report"]["applied"] is True
+    assert result["report"]["final_missing_mandatory_count"] == 1
+    assert "Outcome Review" in result["memo"]
+
+
+def test_strict_writer_repair_does_not_apply_quantity_only_improvement(monkeypatch) -> None:
+    evidence_item = {
+        "item_id": "decision_writer_item_001",
+        "must_use": True,
+        "role": "strongest_support",
+        "reader_claim": "Option A improves the main outcome.",
+        "source_label": "Outcome Review",
+        "source_labels": ["Outcome Review"],
+        "quantities": [{"value": "10%"}, {"value": "20%"}],
+    }
+    packet = {
+        "method": "global_decision_writer_packet_adapter",
+        "writer_packet": {"schema_id": "decision_writer_packet_v1"},
+        "decision_question": "Should option A be adopted?",
+        "evidence_items": [evidence_item],
+        "memo_obligations": build_memo_obligation_packet([evidence_item], {"warnings": []}),
+        "source_trail": [{"source_label": "Outcome Review"}],
+    }
+    weak_memo = "## Decision Brief\n\nOutcome Review says Option A improves the main outcome.\n"
+    before = build_memo_ready_packet_retention_report(weak_memo, packet)
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(
+            text="## Decision Brief\n\nOutcome Review says Option A improves the main outcome by 10%.\n",
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert before["missing_mandatory_count"] == 1
+    assert before["missing_quantity_count"] == 2
+    assert result["report"]["final_missing_mandatory_count"] == 1
+    assert result["report"]["final_retention_report"]["missing_quantity_count"] == 1
+    assert result["report"]["status"] == "no_retention_improvement_kept_original"
+    assert result["report"]["applied"] is False
+    assert result["memo"] == weak_memo
+
+
+def test_decision_writer_packet_repair_prompt_carries_originating_evidence_context() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    weak_memo = "## Decision Brief\n\nOption A is plausible.\n"
+    before = build_memo_ready_packet_retention_report(weak_memo, packet)
+
+    prompt = build_memo_ready_packet_repair_prompt(weak_memo, packet, before)
+
+    assert '"contract_mode": "strict_writer_packet"' in prompt
+    assert "This is the main support." in prompt
+    assert "This bounds adoption." in prompt

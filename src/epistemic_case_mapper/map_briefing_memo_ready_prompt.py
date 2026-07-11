@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
     writer_packet = memo_ready_packet.get("writer_packet") if isinstance(memo_ready_packet, dict) else None
     if isinstance(writer_packet, dict) and writer_packet.get("evidence_units"):
-        return build_writer_packet_synthesis_prompt(writer_packet)
+        return build_writer_packet_synthesis_prompt(writer_packet, memo_ready_packet=memo_ready_packet)
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record, but write for a human decision-maker rather than exposing packet structure.\n"
@@ -40,11 +42,29 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     )
 
 
-def build_writer_packet_synthesis_prompt(writer_packet: dict[str, Any]) -> str:
+def build_writer_packet_synthesis_prompt(
+    writer_packet: dict[str, Any],
+    *,
+    memo_ready_packet: dict[str, Any] | None = None,
+) -> str:
+    obligations = required_memo_obligations(memo_ready_packet or {})
+    obligation_ledger = [
+        {
+            "obligation_id": obligation.get("obligation_id"),
+            "obligation_type": obligation.get("obligation_type"),
+            "role": obligation.get("role"),
+            "statement": obligation.get("statement"),
+            "prose_instruction": obligation.get("prose_instruction"),
+            "source_labels": obligation.get("source_labels", []),
+            "quantities": obligation.get("quantities", []),
+        }
+        for obligation in obligations
+    ]
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the source-bound writer packet.\n"
         "The writer packet is the complete writing interface. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
-        "Write for a human decision-maker; do not expose packet structure.\n\n"
+        "Write for a human decision-maker; do not expose packet structure.\n"
+        "The required obligation ledger below is a writing checklist: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
         "Rules:\n"
         "- Answer the decision question directly in the first paragraph.\n"
         "- Use only facts, quantities, and source labels present in the writer packet.\n"
@@ -58,6 +78,8 @@ def build_writer_packet_synthesis_prompt(writer_packet: dict[str, Any]) -> str:
         "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
         "- Include a concise practical implication.\n"
         "- Use natural Markdown and choose headings that fit the decision question.\n\n"
+        "Required obligation ledger:\n"
+        f"{json.dumps(obligation_ledger, indent=2, ensure_ascii=False)}\n\n"
         "Suggested memo shape when it fits the case:\n"
         "## Decision Brief\n"
         "## Why This Is the Best Current Read\n"

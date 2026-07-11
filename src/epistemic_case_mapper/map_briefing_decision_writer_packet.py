@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 
 
 ROLE_BY_GLOBAL_SECTION = {
@@ -56,6 +57,7 @@ def decision_writer_packet_to_memo_ready_packet(
         for index, unit in enumerate(_list(packet.get("evidence_units")), start=1)
         if isinstance(unit, dict)
     ]
+    memo_obligations = build_memo_obligation_packet(evidence_items, {"warnings": []})
     memo_ready = {
         "schema_id": "memo_ready_packet_v1",
         "method": "global_decision_writer_packet_adapter",
@@ -70,6 +72,7 @@ def decision_writer_packet_to_memo_ready_packet(
         "memo_warning_packet": {},
         "analyst_decision_logic": _dict(packet.get("decision_logic")),
         "analyst_argument_plan": _list(packet.get("argument_plan")),
+        "memo_obligations": memo_obligations,
         "decision_writer_packet_quality_report": quality_report or packet.get("decision_writer_packet_quality_report", {}),
         "evidence_items": evidence_items,
         "writer_packet": packet,
@@ -79,6 +82,9 @@ def decision_writer_packet_to_memo_ready_packet(
             "method": "global_decision_writer_packet_adapter",
             "bounded_answer": _dict(packet.get("answer")).get("bounded_answer"),
             "must_preserve": _contract_must_preserve(evidence_items),
+            "required_memo_obligations": [
+                obligation for obligation in memo_obligations.get("obligations", []) if obligation.get("required")
+            ],
             "warnings": _string_list(_dict(packet.get("global_reconciliation")).get("issues")),
         },
     }
