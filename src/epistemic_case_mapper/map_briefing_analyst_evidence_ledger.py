@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_appraisal import appraisal_for_sources
 
 
 def build_analyst_evidence_ledger(
@@ -52,6 +53,7 @@ def build_analyst_map_evidence_ledger(
     warning_packet = memo_warning_packet if isinstance(memo_warning_packet, dict) else {}
     relation_lookup = _claim_relation_context(candidate_map)
     source_labels = _source_labels_from_scaffold(scaffold)
+    source_appraisal_report = _dict(scaffold.get("source_appraisal_report"))
     quantity_lookup = _quantity_lookup(scaffold)
     rows = [
         _claim_row(
@@ -59,12 +61,13 @@ def build_analyst_map_evidence_ledger(
             index=index,
             relation_context=relation_lookup.get(str(claim.get("claim_id") or ""), []),
             source_labels=source_labels,
+            source_appraisal_report=source_appraisal_report,
             quantity_lookup=quantity_lookup,
         )
         for index, claim in enumerate(_list(candidate_map.get("claims")), start=1)
         if isinstance(claim, dict) and str(claim.get("claim_id") or "").strip()
     ]
-    rows.extend(_decision_edge_rows(candidate_map, source_labels=source_labels))
+    rows.extend(_decision_edge_rows(candidate_map, source_labels=source_labels, source_appraisal_report=source_appraisal_report))
     rows.extend(_warning_rows(warning_packet))
     rows = _dedupe_rows(rows)
     return {
@@ -84,10 +87,13 @@ def _claim_row(
     index: int,
     relation_context: list[dict[str, Any]],
     source_labels: dict[str, str],
+    source_appraisal_report: dict[str, Any],
     quantity_lookup: dict[str, list[str]],
 ) -> dict[str, Any]:
     claim_id = str(claim.get("claim_id") or f"claim_{index:03d}")
     source_ids = _dedupe([str(claim.get("source_id") or ""), *_string_list(claim.get("supporting_sources"))])
+    labels = [source_labels.get(source_id, source_id) for source_id in source_ids if source_id]
+    source_appraisal = appraisal_for_sources(source_appraisal_report, [*source_ids, *labels])
     quantity_values = _dedupe(
         [
             *_string_list(_dict(claim.get("whole_doc_source_card")).get("quantities")),
@@ -101,7 +107,10 @@ def _claim_row(
             "current_packet_location": "generated_map.claims",
             "claim_id": claim_id,
             "source_ids": source_ids,
-            "source_labels": [source_labels.get(source_id, source_id) for source_id in source_ids if source_id],
+            "source_labels": labels,
+            "source_appraisal": source_appraisal,
+            "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
+            "allowed_wording": source_appraisal.get("allowed_wording"),
             "claim": _short_text(str(claim.get("claim") or ""), 520),
             "source_excerpt": _short_text(str(claim.get("source_quote") or claim.get("excerpt") or ""), 520),
             "current_role": _claim_current_role(claim),
@@ -146,7 +155,12 @@ def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dic
     return context
 
 
-def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[str, str]) -> list[dict[str, Any]]:
+def _decision_edge_rows(
+    candidate_map: dict[str, Any],
+    *,
+    source_labels: dict[str, str],
+    source_appraisal_report: dict[str, Any],
+) -> list[dict[str, Any]]:
     claim_lookup = {
         str(claim.get("claim_id") or ""): claim
         for claim in _list(candidate_map.get("claims"))
@@ -169,6 +183,8 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
                 str(target_claim.get("source_id") or ""),
             ]
         )
+        labels = [source_labels.get(source_id, source_id) for source_id in source_ids if source_id]
+        source_appraisal = appraisal_for_sources(source_appraisal_report, [*source_ids, *labels])
         contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
         candidate_pair = _candidate_pair_summary(relation)
         rows.append(
@@ -180,7 +196,10 @@ def _decision_edge_rows(candidate_map: dict[str, Any], *, source_labels: dict[st
                     "relation_id": relation_id,
                     "claim_ids": _dedupe([source_claim_id, target_claim_id]),
                     "source_ids": source_ids,
-                    "source_labels": [source_labels.get(source_id, source_id) for source_id in source_ids if source_id],
+                    "source_labels": labels,
+                    "source_appraisal": source_appraisal,
+                    "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
+                    "allowed_wording": source_appraisal.get("allowed_wording"),
                     "claim": _short_text(_decision_edge_statement(relation, source_claim, target_claim), 620),
                     "source_excerpt": _short_text(_decision_edge_excerpt(source_claim, target_claim), 620),
                     "current_role": _relation_current_role(str(relation.get("relation_type") or "")),
@@ -433,6 +452,9 @@ def _bundle_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     "current_priority": _priority_from_bundle(bundle),
                     "current_weight": bundle.get("weight"),
                     "quality": bundle.get("quality"),
+                    "source_appraisal": bundle.get("source_appraisal"),
+                    "source_use_warnings": _string_list(bundle.get("source_use_warnings")),
+                    "allowed_wording": bundle.get("allowed_wording"),
                     "directionality": bundle.get("directionality"),
                     "why_it_matters": _short_text(str(bundle.get("why_it_matters") or ""), 260),
                     "existing_warning_codes": _bundle_warning_codes(bundle),

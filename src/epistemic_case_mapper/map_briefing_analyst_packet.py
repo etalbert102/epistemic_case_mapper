@@ -7,6 +7,11 @@ from typing import Any
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import analyst_decision_logic
 from epistemic_case_mapper.map_briefing_analyst_decision_groups import build_groups_from_decision_model
+from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
+    build_analyst_quantity_binding_report,
+    quantity_binding_quality_summary,
+    quantity_bindings_for_group,
+)
 from epistemic_case_mapper.map_briefing_analyst_packet_helpers import (
     applicability_limits as _applicability_limits,
     clean_answer_text as _clean_answer_text,
@@ -29,6 +34,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
+from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
 
 
 FOREGROUND_MEMO_USES = {
@@ -71,6 +77,7 @@ def build_analyst_packet_bundle(
     decision_model: dict[str, Any] | None = None,
     memo_warning_packet: dict[str, Any] | None = None,
     refinement: dict[str, Any] | None = None,
+    quantity_binding: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     packet = packet if isinstance(packet, dict) else {}
     ledger = ledger if isinstance(ledger, dict) else {}
@@ -99,17 +106,24 @@ def build_analyst_packet_bundle(
         warning_packet=warning_packet,
         refinement=refinement,
     )
+    quantity_binding_report = (
+        quantity_binding
+        if isinstance(quantity_binding, dict) and quantity_binding.get("schema_id") == "analyst_quantity_binding_report_v1"
+        else build_analyst_quantity_binding_report(synthesis_packet=synthesis_packet, ledger=ledger)
+    )
     quality = build_analyst_packet_quality_report(
         ledger=ledger,
         adjudication=adjudication,
         synthesis_packet=synthesis_packet,
         group_accounting=group_accounting,
+        quantity_binding=quantity_binding_report,
     )
     memo_ready = _build_analyst_memo_ready_packet(
         packet=packet,
         synthesis_packet=synthesis_packet,
         warning_packet=_memo_facing_warning_packet(warning_packet, synthesis_packet),
         quality=quality,
+        quantity_binding=quantity_binding_report,
     )
     return {
         "analyst_answer_frame": answer_frame,
@@ -120,6 +134,7 @@ def build_analyst_packet_bundle(
             "accounting": group_accounting,
         },
         "analyst_synthesis_packet": synthesis_packet,
+        "analyst_quantity_binding_report": quantity_binding_report,
         "analyst_packet_quality_report": quality,
         "analyst_memo_ready_packet": memo_ready,
     }
@@ -131,6 +146,7 @@ def build_analyst_packet_quality_report(
     adjudication: dict[str, Any],
     synthesis_packet: dict[str, Any],
     group_accounting: dict[str, Any] | None = None,
+    quantity_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ledger_ids = _ledger_ids(ledger)
     adjudicated_ids = {
@@ -163,6 +179,7 @@ def build_analyst_packet_quality_report(
         "foreground_group_count": sum(len(_list(synthesis_packet.get(section))) for section in _foreground_sections()),
         "background_group_count": len(_list(synthesis_packet.get("background_context"))),
         "covered_evidence_item_count": len(covered_ids),
+        "quantity_binding": quantity_binding_quality_summary(quantity_binding or {}),
         "missing_from_adjudication": missing_from_adjudication,
         "missing_from_packet_accounting": missing_from_packet_accounting,
         "group_accounting": group_accounting or {},
@@ -295,6 +312,7 @@ def _build_analyst_memo_ready_packet(
     synthesis_packet: dict[str, Any],
     warning_packet: dict[str, Any],
     quality: dict[str, Any],
+    quantity_binding: dict[str, Any],
 ) -> dict[str, Any]:
     evidence_items = []
     mandatory_group_ids = _mandatory_group_ids(synthesis_packet)
@@ -307,6 +325,7 @@ def _build_analyst_memo_ready_packet(
                     len(evidence_items) + 1,
                     group,
                     must_use=str(group.get("group_id") or "") in mandatory_group_ids,
+                    quantity_bindings=quantity_bindings_for_group(quantity_binding, str(group.get("group_id") or "")),
                 )
             )
     for obligation in _list(synthesis_packet.get("warning_obligations")):
@@ -326,9 +345,13 @@ def _build_analyst_memo_ready_packet(
         "analyst_synthesis_packet": synthesis_packet,
         "analyst_argument_plan": synthesis_packet.get("argument_plan", []),
         "analyst_decision_logic": synthesis_packet.get("decision_logic", {}),
+        "analyst_quantity_binding_report": quantity_binding,
         "analyst_packet_quality_report": quality,
         "evidence_items": evidence_items,
     }
+    writer_packet = build_writer_packet(memo_ready)
+    memo_ready["writer_packet"] = writer_packet
+    memo_ready["writer_packet_quality_report"] = writer_packet.get("writer_packet_quality_report", {})
     memo_ready["decision_synthesis_contract"] = build_memo_ready_decision_synthesis_contract(memo_ready)
     return memo_ready
 
@@ -436,13 +459,20 @@ def _mandatory_group_ids(synthesis_packet: dict[str, Any]) -> set[str]:
     }
 
 
-def _memo_ready_item_from_group(index: int, group: dict[str, Any], *, must_use: bool) -> dict[str, Any]:
+def _memo_ready_item_from_group(
+    index: int,
+    group: dict[str, Any],
+    *,
+    must_use: bool,
+    quantity_bindings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     memo_role = str(group.get("memo_role") or "")
     source_labels = _string_list(group.get("source_labels"))
     proposition = str(group.get("proposition") or "")
     quantities = [
-        {"value": value, "interpretation": "Use this quantity only in relation to the group's proposition."}
-        for value in _memo_ready_quantities(group, proposition=proposition)
+        _memo_ready_quantity_from_binding(binding)
+        for binding in (quantity_bindings or [])
+        if isinstance(binding, dict) and str(binding.get("value") or "").strip()
     ]
     claim = _reader_claim_with_key_quantities(proposition, [row["value"] for row in quantities])
     return {
@@ -454,10 +484,36 @@ def _memo_ready_item_from_group(index: int, group: dict[str, Any], *, must_use: 
         "source_ids": _string_list(group.get("source_ids")),
         "quantities": quantities,
         "lineage": {"analyst_group_id": group.get("group_id"), "evidence_item_ids": group.get("covered_evidence_item_ids", [])},
+        "quantity_binding_lineage": [
+            {
+                "candidate_id": binding.get("candidate_id"),
+                "source_evidence_item_id": binding.get("source_evidence_item_id"),
+                "binding_source": binding.get("binding_source"),
+                "binding_confidence": binding.get("binding_confidence"),
+                "deterministic_warnings": binding.get("deterministic_warnings", []),
+            }
+            for binding in (quantity_bindings or [])
+            if isinstance(binding, dict)
+        ],
         "decision_relevance": group.get("rationale"),
         "caveat": "; ".join(_string_list(group.get("applicability_limits"))),
+        "source_appraisal": group.get("source_appraisal") if isinstance(group.get("source_appraisal"), dict) else {},
+        "source_use_warnings": _string_list(group.get("source_use_warnings")),
+        "allowed_wording": group.get("allowed_wording") if isinstance(group.get("allowed_wording"), dict) else {},
         "must_use": must_use,
     }
+
+
+def _memo_ready_quantity_from_binding(binding: dict[str, Any]) -> dict[str, str]:
+    return _drop_empty(
+        {
+            "value": str(binding.get("value") or "").strip(),
+            "interpretation": str(binding.get("interpretation") or "").strip(),
+            "source_evidence_item_id": str(binding.get("source_evidence_item_id") or "").strip(),
+            "source_labels": _string_list(binding.get("source_labels")),
+            "binding_confidence": str(binding.get("binding_confidence") or "").strip(),
+        }
+    )
 
 
 def _memo_ready_item_from_warning_obligation(index: int, obligation: dict[str, Any]) -> dict[str, Any]:
@@ -478,37 +534,6 @@ def _memo_ready_item_from_warning_obligation(index: int, obligation: dict[str, A
         "caveat": obligation.get("rationale"),
         "must_use": action in {"incorporate_as_counterweight", "bound_scope_or_confidence"} or severity == "critical",
     }
-
-
-def _memo_ready_quantities(group: dict[str, Any], *, proposition: str) -> list[str]:
-    proposition_quantities = _quantities_from_text(proposition)
-    quantities = _string_list(group.get("quantity_values"))
-    if proposition_quantities:
-        return proposition_quantities[:3]
-    if not quantities:
-        return []
-    preferred = [value for value in quantities if _quantity_value_is_interpretable(value)]
-    return _dedupe([*(preferred or quantities)])[:3]
-
-
-def _quantity_value_is_interpretable(value: str) -> bool:
-    lowered = value.lower()
-    return any(token in lowered for token in ("rr", "hr", "ci", "risk", "%", "participants", "subjects", "year", "wk", "month"))
-
-
-def _quantities_from_text(text: str) -> list[str]:
-    value = str(text or "")
-    patterns = (
-        r"\b(?:RR|HR|OR)\s*:?\s*\d+(?:\.\d+)?",
-        r"\brelative risk\s+of\s+\d+(?:\.\d+)?",
-        r"\b\d+(?:\.\d+)?\s*\(\s*95%\s*CI\s*[^)]+\)",
-        r"\b95%\s*(?:confidence interval|CI)\s*(?:of\s*)?\d+(?:\.\d+)?\s*(?:to|-)\s*\d+(?:\.\d+)?",
-        r"\b(?!95\b)\d+(?:\.\d+)?%",
-    )
-    found: list[str] = []
-    for pattern in patterns:
-        found.extend(match.group(0).strip() for match in re.finditer(pattern, value, flags=re.IGNORECASE))
-    return _dedupe(found)
 
 
 def _reader_claim_with_key_quantities(claim: str, quantities: list[str]) -> str:
@@ -547,6 +572,9 @@ def _group_from_row(index: int, adjudication_row: dict[str, Any], ledger_row: di
         "covered_evidence_item_ids": [evidence_id],
         "source_ids": _dedupe([*_string_list(ledger_row.get("source_ids")), *_string_list(adjudication_row.get("source_ids"))]),
         "source_labels": source_labels,
+        "source_appraisal": ledger_row.get("source_appraisal") if isinstance(ledger_row.get("source_appraisal"), dict) else {},
+        "source_use_warnings": _string_list(ledger_row.get("source_use_warnings")),
+        "allowed_wording": ledger_row.get("allowed_wording") if isinstance(ledger_row.get("allowed_wording"), dict) else {},
         "quantity_values": quantity_values,
         "applicability_limits": _applicability_limits(memo_use, ledger_row, adjudication_row),
         "rationale": _short_text(str(adjudication_row.get("rationale") or ledger_row.get("why_it_matters") or "Adjudicated as relevant to the decision."), 320),

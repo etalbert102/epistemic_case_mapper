@@ -118,6 +118,9 @@ class AnalystEvidenceGroup(BaseModel):
     evidence_strength: str = ""
     answer_impact: str = ""
     uncertainty_type: str = ""
+    source_appraisal: dict[str, Any] = Field(default_factory=dict)
+    source_use_warnings: list[str] = Field(default_factory=list)
+    allowed_wording: dict[str, Any] = Field(default_factory=dict)
 
 
 class AnalystSynthesisPacket(BaseModel):

@@ -98,6 +98,15 @@ def _group_from_decision_model_row(
             "covered_evidence_item_ids": evidence_ids,
             "source_ids": _dedupe([source_id for evidence_id in evidence_ids for source_id in _string_list(ledger_by_id[evidence_id].get("source_ids"))]),
             "source_labels": _dedupe([source for evidence_id in evidence_ids for source in _string_list(ledger_by_id[evidence_id].get("source_labels"))]),
+            "source_appraisal": _merged_source_appraisal(evidence_ids, ledger_by_id),
+            "source_use_warnings": _dedupe(
+                [
+                    warning
+                    for evidence_id in evidence_ids
+                    for warning in _string_list(ledger_by_id[evidence_id].get("source_use_warnings"))
+                ]
+            ),
+            "allowed_wording": _merged_allowed_wording(evidence_ids, ledger_by_id),
             "quantity_values": _dedupe(
                 [
                     *_string_list(row.get("quantity_values")),
@@ -311,6 +320,49 @@ def _first_ledger_claim(evidence_ids: list[str], ledger_by_id: dict[str, dict[st
         if claim:
             return claim
     return evidence_ids[0] if evidence_ids else ""
+
+
+def _merged_source_appraisal(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    appraisals = [
+        ledger_by_id[evidence_id].get("source_appraisal")
+        for evidence_id in evidence_ids
+        if isinstance(ledger_by_id.get(evidence_id, {}).get("source_appraisal"), dict)
+    ]
+    if not appraisals:
+        return {}
+    return {
+        "status": "ready",
+        "source_appraisal_ids": _dedupe([value for row in appraisals for value in _string_list(row.get("source_appraisal_ids"))]),
+        "document_types": _dedupe([value for row in appraisals for value in _string_list(row.get("document_types"))]),
+        "evidence_proximity": _dedupe([value for row in appraisals for value in _string_list(row.get("evidence_proximity"))]),
+        "recommended_uses": _dedupe([value for row in appraisals for value in _string_list(row.get("recommended_uses"))]),
+        "decision_directness": _least_direct([str(row.get("decision_directness") or "") for row in appraisals]),
+        "interpretation_caveats": _dedupe([value for row in appraisals for value in _string_list(row.get("interpretation_caveats"))])[:8],
+    }
+
+
+def _merged_allowed_wording(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    rows = [
+        ledger_by_id[evidence_id].get("allowed_wording")
+        for evidence_id in evidence_ids
+        if isinstance(ledger_by_id.get(evidence_id, {}).get("allowed_wording"), dict)
+    ]
+    if not rows:
+        return {}
+    return {
+        "preferred_verbs": _dedupe([value for row in rows for value in _string_list(row.get("preferred_verbs"))])[:8],
+        "avoid_terms": _dedupe([value for row in rows for value in _string_list(row.get("avoid_terms"))])[:10],
+        "must_qualify_with": _dedupe([value for row in rows for value in _string_list(row.get("must_qualify_with"))])[:6],
+        "causal_language_allowed": all(bool(row.get("causal_language_allowed")) for row in rows),
+    }
+
+
+def _least_direct(values: list[str]) -> str:
+    order = {"indirect": 0, "partial": 1, "direct": 2}
+    normalized = [value for value in values if value in order]
+    if not normalized:
+        return "unknown"
+    return min(normalized, key=lambda value: order[value])
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

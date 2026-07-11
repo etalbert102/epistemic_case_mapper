@@ -105,6 +105,28 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     scaffold = {
         "source_display_names": {"s1": "Benefit Study", "s2": "Equity Review"},
         "quantity_ledger": {"quantities": [{"claim_id": "c001", "quantity_text": "20 percent"}]},
+        "source_appraisal_report": {
+            "schema_id": "source_appraisal_report_v1",
+            "status": "ready",
+            "appraisal_by_source_id": {
+                "s1": {
+                    "source_appraisal_id": "sa_s1",
+                    "source_id": "s1",
+                    "source_label": "Benefit Study",
+                    "status": "ready",
+                    "source_use_warnings": ["association_not_causation"],
+                    "allowed_wording": {"causal_language_allowed": False},
+                },
+                "s2": {
+                    "source_appraisal_id": "sa_s2",
+                    "source_id": "s2",
+                    "source_label": "Equity Review",
+                    "status": "ready",
+                    "source_use_warnings": ["scope_sensitive"],
+                    "allowed_wording": {"preferred_verbs": ["bounds"]},
+                },
+            },
+        },
     }
 
     ledger = build_analyst_map_evidence_ledger(
@@ -117,11 +139,15 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     assert ledger["coverage_checks"]["retained_map_claim_rows"] == 2
     assert [row["evidence_item_id"] for row in ledger["rows"]] == ["claim:c001", "claim:c002", "relation:r001"]
     assert ledger["rows"][0]["source_labels"] == ["Benefit Study"]
+    assert ledger["rows"][0]["source_appraisal"]["status"] == "ready"
+    assert "association_not_causation" in ledger["rows"][0]["source_use_warnings"]
     assert ledger["rows"][0]["quantity_values"] == ["20 percent"]
     assert ledger["rows"][1]["existing_warning_codes"] == ["question_scope_mismatch"]
     assert ledger["rows"][1]["relation_context"][0]["relation_type"] == "in_tension_with"
     assert ledger["rows"][1]["relation_context"][0]["relation_contract"]["failure_condition"]
     assert ledger["rows"][2]["input_kind"] == "candidate_decision_edge"
+    assert ledger["rows"][2]["source_appraisal"]["status"] == "ready"
+    assert "scope_sensitive" in ledger["rows"][2]["source_use_warnings"]
     assert ledger["rows"][2]["current_role"] == "load_bearing_counterweight"
     assert ledger["rows"][2]["relation_contract"]["source_anchor_a"] == "shifts maintenance costs"
     assert ledger["rows"][2]["candidate_pair"]["decision_edge_contract"] == "scope_bounds_outcome"

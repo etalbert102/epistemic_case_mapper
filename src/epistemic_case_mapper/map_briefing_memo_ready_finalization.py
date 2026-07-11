@@ -38,6 +38,7 @@ def run_memo_ready_packet_synthesis(
         "schema_id": "memo_ready_packet_synthesis_report_v1",
         "status": "deterministic_fallback" if backend.strip() == "prompt" else "not_run",
         "accepted": backend.strip() == "prompt",
+        "live_enrichment_required": backend.strip() != "prompt",
         "used_default_path": True,
         "issues": [],
     }
@@ -46,12 +47,24 @@ def run_memo_ready_packet_synthesis(
     try:
         result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
     except RuntimeError as exc:
-        report.update({"status": "backend_error_deterministic_fallback", "issues": [str(exc)]})
+        report.update(
+            {
+                "status": "backend_error_live_enrichment_failed",
+                "accepted": False,
+                "issues": ["live_model_enrichment_failed", str(exc)],
+            }
+        )
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
     raw = result.text
     candidate = repair_markdown_structure(_extract_markdown(raw))
     if not candidate:
-        report.update({"status": "empty_or_unparseable_deterministic_fallback", "issues": ["synthesis returned no markdown"]})
+        report.update(
+            {
+                "status": "empty_or_unparseable_live_enrichment_failed",
+                "accepted": False,
+                "issues": ["live_model_enrichment_failed", "synthesis returned no markdown"],
+            }
+        )
         return {"memo": draft, "prompt": prompt, "raw": raw, "report": report}
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention)
@@ -59,6 +72,7 @@ def run_memo_ready_packet_synthesis(
         {
             "status": "accepted" if accepted else "accepted_with_retention_warnings",
             "accepted": True,
+            "used_default_path": False,
             "retention_status": retention.get("status"),
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
             "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
@@ -477,6 +491,23 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
     labels = _packet_source_labels(packet)
     common_prefix = _common_token_prefix(labels)
     replacements: dict[str, str] = {}
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        source_label = str(source.get("source_label") or "").strip()
+        display = _preferred_source_display(source, common_prefix=common_prefix)
+        if not display:
+            continue
+        aliases = [
+            str(source.get("source_id") or "").strip(),
+            source_label,
+            str(source.get("display_label") or "").strip(),
+            str(source.get("citation_label") or "").strip(),
+        ]
+        for alias in aliases:
+            for variant in _source_label_variants(alias):
+                if variant and variant != display:
+                    replacements[variant] = display
     for source_label in labels:
         if not source_label:
             continue
@@ -526,15 +557,21 @@ def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
         if not isinstance(source, dict):
             continue
         source_label = str(source.get("source_label") or "").strip()
-        if not source_label:
+        source_id = str(source.get("source_id") or "").strip()
+        if not source_label and not source_id:
             continue
         values = [
             source_label,
+            source_id,
             replacements.get(source_label, ""),
+            replacements.get(source_id, ""),
             str(source.get("display_label") or "").strip(),
             str(source.get("citation_label") or "").strip(),
         ]
-        aliases[source_label] = _dedupe(value for value in values if value)
+        alias_values = _dedupe(value for value in values if value)
+        for key in (source_label, source_id, *alias_values):
+            if key:
+                aliases[key] = alias_values
     return aliases
 
 
@@ -641,11 +678,7 @@ def _mandatory_items(packet: dict[str, Any]) -> list[dict[str, Any]]:
 def _item_retention_status(memo: str, item: dict[str, Any], source_aliases: dict[str, list[str]] | None = None) -> dict[str, Any]:
     claim = str(item.get("reader_claim") or "").strip()
     source = str(item.get("source_label") or "").strip()
-    quantities = [
-        str(quantity.get("value") or "").strip()
-        for quantity in _list(item.get("quantities"))
-        if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
-    ]
+    quantities = _retention_quantities(item)
     missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
     aliases = _dedupe([source, *(_source_aliases_for_label(source, source_aliases or {}) if source else [])])
     source_retained = not source or any(_contains_text(memo, alias) for alias in aliases)
@@ -672,11 +705,7 @@ def _obligation_retention_status(
 ) -> dict[str, Any]:
     statement = str(obligation.get("statement") or "").strip()
     source_labels = _string_list(obligation.get("source_labels"))
-    quantities = [
-        str(quantity.get("value") or "").strip()
-        for quantity in _list(obligation.get("quantities"))
-        if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
-    ]
+    quantities = _retention_quantities(obligation)
     missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
     source_retained = not source_labels or any(
         _contains_text(memo, alias)
@@ -743,6 +772,42 @@ def _repair_obligation(packet: dict[str, Any], issue: dict[str, Any]) -> dict[st
     }
 
 
+def _retention_quantities(row: dict[str, Any]) -> list[str]:
+    quantities = []
+    for quantity in _list(row.get("quantities")):
+        if not isinstance(quantity, dict):
+            continue
+        value = str(quantity.get("value") or "").strip()
+        if value and _quantity_required_for_retention(quantity, row):
+            quantities.append(value)
+    return quantities
+
+
+def _quantity_required_for_retention(quantity: dict[str, Any], row: dict[str, Any]) -> bool:
+    value = str(quantity.get("value") or "").strip()
+    if not value:
+        return False
+    text = " ".join(
+        [
+            value,
+            str(quantity.get("quantity_type") or ""),
+            str(quantity.get("interpretation") or ""),
+            str(row.get("role") or ""),
+            str(row.get("obligation_type") or ""),
+            str(row.get("statement") or row.get("reader_claim") or ""),
+        ]
+    ).lower()
+    if re.fullmatch(r"(?:19|20)\d{2}(?:\s*[–-]\s*(?:19|20)\d{2})?", value):
+        return False
+    if re.search(r"\bci\b|\bconfidence interval\b", text):
+        return True
+    if any(token in text for token in ("risk", "ratio", "odds", "hazard", "effect", "reduction", "increase", "prevalence", "incidence", "mortality", "dose", "serving", "per day", "/day", "mg", "percent", "%")):
+        return True
+    if str(row.get("role") or "") == "quantitative_anchor":
+        return True
+    return False
+
+
 def _acceptable_synthesis(memo: str, retention: dict[str, Any]) -> bool:
     return bool(memo.strip()) and int(retention.get("missing_mandatory_count", 0) or 0) <= 2
 
@@ -797,6 +862,8 @@ def _contains_text(text: str, needle: str) -> bool:
 
 def _contains_quantity(text: str, quantity: str) -> bool:
     if _contains_text(text, quantity):
+        return True
+    if "/day" in quantity.lower() and _contains_text(text, re.sub(r"/day\b", " per day", quantity, flags=re.IGNORECASE)):
         return True
     normalized_text = _norm(text)
     numbers = re.findall(r"\d+(?:\.\d+)?", quantity)

@@ -25,6 +25,27 @@ The repo already has several related pieces, but they are not integrated into an
 
 This means the pipeline can say whether a claim is anchored, but it cannot yet reliably say what kind of document produced the claim or what source-level caveats should constrain interpretation of the claim.
 
+## Memo-Impact Vertical Slice
+The first executable slice should focus on decision-grade memo impact before the full early-triage architecture. The current memo failure is not mainly junk-source contamination; it is that credible sources are used too flatly. The pipeline needs source-use guidance that reaches the analyst packet, writer packet, and synthesis prompt.
+
+This slice has a narrower target:
+
+- Derive transparent source-use appraisals after source cards and evidence-quality reports exist.
+- Preserve separate components rather than issuing an aggregate quality score.
+- Attach appraisal-derived use guidance to memo-facing evidence units.
+- Give the final writer allowed wording and calibration constraints for load-bearing evidence.
+- Evaluate whether the memo changes in the intended direction: association evidence stays associational, indirect evidence stays indirect, context sources stay contextual, and subgroup evidence bounds the answer rather than replacing it.
+
+The slice should not hard-quarantine sources, add early extraction gates, or block synthesis. It should produce report-only artifacts plus writer-packet fields that shape prose.
+
+Acceptance for this slice:
+
+- Every memo-facing evidence unit receives `source_appraisal`, `allowed_wording`, and `source_use_warnings` fields when source-card context is available.
+- Writer packet quality reports count source-appraised units and warn when load-bearing units lack appraisal context.
+- The synthesis prompt receives appraisal fields through the writer packet, not through a separate source dump.
+- Tests cover generic document/evidence classes rather than egg-specific terms: observational outcome evidence, indirect surrogate evidence, contextual guidance/explainer evidence, and subgroup/scope evidence.
+- The final memo can still be produced when appraisals are missing, but missing appraisals are visible in telemetry.
+
 ## Non-Goals
 - Do not replace claim anchoring or quote validation with source-level appraisal.
 - Do not let an unvalidated LLM judgment silently change evidence weight.

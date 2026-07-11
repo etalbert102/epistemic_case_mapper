@@ -137,7 +137,7 @@ def run_map_briefing(
     }
     scaffold["relation_value_report"] = build_relation_value_report(prioritized_map)
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
-    _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup)
+    _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup, backend_config=backend_config)
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
     _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
     prompt = build_map_briefing_prompt(
@@ -242,6 +242,7 @@ def _attach_decision_ready_context_reports(
     *,
     question: str,
     source_lookup: dict[str, str],
+    backend_config: ModelBackendConfig,
 ) -> None:
     scaffold.update(
         build_decision_ready_context_bundle(
@@ -249,6 +250,9 @@ def _attach_decision_ready_context_reports(
             scaffold=scaffold,
             question=question,
             source_lookup=source_lookup,
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
         )
     )
 
@@ -369,6 +373,17 @@ def _attach_decision_briefing_packet(
                     backend_retries=backend_config.retries,
                 )
             )
+            from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
+
+            scaffold.update(
+                run_analyst_quantity_binding(
+                    synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
+                    ledger=ledger,
+                    backend=backend_config.backend,
+                    backend_timeout=backend_config.timeout,
+                    backend_retries=backend_config.retries,
+                )
+            )
             scaffold.update(
                 build_analyst_packet_bundle(
                     packet=packet,
@@ -377,6 +392,7 @@ def _attach_decision_briefing_packet(
                     decision_model=scaffold.get("analyst_decision_model", {}),
                     memo_warning_packet=scaffold.get("memo_warning_packet", {}),
                     refinement=scaffold.get("analyst_packet_refinement", {}),
+                    quantity_binding=scaffold.get("analyst_quantity_binding_report", {}),
                 )
             )
             _promote_analyst_packet_as_active(scaffold)

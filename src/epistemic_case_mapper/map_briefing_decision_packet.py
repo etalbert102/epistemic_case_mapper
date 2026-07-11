@@ -15,22 +15,15 @@ from epistemic_case_mapper.map_briefing_packet_coverage import build_packet_cove
 from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_section_views import build_section_views
 from epistemic_case_mapper.map_briefing_answer_frame import normalize_answer_frame
-from epistemic_case_mapper.map_briefing_decision_problem import (
-    build_candidate_answer_set,
-    build_decision_problem_report,
-)
+from epistemic_case_mapper.map_briefing_decision_problem import build_candidate_answer_set, build_decision_problem_report
 from epistemic_case_mapper.map_briefing_decision_obligations import build_decision_obligation_graph
 from epistemic_case_mapper.map_briefing_decision_slots import build_decision_slot_inventory
 from epistemic_case_mapper.map_briefing_evidence_answer_matrix import build_evidence_answer_matrix
-from epistemic_case_mapper.map_briefing_packet_budget import (
-    build_packet_budget_allocation_report,
-    build_packet_compression_report,
-)
+from epistemic_case_mapper.map_briefing_packet_budget import build_packet_budget_allocation_report, build_packet_compression_report
 from epistemic_case_mapper.map_briefing_packet_views import build_decision_packet_views
 from epistemic_case_mapper.map_briefing_source_evidence_graph import build_source_evidence_graph
-from epistemic_case_mapper.map_briefing_source_bottom_lines import (
-    source_bottom_line_candidates as _source_bottom_line_candidates,
-)
+from epistemic_case_mapper.map_briefing_source_bottom_lines import source_bottom_line_candidates as _source_bottom_line_candidates
+from epistemic_case_mapper.map_briefing_source_appraisal import attach_source_appraisal_to_rows
 from epistemic_case_mapper.map_briefing_top_quantity_candidates import build_top_quantity_anchor_candidates
 from epistemic_case_mapper.map_briefing_vertical_slice_report import build_decision_model_vertical_slice_report
 
@@ -57,6 +50,7 @@ def build_decision_briefing_packet_bundle(scaffold: dict[str, Any], *, question:
     """
 
     candidate_pool = _candidate_pool(scaffold, question=question)
+    attach_source_appraisal_to_rows(candidate_pool, _dict(scaffold.get("source_appraisal_report")))
     source_trail = _source_trail(scaffold, candidate_pool)
     bundles = _trimmed_bundles(candidate_pool)
     retain_ledger = _must_retain_ledger(scaffold, bundles)
@@ -197,6 +191,9 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
                     "quality": card.get("quality"),
                     "inclusion_recommendation": card.get("inclusion_recommendation"),
                     "anchor_confidence": card.get("anchor_confidence"),
+                    "source_appraisal": card.get("source_appraisal"),
+                    "source_use_warnings": _string_list(card.get("source_use_warnings")),
+                    "allowed_wording": card.get("allowed_wording"),
                     "why_it_matters": _short_text(str(card.get("inclusion_reason", "")), 240),
                     "limits": _candidate_limits(card),
                     "directionality": _directionality_for_role(role),
@@ -410,6 +407,9 @@ def _bundle_from_candidate(index: int, row: dict[str, Any]) -> dict[str, Any]:
             "section_targets": _section_targets_for_row(row, role),
             "weight": _bundle_weight(row),
             "quality": row.get("quality"),
+            "source_appraisal": row.get("source_appraisal"),
+            "source_use_warnings": _string_list(row.get("source_use_warnings")),
+            "allowed_wording": row.get("allowed_wording"),
             "evidence_track": row.get("evidence_track"),
             "source_summary_decision_role": row.get("source_summary_decision_role"),
             "source_summary_directionality": row.get("source_summary_directionality"),

@@ -13,6 +13,11 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
     SourceCoverageReport,
     SourceMapReconciliationReport,
 )
+from epistemic_case_mapper.map_briefing_source_appraisal import (
+    appraisal_for_sources,
+    build_source_appraisal_report,
+    run_source_caveat_appraisal,
+)
 
 
 def build_decision_ready_context_bundle(
@@ -21,6 +26,9 @@ def build_decision_ready_context_bundle(
     scaffold: dict[str, Any],
     question: str,
     source_lookup: dict[str, str],
+    backend: str = "prompt",
+    backend_timeout: int | None = None,
+    backend_retries: int = 0,
 ) -> dict[str, Any]:
     source_urls = scaffold.get("source_urls", {}) if isinstance(scaffold.get("source_urls"), dict) else {}
     source_cards = build_source_evidence_cards(prioritized_map, source_lookup=source_lookup, source_urls=source_urls)
@@ -31,11 +39,24 @@ def build_decision_ready_context_bundle(
         candidate_map=prioritized_map,
     )
     quality = build_evidence_quality_report(source_cards)
+    caveat_appraisal = run_source_caveat_appraisal(
+        source_evidence_cards=source_cards,
+        evidence_quality_report=quality,
+        backend=backend,
+        backend_timeout=_source_appraisal_timeout(backend, backend_timeout),
+        backend_retries=backend_retries,
+    )
+    appraisal = build_source_appraisal_report(
+        source_evidence_cards=source_cards,
+        evidence_quality_report=quality,
+        source_caveat_appraisal_report=caveat_appraisal.get("source_caveat_appraisal_report", {}),
+    )
     reconciliation = build_source_map_reconciliation(prioritized_map, source_cards)
     candidates = build_candidate_evidence_cards(
         source_evidence_cards=source_cards,
         source_map_reconciliation=reconciliation,
         evidence_quality_report=quality,
+        source_appraisal_report=appraisal,
         question=question,
     )
     candidates = apply_map_eligibility_to_candidate_cards(candidates, scaffold)
@@ -48,10 +69,20 @@ def build_decision_ready_context_bundle(
         "source_evidence_cards": source_cards,
         "source_sufficiency_report": sufficiency,
         "evidence_quality_report": quality,
+        "source_appraisal_report": appraisal,
+        **caveat_appraisal,
         "source_map_reconciliation": reconciliation,
         "candidate_evidence_cards": candidates,
         "source_coverage_report": coverage,
     }
+
+
+def _source_appraisal_timeout(backend: str, backend_timeout: int | None) -> int | None:
+    if backend.strip() == "prompt":
+        return backend_timeout
+    if backend_timeout is None:
+        return 90
+    return min(max(20, backend_timeout), 90)
 
 
 def build_source_map_reconciliation(candidate_map: dict[str, Any], source_evidence_cards: dict[str, Any]) -> dict[str, Any]:
@@ -154,6 +185,7 @@ def build_candidate_evidence_cards(
     source_evidence_cards: dict[str, Any],
     source_map_reconciliation: dict[str, Any],
     evidence_quality_report: dict[str, Any],
+    source_appraisal_report: dict[str, Any] | None = None,
     question: str,
 ) -> dict[str, Any]:
     question_terms = _content_terms(question)
@@ -169,13 +201,15 @@ def build_candidate_evidence_cards(
         profile = _candidate_profile(source_card)
         role = str(profile["primary_role"])
         claim_ids = _string_list(source_card.get("claim_ids"))
+        source_ids = _string_list(source_card.get("source_id"))
+        source_appraisal = appraisal_for_sources(source_appraisal_report or {}, source_ids)
         appendix_only = _appendix_only(source_card, score, quality_row, backed_claims, claim_ids)
         cards.append(
             {
                 "candidate_card_id": f"ec{index:04d}",
                 "source_card_ids": [source_card_id] if source_card_id else [],
                 "claim_ids": claim_ids,
-                "source_ids": _string_list(source_card.get("source_id")),
+                "source_ids": source_ids,
                 "source_titles": _string_list(source_card.get("source_title")),
                 "claim": _shorten(str(source_card.get("source_quote_or_excerpt", "")), 300),
                 "source_excerpt": _shorten(str(source_card.get("source_quote_or_excerpt", "")), 500),
@@ -190,6 +224,9 @@ def build_candidate_evidence_cards(
                 "quantity_values": _string_list(source_card.get("quantity_values")),
                 "limitations": _string_list(source_card.get("limitations")),
                 "anchor_confidence": str(source_card.get("anchor_confidence") or "missing"),
+                "source_appraisal": source_appraisal,
+                "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
+                "allowed_wording": source_appraisal.get("allowed_wording", {}),
                 "off_question_risk": score < 4,
                 "fragment_risk": bool(source_card.get("fragment_risk") or source_card.get("boilerplate_risk")),
             }

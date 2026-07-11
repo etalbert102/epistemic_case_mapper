@@ -5,6 +5,9 @@ from typing import Any
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
+    writer_packet = memo_ready_packet.get("writer_packet") if isinstance(memo_ready_packet, dict) else None
+    if isinstance(writer_packet, dict) and writer_packet.get("evidence_units"):
+        return build_writer_packet_synthesis_prompt(writer_packet)
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record, but write for a human decision-maker rather than exposing packet structure.\n"
@@ -34,4 +37,32 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
         "## Decision-Relevant Evidence\n\n"
         "Memo-ready packet:\n"
         f"{json.dumps(memo_ready_packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def build_writer_packet_synthesis_prompt(writer_packet: dict[str, Any]) -> str:
+    return (
+        "You are a senior decision analyst. Write a coherent decision memo from the source-bound writer packet.\n"
+        "The writer packet is the complete writing interface. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
+        "Write for a human decision-maker; do not expose packet structure.\n\n"
+        "Rules:\n"
+        "- Answer the decision question directly in the first paragraph.\n"
+        "- Use only facts, quantities, and source labels present in the writer packet.\n"
+        "- Use only quantities listed inside evidence_units.quantities; do not reintroduce excluded_quantity_values.\n"
+        "- Cite the source_display or source_label attached to the evidence unit or quantity that supports the sentence.\n"
+        "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
+        "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
+        "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
+        "- Use each evidence unit's source_appraisal, allowed_wording, and source_use_warnings to calibrate verbs, causal language, and uncertainty.\n"
+        "- Treat cruxes and subgroup signals as calibration unless the packet says they change the default answer.\n"
+        "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
+        "- Include a concise practical implication.\n"
+        "- Use natural Markdown and choose headings that fit the decision question.\n\n"
+        "Suggested memo shape when it fits the case:\n"
+        "## Decision Brief\n"
+        "## Why This Is the Best Current Read\n"
+        "## What Could Change the Answer\n"
+        "## Practical Implications\n\n"
+        "Source-bound writer packet:\n"
+        f"{json.dumps(writer_packet, indent=2, ensure_ascii=False)}\n"
     )

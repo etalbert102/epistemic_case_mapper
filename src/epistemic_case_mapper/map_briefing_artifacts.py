@@ -54,6 +54,10 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("source_bottom_line_cards", "source_bottom_line_cards.json", "json", _scaffold_value("source_bottom_line_cards"), review_label="Source bottom-line cards"),
         ArtifactSpec("source_sufficiency_report", "source_sufficiency_report.json", "json", _scaffold_value("source_sufficiency_report"), review_label="Source sufficiency report"),
         ArtifactSpec("evidence_quality_report", "evidence_quality_report.json", "json", _scaffold_value("evidence_quality_report"), review_label="Evidence quality report"),
+        ArtifactSpec("source_appraisal_packets", "source_appraisal_packets.json", "json", _scaffold_value("source_appraisal_packets"), review_label="Source appraisal packets"),
+        ArtifactSpec("source_caveat_appraisal_report", "source_caveat_appraisal_report.json", "json", _scaffold_value("source_caveat_appraisal_report"), review_label="Source caveat appraisal report"),
+        ArtifactSpec("source_caveat_appraisal_run_report", "source_caveat_appraisal_run_report.json", "json", _scaffold_value("source_caveat_appraisal_run_report"), review_label="Source caveat appraisal run report"),
+        ArtifactSpec("source_appraisal_report", "source_appraisal_report.json", "json", _scaffold_value("source_appraisal_report"), review_label="Source appraisal report"),
         ArtifactSpec("candidate_evidence_cards", "candidate_evidence_cards.json", "json", _scaffold_value("candidate_evidence_cards"), review_label="Candidate evidence cards"),
         ArtifactSpec("source_map_reconciliation", "source_map_reconciliation.json", "json", _scaffold_value("source_map_reconciliation"), review_label="Source-map reconciliation"),
         ArtifactSpec("source_coverage_report", "source_coverage_report.json", "json", _scaffold_value("source_coverage_report"), review_label="Source coverage report"),
@@ -137,11 +141,18 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_packet_refinement", "analyst_packet_refinement.json", "json", _scaffold_value("analyst_packet_refinement"), review_label="Analyst packet refinement"),
         ArtifactSpec("analyst_packet_refinement_parse_report", "analyst_packet_refinement_parse_report.json", "json", _scaffold_value("analyst_packet_refinement_parse_report"), review_label="Analyst packet refinement parse report"),
         ArtifactSpec("analyst_packet_refinement_report", "analyst_packet_refinement_report.json", "json", _scaffold_value("analyst_packet_refinement_report"), review_label="Analyst packet refinement report"),
+        ArtifactSpec("analyst_quantity_binding_prompt", "analyst_quantity_binding_prompt.txt", "markdown", _scaffold_text("analyst_quantity_binding_prompt")),
+        ArtifactSpec("analyst_quantity_binding_raw", "analyst_quantity_binding_raw.txt", "markdown", _scaffold_text("analyst_quantity_binding_raw")),
+        ArtifactSpec("analyst_quantity_binding_report", "analyst_quantity_binding_report.json", "json", _scaffold_value("analyst_quantity_binding_report"), review_label="Analyst quantity binding"),
+        ArtifactSpec("analyst_quantity_binding_parse_report", "analyst_quantity_binding_parse_report.json", "json", _scaffold_value("analyst_quantity_binding_parse_report"), review_label="Analyst quantity binding parse report"),
+        ArtifactSpec("analyst_quantity_binding_run_report", "analyst_quantity_binding_run_report.json", "json", _scaffold_value("analyst_quantity_binding_run_report"), review_label="Analyst quantity binding run report"),
         ArtifactSpec("analyst_answer_frame", "analyst_answer_frame.json", "json", _scaffold_value("analyst_answer_frame"), review_label="Analyst answer frame"),
         ArtifactSpec("analyst_evidence_groups", "analyst_evidence_groups.json", "json", _scaffold_value("analyst_evidence_groups"), review_label="Analyst evidence groups"),
         ArtifactSpec("analyst_synthesis_packet", "analyst_synthesis_packet.json", "json", _scaffold_value("analyst_synthesis_packet"), review_label="Analyst synthesis packet"),
         ArtifactSpec("analyst_packet_quality_report", "analyst_packet_quality_report.json", "json", _scaffold_value("analyst_packet_quality_report"), review_label="Analyst packet quality"),
         ArtifactSpec("analyst_memo_ready_packet", "analyst_memo_ready_packet.json", "json", _scaffold_value("analyst_memo_ready_packet"), review_label="Analyst memo-ready packet"),
+        ArtifactSpec("writer_packet", "writer_packet.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("writer_packet", {}), review_label="Writer packet"),
+        ArtifactSpec("writer_packet_quality_report", "writer_packet_quality_report.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("writer_packet_quality_report", {}), review_label="Writer packet quality"),
         ArtifactSpec("active_memo_ready_packet_report", "active_memo_ready_packet_report.json", "json", _scaffold_value("active_memo_ready_packet_report"), review_label="Active memo-ready packet report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
@@ -527,6 +538,8 @@ def map_briefing_summary_payload(
     source_cards = scaffold.get("source_evidence_cards", {}) if isinstance(scaffold.get("source_evidence_cards"), dict) else {}
     source_sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
     evidence_quality = scaffold.get("evidence_quality_report", {}) if isinstance(scaffold.get("evidence_quality_report"), dict) else {}
+    source_appraisal = scaffold.get("source_appraisal_report", {}) if isinstance(scaffold.get("source_appraisal_report"), dict) else {}
+    source_caveat_run = scaffold.get("source_caveat_appraisal_run_report", {}) if isinstance(scaffold.get("source_caveat_appraisal_run_report"), dict) else {}
     candidate_cards = scaffold.get("candidate_evidence_cards", {}) if isinstance(scaffold.get("candidate_evidence_cards"), dict) else {}
     reconciliation = scaffold.get("source_map_reconciliation", {}) if isinstance(scaffold.get("source_map_reconciliation"), dict) else {}
     source_coverage = scaffold.get("source_coverage_report", {}) if isinstance(scaffold.get("source_coverage_report"), dict) else {}
@@ -570,6 +583,11 @@ def map_briefing_summary_payload(
         "source_sufficiency_missing_categories": source_sufficiency.get("missing_source_categories", []),
         "evidence_quality_weak_or_indirect_count": evidence_quality.get("weak_or_indirect_count"),
         "evidence_quality_unknown_count": evidence_quality.get("unknown_quality_count"),
+        "source_appraisal_status": source_appraisal.get("status"),
+        "source_appraisal_source_count": source_appraisal.get("source_count"),
+        "source_caveat_appraisal_status": source_caveat_run.get("status"),
+        "source_caveat_appraisal_fallback_count": source_caveat_run.get("fallback_appraisal_count"),
+        "source_appraisal_warning_counts": _source_appraisal_warning_counts(source_appraisal),
         "candidate_evidence_card_count": candidate_cards.get("card_count"),
         "candidate_evidence_main_text_count": candidate_cards.get("main_text_count"),
         "source_map_reconciliation_unbacked_count": reconciliation.get("unbacked_count"),
@@ -634,6 +652,17 @@ def _relations(candidate_map: dict[str, Any]) -> list[dict[str, Any]]:
 def _list_count(value: dict[str, Any], key: str) -> int:
     items = value.get(key, [])
     return len(items) if isinstance(items, list) else 0
+
+
+def _source_appraisal_warning_counts(report: dict[str, Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for appraisal in report.get("appraisals", []) if isinstance(report.get("appraisals"), list) else []:
+        if not isinstance(appraisal, dict):
+            continue
+        for warning in appraisal.get("source_use_warnings", []) if isinstance(appraisal.get("source_use_warnings"), list) else []:
+            key = str(warning)
+            counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _scaffold_dict(scaffold: dict[str, Any], key: str) -> dict[str, Any]:

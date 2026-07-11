@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
+from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
 
@@ -286,6 +288,93 @@ def test_analyst_packet_does_not_bind_source_matched_quantity_to_semantically_wr
     assert result["analyst_synthesis_packet"]["quantitative_anchors"][0]["covered_evidence_item_ids"] == ["quantity:risk_ratio"]
 
 
+def test_analyst_quantity_binding_blocks_off_scope_age_quantity_from_memo_obligations() -> None:
+    packet = {
+        "decision_question": "For generally healthy adults, should eggs be treated as harmful or neutral for cardiovascular risk?",
+        "answer_frame": {
+            "default_answer": "Treat moderate egg intake as neutral for generally healthy adults.",
+            "confidence": "medium",
+        },
+        "source_trail": [
+            {"source_id": "adult_cvd", "source_label": "Adult CVD Cohort"},
+            {"source_id": "child_guideline", "source_label": "Child Nutrition Guideline"},
+        ],
+    }
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": packet["decision_question"],
+        "rows": [
+            {
+                "evidence_item_id": "claim:adult_cvd",
+                "input_kind": "claim",
+                "source_ids": ["adult_cvd"],
+                "source_labels": ["Adult CVD Cohort"],
+                "claim": "Moderate egg consumption up to one egg per day was not associated with incident cardiovascular disease risk in adults.",
+                "source_excerpt": "At least one egg per day versus less than one egg per month had hazard ratio 0.93, 95% confidence interval 0.82 to 1.05.",
+                "quantity_values": ["hazard ratio 0.93", "95% confidence interval 0.82 to 1.05"],
+            },
+            {
+                "evidence_item_id": "claim:child_age_scope",
+                "input_kind": "claim",
+                "source_ids": ["child_guideline"],
+                "source_labels": ["Child Nutrition Guideline"],
+                "claim": "Eggs are included as a recommended food for children aged 6 months and older.",
+                "source_excerpt": "For toddlers 12 to 24 months old whose diets do not include meat, the committee advised providing eggs.",
+                "quantity_values": ["6 to 12 months old", "12 to 24 months old"],
+            },
+        ],
+    }
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": packet["decision_question"],
+        "direct_answer": "Treat moderate egg intake as neutral for generally healthy adults.",
+        "confidence": "medium",
+        "overall_rationale": "Adult CVD outcome evidence carries the decision; child feeding guidance is only background.",
+        "evidence_groups": [
+            {
+                "group_id": "adult_safety",
+                "proposition": "Moderate egg consumption up to one egg per day is not associated with increased cardiovascular disease risk in generally healthy adults.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["claim:adult_cvd", "claim:child_age_scope"],
+                "rationale": "Use adult cardiovascular outcome evidence as the support proposition.",
+            }
+        ],
+    }
+
+    result = build_analyst_packet_bundle(packet=packet, ledger=ledger, adjudication={"rows": []}, decision_model=decision_model)
+
+    binding = result["analyst_quantity_binding_report"]
+    approved_values = {row["value"] for row in binding["approved_bindings"]}
+    rejected_values = {row["value"] for row in binding["rejected_bindings"]}
+    memo_item = result["analyst_memo_ready_packet"]["evidence_items"][0]
+    memo_quantity_values = {row["value"] for row in memo_item["quantities"]}
+
+    assert "95% confidence interval 0.82 to 1.05" in approved_values
+    assert "6 to 12 months old" in rejected_values
+    assert "12 to 24 months old" in rejected_values
+    assert "6 to 12 months old" not in memo_quantity_values
+    assert "12 to 24 months old" not in memo_quantity_values
+    assert "6 to 12 months old" not in memo_item["reader_claim"]
+    assert binding["rejected_count"] == 2
+
+
+def test_analyst_quantity_binding_prompt_backend_returns_visible_report() -> None:
+    result = build_analyst_packet_bundle(packet=_packet(), ledger=_ledger(), adjudication=_adjudication())
+
+    binding = run_analyst_quantity_binding(
+        synthesis_packet=result["analyst_synthesis_packet"],
+        ledger=_ledger(),
+        backend="prompt",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert binding["analyst_quantity_binding_report"]["schema_id"] == "analyst_quantity_binding_report_v1"
+    assert binding["analyst_quantity_binding_run_report"]["status"] == "prompt_backend_deterministic"
+    assert binding["analyst_quantity_binding_prompt"]
+
+
 def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
     warning_packet = {
         "schema_id": "memo_warning_packet_v1",
@@ -415,11 +504,39 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
 
     prompt = build_memo_ready_packet_synthesis_prompt(result["analyst_memo_ready_packet"])
 
-    assert "analyst_argument_plan" in prompt
-    assert "analyst_decision_logic" in prompt
-    assert "Treat these as guidance for what matters" in prompt
-    assert "Exercise analyst judgment" in prompt
+    assert "source-bound writer packet" in prompt
+    assert "argument_plan" in prompt
+    assert "decision_logic" in prompt
+    assert "complete writing interface" in prompt
     assert "weigh_risk" in prompt
+    assert '"evidence_items"' not in prompt
+
+
+def test_analyst_packet_builds_source_bound_writer_packet() -> None:
+    result = build_analyst_packet_bundle(packet=_packet(), ledger=_ledger(), adjudication=_adjudication())
+
+    writer_packet = result["analyst_memo_ready_packet"]["writer_packet"]
+    quality = result["analyst_memo_ready_packet"]["writer_packet_quality_report"]
+    support = next(unit for unit in writer_packet["evidence_units"] if unit["role"] == "strongest_support")
+
+    assert writer_packet["schema_id"] == "writer_packet_v1"
+    assert quality["status"] == "ready"
+    assert support["quantities"][0]["value"] == "25% reduction"
+    assert support["quantities"][0]["source_evidence_item_id"] == "bundle:support"
+    assert support["quantities"][0]["source_label"] == "Outcome Study"
+    assert quality["source_bound_quantity_count"] >= 1
+
+
+def test_presentation_normalization_replaces_source_ids_from_source_trail() -> None:
+    packet = build_analyst_packet_bundle(packet=_packet(), ledger=_ledger(), adjudication=_adjudication())[
+        "analyst_memo_ready_packet"
+    ]
+    memo = "## Decision Brief\n\nThe estimate was 25% [s1].\n\n## Sources\n\n* s1\n"
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "[Outcome Study]" in result["memo"]
+    assert "[s1]" not in result["memo"]
 
 
 def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet() -> None:
