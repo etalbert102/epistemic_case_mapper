@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator
 
 
 PROGRESS_FILENAME = "memo_creation_progress.jsonl"
@@ -50,6 +51,36 @@ def record_memo_progress(
         handle.write(json.dumps(row, sort_keys=True) + "\n")
     _print_progress(row)
     return row
+
+
+@contextmanager
+def memo_progress_stage(
+    artifacts: Path,
+    stage: str,
+    *,
+    backend: str = "",
+    details: dict[str, Any] | None = None,
+    completion_details: Callable[[], dict[str, Any]] | None = None,
+) -> Iterator[None]:
+    record_memo_progress(artifacts, stage, "started", backend=backend, details=details)
+    try:
+        yield
+    except Exception as exc:
+        record_memo_progress(
+            artifacts,
+            stage,
+            "failed",
+            backend=backend,
+            details={"error_type": type(exc).__name__, "error": str(exc)[:500]},
+        )
+        raise
+    record_memo_progress(
+        artifacts,
+        stage,
+        "completed",
+        backend=backend,
+        details=completion_details() if completion_details else {},
+    )
 
 
 def _print_progress(row: dict[str, Any]) -> None:

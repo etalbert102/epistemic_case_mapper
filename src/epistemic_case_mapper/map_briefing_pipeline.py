@@ -43,7 +43,7 @@ from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
     write_final_reader_outputs as _write_final_reader_outputs,
 )
-from epistemic_case_mapper.map_briefing_memo_progress import record_memo_progress, reset_memo_progress
+from epistemic_case_mapper.map_briefing_memo_progress import memo_progress_stage, record_memo_progress, reset_memo_progress
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
@@ -130,20 +130,16 @@ def run_map_briefing(
     }
     scaffold["relation_value_report"] = build_relation_value_report(prioritized_map)
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
-    progress("decision_ready_context", "started")
-    _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup, backend_config=backend_config)
-    progress("decision_ready_context", "completed", {"source_count": scaffold.get("source_appraisal_report", {}).get("source_count", 0)})
-    progress("decision_spine", "started")
-    _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
-    progress("decision_spine", "completed", {"status": scaffold.get("canonical_decision_spine", {}).get("status", "unknown")})
-    progress("decision_packet", "started")
-    _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
-    progress("decision_packet", "completed", {"status": scaffold.get("active_memo_ready_packet_report", {}).get("status", "unknown")})
+    with memo_progress_stage(artifacts, "decision_ready_context", backend=backend, completion_details=lambda: {"source_count": scaffold.get("source_appraisal_report", {}).get("source_count", 0)}):
+        _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup, backend_config=backend_config)
+    with memo_progress_stage(artifacts, "decision_spine", backend=backend, completion_details=lambda: {"status": scaffold.get("canonical_decision_spine", {}).get("status", "unknown")}):
+        _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
+    with memo_progress_stage(artifacts, "decision_packet", backend=backend, completion_details=lambda: {"status": scaffold.get("active_memo_ready_packet_report", {}).get("status", "unknown")}):
+        _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
     prompt = build_map_briefing_prompt(candidate_map=prioritized_map, quality_report=quality_report, question=question, source_lookup=source_lookup, erosion_audit=erosion_audit, scaffold=scaffold)
 
-    progress("scaffold_artifacts", "started")
-    scaffold_paths = write_scaffold_artifacts(artifacts=artifacts, prompt=prompt, prioritized_map=prioritized_map, prioritization_report=prioritization_report, erosion_audit=erosion_audit, scaffold=scaffold)
-    progress("scaffold_artifacts", "completed", {"artifact_count": len(scaffold_paths)})
+    with memo_progress_stage(artifacts, "scaffold_artifacts", backend=backend):
+        scaffold_paths = write_scaffold_artifacts(artifacts=artifacts, prompt=prompt, prioritized_map=prioritized_map, prioritization_report=prioritization_report, erosion_audit=erosion_audit, scaffold=scaffold)
     briefing_validation_path = artifacts / "briefing_validation_report.json"
 
     raw_path = artifacts / "map_briefing_raw.txt"
