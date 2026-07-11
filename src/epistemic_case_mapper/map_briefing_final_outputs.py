@@ -5,6 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_memo_progress import (
+    memo_progress_path,
+    record_memo_progress,
+    reset_memo_progress,
+)
 
 
 @dataclass(frozen=True)
@@ -73,15 +78,20 @@ def write_final_reader_outputs(
     from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
     from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
 
+    reset_memo_progress(artifacts)
+    record_memo_progress(artifacts, "final_reader_outputs", "started", backend=backend_config.backend)
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
+    record_memo_progress(artifacts, "compose_memo_package", "completed", backend=backend_config.backend)
     evidence_appendix = str(memo_package["appendix"])
     if _should_use_memo_ready_packet(memo_package["scaffold"]):
+        record_memo_progress(artifacts, "memo_output_path", "memo_ready", backend=backend_config.backend)
         output_path_result = _run_memo_ready_final_output_path(
             memo_package=memo_package,
             backend_config=backend_config,
             artifacts=artifacts,
         )
     else:
+        record_memo_progress(artifacts, "memo_output_path", "legacy", backend=backend_config.backend)
         output_path_result = _run_legacy_final_output_path(
             memo_package=memo_package,
             evidence_appendix=evidence_appendix,
@@ -99,6 +109,13 @@ def write_final_reader_outputs(
     memo_ready_repair_result = output_path_result["memo_ready_repair_result"]
     memo_ready_final_polish_result = output_path_result["memo_ready_final_polish_result"]
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
+    record_memo_progress(
+        artifacts,
+        "metadata_and_diagnostics",
+        "started",
+        backend=backend_config.backend,
+        details={"memo_words": len(reader_memo.split())},
+    )
     paths = _final_reader_output_paths(artifacts)
     diagnostics = _build_final_reader_diagnostics(
         reader_memo=reader_memo,
@@ -133,6 +150,7 @@ def write_final_reader_outputs(
         memo_ready_final_polish_result=memo_ready_final_polish_result,
         diagnostics=diagnostics,
     )
+    record_memo_progress(artifacts, "final_reader_outputs", "completed", backend=backend_config.backend)
     return {
         "briefing_path": paths.briefing,
         "evidence_appendix_path": paths.evidence_appendix,
@@ -184,16 +202,39 @@ def _run_memo_ready_final_output_path(
 
     packet = memo_package["scaffold"].get("memo_ready_packet")
     memo_ready_packet = packet if isinstance(packet, dict) else {}
+    record_memo_progress(
+        artifacts,
+        "memo_ready_synthesis",
+        "started",
+        backend=backend_config.backend,
+        details={"evidence_items": len(memo_ready_packet.get("evidence_items", [])) if isinstance(memo_ready_packet.get("evidence_items"), list) else 0},
+    )
     synthesis = run_memo_ready_packet_synthesis(
         memo_ready_packet,
         backend=backend_config.backend,
         backend_timeout=backend_config.timeout,
         backend_retries=backend_config.retries,
     )
+    record_memo_progress(
+        artifacts,
+        "memo_ready_synthesis",
+        "completed",
+        backend=backend_config.backend,
+        details=_progress_report_details(synthesis),
+    )
     section_rewrite_result = _memo_ready_section_rewrite_result(synthesis, artifacts=artifacts)
     memo_package["scaffold"]["section_context_acceptance_status"] = "ready"
     rewrite_result = _memo_ready_rewrite_result(synthesis)
+    record_memo_progress(artifacts, "memo_ready_retention_check", "started", backend=backend_config.backend)
     retention = build_memo_ready_packet_retention_report(str(rewrite_result["memo"]), memo_ready_packet)
+    record_memo_progress(
+        artifacts,
+        "memo_ready_retention_check",
+        "completed",
+        backend=backend_config.backend,
+        details=_progress_report_details({"report": retention}),
+    )
+    record_memo_progress(artifacts, "memo_ready_repair", "started", backend=backend_config.backend)
     repair = run_memo_ready_packet_repair(
         str(rewrite_result["memo"]),
         memo_ready_packet,
@@ -202,11 +243,19 @@ def _run_memo_ready_final_output_path(
         backend_timeout=backend_config.timeout,
         backend_retries=backend_config.retries,
     )
+    record_memo_progress(
+        artifacts,
+        "memo_ready_repair",
+        "completed",
+        backend=backend_config.backend,
+        details=_progress_report_details(repair),
+    )
     rewrite_result["memo"] = repair["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_repair_status"] = repair.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["active_memo_ready_packet_method"] = str(
         memo_ready_packet.get("method") or ""
     )
+    record_memo_progress(artifacts, "memo_ready_final_polish", "started", backend=backend_config.backend)
     final_polish = run_memo_ready_final_polish(
         str(rewrite_result["memo"]),
         memo_ready_packet,
@@ -214,9 +263,23 @@ def _run_memo_ready_final_output_path(
         backend_timeout=backend_config.timeout,
         backend_retries=backend_config.retries,
     )
+    record_memo_progress(
+        artifacts,
+        "memo_ready_final_polish",
+        "completed",
+        backend=backend_config.backend,
+        details=_progress_report_details(final_polish),
+    )
     rewrite_result["memo"] = final_polish["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_final_polish_status"] = final_polish.get("report", {}).get("status")
     presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), memo_ready_packet)
+    record_memo_progress(
+        artifacts,
+        "memo_ready_presentation_normalization",
+        "completed",
+        backend=backend_config.backend,
+        details=_progress_report_details(presentation),
+    )
     rewrite_result["memo"] = presentation["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_status"] = presentation.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_changes"] = presentation.get("report", {}).get("changes", [])
@@ -252,6 +315,7 @@ def _run_legacy_final_output_path(
 
     packet_plan_result = None
     if _should_use_packet_first(memo_package["scaffold"]):
+        record_memo_progress(artifacts, "packet_first_section_plan", "started", backend=backend_config.backend)
         packet_plan_result = write_packet_first_artifacts(
             artifacts=artifacts,
             packet=memo_package["scaffold"]["decision_briefing_packet"],
@@ -261,6 +325,7 @@ def _run_legacy_final_output_path(
         )
         section_rewrite_result = packet_first_section_rewrite_result(packet_plan_result)
     else:
+        record_memo_progress(artifacts, "legacy_section_rewrite", "started", backend=backend_config.backend)
         section_rewrite_result = rewrite_reader_memo_by_section(
             str(memo_package["memo"]),
             evidence_appendix,
@@ -271,6 +336,8 @@ def _run_legacy_final_output_path(
             backend_retries=backend_config.retries,
             artifacts=artifacts,
         )
+    record_memo_progress(artifacts, "legacy_section_memo", "completed", backend=backend_config.backend)
+    record_memo_progress(artifacts, "legacy_reader_rewrite", "started", backend=backend_config.backend)
     rewrite_result = _run_reader_memo_rewrite(
         section_memo=str(section_rewrite_result["memo"]),
         evidence_appendix=evidence_appendix,
@@ -278,8 +345,10 @@ def _run_legacy_final_output_path(
         prioritized_map=prioritized_map,
         backend_config=backend_config,
     )
+    record_memo_progress(artifacts, "legacy_reader_rewrite", "completed", backend=backend_config.backend, details=_progress_report_details(rewrite_result))
     _canonicalize_packet_aliases(packet_plan_result, rewrite_result)
     _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
+    record_memo_progress(artifacts, "legacy_packet_repairs", "started", backend=backend_config.backend)
     reader_packet_repair_result, packet_repair_result = _run_legacy_packet_repairs(
         rewrite_result,
         memo_package,
@@ -287,8 +356,11 @@ def _run_legacy_final_output_path(
         build_memo_packet_retention_report=build_memo_packet_retention_report,
         run_packet_retention_repair=run_packet_retention_repair,
     )
+    record_memo_progress(artifacts, "legacy_packet_repairs", "completed", backend=backend_config.backend)
     reader_memo_for_editor = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
+    record_memo_progress(artifacts, "legacy_editorial_pass", "started", backend=backend_config.backend)
     editorial_result = _run_decision_memo_editorial_pass(reader_memo_for_editor, memo_package["scaffold"], backend_config)
+    record_memo_progress(artifacts, "legacy_editorial_pass", "completed", backend=backend_config.backend, details=_progress_report_details(editorial_result))
     rewrite_result["memo"] = editorial_result["memo"]
     rewrite_result.setdefault("report", {})["decision_memo_editorial_status"] = editorial_result.get("report", {}).get("status")
     return {
@@ -400,6 +472,18 @@ def _memo_ready_rewrite_result(synthesis_result: dict[str, Any]) -> dict[str, An
         "raw": synthesis_result.get("raw", ""),
         "report": report,
     }
+
+
+def _progress_report_details(result: dict[str, Any]) -> dict[str, Any]:
+    report = result.get("report", result) if isinstance(result, dict) else {}
+    if not isinstance(report, dict):
+        return {}
+    keys = ("status", "accepted", "missing_mandatory_count", "unresolved_warning_count", "issue_count")
+    details = {key: report[key] for key in keys if key in report}
+    issues = report.get("issues")
+    if "issue_count" not in details and isinstance(issues, list):
+        details["issue_count"] = len(issues)
+    return details
 
 
 def _run_decision_memo_editorial_pass(
@@ -796,6 +880,7 @@ def _memo_ready_summary_paths(
         "memo_ready_final_polish_report": paths.memo_ready_final_polish_report,
         "memo_ready_final_polish_prompt": paths.memo_ready_final_polish_prompt if final_polish_result and final_polish_result.get("prompt") else None,
         "memo_ready_final_polish_raw": paths.memo_ready_final_polish_raw if final_polish_result and final_polish_result.get("raw") else None,
+        "memo_creation_progress": memo_progress_path(paths.briefing.parent),
     }
 
 

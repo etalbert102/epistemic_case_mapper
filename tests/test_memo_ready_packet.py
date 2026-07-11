@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
@@ -735,6 +736,16 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert paths["memo_ready_synthesis_prompt"].exists()
     assert paths["memo_ready_repair_report"].exists()
     assert paths["memo_ready_final_polish_report"].exists()
+    assert paths["memo_creation_progress"].exists()
+    progress = [
+        json.loads(line)
+        for line in paths["memo_creation_progress"].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    stages = [row["stage"] for row in progress]
+    assert "memo_ready_synthesis" in stages
+    assert "memo_ready_final_polish" in stages
+    assert progress[-1]["status"] == "completed"
     assert "25%" in result["briefing_path"].read_text()
 
 
