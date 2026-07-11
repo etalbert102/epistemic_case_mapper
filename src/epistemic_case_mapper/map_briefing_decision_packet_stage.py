@@ -106,6 +106,7 @@ def _run_analyst_adjudication(scaffold: dict[str, Any], ledger: dict[str, Any], 
 
 def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
+    from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
 
     _progress(progress, "analyst_decision_model", "started", {"row_count": _ledger_row_count(ledger)})
     scaffold.update(
@@ -118,6 +119,19 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
         )
     )
     _progress(progress, "analyst_decision_model", "completed", _analyst_decision_model_details(scaffold))
+    _progress(progress, "global_decision_model", "started")
+    scaffold.update(
+        build_global_decision_model_bundle(
+            ledger=ledger,
+            analyst_decision_model=scaffold.get("analyst_decision_model", {}),
+            analyst_decision_model_report=scaffold.get("analyst_decision_model_report", {}),
+            analyst_decision_model_parse_report=scaffold.get("analyst_decision_model_parse_report", {}),
+            parallel_report=scaffold.get("analyst_decision_model_parallel_report", {}),
+            evidence_routing_report=scaffold.get("evidence_routing_report", {}),
+            deferred_evidence_audit=scaffold.get("deferred_evidence_audit", {}),
+        )
+    )
+    _progress(progress, "global_decision_model", "completed", _report_status(scaffold, "global_decision_model_report"))
 
 
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
