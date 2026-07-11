@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_decision_writer_contract import build_decision_memo_contract
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 
 
@@ -67,6 +68,7 @@ def decision_writer_packet_to_memo_ready_packet(
         for index, unit in enumerate(_list(packet.get("evidence_units")), start=1)
         if isinstance(unit, dict)
     ]
+    _apply_obligation_budget(evidence_items)
     decision_obligation_plan = build_decision_obligation_plan(evidence_items, packet=packet, semantic_context=semantic_context)
     memo_obligations = build_memo_obligation_packet(evidence_items, {"warnings": []})
     writeability = build_writer_packet_writeability_report(
@@ -76,7 +78,7 @@ def decision_writer_packet_to_memo_ready_packet(
         packet=packet,
         semantic_context=semantic_context,
     )
-    decision_contract = _decision_memo_contract(
+    decision_contract = build_decision_memo_contract(
         packet=packet,
         memo_obligations=memo_obligations,
         decision_obligation_plan=decision_obligation_plan,
@@ -171,6 +173,8 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "lineage": _dict(unit.get("lineage")),
         "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
         "caveat": str(unit.get("caveat") or "").strip(),
+        "importance_rank": unit.get("importance_rank"),
+        "source_memo_role": str(unit.get("source_memo_role") or "").strip(),
         "obligation_level": obligation.get("obligation_level", "optional_context"),
         "memo_function": obligation.get("memo_function", "background"),
         "include_reason": obligation.get("include_reason", ""),
@@ -287,6 +291,50 @@ def build_decision_obligation_plan(
             ]
         ),
     }
+
+
+def _apply_obligation_budget(evidence_items: list[dict[str, Any]]) -> None:
+    budgets = {
+        "strongest_support": 4,
+        "quantitative_anchor": 2,
+        "strongest_counterweight": 3,
+        "scope_boundary": 2,
+        "decision_crux": 2,
+    }
+    by_role: dict[str, list[dict[str, Any]]] = {}
+    for index, item in enumerate(evidence_items):
+        if not isinstance(item, dict):
+            continue
+        item["_original_order"] = index
+        by_role.setdefault(str(item.get("role") or ""), []).append(item)
+    for role, items in by_role.items():
+        if role == "context_only":
+            continue
+        budget = budgets.get(role, 2)
+        ordered = sorted(items, key=_obligation_budget_sort_key)
+        required_ids = {id(item) for item in ordered[:budget]}
+        for item in items:
+            if id(item) in required_ids:
+                item["obligation_level"] = "must_include"
+                item["must_use"] = True
+                continue
+            if item.get("obligation_level") == "must_include":
+                item["obligation_level"] = "should_include"
+                item["must_use"] = False
+                item["demotion_reason"] = (
+                    "Preserved as should-include evidence because the model selected it, but demoted from mandatory "
+                    "to keep the memo contract writeable."
+                )
+    for item in evidence_items:
+        item.pop("_original_order", None)
+
+
+def _obligation_budget_sort_key(item: dict[str, Any]) -> tuple[int, int]:
+    try:
+        rank = int(item.get("importance_rank"))
+    except (TypeError, ValueError):
+        rank = 999
+    return (rank, int(item.get("_original_order") or 0))
 
 
 def build_writer_packet_writeability_report(
@@ -439,7 +487,7 @@ def _quantity_obligation_plan(report: dict[str, Any]) -> dict[str, Any]:
             continue
         memo_use = str(row.get("memo_use") or "").strip()
         role = _quantity_role(row)
-        must_retain = memo_use == "yes" and role in {"decision_anchor", "supporting_detail"}
+        must_retain = bool(row.get("must_retain")) if "must_retain" in row else memo_use == "yes" and role == "decision_anchor"
         rows.append(
             {
                 "quantity_id": str(row.get("candidate_id") or "").strip(),
@@ -522,7 +570,7 @@ def _quantity_plan_match(quantity: dict[str, Any], quantity_plan: dict[str, dict
 
 
 def _quantity_must_retain(plan: dict[str, Any]) -> bool:
-    return bool(plan.get("must_retain") or str(plan.get("memo_use") or "") == "yes")
+    return bool(plan.get("must_retain"))
 
 
 def _obligation_fallback_requests(obligations: list[dict[str, Any]], conflicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -586,51 +634,6 @@ def _reused_artifacts(semantic_context: dict[str, Any]) -> list[str]:
     if _list(_dict(semantic_context.get("quantity_obligation_plan")).get("rows")):
         rows.append("analyst_quantity_binding_report")
     return _dedupe(rows)
-
-
-def _decision_memo_contract(
-    *,
-    packet: dict[str, Any],
-    memo_obligations: dict[str, Any],
-    decision_obligation_plan: dict[str, Any],
-    writeability: dict[str, Any],
-) -> dict[str, Any]:
-    required = [row for row in _list(memo_obligations.get("obligations")) if isinstance(row, dict) and row.get("required")]
-    return {
-        "schema_id": "decision_memo_contract_v1",
-        "method": "reuse_first_obligation_contract",
-        "decision_question": packet.get("decision_question"),
-        "bounded_answer": _dict(packet.get("answer")).get("bounded_answer"),
-        "confidence": _dict(packet.get("answer")).get("confidence"),
-        "confidence_reasons": _string_list(_dict(packet.get("answer")).get("confidence_reasons")),
-        "must_include_obligations": required,
-        "must_include_count": len(required),
-        "strongest_counterweights": _role_units(packet, "strongest_counterweight"),
-        "scope_boundaries": _role_units(packet, "scope_boundary"),
-        "decision_cruxes": _role_units(packet, "decision_crux"),
-        "missing_evidence": _string_list(packet.get("missing_evidence")),
-        "source_trail": _list(packet.get("source_trail")),
-        "writeability_status": writeability.get("status"),
-        "recommended_synthesis_strategy": writeability.get("recommended_synthesis_strategy"),
-        "judgment_lineage": {
-            "obligations": decision_obligation_plan.get("source_artifacts_used", []),
-            "quantities": ["analyst_quantity_binding_report"],
-            "answer": ["global_decision_model"],
-        },
-    }
-
-
-def _role_units(packet: dict[str, Any], role: str) -> list[dict[str, Any]]:
-    return [
-        {
-            "unit_id": unit.get("unit_id"),
-            "claim": unit.get("claim"),
-            "decision_relevance": unit.get("decision_relevance"),
-            "source_labels": unit.get("source_labels", []),
-        }
-        for unit in _list(packet.get("evidence_units"))
-        if isinstance(unit, dict) and str(unit.get("role") or "") == role
-    ]
 
 
 def _contract_must_preserve(evidence_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -735,6 +738,8 @@ def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_
         "claim": _short_text(str(group.get("proposition") or ""), 720),
         "decision_relevance": _short_text(str(group.get("answer_impact") or group.get("rationale") or ""), 520),
         "caveat": _short_text("; ".join(_string_list(group.get("applicability_limits"))), 360),
+        "importance_rank": group.get("importance_rank"),
+        "source_memo_role": str(group.get("memo_role") or "").strip(),
         "source_labels": source_labels,
         "primary_source_label": source_labels[0] if source_labels else "",
         "quantities": _quantities(evidence_ids, ledger_by_id),
