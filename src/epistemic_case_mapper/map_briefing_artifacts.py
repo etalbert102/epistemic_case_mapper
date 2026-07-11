@@ -18,6 +18,7 @@ from epistemic_case_mapper.map_briefing_spine_audit import (
     render_spine_completion_audit,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_writer_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
 
 
@@ -131,10 +132,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_decision_model_parse_report", "analyst_decision_model_parse_report.json", "json", _scaffold_value("analyst_decision_model_parse_report"), review_label="Analyst decision model parse report"),
         ArtifactSpec("analyst_decision_model_report", "analyst_decision_model_report.json", "json", _scaffold_value("analyst_decision_model_report"), review_label="Analyst decision model report"),
         ArtifactSpec("analyst_decision_model_parallel_report", "analyst_decision_model_parallel_report.json", "json", _scaffold_value("analyst_decision_model_parallel_report"), review_label="Parallel analyst decision model report"),
-        ArtifactSpec("global_decision_model", "global_decision_model.json", "json", _scaffold_value("global_decision_model"), review_label="Global decision model"),
-        ArtifactSpec("global_decision_model_report", "global_decision_model_report.json", "json", _scaffold_value("global_decision_model_report"), review_label="Global decision model report"),
-        ArtifactSpec("global_decision_model_reconciliation_report", "global_decision_model_reconciliation_report.json", "json", _scaffold_value("global_decision_model_reconciliation_report"), review_label="Global decision reconciliation"),
-        ArtifactSpec("global_decision_model_failure_accounting", "global_decision_model_failure_accounting.json", "json", _scaffold_value("global_decision_model_failure_accounting"), review_label="Global decision failure accounting"),
+        *_global_decision_artifact_specs(),
         ArtifactSpec("analyst_decision_model_initial", "analyst_decision_model_initial.json", "json", _scaffold_value("analyst_decision_model_initial"), review_label="Initial analyst decision model"),
         ArtifactSpec("analyst_decision_model_initial_parse_report", "analyst_decision_model_initial_parse_report.json", "json", _scaffold_value("analyst_decision_model_initial_parse_report"), review_label="Initial analyst decision model parse report"),
         ArtifactSpec("analyst_decision_model_repair_prompt", "analyst_decision_model_repair_prompt.txt", "markdown", _scaffold_text("analyst_decision_model_repair_prompt")),
@@ -179,6 +177,19 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("competing_reads_markdown", "COMPETING_READS.md", "markdown", lambda ctx: render_competing_reads_markdown(_argument_artifacts(ctx.scaffold).get("competing_reads", {}))),
         ArtifactSpec("argument_case_graph_markdown", "ARGUMENT_CASE_GRAPH.md", "markdown", lambda ctx: render_argument_case_graph_markdown(_argument_artifacts(ctx.scaffold).get("argument_case_graph", {}))),
         ArtifactSpec("decision_traceability_matrix_markdown", "DECISION_TRACEABILITY_MATRIX.md", "markdown", lambda ctx: render_decision_traceability_matrix_markdown(_argument_artifacts(ctx.scaffold).get("decision_traceability_matrix", {}))),
+    )
+
+
+def _global_decision_artifact_specs() -> tuple[ArtifactSpec, ...]:
+    return (
+        ArtifactSpec("global_decision_model", "global_decision_model.json", "json", _scaffold_value("global_decision_model"), review_label="Global decision model"),
+        ArtifactSpec("global_decision_model_report", "global_decision_model_report.json", "json", _scaffold_value("global_decision_model_report"), review_label="Global decision model report"),
+        ArtifactSpec("global_decision_model_reconciliation_report", "global_decision_model_reconciliation_report.json", "json", _scaffold_value("global_decision_model_reconciliation_report"), review_label="Global decision reconciliation"),
+        ArtifactSpec("global_decision_model_failure_accounting", "global_decision_model_failure_accounting.json", "json", _scaffold_value("global_decision_model_failure_accounting"), review_label="Global decision failure accounting"),
+        ArtifactSpec("decision_writer_packet", "decision_writer_packet.json", "json", _scaffold_value("decision_writer_packet"), review_label="Decision writer packet"),
+        ArtifactSpec("decision_writer_packet_quality_report", "decision_writer_packet_quality_report.json", "json", _scaffold_value("decision_writer_packet_quality_report"), review_label="Decision writer packet quality"),
+        ArtifactSpec("evidence_unit_traceability_matrix", "evidence_unit_traceability_matrix.json", "json", _scaffold_value("evidence_unit_traceability_matrix"), review_label="Evidence unit traceability"),
+        ArtifactSpec("decision_writer_packet_synthesis_prompt", "decision_writer_packet_synthesis_prompt.txt", "markdown", lambda ctx: build_writer_packet_synthesis_prompt(_scaffold_dict(ctx.scaffold, "decision_writer_packet"))),
     )
 
 

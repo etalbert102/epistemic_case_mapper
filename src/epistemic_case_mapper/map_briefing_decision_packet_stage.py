@@ -106,6 +106,7 @@ def _run_analyst_adjudication(scaffold: dict[str, Any], ledger: dict[str, Any], 
 
 def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
+    from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
     from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
 
     _progress(progress, "analyst_decision_model", "started", {"row_count": _ledger_row_count(ledger)})
@@ -132,6 +133,14 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
         )
     )
     _progress(progress, "global_decision_model", "completed", _report_status(scaffold, "global_decision_model_report"))
+    _progress(progress, "decision_writer_packet", "started")
+    scaffold.update(
+        build_decision_writer_packet_bundle(
+            global_decision_model=scaffold.get("global_decision_model", {}),
+            ledger=ledger,
+        )
+    )
+    _progress(progress, "decision_writer_packet", "completed", _report_status(scaffold, "decision_writer_packet_quality_report"))
 
 
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
