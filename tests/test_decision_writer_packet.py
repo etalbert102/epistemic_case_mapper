@@ -142,6 +142,68 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["evidence_items"][0]["quantities"][0]["value"] == "20% improvement"
     assert packet["memo_obligations"]["required_count"] == 2
     assert packet["decision_synthesis_contract"]["required_memo_obligations"]
+    assert packet["decision_obligation_plan"]["schema_id"] == "decision_obligation_plan_v1"
+    assert packet["writer_packet_writeability_report"]["schema_id"] == "writer_packet_writeability_report_v1"
+    assert packet["decision_memo_contract"]["schema_id"] == "decision_memo_contract_v1"
+
+
+def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    quantity_binding = {
+        "schema_id": "analyst_quantity_binding_report_v1",
+        "status": "ready",
+        "candidate_bindings": [
+            {
+                "candidate_id": "support_group::item:support::20_improvement",
+                "group_id": "support_group",
+                "value": "20% improvement",
+                "source_evidence_item_id": "item:support",
+                "source_labels": ["Outcome Review"],
+                "memo_use": "yes",
+                "quantity_role": "decision_anchor",
+                "must_retain": True,
+                "interpretation": "20% improvement in the main outcome.",
+                "retention_phrase": "20% improvement in the main outcome",
+                "rationale": "This is the decision-facing effect size.",
+                "binding_source": "model",
+            },
+            {
+                "candidate_id": "support_group::item:support::p_value",
+                "group_id": "support_group",
+                "value": "p = 0.04",
+                "source_evidence_item_id": "item:support",
+                "source_labels": ["Outcome Review"],
+                "memo_use": "context_only",
+                "quantity_role": "statistical_detail",
+                "must_retain": False,
+                "interpretation": "p-value trace statistic.",
+                "rationale": "Not reader-facing for this decision.",
+                "binding_source": "model",
+            },
+        ],
+    }
+    bundle["decision_writer_packet"]["evidence_units"][0]["quantities"].append(
+        {
+            "value": "p = 0.04",
+            "source_evidence_item_id": "item:support",
+            "source_label": "Outcome Review",
+            "interpretation": "p-value trace statistic.",
+        }
+    )
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+        analyst_quantity_binding_report=quantity_binding,
+        global_decision_model=_global_model(),
+    )
+
+    support_item = packet["evidence_items"][0]
+    assert [row["value"] for row in support_item["quantities"]] == ["20% improvement"]
+    assert support_item["excluded_quantity_values"] == ["p = 0.04"]
+    assert packet["quantity_obligation_plan"]["must_retain_count"] == 1
+    assert packet["writer_packet_writeability_report"]["model_call_accounting"]["new_default_model_call_added"] is False
+    assert "analyst_quantity_binding_report" in packet["writer_packet_writeability_report"]["model_call_accounting"]["existing_judgment_artifacts_reused"]
 
 
 def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:

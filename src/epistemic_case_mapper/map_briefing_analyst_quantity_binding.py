@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_backends import run_model_backend
 
 
 MemoQuantityUse = Literal["yes", "context_only", "no"]
+QuantityRole = Literal["decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"]
 
 
 class AnalystQuantityAdjudicationRow(BaseModel):
@@ -24,13 +25,40 @@ class AnalystQuantityAdjudicationRow(BaseModel):
 
     candidate_id: str
     memo_use: MemoQuantityUse
+    quantity_role: QuantityRole = "audit_only"
+    must_retain: bool = False
     interpretation: str = Field(min_length=1)
     rationale: str = Field(min_length=1)
+    retention_phrase: str = ""
+    required_for_memo_reason: str = ""
+    safe_to_omit_reason: str = ""
 
-    @field_validator("candidate_id", "memo_use", "interpretation", "rationale", mode="before")
+    @field_validator(
+        "candidate_id",
+        "memo_use",
+        "quantity_role",
+        "interpretation",
+        "rationale",
+        "retention_phrase",
+        "required_for_memo_reason",
+        "safe_to_omit_reason",
+        mode="before",
+    )
     @classmethod
     def _strip_text(cls, value: Any) -> str:
         return str(value or "").strip()
+
+    @model_validator(mode="after")
+    def _align_role_and_retention(self) -> "AnalystQuantityAdjudicationRow":
+        if self.memo_use != "yes" and self.must_retain:
+            raise ValueError("must_retain requires memo_use=yes")
+        if self.must_retain and self.quantity_role not in {"decision_anchor", "supporting_detail"}:
+            raise ValueError("must_retain requires decision_anchor or supporting_detail quantity_role")
+        if self.must_retain and not self.retention_phrase.strip():
+            raise ValueError("must_retain requires retention_phrase")
+        if self.must_retain and not self.required_for_memo_reason.strip():
+            raise ValueError("must_retain requires required_for_memo_reason")
+        return self
 
 
 class AnalystQuantityAdjudication(BaseModel):
@@ -136,11 +164,14 @@ def build_analyst_quantity_binding_prompt(
     packet = {
         "decision_question": synthesis_packet.get("decision_question"),
         "task": [
-            "For each candidate quantity, decide whether it should appear in the final memo.",
-            "Use yes only when the quantity directly quantifies the group proposition for this decision question.",
+            "For each candidate quantity, decide whether it should be a reader-facing obligation in the final memo.",
+            "Use yes only when the quantity directly helps answer the decision question or calibrates a load-bearing claim.",
             "Use context_only when the quantity may be useful trace context but should not be a memo obligation.",
             "Use no when the quantity describes a different population, scope, method statistic, source context, or otherwise does not quantify the proposition.",
-            "Write an interpretation that states exactly what the quantity measures if it is used.",
+            "Set must_retain=true only for quantities the memo would be materially worse without.",
+            "Prefer a small set of reader-facing anchors over raw statistical clutter.",
+            "Classify p-values, heterogeneity statistics, dates, and eligibility windows as statistical_detail or study_descriptor unless the decision question makes them load-bearing.",
+            "Write a retention_phrase only for quantities that should appear in the memo.",
         ],
         "candidates": [
             {
@@ -165,8 +196,13 @@ def build_analyst_quantity_binding_prompt(
                 {
                     "candidate_id": "copy candidate_id exactly",
                     "memo_use": "yes | context_only | no",
+                    "quantity_role": "decision_anchor | supporting_detail | study_descriptor | statistical_detail | audit_only",
+                    "must_retain": True,
                     "interpretation": "reader-safe explanation of what the quantity measures",
                     "rationale": "why this quantity does or does not quantify the group proposition",
+                    "retention_phrase": "short reader-facing phrase to preserve if must_retain is true, otherwise empty",
+                    "required_for_memo_reason": "why this number is decision-load-bearing if must_retain is true, otherwise empty",
+                    "safe_to_omit_reason": "why this can stay out of memo prose if must_retain is false, otherwise empty",
                 }
             ],
         },
@@ -211,7 +247,8 @@ def merge_quantity_adjudication(
     for candidate in _list(deterministic_report.get("candidate_bindings")):
         if not isinstance(candidate, dict):
             continue
-        rows.append(_binding_row(candidate, by_model.get(str(candidate.get("candidate_id") or ""))))
+        candidate_id = str(candidate.get("candidate_id") or "")
+        rows.append(_binding_row(candidate, by_model.get(candidate_id) or {"_missing_model_row": True}))
     merged = _report_from_rows(
         rows,
         method="model_adjudicated_quantity_binding",
@@ -247,6 +284,7 @@ def quantity_binding_quality_summary(quantity_binding_report: dict[str, Any]) ->
         "status": quantity_binding_report.get("status", "missing"),
         "candidate_count": quantity_binding_report.get("candidate_count", 0),
         "approved_count": quantity_binding_report.get("approved_count", 0),
+        "must_retain_count": quantity_binding_report.get("must_retain_count", 0),
         "context_only_count": quantity_binding_report.get("context_only_count", 0),
         "rejected_count": quantity_binding_report.get("rejected_count", 0),
         "accepted_with_warning_count": quantity_binding_report.get("accepted_with_warning_count", 0),
@@ -307,23 +345,64 @@ def _candidate_row(
 
 def _binding_row(candidate: dict[str, Any], model_row: dict[str, Any] | None) -> dict[str, Any]:
     model_row = model_row if isinstance(model_row, dict) else {}
-    memo_use = str(model_row.get("memo_use") or candidate.get("deterministic_memo_use") or "context_only")
+    model_missing = bool(model_row.get("_missing_model_row"))
+    memo_use = str(model_row.get("memo_use") or ("context_only" if model_missing else _fallback_memo_use(candidate)) or "context_only")
     if memo_use not in {"yes", "context_only", "no"}:
         memo_use = "context_only"
+    quantity_role = str(model_row.get("quantity_role") or _fallback_quantity_role(candidate, memo_use=memo_use)).strip()
+    if quantity_role not in {"decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"}:
+        quantity_role = "audit_only"
+    must_retain = bool(model_row.get("must_retain")) if model_row and not model_missing else memo_use == "yes" and quantity_role == "decision_anchor"
+    if memo_use != "yes":
+        must_retain = False
+    if must_retain and quantity_role not in {"decision_anchor", "supporting_detail"}:
+        quantity_role = "supporting_detail"
     interpretation = str(model_row.get("interpretation") or candidate.get("deterministic_interpretation") or "").strip()
     rationale = str(model_row.get("rationale") or candidate.get("deterministic_rationale") or "").strip()
+    retention_phrase = str(model_row.get("retention_phrase") or (interpretation if must_retain else "")).strip()
+    required_reason = str(model_row.get("required_for_memo_reason") or (rationale if must_retain else "")).strip()
+    safe_to_omit = str(model_row.get("safe_to_omit_reason") or ("" if must_retain else rationale)).strip()
     return {
         **candidate,
         "memo_use": memo_use,
+        "quantity_role": quantity_role,
+        "must_retain": must_retain,
         "interpretation": _short_text(interpretation, 420) or "Quantity preserved for traceability without memo-facing interpretation.",
         "rationale": _short_text(rationale, 420) or "No binding rationale supplied.",
-        "binding_source": "model" if model_row else "deterministic",
+        "retention_phrase": _short_text(retention_phrase, 360),
+        "required_for_memo_reason": _short_text(required_reason, 360),
+        "safe_to_omit_reason": _short_text(safe_to_omit, 360),
+        "binding_source": "model_missing_context_only" if model_missing else ("model" if model_row else "deterministic"),
         "binding_confidence": _binding_confidence(candidate, memo_use=memo_use, model_row=model_row),
     }
 
 
+def _fallback_memo_use(candidate: dict[str, Any]) -> str:
+    deterministic = str(candidate.get("deterministic_memo_use") or "context_only")
+    if deterministic == "yes" and candidate.get("deterministic_warnings"):
+        return "context_only"
+    return deterministic if deterministic in {"yes", "context_only", "no"} else "context_only"
+
+
+def _fallback_quantity_role(candidate: dict[str, Any], *, memo_use: str) -> str:
+    warnings = set(_string_list(candidate.get("deterministic_warnings")))
+    memo_role = str(candidate.get("memo_role") or "")
+    if memo_use == "no":
+        return "audit_only"
+    if "p_value_not_effect_measure" in warnings or "heterogeneity_statistic_not_effect_measure" in warnings:
+        return "statistical_detail"
+    if "age_scope_quantity_not_group_measure" in warnings:
+        return "study_descriptor"
+    if memo_role == "quantitative_anchor" and memo_use == "yes":
+        return "decision_anchor"
+    if memo_use == "yes":
+        return "supporting_detail"
+    return "study_descriptor" if memo_use == "context_only" else "audit_only"
+
+
 def _report_from_rows(rows: list[dict[str, Any]], *, method: str, decision_question: str = "") -> dict[str, Any]:
     approved = [row for row in rows if row.get("memo_use") == "yes"]
+    must_retain = [row for row in rows if row.get("must_retain")]
     context = [row for row in rows if row.get("memo_use") == "context_only"]
     rejected = [row for row in rows if row.get("memo_use") == "no"]
     accepted_with_warning = [row for row in approved if row.get("deterministic_warnings")]
@@ -338,12 +417,14 @@ def _report_from_rows(rows: list[dict[str, Any]], *, method: str, decision_quest
         "decision_question": decision_question,
         "candidate_count": len(rows),
         "approved_count": len(approved),
+        "must_retain_count": len(must_retain),
         "context_only_count": len(context),
         "rejected_count": len(rejected),
         "accepted_with_warning_count": len(accepted_with_warning),
         "warning_counts": warning_counts,
         "candidate_bindings": rows,
         "approved_bindings": approved,
+        "must_retain_bindings": must_retain,
         "context_only_bindings": context,
         "rejected_bindings": rejected,
         "issues": ["accepted_quantity_with_deterministic_warning"] if accepted_with_warning else [],

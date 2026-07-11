@@ -229,12 +229,34 @@ def _promote_decision_writer_packet_as_active(scaffold: dict[str, Any]) -> bool:
     memo_ready = decision_writer_packet_to_memo_ready_packet(
         writer_packet if isinstance(writer_packet, dict) else {},
         quality_report=quality if isinstance(quality, dict) else {},
+        analyst_adjudication=scaffold.get("analyst_adjudication") if isinstance(scaffold.get("analyst_adjudication"), dict) else {},
+        analyst_decision_model=scaffold.get("analyst_decision_model") if isinstance(scaffold.get("analyst_decision_model"), dict) else {},
+        analyst_quantity_binding_report=scaffold.get("analyst_quantity_binding_report") if isinstance(scaffold.get("analyst_quantity_binding_report"), dict) else {},
+        global_decision_model=scaffold.get("global_decision_model") if isinstance(scaffold.get("global_decision_model"), dict) else {},
     )
     scaffold["memo_ready_packet"] = memo_ready
+    scaffold["decision_obligation_plan"] = memo_ready.get("decision_obligation_plan", {})
+    scaffold["decision_obligation_plan_report"] = {
+        "schema_id": "decision_obligation_plan_report_v1",
+        "status": "ready" if not memo_ready.get("decision_obligation_plan", {}).get("fallback_requests") else "warning",
+        "level_counts": memo_ready.get("decision_obligation_plan", {}).get("level_counts", {}),
+        "memo_function_counts": memo_ready.get("decision_obligation_plan", {}).get("memo_function_counts", {}),
+        "fallback_request_count": len(memo_ready.get("decision_obligation_plan", {}).get("fallback_requests", [])),
+        "conflict_count": len(memo_ready.get("decision_obligation_plan", {}).get("conflicts", [])),
+    }
+    scaffold["decision_memo_contract"] = memo_ready.get("decision_memo_contract", {})
+    scaffold["decision_contract_source_judgment_lineage"] = memo_ready.get("decision_contract_source_judgment_lineage", {})
+    scaffold["writer_packet_writeability_report"] = memo_ready.get("writer_packet_writeability_report", {})
+    scaffold["writer_packet_fallback_requests"] = {
+        "schema_id": "writer_packet_fallback_requests_v1",
+        "requests": memo_ready.get("writer_packet_fallback_requests", []),
+    }
+    scaffold["quantity_obligation_plan"] = memo_ready.get("quantity_obligation_plan", {})
     scaffold["memo_ready_packet_quality_report"] = {
         **(quality if isinstance(quality, dict) else {}),
         "active_packet": "memo_ready_packet",
         "active_packet_source": "decision_writer_packet",
+        "writeability_status": memo_ready.get("writer_packet_writeability_report", {}).get("status"),
     }
     scaffold["active_memo_ready_packet_report"] = {
         "schema_id": "active_memo_ready_packet_report_v1",
@@ -246,6 +268,7 @@ def _promote_decision_writer_packet_as_active(scaffold: dict[str, Any]) -> bool:
         "writer_evidence_unit_count": _list_count((writer_packet or {}).get("evidence_units")) if isinstance(writer_packet, dict) else 0,
         "source_trail_count": _list_count(memo_ready.get("source_trail")),
         "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
+        "writeability_status": memo_ready.get("writer_packet_writeability_report", {}).get("status"),
     }
     return True
 

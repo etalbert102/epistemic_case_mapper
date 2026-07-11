@@ -156,6 +156,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_memo_ready_packet", "analyst_memo_ready_packet.json", "json", _scaffold_value("analyst_memo_ready_packet"), review_label="Analyst memo-ready packet"),
         ArtifactSpec("writer_packet", "writer_packet.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("writer_packet", {}), review_label="Writer packet"),
         ArtifactSpec("writer_packet_quality_report", "writer_packet_quality_report.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("writer_packet_quality_report", {}), review_label="Writer packet quality"),
+        *_decision_contract_artifact_specs(),
         ArtifactSpec("active_memo_ready_packet_report", "active_memo_ready_packet_report.json", "json", _scaffold_value("active_memo_ready_packet_report"), review_label="Active memo-ready packet report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
@@ -177,6 +178,18 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("competing_reads_markdown", "COMPETING_READS.md", "markdown", lambda ctx: render_competing_reads_markdown(_argument_artifacts(ctx.scaffold).get("competing_reads", {}))),
         ArtifactSpec("argument_case_graph_markdown", "ARGUMENT_CASE_GRAPH.md", "markdown", lambda ctx: render_argument_case_graph_markdown(_argument_artifacts(ctx.scaffold).get("argument_case_graph", {}))),
         ArtifactSpec("decision_traceability_matrix_markdown", "DECISION_TRACEABILITY_MATRIX.md", "markdown", lambda ctx: render_decision_traceability_matrix_markdown(_argument_artifacts(ctx.scaffold).get("decision_traceability_matrix", {}))),
+    )
+
+
+def _decision_contract_artifact_specs() -> tuple[ArtifactSpec, ...]:
+    return (
+        ArtifactSpec("decision_obligation_plan", "decision_obligation_plan.json", "json", _scaffold_value("decision_obligation_plan"), review_label="Decision obligation plan"),
+        ArtifactSpec("decision_obligation_plan_report", "decision_obligation_plan_report.json", "json", _scaffold_value("decision_obligation_plan_report"), review_label="Decision obligation plan report"),
+        ArtifactSpec("quantity_obligation_plan", "quantity_obligation_plan.json", "json", _scaffold_value("quantity_obligation_plan"), review_label="Quantity obligation plan"),
+        ArtifactSpec("writer_packet_writeability_report", "writer_packet_writeability_report.json", "json", _scaffold_value("writer_packet_writeability_report"), review_label="Writer packet writeability"),
+        ArtifactSpec("writer_packet_fallback_requests", "writer_packet_fallback_requests.json", "json", _scaffold_value("writer_packet_fallback_requests"), review_label="Writer packet fallback requests"),
+        ArtifactSpec("decision_memo_contract", "decision_memo_contract.json", "json", _scaffold_value("decision_memo_contract"), review_label="Decision memo contract"),
+        ArtifactSpec("decision_contract_source_judgment_lineage", "decision_contract_source_judgment_lineage.json", "json", _scaffold_value("decision_contract_source_judgment_lineage"), review_label="Decision contract lineage"),
     )
 
 

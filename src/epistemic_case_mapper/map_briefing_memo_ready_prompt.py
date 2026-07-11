@@ -48,6 +48,7 @@ def build_writer_packet_synthesis_prompt(
     memo_ready_packet: dict[str, Any] | None = None,
 ) -> str:
     obligations = required_memo_obligations(memo_ready_packet or {})
+    writing_interface = _writing_interface(writer_packet, memo_ready_packet or {})
     obligation_ledger = [
         {
             "obligation_id": obligation.get("obligation_id"),
@@ -61,14 +62,14 @@ def build_writer_packet_synthesis_prompt(
         for obligation in obligations
     ]
     return (
-        "You are a senior decision analyst. Write a coherent decision memo from the source-bound writer packet.\n"
-        "The writer packet is the complete writing interface. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
+        "You are a senior decision analyst. Write a coherent decision memo from the source-bound writer packet writing interface.\n"
+        "The writing interface is the complete writing interface and memo-facing evidence record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
         "The required obligation ledger below is a writing checklist: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
         "Rules:\n"
         "- Answer the decision question directly in the first paragraph.\n"
-        "- Use only facts, quantities, and source labels present in the writer packet.\n"
-        "- Use only quantities listed inside evidence_units.quantities; do not reintroduce excluded_quantity_values.\n"
+        "- Use only facts, quantities, and source labels present in the writing interface.\n"
+        "- Use only quantities listed inside evidence_items.quantities or the required obligation ledger.\n"
         "- Cite the source_display or source_label attached to the evidence unit or quantity that supports the sentence.\n"
         "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
@@ -85,6 +86,26 @@ def build_writer_packet_synthesis_prompt(
         "## Why This Is the Best Current Read\n"
         "## What Could Change the Answer\n"
         "## Practical Implications\n\n"
-        "Source-bound writer packet:\n"
-        f"{json.dumps(writer_packet, indent=2, ensure_ascii=False)}\n"
+        "Source-bound writing interface:\n"
+        f"{json.dumps(writing_interface, indent=2, ensure_ascii=False)}\n"
     )
+
+
+def _writing_interface(writer_packet: dict[str, Any], memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
+    if (
+        isinstance(memo_ready_packet, dict)
+        and memo_ready_packet.get("evidence_items")
+        and str(memo_ready_packet.get("method") or "") == "global_decision_writer_packet_adapter"
+    ):
+        return {
+            "schema_id": "source_bound_writing_interface_v1",
+            "decision_question": memo_ready_packet.get("decision_question"),
+            "answer_spine": memo_ready_packet.get("answer_spine", {}),
+            "decision_memo_contract": memo_ready_packet.get("decision_memo_contract", {}),
+            "evidence_items": memo_ready_packet.get("evidence_items", []),
+            "source_trail": memo_ready_packet.get("source_trail", []),
+            "writer_packet_writeability_report": memo_ready_packet.get("writer_packet_writeability_report", {}),
+            "decision_logic": memo_ready_packet.get("analyst_decision_logic", {}),
+            "analyst_argument_plan": memo_ready_packet.get("analyst_argument_plan", []),
+        }
+    return writer_packet

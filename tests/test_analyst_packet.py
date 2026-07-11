@@ -5,7 +5,11 @@ from pathlib import Path
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
-from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
+from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
+    build_analyst_quantity_binding_report,
+    merge_quantity_adjudication,
+    run_analyst_quantity_binding,
+)
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
 
@@ -373,6 +377,44 @@ def test_analyst_quantity_binding_prompt_backend_returns_visible_report() -> Non
     assert binding["analyst_quantity_binding_report"]["schema_id"] == "analyst_quantity_binding_report_v1"
     assert binding["analyst_quantity_binding_run_report"]["status"] == "prompt_backend_deterministic"
     assert binding["analyst_quantity_binding_prompt"]
+
+
+def test_analyst_quantity_binding_missing_model_rows_do_not_create_mandatory_quantities() -> None:
+    packet = build_analyst_packet_bundle(packet=_packet(), ledger=_ledger(), adjudication=_adjudication())
+    deterministic = build_analyst_quantity_binding_report(
+        synthesis_packet=packet["analyst_synthesis_packet"],
+        ledger=_ledger(),
+    )
+    first_candidate = deterministic["candidate_bindings"][0]
+
+    merged, parse_report = merge_quantity_adjudication(
+        deterministic,
+        {
+            "schema_id": "analyst_quantity_binding_adjudication_v1",
+            "bindings": [
+                {
+                    "candidate_id": first_candidate["candidate_id"],
+                    "memo_use": "yes",
+                    "quantity_role": "decision_anchor",
+                    "must_retain": True,
+                    "interpretation": "The key quantity calibrates the decision.",
+                    "rationale": "It is the only load-bearing quantity in this fixture.",
+                    "retention_phrase": "key quantity for the decision",
+                    "required_for_memo_reason": "The answer would be less calibrated without it.",
+                    "safe_to_omit_reason": "",
+                }
+            ],
+        },
+    )
+
+    assert parse_report["status"] == "warning"
+    assert merged["must_retain_count"] == 1
+    assert len(merged["must_retain_bindings"]) == 1
+    assert all(
+        row["memo_use"] != "yes"
+        for row in merged["candidate_bindings"]
+        if row["candidate_id"] != first_candidate["candidate_id"]
+    )
 
 
 def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:
