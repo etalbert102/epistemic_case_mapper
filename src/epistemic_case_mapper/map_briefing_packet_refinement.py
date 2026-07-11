@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_packet_critique_issues import (
 from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissions_with_recomputed_quantities
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
+from epistemic_case_mapper.map_briefing_packet_targeted_refinement import run_targeted_packet_refinement
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.model_schemas import parse_model_output_report
@@ -406,53 +407,19 @@ def run_packet_refinement(
             "raw": "",
             "report": _skipped_report("decision_briefing_packet_refinement_report_v1", "prompt_backend"),
         }
-    raw = run_model_backend(
-        prompt,
-        backend,
-        timeout_seconds=backend_timeout,
-        max_retries=backend_retries,
-        response_schema=PacketRefinementOutput.model_json_schema(),
-    ).text
-    parse_report = parse_model_output_report(raw, PacketRefinementOutput)
-    if not parse_report.get("ok"):
-        repaired, repair_report = repair_packet_for_synthesis(packet, critique_adjudication)
-        return {
-            "packet": repaired,
-            "prompt": prompt,
-            "raw": canonical_json_output(raw),
-            "report": {
-                "schema_id": "decision_briefing_packet_refinement_report_v1",
-                "status": "parse_failed",
-                "parse_report": parse_report,
-                "applied_update_count": 0,
-                "rejected_update_count": 0,
-                "packet_quality_repair_report": repair_report,
-            },
-        }
-    refined, applied, rejected = apply_packet_refinement(packet, parse_report["data"])
-    cleanup_applied, cleanup_rejected = apply_adjudicated_relabel_cleanup(refined, critique_adjudication)
-    applied.extend(cleanup_applied)
-    rejected.extend(cleanup_rejected)
-    repaired, repair_report = repair_packet_for_synthesis(refined, critique_adjudication)
-    return {
-        "packet": repaired,
-        "prompt": prompt,
-        "raw": canonical_json_output(raw),
-        "report": {
-            "schema_id": "decision_briefing_packet_refinement_report_v1",
-            "status": "applied",
-            "parse_report": parse_report,
-            "packet_ready_for_synthesis": parse_report["data"].get("packet_ready_for_synthesis"),
-            "applied_update_count": len(applied),
-            "rejected_update_count": len(rejected),
-            "applied_updates": applied[:30],
-            "rejected_updates": rejected[:30],
-            "warnings": parse_report["data"].get("warnings", []),
-            "packet_quality_repair_report": repair_report,
-        },
-    }
-
-
+    return run_targeted_packet_refinement(
+        packet=packet,
+        sufficiency_report=sufficiency_report,
+        critique_adjudication=critique_adjudication,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        run_backend=run_model_backend,
+        refinement_schema=PacketRefinementOutput,
+        apply_refinement=apply_packet_refinement,
+        apply_cleanup=apply_adjudicated_relabel_cleanup,
+        repair_packet=repair_packet_for_synthesis,
+    )
 def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dict[str, Any]) -> str:
     view = packet_summary_for_model(packet, max_bundles=24)
     return (
