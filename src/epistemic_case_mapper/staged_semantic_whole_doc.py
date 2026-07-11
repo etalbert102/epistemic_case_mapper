@@ -10,6 +10,7 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import json_schema_block, render_prompt
+from epistemic_case_mapper.staged_semantic_evidence_units import build_source_evidence_units
 
 WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v5_decision_ranked_json"
 WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v5_decision_ranked_json"
@@ -135,10 +136,37 @@ def whole_doc_claim_payload_for_source(
         write_json(report_path, report)
         write_json(canonical_path, {})
         return None, False, "whole-doc extraction produced no usable source card"
+    payload, report = _successful_source_card_payload(
+        source_card,
+        source_id=source_id,
+        source_text=source_text,
+        max_claims=max_claims,
+        effective_max_claims=effective_max_claims,
+        num_predict=num_predict,
+        repair_info=repair_info,
+    )
+    write_json(canonical_path, payload)
+    write_json(report_path, report)
+    return payload, False, ""
+
+
+def _successful_source_card_payload(
+    source_card: dict[str, Any],
+    *,
+    source_id: str,
+    source_text: str,
+    max_claims: int,
+    effective_max_claims: int,
+    num_predict: int,
+    repair_info: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
     proposals, proposal_report = _claim_proposals_from_source_card(source_card, source_text=source_text, source_id=source_id)
+    evidence_unit_bundle = build_source_evidence_units(source_card, source_id=source_id, source_text=source_text)
+    evidence_unit_report = evidence_unit_bundle["source_evidence_unit_quality_report"]
     payload = {
         "claims": proposals,
         "source_card": source_card,
+        **evidence_unit_bundle,
         "extractor": "whole-doc",
         "prompt_version": WHOLE_DOC_CLAIM_PROMPT_VERSION,
     }
@@ -152,10 +180,11 @@ def whole_doc_claim_payload_for_source(
         "num_predict": num_predict,
         **repair_info,
         **proposal_report,
+        "source_evidence_unit_count": evidence_unit_report["unit_count"],
+        "source_quantity_tuple_count": evidence_unit_report["quantity_tuple_count"],
+        "source_evidence_unit_warning_counts": evidence_unit_report["warning_counts"],
     }
-    write_json(canonical_path, payload)
-    write_json(report_path, report)
-    return payload, False, ""
+    return payload, report
 
 
 def _write_backend_error_report(
