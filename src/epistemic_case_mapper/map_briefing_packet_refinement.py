@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from epistemic_case_mapper.map_briefing_decision_packet import packet_summary_for_model
-from epistemic_case_mapper.map_briefing_packet_critique_issues import (
-    dedupe_issue_rows,
-    normalized_critique_issues,
-)
+from epistemic_case_mapper.map_briefing_decision_packet_progress import critique_progress_details, packet_counts, packet_progress, refinement_progress_details
+from epistemic_case_mapper.map_briefing_packet_critique_issues import dedupe_issue_rows, normalized_critique_issues
+from epistemic_case_mapper.map_briefing_packet_parallel_critique import run_parallel_packet_critique, should_use_parallel_packet_critique
 from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissions_with_recomputed_quantities
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
@@ -319,14 +319,27 @@ def run_packet_critique_and_refinement(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     pre_sufficiency = deepcopy(sufficiency_report)
+    packet_progress(progress, "packet_critique", "started", packet_counts(packet))
     critique = run_packet_critique(
         packet,
         pre_sufficiency,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
+        progress=progress,
+    )
+    packet_progress(progress, "packet_critique", "completed", critique_progress_details(critique))
+    packet_progress(
+        progress,
+        "packet_refinement",
+        "started",
+        {
+            "accepted_count": critique["adjudication_report"].get("accepted_count", 0),
+            "warning_only_count": critique["adjudication_report"].get("warning_only_count", 0),
+        },
     )
     refined = run_packet_refinement(
         packet,
@@ -336,6 +349,8 @@ def run_packet_critique_and_refinement(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
+    packet_progress(progress, "packet_refinement", "completed", refinement_progress_details(refined))
+    packet_progress(progress, "packet_sufficiency_recompute", "started")
     if _refinement_left_packet_semantics_unchanged(refined["report"]):
         candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
         recomputed = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
@@ -344,6 +359,7 @@ def run_packet_critique_and_refinement(
         candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
         post_sufficiency = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
     _sync_packet_coverage_with_sufficiency(refined["packet"], post_sufficiency)
+    packet_progress(progress, "packet_sufficiency_recompute", "completed", {"status": post_sufficiency.get("status", "unknown")})
     return {
         "decision_briefing_packet": refined["packet"],
         "packet_sufficiency_report_pre_refinement": pre_sufficiency,
@@ -365,12 +381,26 @@ def run_packet_critique(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     prompt = build_packet_critique_prompt(packet, sufficiency_report)
     if backend.strip() == "prompt":
         report = _skipped_report("packet_critique_report_v1", "prompt_backend")
         adjudication = _adjudication_report({}, packet, skipped=True)
         return {"prompt": prompt, "raw": "", "report": report, "adjudication_report": adjudication}
+    if should_use_parallel_packet_critique(packet, threshold=_packet_critique_parallel_threshold()):
+        return run_parallel_packet_critique(
+            packet,
+            sufficiency_report,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            run_backend=run_model_backend,
+            critique_schema=PacketCritiqueOutput,
+            adjudicate=_adjudication_report,
+            progress=progress,
+        )
+    packet_progress(progress, "packet_critique_single_model_call", "started", {"prompt_chars": len(prompt)})
     raw = run_model_backend(
         prompt,
         backend,
@@ -378,16 +408,27 @@ def run_packet_critique(
         max_retries=backend_retries,
         response_schema=PacketCritiqueOutput.model_json_schema(),
     ).text
+    packet_progress(progress, "packet_critique_single_model_call", "completed", {"raw_chars": len(raw)})
     parse_report = parse_model_output_report(raw, PacketCritiqueOutput)
     critique = parse_report.get("data") if parse_report.get("ok") else {}
     adjudication = _adjudication_report(critique if isinstance(critique, dict) else {}, packet)
     report = {
         "schema_id": "packet_critique_report_v1",
         "status": "parsed" if parse_report.get("ok") else "parse_failed",
+        "method": "single_packet_critique",
         "parse_report": parse_report,
         "judgment": (critique or {}).get("packet_sufficiency_judgment") if isinstance(critique, dict) else "unknown",
     }
     return {"prompt": prompt, "raw": canonical_json_output(raw), "report": report, "adjudication_report": adjudication}
+
+
+def _packet_critique_parallel_threshold() -> int:
+    try:
+        return max(1, int(os.environ.get("ECM_PACKET_CRITIQUE_PARALLEL_THRESHOLD", "8")))
+    except ValueError:
+        return 8
+
+
 
 
 def run_packet_refinement(

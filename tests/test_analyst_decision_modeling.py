@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_modeling import (
     build_analyst_decision_model_prompt,
     run_analyst_decision_model,
 )
+from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import build_decision_model_tasks
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -77,6 +78,40 @@ def _adjudication() -> dict:
                 "importance_rank": 3,
                 "rationale": "Main limitation.",
             },
+        ],
+    }
+
+
+def _large_ledger(count: int = 14) -> dict:
+    rows = []
+    for index in range(1, count + 1):
+        role = "load_bearing_counterweight" if index % 5 == 0 else "load_bearing_primary_support"
+        rows.append(
+            {
+                "evidence_item_id": f"bundle:{index:03d}",
+                "claim_id": f"c{index:03d}",
+                "claim": f"Evidence item {index} bears on option A.",
+                "current_role": role,
+                "source_ids": [f"s{index}"],
+                "source_labels": [f"Source {index}"],
+                "quantity_values": [f"{index}%"] if index % 3 == 0 else [],
+            }
+        )
+    return {"schema_id": "analyst_evidence_ledger_v1", "decision_question": "Should option A be adopted?", "rows": rows}
+
+
+def _large_adjudication(count: int = 14) -> dict:
+    return {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": f"bundle:{index:03d}",
+                "memo_use": "load_bearing_counterweight" if index % 5 == 0 else "load_bearing_primary_support",
+                "importance_rank": index,
+                "rationale": f"Item {index} is relevant.",
+            }
+            for index in range(1, count + 1)
         ],
     }
 
@@ -175,6 +210,15 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "obligation_group_skeleton" in prompt
     assert "Start from obligation_group_skeleton" in prompt
     assert "Do not bury contrary evidence inside a support group" in prompt
+
+
+def test_parallel_decision_model_tasks_chunk_large_context() -> None:
+    context = build_analyst_decision_context(ledger=_large_ledger(14), adjudication=_large_adjudication(14))
+    tasks = build_decision_model_tasks(context, max_rows_per_task=6)
+
+    assert len(tasks) == 3
+    assert [len(task["evidence_rows"]) for task in tasks] == [6, 6, 2]
+    assert tasks[0]["task_id"] == "analyst_decision_model_task_001"
 
 
 def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) -> None:
@@ -287,6 +331,106 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
         "bundle:support_duplicate",
     ]
     assert result["analyst_decision_model_repair_report"]["status"] == "not_needed"
+
+
+def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> None:
+    calls = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        payload = json.loads(prompt)
+        rows = payload["context"]["evidence_rows"]
+        groups = [
+            {
+                "group_id": f"group_{len(calls):03d}",
+                "proposition": f"Grouped {len(rows)} local evidence rows.",
+                "memo_role": rows[0].get("adjudicated_memo_use") or "load_bearing_primary_support",
+                "importance_rank": len(calls),
+                "covered_evidence_item_ids": [row["evidence_item_id"] for row in rows],
+                "rationale": "Local grouped rationale.",
+            }
+        ]
+        model = {
+            "schema_id": "analyst_decision_model_v1",
+            "decision_question": "Should option A be adopted?",
+            "direct_answer": "Adopt if the grouped evidence warrants it.",
+            "confidence": "medium",
+            "overall_rationale": "Local grouped model.",
+            "evidence_groups": groups,
+            "evidence_dispositions": [
+                {"evidence_item_id": row["evidence_item_id"], "disposition": "foreground", "group_id": groups[0]["group_id"]}
+                for row in rows
+            ],
+            "quantitative_anchors": [quantity for row in rows for quantity in row.get("quantity_values", [])],
+            "what_would_change_the_answer": [],
+            "decision_logic": {"bounded_bottom_line": "Adopt if warranted."},
+            "argument_plan": [],
+        }
+        return ModelBackendResult(text=json.dumps(model), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+
+    result = run_analyst_decision_model(
+        ledger=_large_ledger(14),
+        adjudication=_large_adjudication(14),
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert len(calls) == 4
+    assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
+    assert result["analyst_decision_model_parallel_report"]["task_count"] == 4
+    assert result["analyst_decision_model_parse_report"]["valid"] is True
+    assert result["analyst_decision_model_parse_report"]["covered_evidence_item_count"] == 14
+
+
+def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(monkeypatch) -> None:
+    calls = {"count": 0}
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("timeout")
+        if "Assign each repair_row" in prompt:
+            return ModelBackendResult(text=json.dumps({"assignments": []}), backend="fake")
+        payload = json.loads(prompt)
+        rows = payload["context"]["evidence_rows"]
+        model = {
+            "schema_id": "analyst_decision_model_v1",
+            "decision_question": "Should option A be adopted?",
+            "direct_answer": "Partial model.",
+            "confidence": "medium",
+            "overall_rationale": "Partial grouped model.",
+            "evidence_groups": [
+                {
+                    "group_id": f"group_{calls['count']:03d}",
+                    "proposition": "Recovered local group.",
+                    "memo_role": "load_bearing_primary_support",
+                    "importance_rank": calls["count"],
+                    "covered_evidence_item_ids": [row["evidence_item_id"] for row in rows],
+                    "rationale": "Recovered rows.",
+                }
+            ],
+            "evidence_dispositions": [],
+        }
+        return ModelBackendResult(text=json.dumps(model), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+
+    result = run_analyst_decision_model(
+        ledger=_large_ledger(14),
+        adjudication=_large_adjudication(14),
+        backend="fake",
+        backend_timeout=1,
+        backend_retries=0,
+    )
+
+    assert result["analyst_decision_model_parallel_report"]["failed_count"] == 1
+    assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
+    assert result["analyst_decision_model_parse_report"]["valid"] is True
 
 
 def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> None:

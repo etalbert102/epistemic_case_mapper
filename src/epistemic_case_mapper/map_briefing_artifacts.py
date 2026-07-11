@@ -130,6 +130,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_decision_model", "analyst_decision_model.json", "json", _scaffold_value("analyst_decision_model"), review_label="Analyst decision model"),
         ArtifactSpec("analyst_decision_model_parse_report", "analyst_decision_model_parse_report.json", "json", _scaffold_value("analyst_decision_model_parse_report"), review_label="Analyst decision model parse report"),
         ArtifactSpec("analyst_decision_model_report", "analyst_decision_model_report.json", "json", _scaffold_value("analyst_decision_model_report"), review_label="Analyst decision model report"),
+        ArtifactSpec("analyst_decision_model_parallel_report", "analyst_decision_model_parallel_report.json", "json", _scaffold_value("analyst_decision_model_parallel_report"), review_label="Parallel analyst decision model report"),
         ArtifactSpec("analyst_decision_model_initial", "analyst_decision_model_initial.json", "json", _scaffold_value("analyst_decision_model_initial"), review_label="Initial analyst decision model"),
         ArtifactSpec("analyst_decision_model_initial_parse_report", "analyst_decision_model_initial_parse_report.json", "json", _scaffold_value("analyst_decision_model_initial_parse_report"), review_label="Initial analyst decision model parse report"),
         ArtifactSpec("analyst_decision_model_repair_prompt", "analyst_decision_model_repair_prompt.txt", "markdown", _scaffold_text("analyst_decision_model_repair_prompt")),

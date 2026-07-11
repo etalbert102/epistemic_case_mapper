@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
+from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import run_parallel_analyst_decision_model, should_use_parallel_analyst_decision_model
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize_decision_logic_payload
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
     compact_decision_model_repair_report,
@@ -53,6 +54,15 @@ def run_analyst_decision_model(
             "analyst_decision_model_parse_report": parse_report,
             "analyst_decision_model_report": _report("prompt_backend_scaffold", parse_report),
         }
+    if should_use_parallel_analyst_decision_model(context):
+        return _run_parallel_decision_model_candidate(
+            context=context,
+            ledger=ledger,
+            scaffold=scaffold,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
     try:
         result = run_model_backend(
             prompt,
@@ -117,6 +127,86 @@ def run_analyst_decision_model(
         "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
         "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
     }
+
+
+def _run_parallel_decision_model_candidate(
+    *,
+    context: dict[str, Any],
+    ledger: dict[str, Any],
+    scaffold: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    parallel = run_parallel_analyst_decision_model(
+        context=context,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=analyst_decision_model_num_predict(context),
+        run_backend=run_model_backend,
+    )
+    payload = parallel["payload"]
+    parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
+    if not parse_report.get("valid"):
+        return _invalid_parallel_decision_model_result(context, scaffold, parallel, parse_report)
+    parsed = AnalystDecisionModel.model_validate(payload).model_dump()
+    parsed["decision_logic"] = naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    repair = run_analyst_decision_model_repair(
+        initial_model=parsed,
+        initial_parse_report=parse_report,
+        context=context,
+        ledger=ledger,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=analyst_decision_model_num_predict(context),
+    )
+    final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
+    final_parse_report = repair.get("analyst_decision_model_parse_report", parse_report) if repair.get("accepted") else parse_report
+    status = _parallel_status(final_parse_report, repair)
+    return {
+        "analyst_decision_context": context,
+        "analyst_decision_model": final_model,
+        "analyst_decision_model_prompt": parallel["prompt"],
+        "analyst_decision_model_raw": parallel["raw"],
+        "analyst_decision_model_parse_report": final_parse_report,
+        "analyst_decision_model_report": _report(status, final_parse_report, issues=_list(repair.get("issues"))),
+        "analyst_decision_model_parallel_report": parallel["report"],
+        "analyst_decision_model_initial": parsed,
+        "analyst_decision_model_initial_parse_report": parse_report,
+        "analyst_decision_model_repair_prompt": repair.get("analyst_decision_model_repair_prompt", ""),
+        "analyst_decision_model_repair_raw": repair.get("analyst_decision_model_repair_raw", ""),
+        "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
+        "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
+    }
+
+
+def _invalid_parallel_decision_model_result(
+    context: dict[str, Any],
+    scaffold: dict[str, Any],
+    parallel: dict[str, Any],
+    parse_report: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "analyst_decision_context": context,
+        "analyst_decision_model": scaffold,
+        "analyst_decision_model_prompt": parallel["prompt"],
+        "analyst_decision_model_raw": parallel["raw"],
+        "analyst_decision_model_parse_report": parse_report,
+        "analyst_decision_model_parallel_report": parallel["report"],
+        "analyst_decision_model_report": _report(
+            "parallel_model_output_invalid_scaffold",
+            parse_report,
+            issues=["parallel analyst decision model failed schema or evidence ID checks"],
+        ),
+    }
+
+
+def _parallel_status(parse_report: dict[str, Any], repair: dict[str, Any]) -> str:
+    if repair.get("accepted"):
+        return "accepted_parallel_after_repair" if parse_report.get("status") == "ready" else "accepted_parallel_after_repair_with_warnings"
+    return "accepted_parallel" if parse_report.get("status") == "ready" else "accepted_parallel_with_warnings"
 
 
 def analyst_decision_model_num_predict(context: dict[str, Any] | None = None) -> int:

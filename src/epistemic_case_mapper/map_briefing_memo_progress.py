@@ -94,6 +94,27 @@ def _print_progress(row: dict[str, Any]) -> None:
 
 
 def _detail_text(details: dict[str, Any]) -> str:
-    keys = ("status", "accepted", "missing_mandatory_count", "unresolved_warning_count", "memo_words", "issue_count")
+    keys = (
+        "status",
+        "substage",
+        "method",
+        "bundle_count",
+        "retain_item_count",
+        "prompt_chars",
+        "local_shard_count",
+        "local_shards_completed",
+        "chunk_count",
+        "task_count",
+        "parsed_count",
+        "failed_count",
+        "row_count",
+        "accepted",
+        "accepted_count",
+        "warning_only_count",
+        "missing_mandatory_count",
+        "unresolved_warning_count",
+        "memo_words",
+        "issue_count",
+    )
     parts = [f"{key}={details[key]}" for key in keys if key in details]
     return " ".join(parts)

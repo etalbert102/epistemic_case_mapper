@@ -32,12 +32,8 @@ from epistemic_case_mapper.decision_frame import (
 from epistemic_case_mapper.map_briefing_artifacts import write_gap_telemetry_outputs, write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
 from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle, build_source_coverage_report
+from epistemic_case_mapper.map_briefing_decision_packet_stage import attach_decision_briefing_packet, _promote_analyst_packet_as_active
 from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
-from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
-from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
-from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
 from epistemic_case_mapper.map_briefing_evidence_cards import apply_evidence_cards_to_map
 from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
@@ -51,7 +47,6 @@ from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger,
 from epistemic_case_mapper.map_briefing_relation_value import build_relation_value_report
 from epistemic_case_mapper.map_briefing_run_helpers import prepare_map_briefing_inputs, write_map_briefing_run_summary
 from epistemic_case_mapper.map_briefing_seed_brief import deterministic_graph_claim_sentences
-from epistemic_case_mapper.map_briefing_source_bottom_lines import build_source_bottom_line_cards
 from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
 from epistemic_case_mapper.map_briefing_text_cleanup import reader_facing_unresolved_family, reader_facing_unresolved_slot
 ROLE_PRIORITY = {
@@ -135,7 +130,7 @@ def run_map_briefing(
     with memo_progress_stage(artifacts, "decision_spine", backend=backend, completion_details=lambda: {"status": scaffold.get("canonical_decision_spine", {}).get("status", "unknown")}):
         _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
     with memo_progress_stage(artifacts, "decision_packet", backend=backend, completion_details=lambda: {"status": scaffold.get("active_memo_ready_packet_report", {}).get("status", "unknown")}):
-        _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
+        attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config, progress=progress)
     prompt = build_map_briefing_prompt(candidate_map=prioritized_map, quality_report=quality_report, question=question, source_lookup=source_lookup, erosion_audit=erosion_audit, scaffold=scaffold)
 
     with memo_progress_stage(artifacts, "scaffold_artifacts", backend=backend):
@@ -256,165 +251,6 @@ def _attach_decision_spine_bundle(
             section_context_decision_packets=scaffold.get("section_context_decision_packets"),
         )
 
-
-def _attach_decision_briefing_packet(
-    prioritized_map: dict[str, Any],
-    scaffold: dict[str, Any],
-    *,
-    question: str,
-    backend_config: ModelBackendConfig,
-) -> None:
-    from epistemic_case_mapper.map_briefing_readiness import build_packet_quality_gate_report
-
-    scaffold["source_bottom_line_cards"] = build_source_bottom_line_cards(prioritized_map, scaffold)
-    scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=question))
-    scaffold.update(
-        run_packet_critique_and_refinement(
-            scaffold.get("decision_briefing_packet", {}) if isinstance(scaffold.get("decision_briefing_packet"), dict) else {},
-            scaffold.get("packet_sufficiency_report", {}) if isinstance(scaffold.get("packet_sufficiency_report"), dict) else {},
-            backend=backend_config.backend,
-            backend_timeout=backend_config.timeout,
-            backend_retries=backend_config.retries,
-        )
-    )
-    adjudicated_packet, role_adjudication = adjudicate_packet_roles(
-        scaffold.get("decision_briefing_packet", {}) if isinstance(scaffold.get("decision_briefing_packet"), dict) else {}
-    )
-    scaffold["decision_briefing_packet"] = adjudicated_packet
-    scaffold["packet_role_adjudication_report"] = role_adjudication
-    scaffold["role_conflict_candidates"] = {"schema_id": "role_conflict_candidates_v1", "candidates": role_adjudication.get("role_conflict_candidates", [])}
-    scaffold["packet_quality_gate_report"] = build_packet_quality_gate_report(scaffold)
-    packet = scaffold.get("decision_briefing_packet")
-    if isinstance(packet, dict):
-        packet["synthesis_warning_inputs"] = {
-            "packet_sufficiency_issues": (
-                scaffold.get("packet_sufficiency_report", {}).get("issues", [])
-                if isinstance(scaffold.get("packet_sufficiency_report"), dict)
-                else []
-            ),
-            "packet_quality_gate_issues": [
-                issue.get("issue_type")
-                for issue in scaffold["packet_quality_gate_report"].get("issues", [])
-                if isinstance(issue, dict) and issue.get("issue_type")
-            ],
-        }
-        scaffold["memo_warning_packet"] = build_memo_warning_packet(packet)
-        scaffold["analyst_evidence_ledger"] = build_analyst_map_evidence_ledger(
-            prioritized_map,
-            scaffold,
-            question=question,
-            memo_warning_packet=scaffold["memo_warning_packet"],
-        )
-        from epistemic_case_mapper.map_briefing_analyst_adjudication import run_analyst_adjudication
-
-        ledger = scaffold.get("analyst_evidence_ledger", {})
-        if isinstance(ledger, dict):
-            scaffold.update(
-                run_analyst_adjudication(
-                    ledger,
-                    backend=backend_config.backend,
-                    backend_timeout=backend_config.timeout,
-                    backend_retries=backend_config.retries,
-                )
-            )
-            from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
-
-            scaffold.update(
-                run_analyst_decision_model(
-                    ledger=ledger,
-                    adjudication=scaffold.get("analyst_adjudication", {}),
-                    backend=backend_config.backend,
-                    backend_timeout=backend_config.timeout,
-                    backend_retries=backend_config.retries,
-                )
-            )
-            from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
-
-            scaffold.update(
-                build_analyst_packet_bundle(
-                    packet=packet,
-                    ledger=ledger,
-                    adjudication=scaffold.get("analyst_adjudication", {}),
-                    decision_model=scaffold.get("analyst_decision_model", {}),
-                    memo_warning_packet=scaffold.get("memo_warning_packet", {}),
-                )
-            )
-            from epistemic_case_mapper.map_briefing_analyst_refinement import run_analyst_packet_refinement
-
-            scaffold.update(
-                run_analyst_packet_refinement(
-                    synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
-                    warning_packet=scaffold.get("memo_warning_packet", {}),
-                    backend=backend_config.backend,
-                    backend_timeout=backend_config.timeout,
-                    backend_retries=backend_config.retries,
-                )
-            )
-            from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
-
-            scaffold.update(
-                run_analyst_quantity_binding(
-                    synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
-                    ledger=ledger,
-                    backend=backend_config.backend,
-                    backend_timeout=backend_config.timeout,
-                    backend_retries=backend_config.retries,
-                )
-            )
-            scaffold.update(
-                build_analyst_packet_bundle(
-                    packet=packet,
-                    ledger=ledger,
-                    adjudication=scaffold.get("analyst_adjudication", {}),
-                    decision_model=scaffold.get("analyst_decision_model", {}),
-                    memo_warning_packet=scaffold.get("memo_warning_packet", {}),
-                    refinement=scaffold.get("analyst_packet_refinement", {}),
-                    quantity_binding=scaffold.get("analyst_quantity_binding_report", {}),
-                )
-            )
-            _promote_analyst_packet_as_active(scaffold)
-
-
-def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
-    analyst_packet = scaffold.get("analyst_memo_ready_packet")
-    if not isinstance(analyst_packet, dict) or not analyst_packet.get("evidence_items"):
-        scaffold["active_memo_ready_packet_report"] = {
-            "schema_id": "active_memo_ready_packet_report_v1",
-            "status": "missing_active_packet",
-            "active_packet": "memo_ready_packet",
-            "reason": "analyst_memo_ready_packet_missing_or_empty",
-        }
-        return
-    analyst_quality = scaffold.get("analyst_packet_quality_report")
-    scaffold["memo_ready_packet"] = analyst_packet
-    if isinstance(analyst_quality, dict):
-        scaffold["memo_ready_packet_quality_report"] = {
-            **analyst_quality,
-            "active_packet": "memo_ready_packet",
-        }
-    scaffold["active_memo_ready_packet_report"] = {
-        "schema_id": "active_memo_ready_packet_report_v1",
-        "status": "analyst_active",
-        "active_packet": "memo_ready_packet",
-        "method": str(analyst_packet.get("method") or "analyst_adjudicated_packet_adapter"),
-        "evidence_item_count": len(analyst_packet.get("evidence_items", [])),
-        "source_trail_count": len(analyst_packet.get("source_trail", [])),
-        "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
-    }
-
-
-def _analyst_downgraded_evidence_ids(scaffold: dict[str, Any]) -> list[str]:
-    synthesis = scaffold.get("analyst_synthesis_packet")
-    if not isinstance(synthesis, dict):
-        return []
-    accounting = synthesis.get("evidence_accounting_summary")
-    if not isinstance(accounting, dict):
-        return []
-    return [
-        str(item)
-        for item in accounting.get("explicitly_downgraded_evidence_item_ids", [])
-        if str(item).strip()
-    ]
 
 
 def _attach_model_context_audit(
