@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_readiness import (
     build_final_decision_readiness_report,
+    build_memo_semantic_acceptance_report,
     build_packet_quality_gate_report,
 )
 
@@ -84,3 +85,42 @@ def test_final_decision_readiness_surfaces_retention_blockers() -> None:
     issue_types = {issue["issue_type"] for issue in report["issues"]}
     assert "critical_packet_evidence_missing_from_memo" in issue_types
     assert "packet_quality_gate_warnings" in issue_types
+
+
+def test_memo_semantic_acceptance_flags_polished_but_not_decision_ready() -> None:
+    report = build_memo_semantic_acceptance_report(
+        final_readiness_report={
+            "status": "not_decision_ready",
+            "issues": [{"severity": "blocker", "issue_type": "critical_packet_evidence_missing_from_memo"}],
+        },
+        memo_quality_report={"status": "polished", "score": 95},
+        polish_report={"status": "polished", "score": 92},
+        validation_report={"status": "passes"},
+        packet_retention_report={"status": "critical_warnings", "missing_critical_count": 1},
+        final_evaluation={"status": "warning"},
+    )
+
+    assert report["schema_id"] == "memo_semantic_acceptance_report_v1"
+    assert report["status"] == "not_accepted"
+    assert report["accepted_for_decision_use"] is False
+    issue_types = {issue["issue_type"] for issue in report["issues"]}
+    assert "polished_but_not_decision_ready" in issue_types
+    assert "critical_evidence_missing_from_final_memo" in issue_types
+
+
+def test_memo_semantic_acceptance_allows_ready_with_warnings() -> None:
+    report = build_memo_semantic_acceptance_report(
+        final_readiness_report={
+            "status": "decision_ready_with_warnings",
+            "issues": [{"severity": "warning", "issue_type": "briefing_validation_warnings"}],
+        },
+        memo_quality_report={"status": "usable_with_review", "score": 82},
+        polish_report={"status": "polished_with_warnings", "score": 82},
+        validation_report={"status": "passes_with_warnings"},
+        packet_retention_report={"status": "ready", "missing_critical_count": 0},
+        final_evaluation={"status": "warning"},
+    )
+
+    assert report["status"] == "accepted_with_warnings"
+    assert report["accepted_for_decision_use"] is True
+    assert report["high_confidence_blockers"] == []
