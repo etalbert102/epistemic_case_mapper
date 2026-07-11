@@ -21,6 +21,13 @@ def reset_memo_progress(artifacts: Path) -> Path:
     return path
 
 
+def ensure_memo_progress(artifacts: Path) -> Path:
+    path = memo_progress_path(artifacts)
+    if not path.exists():
+        reset_memo_progress(artifacts)
+    return path
+
+
 def record_memo_progress(
     artifacts: Path,
     stage: str,

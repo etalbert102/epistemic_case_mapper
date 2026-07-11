@@ -6,9 +6,9 @@ from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_memo_progress import (
+    ensure_memo_progress,
     memo_progress_path,
     record_memo_progress,
-    reset_memo_progress,
 )
 
 
@@ -78,7 +78,7 @@ def write_final_reader_outputs(
     from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
     from epistemic_case_mapper.map_briefing_reader_contracts import compose_final_reader_memo_package
 
-    reset_memo_progress(artifacts)
+    ensure_memo_progress(artifacts)
     record_memo_progress(artifacts, "final_reader_outputs", "started", backend=backend_config.backend)
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
     record_memo_progress(artifacts, "compose_memo_package", "completed", backend=backend_config.backend)

@@ -43,6 +43,7 @@ from epistemic_case_mapper.map_briefing_final_outputs import (
     ModelBackendConfig,
     write_final_reader_outputs as _write_final_reader_outputs,
 )
+from epistemic_case_mapper.map_briefing_memo_progress import record_memo_progress, reset_memo_progress
 from epistemic_case_mapper.map_briefing_frame_policy import adapt_decision_model_to_frame, section_policy_for_frame
 from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
 from epistemic_case_mapper.map_briefing_model_context import write_model_context_audit
@@ -99,13 +100,7 @@ def run_map_briefing(
 ) -> MapBriefingResult:
     _validate_run_args(question, backend_timeout, backend_retries)
     backend_config = ModelBackendConfig(backend=backend, timeout=backend_timeout, retries=backend_retries)
-    prep = prepare_map_briefing_inputs(
-        repo_root=repo_root,
-        map_path=map_path,
-        quality_report_path=quality_report_path,
-        source_titles=source_titles,
-        max_claims=max_claims,
-    )
+    prep = prepare_map_briefing_inputs(repo_root=repo_root, map_path=map_path, quality_report_path=quality_report_path, source_titles=source_titles, max_claims=max_claims)
     map_file = prep["map_file"]
     candidate_map = prep["candidate_map"]
     quality_report = prep["quality_report"]
@@ -117,15 +112,13 @@ def run_map_briefing(
     erosion_audit = prep["erosion_audit"]
     artifacts = _resolve(repo_root, output_dir or Path("artifacts") / "map_briefings" / map_file.stem)
     artifacts.mkdir(parents=True, exist_ok=True)
-    scaffold = briefing_scaffold(
-        prioritized_map,
-        quality_report,
-        source_lookup,
-        erosion_audit,
-        question=question,
-        source_urls=source_urls,
-        source_citation_labels=source_citation_labels,
-    )
+    reset_memo_progress(artifacts)
+
+    def progress(stage: str, status: str, details: dict[str, Any] | None = None) -> None:
+        record_memo_progress(artifacts, stage, status, backend=backend, details=details)
+
+    progress("map_briefing", "started", {"claims": len(candidate_map.get("claims", [])), "relations": len(candidate_map.get("relations", []))})
+    scaffold = briefing_scaffold(prioritized_map, quality_report, source_lookup, erosion_audit, question=question, source_urls=source_urls, source_citation_labels=source_citation_labels)
     scaffold["claim_canonicalization_report"] = canonicalization_report
     scaffold["input_map_scope_counts"] = {
         "schema_id": "input_map_scope_counts_v1",
@@ -137,42 +130,27 @@ def run_map_briefing(
     }
     scaffold["relation_value_report"] = build_relation_value_report(prioritized_map)
     prioritized_map, scaffold = _apply_atomic_cards_to_briefing_map(prioritized_map, scaffold)
+    progress("decision_ready_context", "started")
     _attach_decision_ready_context_reports(prioritized_map, scaffold, question=question, source_lookup=source_lookup, backend_config=backend_config)
+    progress("decision_ready_context", "completed", {"source_count": scaffold.get("source_appraisal_report", {}).get("source_count", 0)})
+    progress("decision_spine", "started")
     _attach_decision_spine_bundle(prioritized_map, scaffold, question=question, backend_config=backend_config)
+    progress("decision_spine", "completed", {"status": scaffold.get("canonical_decision_spine", {}).get("status", "unknown")})
+    progress("decision_packet", "started")
     _attach_decision_briefing_packet(prioritized_map, scaffold, question=question, backend_config=backend_config)
-    prompt = build_map_briefing_prompt(
-        candidate_map=prioritized_map,
-        quality_report=quality_report,
-        question=question,
-        source_lookup=source_lookup,
-        erosion_audit=erosion_audit,
-        scaffold=scaffold,
-    )
+    progress("decision_packet", "completed", {"status": scaffold.get("active_memo_ready_packet_report", {}).get("status", "unknown")})
+    prompt = build_map_briefing_prompt(candidate_map=prioritized_map, quality_report=quality_report, question=question, source_lookup=source_lookup, erosion_audit=erosion_audit, scaffold=scaffold)
 
-    scaffold_paths = write_scaffold_artifacts(
-        artifacts=artifacts,
-        prompt=prompt,
-        prioritized_map=prioritized_map,
-        prioritization_report=prioritization_report,
-        erosion_audit=erosion_audit,
-        scaffold=scaffold,
-    )
+    progress("scaffold_artifacts", "started")
+    scaffold_paths = write_scaffold_artifacts(artifacts=artifacts, prompt=prompt, prioritized_map=prioritized_map, prioritization_report=prioritization_report, erosion_audit=erosion_audit, scaffold=scaffold)
+    progress("scaffold_artifacts", "completed", {"artifact_count": len(scaffold_paths)})
     briefing_validation_path = artifacts / "briefing_validation_report.json"
 
     raw_path = artifacts / "map_briefing_raw.txt"
     write_markdown(raw_path, _section_first_generation_note(backend))
-    render_state = _section_first_render_state(
-        prompt=prompt,
-        quality_report=quality_report,
-        scaffold=scaffold,
-    )
-    rendered = _prepare_rendered_reader_packet(
-        str(render_state["rendered"]),
-        calibrated=str(render_state["calibrated"]),
-        scaffold=scaffold,
-        prioritized_map=prioritized_map,
-        source_lookup=source_lookup,
-    )
+    render_state = _section_first_render_state(prompt=prompt, quality_report=quality_report, scaffold=scaffold)
+    rendered = _prepare_rendered_reader_packet(str(render_state["rendered"]), calibrated=str(render_state["calibrated"]), scaffold=scaffold, prioritized_map=prioritized_map, source_lookup=source_lookup)
+    progress("final_reader_outputs", "handoff")
     final_outputs = _write_final_reader_outputs(
         rendered=rendered,
         scaffold=scaffold,
@@ -180,6 +158,7 @@ def run_map_briefing(
         artifacts=artifacts,
         backend_config=backend_config,
     )
+    progress("final_reader_outputs", "returned")
     _attach_model_context_audit(artifacts=artifacts, backend=backend, prompt=prompt, scaffold=scaffold, final_outputs=final_outputs)
     briefing_path = final_outputs["briefing_path"]
     evidence_appendix_path = final_outputs["evidence_appendix_path"]
@@ -196,6 +175,7 @@ def run_map_briefing(
         final_outputs=final_outputs,
         baseline_path=baseline_path,
     )
+    progress("gap_telemetry", "completed")
     summary_path = write_map_briefing_run_summary(
         artifacts=artifacts,
         repo_root=repo_root,
@@ -217,6 +197,7 @@ def run_map_briefing(
         erosion_audit=erosion_audit,
         scaffold=scaffold,
     )
+    progress("map_briefing", "completed")
     return _map_briefing_result(
         briefing_path=briefing_path, summary_path=summary_path, scaffold_paths=scaffold_paths,
         briefing_validation_path=briefing_validation_path, telemetry_paths=telemetry_paths,
