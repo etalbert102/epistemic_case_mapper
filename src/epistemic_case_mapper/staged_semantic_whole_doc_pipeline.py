@@ -11,6 +11,7 @@ from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
+from epistemic_case_mapper.staged_semantic_evidence_routing import build_evidence_unit_routing
 from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_sources import (
@@ -300,6 +301,7 @@ def _write_whole_doc_extraction_artifacts(
     _write_evidence_unit_artifacts(
         artifact_dir=artifact_dir,
         selected_question=selected_question,
+        source_ids=[chunk.source_id for chunk in source_chunks],
         evidence_units=evidence_units,
         quantity_tuples=quantity_tuples,
         evidence_unit_reports=evidence_unit_reports,
@@ -310,6 +312,7 @@ def _write_evidence_unit_artifacts(
     *,
     artifact_dir: Path,
     selected_question: str,
+    source_ids: list[str],
     evidence_units: list[dict[str, Any]],
     quantity_tuples: list[dict[str, Any]],
     evidence_unit_reports: list[dict[str, Any]],
@@ -326,6 +329,10 @@ def _write_evidence_unit_artifacts(
         artifact_dir / "source_evidence_unit_quality_report.json",
         _aggregate_evidence_unit_quality_report(evidence_unit_reports, unit_count=len(evidence_units), quantity_tuple_count=len(quantity_tuples)),
     )
+    routing = build_evidence_unit_routing(evidence_units, decision_question=selected_question, source_ids=source_ids)
+    write_json(artifact_dir / "evidence_relevance_ledger.json", routing["evidence_relevance_ledger"])
+    write_json(artifact_dir / "evidence_routing_report.json", routing["evidence_routing_report"])
+    write_json(artifact_dir / "deferred_evidence_audit.json", routing["deferred_evidence_audit"])
 
 
 def _collect_evidence_unit_artifacts(
