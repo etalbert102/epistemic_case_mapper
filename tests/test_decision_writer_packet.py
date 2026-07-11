@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
+from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+    build_decision_writer_packet_bundle,
+    decision_writer_packet_to_memo_ready_packet,
+)
 
 
 def _ledger() -> dict:
@@ -112,3 +115,19 @@ def test_decision_writer_packet_flags_missing_critical_evidence() -> None:
     assert quality["missing_critical_evidence_item_ids"] == ["item:missing"]
     assert "critical_evidence_not_accounted" in quality["issues"]
     assert "global_model_has_reconciliation_warnings" in quality["issues"]
+
+
+def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    assert packet["schema_id"] == "memo_ready_packet_v1"
+    assert packet["method"] == "global_decision_writer_packet_adapter"
+    assert packet["answer_spine"]["default_read"] == "Adopt option A only where the narrower setting is not decisive."
+    assert packet["writer_packet"]["schema_id"] == "decision_writer_packet_v1"
+    assert packet["evidence_items"][0]["reader_claim"] == "Option A improves the main outcome."
+    assert packet["evidence_items"][0]["must_use"] is True
+    assert packet["evidence_items"][0]["quantities"][0]["value"] == "20% improvement"

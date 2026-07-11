@@ -568,6 +568,55 @@ def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet(
     assert scaffold["active_memo_ready_packet_report"]["downgraded_evidence_item_ids"] == ["bundle:off_question"]
 
 
+def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
+    analyst_packet = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+    )["analyst_memo_ready_packet"]
+    scaffold = {
+        "analyst_memo_ready_packet": analyst_packet,
+        "analyst_packet_quality_report": {"schema_id": "analyst_packet_quality_report_v1", "status": "ready"},
+        "decision_writer_packet": {
+            "schema_id": "decision_writer_packet_v1",
+            "decision_question": "Should option A be adopted?",
+            "answer": {
+                "bounded_answer": "Adopt option A only if risk is bounded.",
+                "confidence": "medium",
+                "confidence_reasons": ["Support is bounded by risk."],
+            },
+            "decision_logic": {"bounded_bottom_line": "Adopt option A only if risk is bounded."},
+            "argument_plan": [],
+            "evidence_units": [
+                {
+                    "unit_id": "decision_unit_001",
+                    "role": "strongest_support",
+                    "claim": "Option A reduces losses.",
+                    "decision_relevance": "This is the main support.",
+                    "source_labels": ["Outcome Study"],
+                    "quantities": [{"value": "25% reduction", "source_label": "Outcome Study"}],
+                    "lineage": {"covered_evidence_item_ids": ["bundle:support"]},
+                }
+            ],
+            "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}],
+            "global_reconciliation": {"issues": []},
+        },
+        "decision_writer_packet_quality_report": {
+            "schema_id": "decision_writer_packet_quality_report_v1",
+            "status": "ready",
+            "evidence_unit_count": 1,
+        },
+    }
+
+    _promote_analyst_packet_as_active(scaffold)
+
+    assert scaffold["memo_ready_packet"]["method"] == "global_decision_writer_packet_adapter"
+    assert scaffold["memo_ready_packet"]["writer_packet"]["schema_id"] == "decision_writer_packet_v1"
+    assert scaffold["memo_ready_packet"]["evidence_items"][0]["reader_claim"] == "Option A reduces losses."
+    assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
+    assert scaffold["memo_ready_packet_quality_report"]["active_packet_source"] == "decision_writer_packet"
+
+
 def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -> None:
     scaffold = _scaffold()
     scaffold["question"] = "Should option A be adopted?"

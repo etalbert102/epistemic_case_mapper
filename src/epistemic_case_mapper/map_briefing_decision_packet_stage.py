@@ -193,6 +193,8 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
 
 
 def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
+    if _promote_decision_writer_packet_as_active(scaffold):
+        return
     analyst_packet = scaffold.get("analyst_memo_ready_packet")
     if not isinstance(analyst_packet, dict) or not analyst_packet.get("evidence_items"):
         scaffold["active_memo_ready_packet_report"] = {
@@ -215,6 +217,45 @@ def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
         "source_trail_count": _list_count(analyst_packet.get("source_trail")),
         "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
     }
+
+
+def _promote_decision_writer_packet_as_active(scaffold: dict[str, Any]) -> bool:
+    from epistemic_case_mapper.map_briefing_decision_writer_packet import decision_writer_packet_to_memo_ready_packet
+
+    writer_packet = scaffold.get("decision_writer_packet")
+    quality = scaffold.get("decision_writer_packet_quality_report")
+    if not _decision_writer_packet_ready(writer_packet, quality):
+        return False
+    memo_ready = decision_writer_packet_to_memo_ready_packet(
+        writer_packet if isinstance(writer_packet, dict) else {},
+        quality_report=quality if isinstance(quality, dict) else {},
+    )
+    scaffold["memo_ready_packet"] = memo_ready
+    scaffold["memo_ready_packet_quality_report"] = {
+        **(quality if isinstance(quality, dict) else {}),
+        "active_packet": "memo_ready_packet",
+        "active_packet_source": "decision_writer_packet",
+    }
+    scaffold["active_memo_ready_packet_report"] = {
+        "schema_id": "active_memo_ready_packet_report_v1",
+        "status": "decision_writer_active",
+        "active_packet": "memo_ready_packet",
+        "method": str(memo_ready.get("method") or "global_decision_writer_packet_adapter"),
+        "source_artifact": "decision_writer_packet",
+        "evidence_item_count": _list_count(memo_ready.get("evidence_items")),
+        "writer_evidence_unit_count": _list_count((writer_packet or {}).get("evidence_units")) if isinstance(writer_packet, dict) else 0,
+        "source_trail_count": _list_count(memo_ready.get("source_trail")),
+        "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
+    }
+    return True
+
+
+def _decision_writer_packet_ready(writer_packet: Any, quality: Any) -> bool:
+    if not isinstance(writer_packet, dict) or not writer_packet.get("evidence_units"):
+        return False
+    if isinstance(quality, dict) and quality.get("status") != "ready":
+        return False
+    return True
 
 
 def _analyst_downgraded_evidence_ids(scaffold: dict[str, Any]) -> list[str]:

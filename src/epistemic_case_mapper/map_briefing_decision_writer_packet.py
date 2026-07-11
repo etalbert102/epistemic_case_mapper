@@ -45,6 +45,46 @@ def build_decision_writer_packet_bundle(
     }
 
 
+def decision_writer_packet_to_memo_ready_packet(
+    decision_writer_packet: dict[str, Any],
+    *,
+    quality_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    packet = decision_writer_packet if isinstance(decision_writer_packet, dict) else {}
+    evidence_items = [
+        _memo_ready_item_from_unit(index, unit)
+        for index, unit in enumerate(_list(packet.get("evidence_units")), start=1)
+        if isinstance(unit, dict)
+    ]
+    memo_ready = {
+        "schema_id": "memo_ready_packet_v1",
+        "method": "global_decision_writer_packet_adapter",
+        "decision_question": packet.get("decision_question"),
+        "answer_spine": {
+            "default_read": _dict(packet.get("answer")).get("bounded_answer"),
+            "confidence": _dict(packet.get("answer")).get("confidence", "not_specified"),
+            "why_this_read": "; ".join(_string_list(_dict(packet.get("answer")).get("confidence_reasons"))[:3]),
+            "synthesis_strategy": "Write directly from the global decision writer packet.",
+        },
+        "source_trail": _list(packet.get("source_trail")),
+        "memo_warning_packet": {},
+        "analyst_decision_logic": _dict(packet.get("decision_logic")),
+        "analyst_argument_plan": _list(packet.get("argument_plan")),
+        "decision_writer_packet_quality_report": quality_report or packet.get("decision_writer_packet_quality_report", {}),
+        "evidence_items": evidence_items,
+        "writer_packet": packet,
+        "writer_packet_quality_report": quality_report or packet.get("decision_writer_packet_quality_report", {}),
+        "decision_synthesis_contract": {
+            "schema_id": "decision_synthesis_contract_v1",
+            "method": "global_decision_writer_packet_adapter",
+            "bounded_answer": _dict(packet.get("answer")).get("bounded_answer"),
+            "must_preserve": _contract_must_preserve(evidence_items),
+            "warnings": _string_list(_dict(packet.get("global_reconciliation")).get("issues")),
+        },
+    }
+    return memo_ready
+
+
 def build_decision_writer_packet(*, global_decision_model: dict[str, Any], ledger: dict[str, Any]) -> dict[str, Any]:
     ledger_by_id = _ledger_by_id(ledger)
     evidence_units = _evidence_units(global_decision_model, ledger_by_id)
@@ -73,6 +113,50 @@ def build_decision_writer_packet(*, global_decision_model: dict[str, Any], ledge
             "Treat missing evidence and reconciliation warnings as uncertainty to explain, not as prose metadata.",
         ],
     }
+
+
+def _memo_ready_item_from_unit(index: int, unit: dict[str, Any]) -> dict[str, Any]:
+    source_labels = _string_list(unit.get("source_labels"))
+    return {
+        "item_id": f"decision_writer_item_{index:03d}",
+        "role": str(unit.get("role") or "context_only"),
+        "reader_claim": str(unit.get("claim") or "").strip(),
+        "source_label": source_labels[0] if source_labels else "",
+        "source_labels": source_labels,
+        "source_ids": [],
+        "quantities": _memo_ready_quantities(unit),
+        "lineage": _dict(unit.get("lineage")),
+        "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
+        "caveat": str(unit.get("caveat") or "").strip(),
+        "must_use": str(unit.get("role") or "") != "context_only",
+    }
+
+
+def _memo_ready_quantities(unit: dict[str, Any]) -> list[dict[str, str]]:
+    return [
+        {
+            "value": str(quantity.get("value") or "").strip(),
+            "interpretation": str(quantity.get("interpretation") or "").strip(),
+            "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
+            "source_labels": _string_list(quantity.get("source_label")) or _string_list(quantity.get("source_labels")),
+        }
+        for quantity in _list(unit.get("quantities"))
+        if isinstance(quantity, dict) and str(quantity.get("value") or "").strip()
+    ]
+
+
+def _contract_must_preserve(evidence_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "item_id": item.get("item_id"),
+            "role": item.get("role"),
+            "claim": item.get("reader_claim"),
+            "source_labels": item.get("source_labels", []),
+            "quantities": item.get("quantities", []),
+        }
+        for item in evidence_items
+        if item.get("must_use")
+    ]
 
 
 def build_decision_writer_packet_quality_report(
