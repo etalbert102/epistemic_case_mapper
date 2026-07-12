@@ -172,6 +172,8 @@ def _run_memo_ready_final_output_path(
             "writer_interface_visible_evidence": writer_interface_quality.get("must_use_evidence_count"),
             "writer_interface_excluded_evidence": writer_interface_quality.get("excluded_evidence_count"),
             "writer_interface_quantity_anchors": writer_interface_quality.get("quantity_anchor_count"),
+            "writer_interface_reasoning_moves": writer_interface_quality.get("reasoning_move_count"),
+            "writer_interface_rescued_context": writer_interface_quality.get("rescued_context_count"),
             "writer_interface_quality_status": writer_interface_quality.get("status"),
             "writer_interface_quality_warnings": writer_interface_quality.get("warnings", []),
         },
