@@ -146,22 +146,26 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
     from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
-    from epistemic_case_mapper.map_briefing_analyst_refinement import run_analyst_packet_refinement
 
     _progress(progress, "analyst_packet_bundle", "started")
     scaffold.update(build_analyst_packet_bundle(packet=packet, ledger=ledger, adjudication=scaffold.get("analyst_adjudication", {}), decision_model=scaffold.get("analyst_decision_model", {}), memo_warning_packet=scaffold.get("memo_warning_packet", {})))
     _progress(progress, "analyst_packet_bundle", "completed")
 
     _progress(progress, "analyst_packet_refinement", "started")
-    scaffold.update(
-        run_analyst_packet_refinement(
-            synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
-            warning_packet=scaffold.get("memo_warning_packet", {}),
-            backend=backend_config.backend,
-            backend_timeout=backend_config.timeout,
-            backend_retries=backend_config.retries,
+    if _decision_writer_packet_ready(scaffold.get("decision_writer_packet"), scaffold.get("decision_writer_packet_quality_report")):
+        scaffold.update(_skipped_analyst_packet_refinement_bundle())
+    else:
+        from epistemic_case_mapper.map_briefing_analyst_refinement import run_analyst_packet_refinement
+
+        scaffold.update(
+            run_analyst_packet_refinement(
+                synthesis_packet=scaffold.get("analyst_synthesis_packet", {}),
+                warning_packet=scaffold.get("memo_warning_packet", {}),
+                backend=backend_config.backend,
+                backend_timeout=backend_config.timeout,
+                backend_retries=backend_config.retries,
+            )
         )
-    )
     _progress(progress, "analyst_packet_refinement", "completed", _report_status(scaffold, "analyst_packet_refinement_report"))
 
     _progress(progress, "analyst_quantity_binding", "started")
@@ -190,6 +194,26 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     )
     _promote_analyst_packet_as_active(scaffold)
     _progress(progress, "analyst_packet_finalization", "completed", _report_status(scaffold, "active_memo_ready_packet_report"))
+
+
+def _skipped_analyst_packet_refinement_bundle() -> dict[str, Any]:
+    reason = "decision_writer_packet_ready_for_active_memo_packet"
+    return {
+        "analyst_packet_refinement": {},
+        "analyst_packet_refinement_prompt": "",
+        "analyst_packet_refinement_raw": "",
+        "analyst_packet_refinement_parse_report": {
+            "schema_id": "analyst_packet_refinement_parse_report_v1",
+            "status": "skipped",
+            "reason": reason,
+        },
+        "analyst_packet_refinement_report": {
+            "schema_id": "analyst_packet_refinement_report_v1",
+            "status": "skipped",
+            "reason": reason,
+            "active_path": "decision_writer_packet",
+        },
+    }
 
 
 def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:

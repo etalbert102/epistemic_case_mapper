@@ -12,6 +12,7 @@ from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
 )
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_decision_writer_packet import decision_writer_packet_to_memo_ready_packet
+from epistemic_case_mapper.map_briefing_decision_packet_stage import _run_analyst_packet_builders
 from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -725,6 +726,54 @@ def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
     assert scaffold["memo_ready_packet"]["evidence_items"][0]["reader_claim"] == "Option A reduces losses."
     assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
     assert scaffold["memo_ready_packet_quality_report"]["active_packet_source"] == "decision_writer_packet"
+
+
+def test_ready_decision_writer_path_skips_legacy_analyst_refinement() -> None:
+    scaffold = {
+        "analyst_adjudication": _adjudication(),
+        "memo_warning_packet": {"schema_id": "memo_warning_packet_v1", "warnings": []},
+        "decision_writer_packet": {
+            "schema_id": "decision_writer_packet_v1",
+            "decision_question": "Should option A be adopted?",
+            "answer": {
+                "bounded_answer": "Adopt option A only if risk is bounded.",
+                "confidence": "medium",
+                "confidence_reasons": ["Support is bounded by risk."],
+            },
+            "decision_logic": {"bounded_bottom_line": "Adopt option A only if risk is bounded."},
+            "argument_plan": [],
+            "evidence_units": [
+                {
+                    "unit_id": "decision_unit_001",
+                    "role": "strongest_support",
+                    "claim": "Option A reduces losses.",
+                    "decision_relevance": "This is the main support.",
+                    "source_labels": ["Outcome Study"],
+                    "quantities": [{"value": "25% reduction", "source_label": "Outcome Study"}],
+                    "lineage": {"covered_evidence_item_ids": ["bundle:support"]},
+                }
+            ],
+            "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}],
+            "global_reconciliation": {"issues": []},
+        },
+        "decision_writer_packet_quality_report": {
+            "schema_id": "decision_writer_packet_quality_report_v1",
+            "status": "ready",
+            "evidence_unit_count": 1,
+        },
+    }
+
+    _run_analyst_packet_builders(
+        scaffold,
+        _packet(),
+        _ledger(),
+        backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
+        progress=None,
+    )
+
+    assert scaffold["analyst_packet_refinement_report"]["status"] == "skipped"
+    assert scaffold["analyst_packet_refinement_report"]["active_path"] == "decision_writer_packet"
+    assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
 
 
 def test_decision_writer_budget_keeps_adjudicated_quantified_support_mandatory() -> None:
