@@ -231,6 +231,11 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["support_that_drives_answer"][0]["claim"] == "Option A improves the main outcome."
     assert interface["scope_boundaries"][0]["claim"] == "The answer depends on whether the narrower setting matters."
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
+    assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"
+    assert [move["move"] for move in interface["reasoning_hierarchy"]["reasoning_moves"]][:2] == [
+        "answer_frame",
+        "primary_answer_evidence",
+    ]
     assert interface["retention_checklist"]
     assert interface["lineage_report"]["model_visible_evidence_item_count"] == 2
     assert quality["status"] == "warning"
@@ -268,6 +273,37 @@ def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() ->
     assert "decision_writer_item_optional" not in model_serialized
 
 
+def test_writer_decision_interface_rescues_should_include_quantity_context() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    packet["evidence_items"].append(
+        {
+            "item_id": "decision_writer_item_should_include",
+            "role": "context_only",
+            "reader_claim": "The implementation threshold is two cycles.",
+            "source_label": "Implementation Review",
+            "source_labels": ["Implementation Review"],
+            "quantities": [{"value": "two cycles", "interpretation": "implementation threshold"}],
+            "obligation_level": "should_include",
+            "memo_function": "answer_anchor",
+            "source_memo_role": "quantitative_anchor",
+            "importance_rank": 5,
+            "must_use": False,
+        }
+    )
+
+    interface = build_writer_decision_interface(packet)
+    model_context = build_writer_model_context(interface)
+    hierarchy = model_context["reasoning_hierarchy"]
+    interpretive = next(move for move in hierarchy["reasoning_moves"] if move["move"] == "interpretive_context")
+
+    assert interpretive["evidence"][0]["item_id"] == "decision_writer_item_should_include"
+    assert "two cycles" in str(model_context)
+
+
 def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     packet = decision_writer_packet_to_memo_ready_packet(
@@ -278,6 +314,8 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert "Narrative blueprint" in prompt
+    assert "reasoning_hierarchy" in prompt
+    assert "primary organizing spine" in prompt
     assert "Required obligation ledger" in prompt
     assert "retention checklist, not an outline" in prompt
     assert "Use this as load-bearing support for the default answer" in prompt

@@ -30,11 +30,13 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
     visible_items = _model_visible_evidence_items(packet)
     filtered_items = _filtered_evidence_items(packet, visible_items)
     obligations = required_memo_obligations(packet)
+    reasoning_hierarchy = _reasoning_hierarchy(packet, visible_items, filtered_items)
     interface = {
         "schema_id": "writer_decision_interface_v1",
         "decision_question": packet.get("decision_question"),
         "bottom_line": _bottom_line(packet, visible_items),
         "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
+        "reasoning_hierarchy": reasoning_hierarchy,
         "support_that_drives_answer": _evidence_group(visible_items, roles={"strongest_support", "quantitative_anchor"}),
         "counterweights_and_disposition": _counterweights(packet, visible_items),
         "scope_boundaries": _evidence_group(visible_items, roles={"scope_boundary"}),
@@ -57,22 +59,30 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
     """Return the subset of the writer interface that belongs in synthesis prompts."""
 
     interface = writer_interface if isinstance(writer_interface, dict) else {}
-    return {
+    hierarchy = _dict(interface.get("reasoning_hierarchy"))
+    context = {
         "schema_id": "writer_model_context_v1",
         "source_schema_id": interface.get("schema_id"),
         "decision_question": interface.get("decision_question"),
         "bottom_line": interface.get("bottom_line"),
         "confidence": interface.get("confidence"),
-        "support_that_drives_answer": _list(interface.get("support_that_drives_answer")),
-        "counterweights_and_disposition": _list(interface.get("counterweights_and_disposition")),
-        "scope_boundaries": _list(interface.get("scope_boundaries")),
-        "decision_cruxes": _list(interface.get("decision_cruxes")),
+        "reasoning_hierarchy": hierarchy,
         "practical_implications": _string_list(interface.get("practical_implications")),
         "must_use_evidence": _list(interface.get("must_use_evidence")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
         "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
         "source_trail": _list(interface.get("source_trail")),
     }
+    if not _list(hierarchy.get("reasoning_moves")):
+        context.update(
+            {
+                "support_that_drives_answer": _list(interface.get("support_that_drives_answer")),
+                "counterweights_and_disposition": _list(interface.get("counterweights_and_disposition")),
+                "scope_boundaries": _list(interface.get("scope_boundaries")),
+                "decision_cruxes": _list(interface.get("decision_cruxes")),
+            }
+        )
+    return context
 
 
 def build_writer_decision_interface_quality_report(interface: dict[str, Any]) -> dict[str, Any]:
@@ -88,6 +98,9 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
     guidance = _dict(interface.get("critique_writer_guidance"))
     if guidance.get("status") == "ready" and not _list(guidance.get("guidance")):
         warnings.append("critique_guidance_empty_despite_ready_status")
+    hierarchy = _dict(interface.get("reasoning_hierarchy"))
+    if not _list(hierarchy.get("reasoning_moves")):
+        warnings.append("missing_reasoning_hierarchy")
     retention = _list(interface.get("retention_checklist"))
     evidence_ids = {
         evidence_id
@@ -109,6 +122,8 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         "warnings": warnings,
         "must_use_evidence_count": len(_list(interface.get("must_use_evidence"))),
         "quantity_anchor_count": len(_list(interface.get("quantity_anchors"))),
+        "reasoning_move_count": len(_list(hierarchy.get("reasoning_moves"))),
+        "rescued_context_count": _reasoning_hierarchy_rescue_count(hierarchy),
         "excluded_evidence_count": len(_list(interface.get("excluded_evidence_log"))),
         "missing_obligation_evidence": missing_obligation_evidence,
     }
@@ -161,6 +176,216 @@ def _practical_implications(packet: dict[str, Any], visible_items: list[dict[str
     return [_short_text(f"Act on the bounded answer while respecting the listed counterweights and scope boundaries: {bottom}", 420)] if bottom else []
 
 
+def _reasoning_hierarchy(
+    packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+    filtered_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build a compact, deterministic writing hierarchy from existing model judgments."""
+
+    selected_context = _selected_interpretive_context(packet, filtered_items)
+    moves = [
+        _reasoning_move(
+            "answer_frame",
+            "State the bounded answer and confidence before explaining the evidence.",
+            [],
+            guidance=[_bottom_line(packet, visible_items)],
+        ),
+        _reasoning_move(
+            "primary_answer_evidence",
+            "Explain the source-backed evidence that most directly supports the bounded answer.",
+            _sort_items(_evidence_group(visible_items, roles={"strongest_support", "quantitative_anchor"})),
+        ),
+        _reasoning_move(
+            "quantitative_calibration",
+            "Use quantities to calibrate the size, direction, or boundary of the decision read.",
+            _quantity_context_items(visible_items, selected_context),
+        ),
+        _reasoning_move(
+            "counterweights_and_limits",
+            "Give counterweights and scope boundaries their force, then explain how they bound the answer.",
+            _sort_items(
+                [
+                    *_evidence_group(visible_items, roles={"strongest_counterweight"}),
+                    *_evidence_group(visible_items, roles={"scope_boundary"}),
+                ]
+            ),
+        ),
+        _reasoning_move(
+            "decision_cruxes",
+            "Name the cruxes or distinctions that would most change the answer.",
+            _sort_items(_evidence_group(visible_items, roles={"decision_crux"})),
+        ),
+        _reasoning_move(
+            "interpretive_context",
+            "Use context that changes how the answer should be interpreted or applied.",
+            selected_context,
+        ),
+    ]
+    return {
+        "schema_id": "decision_reasoning_hierarchy_v1",
+        "method": "deterministic_projection_from_existing_packet_judgments",
+        "decision_question": packet.get("decision_question"),
+        "bottom_line": _bottom_line(packet, visible_items),
+        "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
+        "reasoning_moves": [move for move in moves if move.get("guidance") or move.get("evidence")],
+        "projection_policy": [
+            "Uses existing model-produced packet roles, obligation levels, ranks, and quantity bindings.",
+            "Does not introduce a new semantic model call.",
+            "Rescues should-include and quantity-bearing context for synthesis without making it mandatory retention evidence.",
+        ],
+    }
+
+
+def _reasoning_move(
+    move: str,
+    writing_goal: str,
+    items: list[dict[str, Any]],
+    *,
+    guidance: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "move": move,
+        "writing_goal": writing_goal,
+        "guidance": [text for text in _string_list(guidance or []) if text],
+        "evidence": [_writer_evidence_item(item) for item in items if isinstance(item, dict)],
+    }
+
+
+def _selected_interpretive_context(packet: dict[str, Any], filtered_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    guidance_profiles = _guidance_profiles(packet)
+    candidates = [
+        item
+        for item in filtered_items
+        if isinstance(item, dict) and _context_rescue_score(item, guidance_profiles=guidance_profiles) >= 5
+    ]
+    return sorted(
+        candidates,
+        key=lambda item: (-_context_rescue_score(item, guidance_profiles=guidance_profiles), _importance_rank(item), str(item.get("item_id") or "")),
+    )[:6]
+
+
+def _quantity_context_items(
+    visible_items: list[dict[str, Any]],
+    selected_context: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    candidates = [
+        item
+        for item in [*visible_items, *selected_context]
+        if isinstance(item, dict) and (_list(item.get("quantities")) or _list(item.get("excluded_quantity_values")))
+    ]
+    return _dedupe_items(_sort_items(candidates))[:10]
+
+
+def _sort_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        [item for item in items if isinstance(item, dict)],
+        key=lambda item: (
+            _importance_rank(item),
+            -_diagnosticity_score(item),
+            str(item.get("item_id") or ""),
+        ),
+    )
+
+
+def _dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for item in items:
+        item_id = str(item.get("item_id") or "")
+        if item_id and item_id not in seen:
+            seen.add(item_id)
+            rows.append(item)
+    return rows
+
+
+def _context_rescue_score(item: dict[str, Any], *, guidance_profiles: list[dict[str, Any]]) -> int:
+    guidance_overlap = _guidance_overlap(item, guidance_profiles)
+    if (
+        str(item.get("source_memo_role") or "") == "quantitative_anchor"
+        and not _list(item.get("quantities"))
+        and not guidance_overlap
+    ):
+        return 0
+    score = 0
+    if str(item.get("obligation_level") or "") == "should_include":
+        score += 5
+    if _list(item.get("quantities")):
+        score += 3
+    if _list(item.get("excluded_quantity_values")):
+        score += 1
+    if str(item.get("source_memo_role") or "") in {"mechanism_or_context", "quantitative_anchor"}:
+        score += 1
+    if str(item.get("memo_function") or "") in {"answer_anchor", "counterweight", "scope_boundary", "crux"}:
+        score += 2
+    if guidance_overlap:
+        score += 6
+    score += max(0, 3 - min(_importance_rank(item), 100) // 20)
+    return score
+
+
+def _guidance_profiles(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    profiles = []
+    guidance = _dict(packet.get("compact_writer_guidance")) or compact_writer_guidance_for_model(_dict(packet.get("writer_guidance_packet")))
+    for row in _list(guidance.get("guidance")):
+        if not isinstance(row, dict):
+            continue
+        source_labels = set(_source_labels(row))
+        if not source_labels:
+            continue
+        terms: set[str] = set()
+        for value in _string_list(row.get("validation_terms")):
+            if len(value) > 3:
+                terms.add(value.lower())
+        for text in _string_list(row.get("instruction")) + _string_list(row.get("why_it_matters")):
+            terms.update(_content_terms(text))
+        if terms:
+            profiles.append({"source_labels": source_labels, "terms": terms})
+    return profiles
+
+
+def _guidance_overlap(item: dict[str, Any], guidance_profiles: list[dict[str, Any]]) -> bool:
+    if not guidance_profiles:
+        return False
+    item_source_labels = set(_source_labels(item))
+    item_terms = _content_terms(
+        " ".join(
+            [
+                str(item.get("reader_claim") or ""),
+                str(item.get("decision_relevance") or ""),
+                str(item.get("include_reason") or ""),
+            ]
+        )
+    )
+    for profile in guidance_profiles:
+        if not item_source_labels.intersection(set(profile.get("source_labels", set()))):
+            continue
+        if len(set(profile.get("terms", set())).intersection(item_terms)) >= 3:
+            return True
+    return False
+
+
+def _importance_rank(item: dict[str, Any]) -> int:
+    try:
+        return int(item.get("importance_rank") or 100)
+    except (TypeError, ValueError):
+        return 100
+
+
+def _diagnosticity_score(item: dict[str, Any]) -> int:
+    try:
+        return int(_dict(item.get("decision_diagnosticity")).get("score") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _reasoning_hierarchy_rescue_count(hierarchy: dict[str, Any]) -> int:
+    for move in _list(hierarchy.get("reasoning_moves")):
+        if isinstance(move, dict) and move.get("move") == "interpretive_context":
+            return len(_list(move.get("evidence")))
+    return 0
+
+
 def _evidence_group(visible_items: list[dict[str, Any]], *, roles: set[str]) -> list[dict[str, Any]]:
     return [_writer_evidence_item(item) for item in visible_items if isinstance(item, dict) and str(item.get("role") or "") in roles]
 
@@ -177,6 +402,8 @@ def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
         "lineage": _dict(item.get("lineage")),
         "obligation_level": item.get("obligation_level"),
         "memo_function": item.get("memo_function"),
+        "source_memo_role": str(item.get("source_memo_role") or "").strip(),
+        "importance_rank": item.get("importance_rank"),
     }
 
 
@@ -318,6 +545,45 @@ def _clean_answer_text(value: Any) -> str:
     text = re.sub(r"^The evidence supports a bounded answer to ['\"][^'\"]+['\"]:\s*", "", text)
     text = re.sub(r"^The evidence supports a bounded answer:\s*", "", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _content_terms(text: str) -> set[str]:
+    stop = {
+        "about",
+        "after",
+        "against",
+        "also",
+        "and",
+        "are",
+        "answer",
+        "associated",
+        "between",
+        "claim",
+        "decision",
+        "does",
+        "evidence",
+        "for",
+        "from",
+        "into",
+        "not",
+        "other",
+        "provides",
+        "significant",
+        "source",
+        "sources",
+        "that",
+        "the",
+        "their",
+        "this",
+        "using",
+        "with",
+        "without",
+    }
+    return {
+        token
+        for token in re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", str(text).lower())
+        if token not in stop
+    }
 
 
 def _source_labels(item: dict[str, Any]) -> list[str]:

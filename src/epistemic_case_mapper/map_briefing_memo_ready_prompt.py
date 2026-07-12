@@ -36,11 +36,19 @@ def build_writer_packet_synthesis_prompt(
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
     obligation_ledger = writing_interface.get("retention_checklist") or _obligation_ledger(obligations)
     model_context = build_writer_model_context(writing_interface)
+    blueprint_context: dict[str, Any] = narrative_blueprint
+    if _list(_dict(model_context.get("reasoning_hierarchy")).get("reasoning_moves")):
+        blueprint_context = {
+            "schema_id": "memo_narrative_blueprint_reference_v1",
+            "status": "superseded_by_reasoning_hierarchy",
+            "decision_question": narrative_blueprint.get("decision_question"),
+            "note": "Use writer_model_context.reasoning_hierarchy as the organizing spine; this placeholder preserves the prompt section without duplicating evidence.",
+        }
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
-        "Use the narrative blueprint as the memo's organizing spine. The required obligation ledger below is a retention checklist, not an outline: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
+        "Use reasoning_hierarchy in the writer model context as the primary organizing spine. Use the narrative blueprint as secondary orientation. The required obligation ledger below is a retention checklist, not an outline: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
         "Rules:\n"
         "- Start the first paragraph with a direct bottom-line answer to the decision question, using the bottom_line from the writer model context.\n"
         "- State the confidence level and main reason for uncertainty in the opening section when the writer model context supplies them.\n"
@@ -51,17 +59,18 @@ def build_writer_packet_synthesis_prompt(
         "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
         "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
-        "- Use counterweights_and_disposition to explain whether counterweights overturn, weaken, bound, or contextualize the answer.\n"
+        "- Use the hierarchy's counterweight, scope, and crux moves to explain whether counterevidence overturns, weakens, bounds, or contextualizes the answer.\n"
         "- Use critique_writer_guidance to avoid answer-frame mistakes, source-quality omissions, and synthesis traps identified during packet critique.\n"
         "- Treat cruxes and subgroup signals as calibration unless the packet says they change the default answer.\n"
         "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
         "- Include a concise practical implication.\n"
+        "- Let reasoning_hierarchy determine the sequence of reasoning moves; it is a compact projection of existing packet judgments, not a separate evidence source.\n"
         "- Write from the blueprint's reasoning moves rather than from the ledger's order.\n"
         "- Avoid checklist rhythm: do not make source labels or obligation statements the repeated grammatical subject.\n"
         "- Turn bare statistics into decision interpretation before moving to the next point.\n"
         "- Use natural Markdown and choose headings that fit the decision question.\n\n"
         "Narrative blueprint:\n"
-        f"{json.dumps(narrative_blueprint, indent=2, ensure_ascii=False)}\n\n"
+        f"{json.dumps(blueprint_context, indent=2, ensure_ascii=False)}\n\n"
         "Required obligation ledger:\n"
         f"{json.dumps(obligation_ledger, indent=2, ensure_ascii=False)}\n\n"
         "Suggested memo shape when it fits the case:\n"
