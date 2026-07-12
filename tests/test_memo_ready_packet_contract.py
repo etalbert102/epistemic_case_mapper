@@ -32,8 +32,8 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
-    assert "decision_synthesis_contract" in prompt
-    assert "Treat these as guidance for what matters" in prompt
-    assert "Produce a decision read: answer, reason, counterweight, scope, uncertainty, and practical implication." in prompt
-    assert "## Why This Is the Best Current Read" in prompt
-    assert "quantity_tuples" in prompt
+    assert "writer decision interface" in prompt
+    assert "writer_decision_interface_v1" in prompt
+    assert "The writer decision interface is the complete model-visible evidence and judgment record" in prompt
+    assert "Weigh support against counterweights and scope boundaries" in prompt
+    assert "quantity_anchors" in prompt
