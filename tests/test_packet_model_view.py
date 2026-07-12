@@ -6,7 +6,21 @@ from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_
 def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",
-        "evidence_bundles": [{"bundle_id": "b1", "claim": "Option A helps."}],
+        "evidence_bundles": [
+            {
+                "bundle_id": "b1",
+                "claim": "Option A helps.",
+                "source_excerpt": "This raw excerpt should not be model visible.",
+                "allowed_wording": {"avoid_terms": ["proves"]},
+                "source_appraisal": {
+                    "decision_directness": "direct",
+                    "document_types": ["trial"],
+                    "interpretation_caveats": ["Do not overstate the result."],
+                    "large_internal_notes": "This bulky source appraisal detail should not be visible.",
+                },
+                "source_use_warnings": ["quality_limit"],
+            }
+        ],
         "must_retain_ledger": [],
         "section_views": [
             {
@@ -47,3 +61,8 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
     assert "long_internal_notes" not in serialized
     assert "raw_candidate_pool" not in serialized
     assert "extra-9" not in serialized
+    assert "source_excerpt" not in serialized
+    assert "allowed_wording" not in serialized
+    assert "large_internal_notes" not in serialized
+    assert view["evidence_bundles"][0]["source_quality"]["decision_directness"] == "direct"
+    assert view["evidence_bundles"][0]["source_quality"]["warnings"] == ["quality_limit"]

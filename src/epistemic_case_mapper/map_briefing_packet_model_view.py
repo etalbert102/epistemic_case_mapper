@@ -7,12 +7,12 @@ def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -
     """Return a compact, model-facing view for critique/refinement/writing."""
 
     bundles = [
-        row
+        _compact_bundle(row)
         for row in packet.get("evidence_bundles", [])
         if isinstance(row, dict) and not row.get("synthesis_suppressed")
     ]
     retain_rows = [
-        row
+        _compact_retain(row)
         for row in packet.get("must_retain_ledger", [])
         if isinstance(row, dict) and not row.get("synthesis_suppressed")
     ]
@@ -25,6 +25,61 @@ def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -
         "section_summary": _section_summary(packet.get("section_views")),
         "source_trail": packet.get("source_trail", [])[:24],
         "coverage_summary": _coverage_summary(packet.get("coverage_report")),
+    }
+
+
+def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
+    keys = (
+        "bundle_id",
+        "decision_role",
+        "weight",
+        "directionality",
+        "section_use",
+        "section_targets",
+        "source_ids",
+        "source_labels",
+        "quantity_values",
+        "relation_ids",
+    )
+    compact = {key: row.get(key) for key in keys if row.get(key) not in (None, "", [])}
+    compact["claim"] = _short_text(str(row.get("claim") or ""), 520)
+    compact["why_it_matters"] = _short_text(str(row.get("why_it_matters") or ""), 360)
+    compact["limits"] = _string_list(row.get("limits"))[:6]
+    compact["source_quality"] = _source_quality_summary(row)
+    return {key: value for key, value in compact.items() if value not in (None, "", [], {})}
+
+
+def _compact_retain(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in {
+            "item_id": row.get("item_id"),
+            "decision_role": row.get("decision_role"),
+            "importance": row.get("importance"),
+            "statement": _short_text(str(row.get("statement") or ""), 420),
+            "bundle_ids": _string_list(row.get("bundle_ids"))[:12],
+            "required_terms": _string_list(row.get("required_terms"))[:10],
+            "source_ids": _string_list(row.get("source_ids"))[:8],
+            "quantity_ids": _string_list(row.get("quantity_ids"))[:8],
+        }.items()
+        if value not in (None, "", [], {})
+    }
+
+
+def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
+    appraisal = row.get("source_appraisal") if isinstance(row.get("source_appraisal"), dict) else {}
+    return {
+        key: value
+        for key, value in {
+            "quality": row.get("quality"),
+            "warnings": _string_list(row.get("source_use_warnings"))[:4],
+            "decision_directness": appraisal.get("decision_directness"),
+            "document_types": _string_list(appraisal.get("document_types"))[:4],
+            "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
+            "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+            "interpretation_caveats": [_short_text(str(item), 180) for item in _string_list(appraisal.get("interpretation_caveats"))[:3]],
+        }.items()
+        if value not in (None, "", [], {})
     }
 
 
@@ -84,3 +139,11 @@ def _short_text(text: str, limit: int) -> str:
     if len(cleaned) <= limit:
         return cleaned
     return cleaned[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:") + "."
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if value in (None, ""):
+        return []
+    return [str(value).strip()]

@@ -107,7 +107,25 @@ def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
     compact["claim"] = _short_text(str(row.get("claim") or ""), 520)
     compact["why_it_matters"] = _short_text(str(row.get("why_it_matters") or ""), 360)
     compact["limits"] = _string_list(row.get("limits"))[:6]
-    return compact
+    compact["source_quality"] = _source_quality_summary(row)
+    return {key: value for key, value in compact.items() if value not in (None, "", [], {})}
+
+
+def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
+    appraisal = row.get("source_appraisal") if isinstance(row.get("source_appraisal"), dict) else {}
+    return {
+        key: value
+        for key, value in {
+            "quality": row.get("quality"),
+            "warnings": _string_list(row.get("source_use_warnings"))[:4],
+            "decision_directness": appraisal.get("decision_directness"),
+            "document_types": _string_list(appraisal.get("document_types"))[:4],
+            "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
+            "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+            "interpretation_caveats": [_short_text(str(item), 180) for item in _string_list(appraisal.get("interpretation_caveats"))[:3]],
+        }.items()
+        if value not in (None, "", [], {})
+    }
 
 
 def _compact_retain(row: dict[str, Any]) -> dict[str, Any]:

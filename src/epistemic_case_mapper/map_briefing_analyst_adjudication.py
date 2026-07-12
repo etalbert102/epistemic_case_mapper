@@ -316,7 +316,7 @@ def deterministic_adjudication_scaffold(ledger: dict[str, Any]) -> dict[str, Any
 
 
 def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
-    return {
+    prompt = {
         "evidence_item_id": row.get("evidence_item_id"),
         "input_kind": row.get("input_kind"),
         "current_role": row.get("current_role"),
@@ -324,20 +324,73 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
         "current_weight": row.get("current_weight"),
         "directionality": row.get("directionality"),
         "relation_semantic_role": row.get("relation_semantic_role"),
-        "relation_contract": row.get("relation_contract", {}),
-        "candidate_pair": row.get("candidate_pair", {}),
-        "endpoint_claims": row.get("endpoint_claims", []),
         "source_labels": row.get("source_labels", []),
+        "source_quality": _source_quality_summary(row),
         "quantity_values": row.get("quantity_values", []),
-        "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 260),
         "claim": _short_text(str(row.get("claim") or ""), 360),
         "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 180),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 180),
         "claim_ids": row.get("claim_ids") or _string_list(row.get("claim_id")),
         "relation_ids": row.get("relation_ids", []),
-        "relation_context": row.get("relation_context", []),
         "existing_warning_codes": row.get("existing_warning_codes", []),
     }
+    if str(row.get("input_kind") or "") == "candidate_decision_edge":
+        prompt.update(
+            {
+                "relation_contract": _relation_contract_for_prompt(row.get("relation_contract", {})),
+                "candidate_pair": _candidate_pair_for_prompt(row.get("candidate_pair", {})),
+                "endpoint_claims": _endpoint_claims_for_prompt(row.get("endpoint_claims", [])),
+            }
+        )
+    return {key: value for key, value in prompt.items() if value not in (None, "", [], {})}
+
+
+def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
+    appraisal = _dict(row.get("source_appraisal"))
+    return {
+        key: value
+        for key, value in {
+            "quality": row.get("quality"),
+            "warnings": _string_list(row.get("source_use_warnings"))[:4],
+            "decision_directness": appraisal.get("decision_directness"),
+            "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
+            "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+        }.items()
+        if value not in (None, "", [], {})
+    }
+
+
+def _relation_contract_for_prompt(value: Any) -> dict[str, Any]:
+    contract = _dict(value)
+    return {
+        key: _short_text(str(contract.get(key) or ""), 220)
+        for key in ("edge_basis", "source_anchor_a", "source_anchor_b", "why_decision_relevant", "failure_condition")
+        if contract.get(key)
+    }
+
+
+def _candidate_pair_for_prompt(value: Any) -> dict[str, Any]:
+    pair = _dict(value)
+    return {
+        key: pair.get(key)
+        for key in ("pair_id", "decision_edge_contract", "reason", "score")
+        if pair.get(key) not in (None, "", [], {})
+    }
+
+
+def _endpoint_claims_for_prompt(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                key: _short_text(str(row.get(key) or ""), 260) if key == "claim" else row.get(key)
+                for key in ("endpoint", "claim_id", "decision_edge_role", "decision_function", "question_relevance", "claim")
+                if row.get(key) not in (None, "", [], {})
+            }
+        )
+    return rows[:4]
 
 
 def _memo_use_for_row(row: dict[str, Any]) -> str:

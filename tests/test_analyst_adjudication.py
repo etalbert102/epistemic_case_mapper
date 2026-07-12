@@ -23,6 +23,14 @@ def _ledger() -> dict:
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
                 "claim": "Option A reduced losses.",
+                "source_excerpt": "Raw excerpt should stay out of adjudication prompt.",
+                "source_appraisal": {
+                    "decision_directness": "direct",
+                    "document_types": ["trial"],
+                    "interpretation_caveats": ["Do not overstate."],
+                    "large_internal_notes": "This bulky appraisal detail should stay out.",
+                },
+                "source_use_warnings": ["quality_limit"],
             },
             {
                 "evidence_item_id": "warning:two",
@@ -65,6 +73,12 @@ def _relation_ledger() -> dict:
                     {"endpoint": "source", "claim_id": "c001", "decision_edge_role": "mechanism_or_biomarker"},
                     {"endpoint": "target", "claim_id": "c002", "decision_edge_role": "outcome_finding"},
                 ],
+                "relation_context": [
+                    {
+                        "relation_id": "too_broad",
+                        "rationale": "Broad neighboring relation context should not be forwarded to the model.",
+                    }
+                ],
                 "claim": "supports: mechanism evidence may explain the outcome finding.",
                 "source_excerpt": "mechanism changed | outcome improved",
             }
@@ -79,6 +93,10 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "bundle:one" in prompt
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
+    assert "Raw excerpt should stay out" not in prompt
+    assert "large_internal_notes" not in prompt
+    assert "source_quality" in prompt
+    assert "quality_limit" in prompt
 
 
 def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> None:
@@ -90,6 +108,7 @@ def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> No
     assert "source_anchor_a" in prompt
     assert "failure_condition" in prompt
     assert "endpoint_claims" in prompt
+    assert "Broad neighboring relation context" not in prompt
 
 
 def test_analyst_adjudication_prompt_backend_scaffolds_all_rows() -> None:

@@ -27,6 +27,13 @@ def _packet(count: int = 10) -> dict:
                 "section_targets": ["Decision evidence"],
                 "source_ids": [f"s{index}"],
                 "source_labels": [f"Source {index}"],
+                "source_excerpt": "Raw excerpt should not be forwarded.",
+                "source_appraisal": {
+                    "decision_directness": "direct",
+                    "document_types": ["trial"],
+                    "large_internal_notes": "Bulky appraisal internals should not be forwarded.",
+                },
+                "source_use_warnings": ["quality_limit"],
             }
             for index in range(1, count + 1)
         ],
@@ -68,6 +75,11 @@ def test_packet_critique_index_shards_large_packet() -> None:
     assert len(shards) == 3
     assert [len(row["bundles"]) for row in shards] == [6, 6, 1]
     assert shards[0]["bundle_ids"][0] == "bundle_001"
+    serialized = json.dumps(index)
+    assert "Raw excerpt should not be forwarded" not in serialized
+    assert "large_internal_notes" not in serialized
+    assert index["bundles"][0]["source_quality"]["decision_directness"] == "direct"
+    assert index["bundles"][0]["source_quality"]["warnings"] == ["quality_limit"]
 
 
 def test_parallel_packet_critique_merges_and_verifies_recommendations() -> None:

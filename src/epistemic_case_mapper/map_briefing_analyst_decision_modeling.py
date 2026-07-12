@@ -530,7 +530,7 @@ def _content_terms(text: str) -> list[str]:
 def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:
     evidence_id = str(row.get("evidence_item_id") or "").strip()
     adjudicated = _adjudication_by_id(adjudication).get(evidence_id, {})
-    return {
+    context = {
         "evidence_item_id": evidence_id,
         "claim_id": row.get("claim_id"),
         "input_kind": row.get("input_kind"),
@@ -539,21 +539,75 @@ def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str,
         "current_weight": row.get("current_weight"),
         "directionality": row.get("directionality"),
         "relation_semantic_role": row.get("relation_semantic_role"),
-        "relation_contract": row.get("relation_contract", {}),
-        "candidate_pair": row.get("candidate_pair", {}),
-        "endpoint_claims": row.get("endpoint_claims", []),
         "adjudicated_memo_use": adjudicated.get("memo_use"),
         "adjudicated_importance_rank": adjudicated.get("importance_rank"),
         "source_labels": row.get("source_labels", []),
         "source_ids": row.get("source_ids", []),
+        "source_quality": _source_quality_summary(row),
         "claim": _short_text(str(row.get("claim") or ""), 620),
-        "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 360),
         "quantity_values": row.get("quantity_values", []),
         "why_it_matters": _short_text(str(row.get("why_it_matters") or adjudicated.get("rationale") or ""), 280),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 220),
-        "relation_context": _compact_relation_context(row.get("relation_context", [])),
+        "relation_ids": row.get("relation_ids", []),
         "existing_warning_codes": row.get("existing_warning_codes", []),
     }
+    if str(row.get("input_kind") or "") == "candidate_decision_edge":
+        context.update(
+            {
+                "relation_contract": _relation_contract_for_context(row.get("relation_contract", {})),
+                "candidate_pair": _candidate_pair_for_context(row.get("candidate_pair", {})),
+                "endpoint_claims": _endpoint_claims_for_context(row.get("endpoint_claims", [])),
+            }
+        )
+    return {key: value for key, value in context.items() if value not in (None, "", [], {})}
+
+
+def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
+    appraisal = _dict(row.get("source_appraisal"))
+    return {
+        key: value
+        for key, value in {
+            "quality": row.get("quality"),
+            "warnings": _string_list(row.get("source_use_warnings"))[:4],
+            "decision_directness": appraisal.get("decision_directness"),
+            "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
+            "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+        }.items()
+        if value not in (None, "", [], {})
+    }
+
+
+def _relation_contract_for_context(value: Any) -> dict[str, Any]:
+    contract = _dict(value)
+    return {
+        key: _short_text(str(contract.get(key) or ""), 240)
+        for key in ("edge_basis", "source_anchor_a", "source_anchor_b", "why_decision_relevant", "failure_condition")
+        if contract.get(key)
+    }
+
+
+def _candidate_pair_for_context(value: Any) -> dict[str, Any]:
+    pair = _dict(value)
+    return {
+        key: pair.get(key)
+        for key in ("pair_id", "decision_edge_contract", "reason", "score")
+        if pair.get(key) not in (None, "", [], {})
+    }
+
+
+def _endpoint_claims_for_context(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                key: _short_text(str(row.get(key) or ""), 280) if key == "claim" else row.get(key)
+                for key in ("endpoint", "claim_id", "decision_edge_role", "decision_function", "question_relevance", "claim")
+                if row.get(key) not in (None, "", [], {})
+            }
+        )
+    return rows[:4]
 
 
 def _retention_obligation_context(ledger: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:

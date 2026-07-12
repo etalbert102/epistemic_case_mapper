@@ -26,13 +26,20 @@ def _ledger() -> dict:
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
                 "quantity_values": ["25% reduction"],
+                "source_excerpt": "Raw support excerpt should not be model-facing.",
                 "relation_context": [
                     {
                         "relation_type": "in_tension_with",
                         "other_claim_id": "risk",
-                        "other_claim": "Option A shifts risk to operations.",
+                        "other_claim": "Broad relation context should not be forwarded.",
                     }
                 ],
+                "source_appraisal": {
+                    "decision_directness": "direct",
+                    "document_types": ["trial"],
+                    "large_internal_notes": "Bulky appraisal detail should not be model-facing.",
+                },
+                "source_use_warnings": ["quality_limit"],
             },
             {
                 "evidence_item_id": "bundle:support_duplicate",
@@ -178,6 +185,11 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["row_count"] == 3
     assert context["model_hints"]["top_central_evidence_item_ids"]
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
+    assert "source_excerpt" not in context["evidence_rows"][0]
+    assert "relation_context" not in context["evidence_rows"][0]
+    assert context["evidence_rows"][0]["source_quality"]["decision_directness"] == "direct"
+    assert context["evidence_rows"][0]["source_quality"]["warnings"] == ["quality_limit"]
+    assert "Bulky appraisal" not in json.dumps(context)
     assert context["retention_obligations"]["quantitative_anchors"][0]["evidence_item_id"] == "bundle:support"
     assert context["retention_obligations"]["counterweights"][0]["evidence_item_id"] == "bundle:risk"
     skeleton_ids = {row["skeleton_group_id"] for row in context["obligation_group_skeleton"]}
@@ -220,6 +232,8 @@ def test_parallel_decision_model_tasks_chunk_large_context() -> None:
     assert len(tasks) == 3
     assert [len(task["evidence_rows"]) for task in tasks] == [6, 6, 2]
     assert tasks[0]["task_id"] == "analyst_decision_model_task_001"
+    assert "source_excerpt" not in json.dumps(tasks)
+    assert "relation_context" not in json.dumps(tasks)
 
 
 def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) -> None:

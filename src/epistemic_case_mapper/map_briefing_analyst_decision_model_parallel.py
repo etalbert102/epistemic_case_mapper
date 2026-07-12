@@ -248,7 +248,7 @@ def _hints_for_rows(context: dict[str, Any], rows: list[dict[str, Any]]) -> dict
 
 
 def _compact_task_row(row: dict[str, Any]) -> dict[str, Any]:
-    return {
+    compact = {
         "evidence_item_id": row.get("evidence_item_id"),
         "claim_id": row.get("claim_id"),
         "input_kind": row.get("input_kind"),
@@ -256,27 +256,48 @@ def _compact_task_row(row: dict[str, Any]) -> dict[str, Any]:
         "adjudicated_memo_use": row.get("adjudicated_memo_use"),
         "adjudicated_importance_rank": row.get("adjudicated_importance_rank"),
         "source_labels": _string_list(row.get("source_labels"))[:4],
+        "source_quality": row.get("source_quality") if isinstance(row.get("source_quality"), dict) else {},
         "claim": _short_text(str(row.get("claim") or ""), 320),
-        "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 160),
         "quantity_values": _string_list(row.get("quantity_values"))[:6],
         "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 160),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 120),
-        "relation_context": _compact_relation_context(row.get("relation_context")),
         "existing_warning_codes": _string_list(row.get("existing_warning_codes"))[:4],
+    }
+    if str(row.get("input_kind") or "") == "candidate_decision_edge":
+        compact["relation_contract"] = _relation_contract_for_task(row.get("relation_contract"))
+        compact["candidate_pair"] = _candidate_pair_for_task(row.get("candidate_pair"))
+        compact["endpoint_claims"] = _endpoint_claims_for_task(row.get("endpoint_claims"))
+    return {key: value for key, value in compact.items() if value not in (None, "", [], {})}
+
+
+def _relation_contract_for_task(value: Any) -> dict[str, Any]:
+    contract = value if isinstance(value, dict) else {}
+    return {
+        key: _short_text(str(contract.get(key) or ""), 180)
+        for key in ("edge_basis", "source_anchor_a", "source_anchor_b", "why_decision_relevant", "failure_condition")
+        if contract.get(key)
     }
 
 
-def _compact_relation_context(value: Any) -> list[dict[str, Any]]:
+def _candidate_pair_for_task(value: Any) -> dict[str, Any]:
+    pair = value if isinstance(value, dict) else {}
+    return {
+        key: pair.get(key)
+        for key in ("pair_id", "decision_edge_contract", "reason", "score")
+        if pair.get(key) not in (None, "", [], {})
+    }
+
+
+def _endpoint_claims_for_task(value: Any) -> list[dict[str, Any]]:
     rows = []
-    for relation in _list(value)[:2]:
-        if not isinstance(relation, dict):
+    for endpoint in _list(value)[:4]:
+        if not isinstance(endpoint, dict):
             continue
         rows.append(
             {
-                "relation_type": relation.get("relation_type"),
-                "other_claim_id": relation.get("other_claim_id"),
-                "other_claim": _short_text(str(relation.get("other_claim") or ""), 120),
-                "rationale": _short_text(str(relation.get("rationale") or ""), 120),
+                key: _short_text(str(endpoint.get(key) or ""), 180) if key == "claim" else endpoint.get(key)
+                for key in ("endpoint", "claim_id", "decision_edge_role", "decision_function", "question_relevance", "claim")
+                if endpoint.get(key) not in (None, "", [], {})
             }
         )
     return rows
