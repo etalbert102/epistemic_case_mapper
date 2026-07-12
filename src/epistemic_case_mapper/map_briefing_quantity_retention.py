@@ -22,11 +22,22 @@ def retention_quantity_rows(row: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def quantity_retained(memo: str, quantity: dict[str, str]) -> bool:
+    value = str(quantity.get("value") or "")
+    if _interval_endpoints(value):
+        return _contains_interval(memo, value) or any(
+            _contains_interval(memo, candidate)
+            for candidate in _dedupe(
+                [
+                    str(quantity.get("retention_phrase") or ""),
+                    str(quantity.get("interpretation") or ""),
+                ]
+            )
+        )
     return any(
         contains_quantity(memo, candidate)
         for candidate in _dedupe(
             [
-                str(quantity.get("value") or ""),
+                value,
                 str(quantity.get("retention_phrase") or ""),
                 str(quantity.get("interpretation") or ""),
             ]
@@ -86,6 +97,42 @@ def contains_quantity(text: str, quantity: str) -> bool:
     normalized_text = _norm(text)
     numbers = re.findall(r"\d+(?:\.\d+)?", quantity)
     return bool(numbers) and all(number in normalized_text for number in numbers)
+
+
+def _contains_interval(text: str, quantity: str) -> bool:
+    endpoints = _interval_endpoints(quantity)
+    if not endpoints:
+        return False
+    normalized_text = _norm(text)
+    return all(_norm(endpoint) in normalized_text for endpoint in endpoints)
+
+
+def _interval_endpoints(text: str) -> tuple[str, str] | None:
+    normalized = str(text or "")
+    endpoint = r"[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?"
+    pattern = rf"(?P<left>{endpoint})\s*(?:to|through|[-–—])\s*(?P<right>{endpoint})"
+    matches = list(re.finditer(pattern, normalized, flags=re.IGNORECASE))
+    if matches:
+        match = matches[-1]
+        left = match.group("left")
+        right = match.group("right")
+        if _looks_like_decision_interval(left, right, normalized):
+            return left, right
+    lowered = normalized.lower()
+    if re.search(r"\b(?:ci|confidence interval|credible interval)\b", lowered):
+        numbers = re.findall(endpoint, normalized)
+        if len(numbers) >= 2:
+            return numbers[-2], numbers[-1]
+    return None
+
+
+def _looks_like_decision_interval(left: str, right: str, text: str) -> bool:
+    lowered = text.lower()
+    if re.search(r"\b(?:ci|confidence interval|credible interval|range|interval)\b", lowered):
+        return True
+    if any("." in value or "%" in value for value in (left, right)):
+        return True
+    return False
 
 
 def _quantity_signatures(text: str) -> set[str]:
