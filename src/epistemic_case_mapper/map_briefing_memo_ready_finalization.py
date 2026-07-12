@@ -294,7 +294,7 @@ def run_memo_ready_final_polish(
         report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
     raw = result.text
-    candidate = repair_markdown_structure(_extract_markdown(raw))
+    candidate = normalize_memo_ready_polish_text(repair_markdown_structure(_extract_markdown(raw)))
     if not candidate:
         report.update({"status": "empty_response_kept_original", "issues": ["final polish returned no markdown"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
@@ -338,16 +338,44 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
     }
     return (
         "You are doing a final prose polish on a source-grounded decision memo.\n"
-        "Improve flow and remove awkward wording while preserving every protected source-backed item.\n\n"
+        "Improve flow, sentence rhythm, and transitions while preserving every protected source-backed item.\n"
+        "The protected item list is a factual constraint for retention, not an outline for the memo.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
         "- Preserve protected obligations, quantities, source labels, caveats, counterweights, and scope boundaries.\n"
         "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
         "- Use facts and sources already present in the memo or protected item list.\n"
+        "- Keep the decision answer direct, then make the supporting reasoning flow across paragraphs.\n"
+        "- Remove checklist rhythm, repeated sentence openings, and source-label-as-subject patterns when they make the memo stiff.\n"
+        "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
+        "- Fix obvious citation spacing and author-year formatting mistakes without changing the source label.\n"
         "- Make the memo read like decision-ready analysis.\n\n"
         f"Protected item list:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
         f"Memo:\n{memo.strip()}\n"
     )
+
+
+def normalize_memo_ready_polish_text(memo: str) -> str:
+    text = str(memo or "")
+    if not text.strip():
+        return ""
+    replacements = [
+        (r"\betal\.", "et al."),
+        (r"\bet\s+al\s*\.", "et al."),
+        (r"\b([A-Z][A-Za-z-]+)\s+et al\.\s*,\s*(\d{4})", r"\1 et al. \2"),
+        (r"\b([A-Z][A-Za-z-]+)\s+et al\.\s+(\d{4})\s*\)", r"\1 et al. \2)"),
+        (r"\bThe primary support for this conclusion is rooted in\b", "The main support is"),
+        (r"\bThe primary support for this conclusion stems from\b", "The main support is"),
+        (r"\bThe strongest support for this conclusion stems from\b", "The strongest support is"),
+        (r"\bThe primary support for ([^.]{1,120}?) is rooted in\b", r"The main support for \1 is"),
+        (r"\bThe primary support for ([^.]{1,120}?) stems from\b", r"The main support for \1 is"),
+        (r"\bThe strongest support for ([^.]{1,120}?) stems from\b", r"The strongest support for \1 is"),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    text = re.sub(r"[ \t]+$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip() + "\n"
 
 
 def _item_lines(items: list[Any], roles: set[str]) -> list[str]:

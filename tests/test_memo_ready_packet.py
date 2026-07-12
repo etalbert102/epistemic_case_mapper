@@ -6,8 +6,10 @@ from pathlib import Path
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_memo_ready_final_polish_prompt,
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
+    normalize_memo_ready_polish_text,
     run_memo_ready_final_polish,
     run_memo_ready_presentation_normalization,
     run_memo_ready_packet_repair,
@@ -715,6 +717,46 @@ def test_memo_ready_final_polish_rejects_evidence_loss(monkeypatch) -> None:
 
     assert result["report"]["status"] == "rejected_kept_original"
     assert result["memo"] == memo
+
+
+def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    prompt = build_memo_ready_final_polish_prompt("## Decision Brief\n\nOption A may help.", packet)
+
+    assert "factual constraint for retention, not an outline" in prompt
+    assert "Remove checklist rhythm" in prompt
+    assert "Protected item list" in prompt
+
+
+def test_memo_ready_final_polish_normalizes_safe_citation_and_phrase_defects(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    memo = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
+    polished = memo.replace(
+        "\n## Sources\n",
+        "\nThe primary support for this conclusion stems from Outcome Study: Option A reduced flood losses by 25% in comparable river cities (Zhong etal. 2019).\n\n## Sources\n",
+    )
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=polished, backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert "The main support is" in result["memo"]
+    assert "etal." not in result["memo"]
+
+
+def test_memo_ready_polish_cleanup_is_narrow() -> None:
+    cleaned = normalize_memo_ready_polish_text(
+        "## Decision Brief\n\nThe primary support for this neutral stance is rooted in Zhong etal. 2019 reporting 0.93.\n"
+    )
+
+    assert "The main support for this neutral stance is Zhong et al. 2019 reporting 0.93." in cleaned
 
 
 def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None:

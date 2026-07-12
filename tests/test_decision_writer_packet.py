@@ -215,7 +215,9 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
+    assert "Narrative blueprint" in prompt
     assert "Required obligation ledger" in prompt
+    assert "retention checklist, not an outline" in prompt
     assert "Use this as load-bearing support for the default answer" in prompt
     assert "Bound the answer's applicability" in prompt
     assert "analyst_synthesis_packet" not in prompt
