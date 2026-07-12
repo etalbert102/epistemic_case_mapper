@@ -615,11 +615,10 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
 
     prompt = build_memo_ready_packet_synthesis_prompt(result["analyst_memo_ready_packet"])
 
-    assert "source-bound writer packet" in prompt
-    assert "argument_plan" in prompt
-    assert "decision_logic" in prompt
-    assert "complete writing interface" in prompt
-    assert "weigh_risk" in prompt
+    assert "writer decision interface" in prompt
+    assert "writer_decision_interface_v1" in prompt
+    assert "retention_checklist" in prompt
+    assert "excluded_evidence_log" in prompt
     assert '"evidence_items"' not in prompt
 
 

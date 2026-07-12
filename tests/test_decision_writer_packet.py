@@ -300,7 +300,8 @@ def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_
     assert "Off-question omega seafood context should not guide the memo" not in prompt
     assert "decision_writer_item_optional" in prompt
     assert "not_marked_must_use_for_memo_synthesis" in prompt
-    assert "model_context_filter_report" in prompt
+    assert "writer_decision_interface_v1" in prompt
+    assert "excluded_evidence_log" in prompt
 
 
 def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monkeypatch) -> None:

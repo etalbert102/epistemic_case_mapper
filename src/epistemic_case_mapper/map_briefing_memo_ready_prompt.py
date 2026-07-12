@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -51,35 +52,29 @@ def build_writer_packet_synthesis_prompt(
     memo_ready_packet: dict[str, Any] | None = None,
 ) -> str:
     obligations = required_memo_obligations(memo_ready_packet or {})
-    writing_interface = _writing_interface(writer_packet, memo_ready_packet or {})
+    writing_interface = (
+        build_writer_decision_interface(memo_ready_packet)
+        if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items")
+        else _legacy_writer_decision_interface(writer_packet)
+    )
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
-    obligation_ledger = [
-        {
-            "obligation_id": obligation.get("obligation_id"),
-            "obligation_type": obligation.get("obligation_type"),
-            "role": obligation.get("role"),
-            "statement": obligation.get("statement"),
-            "prose_instruction": obligation.get("prose_instruction"),
-            "source_labels": obligation.get("source_labels", []),
-            "quantities": obligation.get("quantities", []),
-        }
-        for obligation in obligations
-    ]
+    obligation_ledger = writing_interface.get("retention_checklist") or _obligation_ledger(obligations)
     return (
-        "You are a senior decision analyst. Write a coherent decision memo from the source-bound writer packet writing interface.\n"
-        "The writing interface is the complete writing interface and memo-facing evidence record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
+        "You are a senior decision analyst. Write a coherent decision memo from the writer decision interface.\n"
+        "The writer decision interface is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
         "Use the narrative blueprint as the memo's organizing spine. The required obligation ledger below is a retention checklist, not an outline: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
         "Rules:\n"
-        "- Start the first paragraph with a direct bottom-line answer to the decision question, using the bounded answer/default read from the writing interface.\n"
-        "- State the confidence level and main reason for uncertainty in the opening section when the writing interface supplies them.\n"
-        "- Use only facts, quantities, and source labels present in the writing interface.\n"
-        "- Use only quantities listed inside evidence_items.quantities or the required obligation ledger.\n"
-        "- Cite the source_display or source_label attached to the evidence unit or quantity that supports the sentence.\n"
+        "- Start the first paragraph with a direct bottom-line answer to the decision question, using the bottom_line from the writer decision interface.\n"
+        "- State the confidence level and main reason for uncertainty in the opening section when the writer decision interface supplies them.\n"
+        "- Use only facts, quantities, and source labels present in the writer decision interface.\n"
+        "- Use only quantities listed inside quantity_anchors, must_use_evidence.quantities, or the required obligation ledger.\n"
+        "- When a quantity value is ambiguous by itself, use its interpretation wording from quantity_anchors or must_use_evidence.quantities.\n"
+        "- Cite the source label attached to the evidence unit or quantity that supports the sentence.\n"
         "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
         "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
-        "- Use each evidence unit's source_appraisal, allowed_wording, and source_use_warnings to calibrate verbs, causal language, and uncertainty.\n"
+        "- Use counterweights_and_disposition to explain whether counterweights overturn, weaken, bound, or contextualize the answer.\n"
         "- Treat cruxes and subgroup signals as calibration unless the packet says they change the default answer.\n"
         "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
         "- Include a concise practical implication.\n"
@@ -96,7 +91,7 @@ def build_writer_packet_synthesis_prompt(
         "## Why This Is the Best Current Read\n"
         "## What Could Change the Answer\n"
         "## Practical Implications\n\n"
-        "Source-bound writing interface:\n"
+        "Writer decision interface:\n"
         f"{json.dumps(writing_interface, indent=2, ensure_ascii=False)}\n"
     )
 
@@ -106,6 +101,8 @@ def build_memo_narrative_blueprint(
     *,
     writing_interface: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if isinstance(writing_interface, dict) and writing_interface.get("schema_id") == "writer_decision_interface_v1":
+        return _writer_interface_narrative_blueprint(writing_interface)
     interface = writing_interface if isinstance(writing_interface, dict) else _writing_interface(
         _dict(memo_ready_packet.get("writer_packet")), memo_ready_packet
     )
@@ -173,6 +170,111 @@ def build_memo_narrative_blueprint(
             "Connect support, counterweight, and scope in sentences that explain why they matter for the decision.",
             "Use the required obligation ledger only to check retention after drafting.",
         ],
+    }
+
+
+def _writer_interface_narrative_blueprint(writer_interface: dict[str, Any]) -> dict[str, Any]:
+    support = _list(writer_interface.get("support_that_drives_answer"))
+    counterweights = _list(writer_interface.get("counterweights_and_disposition"))
+    scope = _list(writer_interface.get("scope_boundaries"))
+    cruxes = _list(writer_interface.get("decision_cruxes"))
+    implications = _string_list(writer_interface.get("practical_implications"))
+    return {
+        "schema_id": "memo_narrative_blueprint_v1",
+        "decision_question": writer_interface.get("decision_question"),
+        "opening_answer": _clean_answer_text(writer_interface.get("bottom_line")),
+        "confidence": writer_interface.get("confidence"),
+        "moves": [
+            {
+                "move": "bottom_line",
+                "writing_goal": "Open with the answer, confidence, and the main reason the answer is bounded.",
+                "guidance": [_clean_answer_text(writer_interface.get("bottom_line"))],
+                "required_points": _blueprint_points(support[:3]),
+            },
+            {
+                "move": "main_support",
+                "writing_goal": "Explain the strongest support and interpret the load-bearing quantities.",
+                "guidance": [],
+                "required_points": _blueprint_points(support),
+            },
+            {
+                "move": "counterweights",
+                "writing_goal": "Give the strongest counterweights their force, then explain whether they change the answer.",
+                "guidance": [],
+                "required_points": _blueprint_points(counterweights),
+            },
+            {
+                "move": "scope_and_cruxes",
+                "writing_goal": "State the boundaries, cruxes, or assumptions that would change the answer.",
+                "guidance": [],
+                "required_points": _blueprint_points([*scope, *cruxes]),
+            },
+            {
+                "move": "practical_implication",
+                "writing_goal": "Translate the evidence into the next decision action or monitoring implication.",
+                "guidance": implications,
+                "required_points": [],
+            },
+        ],
+        "argument_plan_hints": [],
+        "prose_discipline": [
+            "Use the moves as a reasoning sequence, not as visible labels unless the headings fit naturally.",
+            "Connect support, counterweight, and scope in sentences that explain why they matter for the decision.",
+            "Use the required obligation ledger only to check retention after drafting.",
+        ],
+    }
+
+
+def _blueprint_points(items: list[Any]) -> list[dict[str, Any]]:
+    points = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        points.append(
+            {
+                "item_id": item.get("item_id"),
+                "point": _short_text(item.get("claim")),
+                "source_labels": _string_list(item.get("source_labels")),
+                "quantities": _quantity_values(item.get("quantities")),
+                "disposition": item.get("disposition"),
+            }
+        )
+    return points
+
+
+def _obligation_ledger(obligations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "obligation_id": obligation.get("obligation_id"),
+            "obligation_type": obligation.get("obligation_type"),
+            "role": obligation.get("role"),
+            "statement": obligation.get("statement"),
+            "prose_instruction": obligation.get("prose_instruction"),
+            "source_labels": obligation.get("source_labels", []),
+            "quantities": obligation.get("quantities", []),
+        }
+        for obligation in obligations
+    ]
+
+
+def _legacy_writer_decision_interface(writer_packet: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_id": "writer_decision_interface_v1",
+        "decision_question": writer_packet.get("decision_question") if isinstance(writer_packet, dict) else "",
+        "bottom_line": _dict(writer_packet.get("answer")).get("bounded_answer") if isinstance(writer_packet, dict) else "",
+        "confidence": _dict(writer_packet.get("answer")).get("confidence", "not_specified") if isinstance(writer_packet, dict) else "not_specified",
+        "support_that_drives_answer": [],
+        "counterweights_and_disposition": [],
+        "scope_boundaries": [],
+        "decision_cruxes": [],
+        "practical_implications": [],
+        "must_use_evidence": [],
+        "quantity_anchors": [],
+        "source_trail": _list(writer_packet.get("source_trail")) if isinstance(writer_packet, dict) else [],
+        "retention_checklist": [],
+        "excluded_evidence_log": [],
+        "lineage_report": {"schema_id": "writer_decision_interface_lineage_report_v1", "source_packet_method": "legacy_writer_packet_without_memo_ready_packet"},
+        "quality_warnings": ["legacy_writer_packet_without_memo_ready_packet"],
     }
 
 
