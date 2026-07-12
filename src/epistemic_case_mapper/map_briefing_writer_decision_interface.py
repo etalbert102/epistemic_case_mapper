@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_registry_for_model
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
@@ -26,7 +27,6 @@ GENERIC_JUDGMENT_PATTERNS = (
     "answer the decision question",
     "if they do not overturn",
 )
-
 
 def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
     """Compile a memo-ready packet into the only context the writer model should see."""
@@ -63,6 +63,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "quantity_anchors": _quantity_anchors(visible_items),
         "critique_writer_guidance": compact_writer_guidance_for_model(_dict(packet.get("writer_guidance_packet"))),
         "source_trail": _visible_source_trail(packet, visible_items),
+        "_source_identity_trail": _list(packet.get("source_trail")),
         "retention_checklist": _retention_checklist(obligations),
         "excluded_evidence_log": [_excluded_evidence_log_row(item) for item in filtered_items],
         "lineage_report": _lineage_report(packet, visible_items, filtered_items, obligations),
@@ -78,6 +79,8 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
 
     interface = writer_interface if isinstance(writer_interface, dict) else {}
     hierarchy = _dict(interface.get("reasoning_hierarchy"))
+    source_trail = _list(interface.get("source_trail"))
+    source_identity_trail = _list(interface.get("_source_identity_trail")) or source_trail
     context = {
         "schema_id": "writer_model_context_v1",
         "source_schema_id": interface.get("schema_id"),
@@ -95,7 +98,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "practical_implication_cards": _list(interface.get("practical_implication_cards")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
         "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
-        "source_trail": _list(interface.get("source_trail")),
+        "source_registry": source_id_registry_for_model(source_trail),
     }
     if not _list(hierarchy.get("reasoning_moves")):
         context.update(
@@ -106,7 +109,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
                 "decision_cruxes": _list(interface.get("decision_cruxes")),
             }
         )
-    return context
+    return project_sources_to_ids_for_model(context, source_identity_trail)
 
 
 def build_writer_decision_interface_quality_report(interface: dict[str, Any]) -> dict[str, Any]:

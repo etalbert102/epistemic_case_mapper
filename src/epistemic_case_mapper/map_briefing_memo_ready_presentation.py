@@ -9,6 +9,11 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_identity import (
+    common_source_prefix,
+    preferred_source_display,
+    source_label_variants,
+)
 
 
 def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
@@ -22,6 +27,10 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
         if next_memo != normalized:
             changes.append("inserted_decision_question")
             normalized = next_memo
+    next_memo = _remove_duplicate_decision_heading(normalized)
+    if next_memo != normalized:
+        changes.append("removed_duplicate_decision_heading")
+        normalized = next_memo
     next_memo = _replace_source_aliases(normalized, source_aliases)
     if next_memo != normalized:
         changes.append("normalized_source_labels")
@@ -76,10 +85,10 @@ def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
 def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
     urls = _source_url_lookup(packet)
     labels = _packet_source_labels(packet)
-    common_prefix = _common_token_prefix(labels)
+    common_prefix = common_source_prefix(labels)
     entries = []
     for label in labels:
-        display = _preferred_source_display({"source_label": label}, common_prefix=common_prefix)
+        display = preferred_source_display({"source_label": label}, common_prefix=common_prefix)
         if not display:
             continue
         entries.append({"display": display, "url": urls.get(label, "")})
@@ -94,7 +103,7 @@ def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
         label = str(source.get("source_label") or "").strip()
         url = str(source.get("source_url") or "").strip()
         if label and url:
-            for variant in _source_label_variants(label):
+            for variant in source_label_variants(label):
                 urls[variant] = url
     return urls
 
@@ -133,6 +142,20 @@ def _ensure_decision_question(memo: str, question: str) -> str:
     return f"## Decision Brief\n\n{line}\n\n{memo.strip()}"
 
 
+def _remove_duplicate_decision_heading(memo: str) -> str:
+    lines = str(memo or "").splitlines()
+    if not lines or lines[0].strip().lower() != "## decision brief":
+        return str(memo or "")
+    for index, line in enumerate(lines[1:8], start=1):
+        if line.strip().lower() == "### decision brief":
+            before = lines[:index]
+            after = lines[index + 1 :]
+            while after and not after[0].strip():
+                after = after[1:]
+            return "\n".join([*before, "", *after]).strip()
+    return str(memo or "")
+
+
 def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
     normalized = memo
     for source_label, display in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
@@ -143,13 +166,13 @@ def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
 
 def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
     labels = _packet_source_labels(packet)
-    common_prefix = _common_token_prefix(labels)
+    common_prefix = common_source_prefix(labels)
     replacements: dict[str, str] = {}
     for source in _list(packet.get("source_trail")):
         if not isinstance(source, dict):
             continue
         source_label = str(source.get("source_label") or "").strip()
-        display = _preferred_source_display(source, common_prefix=common_prefix)
+        display = preferred_source_display(source, common_prefix=common_prefix)
         if not display:
             continue
         aliases = [
@@ -159,15 +182,15 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
             str(source.get("citation_label") or "").strip(),
         ]
         for alias in aliases:
-            for variant in _source_label_variants(alias):
+            for variant in source_label_variants(alias):
                 if variant and variant != display:
                     replacements[variant] = display
     for source_label in labels:
         if not source_label:
             continue
-        display = _preferred_source_display({"source_label": source_label}, common_prefix=common_prefix)
+        display = preferred_source_display({"source_label": source_label}, common_prefix=common_prefix)
         if display and display != source_label:
-            for alias in _source_label_variants(source_label):
+            for alias in source_label_variants(source_label):
                 replacements[alias] = display
     return replacements
 
@@ -187,66 +210,6 @@ def _packet_source_labels(packet: dict[str, Any]) -> list[str]:
         labels.extend(_string_list(obligation.get("source_labels")))
         labels.append(str(obligation.get("source_label") or "").strip())
     return _dedupe(label for label in labels if label)
-
-
-def _source_label_variants(source_label: str) -> list[str]:
-    variants = [source_label]
-    if "_" in source_label:
-        variants.append(source_label.replace("_", " "))
-    if " " in source_label:
-        variants.append(source_label.replace(" ", "_"))
-        variants.append(source_label.replace(" Sources ", "_Sources "))
-        variants.append(source_label.replace(" sources ", "_sources "))
-    if "_Sources " in source_label:
-        variants.append(source_label.replace("_Sources ", " Sources "))
-    if "_sources " in source_label:
-        variants.append(source_label.replace("_sources ", " sources "))
-    return list(dict.fromkeys(variant for variant in variants if variant))
-
-
-def _preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]) -> str:
-    label = str(source.get("source_label") or "").strip()
-    for key in ("citation_label", "display_label"):
-        value = str(source.get(key) or "").strip()
-        if value and value != label:
-            return value
-    if common_prefix:
-        tokens = label.replace("_", " ").split()
-        if [token.lower() for token in tokens[: len(common_prefix)]] == [token.lower() for token in common_prefix]:
-            stripped = " ".join(tokens[len(common_prefix) :]).strip()
-            if stripped:
-                return stripped
-    artifact_stripped = _strip_artifact_source_prefix(label)
-    if artifact_stripped != label:
-        return artifact_stripped
-    return label
-
-
-def _strip_artifact_source_prefix(label: str) -> str:
-    tokens = str(label or "").replace("_", " ").split()
-    lowered = [token.lower() for token in tokens]
-    if len(tokens) >= 5 and lowered[:2] == ["deep", "research"] and "sources" in lowered[2:5]:
-        source_index = lowered.index("sources", 2, 5)
-        stripped = " ".join(tokens[source_index + 1 :]).strip()
-        if len(stripped.split()) >= 2:
-            return stripped
-    return label
-
-
-def _common_token_prefix(labels: list[str]) -> list[str]:
-    tokenized = [label.replace("_", " ").split() for label in labels if label.strip()]
-    if len(tokenized) < 2:
-        return []
-    prefix: list[str] = []
-    for tokens in zip(*tokenized):
-        lowered = {token.lower() for token in tokens}
-        if len(lowered) != 1:
-            break
-        prefix.append(tokens[0])
-    if len(prefix) < 2:
-        return []
-    shortest_remainder = min((len(tokens) - len(prefix) for tokens in tokenized), default=0)
-    return prefix if shortest_remainder >= 2 else []
 
 
 def _contains_text(text: str, needle: str) -> bool:

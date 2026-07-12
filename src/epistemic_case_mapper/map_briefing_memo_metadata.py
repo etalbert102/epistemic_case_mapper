@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_markdown_quality import repair_markdown_structure
+from epistemic_case_mapper.map_briefing_source_identity import common_source_prefix, preferred_source_display
 from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 
 
@@ -144,7 +145,7 @@ def _replace_sources_section(markdown: str, source_lines: list[str]) -> str:
     return markdown.rstrip() + "\n" + source_block
 
 
-def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, str]]:
+def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
     source_lookup = scaffold.get("source_display_names", {})
     if not isinstance(source_lookup, dict) or not source_lookup:
         return []
@@ -154,9 +155,18 @@ def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     source_citations = scaffold.get("source_citation_labels", {})
     if not isinstance(source_citations, dict):
         source_citations = {}
+    common_prefix = common_source_prefix([str(value) for value in source_lookup.values()])
     entries = []
     for source_id, display in source_lookup.items():
-        label = str(display).strip() or str(source_id).strip()
+        original_display = str(display).strip() or str(source_id).strip()
+        label = preferred_source_display(
+            {
+                "source_id": str(source_id).strip(),
+                "source_label": original_display,
+                "citation_label": str(source_citations.get(source_id, "")).strip(),
+            },
+            common_prefix=common_prefix,
+        )
         if not label:
             continue
         entries.append(
@@ -165,12 +175,13 @@ def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, str]]:
                 "display": label,
                 "url": str(source_urls.get(source_id, "")).strip(),
                 "citation_label": str(source_citations.get(source_id, "")).strip(),
+                "aliases": [original_display],
             }
         )
     return entries
 
 
-def _cited_source_entries(body: str, scaffold: dict[str, Any]) -> list[dict[str, str]]:
+def _cited_source_entries(body: str, scaffold: dict[str, Any]) -> list[dict[str, Any]]:
     cited = []
     for entry in _source_entries(scaffold):
         position = _source_mention_position(body, entry)
@@ -179,10 +190,10 @@ def _cited_source_entries(body: str, scaffold: dict[str, Any]) -> list[dict[str,
     return [entry for _, entry in sorted(cited, key=lambda row: row[0])]
 
 
-def _source_mention_position(body: str, entry: dict[str, str]) -> int:
+def _source_mention_position(body: str, entry: dict[str, Any]) -> int:
     positions = [
         _source_label_position(body, label)
-        for label in (entry.get("display", ""), entry.get("citation_label", ""))
+        for label in (entry.get("display", ""), entry.get("citation_label", ""), *entry.get("aliases", []))
         if label
     ]
     positions = [position for position in positions if position >= 0]

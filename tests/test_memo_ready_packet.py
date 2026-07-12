@@ -133,7 +133,9 @@ def test_synthesis_prompt_uses_memo_ready_packet_not_legacy_section_contract() -
     assert "Why This Read" not in prompt
     assert "Evidence Carrying the Conclusion" not in prompt
     assert "25%" in prompt
-    assert "Counter Study" in prompt
+    assert '"source_id": "s2"' in prompt
+    assert "Counter Study" not in prompt
+    assert '"source_labels"' not in prompt
 
 
 def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
@@ -280,6 +282,21 @@ def test_presentation_normalization_replaces_model_sources_with_cited_sources() 
     assert result["memo"].count("## Sources") == 1
     assert result["memo"].index("* Outcome Study 2025") < result["memo"].index("* Missed Study 2024")
     assert "deterministic_sources" in result["report"]["changes"]
+
+
+def test_presentation_normalization_removes_duplicate_decision_heading() -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "source_trail": [{"source_id": "s1", "source_label": "Deep Research Flood Sources Outcome Study 2025"}],
+        "evidence_items": [],
+    }
+    memo = "### Decision Brief\n\nOption A is supported [s1]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert result["memo"].count("Decision Brief") == 1
+    assert "### Decision Brief" not in result["memo"]
+    assert "removed_duplicate_decision_heading" in result["report"]["changes"]
 
 
 def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support() -> None:

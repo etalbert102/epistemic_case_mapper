@@ -411,7 +411,8 @@ def test_writer_model_context_exposes_compact_source_appraisal() -> None:
     assert context["source_appraisal_summary"][0]["decision_directness"] == "partial"
     assert context["source_appraisal_summary"][0]["allowed_wording"]["causal_language_allowed"] is False
     contract = context["decision_boundary_source_contract"]
-    assert contract["source_use_cards"][0]["source_label"] == "Outcome Review"
+    assert contract["source_use_cards"][0]["source_id"] == "s1"
+    assert "source_label" not in contract["source_use_cards"][0]
     assert "observational evidence" in str(contract["source_use_cards"][0]["wording_cautions"])
     assert contract["quantity_priority_cards"][0]["quantity"] == "20% improvement"
     assert contract["quantity_priority_cards"][0]["priority"] == "primary_decision_anchor"

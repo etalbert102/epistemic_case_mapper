@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_model_context,
@@ -34,7 +35,10 @@ def build_writer_packet_synthesis_prompt(
     writing_interface = build_writer_decision_interface(memo_ready_packet)
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
     model_context = build_writer_model_context(writing_interface)
-    blueprint_context: dict[str, Any] = narrative_blueprint
+    blueprint_context: dict[str, Any] = project_sources_to_ids_for_model(
+        narrative_blueprint,
+        _list(writing_interface.get("_source_identity_trail")) or _list(writing_interface.get("source_trail")),
+    )
     if _list(_dict(model_context.get("reasoning_hierarchy")).get("reasoning_moves")):
         blueprint_context = {
             "schema_id": "memo_narrative_blueprint_reference_v1",
@@ -58,10 +62,10 @@ def build_writer_packet_synthesis_prompt(
         "- Follow decision_boundary_source_contract.language_discipline when it gives source-appraisal cautions about association, causality, quality, or interpretation.\n"
         "- Satisfy every adaptive_memo_outline.must_write_cards entry in natural prose; use the cards to preserve required evidence, not to create checklist rhythm.\n"
         "- When a must-write card has multiple quantities_to_keep_together, write those quantities in the same sentence or adjacent clause so the model does not split paired estimates from their interval, denominator, or interpretation.\n"
-        "- Use only facts, quantities, and source labels present in the writer model context.\n"
+        "- Use only facts, quantities, and source IDs present in the writer model context.\n"
         "- Use only quantities listed inside adaptive_memo_outline.must_write_cards, quantity_anchors, decision_evidence_table.quantities, or practical_implication_cards.\n"
         "- When a quantity value is ambiguous by itself, use its interpretation wording from quantity_anchors or decision_evidence_table.quantities.\n"
-        "- Cite the source label attached to the evidence unit or quantity that supports the sentence.\n"
+        "- Cite the source_id attached to the evidence unit or quantity that supports the sentence; presentation code will replace source IDs with reader-facing source names.\n"
         "- Use source_appraisal_summary and source_appraisal_note to calibrate wording, confidence, and source weight.\n"
         "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"

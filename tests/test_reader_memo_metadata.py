@@ -34,7 +34,7 @@ The strongest support comes from Dehghan 2020 (Egg Consumption And Risk Of Cardi
     assert "[Drouin-Chartier et al. 2020](https://example.org/bmj)" in updated
     assert "Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies" not in updated
     assert "- [Dehghan 2020](https://example.org/dehghan)" in updated
-    assert "- [Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis](https://example.org/bmj)" in updated
+    assert "- [Drouin-Chartier et al. 2020](https://example.org/bmj)" in updated
     assert "- Study Without Url" in updated
     assert "[Study Without Url]" not in updated
 
