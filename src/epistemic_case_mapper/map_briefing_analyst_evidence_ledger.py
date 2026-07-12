@@ -9,6 +9,11 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_residual_quantities import (
+    likely_residual_quantity,
+    quantity_covered_by_text,
+    quantity_signature,
+)
 from epistemic_case_mapper.map_briefing_source_appraisal import appraisal_for_sources
 from epistemic_case_mapper.staged_semantic_claim_quantities import claim_quantity_values, normalize_claim_quantity_rows
 
@@ -95,15 +100,11 @@ def _claim_row(
     source_ids = _dedupe([str(claim.get("source_id") or ""), *_string_list(claim.get("supporting_sources"))])
     labels = [source_labels.get(source_id, source_id) for source_id in source_ids if source_id]
     source_appraisal = appraisal_for_sources(source_appraisal_report, [*source_ids, *labels])
-    claim_quantities = _claim_quantities(claim)
-    quantity_values = _dedupe(
-        [
-            *claim_quantity_values(claim_quantities),
-            *_string_list(claim.get("quantity_values")),
-            *_string_list(_dict(claim.get("whole_doc_source_card")).get("quantities")),
-            *quantity_lookup.get(claim_id, []),
-        ]
-    )
+    claim_quantities = _claim_bound_quantities(claim)
+    claim_bound_values = _dedupe([*claim_quantity_values(claim_quantities), *_string_list(claim.get("quantity_values"))])
+    residual_values = _residual_quantity_values(claim, claim_bound_values=claim_bound_values, quantity_lookup=quantity_lookup.get(claim_id, []))
+    residual_candidates = _residual_quantity_candidates(claim, residual_values)
+    quantity_values = _dedupe([*claim_bound_values, *residual_candidates])
     return _drop_empty(
         {
             "evidence_item_id": f"claim:{claim_id}",
@@ -123,6 +124,9 @@ def _claim_row(
             "directionality": claim.get("question_relevance"),
             "quantity_values": quantity_values,
             "claim_quantities": claim_quantities,
+            "claim_bound_quantity_values": claim_bound_values,
+            "residual_quantity_values": residual_values,
+            "residual_quantity_candidate_values": residual_candidates,
             "why_it_matters": _short_text(str(claim.get("importance_rationale") or claim.get("relevance_rationale") or ""), 260),
             "relation_ids": [str(row.get("relation_id") or "") for row in relation_context if row.get("relation_id")],
             "relation_context": relation_context[:8],
@@ -131,7 +135,7 @@ def _claim_row(
     )
 
 
-def _claim_quantities(claim: dict[str, Any]) -> list[dict[str, str]]:
+def _claim_bound_quantities(claim: dict[str, Any]) -> list[dict[str, str]]:
     source_card = _dict(claim.get("whole_doc_source_card"))
     rows = [
         *_list(claim.get("claim_quantities")),
@@ -139,7 +143,39 @@ def _claim_quantities(claim: dict[str, Any]) -> list[dict[str, str]]:
     ]
     if rows:
         return normalize_claim_quantity_rows(rows)
-    return normalize_claim_quantity_rows([*_string_list(claim.get("quantity_values")), *_string_list(source_card.get("quantities"))])
+    return normalize_claim_quantity_rows(_string_list(claim.get("quantity_values")))
+
+
+def _residual_quantity_values(
+    claim: dict[str, Any],
+    *,
+    claim_bound_values: list[str],
+    quantity_lookup: list[str],
+) -> list[str]:
+    source_card = _dict(claim.get("whole_doc_source_card"))
+    covered = {quantity_signature(value) for value in claim_bound_values}
+    claim_text = str(claim.get("claim") or "")
+    rows = []
+    for value in [*_string_list(source_card.get("quantities")), *_string_list(quantity_lookup)]:
+        signature = quantity_signature(value)
+        if not signature or signature in covered:
+            continue
+        if quantity_covered_by_text(value, claim_text):
+            continue
+        rows.append(value)
+    return _dedupe(rows)
+
+
+def _residual_quantity_candidates(claim: dict[str, Any], residual_values: list[str]) -> list[str]:
+    context = " ".join(
+        [
+            str(claim.get("claim") or ""),
+            str(claim.get("importance_rationale") or ""),
+            str(claim.get("relevance_rationale") or ""),
+            str(claim.get("decision_function") or ""),
+        ]
+    )
+    return _dedupe([value for value in residual_values if likely_residual_quantity(value, context_text=context)])
 
 
 def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:

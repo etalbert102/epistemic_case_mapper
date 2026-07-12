@@ -7,17 +7,30 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
-    dedupe as _dedupe,
     dict_value as _dict,
     list_value as _list,
     short_text as _short_text,
     string_list as _string_list,
+)
+from epistemic_case_mapper.map_briefing_analyst_quantity_prompt import quantity_prompt_candidate
+from epistemic_case_mapper.map_briefing_residual_quantities import (
+    likely_residual_quantity,
+    quantity_covered_by_text,
+    quantity_signature,
+)
+from epistemic_case_mapper.map_briefing_quantity_binding_heuristics import (
+    deterministic_quantity_interpretation as _deterministic_interpretation,
+    deterministic_quantity_memo_use as _deterministic_memo_use,
+    deterministic_quantity_rationale as _deterministic_rationale,
+    deterministic_quantity_warnings as _deterministic_warnings,
+    quantity_binding_confidence as _binding_confidence,
 )
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
 MemoQuantityUse = Literal["yes", "context_only", "no"]
 QuantityRole = Literal["decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"]
+DEFAULT_QUANTITY_BINDING_NUM_PREDICT = 1536
 
 
 class AnalystQuantityAdjudicationRow(BaseModel):
@@ -136,7 +149,11 @@ def _run_model_quantity_binding_batches(
     backend_retries: int,
     batch_size: int = 8,
 ) -> tuple[dict[str, Any], str, str, dict[str, Any]]:
-    candidates = [row for row in _list(deterministic.get("candidate_bindings")) if isinstance(row, dict)]
+    candidates = [
+        row
+        for row in _list(deterministic.get("candidate_bindings"))
+        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
+    ]
     if not candidates:
         return deterministic, "", build_analyst_quantity_binding_prompt(synthesis_packet=synthesis_packet, deterministic_report=deterministic), _prompt_parse_report(deterministic)
     prompts: list[str] = []
@@ -152,7 +169,14 @@ def _run_model_quantity_binding_batches(
         )
         prompt = build_analyst_quantity_binding_prompt(synthesis_packet=synthesis_packet, deterministic_report=chunk_report)
         prompts.append(f"--- quantity binding batch {index} ---\n{prompt}")
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            response_schema=AnalystQuantityAdjudication.model_json_schema(),
+            num_predict=DEFAULT_QUANTITY_BINDING_NUM_PREDICT,
+        )
         raw = result.text
         raws.append(f"--- quantity binding batch {index} ---\n{raw}")
         payload = _extract_json(raw)
@@ -225,21 +249,9 @@ def build_analyst_quantity_binding_prompt(
             "Write a retention_phrase only for quantities that should appear in the memo.",
         ],
         "candidates": [
-            {
-                "candidate_id": row.get("candidate_id"),
-                "group_id": row.get("group_id"),
-                "memo_role": row.get("memo_role"),
-                "group_proposition": row.get("group_proposition"),
-                "quantity": row.get("value"),
-                "source_evidence_item_id": row.get("source_evidence_item_id"),
-                "source_claim": row.get("source_claim"),
-                "source_excerpt": row.get("source_excerpt"),
-                "source_labels": row.get("source_labels", []),
-                "deterministic_memo_use": row.get("deterministic_memo_use"),
-                "deterministic_warnings": row.get("deterministic_warnings", []),
-            }
+            quantity_prompt_candidate(row)
             for row in _list(deterministic_report.get("candidate_bindings"))
-            if isinstance(row, dict)
+            if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
         ],
         "required_output_schema": {
             "schema_id": "analyst_quantity_binding_adjudication_v1",
@@ -272,7 +284,7 @@ def merge_quantity_adjudication(
     candidate_ids = {
         str(row.get("candidate_id") or "")
         for row in _list(deterministic_report.get("candidate_bindings"))
-        if isinstance(row, dict)
+        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
     }
     try:
         parsed = AnalystQuantityAdjudication.model_validate(payload)
@@ -311,7 +323,13 @@ def merge_quantity_adjudication(
         if not isinstance(candidate, dict):
             continue
         candidate_id = str(candidate.get("candidate_id") or "")
-        rows.append(_binding_row(candidate, by_model.get(candidate_id) or {"_missing_model_row": True}))
+        if candidate_id in by_model:
+            model_context = by_model[candidate_id]
+        elif candidate.get("model_adjudication_required"):
+            model_context = {"_missing_model_row": True}
+        else:
+            model_context = None
+        rows.append(_binding_row(candidate, model_context))
     merged = _report_from_rows(
         rows,
         method="model_adjudicated_quantity_binding",
@@ -337,7 +355,7 @@ def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any],
     candidate_ids = {
         str(row.get("candidate_id") or "")
         for row in _list(deterministic_report.get("candidate_bindings"))
-        if isinstance(row, dict)
+        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
     }
     valid_rows = [
         row
@@ -350,7 +368,13 @@ def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any],
         if not isinstance(candidate, dict):
             continue
         candidate_id = str(candidate.get("candidate_id") or "")
-        rows.append(_binding_row(candidate, by_model.get(candidate_id) or {"_missing_model_row": True}))
+        if candidate_id in by_model:
+            model_context = by_model[candidate_id]
+        elif candidate.get("model_adjudication_required"):
+            model_context = {"_missing_model_row": True}
+        else:
+            model_context = None
+        rows.append(_binding_row(candidate, model_context))
     return _report_from_rows(
         rows,
         method="model_adjudicated_quantity_binding_batched",
@@ -367,7 +391,7 @@ def _combined_parse_report(
     candidate_ids = {
         str(row.get("candidate_id") or "")
         for row in _list(deterministic_report.get("candidate_bindings"))
-        if isinstance(row, dict)
+        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
     }
     row_ids = {str(row.get("candidate_id") or "") for row in model_rows if isinstance(row, dict)}
     unknown = sorted(row_ids - candidate_ids)
@@ -421,16 +445,79 @@ def _quantity_candidates(synthesis_packet: dict[str, Any], ledger_by_id: dict[st
         seen_values: set[tuple[str, str]] = set()
         for evidence_id in _string_list(group.get("covered_evidence_item_ids")):
             ledger_row = ledger_by_id.get(evidence_id, {})
-            for quantity in _string_list(ledger_row.get("quantity_values")):
+            if _uses_legacy_unsplit_quantities(ledger_row):
+                for quantity in _string_list(ledger_row.get("quantity_values")):
+                    key = (evidence_id, quantity)
+                    if key in seen_values:
+                        continue
+                    seen_values.add(key)
+                    rows.append(
+                        _candidate_row(
+                            group,
+                            quantity,
+                            source_evidence_item_id=evidence_id,
+                            ledger_row=ledger_row,
+                            candidate_origin="legacy_unsplit_quantity",
+                            model_adjudication_required=False,
+                        )
+                    )
+                continue
+            for quantity in _claim_bound_quantity_rows(ledger_row):
+                quantity_value = _quantity_value(quantity)
+                key = (evidence_id, quantity_value)
+                if key in seen_values:
+                    continue
+                seen_values.add(key)
+                rows.append(
+                    _candidate_row(
+                        group,
+                        quantity_value,
+                        source_evidence_item_id=evidence_id,
+                        ledger_row=ledger_row,
+                        quantity_row=quantity if isinstance(quantity, dict) else None,
+                        candidate_origin="claim_map_bound",
+                        model_adjudication_required=False,
+                    )
+                )
+            for quantity in _string_list(ledger_row.get("residual_quantity_candidate_values")):
                 key = (evidence_id, quantity)
                 if key in seen_values:
                     continue
                 seen_values.add(key)
-                rows.append(_candidate_row(group, quantity, source_evidence_item_id=evidence_id, ledger_row=ledger_row))
+                rows.append(
+                    _candidate_row(
+                        group,
+                        quantity,
+                        source_evidence_item_id=evidence_id,
+                        ledger_row=ledger_row,
+                        candidate_origin="residual_source_quantity",
+                        model_adjudication_required=True,
+                    )
+                )
+        claim_bound_group_values = {
+            quantity_signature(row.get("value"))
+            for row in rows
+            if isinstance(row, dict)
+            and str(row.get("group_id") or "") == group_id
+            and str(row.get("candidate_origin") or "") == "claim_map_bound"
+        }
         for quantity in _string_list(group.get("quantity_values")):
             if any(quantity == row.get("value") and str(row.get("group_id")) == group_id for row in rows):
                 continue
-            rows.append(_candidate_row(group, quantity, source_evidence_item_id="", ledger_row={}))
+            if quantity_signature(quantity) in claim_bound_group_values or quantity_covered_by_text(quantity, _group_quantity_context(group)):
+                continue
+            if not likely_residual_quantity(quantity, context_text=_group_quantity_context(group)):
+                continue
+            rows.append(
+                _candidate_row(
+                    group,
+                    quantity,
+                    source_evidence_item_id="",
+                    ledger_row={},
+                    candidate_origin="residual_group_quantity",
+                    model_adjudication_required=True,
+                )
+            )
     return rows
 
 
@@ -440,6 +527,9 @@ def _candidate_row(
     *,
     source_evidence_item_id: str,
     ledger_row: dict[str, Any],
+    quantity_row: dict[str, Any] | None = None,
+    candidate_origin: str = "residual_source_quantity",
+    model_adjudication_required: bool = True,
 ) -> dict[str, Any]:
     group_id = str(group.get("group_id") or "")
     value = str(quantity or "").strip()
@@ -448,13 +538,26 @@ def _candidate_row(
     interpretation = _deterministic_interpretation(value, group=group, ledger_row=ledger_row, memo_use=memo_use)
     return {
         "candidate_id": _candidate_id(group_id, source_evidence_item_id, value),
+        "candidate_origin": candidate_origin,
+        "model_adjudication_required": model_adjudication_required,
         "group_id": group_id,
         "memo_role": str(group.get("memo_role") or ""),
         "group_proposition": str(group.get("proposition") or ""),
         "value": value,
+        "claim_quantity_role": str((quantity_row or {}).get("quantity_role") or ""),
+        "claim_quantity_type": str((quantity_row or {}).get("quantity_type") or ""),
+        "claim_quantity_retention_hint": str((quantity_row or {}).get("retention_hint") or ""),
+        "claim_quantity_interpretation": str((quantity_row or {}).get("local_interpretation") or ""),
         "source_evidence_item_id": source_evidence_item_id,
         "source_claim": str(ledger_row.get("claim") or ""),
         "source_excerpt": str(ledger_row.get("source_excerpt") or ""),
+        "claim_bound_quantity_values": _string_list(ledger_row.get("claim_bound_quantity_values")),
+        "residual_quantity_values": _string_list(ledger_row.get("residual_quantity_values")),
+        "excluded_quantity_values": [
+            quantity
+            for quantity in _string_list(ledger_row.get("residual_quantity_values"))
+            if quantity not in _string_list(ledger_row.get("residual_quantity_candidate_values"))
+        ],
         "source_ids": _string_list(ledger_row.get("source_ids")) or _string_list(group.get("source_ids")),
         "source_labels": _string_list(ledger_row.get("source_labels")) or _string_list(group.get("source_labels")),
         "input_kind": str(ledger_row.get("input_kind") or ""),
@@ -474,12 +577,12 @@ def _binding_row(candidate: dict[str, Any], model_row: dict[str, Any] | None) ->
     quantity_role = str(model_row.get("quantity_role") or _fallback_quantity_role(candidate, memo_use=memo_use)).strip()
     if quantity_role not in {"decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"}:
         quantity_role = "audit_only"
-    must_retain = bool(model_row.get("must_retain")) if model_row and not model_missing else memo_use == "yes" and quantity_role == "decision_anchor"
+    must_retain = bool(model_row.get("must_retain")) if model_row and not model_missing else _fallback_must_retain(candidate, memo_use=memo_use, quantity_role=quantity_role)
     if memo_use != "yes":
         must_retain = False
     if must_retain and quantity_role not in {"decision_anchor", "supporting_detail"}:
         quantity_role = "supporting_detail"
-    interpretation = str(model_row.get("interpretation") or candidate.get("deterministic_interpretation") or "").strip()
+    interpretation = str(model_row.get("interpretation") or candidate.get("claim_quantity_interpretation") or candidate.get("deterministic_interpretation") or "").strip()
     rationale = str(model_row.get("rationale") or candidate.get("deterministic_rationale") or "").strip()
     retention_phrase = str(model_row.get("retention_phrase") or (interpretation if must_retain else "")).strip()
     required_reason = str(model_row.get("required_for_memo_reason") or (rationale if must_retain else "")).strip()
@@ -500,13 +603,34 @@ def _binding_row(candidate: dict[str, Any], model_row: dict[str, Any] | None) ->
 
 
 def _fallback_memo_use(candidate: dict[str, Any]) -> str:
+    if str(candidate.get("candidate_origin") or "") == "claim_map_bound":
+        return "yes" if str(candidate.get("claim_quantity_retention_hint") or "") != "audit_only" else "context_only"
     deterministic = str(candidate.get("deterministic_memo_use") or "context_only")
     if deterministic == "yes" and candidate.get("deterministic_warnings"):
         return "context_only"
     return deterministic if deterministic in {"yes", "context_only", "no"} else "context_only"
 
 
+def _fallback_must_retain(candidate: dict[str, Any], *, memo_use: str, quantity_role: str) -> bool:
+    if memo_use != "yes":
+        return False
+    if str(candidate.get("candidate_origin") or "") == "claim_map_bound":
+        return str(candidate.get("claim_quantity_retention_hint") or "") == "must_retain" and quantity_role in {
+            "decision_anchor",
+            "supporting_detail",
+        }
+    return quantity_role == "decision_anchor"
+
+
 def _fallback_quantity_role(candidate: dict[str, Any], *, memo_use: str) -> str:
+    if str(candidate.get("candidate_origin") or "") == "claim_map_bound":
+        role = str(candidate.get("claim_quantity_role") or "")
+        if role in {"effect_estimate", "uncertainty_interval", "baseline_or_absolute_risk", "threshold_or_guideline"}:
+            return "decision_anchor" if memo_use == "yes" else "statistical_detail"
+        if role in {"exposure_or_intervention_level", "time_horizon", "cost_or_resource"}:
+            return "supporting_detail" if memo_use == "yes" else "study_descriptor"
+        if role == "study_descriptor":
+            return "study_descriptor"
     warnings = set(_string_list(candidate.get("deterministic_warnings")))
     memo_role = str(candidate.get("memo_role") or "")
     if memo_use == "no":
@@ -603,221 +727,39 @@ def _groups(synthesis_packet: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _deterministic_warnings(value: str, *, group: dict[str, Any], ledger_row: dict[str, Any]) -> list[str]:
-    text = " ".join([value, str(ledger_row.get("claim") or ""), str(ledger_row.get("source_excerpt") or "")])
-    lowered = text.lower()
-    group_text = " ".join([str(group.get("proposition") or ""), str(group.get("rationale") or ""), str(group.get("answer_impact") or "")]).lower()
-    warnings = []
-    if _looks_like_age_scope(value) and not _group_about_age_scope(group_text):
-        warnings.append("age_scope_quantity_not_group_measure")
-    if _looks_like_heterogeneity(value) and "heterogeneity" not in group_text and "i2" not in group_text and "i²" not in group_text:
-        warnings.append("heterogeneity_statistic_not_effect_measure")
-    if _looks_like_p_value(value) and "statistical significance" not in group_text and "p-value" not in group_text:
-        warnings.append("p_value_not_effect_measure")
-    if _looks_like_non_quantity(value):
-        warnings.append("non_numeric_quantity_value")
-    if _looks_like_interval(value) and not _has_effect_pair_nearby(value, text):
-        warnings.append("interval_without_local_effect_estimate")
-    if _weak_quantity_claim_overlap(value, group=group, ledger_row=ledger_row):
-        warnings.append("weak_quantity_proposition_overlap")
-    if not str(ledger_row.get("claim") or "").strip() and not _quantity_in_group_text(value, group_text):
-        warnings.append("quantity_without_source_claim")
-    return _dedupe(warnings)
+def _claim_bound_quantity_rows(ledger_row: dict[str, Any]) -> list[Any]:
+    rows = [row for row in _list(ledger_row.get("claim_quantities")) if isinstance(row, dict)]
+    if rows:
+        return rows
+    return _string_list(ledger_row.get("claim_bound_quantity_values"))
 
 
-def _deterministic_memo_use(
-    value: str,
-    *,
-    group: dict[str, Any],
-    ledger_row: dict[str, Any],
-    warnings: list[str],
-) -> MemoQuantityUse:
-    group_text = " ".join([str(group.get("proposition") or ""), str(group.get("rationale") or ""), str(group.get("answer_impact") or "")]).lower()
-    if any(
-        warning in warnings
-        for warning in (
-            "age_scope_quantity_not_group_measure",
-            "heterogeneity_statistic_not_effect_measure",
-            "p_value_not_effect_measure",
-            "non_numeric_quantity_value",
-        )
-    ):
-        return "no"
-    if str(group.get("memo_role") or "") == "quantitative_anchor" and not warnings:
-        return "yes"
-    if _quantity_in_group_text(value, group_text):
-        return "yes"
-    if str(ledger_row.get("input_kind") or "") == "top_quantity_anchor" and not warnings:
-        return "yes"
-    if _looks_like_effect_quantity(value) and _source_claim_overlaps_group(group=group, ledger_row=ledger_row):
-        return "yes" if not warnings else "context_only"
-    return "context_only" if warnings else "yes"
-
-
-def _deterministic_interpretation(
-    value: str,
-    *,
-    group: dict[str, Any],
-    ledger_row: dict[str, Any],
-    memo_use: str,
-) -> str:
-    if memo_use == "yes":
-        source_claim = str(ledger_row.get("claim") or "").strip()
-        if source_claim:
-            return f"{value}: quantifies the source claim that {source_claim}"
-        return f"{value}: quantifies the group proposition."
-    if memo_use == "context_only":
-        return f"{value}: retained as source context, not a required memo-facing quantitative anchor."
-    return f"{value}: does not directly quantify the group proposition for the decision question."
-
-
-def _deterministic_rationale(
-    value: str,
-    *,
-    group: dict[str, Any],
-    ledger_row: dict[str, Any],
-    memo_use: str,
-    warnings: list[str],
-) -> str:
-    if warnings:
-        return f"Deterministic binding classified as {memo_use} due to: {', '.join(warnings)}."
-    if memo_use == "yes":
-        return "Quantity appears semantically tied to the group proposition or a compatible source claim."
-    if memo_use == "context_only":
-        return "Quantity is preserved for traceability but is not clearly load-bearing for memo prose."
-    return "Quantity does not quantify the group proposition."
-
-
-def _binding_confidence(candidate: dict[str, Any], *, memo_use: str, model_row: dict[str, Any]) -> str:
-    if model_row:
-        return "medium" if candidate.get("deterministic_warnings") else "high"
-    if candidate.get("deterministic_warnings"):
-        return "medium" if memo_use != "yes" else "low"
-    return "medium"
-
-
-def _looks_like_age_scope(value: str) -> bool:
-    text = str(value or "").lower()
-    return bool(
-        re.search(r"\b(?:aged?\s*)?\d+(?:\.\d+)?\s*(?:to|-)\s*\d+(?:\.\d+)?\s*months?\s*old\b", text)
-        or re.search(r"\b\d+(?:\.\d+)?\s*months?\s*old\b", text)
-        or re.search(r"\b\d+(?:\.\d+)?\s*(?:to|-)\s*\d+(?:\.\d+)?\s*years?\s*old\b", text)
+def _uses_legacy_unsplit_quantities(ledger_row: dict[str, Any]) -> bool:
+    if not _string_list(ledger_row.get("quantity_values")):
+        return False
+    split_keys = (
+        "claim_quantities",
+        "claim_bound_quantity_values",
+        "residual_quantity_values",
+        "residual_quantity_candidate_values",
     )
+    return not any(ledger_row.get(key) for key in split_keys)
 
 
-def _group_about_age_scope(group_text: str) -> bool:
-    return any(term in group_text for term in ("age", "infant", "child", "children", "toddler", "pediatric", "older adult", "elderly", "years old", "months old"))
+def _quantity_value(row: Any) -> str:
+    if isinstance(row, dict):
+        return str(row.get("value") or row.get("quantity") or "").strip()
+    return str(row or "").strip()
 
 
-def _looks_like_heterogeneity(value: str) -> bool:
-    return bool(re.search(r"\b(?:i2|i²)\s*=\s*\d+(?:\.\d+)?%", str(value or ""), flags=re.IGNORECASE))
-
-
-def _looks_like_p_value(value: str) -> bool:
-    return bool(re.search(r"\bp\s*(?:=|<|>|≤|>=|<=)\s*\d+(?:\.\d+)?\b", str(value or ""), flags=re.IGNORECASE))
-
-
-def _looks_like_non_quantity(value: str) -> bool:
-    text = str(value or "").strip().lower()
-    if not text:
-        return True
-    if re.search(r"\d", text):
-        return False
-    quantity_patterns = (
-        r"\bincreas(?:e|ed|es|ing)\b",
-        r"\bdecreas(?:e|ed|es|ing)\b",
-        r"\bratio\b",
-        r"\brisk\b",
-        r"\bhazard\b",
-        r"\bodds\b",
-        r"\bpercent\b",
-        r"\bper\s+(?:day|week|month|year)\b",
-        r"/(?:day|week|month|year)\b",
+def _group_quantity_context(group: dict[str, Any]) -> str:
+    return " ".join(
+        [
+            str(group.get("proposition") or ""),
+            str(group.get("rationale") or ""),
+            str(group.get("answer_impact") or ""),
+        ]
     )
-    if any(re.search(pattern, text) for pattern in quantity_patterns):
-        return False
-    return True
-
-
-def _looks_like_interval(value: str) -> bool:
-    text = str(value or "").lower()
-    return "confidence interval" in text or re.search(r"\bci\b", text)
-
-
-def _has_effect_pair_nearby(value: str, text: str) -> bool:
-    lowered = " ".join([value, text]).lower()
-    return bool(re.search(r"\b(?:hr|rr|or|md|hazard ratio|relative risk|odds ratio|mean difference|risk ratio)\b", lowered))
-
-
-def _looks_like_effect_quantity(value: str) -> bool:
-    text = str(value or "").lower()
-    return bool(
-        re.search(r"\b(?:hr|rr|or|md|ci|hazard ratio|relative risk|odds ratio|mean difference|confidence interval)\b", text)
-        or "%" in text
-        or "per day" in text
-    )
-
-
-def _weak_quantity_claim_overlap(value: str, *, group: dict[str, Any], ledger_row: dict[str, Any]) -> bool:
-    if _quantity_in_group_text(value, " ".join([str(group.get("proposition") or ""), str(group.get("rationale") or "")]).lower()):
-        return False
-    quantity_terms = _content_terms(" ".join([value, str(ledger_row.get("claim") or ""), str(ledger_row.get("source_excerpt") or "")]))
-    group_terms = _content_terms(" ".join([str(group.get("proposition") or ""), str(group.get("rationale") or ""), str(group.get("answer_impact") or "")]))
-    if not quantity_terms or not group_terms:
-        return True
-    return len(quantity_terms & group_terms) == 0
-
-
-def _source_claim_overlaps_group(*, group: dict[str, Any], ledger_row: dict[str, Any]) -> bool:
-    source_terms = _content_terms(" ".join([str(ledger_row.get("claim") or ""), str(ledger_row.get("source_excerpt") or "")]))
-    group_terms = _content_terms(" ".join([str(group.get("proposition") or ""), str(group.get("rationale") or ""), str(group.get("answer_impact") or "")]))
-    return bool(source_terms and group_terms and source_terms & group_terms)
-
-
-def _quantity_in_group_text(value: str, group_text: str) -> bool:
-    value = str(value or "").strip().lower()
-    if not value:
-        return False
-    if value in group_text:
-        return True
-    numbers = re.findall(r"\d+(?:\.\d+)?", value)
-    if numbers and all(number in group_text for number in numbers[:2]):
-        return True
-    return False
-
-
-def _content_terms(text: str) -> set[str]:
-    stop = {
-        "about",
-        "after",
-        "also",
-        "because",
-        "before",
-        "between",
-        "could",
-        "does",
-        "from",
-        "have",
-        "into",
-        "more",
-        "most",
-        "than",
-        "that",
-        "their",
-        "there",
-        "these",
-        "this",
-        "with",
-        "without",
-        "risk",
-        "study",
-        "source",
-    }
-    return {
-        token
-        for token in re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{2,}", str(text or "").lower())
-        if token not in stop
-    }
 
 
 def _candidate_id(group_id: str, source_evidence_item_id: str, value: str) -> str:

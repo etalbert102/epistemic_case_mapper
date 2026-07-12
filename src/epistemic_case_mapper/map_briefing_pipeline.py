@@ -267,8 +267,54 @@ def _attach_model_context_audit(
         legacy_prompt=prompt,
         section_packets_path=final_outputs["summary_paths"].get("section_synthesis_packets"),
         reader_rewrite_prompt=str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
+        active_prompts=_active_model_prompts(scaffold, final_outputs),
+        active_prompt_paths=_active_prompt_paths(final_outputs),
     )
     final_outputs["summary_paths"]["model_context_audit"] = audit_path
+
+
+def _active_model_prompts(scaffold: dict[str, Any], final_outputs: dict[str, Any]) -> dict[str, str]:
+    prompts = {
+        "analyst_adjudication": scaffold.get("analyst_adjudication_prompt", ""),
+        "analyst_decision_model": scaffold.get("analyst_decision_model_prompt", ""),
+        "analyst_decision_model_repair": scaffold.get("analyst_decision_model_repair_prompt", ""),
+        "analyst_packet_refinement": scaffold.get("analyst_packet_refinement_prompt", ""),
+        "analyst_quantity_binding": scaffold.get("analyst_quantity_binding_prompt", ""),
+        "packet_critique": scaffold.get("packet_critique_prompt", ""),
+        "decision_briefing_packet_refinement": scaffold.get("decision_briefing_packet_refinement_prompt", ""),
+        "memo_ready_synthesis": _summary_prompt(final_outputs, "memo_ready_synthesis_prompt"),
+        "memo_ready_repair": _summary_prompt(final_outputs, "memo_ready_repair_prompt"),
+        "memo_ready_final_polish": _summary_prompt(final_outputs, "memo_ready_final_polish_prompt"),
+        "reader_memo_rewrite": str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
+    }
+    return {key: str(value or "") for key, value in prompts.items() if str(value or "").strip()}
+
+
+def _active_prompt_paths(final_outputs: dict[str, Any]) -> dict[str, Path | None]:
+    summary = final_outputs.get("summary_paths", {})
+    if not isinstance(summary, dict):
+        return {}
+    wanted = {
+        "memo_ready_synthesis": "memo_ready_synthesis_prompt",
+        "memo_ready_repair": "memo_ready_repair_prompt",
+        "memo_ready_final_polish": "memo_ready_final_polish_prompt",
+        "reader_memo_rewrite": "reader_memo_rewrite_prompt",
+    }
+    return {
+        stage: (summary.get(path_key) if isinstance(summary.get(path_key), Path) else None)
+        for stage, path_key in wanted.items()
+    }
+
+
+def _summary_prompt(final_outputs: dict[str, Any], key: str) -> str:
+    summary = final_outputs.get("summary_paths", {})
+    path = summary.get(key) if isinstance(summary, dict) else None
+    if not isinstance(path, Path):
+        return ""
+    try:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+    except OSError:
+        return ""
 
 
 def _apply_atomic_cards_to_briefing_map(prioritized_map: dict[str, Any], scaffold: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

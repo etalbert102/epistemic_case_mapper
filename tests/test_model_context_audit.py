@@ -127,3 +127,26 @@ def test_model_context_audit_accepts_compact_reader_rewrite_prompt() -> None:
     reader_stage = stages["reader_memo_edit_suggestions"]
     assert reader_stage["sent_to_model"] is True
     assert reader_stage["pollution_flags"] == []
+
+
+def test_model_context_audit_flags_active_prompt_pollution() -> None:
+    audit = build_model_context_audit(
+        backend="ollama:test",
+        legacy_prompt="",
+        section_packets_path=None,
+        reader_rewrite_prompt="",
+        active_prompts={
+            "analyst_quantity_binding": '{"deterministic_memo_use": "yes", "source_excerpt": "long"}',
+            "memo_ready_synthesis": '{"excluded_evidence_log": [], "lineage_report": {}}',
+            "packet_refinement": '{"packet_sufficiency_report": {"status": "skipped_prompt_backend"}}',
+        },
+    )
+
+    stages = {stage["stage"]: stage for stage in audit["stages"]}
+    active = {row["stage"]: row for row in stages["active_model_prompts"]["prompts"]}
+
+    assert stages["active_model_prompts"]["sent_to_model"] is True
+    assert "deterministic_judgment_label_visible" in active["analyst_quantity_binding"]["pollution_flags"]
+    assert "writer_debug_record_visible" in active["memo_ready_synthesis"]["pollution_flags"]
+    assert "validator_report_visible" in active["packet_refinement"]["pollution_flags"]
+    assert "skipped_backend_report_visible" in active["packet_refinement"]["pollution_flags"]
