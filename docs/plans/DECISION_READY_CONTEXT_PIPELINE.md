@@ -1,5 +1,7 @@
 # Plan: Decision-Ready Context Pipeline
 
+Status note: references to section prompt contracts and section rewrite are historical. Current final synthesis should use memo-ready packet obligations and `map_briefing_memo_ready_finalization.py`; do not restore deleted section-rewrite modules.
+
 ## Objective
 
 Produce briefing memos where each section receives clean, decision-specific context and writes useful analysis rather than generic prose. The system should make bad context visible before model generation, preserve source traceability, and generalize across cases.
@@ -143,12 +145,8 @@ Current code surfaces:
   - Claims may already include source IDs, spans, hashes, and excerpts. Reuse these anchors before falling back to text matching.
 - `main_memo_obligations.py`
   - Builds the current obligation plan. This is useful input, but too noisy to be the model-facing context by itself.
-- `map_briefing_section_input_compiler.py`
-  - Builds `model_section_packet`. This is the main integration point for `section_context_decision_packets`.
-- `map_briefing_section_prompt_contract.py`
-  - Separates model-facing packets from validation obligations. The new plan should preserve this boundary.
-- `map_briefing_section_rewrite.py`
-  - Prompts the model for section markdown and validates output. The new specificity checks should plug in here.
+- `map_briefing_memo_ready_packet.py` and `map_briefing_memo_ready_finalization.py`
+  - Separate model-facing packet obligations from audit artifacts, then synthesize and validate the final memo from that packet.
 - `decision_argument_artifacts.py`
   - Already creates traceability matrices and argument artifacts. These should be reused rather than duplicated.
 - `map_briefing_model_context.py`

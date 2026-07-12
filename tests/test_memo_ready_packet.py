@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
@@ -790,6 +792,27 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert "memo_ready_final_polish" in stages
     assert progress[-1]["status"] == "completed"
     assert "25%" in result["briefing_path"].read_text()
+
+
+def test_final_reader_outputs_require_memo_ready_packet(tmp_path: Path) -> None:
+    scaffold = _scaffold()
+
+    with pytest.raises(ValueError, match="memo_ready_packet.evidence_items"):
+        write_final_reader_outputs(
+            rendered="## Decision Brief\n\nSeed memo.",
+            scaffold=scaffold,
+            prioritized_map={"claims": []},
+            artifacts=tmp_path,
+            backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
+        )
+
+    progress_path = tmp_path / "memo_creation_progress.jsonl"
+    progress = [
+        json.loads(line)
+        for line in progress_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert progress[-1]["status"] == "failed_missing_memo_ready_packet"
 
 
 def test_pipeline_simplification_comparison_summarizes_completion_audit() -> None:

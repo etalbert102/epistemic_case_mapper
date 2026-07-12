@@ -41,22 +41,23 @@ def write_final_reader_outputs(
     memo_package = compose_final_reader_memo_package(rendered, scaffold)
     record_memo_progress(artifacts, "compose_memo_package", "completed", backend=backend_config.backend)
     evidence_appendix = str(memo_package["appendix"])
-    if _should_use_memo_ready_packet(memo_package["scaffold"]):
-        record_memo_progress(artifacts, "memo_output_path", "memo_ready", backend=backend_config.backend)
-        output_path_result = _run_memo_ready_final_output_path(
-            memo_package=memo_package,
-            backend_config=backend_config,
-            artifacts=artifacts,
+    if not _should_use_memo_ready_packet(memo_package["scaffold"]):
+        record_memo_progress(
+            artifacts,
+            "memo_output_path",
+            "failed_missing_memo_ready_packet",
+            backend=backend_config.backend,
         )
-    else:
-        record_memo_progress(artifacts, "memo_output_path", "legacy", backend=backend_config.backend)
-        output_path_result = _run_legacy_final_output_path(
-            memo_package=memo_package,
-            evidence_appendix=evidence_appendix,
-            prioritized_map=prioritized_map,
-            backend_config=backend_config,
-            artifacts=artifacts,
+        raise ValueError(
+            "write_final_reader_outputs requires scaffold.memo_ready_packet.evidence_items; "
+            "legacy final-output paths have been removed"
         )
+    record_memo_progress(artifacts, "memo_output_path", "memo_ready", backend=backend_config.backend)
+    output_path_result = _run_memo_ready_final_output_path(
+        memo_package=memo_package,
+        backend_config=backend_config,
+        artifacts=artifacts,
+    )
     section_rewrite_result = output_path_result["section_rewrite_result"]
     rewrite_result = output_path_result["rewrite_result"]
     packet_plan_result = output_path_result.get("packet_plan_result")
@@ -135,13 +136,6 @@ def write_final_reader_outputs(
 def _should_use_memo_ready_packet(scaffold: dict[str, Any]) -> bool:
     packet = scaffold.get("memo_ready_packet", {})
     return isinstance(packet, dict) and bool(packet.get("evidence_items"))
-
-
-def _should_use_packet_first(scaffold: dict[str, Any]) -> bool:
-    packet = scaffold.get("decision_briefing_packet", {})
-    if not isinstance(packet, dict) or not packet.get("evidence_bundles"):
-        return False
-    return True
 
 
 def _run_memo_ready_final_output_path(
@@ -269,143 +263,6 @@ def _run_memo_ready_final_output_path(
     }
 
 
-def _run_legacy_final_output_path(
-    *,
-    memo_package: dict[str, Any],
-    evidence_appendix: str,
-    prioritized_map: dict[str, Any],
-    backend_config: ModelBackendConfig,
-    artifacts: Path,
-) -> dict[str, Any]:
-    from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
-    from epistemic_case_mapper.map_briefing_packet_memo import (
-        packet_first_section_rewrite_result,
-        write_packet_first_artifacts,
-    )
-    from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
-    from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
-    from epistemic_case_mapper.map_briefing_section_rewrite import rewrite_reader_memo_by_section
-
-    packet_plan_result = None
-    if _should_use_packet_first(memo_package["scaffold"]):
-        record_memo_progress(artifacts, "packet_first_section_plan", "started", backend=backend_config.backend)
-        packet_plan_result = write_packet_first_artifacts(
-            artifacts=artifacts,
-            packet=memo_package["scaffold"]["decision_briefing_packet"],
-            backend=backend_config.backend,
-            backend_timeout=backend_config.timeout,
-            backend_retries=backend_config.retries,
-        )
-        section_rewrite_result = packet_first_section_rewrite_result(packet_plan_result)
-    else:
-        record_memo_progress(artifacts, "legacy_section_rewrite", "started", backend=backend_config.backend)
-        section_rewrite_result = rewrite_reader_memo_by_section(
-            str(memo_package["memo"]),
-            evidence_appendix,
-            memo_package["scaffold"],
-            prioritized_map,
-            backend=backend_config.backend,
-            backend_timeout=backend_config.timeout,
-            backend_retries=backend_config.retries,
-            artifacts=artifacts,
-        )
-    record_memo_progress(artifacts, "legacy_section_memo", "completed", backend=backend_config.backend)
-    record_memo_progress(artifacts, "legacy_reader_rewrite", "started", backend=backend_config.backend)
-    rewrite_result = _run_reader_memo_rewrite(
-        section_memo=str(section_rewrite_result["memo"]),
-        evidence_appendix=evidence_appendix,
-        memo_package=memo_package,
-        prioritized_map=prioritized_map,
-        backend_config=backend_config,
-    )
-    record_memo_progress(artifacts, "legacy_reader_rewrite", "completed", backend=backend_config.backend, details=_progress_report_details(rewrite_result))
-    _canonicalize_packet_aliases(packet_plan_result, rewrite_result)
-    _attach_section_context_status(memo_package, rewrite_result, section_rewrite_result)
-    record_memo_progress(artifacts, "legacy_packet_repairs", "started", backend=backend_config.backend)
-    reader_packet_repair_result, packet_repair_result = _run_legacy_packet_repairs(
-        rewrite_result,
-        memo_package,
-        backend_config,
-        build_memo_packet_retention_report=build_memo_packet_retention_report,
-        run_packet_retention_repair=run_packet_retention_repair,
-    )
-    record_memo_progress(artifacts, "legacy_packet_repairs", "completed", backend=backend_config.backend)
-    reader_memo_for_editor = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
-    record_memo_progress(artifacts, "legacy_editorial_pass", "started", backend=backend_config.backend)
-    editorial_result = _run_decision_memo_editorial_pass(reader_memo_for_editor, memo_package["scaffold"], backend_config)
-    record_memo_progress(artifacts, "legacy_editorial_pass", "completed", backend=backend_config.backend, details=_progress_report_details(editorial_result))
-    rewrite_result["memo"] = editorial_result["memo"]
-    rewrite_result.setdefault("report", {})["decision_memo_editorial_status"] = editorial_result.get("report", {}).get("status")
-    return {
-        "section_rewrite_result": section_rewrite_result,
-        "rewrite_result": rewrite_result,
-        "packet_plan_result": packet_plan_result,
-        "reader_packet_repair_result": reader_packet_repair_result,
-        "packet_repair_result": packet_repair_result,
-        "editorial_result": editorial_result,
-        "memo_ready_synthesis_result": _not_run_result(),
-        "memo_ready_repair_result": _not_run_result(),
-        "memo_ready_final_polish_result": _not_run_result(),
-    }
-
-
-def _canonicalize_packet_aliases(packet_plan_result: dict[str, Any] | None, rewrite_result: dict[str, Any]) -> None:
-    if not packet_plan_result:
-        return
-    from epistemic_case_mapper.map_briefing_reader_packet_verbalization import canonicalize_reader_packet_source_aliases
-
-    reader_packet = packet_plan_result.get("memo_plan", {}).get("reader_facing_packet", {})
-    canonicalized_memo = canonicalize_reader_packet_source_aliases(
-        str(rewrite_result.get("memo") or ""),
-        reader_packet if isinstance(reader_packet, dict) else {},
-    )
-    if canonicalized_memo != str(rewrite_result.get("memo") or ""):
-        rewrite_result["memo"] = canonicalized_memo
-        rewrite_result.setdefault("report", {})["source_alias_canonicalization_status"] = "canonicalized"
-    else:
-        rewrite_result.setdefault("report", {})["source_alias_canonicalization_status"] = "no_aliases_found"
-
-
-def _run_legacy_packet_repairs(
-    rewrite_result: dict[str, Any],
-    memo_package: dict[str, Any],
-    backend_config: ModelBackendConfig,
-    *,
-    build_memo_packet_retention_report,
-    run_packet_retention_repair,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    packet = memo_package["scaffold"].get("decision_briefing_packet")
-    if not isinstance(packet, dict) or not packet.get("must_retain_ledger"):
-        return _not_needed_result(str(rewrite_result["memo"]), "not_needed"), _not_needed_result(str(rewrite_result["memo"]), "not_needed")
-    from epistemic_case_mapper.map_briefing_reader_packet_repair import run_reader_packet_retention_repair
-
-    reader_repair = run_reader_packet_retention_repair(
-        str(rewrite_result["memo"]),
-        packet,
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-    )
-    rewrite_result["memo"] = reader_repair["memo"]
-    rewrite_result.setdefault("report", {})["reader_packet_retention_repair_status"] = reader_repair.get("report", {}).get("status")
-    pre_repair_retention = build_memo_packet_retention_report(str(rewrite_result["memo"]), packet)
-    packet_repair = run_packet_retention_repair(
-        str(rewrite_result["memo"]),
-        packet,
-        pre_repair_retention,
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-    )
-    rewrite_result["memo"] = packet_repair["memo"]
-    rewrite_result.setdefault("report", {})["packet_retention_repair_status"] = packet_repair.get("report", {}).get("status")
-    return reader_repair, packet_repair
-
-
-def _not_run_result() -> dict[str, Any]:
-    return {"memo": "", "prompt": "", "raw": "", "report": {"status": "not_run"}}
-
-
 def _not_needed_result(memo: str, status: str) -> dict[str, Any]:
     return {"memo": memo, "prompt": "", "raw": "", "report": {"status": status}}
 
@@ -457,54 +314,6 @@ def _progress_report_details(result: dict[str, Any]) -> dict[str, Any]:
     if "issue_count" not in details and isinstance(issues, list):
         details["issue_count"] = len(issues)
     return details
-
-
-def _run_decision_memo_editorial_pass(
-    reader_memo: str,
-    scaffold: dict[str, Any],
-    backend_config: ModelBackendConfig,
-) -> dict[str, Any]:
-    from epistemic_case_mapper.map_briefing_editorial_pass import run_decision_memo_editorial_pass
-
-    return run_decision_memo_editorial_pass(
-        reader_memo,
-        scaffold,
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-    )
-
-
-def _run_reader_memo_rewrite(
-    *,
-    section_memo: str,
-    evidence_appendix: str,
-    memo_package: dict[str, Any],
-    prioritized_map: dict[str, Any],
-    backend_config: ModelBackendConfig,
-) -> dict[str, Any]:
-    from epistemic_case_mapper.map_briefing_reader_contracts import rewrite_reader_memo_with_contract
-
-    return rewrite_reader_memo_with_contract(
-        section_memo,
-        evidence_appendix,
-        memo_package["scaffold"],
-        prioritized_map,
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-    )
-
-
-def _attach_section_context_status(
-    memo_package: dict[str, Any],
-    rewrite_result: dict[str, Any],
-    section_rewrite_result: dict[str, Any],
-) -> None:
-    rewrite_result.setdefault("report", {})["section_context_acceptance_status"] = section_rewrite_result.get("report", {}).get(
-        "section_context_acceptance_status"
-    )
-    memo_package["scaffold"]["section_context_acceptance_status"] = rewrite_result["report"]["section_context_acceptance_status"]
 
 
 def _build_final_reader_diagnostics(

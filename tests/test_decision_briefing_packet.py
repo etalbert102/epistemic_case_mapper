@@ -6,20 +6,9 @@ from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligati
 from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
-from epistemic_case_mapper.map_briefing_packet_memo import (
-    build_packet_memo_plan,
-    build_reader_facing_packet_synthesis_prompt,
-    render_packet_first_draft,
-    write_packet_first_artifacts,
-)
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
-from epistemic_case_mapper.map_briefing_packet_repair import run_packet_retention_repair
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
-from epistemic_case_mapper.map_briefing_reader_packet_repair import (
-    build_reader_packet_retention_report,
-    run_reader_packet_retention_repair,
-)
 
 
 def _scaffold() -> dict:
@@ -618,9 +607,6 @@ def test_packet_critique_preserves_synthesis_risks_and_packet_quality_issues(mon
     repaired_section = repaired_packet["section_views"][-1]
     assert counterweight["bundle_id"] not in repaired_section["primary_bundle_ids"]
     assert counterweight["bundle_id"] in repaired_section["contrast_bundle_ids"]
-    memo_plan = build_packet_memo_plan(repaired_packet)
-    evidence_section = memo_plan["section_views"][-1]
-    assert all(row.get("bundle_id") != "bundle_nonrepairable" for row in evidence_section["primary_bundles"])
 
 
 def test_main_memo_obligations_prefer_packet_must_retain_items() -> None:
@@ -638,58 +624,6 @@ def test_main_memo_obligations_prefer_packet_must_retain_items() -> None:
     assert any("25%" in row.get("search_terms", []) for row in evidence_section)
     practical_section = section_obligations_for_title("Practical Read", obligations, limit=8)
     assert all("25%" not in row.get("search_terms", []) for row in practical_section)
-
-
-def test_packet_memo_plan_and_draft_include_question_sources_and_required_terms(tmp_path: Path) -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = built["decision_briefing_packet"]
-
-    plan = build_packet_memo_plan(packet)
-    draft = render_packet_first_draft(plan)
-    written = write_packet_first_artifacts(artifacts=tmp_path, packet=packet)
-
-    assert "Should the city adopt option A" in draft
-    assert "25%" in draft
-    assert "Outcome Study" in draft
-    assert "Counter Study" in draft
-    assert "bundle_" not in draft
-    assert "**Must retain:**" not in draft
-    assert "Required terms:" not in draft
-    reader_packet = plan["reader_facing_packet"]
-    assert reader_packet["schema_id"] == "reader_facing_decision_packet_v1"
-    assert reader_packet["evidence_cards"]
-    assert reader_packet["must_retain_obligations"]
-    assert any(card.get("required_in_memo") for card in reader_packet["evidence_cards"])
-    assert any("25%" in obligation.get("required_terms", []) for obligation in reader_packet["must_retain_obligations"])
-    assert "bundle_id" not in str(reader_packet)
-    prompt = build_reader_facing_packet_synthesis_prompt(reader_packet)
-    assert "Write like an analyst" in prompt
-    assert "must_retain_obligations" in prompt
-    assert "required_in_memo" in prompt
-    assert written["memo_plan_path"].exists()
-    assert written["reader_facing_packet_path"].exists()
-    assert written["reader_facing_packet_synthesis_prompt_path"].exists()
-    assert written["packet_first_draft_path"].exists()
-    assert written["section_context_acceptance_report_path"].exists()
-    assert written["reader_packet_verbalization_report_path"].exists()
-    assert written["report"]["status"] == "ready"
-
-
-def test_reader_packet_includes_compact_synthesis_warnings() -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = built["decision_briefing_packet"]
-    packet["synthesis_warning_inputs"] = {
-        "packet_sufficiency_issues": ["counterweights_not_preserved"],
-        "packet_quality_gate_issues": ["packet_critique_warning_only_recommendations"],
-    }
-
-    reader_packet = build_packet_memo_plan(packet)["reader_facing_packet"]
-    prompt = build_reader_facing_packet_synthesis_prompt(reader_packet)
-
-    assert reader_packet["synthesis_warnings"]
-    assert any("counterweight" in warning.lower() for warning in reader_packet["synthesis_warnings"])
-    assert "packet_critique_warning_only_recommendations" not in prompt
-    assert "synthesis_warnings" in prompt
 
 
 def test_memo_packet_retention_report_flags_missing_required_packet_items() -> None:
@@ -743,151 +677,3 @@ def test_packet_first_comparison_report_accounts_for_calls_and_retention() -> No
     assert report["baseline_mode"] == "estimated_section_rewrite_baseline"
     assert report["model_calls"]["estimated_call_delta"] > 0
     assert report["status"] == "packet_first_supported_by_estimated_comparison"
-
-
-def test_packet_retention_repair_accepts_only_if_retention_improves(monkeypatch) -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = built["decision_briefing_packet"]
-    weak_memo = """
-## Decision Brief
-
-Option A is promising.
-
-**Confidence:** medium
-"""
-    repaired_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent. Option A reduced flood losses by 25% in comparable river cities
-according to Outcome Study. Counter Study shows that Option A failed when maintenance budgets were cut.
-Maintenance cuts can erase the benefit. Boundary Report says the result only applies where pump capacity exceeds expected peak flow.
-
-**Confidence:** medium
-"""
-    pre_report = build_memo_packet_retention_report(weak_memo, packet)
-
-    class FakeResult:
-        text = repaired_memo
-        prompt_only = False
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_repair.run_model_backend", lambda *args, **kwargs: FakeResult())
-
-    result = run_packet_retention_repair(
-        weak_memo,
-        packet,
-        pre_report,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-    )
-
-    assert result["report"]["status"] == "accepted"
-    assert result["report"]["final_missing_critical_count"] == 0
-    assert "Counter Study" in result["memo"]
-
-
-def test_reader_packet_retention_report_flags_dropped_numeric_cards() -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    plan = build_packet_memo_plan(built["decision_briefing_packet"])
-    reader_packet = plan["reader_facing_packet"]
-    weak_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent.
-"""
-
-    report = build_reader_packet_retention_report(weak_memo, reader_packet)
-
-    assert report["status"] == "warning"
-    assert report["missing_card_count"] > 0
-    assert any("25%" in issue.get("missing_numbers", []) for issue in report["issues"])
-
-
-def test_reader_packet_retention_repair_accepts_targeted_anchor_reinsertion(monkeypatch) -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = built["decision_briefing_packet"]
-    weak_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent.
-
-## Sources
-
-- Outcome Study
-"""
-    repaired_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent.
-
-## What the Evidence Supports
-
-Option A reduced flood losses by 25% in comparable river cities [Outcome Study].
-
-## Sources
-
-- Outcome Study
-"""
-
-    class FakeResult:
-        text = repaired_memo
-        prompt_only = False
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_reader_packet_repair.run_model_backend", lambda *args, **kwargs: FakeResult())
-
-    result = run_reader_packet_retention_repair(
-        weak_memo,
-        packet,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-    )
-
-    assert result["report"]["status"] == "accepted"
-    assert result["report"]["final_missing_number_count"] == 0
-    assert "25%" in result["memo"]
-
-
-def test_reader_packet_retention_repair_uses_deterministic_fallback_after_numeric_regression(monkeypatch) -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = built["decision_briefing_packet"]
-    packet["evidence_bundles"].append(
-        {
-            "bundle_id": "bundle_extra_numeric",
-            "decision_role": "quantitative_anchor",
-            "claim": "Option A also reduced emergency callouts by 40% in comparable river cities.",
-            "source_labels": ["Outcome Study"],
-            "quantity_values": ["40%"],
-            "why_it_matters": "This is a second numerical anchor.",
-        }
-    )
-    initial_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent. Option A reduced flood losses by 25% in comparable river cities [Outcome Study].
-"""
-    regressed_memo = """
-## Decision Brief
-
-Option A is promising but maintenance-dependent. Option A also reduced emergency callouts by 40% in comparable river cities [Outcome Study].
-"""
-
-    class FakeResult:
-        text = regressed_memo
-        prompt_only = False
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_reader_packet_repair.run_model_backend", lambda *args, **kwargs: FakeResult())
-
-    result = run_reader_packet_retention_repair(
-        initial_memo,
-        packet,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-    )
-
-    assert result["report"]["status"] == "accepted"
-    assert result["report"]["accepted_via"] == "deterministic_fallback"
-    assert result["report"]["deterministic_fallback"]["accepted"] is True
-    assert "25%" in result["memo"]
-    assert "40%" in result["memo"]

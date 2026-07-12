@@ -24,48 +24,6 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.map_briefing_text_cleanup import replace_internal_reader_phrases
 
-def reader_memo_rewrite_issues(
-    rewritten: str,
-    original_memo: str,
-    evidence_appendix: str,
-    scaffold: dict[str, Any],
-    candidate_map: dict[str, Any],
-    contract: dict[str, Any],
-) -> list[str]:
-    issues: list[str] = []
-    if not rewritten:
-        return ["missing memo_markdown"]
-    if "## Evidence Appendix" in rewritten:
-        issues.append("rewrite included evidence appendix")
-    if "## Decision Brief" not in rewritten:
-        issues.append("rewrite dropped Decision Brief heading")
-    if "**Confidence:**" not in rewritten:
-        issues.append("rewrite dropped confidence line")
-    if len(rewritten.split()) < 250:
-        issues.append("rewrite is too short to preserve the decision contract")
-    if _rewrite_introduces_domain_leakage(rewritten, scaffold):
-        issues.append("rewrite introduced unrelated domain language")
-    if _rewrite_has_raw_identifiers(rewritten):
-        issues.append("rewrite contains raw map identifiers")
-    issues.extend(_rewrite_editorial_issues(rewritten, contract))
-    for row in contract.get("required_evidence", []) if isinstance(contract.get("required_evidence"), list) else []:
-        if not isinstance(row, dict):
-            continue
-        if not _rewrite_mentions_anchor_row(rewritten, row):
-            issues.append(f"rewrite dropped required evidence: {str(row.get('claim', ''))[:90]}")
-    for gap in _string_list(contract.get("required_gaps")):
-        if not _rewrite_mentions_gap(rewritten, gap):
-            issues.append(f"rewrite dropped required gap: {gap[:90]}")
-    combined = rewritten.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
-    validation = validate_briefing_against_scaffold(combined, scaffold, candidate_map)
-    if validation.get("status") == "needs_review":
-        issues.append(f"rewrite failed scaffold validation: {validation.get('issues')}")
-    original_sentences = _sentence_fingerprints(_markdown_without_tables(original_memo))
-    rewritten_sentences = _sentence_fingerprints(_markdown_without_tables(rewritten))
-    if rewritten_sentences and len(set(rewritten_sentences)) < max(3, len(rewritten_sentences) - 3):
-        issues.append("rewrite still has duplicate sentence overload")
-    return issues
-
 def _markdown_without_tables(markdown: str) -> str:
     return "\n".join(line for line in markdown.splitlines() if not line.lstrip().startswith("|"))
 

@@ -1,5 +1,7 @@
 # Plan: Packet-First Briefing Pipeline
 
+Status note: this plan is historical. The packet-first, section-rewrite, old final-editor, and warning-repair memo paths it references have been superseded by the memo-ready packet path. Do not restore those deleted paths; use `memo_ready_packet` and `map_briefing_memo_ready_finalization.py` for final synthesis.
+
 ## Objective
 
 Replace the default section-by-section model rewrite path with a packet-first synthesis path. The model budget should improve the decision briefing packet: evidence prioritization, role assignment, quantities, cruxes, source retention, and salience. The memo should then be assembled deterministically and polished with one whole-memo pass.
@@ -21,8 +23,8 @@ The codebase already contains most of the needed machinery, but the responsibili
 - `main_memo_obligations.py` selects required memo obligations.
 - `map_briefing_section_input_compiler.py` builds section-local model packets.
 - `map_briefing_evidence_role_matrix.py` assigns evidence roles and working sets.
-- `map_briefing_final_memo_editor.py` validates and polishes the whole memo.
-- `rewrite_reader_memo_by_section()` spends many model calls rewriting individual sections.
+- `map_briefing_memo_ready_finalization.py` synthesizes, checks retention, repairs, polishes, and normalizes the final memo from the memo-ready packet.
+- The deleted section rewrite path used to spend many model calls rewriting individual sections.
 
 The missing layer is a single `decision_briefing_packet.json` that becomes the source of truth for both synthesis and validation.
 
@@ -39,7 +41,7 @@ The failure mode is not just prompt size. The model needs a decision-shaped pack
 - Do not change source acquisition.
 - Do not change claim extraction or relationship construction unless packet telemetry identifies a specific upstream failure.
 - Do not add domain-specific vocabularies.
-- Do not remove section rewrite immediately; keep it as a fallback or debug mode.
+- Do not restore the deleted section rewrite fallback; unsupported callers should assemble `memo_ready_packet.evidence_items`.
 - Do not make uncalibrated validators blocking. New gates should start report-only unless they check hard invariants such as schema validity, source IDs, or exact required quantities.
 - Do not ask the model to invent source labels, quantities, or evidence not present in the packet.
 
@@ -66,9 +68,9 @@ Existing integration points:
 - `map_briefing_section_input_compiler.py`
   - Should consume packet section views if present, with current working sets as fallback.
 - `map_briefing_final_outputs.py`
-  - Should route default generation through packet-first memo planning and one whole-memo writer.
-- `map_briefing_final_memo_editor.py` and `map_briefing_warning_repair.py`
-  - Should validate and repair against packet obligations.
+  - Routes generation through the memo-ready packet synthesis path and fails clearly when `memo_ready_packet.evidence_items` is absent.
+- `map_briefing_memo_ready_finalization.py`
+  - Validates retention, performs targeted repair, runs final polish, and normalizes presentation against packet obligations.
 
 Existing artifacts to reuse:
 

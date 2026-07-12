@@ -23,7 +23,6 @@ from epistemic_case_mapper.map_briefing import (
     build_evidence_weighting_ledger,
     build_map_sufficiency_report,
     build_option_comparison,
-    build_reader_memo_rewrite_contract,
     build_proposition_clusters,
     build_curated_evidence_packets,
     calibrate_confidence,
@@ -36,8 +35,6 @@ from epistemic_case_mapper.map_briefing import (
     polish_briefing_for_reader,
     prioritize_map_for_briefing,
     repair_briefing_payload,
-    repair_reader_memo_rewrite_candidate,
-    reader_memo_rewrite_issues,
     run_map_briefing,
     validate_briefing_against_scaffold,
     _rewrite_mentions_anchor_row,
@@ -587,192 +584,6 @@ Trailing escaped newline.\\n
     assert "## Sources\n\n- Study" in updated
 
 
-def test_rewrite_candidate_repair_salvages_generic_crux_and_source_label_noise() -> None:
-    scaffold = {
-        "confidence_cap": "medium",
-        "source_display_names": {"nacto": "Nacto Protected Bikeways"},
-    }
-    contract = {
-        "confidence": "medium",
-        "required_evidence": [],
-        "required_gaps": [],
-        "required_cruxes": [
-            {
-                "crux": "Maintenance capacity",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-            {
-                "crux": "Attribution of results",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-        ],
-    }
-    rewrite = """## Decision Brief
-
-Prefer protected lanes where the city can maintain them (Nacto Protected_Protected Bikeways).
-
-**Confidence:** medium
-
-## Decision Cruxes
-
-| Crux | Why it matters | Current read | Would change if |
-|---|---|---|---|
-| Maintenance capacity | Separators need upkeep. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-| Attribution of results | The before-after evaluation was not randomized. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-"""
-
-    repaired = repair_reader_memo_rewrite_candidate(rewrite, scaffold, contract)
-
-    assert "Nacto Protected_Protected Bikeways" not in repaired
-    assert "Nacto Protected Bikeways" in repaired
-    assert "This condition changes how strongly" not in repaired
-    assert "named condition no longer affected" not in repaired
-    assert "causal-attribution limits" in repaired
-    assert "keep the intervention usable" in repaired
-
-
-def test_rewrite_repair_can_clear_duplicate_crux_rejection_without_fallback() -> None:
-    scaffold = {
-        "confidence_cap": "medium",
-        "source_display_names": {"nacto": "Nacto Protected Bikeways"},
-        "map_sufficiency_report": {"status": "sufficient_for_scaffolded_briefing"},
-        "decision_memo_slots": {
-            "slots": [
-                {
-                    "id": "main_support",
-                    "label": "Main support",
-                    "status": "filled",
-                    "rows": [
-                        {
-                            "claim": "Protected lanes are most relevant where traffic stress makes paint insufficient.",
-                            "source": "Nacto Protected Bikeways",
-                        }
-                    ],
-                }
-            ]
-        },
-        "crux_candidates": [
-            {
-                "crux": "Maintenance capacity",
-                "why_it_matters": "Cities should choose protection types they can maintain.",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-            {
-                "crux": "Attribution of results",
-                "why_it_matters": "The before-after evidence was not randomized.",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-            {
-                "crux": "Site constraints",
-                "why_it_matters": "Street geometry and access conflicts can change feasibility.",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-            {
-                "crux": "Rider volume changes",
-                "why_it_matters": "Exposure changes affect interpretation of injury trends.",
-                "current_read": "This condition changes how strongly the recommendation holds.",
-                "would_change_if": "The named condition no longer affected the practical recommendation.",
-            },
-        ],
-    }
-    original = """## Decision Brief
-
-The deterministic memo contains many repeated phrases and source-grounded detail.
-
-**Confidence:** medium
-
-## Practical Read
-
-- Keep the answer bounded by implementation capacity.
-
-## Evidence Carrying the Conclusion
-
-Protected lanes are most relevant where traffic stress makes paint insufficient. (Nacto Protected Bikeways)
-""" + ("Extra deterministic detail. " * 130)
-    appendix = "## Evidence Appendix\n\nProtected lanes are most relevant where traffic stress makes paint insufficient. (Nacto Protected Bikeways)"
-    candidate_map = {
-        "claims": [
-            {
-                "claim_id": "c001",
-                "claim": "Protected lanes are most relevant where traffic stress makes paint insufficient.",
-                "source_id": "nacto",
-                "role": "conclusion_support",
-            }
-        ],
-        "relations": [],
-    }
-    contract = build_reader_memo_rewrite_contract(original, scaffold)
-    contract["required_cruxes"] = [
-        {
-            "crux": "Maintenance capacity",
-            "current_read": "This condition changes how strongly the recommendation holds.",
-            "would_change_if": "The named condition no longer affected the practical recommendation.",
-        },
-        {
-            "crux": "Attribution of results",
-            "current_read": "This condition changes how strongly the recommendation holds.",
-            "would_change_if": "The named condition no longer affected the practical recommendation.",
-        },
-        {
-            "crux": "Site constraints",
-            "current_read": "This condition changes how strongly the recommendation holds.",
-            "would_change_if": "The named condition no longer affected the practical recommendation.",
-        },
-        {
-            "crux": "Rider volume changes",
-            "current_read": "This condition changes how strongly the recommendation holds.",
-            "would_change_if": "The named condition no longer affected the practical recommendation.",
-        },
-    ]
-    rewrite = """## Decision Brief
-
-The city should prefer protected lanes over paint on high-stress arterials when it can maintain the protection and handle operating constraints. Protected lanes are most relevant where traffic stress makes paint insufficient (Nacto Protected_Protected Bikeways).
-
-**Confidence:** medium
-
-## Practical Read
-
-- Select protection types that match maintenance capacity.
-- Use paint only where traffic stress is already low or protection is infeasible.
-- Treat implementation constraints as conditions on the recommendation.
-
-## Why This Read
-
-- Protected lanes are most relevant where traffic stress makes paint insufficient (Nacto Protected Bikeways).
-- Maintenance capacity determines whether physical protection remains usable after installation.
-- The observational evidence should be read as a corridor-package signal rather than a clean single-cause estimate.
-
-## Decision Cruxes
-
-| Crux | Why it matters | Current read | Would change if |
-|---|---|---|---|
-| Maintenance capacity | Cities should choose protection types they can maintain. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-| Attribution of results | The before-after evidence was not randomized. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-| Site constraints | Street geometry and access conflicts can change feasibility. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-| Rider volume changes | Exposure changes affect interpretation of injury trends. | This condition changes how strongly the recommendation holds. | The named condition no longer affected the practical recommendation. |
-
-## Limits of the Current Map
-
-The packet does not settle every local design constraint. It also does not prove that physical protection alone caused the observed before-after change, because corridor projects can include intersection treatments, signal timing changes, loading changes, and other safety work. The recommendation should therefore be read as a practical program choice: use protection as the arterial default where the street can support it, keep paint for lower-stress gaps or infeasible corridors, and require operations planning before installation. The packet is strong enough to organize the decision, but it is not a substitute for corridor-level design review.
-
-## Evidence Trail
-
-The structured evidence trail is in `EVIDENCE_APPENDIX.md`.
-"""
-
-    issues = reader_memo_rewrite_issues(rewrite, original, appendix, scaffold, candidate_map, contract)
-    repaired = repair_reader_memo_rewrite_candidate(rewrite, scaffold, contract)
-    repaired_issues = reader_memo_rewrite_issues(repaired, original, appendix, scaffold, candidate_map, contract)
-
-    assert "rewrite crux table contains non-human current-read language" in issues
-    assert repaired_issues == []
-
-
 def test_rewrite_accepts_synthetic_option_comparison_without_internal_source_label() -> None:
     row = {
         "slot": "Alternatives and comparators",
@@ -802,48 +613,6 @@ def test_rewrite_accepts_strong_source_backed_paraphrase_without_exact_source_la
     assert not _rewrite_mentions_anchor_row("Option alpha improved results.", row)
     assert _rewrite_mentions_anchor_row("Option alpha reduced failures by 34%.", row)
     assert _rewrite_mentions_anchor_row("Option alpha reduced failures by 34% (Evaluation Report).", row)
-
-
-def test_rewrite_repair_tones_down_generic_overclaim_language() -> None:
-    rewrite = """## Decision Brief
-
-The intervention has significant safety benefits, significantly reduced failures, and is proven safe.
-
-**Confidence:** medium
-
-## Why This Read
-
-- **Proven Safety Impact:** The mapped evaluation reported fewer failures.
-- **Proven Outcome:** The source reported a change.
-"""
-
-    repaired = repair_reader_memo_rewrite_candidate(rewrite, {}, {"confidence": "medium"})
-
-    assert "significant safety benefits" not in repaired
-    assert "proven safe" not in repaired.lower()
-    assert "Proven Safety Impact" not in repaired
-    assert "Proven Outcome" not in repaired
-    assert "significantly reduced" not in repaired
-    assert "source-supported safety benefits" in repaired
-    assert "Mapped Safety Signal" in repaired
-    assert "Mapped Outcome" in repaired
-
-
-def test_rewrite_repair_fixes_near_miss_parenthetical_source_labels() -> None:
-    rewrite = "The decision turns on access risk and timing issues (Method Separated Guidance)."
-    contract = {
-        "confidence": "medium",
-        "required_evidence": [
-            {
-                "source": "Method Separation Guidance",
-                "claim": "Access risk and timing issues affect the intervention.",
-            }
-        ],
-    }
-
-    repaired = repair_reader_memo_rewrite_candidate(rewrite, {}, contract)
-
-    assert "(Method Separation Guidance)" in repaired
 
 
 def test_curated_evidence_packets_drop_reference_debris() -> None:

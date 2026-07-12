@@ -663,7 +663,6 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
     build_option_comparison,
     compose_final_reader_memo_package,
     polish_briefing_for_reader,
-    rewrite_reader_memo_with_contract,
 )
 from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
 from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata

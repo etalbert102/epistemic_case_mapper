@@ -1,5 +1,7 @@
 # Plan: Canonical Decision-Support Spine
 
+Status note: references to the old section-rewrite synthesis path are historical. Current final synthesis should consume the memo-ready packet path; do not restore the deleted section-rewrite path.
+
 ## Objective
 
 Build one validated canonical decision model before prose generation, then make every briefing section a projection of that model. The goal is to prevent the BLUF, evidence sections, scope sections, limits, and validation reports from disagreeing with each other.
@@ -120,7 +122,7 @@ Recommended changed modules:
 - `map_briefing_pipeline.py`: attach the new spine artifacts after context curation.
 - `map_briefing_artifacts.py`: write spine, selection, eligibility, projection, and validation artifacts.
 - `map_briefing_section_input_compiler.py`: prefer spine projection packets when present, falling back to current section reasoning cards during migration.
-- `map_briefing_section_rewrite.py`: report projection readiness and validate section prose against projections.
+- `map_briefing_memo_ready_finalization.py`: consume memo-ready packet obligations during final synthesis, retention checks, repair, polish, and presentation normalization.
 - `map_briefing_validation.py`: validate final memo against the canonical spine when present.
 
 ## Workstreams
