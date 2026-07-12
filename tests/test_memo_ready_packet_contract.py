@@ -37,3 +37,17 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "The writer model context is the complete model-visible evidence and judgment record" in prompt
     assert "Weigh support against counterweights and scope boundaries" in prompt
     assert "quantity_anchors" in prompt
+
+
+def test_memo_ready_prompt_without_evidence_items_does_not_dump_raw_packet() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "decision_synthesis_contract": {"schema_id": "decision_synthesis_contract_v1"},
+        "memo_warning_packet": {"warnings": [{"claim": "Raw warning should not be dumped."}]},
+    }
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "synthesis prompt unavailable" in prompt
+    assert "Raw warning should not be dumped" not in prompt
+    assert "decision_synthesis_contract" not in prompt
