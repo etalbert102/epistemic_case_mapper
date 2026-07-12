@@ -48,6 +48,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "scope_boundaries": _evidence_group(visible_items, roles={"scope_boundary"}),
         "decision_cruxes": _evidence_group(visible_items, roles={"decision_crux"}),
         "practical_implications": _practical_implications(packet, visible_items),
+        "practical_implication_cards": _practical_implication_cards(packet, visible_items),
         "must_use_evidence": [_writer_evidence_item(item) for item in visible_items],
         "quantity_anchors": _quantity_anchors(visible_items),
         "critique_writer_guidance": compact_writer_guidance_for_model(_dict(packet.get("writer_guidance_packet"))),
@@ -80,6 +81,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "reasoning_hierarchy": hierarchy,
         "adaptive_memo_outline": _dict(interface.get("adaptive_memo_outline")),
         "practical_implications": _string_list(interface.get("practical_implications")),
+        "practical_implication_cards": _list(interface.get("practical_implication_cards")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
         "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
         "source_trail": _list(interface.get("source_trail")),
@@ -127,6 +129,10 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
     ]
     if missing_obligation_evidence:
         warnings.append("retention_obligation_without_visible_evidence")
+    source_appraisal_rows = _list(interface.get("source_appraisal_summary"))
+    informative_source_appraisal_count = sum(1 for row in source_appraisal_rows if _informative_source_appraisal(row))
+    if source_appraisal_rows and informative_source_appraisal_count == 0:
+        warnings.append("source_appraisal_summary_uninformative")
     return {
         "schema_id": "writer_decision_interface_quality_report_v1",
         "status": "ready" if not warnings else "warning",
@@ -136,6 +142,8 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         "reasoning_move_count": len(_list(hierarchy.get("reasoning_moves"))),
         "rescued_context_count": _reasoning_hierarchy_rescue_count(hierarchy),
         "excluded_evidence_count": len(_list(interface.get("excluded_evidence_log"))),
+        "source_appraisal_row_count": len(source_appraisal_rows),
+        "informative_source_appraisal_row_count": informative_source_appraisal_count,
         "missing_obligation_evidence": missing_obligation_evidence,
     }
 
@@ -155,13 +163,23 @@ def _bottom_line(packet: dict[str, Any], visible_items: list[dict[str, Any]]) ->
 
 
 def _answer_frame(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> dict[str, Any]:
+    logic = _dict(packet.get("analyst_decision_logic"))
     scope = _sort_items([item for item in visible_items if _answer_relation(item) == "bounds_scope"])
     counterweights = _sort_items([item for item in visible_items if _answer_relation(item) == "challenges_answer"])
     cruxes = _sort_items([item for item in visible_items if _answer_relation(item) == "identifies_crux"])
+    support = _sort_items([item for item in visible_items if _answer_relation(item) == "supports_answer"])
+    direct_answer = _bottom_line(packet, visible_items)
+    main_counterweight = _clean_answer_text(logic.get("strongest_counterweight")) or _claim_text(_first_item(counterweights))
+    scope_note = _short_text("; ".join(_claim_text(item) for item in scope[:3]), 520)
     return {
-        "bottom_line": _bottom_line(packet, visible_items),
+        "bottom_line": direct_answer,
+        "direct_answer": direct_answer,
         "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
-        "scope_note": _short_text("; ".join(_claim_text(item) for item in scope[:3]), 520),
+        "confidence_basis": _confidence_basis(packet, visible_items),
+        "main_support": _clean_answer_text(logic.get("support_summary")) or _claim_text(_first_item(support)),
+        "main_counterweight": main_counterweight,
+        "scope_note": scope_note,
+        "decision_application": _decision_application_statement(direct_answer, main_counterweight, scope_note),
         "main_uncertainty": _short_text("; ".join(_claim_text(item) for item in [*counterweights[:2], *cruxes[:2]]), 520),
         "scoping_policy": "State the answer for the population, option, or use case supported by the evidence; use scope and counterweight rows to bound rather than overstate it.",
     }
@@ -191,13 +209,93 @@ def _counterweight_disposition(weighting: Any) -> str:
     return "requires_adjudication"
 
 
+def _implication_card(implication_type: str, statement: str, item: dict[str, Any], index: int) -> dict[str, Any]:
+    return {
+        "implication_id": f"implication_{index:03d}",
+        "implication_type": implication_type,
+        "statement": _short_text(statement, 420),
+        "source_labels": _source_labels(item),
+        "basis_evidence_item_ids": _string_list(item.get("item_id")),
+    }
+
+
 def _practical_implications(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[str]:
     logic = _dict(packet.get("analyst_decision_logic"))
     rows = _string_list(logic.get("practical_implications"))
     if rows:
         return rows[:5]
+    return [card["statement"] for card in _practical_implication_cards(packet, visible_items)[:5]]
+
+
+def _practical_implication_cards(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    logic = _dict(packet.get("analyst_decision_logic"))
+    explicit = _string_list(logic.get("practical_implications"))
+    if explicit:
+        return [
+            {
+                "implication_id": f"implication_{index:03d}",
+                "implication_type": "model_supplied",
+                "statement": _short_text(statement, 420),
+                "source_labels": [],
+                "basis_evidence_item_ids": [],
+            }
+            for index, statement in enumerate(explicit[:6], start=1)
+        ]
+    cards = []
     bottom = _bottom_line(packet, visible_items)
-    return [_short_text(f"Act on the bounded answer while respecting the listed counterweights and scope boundaries: {bottom}", 420)] if bottom else []
+    support = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "supports_answer"]))
+    counter = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "challenges_answer"]))
+    scope = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "bounds_scope"]))
+    crux = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "identifies_crux"]))
+    if bottom:
+        cards.append(_implication_card("default_application", bottom, support, len(cards) + 1))
+    if counter:
+        cards.append(_implication_card("exception_or_counterweight", f"Treat this as the main exception or caution: {_claim_text(counter)}", counter, len(cards) + 1))
+    if scope:
+        cards.append(_implication_card("scope_boundary", f"Bound application by this scope condition: {_claim_text(scope)}", scope, len(cards) + 1))
+    if crux:
+        cards.append(_implication_card("monitoring_or_crux", f"Track this crux because it could change the answer: {_claim_text(crux)}", crux, len(cards) + 1))
+    return cards[:6]
+
+
+def _confidence_basis(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> str:
+    spine = _dict(packet.get("answer_spine"))
+    logic = _dict(packet.get("analyst_decision_logic"))
+    support_summary = _clean_answer_text(logic.get("support_summary"))
+    main_counterweight = _clean_answer_text(logic.get("strongest_counterweight"))
+    if support_summary and main_counterweight:
+        return _short_text(f"Primary support: {support_summary} Main counterweight: {main_counterweight}", 420)
+    if support_summary:
+        return _short_text(support_summary, 420)
+    candidates = [
+        *_string_list(spine.get("confidence_reasons")),
+        str(logic.get("counterweight_weighting") or ""),
+        *re.split(r";\s+", str(spine.get("why_this_read") or "")),
+    ]
+    for candidate in candidates:
+        text = _clean_answer_text(candidate)
+        if text and not _contains_generic_judgment(text):
+            return _short_text(text, 420)
+    support = _first_claim(visible_items, {"strongest_support", "quantitative_anchor"})
+    counter = _first_claim(visible_items, {"strongest_counterweight"})
+    if support and counter:
+        return _short_text(f"Support is bounded by this counterweight: {counter}", 420)
+    return _short_text(support or counter, 420)
+
+
+def _decision_application_statement(direct_answer: str, main_counterweight: str, scope_note: str) -> str:
+    counterweight = _strip_terminal_punctuation(main_counterweight)
+    scope = _strip_terminal_punctuation(scope_note)
+    if main_counterweight and scope_note:
+        return _short_text(
+            f"Use the default answer where it applies; treat this as the main exception or caution: {counterweight}. Scope boundary: {scope}.",
+            520,
+        )
+    if main_counterweight:
+        return _short_text(f"Use the default answer while treating this as the main exception or caution: {counterweight}.", 520)
+    if scope_note:
+        return _short_text(f"Use the default answer within this scope boundary: {scope}.", 520)
+    return _short_text(direct_answer, 520)
 
 
 def _reasoning_hierarchy(
@@ -637,6 +735,20 @@ def _contains_generic_judgment(value: Any) -> bool:
     return False
 
 
+def _informative_source_appraisal(row: Any) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if str(row.get("decision_directness") or "").strip() not in {"", "unknown"}:
+        return True
+    return bool(
+        _list(row.get("evidence_proximity"))
+        or _list(row.get("recommended_uses"))
+        or _list(row.get("source_use_warnings"))
+        or _list(row.get("interpretation_caveats"))
+        or _dict(row.get("allowed_wording"))
+    )
+
+
 def _first_claim(visible_items: list[dict[str, Any]], roles: set[str]) -> str:
     for item in visible_items:
         if isinstance(item, dict) and str(item.get("role") or "") in roles:
@@ -646,11 +758,26 @@ def _first_claim(visible_items: list[dict[str, Any]], roles: set[str]) -> str:
     return ""
 
 
+def _first_item(items: list[dict[str, Any]]) -> dict[str, Any]:
+    return items[0] if items else {}
+
+
 def _clean_answer_text(value: Any) -> str:
     text = _short_text(str(value or ""), 700)
     text = re.sub(r"^The evidence supports a bounded answer to ['\"][^'\"]+['\"]:\s*", "", text)
+    text = re.sub(r"^The evidence supports a bounded answer to [^:]{1,240}:\s*", "", text)
     text = re.sub(r"^The evidence supports a bounded answer:\s*", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(
+        r"\b(main|primary|central) limiting consideration is ([A-Z])",
+        lambda match: f"{match.group(1)} limiting consideration is that {match.group(2).lower()}",
+        text,
+    )
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _strip_terminal_punctuation(text: str) -> str:
+    return re.sub(r"[.。؛;:\s]+$", "", str(text or "").strip())
 
 
 def _content_terms(text: str) -> set[str]:

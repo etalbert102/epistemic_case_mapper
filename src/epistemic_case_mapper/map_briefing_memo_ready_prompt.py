@@ -31,10 +31,8 @@ def build_writer_packet_synthesis_prompt(
             "Decision-writer packet synthesis prompt unavailable.\n"
             "Active memo synthesis requires a memo-ready packet with evidence_items so the writer model context can be compiled without audit-only fields.\n"
         )
-    obligations = required_memo_obligations(memo_ready_packet or {})
     writing_interface = build_writer_decision_interface(memo_ready_packet)
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
-    obligation_ledger = writing_interface.get("retention_checklist") or _obligation_ledger(obligations)
     model_context = build_writer_model_context(writing_interface)
     blueprint_context: dict[str, Any] = narrative_blueprint
     if _list(_dict(model_context.get("reasoning_hierarchy")).get("reasoning_moves")):
@@ -48,16 +46,16 @@ def build_writer_packet_synthesis_prompt(
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
-        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, and reasoning_hierarchy as the organizing spine. Use the narrative blueprint as secondary orientation. The required obligation ledger below is a retention checklist, not an outline: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
+        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, and reasoning_hierarchy as the organizing spine. Use the narrative blueprint as secondary orientation. The adaptive outline's must-write cards are the retention contract for synthesis: satisfy each card in natural prose when it affects the decision read. Merge related cards into the same paragraph when that reads better.\n\n"
         "Rules:\n"
-        "- Start the first paragraph with a direct bottom-line answer to the decision question, using answer_frame.bottom_line from the writer model context.\n"
+        "- Start the first paragraph with a direct bottom-line answer to the decision question, using answer_frame.direct_answer from the writer model context when present.\n"
         "- Scope the opening answer using answer_frame.scope_note and answer_frame.main_uncertainty when they are present.\n"
-        "- State the confidence level and main reason for uncertainty in the opening section when the writer model context supplies them.\n"
+        "- State the confidence level and main reason for uncertainty using answer_frame.confidence_basis when the writer model context supplies it.\n"
         "- Use adaptive_memo_outline.sections as the memo's visible section sequence and section-title source when it is present.\n"
         "- Satisfy every adaptive_memo_outline.must_write_cards entry in natural prose; use the cards to preserve required evidence, not to create checklist rhythm.\n"
         "- When a must-write card has multiple quantities_to_keep_together, write those quantities in the same sentence or adjacent clause so the model does not split paired estimates from their interval, denominator, or interpretation.\n"
-        "- Use only facts, quantities, and source labels present in the writer model context or required obligation ledger.\n"
-        "- Use only quantities listed inside quantity_anchors, decision_evidence_table.quantities, or the required obligation ledger.\n"
+        "- Use only facts, quantities, and source labels present in the writer model context.\n"
+        "- Use only quantities listed inside adaptive_memo_outline.must_write_cards, quantity_anchors, decision_evidence_table.quantities, or practical_implication_cards.\n"
         "- When a quantity value is ambiguous by itself, use its interpretation wording from quantity_anchors or decision_evidence_table.quantities.\n"
         "- Cite the source label attached to the evidence unit or quantity that supports the sentence.\n"
         "- Use source_appraisal_summary and source_appraisal_note to calibrate wording, confidence, and source weight.\n"
@@ -66,6 +64,7 @@ def build_writer_packet_synthesis_prompt(
         "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
         "- Use the hierarchy's counterweight, scope, and crux moves to explain whether counterevidence overturns, weakens, bounds, or contextualizes the answer.\n"
         "- Use critique_writer_guidance to avoid answer-frame mistakes, source-quality omissions, and synthesis traps identified during packet critique.\n"
+        "- Use practical_implication_cards to make the final section specific about default application, exceptions, scope, and cruxes.\n"
         "- Treat cruxes and subgroup signals as calibration unless the packet says they change the default answer.\n"
         "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
         "- Include a concise practical implication.\n"
@@ -77,8 +76,6 @@ def build_writer_packet_synthesis_prompt(
         "- Use natural Markdown; do not use To/From/Subject memo headers.\n\n"
         "Narrative blueprint:\n"
         f"{json.dumps(blueprint_context, indent=2, ensure_ascii=False)}\n\n"
-        "Required obligation ledger:\n"
-        f"{json.dumps(obligation_ledger, indent=2, ensure_ascii=False)}\n\n"
         "Writer model context:\n"
         f"{json.dumps(model_context, indent=2, ensure_ascii=False)}\n"
     )
@@ -158,7 +155,7 @@ def build_memo_narrative_blueprint(
         "prose_discipline": [
             "Use the moves as a reasoning sequence, not as visible labels unless the headings fit naturally.",
             "Connect support, counterweight, and scope in sentences that explain why they matter for the decision.",
-            "Use the required obligation ledger only to check retention after drafting.",
+            "Use adaptive must-write cards only to check retention after drafting.",
         ],
     }
 
@@ -210,7 +207,7 @@ def _writer_interface_narrative_blueprint(writer_interface: dict[str, Any]) -> d
         "prose_discipline": [
             "Use the moves as a reasoning sequence, not as visible labels unless the headings fit naturally.",
             "Connect support, counterweight, and scope in sentences that explain why they matter for the decision.",
-            "Use the required obligation ledger only to check retention after drafting.",
+            "Use adaptive must-write cards only to check retention after drafting.",
         ],
     }
 

@@ -277,6 +277,10 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["support_that_drives_answer"][0]["claim"] == "Option A improves the main outcome."
     assert interface["scope_boundaries"][0]["claim"] == "The answer depends on whether the narrower setting matters."
     assert interface["answer_frame"]["scope_note"] == "The answer depends on whether the narrower setting matters."
+    assert interface["answer_frame"]["direct_answer"] == "Adopt option A only where the narrower setting is not decisive."
+    assert interface["answer_frame"]["main_support"] == "Option A improves the main outcome."
+    assert interface["answer_frame"]["main_counterweight"] == ""
+    assert interface["practical_implication_cards"][0]["implication_type"] == "default_application"
     assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
     assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"
@@ -290,6 +294,9 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["lineage_report"]["model_visible_evidence_item_count"] == 2
     assert quality["status"] == "warning"
     assert "missing_counterweights" in quality["warnings"]
+    assert "source_appraisal_summary_uninformative" in quality["warnings"]
+    assert quality["source_appraisal_row_count"] == 2
+    assert quality["informative_source_appraisal_row_count"] == 0
 
 
 def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() -> None:
@@ -355,6 +362,9 @@ def test_writer_model_context_exposes_compact_source_appraisal() -> None:
     assert "association_not_causation" in support["source_appraisal_note"]
     assert context["source_appraisal_summary"][0]["decision_directness"] == "partial"
     assert context["source_appraisal_summary"][0]["allowed_wording"]["causal_language_allowed"] is False
+    quality = build_writer_decision_interface_quality_report(interface)
+    assert quality["informative_source_appraisal_row_count"] == 1
+    assert "source_appraisal_summary_uninformative" not in quality["warnings"]
     assert "source_weighting" in context["adaptive_memo_outline"]["section_selection_summary"]["selected_section_ids"]
 
 
@@ -390,7 +400,7 @@ def test_writer_decision_interface_rescues_should_include_quantity_context() -> 
     assert "two cycles" in str(model_context)
 
 
-def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:
+def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     packet = decision_writer_packet_to_memo_ready_packet(
         bundle["decision_writer_packet"],
@@ -405,11 +415,12 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
     assert "adaptive_memo_outline as the section plan" in prompt
     assert "adaptive_memo_outline.must_write_cards" in prompt
     assert "quantities_to_keep_together" in prompt
+    assert "practical_implication_cards" in prompt
     assert "organizing spine" in prompt
-    assert "Required obligation ledger" in prompt
-    assert "retention checklist, not an outline" in prompt
-    assert "Use this as load-bearing support for the default answer" in prompt
-    assert "Bound the answer's applicability" in prompt
+    assert "Required obligation ledger" not in prompt
+    assert "adaptive outline's must-write cards are the retention contract" in prompt
+    assert "Option A improves the main outcome" in prompt
+    assert "The answer depends on whether the narrower setting matters" in prompt
     assert "Suggested memo shape" not in prompt
     assert "analyst_synthesis_packet" not in prompt
 

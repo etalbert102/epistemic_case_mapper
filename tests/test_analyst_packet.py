@@ -420,7 +420,8 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
 
     assert "writer model context" in prompt
     assert "writer_model_context_v1" in prompt
-    assert "Required obligation ledger" in prompt
+    assert "adaptive_memo_outline" in prompt
+    assert "Required obligation ledger" not in prompt
     assert "excluded_evidence_log" not in prompt
     assert "lineage_report" not in prompt
     assert '"evidence_items"' not in prompt
