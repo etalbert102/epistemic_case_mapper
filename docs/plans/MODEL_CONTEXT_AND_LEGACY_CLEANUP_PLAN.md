@@ -63,3 +63,21 @@ The active memo path now uses `memo_ready_packet -> writer_decision_interface ->
 - Tests use generic flood/option fixtures and synthetic off-question evidence, not only eggs.
 - Context compiler strips by semantic field ownership, not domain vocabulary.
 - Audit artifacts remain complete for any case shape.
+
+## Completion Audit
+
+Completed slices:
+- Added `writer_model_context_v1` so synthesis prompts receive only writer-facing facts, quantities, sources, and decision structure. Full `writer_decision_interface_v1` remains available as an audit artifact.
+- Removed audit-only `excluded_evidence_log`, `lineage_report`, and filtered evidence IDs from memo synthesis prompts.
+- Removed the bare decision-writer-packet synthesis fallback; prompts now require a memo-ready packet with `evidence_items`.
+- Replaced the no-evidence memo-ready prompt fallback with an explicit unavailable note instead of dumping raw packet JSON.
+- Compacted packet critique/refinement model context by replacing raw `section_views` and broad `coverage_report` payloads with `section_summary` and `coverage_summary`.
+
+Verification:
+- Focused prompt/context tests were added or updated for each changed boundary.
+- Final all-up verification passed: `PYTHONPATH=src python3 -m pytest -q` -> 667 passed.
+
+Deferred legacy code:
+- Packet-first, section-rewrite, reader-contract rewrite, and older editorial repair modules remain because direct tests still cover them and fallback callers still exist.
+- These modules should be deleted only after a separate migration proves no supported command or test uses the fallback final-output path.
+- Until then, active-path cleanup should focus on preventing those modules from receiving live traffic when `memo_ready_packet.evidence_items` is available.
