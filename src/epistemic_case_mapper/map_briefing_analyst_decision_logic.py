@@ -13,6 +13,11 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 
 
 _NATURAL_LANGUAGE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    (
+        r"\bUse counterweights to bound the answer if they do not overturn the primary support\.?",
+        "Counterweights limit confidence or scope when the support remains stronger.",
+    ),
+    (r"\bConnect this reasoning step to the weighted answer\.?", ""),
     (r"\bcrux\s+for\b", "relevant to"),
     (r"\bthe\s+primary\s+driver\b", "a plausible important driver"),
     (r"\bprimary\s+driver\b", "plausible important driver"),
@@ -21,6 +26,12 @@ _NATURAL_LANGUAGE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     (r"\bbyproduct\s+of\b", "partly explained by"),
     (r"\binherent\s+property\s+of\b", "effect specific to"),
     (r"\bfundamentally\s+changing\b", "shifting"),
+)
+
+_SCAFFOLDED_DECISION_LOGIC_PATTERNS = (
+    "use counterweights to bound",
+    "connect this reasoning step",
+    "explain whether the strongest counterweight changes",
 )
 
 
@@ -55,8 +66,45 @@ def naturalize_decision_logic_text(value: str) -> str:
     for pattern, replacement in _NATURAL_LANGUAGE_REPLACEMENTS:
         cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\ba plausible important driver\b", "a plausible important driver", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
     cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
-    return cleaned
+    return cleaned.strip()
+
+
+def is_scaffolded_decision_logic_text(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return any(pattern in text for pattern in _SCAFFOLDED_DECISION_LOGIC_PATTERNS)
+
+
+def content_based_counterweight_weighting(
+    *,
+    support: Any = "",
+    counterweight: Any = "",
+    fallback: Any = "",
+) -> str:
+    fallback_text = naturalize_decision_logic_text(str(fallback or ""))
+    if fallback_text and not is_scaffolded_decision_logic_text(fallback_text):
+        return _short_text(fallback_text, 520)
+    support_text = naturalize_decision_logic_text(str(support or ""))
+    counter_text = naturalize_decision_logic_text(str(counterweight or ""))
+    if counter_text and support_text:
+        return _short_text(
+            f"The counterweight limits the support: {counter_text} The support remains: {support_text}",
+            520,
+        )
+    if counter_text:
+        return _short_text(f"The counterweight narrows confidence or scope: {counter_text}", 520)
+    return ""
+
+
+def argument_plan_transition(step_id: str) -> str:
+    if step_id == "counterweight":
+        return "Contrast this point with the support and state whether it changes the answer or narrows scope."
+    if step_id == "scope":
+        return "Use this to state where the answer applies."
+    if step_id == "crux":
+        return "Use this to name what would most change the answer."
+    return ""
 
 
 def _normalize_decision_logic(logic: dict[str, Any], answer_frame: dict[str, Any]) -> dict[str, Any]:
@@ -114,12 +162,10 @@ def _deterministic_decision_logic(
         "support_summary": naturalize_decision_logic_text(support) or _natural_short(answer_frame.get("why_this_read"), 520),
         "strongest_counterweight": naturalize_decision_logic_text(counter)
         or _natural_short(answer_frame.get("strongest_counterargument"), 420),
-        "counterweight_weighting": _natural_short(
-            str(
-                answer_frame.get("why_counterargument_does_or_does_not_change_answer")
-                or "Explain whether the strongest counterweight changes the bottom line or only bounds it."
-            ),
-            520,
+        "counterweight_weighting": content_based_counterweight_weighting(
+            support=support or answer_frame.get("why_this_read"),
+            counterweight=counter or answer_frame.get("strongest_counterargument"),
+            fallback=answer_frame.get("why_counterargument_does_or_does_not_change_answer"),
         ),
         "reconciled_cruxes": [naturalize_decision_logic_text(value) for value in cruxes],
         "scope_boundaries": [naturalize_decision_logic_text(value) for value in scope],

@@ -43,6 +43,23 @@ def test_decision_logic_naturalizes_artifact_and_overstrong_language() -> None:
     assert "less decisive after adjustment" in flattened
 
 
+def test_decision_logic_naturalizes_scaffolded_counterweight_instruction() -> None:
+    result = naturalize_decision_logic_payload(
+        {
+            "counterweight_weighting": (
+                "Use counterweights to bound the answer if they do not overturn the primary support."
+            ),
+            "reconciled_cruxes": ["Connect this reasoning step to the weighted answer."],
+        }
+    )
+
+    flattened = f"{result['counterweight_weighting']} {' '.join(result['reconciled_cruxes'])}".lower()
+    assert "use counterweights" not in flattened
+    assert "if they do not overturn" not in flattened
+    assert "connect this reasoning step" not in flattened
+    assert result["counterweight_weighting"] == "Counterweights limit confidence or scope when the support remains stronger."
+
+
 def test_analyst_decision_logic_naturalizes_refined_output() -> None:
     result = analyst_decision_logic(
         refinement={

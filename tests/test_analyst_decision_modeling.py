@@ -9,7 +9,10 @@ from epistemic_case_mapper.map_briefing_analyst_decision_modeling import (
     build_analyst_decision_model_prompt,
     run_analyst_decision_model,
 )
-from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import build_decision_model_tasks
+from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
+    _decision_logic,
+    build_decision_model_tasks,
+)
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -485,6 +488,54 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
     assert result["analyst_decision_model_parallel_report"]["task_count"] == 4
     assert result["analyst_decision_model_parse_report"]["valid"] is True
     assert result["analyst_decision_model_parse_report"]["covered_evidence_item_count"] == 14
+
+
+def test_parallel_decision_logic_preserves_model_counterweight_judgment() -> None:
+    groups = [
+        {
+            "proposition": "Outcome evidence supports option A.",
+            "memo_role": "load_bearing_primary_support",
+        },
+        {
+            "proposition": "Implementation risk narrows when option A is attractive.",
+            "memo_role": "load_bearing_counterweight",
+        },
+    ]
+    payloads = [
+        {
+            "decision_logic": {
+                "bounded_bottom_line": "Adopt option A only where implementation risk is manageable.",
+                "support_summary": "Outcome evidence supports option A.",
+                "strongest_counterweight": "Implementation risk narrows where adoption makes sense.",
+                "counterweight_weighting": "The risk narrows scope but does not erase the outcome signal.",
+                "practical_implications": ["Pilot where implementation controls are available."],
+            }
+        }
+    ]
+
+    result = _decision_logic({"decision_question": "Should option A be adopted?"}, groups, payloads)
+
+    assert result["counterweight_weighting"] == "The risk narrows scope but does not erase the outcome signal."
+    assert result["practical_implications"] == ["Pilot where implementation controls are available."]
+
+
+def test_parallel_decision_logic_fallback_counterweight_is_evidence_derived() -> None:
+    groups = [
+        {
+            "proposition": "Outcome evidence supports option A.",
+            "memo_role": "load_bearing_primary_support",
+        },
+        {
+            "proposition": "Implementation risk narrows adoption.",
+            "memo_role": "load_bearing_counterweight",
+        },
+    ]
+
+    result = _decision_logic({"decision_question": "Should option A be adopted?"}, groups, [])
+
+    assert "Use counterweights" not in result["counterweight_weighting"]
+    assert "Outcome evidence supports option A" in result["counterweight_weighting"]
+    assert "Implementation risk narrows adoption" in result["counterweight_weighting"]
 
 
 def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(monkeypatch) -> None:

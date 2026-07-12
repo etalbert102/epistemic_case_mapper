@@ -299,6 +299,53 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert quality["informative_source_appraisal_row_count"] == 0
 
 
+def test_writer_quality_ignores_internal_outline_writing_goals() -> None:
+    interface = {
+        "support_that_drives_answer": [{"claim": "Option A improves the main outcome."}],
+        "counterweights_and_disposition": [{"claim": "The result may not transport.", "disposition_rationale": "Scope is narrower."}],
+        "quantity_anchors": [{"value": "20% improvement"}],
+        "reasoning_hierarchy": {"reasoning_moves": [{"move": "answer_frame"}]},
+        "retention_checklist": [],
+        "must_use_evidence": [],
+        "source_appraisal_summary": [],
+        "adaptive_memo_outline": {
+            "sections": [
+                {
+                    "section_id": "bottom_line",
+                    "writing_goal": "Answer the decision question directly from the strongest evidence.",
+                }
+            ]
+        },
+    }
+
+    quality = build_writer_decision_interface_quality_report(interface)
+
+    assert "generic_or_scaffolded_judgment_present" not in quality["warnings"]
+
+
+def test_writer_quality_flags_reader_facing_scaffolded_counterweight() -> None:
+    interface = {
+        "support_that_drives_answer": [{"claim": "Option A improves the main outcome."}],
+        "counterweights_and_disposition": [
+            {
+                "claim": "The result may not transport.",
+                "disposition_rationale": (
+                    "Use counterweights to bound the answer if they do not overturn the primary support."
+                ),
+            }
+        ],
+        "quantity_anchors": [{"value": "20% improvement"}],
+        "reasoning_hierarchy": {"reasoning_moves": [{"move": "answer_frame"}]},
+        "retention_checklist": [],
+        "must_use_evidence": [],
+        "source_appraisal_summary": [],
+    }
+
+    quality = build_writer_decision_interface_quality_report(interface)
+
+    assert "generic_or_scaffolded_judgment_present" in quality["warnings"]
+
+
 def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     packet = decision_writer_packet_to_memo_ready_packet(

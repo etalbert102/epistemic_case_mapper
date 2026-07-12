@@ -7,7 +7,20 @@ import time
 from typing import Any, Callable
 
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
-from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe, list_value as _list, short_text as _short_text, string_list as _string_list
+from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
+    argument_plan_transition,
+    content_based_counterweight_weighting,
+    is_scaffolded_decision_logic_text,
+    naturalize_decision_logic_payload,
+    naturalize_decision_logic_text,
+)
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
+    dedupe as _dedupe,
+    dict_value as _dict,
+    list_value as _list,
+    short_text as _short_text,
+    string_list as _string_list,
+)
 from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 
 
@@ -398,16 +411,41 @@ def _merged_texts(context: dict[str, Any], payloads: list[dict[str, Any]], key: 
 
 
 def _decision_logic(context: dict[str, Any], groups: list[dict[str, Any]], payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    del payloads
+    logic_payloads = [naturalize_decision_logic_payload(_dict(payload.get("decision_logic"))) for payload in payloads]
+    support = _first_payload_logic_text(logic_payloads, "support_summary") or _first_group(
+        groups,
+        "load_bearing_primary_support",
+    )
+    counterweight = _first_payload_logic_text(logic_payloads, "strongest_counterweight") or _first_group(
+        groups,
+        "load_bearing_counterweight",
+    )
     return {
-        "bounded_bottom_line": _direct_answer(context, groups),
-        "support_summary": _first_group(groups, "load_bearing_primary_support"),
-        "strongest_counterweight": _first_group(groups, "load_bearing_counterweight"),
-        "counterweight_weighting": "Use counterweights to bound the answer if they do not overturn the primary support.",
-        "reconciled_cruxes": [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "decision_crux"][:4],
-        "scope_boundaries": [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "scope_or_applicability"][:4],
-        "practical_implications": [],
-        "do_not_overstate": [],
+        "bounded_bottom_line": _first_payload_logic_text(logic_payloads, "bounded_bottom_line") or _direct_answer(
+            context,
+            groups,
+        ),
+        "support_summary": support,
+        "strongest_counterweight": counterweight,
+        "counterweight_weighting": content_based_counterweight_weighting(
+            support=support,
+            counterweight=counterweight,
+            fallback=_first_payload_logic_text(logic_payloads, "counterweight_weighting"),
+        ),
+        "reconciled_cruxes": _merged_logic_list(
+            logic_payloads,
+            "reconciled_cruxes",
+            [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "decision_crux"],
+            limit=4,
+        ),
+        "scope_boundaries": _merged_logic_list(
+            logic_payloads,
+            "scope_boundaries",
+            [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "scope_or_applicability"],
+            limit=4,
+        ),
+        "practical_implications": _merged_logic_list(logic_payloads, "practical_implications", [], limit=6),
+        "do_not_overstate": _merged_logic_list(logic_payloads, "do_not_overstate", [], limit=6),
     }
 
 
@@ -424,8 +462,50 @@ def _argument_plan(groups: list[dict[str, Any]], payloads: list[dict[str, Any]])
     ):
         selected = [group for group in groups if group.get("memo_role") == role][:4]
         if selected:
-            steps.append({"step_id": step_id, "section": "Decision Brief", "writing_goal": goal, "required_points": [str(group.get("proposition") or "") for group in selected], "evidence_item_ids": [evidence_id for group in selected for evidence_id in _string_list(group.get("covered_evidence_item_ids"))], "transition_from_previous": "Connect this reasoning step to the weighted answer."})
+            steps.append(
+                {
+                    "step_id": step_id,
+                    "section": "Decision Brief",
+                    "writing_goal": goal,
+                    "required_points": [str(group.get("proposition") or "") for group in selected],
+                    "evidence_item_ids": [
+                        evidence_id
+                        for group in selected
+                        for evidence_id in _string_list(group.get("covered_evidence_item_ids"))
+                    ],
+                    "transition_from_previous": argument_plan_transition(step_id),
+                }
+            )
     return steps
+
+
+def _first_payload_logic_text(logic_payloads: list[dict[str, Any]], key: str) -> str:
+    for logic in logic_payloads:
+        text = naturalize_decision_logic_text(str(logic.get(key) or ""))
+        if text and not is_scaffolded_decision_logic_text(text):
+            return _short_text(text, 520)
+    return ""
+
+
+def _merged_logic_list(
+    logic_payloads: list[dict[str, Any]],
+    key: str,
+    fallback: list[str],
+    *,
+    limit: int,
+) -> list[str]:
+    values = []
+    for logic in logic_payloads:
+        values.extend(_string_list(logic.get(key)))
+    values.extend(fallback)
+    return _dedupe(
+        [
+            text
+            for value in values
+            if (text := naturalize_decision_logic_text(str(value or "")))
+            and not is_scaffolded_decision_logic_text(text)
+        ]
+    )[:limit]
 
 
 def _public_task_report(row: dict[str, Any]) -> dict[str, Any]:

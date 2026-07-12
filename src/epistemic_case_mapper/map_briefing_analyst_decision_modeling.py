@@ -8,10 +8,10 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from epistemic_case_mapper import map_briefing_analyst_decision_logic as decision_logic
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
 from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import run_parallel_analyst_decision_model, should_use_parallel_analyst_decision_model
-from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize_decision_logic_payload
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
     compact_decision_model_repair_report,
     run_analyst_decision_model_repair,
@@ -98,7 +98,7 @@ def run_analyst_decision_model(
             ),
         }
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
-    parsed["decision_logic"] = naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -154,7 +154,7 @@ def _run_parallel_decision_model_candidate(
     if not parse_report.get("valid"):
         return _invalid_parallel_decision_model_result(context, scaffold, parallel, parse_report)
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
-    parsed["decision_logic"] = naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -423,6 +423,8 @@ def deterministic_decision_model_scaffold(
         )
     question = str(ledger.get("decision_question") or "").strip()
     direct = _scaffold_direct_answer(groups, question)
+    support = _first_group(groups, "load_bearing_primary_support")
+    counterweight = _first_group(groups, "load_bearing_counterweight")
     model = {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": question,
@@ -445,9 +447,9 @@ def deterministic_decision_model_scaffold(
         ][:6],
         "decision_logic": {
             "bounded_bottom_line": direct,
-            "support_summary": _first_group(groups, "load_bearing_primary_support"),
-            "strongest_counterweight": _first_group(groups, "load_bearing_counterweight"),
-            "counterweight_weighting": "Use counterweights to bound the answer if they do not overturn the primary support.",
+            "support_summary": support,
+            "strongest_counterweight": counterweight,
+            "counterweight_weighting": decision_logic.content_based_counterweight_weighting(support=support, counterweight=counterweight),
             "reconciled_cruxes": [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "decision_crux"][:4],
             "scope_boundaries": [str(group.get("proposition") or "") for group in groups if group.get("memo_role") == "scope_or_applicability"][:4],
             "practical_implications": [],
@@ -464,7 +466,7 @@ def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tupl
     updated = dict(model)
     updated["evidence_groups"] = groups
     updated["ranking_guard"] = report
-    updated["decision_logic"] = naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
+    updated["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
     if report.get("changed_group_count") and _answer_misses_top_support(updated, groups):
         refreshed = _ranked_direct_answer(str(context.get("decision_question") or updated.get("decision_question") or ""), groups)
         if refreshed:
@@ -891,7 +893,7 @@ def _scaffold_argument_plan(groups: list[dict[str, Any]]) -> list[dict[str, Any]
                     for group in selected
                     for evidence_id in _string_list(group.get("covered_evidence_item_ids"))
                 ],
-                "transition_from_previous": "Connect this reasoning step to the weighted answer.",
+                "transition_from_previous": decision_logic.argument_plan_transition(step_id),
             }
         )
     return steps

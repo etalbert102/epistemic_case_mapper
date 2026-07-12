@@ -106,7 +106,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         warnings.append("missing_counterweights")
     if not _list(interface.get("quantity_anchors")):
         warnings.append("missing_quantity_anchors")
-    if _contains_generic_judgment(interface):
+    if _contains_generic_judgment(_reader_facing_judgment_surface(interface)):
         warnings.append("generic_or_scaffolded_judgment_present")
     guidance = _dict(interface.get("critique_writer_guidance"))
     if guidance.get("status") == "ready" and not _list(guidance.get("guidance")):
@@ -733,6 +733,49 @@ def _contains_generic_judgment(value: Any) -> bool:
     if isinstance(value, list):
         return any(_contains_generic_judgment(row) for row in value)
     return False
+
+
+def _reader_facing_judgment_surface(interface: dict[str, Any]) -> dict[str, Any]:
+    """Return generated judgment fields, excluding internal writer instructions."""
+
+    return {
+        "bottom_line": interface.get("bottom_line"),
+        "answer_frame": interface.get("answer_frame"),
+        "support_that_drives_answer": _claim_surface(interface.get("support_that_drives_answer")),
+        "counterweights_and_disposition": [
+            {
+                "claim": row.get("claim"),
+                "disposition": row.get("disposition"),
+                "disposition_rationale": row.get("disposition_rationale"),
+            }
+            for row in _list(interface.get("counterweights_and_disposition"))
+            if isinstance(row, dict)
+        ],
+        "scope_boundaries": _claim_surface(interface.get("scope_boundaries")),
+        "decision_cruxes": _claim_surface(interface.get("decision_cruxes")),
+        "practical_implications": interface.get("practical_implications"),
+        "practical_implication_cards": [
+            {
+                "implication_type": row.get("implication_type"),
+                "statement": row.get("statement"),
+            }
+            for row in _list(interface.get("practical_implication_cards"))
+            if isinstance(row, dict)
+        ],
+        "critique_writer_guidance": interface.get("critique_writer_guidance"),
+    }
+
+
+def _claim_surface(rows: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "claim": row.get("claim"),
+            "why_it_matters": row.get("why_it_matters"),
+            "answer_relation": row.get("answer_relation"),
+        }
+        for row in _list(rows)
+        if isinstance(row, dict)
+    ]
 
 
 def _informative_source_appraisal(row: Any) -> bool:
