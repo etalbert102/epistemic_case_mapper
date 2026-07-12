@@ -5,6 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json, write_markdown
+from epistemic_case_mapper.map_briefing_final_output_paths import (
+    FinalReaderOutputPaths,
+    final_reader_output_paths,
+    final_reader_output_paths as _final_reader_output_paths,
+)
 from epistemic_case_mapper.map_briefing_memo_progress import (
     ensure_memo_progress,
     memo_progress_path,
@@ -17,54 +22,6 @@ class ModelBackendConfig:
     backend: str
     timeout: int | None
     retries: int
-
-
-@dataclass(frozen=True)
-class FinalReaderOutputPaths:
-    briefing: Path
-    evidence_appendix: Path
-    polish_report: Path
-    memo_quality: Path
-    curation_report: Path
-    briefing_validation: Path
-    final_traceability: Path
-    final_traceability_markdown: Path
-    memo_coherence: Path
-    section_role_quality: Path
-    pipeline_migration_ledger: Path
-    runtime_budget: Path
-    stage_value: Path
-    final_brief_evaluation: Path
-    final_decision_readiness: Path
-    memo_semantic_acceptance: Path
-    section_rewrite_report: Path
-    reader_memo_rewrite_prompt: Path
-    reader_memo_rewrite_raw: Path
-    reader_memo_rewrite_report: Path
-    memo_packet_retention: Path
-    packet_first_comparison: Path
-    packet_repair_prompt: Path
-    packet_repair_raw: Path
-    packet_repair_report: Path
-    reader_packet_repair_prompt: Path
-    reader_packet_repair_raw: Path
-    reader_packet_repair_report: Path
-    decision_memo_editorial_brief: Path
-    decision_memo_editorial_prompt: Path
-    decision_memo_editorial_raw: Path
-    decision_memo_editorial_report: Path
-    memo_ready_synthesis_prompt: Path
-    memo_ready_synthesis_raw: Path
-    memo_ready_synthesis_report: Path
-    memo_ready_repair_prompt: Path
-    memo_ready_repair_raw: Path
-    memo_ready_repair_report: Path
-    memo_ready_final_polish_prompt: Path
-    memo_ready_final_polish_raw: Path
-    memo_ready_final_polish_report: Path
-    scoped_metric_report: Path
-    final_source_lineage: Path
-    pipeline_measurement_audit: Path
 
 
 def write_final_reader_outputs(
@@ -117,7 +74,7 @@ def write_final_reader_outputs(
         backend=backend_config.backend,
         details={"memo_words": len(reader_memo.split())},
     )
-    paths = _final_reader_output_paths(artifacts)
+    paths = final_reader_output_paths(artifacts)
     diagnostics = _build_final_reader_diagnostics(
         reader_memo=reader_memo,
         evidence_appendix=evidence_appendix,
@@ -548,55 +505,6 @@ def _attach_section_context_status(
         "section_context_acceptance_status"
     )
     memo_package["scaffold"]["section_context_acceptance_status"] = rewrite_result["report"]["section_context_acceptance_status"]
-
-
-def _final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
-    return FinalReaderOutputPaths(
-        briefing=artifacts / "BRIEFING.md",
-        evidence_appendix=artifacts / "EVIDENCE_APPENDIX.md",
-        polish_report=artifacts / "briefing_polish_report.json",
-        memo_quality=artifacts / "memo_quality_report.json",
-        curation_report=artifacts / "evidence_curation_report.json",
-        briefing_validation=artifacts / "briefing_validation_report.json",
-        final_traceability=artifacts / "decision_traceability_matrix_final.json",
-        final_traceability_markdown=artifacts / "DECISION_TRACEABILITY_MATRIX_FINAL.md",
-        memo_coherence=artifacts / "memo_coherence_report.json",
-        section_role_quality=artifacts / "section_role_quality_report.json",
-        pipeline_migration_ledger=artifacts / "pipeline_migration_ledger.json",
-        runtime_budget=artifacts / "runtime_budget_report.json",
-        stage_value=artifacts / "stage_value_report.json",
-        final_brief_evaluation=artifacts / "final_brief_evaluation.json",
-        final_decision_readiness=artifacts / "final_decision_readiness_report.json",
-        memo_semantic_acceptance=artifacts / "memo_semantic_acceptance_report.json",
-        section_rewrite_report=artifacts / "section_rewrite_report.json",
-        reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
-        reader_memo_rewrite_raw=artifacts / "reader_memo_rewrite_raw.txt",
-        reader_memo_rewrite_report=artifacts / "reader_memo_rewrite_report.json",
-        memo_packet_retention=artifacts / "memo_packet_retention_report.json",
-        packet_first_comparison=artifacts / "packet_first_comparison_report.json",
-        packet_repair_prompt=artifacts / "packet_repair_prompt.txt",
-        packet_repair_raw=artifacts / "packet_repair_raw.md",
-        packet_repair_report=artifacts / "packet_repair_report.json",
-        reader_packet_repair_prompt=artifacts / "reader_packet_repair_prompt.txt",
-        reader_packet_repair_raw=artifacts / "reader_packet_repair_raw.md",
-        reader_packet_repair_report=artifacts / "reader_packet_repair_report.json",
-        decision_memo_editorial_brief=artifacts / "decision_memo_editorial_brief.json",
-        decision_memo_editorial_prompt=artifacts / "decision_memo_editorial_prompt.txt",
-        decision_memo_editorial_raw=artifacts / "decision_memo_editorial_raw.txt",
-        decision_memo_editorial_report=artifacts / "decision_memo_editorial_report.json",
-        memo_ready_synthesis_prompt=artifacts / "memo_ready_synthesis_prompt.txt",
-        memo_ready_synthesis_raw=artifacts / "memo_ready_synthesis_raw.md",
-        memo_ready_synthesis_report=artifacts / "memo_ready_synthesis_report.json",
-        memo_ready_repair_prompt=artifacts / "memo_ready_repair_prompt.txt",
-        memo_ready_repair_raw=artifacts / "memo_ready_repair_raw.md",
-        memo_ready_repair_report=artifacts / "memo_ready_repair_report.json",
-        memo_ready_final_polish_prompt=artifacts / "memo_ready_final_polish_prompt.txt",
-        memo_ready_final_polish_raw=artifacts / "memo_ready_final_polish_raw.md",
-        memo_ready_final_polish_report=artifacts / "memo_ready_final_polish_report.json",
-        scoped_metric_report=artifacts / "scoped_metric_report.json",
-        final_source_lineage=artifacts / "final_source_lineage_report.json",
-        pipeline_measurement_audit=artifacts / "pipeline_measurement_audit.json",
-    )
 
 
 def _build_final_reader_diagnostics(
