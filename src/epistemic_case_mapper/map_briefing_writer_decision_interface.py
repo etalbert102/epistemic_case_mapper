@@ -4,6 +4,10 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
+from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import (
+    build_decision_boundary_source_contract,
+    contract_quality_summary,
+)
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -33,6 +37,11 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
     obligations = required_memo_obligations(packet)
     selected_context = _selected_interpretive_context(packet, filtered_items)
     reasoning_hierarchy = _reasoning_hierarchy(packet, visible_items, filtered_items, selected_context=selected_context)
+    boundary_source_contract = build_decision_boundary_source_contract(
+        packet,
+        visible_items,
+        selected_context=selected_context,
+    )
     interface = {
         "schema_id": "writer_decision_interface_v1",
         "decision_question": packet.get("decision_question"),
@@ -42,6 +51,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "decision_evidence_table": _decision_evidence_table(visible_items),
         "rescued_context_table": _decision_evidence_table(selected_context),
         "source_appraisal_summary": _source_appraisal_summary(packet, visible_items),
+        "decision_boundary_source_contract": boundary_source_contract,
         "reasoning_hierarchy": reasoning_hierarchy,
         "support_that_drives_answer": _evidence_group(visible_items, roles={"strongest_support", "quantitative_anchor"}),
         "counterweights_and_disposition": _counterweights(packet, visible_items),
@@ -78,6 +88,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "decision_evidence_table": _list(interface.get("decision_evidence_table")),
         "rescued_context_table": _list(interface.get("rescued_context_table")),
         "source_appraisal_summary": _list(interface.get("source_appraisal_summary")),
+        "decision_boundary_source_contract": _dict(interface.get("decision_boundary_source_contract")),
         "reasoning_hierarchy": hierarchy,
         "adaptive_memo_outline": _dict(interface.get("adaptive_memo_outline")),
         "practical_implications": _string_list(interface.get("practical_implications")),
@@ -114,6 +125,11 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
     hierarchy = _dict(interface.get("reasoning_hierarchy"))
     if not _list(hierarchy.get("reasoning_moves")):
         warnings.append("missing_reasoning_hierarchy")
+    contract_summary = contract_quality_summary(_dict(interface.get("decision_boundary_source_contract")))
+    if contract_summary.get("status") == "warning":
+        warnings.append("decision_boundary_source_contract_warning")
+    if not contract_summary.get("source_card_count"):
+        warnings.append("missing_source_use_cards")
     retention = _list(interface.get("retention_checklist"))
     evidence_ids = {
         evidence_id
@@ -144,6 +160,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         "excluded_evidence_count": len(_list(interface.get("excluded_evidence_log"))),
         "source_appraisal_row_count": len(source_appraisal_rows),
         "informative_source_appraisal_row_count": informative_source_appraisal_count,
+        "decision_boundary_source_contract_quality": contract_summary,
         "missing_obligation_evidence": missing_obligation_evidence,
     }
 

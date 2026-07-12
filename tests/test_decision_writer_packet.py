@@ -4,6 +4,7 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
+from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
@@ -409,10 +410,45 @@ def test_writer_model_context_exposes_compact_source_appraisal() -> None:
     assert "association_not_causation" in support["source_appraisal_note"]
     assert context["source_appraisal_summary"][0]["decision_directness"] == "partial"
     assert context["source_appraisal_summary"][0]["allowed_wording"]["causal_language_allowed"] is False
+    contract = context["decision_boundary_source_contract"]
+    assert contract["source_use_cards"][0]["source_label"] == "Outcome Review"
+    assert "observational evidence" in str(contract["source_use_cards"][0]["wording_cautions"])
+    assert contract["quantity_priority_cards"][0]["quantity"] == "20% improvement"
+    assert contract["quantity_priority_cards"][0]["priority"] == "primary_decision_anchor"
+    assert contract["boundary_obligations"]
     quality = build_writer_decision_interface_quality_report(interface)
     assert quality["informative_source_appraisal_row_count"] == 1
+    assert quality["decision_boundary_source_contract_quality"]["source_card_count"] >= 1
     assert "source_appraisal_summary_uninformative" not in quality["warnings"]
     assert "source_weighting" in context["adaptive_memo_outline"]["section_selection_summary"]["selected_section_ids"]
+
+
+def test_boundary_source_contract_prioritizes_effect_quantities_before_context_quantities() -> None:
+    contract = build_decision_boundary_source_contract(
+        {"decision_question": "Should option A be adopted?"},
+        [
+            {
+                "item_id": "support",
+                "role": "strongest_support",
+                "reader_claim": "Option A improved the main outcome.",
+                "source_labels": ["Outcome Review"],
+                "importance_rank": 1,
+                "quantities": [
+                    {"value": "1 unit per week", "interpretation": "comparison exposure baseline"},
+                    {"value": "HR 0.76", "interpretation": "hazard ratio for the main outcome"},
+                    {"value": "95% CI 0.62 to 0.91", "interpretation": "confidence interval for the hazard ratio"},
+                ],
+            }
+        ],
+    )
+
+    quantities = contract["quantity_priority_cards"]
+    assert [row["quantity_kind"] for row in quantities[:3]] == [
+        "effect_estimate",
+        "uncertainty_interval",
+        "dose_or_context_boundary",
+    ]
+    assert quantities[0]["quantity"] == "HR 0.76"
 
 
 def test_writer_decision_interface_rescues_should_include_quantity_context() -> None:
@@ -460,6 +496,8 @@ def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> Non
     assert "reasoning_hierarchy" in prompt
     assert "decision_evidence_table as the primary evidence surface" in prompt
     assert "adaptive_memo_outline as the section plan" in prompt
+    assert "decision_boundary_source_contract as the guide" in prompt
+    assert "decision_boundary_source_contract" in prompt
     assert "adaptive_memo_outline.must_write_cards" in prompt
     assert "quantities_to_keep_together" in prompt
     assert "practical_implication_cards" in prompt
