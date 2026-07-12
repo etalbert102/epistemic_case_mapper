@@ -257,6 +257,7 @@ def _promote_decision_writer_packet_as_active(scaffold: dict[str, Any]) -> bool:
         analyst_decision_model=scaffold.get("analyst_decision_model") if isinstance(scaffold.get("analyst_decision_model"), dict) else {},
         analyst_quantity_binding_report=scaffold.get("analyst_quantity_binding_report") if isinstance(scaffold.get("analyst_quantity_binding_report"), dict) else {},
         global_decision_model=scaffold.get("global_decision_model") if isinstance(scaffold.get("global_decision_model"), dict) else {},
+        writer_guidance_packet=scaffold.get("writer_guidance_packet") if isinstance(scaffold.get("writer_guidance_packet"), dict) else {},
     )
     scaffold["memo_ready_packet"] = memo_ready
     scaffold["decision_obligation_plan"] = memo_ready.get("decision_obligation_plan", {})

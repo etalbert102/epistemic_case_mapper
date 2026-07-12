@@ -609,6 +609,70 @@ def test_packet_critique_preserves_synthesis_risks_and_packet_quality_issues(mon
     assert counterweight["bundle_id"] in repaired_section["contrast_bundle_ids"]
 
 
+def test_packet_critique_warning_only_outputs_become_writer_guidance(monkeypatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = built["decision_briefing_packet"]
+
+    class FakeResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    def fake_backend(*args, **kwargs):
+        if "packet_critique_v1" in str(kwargs.get("response_schema", "")):
+            return FakeResult(
+                """
+                {
+                  "schema_id": "packet_critique_v1",
+                  "packet_sufficiency_judgment": "ready",
+                  "answer_frame_issues": [
+                    {
+                      "component": "default_answer",
+                      "critique": "The answer frame should name the maintenance boundary rather than sounding unconditional.",
+                      "recommended_action": "Open with a bounded answer that connects adoption to maintenance capacity."
+                    }
+                  ],
+                  "misleading_synthesis_risks": [
+                    {
+                      "type": "source_quality",
+                      "description": "A guidance source could be overread as direct outcome evidence.",
+                      "recommended_action": "Distinguish guidance from direct outcome evidence."
+                    }
+                  ],
+                  "recommended_packet_edits": []
+                }
+                """
+            )
+        return FakeResult(
+            """
+            {
+              "schema_id": "decision_briefing_packet_refinement_v1",
+              "packet_ready_for_synthesis": true,
+              "bundle_updates": [],
+              "warnings": []
+            }
+            """
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+
+    result = run_packet_critique_and_refinement(
+        packet,
+        built["packet_sufficiency_report"],
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    guidance = result["writer_guidance_packet"]
+    assert result["packet_critique_adjudication_report"]["accepted_count"] == 0
+    assert guidance["status"] == "ready"
+    assert guidance["accepted_packet_edit_count"] == 0
+    assert guidance["required_obligation_count"] >= 2
+    assert any(row["guidance_type"] == "answer_frame" for row in guidance["writer_obligations"])
+    assert any("guidance" in row["instruction"].lower() for row in guidance["writer_obligations"])
+    assert result["decision_briefing_packet"]["writer_guidance_packet"]["schema_id"] == "writer_guidance_packet_v1"
+
+
 def test_main_memo_obligations_prefer_packet_must_retain_items() -> None:
     scaffold = _scaffold()
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))

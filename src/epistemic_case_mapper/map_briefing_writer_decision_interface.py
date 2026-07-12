@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
 GENERIC_JUDGMENT_PATTERNS = (
@@ -41,6 +42,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "practical_implications": _practical_implications(packet, visible_items),
         "must_use_evidence": [_writer_evidence_item(item) for item in visible_items],
         "quantity_anchors": _quantity_anchors(visible_items),
+        "critique_writer_guidance": compact_writer_guidance_for_model(_dict(packet.get("writer_guidance_packet"))),
         "source_trail": _visible_source_trail(packet, visible_items),
         "retention_checklist": _retention_checklist(obligations),
         "excluded_evidence_log": [_excluded_evidence_log_row(item) for item in filtered_items],
@@ -68,6 +70,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "practical_implications": _string_list(interface.get("practical_implications")),
         "must_use_evidence": _list(interface.get("must_use_evidence")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
+        "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
         "source_trail": _list(interface.get("source_trail")),
     }
 
@@ -82,6 +85,9 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         warnings.append("missing_quantity_anchors")
     if _contains_generic_judgment(interface):
         warnings.append("generic_or_scaffolded_judgment_present")
+    guidance = _dict(interface.get("critique_writer_guidance"))
+    if guidance.get("status") == "ready" and not _list(guidance.get("guidance")):
+        warnings.append("critique_guidance_empty_despite_ready_status")
     retention = _list(interface.get("retention_checklist"))
     evidence_ids = {
         evidence_id
@@ -261,6 +267,7 @@ def _lineage_report(
             "analyst_decision_logic",
             "memo_obligations",
             "analyst_quantity_binding_report",
+            "writer_guidance_packet",
         ],
     }
 

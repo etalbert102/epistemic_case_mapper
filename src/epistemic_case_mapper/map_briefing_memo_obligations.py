@@ -8,11 +8,13 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     list_value as _list,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_writer_guidance import writer_guidance_memo_obligations
 
 
 def build_memo_obligation_packet(
     evidence_items: list[dict[str, Any]],
     memo_warning_packet: dict[str, Any] | None = None,
+    writer_guidance_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build writer-facing obligations from audit-facing evidence records."""
 
@@ -29,9 +31,10 @@ def build_memo_obligation_packet(
         obligation = _obligation_from_warning(len(obligations) + 1, warning)
         if obligation:
             obligations.append(obligation)
+    obligations.extend(writer_guidance_memo_obligations(writer_guidance_packet, start_index=len(obligations) + 1))
     return {
         "schema_id": "memo_obligations_v1",
-        "method": "decision_obligations_from_memo_ready_items_and_source_warnings",
+        "method": "decision_obligations_from_memo_ready_items_source_warnings_and_writer_guidance",
         "required_count": sum(1 for row in obligations if row.get("required")),
         "optional_count": sum(1 for row in obligations if not row.get("required")),
         "obligations": obligations,

@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissi
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
 from epistemic_case_mapper.map_briefing_packet_targeted_refinement import run_targeted_packet_refinement
+from epistemic_case_mapper.map_briefing_writer_guidance import attach_writer_guidance, build_writer_guidance_packet
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.model_schemas import parse_model_output_report
@@ -351,14 +352,15 @@ def run_packet_critique_and_refinement(
     )
     packet_progress(progress, "packet_refinement", "completed", refinement_progress_details(refined))
     packet_progress(progress, "packet_sufficiency_recompute", "started")
+    candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
     if _refinement_left_packet_semantics_unchanged(refined["report"]):
-        candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
         recomputed = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
         post_sufficiency = preserve_omissions_with_recomputed_quantities(pre_sufficiency, recomputed)
     else:
-        candidate_pool = _post_refinement_candidate_pool(packet, pre_sufficiency)
         post_sufficiency = build_packet_sufficiency_report(refined["packet"], candidate_pool=candidate_pool)
     _sync_packet_coverage_with_sufficiency(refined["packet"], post_sufficiency)
+    writer_guidance = build_writer_guidance_packet(critique_adjudication=critique["adjudication_report"], sufficiency_report=post_sufficiency)
+    attach_writer_guidance(refined["packet"], writer_guidance)
     packet_progress(progress, "packet_sufficiency_recompute", "completed", {"status": post_sufficiency.get("status", "unknown")})
     return {
         "decision_briefing_packet": refined["packet"],
@@ -368,6 +370,7 @@ def run_packet_critique_and_refinement(
         "packet_critique_raw": critique["raw"],
         "packet_critique_report": critique["report"],
         "packet_critique_adjudication_report": critique["adjudication_report"],
+        "writer_guidance_packet": writer_guidance,
         "decision_briefing_packet_refinement_prompt": refined["prompt"],
         "decision_briefing_packet_refinement_raw": refined["raw"],
         "decision_briefing_packet_refinement_report": refined["report"],
@@ -427,8 +430,6 @@ def _packet_critique_parallel_threshold() -> int:
         return max(1, int(os.environ.get("ECM_PACKET_CRITIQUE_PARALLEL_THRESHOLD", "8")))
     except ValueError:
         return 8
-
-
 
 
 def run_packet_refinement(

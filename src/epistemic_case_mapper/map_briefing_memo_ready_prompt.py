@@ -52,6 +52,7 @@ def build_writer_packet_synthesis_prompt(
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
         "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
         "- Use counterweights_and_disposition to explain whether counterweights overturn, weaken, bound, or contextualize the answer.\n"
+        "- Use critique_writer_guidance to avoid answer-frame mistakes, source-quality omissions, and synthesis traps identified during packet critique.\n"
         "- Treat cruxes and subgroup signals as calibration unless the packet says they change the default answer.\n"
         "- Follow do_not_overstate constraints; use calibrated language for causal, safety, and confidence claims.\n"
         "- Include a concise practical implication.\n"

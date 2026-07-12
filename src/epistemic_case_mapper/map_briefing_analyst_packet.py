@@ -33,8 +33,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
+from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
 FOREGROUND_MEMO_USES = {
@@ -300,6 +302,7 @@ def _build_synthesis_packet(
         "warning_obligations": warning_obligations,
         "argument_plan": _argument_plan(refinement, groups, warning_obligations, decision_model=decision_model),
         "decision_logic": analyst_decision_logic(_merged_refinement(refinement, decision_model), answer_frame, groups, warning_obligations),
+        "writer_guidance_packet": _dict(packet.get("writer_guidance_packet")),
         "source_notes": _source_notes(packet),
         "evidence_accounting_summary": _evidence_accounting_summary(ledger, adjudication, groups, group_accounting),
     }
@@ -316,6 +319,7 @@ def _build_analyst_memo_ready_packet(
 ) -> dict[str, Any]:
     evidence_items = []
     mandatory_group_ids = _mandatory_group_ids(synthesis_packet)
+    writer_guidance_packet = _dict(packet.get("writer_guidance_packet")) or _dict(synthesis_packet.get("writer_guidance_packet"))
     for section in _synthesis_group_sections(synthesis_packet):
         for group in _list(synthesis_packet.get(section)):
             if not isinstance(group, dict):
@@ -342,9 +346,12 @@ def _build_analyst_memo_ready_packet(
         },
         "source_trail": _memo_ready_source_trail(packet, evidence_items),
         "memo_warning_packet": warning_packet,
+        "memo_obligations": build_memo_obligation_packet(evidence_items, warning_packet, writer_guidance_packet),
         "analyst_synthesis_packet": synthesis_packet,
         "analyst_argument_plan": synthesis_packet.get("argument_plan", []),
         "analyst_decision_logic": synthesis_packet.get("decision_logic", {}),
+        "writer_guidance_packet": writer_guidance_packet,
+        "compact_writer_guidance": compact_writer_guidance_for_model(writer_guidance_packet),
         "analyst_quantity_binding_report": quantity_binding,
         "analyst_packet_quality_report": quality,
         "evidence_items": evidence_items,
@@ -419,7 +426,6 @@ def _source_refs_for_item(item: dict[str, Any]) -> list[str]:
 
 def _lookup_source_metadata(lookup: dict[str, dict[str, Any]], source_ref: str) -> dict[str, str]:
     return lookup.get(_source_key(source_ref), {})
-
 
 def _source_row_key(metadata: dict[str, Any], source_ref: str) -> str:
     return _source_key(str(metadata.get("source_id") or metadata.get("source_label") or source_ref or ""))

@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
 )
+from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
 ROLE_BY_GLOBAL_SECTION = {
@@ -60,6 +61,7 @@ def decision_writer_packet_to_memo_ready_packet(
     analyst_decision_model: dict[str, Any] | None = None,
     analyst_quantity_binding_report: dict[str, Any] | None = None,
     global_decision_model: dict[str, Any] | None = None,
+    writer_guidance_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     packet = decision_writer_packet if isinstance(decision_writer_packet, dict) else {}
     semantic_context = _semantic_context(
@@ -75,7 +77,8 @@ def decision_writer_packet_to_memo_ready_packet(
     ]
     apply_obligation_budget(evidence_items)
     decision_obligation_plan = build_decision_obligation_plan(evidence_items, packet=packet, semantic_context=semantic_context)
-    memo_obligations = build_memo_obligation_packet(evidence_items, {"warnings": []})
+    writer_guidance = writer_guidance_packet if isinstance(writer_guidance_packet, dict) else {}
+    memo_obligations = build_memo_obligation_packet(evidence_items, {"warnings": []}, writer_guidance)
     writeability = build_writer_packet_writeability_report(
         memo_obligations=memo_obligations,
         evidence_items=evidence_items,
@@ -103,6 +106,8 @@ def decision_writer_packet_to_memo_ready_packet(
         "memo_warning_packet": {},
         "analyst_decision_logic": _dict(packet.get("decision_logic")),
         "analyst_argument_plan": _list(packet.get("argument_plan")),
+        "writer_guidance_packet": writer_guidance,
+        "compact_writer_guidance": compact_writer_guidance_for_model(writer_guidance),
         "memo_obligations": memo_obligations,
         "decision_obligation_plan": decision_obligation_plan,
         "decision_memo_contract": decision_contract,

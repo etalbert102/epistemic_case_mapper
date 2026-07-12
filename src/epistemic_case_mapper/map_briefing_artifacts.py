@@ -105,10 +105,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("packet_sufficiency_report_pre_refinement", "packet_sufficiency_report_pre_refinement.json", "json", _scaffold_value("packet_sufficiency_report_pre_refinement"), review_label="Packet sufficiency before refinement"),
         ArtifactSpec("packet_sufficiency_report", "packet_sufficiency_report.json", "json", _scaffold_value("packet_sufficiency_report"), review_label="Packet sufficiency report"),
         ArtifactSpec("packet_quality_gate_report", "packet_quality_gate_report.json", "json", _scaffold_value("packet_quality_gate_report"), review_label="Packet quality gate"),
-        ArtifactSpec("packet_critique_prompt", "packet_critique_prompt.txt", "markdown", _scaffold_text("packet_critique_prompt")),
-        ArtifactSpec("packet_critique_raw", "packet_critique_raw.txt", "markdown", _scaffold_text("packet_critique_raw")),
-        ArtifactSpec("packet_critique_report", "packet_critique_report.json", "json", _scaffold_value("packet_critique_report"), review_label="Packet critique report"),
-        ArtifactSpec("packet_critique_adjudication_report", "packet_critique_adjudication_report.json", "json", _scaffold_value("packet_critique_adjudication_report"), review_label="Packet critique adjudication"),
+        *_packet_critique_artifact_specs(),
         ArtifactSpec("decision_briefing_packet_refinement_prompt", "decision_briefing_packet_refinement_prompt.txt", "markdown", _scaffold_text("decision_briefing_packet_refinement_prompt")),
         ArtifactSpec("decision_briefing_packet_refinement_raw", "decision_briefing_packet_refinement_raw.txt", "markdown", _scaffold_text("decision_briefing_packet_refinement_raw")),
         ArtifactSpec("decision_briefing_packet_refinement_report", "decision_briefing_packet_refinement_report.json", "json", _scaffold_value("decision_briefing_packet_refinement_report"), review_label="Decision briefing packet refinement"),
@@ -184,6 +181,16 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("competing_reads_markdown", "COMPETING_READS.md", "markdown", lambda ctx: render_competing_reads_markdown(_argument_artifacts(ctx.scaffold).get("competing_reads", {}))),
         ArtifactSpec("argument_case_graph_markdown", "ARGUMENT_CASE_GRAPH.md", "markdown", lambda ctx: render_argument_case_graph_markdown(_argument_artifacts(ctx.scaffold).get("argument_case_graph", {}))),
         ArtifactSpec("decision_traceability_matrix_markdown", "DECISION_TRACEABILITY_MATRIX.md", "markdown", lambda ctx: render_decision_traceability_matrix_markdown(_argument_artifacts(ctx.scaffold).get("decision_traceability_matrix", {}))),
+    )
+
+
+def _packet_critique_artifact_specs() -> tuple[ArtifactSpec, ...]:
+    return (
+        ArtifactSpec("packet_critique_prompt", "packet_critique_prompt.txt", "markdown", _scaffold_text("packet_critique_prompt")),
+        ArtifactSpec("packet_critique_raw", "packet_critique_raw.txt", "markdown", _scaffold_text("packet_critique_raw")),
+        ArtifactSpec("packet_critique_report", "packet_critique_report.json", "json", _scaffold_value("packet_critique_report"), review_label="Packet critique report"),
+        ArtifactSpec("packet_critique_adjudication_report", "packet_critique_adjudication_report.json", "json", _scaffold_value("packet_critique_adjudication_report"), review_label="Packet critique adjudication"),
+        ArtifactSpec("writer_guidance_packet", "writer_guidance_packet.json", "json", _scaffold_value("writer_guidance_packet"), review_label="Critique-derived writer guidance"),
     )
 
 

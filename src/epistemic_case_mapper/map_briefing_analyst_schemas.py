@@ -140,6 +140,7 @@ class AnalystSynthesisPacket(BaseModel):
     warning_obligations: list[dict[str, Any]] = Field(default_factory=list)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
+    writer_guidance_packet: dict[str, Any] = Field(default_factory=dict)
     source_notes: list[dict[str, Any]] = Field(default_factory=list)
     evidence_accounting_summary: dict[str, Any] = Field(default_factory=dict)
 

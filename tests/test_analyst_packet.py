@@ -426,6 +426,48 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     assert '"evidence_items"' not in prompt
 
 
+def test_memo_ready_prompt_includes_critique_writer_guidance() -> None:
+    writer_guidance_packet = {
+        "schema_id": "writer_guidance_packet_v1",
+        "status": "ready",
+        "judgment": "ready",
+        "guidance": [
+            {
+                "guidance_id": "writer_guidance_001",
+                "guidance_type": "source_quality_or_sufficiency",
+                "required": True,
+                "instruction": "Distinguish guidance from direct outcome evidence.",
+                "why_it_matters": "The memo could otherwise overstate source quality.",
+                "validation_terms": ["guidance", "direct", "outcome"],
+            }
+        ],
+        "writer_obligations": [
+            {
+                "guidance_id": "writer_guidance_001",
+                "guidance_type": "source_quality_or_sufficiency",
+                "required": True,
+                "instruction": "Distinguish guidance from direct outcome evidence.",
+                "why_it_matters": "The memo could otherwise overstate source quality.",
+                "validation_terms": ["guidance", "direct", "outcome"],
+            }
+        ],
+    }
+    result = build_analyst_packet_bundle(
+        packet={**_packet(), "writer_guidance_packet": writer_guidance_packet},
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+    )
+
+    memo_ready = result["analyst_memo_ready_packet"]
+    prompt = build_memo_ready_packet_synthesis_prompt(memo_ready)
+
+    assert memo_ready["writer_guidance_packet"]["status"] == "ready"
+    assert any(row["role"] == "critique_writer_guidance" for row in memo_ready["memo_obligations"]["obligations"])
+    assert "critique_writer_guidance" in prompt
+    assert "Distinguish guidance from direct outcome evidence" in prompt
+    assert "excluded_evidence_log" not in prompt
+
+
 def test_analyst_packet_builds_source_bound_writer_packet() -> None:
     result = build_analyst_packet_bundle(packet=_packet(), ledger=_ledger(), adjudication=_adjudication())
 
