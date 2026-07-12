@@ -12,6 +12,7 @@ from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
 )
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
 from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
 
@@ -415,6 +416,73 @@ def test_analyst_quantity_binding_missing_model_rows_do_not_create_mandatory_qua
         for row in merged["candidate_bindings"]
         if row["candidate_id"] != first_candidate["candidate_id"]
     )
+
+
+def test_analyst_quantity_binding_batches_large_candidate_sets(monkeypatch) -> None:
+    ledger = {
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": f"claim:{index}",
+                "claim": f"Outcome claim {index}",
+                "source_labels": ["Synthetic Review"],
+                "quantity_values": [f"{index}% effect"],
+            }
+            for index in range(40)
+        ],
+    }
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "primary_reasoning_chain": [
+            {
+                "group_id": "large_group",
+                "memo_role": "quantitative_anchor",
+                "proposition": "Option A has many quantitative traces.",
+                "covered_evidence_item_ids": [f"claim:{index}" for index in range(40)],
+            }
+        ],
+    }
+    calls = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        import json
+        import re
+
+        calls.append(prompt)
+        payload = json.loads(re.search(r"\{.*\}", prompt, flags=re.DOTALL).group(0))
+        is_anchor = lambda candidate_id: candidate_id.endswith("::0_effect")
+        bindings = [
+            {
+                "candidate_id": row["candidate_id"],
+                "memo_use": "yes" if is_anchor(row["candidate_id"]) else "context_only",
+                "quantity_role": "decision_anchor" if is_anchor(row["candidate_id"]) else "study_descriptor",
+                "must_retain": is_anchor(row["candidate_id"]),
+                "interpretation": "Quantity interpretation.",
+                "rationale": "Batch test rationale.",
+                "retention_phrase": "0% effect anchor" if is_anchor(row["candidate_id"]) else "",
+                "required_for_memo_reason": "Synthetic anchor." if is_anchor(row["candidate_id"]) else "",
+                "safe_to_omit_reason": "" if is_anchor(row["candidate_id"]) else "Not the synthetic anchor.",
+            }
+            for row in payload["candidates"]
+        ]
+        return ModelBackendResult(text=json.dumps({"schema_id": "analyst_quantity_binding_adjudication_v1", "bindings": bindings}), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_quantity_binding.run_model_backend", fake_backend)
+
+    result = run_analyst_quantity_binding(
+        synthesis_packet=packet,
+        ledger=ledger,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    report = result["analyst_quantity_binding_report"]
+    parse = result["analyst_quantity_binding_parse_report"]
+    assert len(calls) == 2
+    assert parse["missing_candidate_ids"] == []
+    assert report["candidate_count"] == 40
+    assert report["must_retain_count"] == 1
 
 
 def test_analyst_packet_uses_refined_answer_and_warning_obligations() -> None:

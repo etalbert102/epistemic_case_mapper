@@ -84,10 +84,7 @@ def run_analyst_quantity_binding(
     backend_retries: int,
 ) -> dict[str, Any]:
     deterministic = build_analyst_quantity_binding_report(synthesis_packet=synthesis_packet, ledger=ledger)
-    prompt = build_analyst_quantity_binding_prompt(
-        synthesis_packet=synthesis_packet,
-        deterministic_report=deterministic,
-    )
+    prompt = build_analyst_quantity_binding_prompt(synthesis_packet=synthesis_packet, deterministic_report=deterministic)
     if backend.strip() == "prompt":
         report = _run_report("prompt_backend_deterministic", deterministic, parse_report=_prompt_parse_report(deterministic))
         return {
@@ -98,7 +95,13 @@ def run_analyst_quantity_binding(
             "analyst_quantity_binding_run_report": report,
         }
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        merged, raw, prompt, parse_report = _run_model_quantity_binding_batches(
+            synthesis_packet=synthesis_packet,
+            deterministic=deterministic,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
     except RuntimeError as exc:
         report = _run_report(
             "backend_error_deterministic",
@@ -113,9 +116,6 @@ def run_analyst_quantity_binding(
             "analyst_quantity_binding_parse_report": report["parse_report"],
             "analyst_quantity_binding_run_report": report,
         }
-    raw = result.text
-    payload = _extract_json(raw)
-    merged, parse_report = merge_quantity_adjudication(deterministic, payload)
     status = "accepted" if parse_report.get("valid") else "model_invalid_deterministic_fallbacks"
     report = _run_report(status, merged, parse_report=parse_report)
     return {
@@ -125,6 +125,57 @@ def run_analyst_quantity_binding(
         "analyst_quantity_binding_parse_report": parse_report,
         "analyst_quantity_binding_run_report": report,
     }
+
+
+def _run_model_quantity_binding_batches(
+    *,
+    synthesis_packet: dict[str, Any],
+    deterministic: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    batch_size: int = 36,
+) -> tuple[dict[str, Any], str, str, dict[str, Any]]:
+    candidates = [row for row in _list(deterministic.get("candidate_bindings")) if isinstance(row, dict)]
+    if not candidates:
+        return deterministic, "", build_analyst_quantity_binding_prompt(synthesis_packet=synthesis_packet, deterministic_report=deterministic), _prompt_parse_report(deterministic)
+    prompts: list[str] = []
+    raws: list[str] = []
+    model_rows: list[dict[str, Any]] = []
+    parse_reports: list[dict[str, Any]] = []
+    for index, start in enumerate(range(0, len(candidates), batch_size), start=1):
+        chunk_rows = candidates[start : start + batch_size]
+        chunk_report = _report_from_rows(
+            chunk_rows,
+            method=str(deterministic.get("method") or "deterministic_candidate_binding"),
+            decision_question=str(deterministic.get("decision_question") or ""),
+        )
+        prompt = build_analyst_quantity_binding_prompt(synthesis_packet=synthesis_packet, deterministic_report=chunk_report)
+        prompts.append(f"--- quantity binding batch {index} ---\n{prompt}")
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        raw = result.text
+        raws.append(f"--- quantity binding batch {index} ---\n{raw}")
+        payload = _extract_json(raw)
+        merged, parse_report = merge_quantity_adjudication(chunk_report, payload)
+        parse_reports.append({**parse_report, "batch_index": index, "batch_candidate_count": len(chunk_rows)})
+        model_rows.extend(
+            {
+                "candidate_id": row.get("candidate_id"),
+                "memo_use": row.get("memo_use"),
+                "quantity_role": row.get("quantity_role"),
+                "must_retain": row.get("must_retain"),
+                "interpretation": row.get("interpretation"),
+                "rationale": row.get("rationale"),
+                "retention_phrase": row.get("retention_phrase"),
+                "required_for_memo_reason": row.get("required_for_memo_reason"),
+                "safe_to_omit_reason": row.get("safe_to_omit_reason"),
+            }
+            for row in _list(merged.get("candidate_bindings"))
+            if isinstance(row, dict) and row.get("binding_source") == "model"
+        )
+    merged = _merge_model_rows_with_missing_context(deterministic, model_rows)
+    parse_report = _combined_parse_report(deterministic, model_rows=model_rows, parse_reports=parse_reports)
+    return merged, "\n\n".join(raws), "\n\n".join(prompts), parse_report
 
 
 def build_analyst_quantity_binding_report(
@@ -266,6 +317,65 @@ def merge_quantity_adjudication(
         "accepted_binding_count": len(valid_rows),
         "missing_candidate_ids": missing,
         "unknown_candidate_ids": unknown,
+        "issues": issues,
+    }
+
+
+def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any], model_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    candidate_ids = {
+        str(row.get("candidate_id") or "")
+        for row in _list(deterministic_report.get("candidate_bindings"))
+        if isinstance(row, dict)
+    }
+    valid_rows = [
+        row
+        for row in model_rows
+        if isinstance(row, dict) and str(row.get("candidate_id") or "") in candidate_ids
+    ]
+    by_model = {str(row.get("candidate_id") or ""): row for row in valid_rows}
+    rows = []
+    for candidate in _list(deterministic_report.get("candidate_bindings")):
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = str(candidate.get("candidate_id") or "")
+        rows.append(_binding_row(candidate, by_model.get(candidate_id) or {"_missing_model_row": True}))
+    return _report_from_rows(
+        rows,
+        method="model_adjudicated_quantity_binding_batched",
+        decision_question=str(deterministic_report.get("decision_question") or ""),
+    )
+
+
+def _combined_parse_report(
+    deterministic_report: dict[str, Any],
+    *,
+    model_rows: list[dict[str, Any]],
+    parse_reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    candidate_ids = {
+        str(row.get("candidate_id") or "")
+        for row in _list(deterministic_report.get("candidate_bindings"))
+        if isinstance(row, dict)
+    }
+    row_ids = {str(row.get("candidate_id") or "") for row in model_rows if isinstance(row, dict)}
+    unknown = sorted(row_ids - candidate_ids)
+    missing = sorted(candidate_ids - row_ids)
+    invalid_batches = [row for row in parse_reports if not row.get("valid")]
+    issues = [
+        *(["unknown_candidate_ids"] if unknown else []),
+        *(["missing_candidate_ids_used_context_only"] if missing else []),
+        *(["invalid_quantity_binding_batches"] if invalid_batches else []),
+    ]
+    return {
+        "schema_id": "analyst_quantity_binding_parse_report_v1",
+        "status": "ready" if not issues else "warning",
+        "valid": not unknown and not invalid_batches,
+        "candidate_count": len(candidate_ids),
+        "accepted_binding_count": len(row_ids & candidate_ids),
+        "missing_candidate_ids": missing,
+        "unknown_candidate_ids": unknown,
+        "batch_count": len(parse_reports),
+        "batch_reports": parse_reports,
         "issues": issues,
     }
 
