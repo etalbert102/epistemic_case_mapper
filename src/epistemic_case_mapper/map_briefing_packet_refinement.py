@@ -219,9 +219,12 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     @model_validator(mode="before")
     @classmethod
     def unwrap_nested_critique(cls, value: Any) -> Any:
-        if not isinstance(value, dict) or not isinstance(value.get("critique"), dict):
+        if not isinstance(value, dict):
             return value
-        critique = dict(value["critique"])
+        nested = next((value.get(key) for key in ("critique", "packet_global_critique", "packet_critique") if isinstance(value.get(key), dict)), None)
+        if nested is None:
+            return value
+        critique = dict(nested)
         if isinstance(critique.get("answer_frame_critique"), dict) and "answer_frame_issues" not in critique:
             critique["answer_frame_issues"] = [critique["answer_frame_critique"]]
         return {**value, **critique, "schema_id": "packet_critique_v1"}
@@ -269,7 +272,6 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     @classmethod
     def coerce_note_rows(cls, value: Any) -> Any:
         return [text for item in _coerce_list_field(value) if (text := _note_to_text(item))]
-
 
 def _coerce_list_field(value: Any) -> list[Any]:
     if value is None:

@@ -92,10 +92,8 @@ def run_parallel_packet_critique(
         critique_schema=critique_schema,
     )
     _packet_progress(progress, "packet_critique_global", "completed", {"status": global_result.get("status"), "prompt_chars": global_result.get("prompt_chars", 0), "raw_chars": global_result.get("raw_chars", 0)})
-    payloads = [*local_payloads]
-    if isinstance(global_result.get("payload"), dict):
-        payloads.append(global_result["payload"])
-    merged = _merge_critique_payloads(payloads)
+    global_payload = global_result.get("payload") if isinstance(global_result.get("payload"), dict) else {}
+    merged = _merge_critique_payloads(local_payloads, global_payload=global_payload)
     adjudication = adjudicate(merged, packet)
     _packet_progress(progress, "packet_critique_adjudication", "completed", {"accepted_count": adjudication.get("accepted_count", 0), "warning_only_count": adjudication.get("warning_only_count", 0)})
     _packet_progress(progress, "packet_critique_verification", "started", {"verification_task_count": len(_list(adjudication.get("accepted_recommendations")))})
@@ -240,11 +238,11 @@ def build_local_critique_prompt(shard: dict[str, Any]) -> str:
             "retain_items_to_check": shard.get("retain_items", []),
             "sufficiency_summary": shard.get("sufficiency_summary", {}),
             "instructions": [
-                "Check every supplied bundle for role, directionality, claim quality, source quality, quantity interpretation, and section-use problems.",
+                "Perform local QA only for the supplied bundles and retain items.",
+                "Check role, directionality, claim quality, source quality, quantity interpretation, and section-use problems tied to existing IDs.",
                 "Use target_ids for existing bundle IDs when recommending edits.",
                 "Use warning-only insufficiency fields for source-level or packet-level problems without a concrete target.",
-                "Return reader_facing_guidance for concrete caveats, evidence-type distinctions, confidence limits, or tensions that final memo prose should make visible to a human reader.",
-                "Write reader_facing_guidance as memo-ready analytical guidance with instruction, why_it_matters, source_labels, target_ids, and validation_terms when available.",
+                "Leave reader_facing_guidance empty; global reader-facing guidance will be consolidated in a separate pass.",
                 "Do not invent sources, quantities, claims, or IDs.",
                 "Return JSON matching packet_critique_v1.",
             ],
@@ -257,14 +255,16 @@ def build_local_critique_prompt(shard: dict[str, Any]) -> str:
 def build_global_critique_prompt(view: dict[str, Any]) -> str:
     return json.dumps(
         {
-            "task": "Perform a compact global critique of the packet using the inventory and local critique summaries. Return strict JSON only.",
+            "task": "Perform global packet critique and consolidate reader-facing memo guidance. Return strict JSON only.",
             "view": view,
             "instructions": [
-                "Look for cross-shard contradictions, duplicated reasoning, overweighted evidence, underweighted evidence, missing decision functions, missing cruxes, and answer-frame risks.",
+                "Use the local critique summaries as telemetry, not as final memo instructions.",
+                "Look across all shards for recurring evidence-type distinctions, confidence limits, subgroup boundaries, source-type caveats, and synthesis traps.",
+                "Return 4 to 6 reader_facing_guidance items total. Each item should be a consolidated theme, not a duplicate local issue.",
+                "Merge overlapping themes such as association-vs-causation, observational-vs-outcome limits, moderate-vs-high intake, subgroup boundaries, and biomarker-vs-clinical-outcome distinctions.",
+                "Each reader_facing_guidance item must include instruction, why_it_matters, source_labels, target_ids when available, and validation_terms.",
                 "Recommend edits only for existing IDs visible in the inventory.",
                 "Use warning-only fields when the problem is global but not target-local.",
-                "Return reader_facing_guidance for global caveats or distinctions the final memo should make explicit, written as reader-facing analysis guidance rather than process commentary.",
-                "Do not repeat local issues unless the global view makes them more important.",
                 "Return JSON matching packet_critique_v1.",
             ],
         },
@@ -293,8 +293,10 @@ def build_verification_prompt(packet: dict[str, Any], recommendation: dict[str, 
     )
 
 
-def _merge_critique_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    merged: dict[str, Any] = {"schema_id": "packet_critique_v1", "packet_sufficiency_judgment": _merged_judgment(payloads)}
+def _merge_critique_payloads(payloads: list[dict[str, Any]], *, global_payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    global_payload = global_payload if isinstance(global_payload, dict) else {}
+    all_payloads = [*payloads, global_payload]
+    merged: dict[str, Any] = {"schema_id": "packet_critique_v1", "packet_sufficiency_judgment": _merged_judgment(all_payloads)}
     list_fields = (
         "bundle_role_checks",
         "bad_answer_frame_risks",
@@ -302,7 +304,6 @@ def _merge_critique_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
         "answer_frame_challenges",
         "misleading_synthesis_risks",
         "misleading_risks",
-        "reader_facing_guidance",
         "insufficiency_warnings",
         "claim_quality_issues",
         "section_routing_issues",
@@ -316,9 +317,10 @@ def _merge_critique_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
     )
     for field in list_fields:
         rows = []
-        for payload in payloads:
+        for payload in all_payloads:
             rows.extend(_list(payload.get(field)))
         merged[field] = _dedupe_jsonish(rows)[:32]
+    merged["reader_facing_guidance"] = _dedupe_jsonish(_list(global_payload.get("reader_facing_guidance")))[:8]
     return merged
 
 

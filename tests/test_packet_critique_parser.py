@@ -105,3 +105,34 @@ def test_packet_critique_parser_coerces_singleton_issue_objects() -> None:
     assert data["claim_quality_issues"][0]["bundle_id"] == "bundle_016"
     assert data["section_plan_risks"] == ["Why This Read lacks primary answer-bearing evidence."]
     assert data["overweighted_bundles"] == ["bundle_016"]
+
+
+def test_packet_critique_parser_unwraps_packet_global_critique() -> None:
+    raw = """
+    {
+      "packet_global_critique": {
+        "packet_sufficiency_judgment": "ready",
+        "reader_facing_guidance": [
+          {
+            "instruction": "Distinguish biomarker changes from clinical outcomes.",
+            "why_it_matters": "The memo could otherwise overread LDL changes.",
+            "source_labels": ["Trial Source"],
+            "target_ids": ["bundle_006"],
+            "validation_terms": ["biomarker", "clinical outcome"]
+          }
+        ],
+        "answer_frame_critique": {
+          "critique": "The answer frame is too narrow.",
+          "recommended_action": "Use a broader decision answer."
+        }
+      }
+    }
+    """
+
+    report = parse_model_output_report(raw, PacketCritiqueOutput)
+
+    assert report["ok"] is True
+    data = report["data"]
+    assert data["schema_id"] == "packet_critique_v1"
+    assert data["reader_facing_guidance"][0]["instruction"].startswith("Distinguish biomarker")
+    assert data["answer_frame_issues"][0]["critique"] == "The answer frame is too narrow."

@@ -4,7 +4,7 @@ import json
 import time
 
 from epistemic_case_mapper.map_briefing_packet_critique_index import build_packet_critique_index, build_packet_critique_shards
-from epistemic_case_mapper.map_briefing_packet_parallel_critique import run_parallel_packet_critique
+from epistemic_case_mapper.map_briefing_packet_parallel_critique import _merge_critique_payloads, run_parallel_packet_critique
 from epistemic_case_mapper.map_briefing_packet_refinement import PacketCritiqueOutput, _adjudication_report, run_packet_critique
 
 
@@ -97,7 +97,7 @@ def test_parallel_packet_critique_merges_and_verifies_recommendations() -> None:
                     }
                 )
             )
-        if "compact global critique" in prompt:
+        if "global packet critique" in prompt:
             return FakeResult(_critique_json())
         if "bundle_004" in prompt:
             return FakeResult(_critique_json(target="bundle_004"))
@@ -154,6 +154,25 @@ def test_parallel_packet_critique_shard_timeout_degrades_to_partial_report() -> 
     assert result["report"]["parallelism"]["local_shards_failed"] == 1
     assert result["adjudication_report"]["accepted_count"] == 0
     assert result["adjudication_report"]["warning_only_count"] >= 1
+
+
+def test_parallel_packet_critique_promotes_only_global_reader_guidance() -> None:
+    local = {
+        "reader_facing_guidance": [
+            {"instruction": "Local duplicate guidance should remain telemetry.", "target_ids": ["bundle_001"]}
+        ],
+        "claim_quality_issues": [{"bundle_id": "bundle_001", "issue": "Local issue is still merged."}],
+    }
+    global_payload = {
+        "reader_facing_guidance": [
+            {"instruction": "Global consolidated guidance should reach the writer.", "target_ids": ["bundle_001"]}
+        ]
+    }
+
+    merged = _merge_critique_payloads([local], global_payload=global_payload)
+
+    assert merged["claim_quality_issues"][0]["issue"] == "Local issue is still merged."
+    assert merged["reader_facing_guidance"] == global_payload["reader_facing_guidance"]
 
 
 def test_parallel_packet_critique_uses_parallel_workers() -> None:
