@@ -30,12 +30,17 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
     visible_items = _model_visible_evidence_items(packet)
     filtered_items = _filtered_evidence_items(packet, visible_items)
     obligations = required_memo_obligations(packet)
-    reasoning_hierarchy = _reasoning_hierarchy(packet, visible_items, filtered_items)
+    selected_context = _selected_interpretive_context(packet, filtered_items)
+    reasoning_hierarchy = _reasoning_hierarchy(packet, visible_items, filtered_items, selected_context=selected_context)
     interface = {
         "schema_id": "writer_decision_interface_v1",
         "decision_question": packet.get("decision_question"),
         "bottom_line": _bottom_line(packet, visible_items),
         "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
+        "answer_frame": _answer_frame(packet, visible_items),
+        "decision_evidence_table": _decision_evidence_table(visible_items),
+        "rescued_context_table": _decision_evidence_table(selected_context),
+        "source_appraisal_summary": _source_appraisal_summary(packet, visible_items),
         "reasoning_hierarchy": reasoning_hierarchy,
         "support_that_drives_answer": _evidence_group(visible_items, roles={"strongest_support", "quantitative_anchor"}),
         "counterweights_and_disposition": _counterweights(packet, visible_items),
@@ -66,9 +71,12 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "decision_question": interface.get("decision_question"),
         "bottom_line": interface.get("bottom_line"),
         "confidence": interface.get("confidence"),
+        "answer_frame": _dict(interface.get("answer_frame")),
+        "decision_evidence_table": _list(interface.get("decision_evidence_table")),
+        "rescued_context_table": _list(interface.get("rescued_context_table")),
+        "source_appraisal_summary": _list(interface.get("source_appraisal_summary")),
         "reasoning_hierarchy": hierarchy,
         "practical_implications": _string_list(interface.get("practical_implications")),
-        "must_use_evidence": _list(interface.get("must_use_evidence")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
         "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
         "source_trail": _list(interface.get("source_trail")),
@@ -143,6 +151,19 @@ def _bottom_line(packet: dict[str, Any], visible_items: list[dict[str, Any]]) ->
     return support or counter
 
 
+def _answer_frame(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> dict[str, Any]:
+    scope = _sort_items([item for item in visible_items if _answer_relation(item) == "bounds_scope"])
+    counterweights = _sort_items([item for item in visible_items if _answer_relation(item) == "challenges_answer"])
+    cruxes = _sort_items([item for item in visible_items if _answer_relation(item) == "identifies_crux"])
+    return {
+        "bottom_line": _bottom_line(packet, visible_items),
+        "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
+        "scope_note": _short_text("; ".join(_claim_text(item) for item in scope[:3]), 520),
+        "main_uncertainty": _short_text("; ".join(_claim_text(item) for item in [*counterweights[:2], *cruxes[:2]]), 520),
+        "scoping_policy": "State the answer for the population, option, or use case supported by the evidence; use scope and counterweight rows to bound rather than overstate it.",
+    }
+
+
 def _counterweights(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     weighting = _dict(packet.get("analyst_decision_logic")).get("counterweight_weighting")
     rows = []
@@ -180,10 +201,12 @@ def _reasoning_hierarchy(
     packet: dict[str, Any],
     visible_items: list[dict[str, Any]],
     filtered_items: list[dict[str, Any]],
+    *,
+    selected_context: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build a compact, deterministic writing hierarchy from existing model judgments."""
 
-    selected_context = _selected_interpretive_context(packet, filtered_items)
+    selected_context = selected_context if isinstance(selected_context, list) else _selected_interpretive_context(packet, filtered_items)
     moves = [
         _reasoning_move(
             "answer_frame",
@@ -228,7 +251,7 @@ def _reasoning_hierarchy(
         "decision_question": packet.get("decision_question"),
         "bottom_line": _bottom_line(packet, visible_items),
         "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
-        "reasoning_moves": [move for move in moves if move.get("guidance") or move.get("evidence")],
+        "reasoning_moves": [move for move in moves if move.get("guidance") or move.get("evidence_refs")],
         "projection_policy": [
             "Uses existing model-produced packet roles, obligation levels, ranks, and quantity bindings.",
             "Does not introduce a new semantic model call.",
@@ -248,7 +271,15 @@ def _reasoning_move(
         "move": move,
         "writing_goal": writing_goal,
         "guidance": [text for text in _string_list(guidance or []) if text],
-        "evidence": [_writer_evidence_item(item) for item in items if isinstance(item, dict)],
+        "evidence_refs": [_evidence_ref(item) for item in items if isinstance(item, dict)],
+    }
+
+
+def _evidence_ref(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "item_id": item.get("item_id"),
+        "role": item.get("role"),
+        "answer_relation": _answer_relation(item),
     }
 
 
@@ -275,6 +306,36 @@ def _quantity_context_items(
         if isinstance(item, dict) and (_list(item.get("quantities")) or _list(item.get("excluded_quantity_values")))
     ]
     return _dedupe_items(_sort_items(candidates))[:10]
+
+
+def _decision_evidence_table(visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [_writer_evidence_item(item) for item in _sort_items(visible_items)]
+
+
+def _source_appraisal_summary(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for item in _sort_items(visible_items):
+        if not isinstance(item, dict):
+            continue
+        appraisal = _dict(item.get("source_appraisal"))
+        labels = _source_labels(item)
+        key = "|".join(labels) or str(item.get("item_id") or "")
+        if key in seen or not labels:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "source_labels": labels,
+                "decision_directness": appraisal.get("decision_directness", "unknown"),
+                "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
+                "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+                "source_use_warnings": _string_list(item.get("source_use_warnings") or appraisal.get("source_use_warnings"))[:5],
+                "interpretation_caveats": _string_list(appraisal.get("interpretation_caveats"))[:4],
+                "allowed_wording": _dict(item.get("allowed_wording") or appraisal.get("allowed_wording")),
+            }
+        )
+    return rows
 
 
 def _sort_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -382,7 +443,7 @@ def _diagnosticity_score(item: dict[str, Any]) -> int:
 def _reasoning_hierarchy_rescue_count(hierarchy: dict[str, Any]) -> int:
     for move in _list(hierarchy.get("reasoning_moves")):
         if isinstance(move, dict) and move.get("move") == "interpretive_context":
-            return len(_list(move.get("evidence")))
+            return len(_list(move.get("evidence_refs")))
     return 0
 
 
@@ -394,17 +455,59 @@ def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "item_id": item.get("item_id"),
         "role": item.get("role"),
+        "source_role": item.get("source_role"),
+        "answer_relation": _answer_relation(item),
+        "answer_relation_basis": item.get("answer_relation_basis"),
         "claim": item.get("reader_claim"),
         "source_labels": _source_labels(item),
         "quantities": _quantity_values(item.get("quantities")),
         "decision_relevance": _short_text(str(item.get("decision_relevance") or ""), 360),
         "caveat": _short_text(str(item.get("caveat") or ""), 260),
+        "source_appraisal_note": _source_appraisal_note(item),
         "lineage": _dict(item.get("lineage")),
         "obligation_level": item.get("obligation_level"),
         "memo_function": item.get("memo_function"),
         "source_memo_role": str(item.get("source_memo_role") or "").strip(),
         "importance_rank": item.get("importance_rank"),
     }
+
+
+def _answer_relation(item: dict[str, Any]) -> str:
+    relation = str(item.get("answer_relation") or "").strip()
+    if relation:
+        return relation
+    role = str(item.get("role") or "")
+    return {
+        "strongest_support": "supports_answer",
+        "quantitative_anchor": "supports_answer",
+        "strongest_counterweight": "challenges_answer",
+        "scope_boundary": "bounds_scope",
+        "decision_crux": "identifies_crux",
+        "context_only": "contextualizes_answer",
+    }.get(role, "contextualizes_answer")
+
+
+def _claim_text(item: dict[str, Any]) -> str:
+    return str(item.get("reader_claim") or item.get("claim") or "").strip()
+
+
+def _source_appraisal_note(item: dict[str, Any]) -> str:
+    appraisal = _dict(item.get("source_appraisal"))
+    parts = []
+    directness = str(appraisal.get("decision_directness") or "").strip()
+    if directness and directness != "unknown":
+        parts.append(f"directness: {directness}")
+    recommended = ", ".join(_string_list(appraisal.get("recommended_uses"))[:2])
+    if recommended:
+        parts.append(f"use: {recommended}")
+    warnings = ", ".join(_string_list(item.get("source_use_warnings") or appraisal.get("source_use_warnings"))[:3])
+    if warnings:
+        parts.append(f"caveats: {warnings}")
+    wording = _dict(item.get("allowed_wording") or appraisal.get("allowed_wording"))
+    qualifiers = ", ".join(_string_list(wording.get("must_qualify_with"))[:2])
+    if qualifiers:
+        parts.append(f"wording: {qualifiers}")
+    return _short_text("; ".join(parts), 360)
 
 
 def _quantity_anchors(visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -157,6 +157,51 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["writer_decision_interface_quality_report"]["schema_id"] == "writer_decision_interface_quality_report_v1"
 
 
+def test_decision_writer_packet_uses_explicit_answer_relation_for_writer_role() -> None:
+    model = _global_model()
+    model["strongest_support"] = []
+    model["strongest_counterargument"] = [
+        {
+            "group_id": "countered_fear_group",
+            "proposition": "The feared harm is not observed in the main outcome.",
+            "memo_role": "load_bearing_counterweight",
+            "importance_rank": 1,
+            "covered_evidence_item_ids": ["item:support"],
+            "rationale": "This counters a feared risk but supports the final answer.",
+        }
+    ]
+    bundle = build_decision_writer_packet_bundle(global_decision_model=model, ledger=_ledger())
+    adjudication = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "item:support",
+                "memo_use": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "importance_rank": 1,
+                "rationale": "It supports the selected bottom line even though it counters a feared risk.",
+                "covered_by": [],
+                "source_ids": ["s1"],
+                "quantity_values": ["20% improvement"],
+            }
+        ],
+    }
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+        analyst_adjudication=adjudication,
+    )
+
+    item = packet["evidence_items"][0]
+    assert item["source_role"] == "strongest_counterweight"
+    assert item["role"] == "strongest_support"
+    assert item["answer_relation"] == "supports_answer"
+    assert item["answer_relation_basis"] == "analyst_adjudication_answer_relation"
+    assert packet["memo_obligations"]["obligations"][0]["obligation_type"] == "must_weigh_support"
+
+
 def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     quantity_binding = {
@@ -230,6 +275,8 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["decision_question"] == "Should option A be adopted?"
     assert interface["support_that_drives_answer"][0]["claim"] == "Option A improves the main outcome."
     assert interface["scope_boundaries"][0]["claim"] == "The answer depends on whether the narrower setting matters."
+    assert interface["answer_frame"]["scope_note"] == "The answer depends on whether the narrower setting matters."
+    assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
     assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"
     assert [move["move"] for move in interface["reasoning_hierarchy"]["reasoning_moves"]][:2] == [
@@ -270,7 +317,40 @@ def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() ->
     assert interface["excluded_evidence_log"][0]["filter_reason"] == "not_marked_must_use_for_memo_synthesis"
     assert "excluded_evidence_log" not in model_serialized
     assert "lineage_report" not in model_serialized
+    assert "decision_evidence_table" in model_serialized
+    assert "must_use_evidence" not in model_serialized
     assert "decision_writer_item_optional" not in model_serialized
+
+
+def test_writer_model_context_exposes_compact_source_appraisal() -> None:
+    ledger = _ledger()
+    ledger["rows"][0]["source_appraisal"] = {
+        "status": "ready",
+        "source_appraisal_ids": ["sa_s1"],
+        "document_types": ["empirical_study"],
+        "evidence_proximity": ["primary"],
+        "recommended_uses": ["load_bearing_with_qualification"],
+        "decision_directness": "partial",
+        "allowed_wording": {
+            "causal_language_allowed": False,
+            "must_qualify_with": ["observational evidence"],
+        },
+        "source_use_warnings": ["association_not_causation"],
+        "interpretation_caveats": ["Associational evidence should not be written as causal."],
+    }
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=ledger)
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    interface = build_writer_decision_interface(packet)
+    context = build_writer_model_context(interface)
+
+    support = context["decision_evidence_table"][0]
+    assert "association_not_causation" in support["source_appraisal_note"]
+    assert context["source_appraisal_summary"][0]["decision_directness"] == "partial"
+    assert context["source_appraisal_summary"][0]["allowed_wording"]["causal_language_allowed"] is False
 
 
 def test_writer_decision_interface_rescues_should_include_quantity_context() -> None:
@@ -300,7 +380,8 @@ def test_writer_decision_interface_rescues_should_include_quantity_context() -> 
     hierarchy = model_context["reasoning_hierarchy"]
     interpretive = next(move for move in hierarchy["reasoning_moves"] if move["move"] == "interpretive_context")
 
-    assert interpretive["evidence"][0]["item_id"] == "decision_writer_item_should_include"
+    assert interpretive["evidence_refs"][0]["item_id"] == "decision_writer_item_should_include"
+    assert model_context["rescued_context_table"][0]["item_id"] == "decision_writer_item_should_include"
     assert "two cycles" in str(model_context)
 
 
@@ -315,7 +396,8 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
 
     assert "Narrative blueprint" in prompt
     assert "reasoning_hierarchy" in prompt
-    assert "primary organizing spine" in prompt
+    assert "decision_evidence_table as the primary evidence surface" in prompt
+    assert "organizing spine" in prompt
     assert "Required obligation ledger" in prompt
     assert "retention checklist, not an outline" in prompt
     assert "Use this as load-bearing support for the default answer" in prompt

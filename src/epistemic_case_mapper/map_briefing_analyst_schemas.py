@@ -20,6 +20,16 @@ MemoUse = Literal[
     "needs_human_or_model_review",
 ]
 
+AnswerRelation = Literal[
+    "supports_answer",
+    "challenges_answer",
+    "bounds_scope",
+    "identifies_crux",
+    "contextualizes_answer",
+    "not_decision_relevant",
+    "uncertain_relation",
+]
+
 
 class EvidenceAdjudicationRow(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -28,6 +38,7 @@ class EvidenceAdjudicationRow(BaseModel):
     memo_use: MemoUse
     importance_rank: int = Field(ge=1, le=100)
     rationale: str = Field(min_length=1)
+    answer_relation: AnswerRelation = "uncertain_relation"
     covered_by: list[str] = Field(default_factory=list)
     source_ids: list[str] = Field(default_factory=list)
     quantity_values: list[str] = Field(default_factory=list)
@@ -57,6 +68,11 @@ class EvidenceAdjudicationRow(BaseModel):
     @classmethod
     def _normalize_memo_use(cls, value: Any) -> str:
         return _memo_use_alias(str(value or ""))
+
+    @field_validator("answer_relation", mode="before")
+    @classmethod
+    def _normalize_answer_relation(cls, value: Any) -> str:
+        return _answer_relation_alias(str(value or ""))
 
     @model_validator(mode="after")
     def _validate_covered_by(self) -> "EvidenceAdjudicationRow":
@@ -563,6 +579,8 @@ def _normalize_adjudication_payload(payload: Any) -> Any:
                 row[key] = []
         if isinstance(row.get("memo_use"), str):
             row["memo_use"] = _memo_use_alias(row["memo_use"])
+        if isinstance(row.get("answer_relation"), str):
+            row["answer_relation"] = _answer_relation_alias(row["answer_relation"])
         if row.get("downgrade_reason") is None:
             row["downgrade_reason"] = ""
     return normalized
@@ -640,6 +658,40 @@ def _memo_use_alias(value: str) -> str:
         "crux": "decision_crux",
         "context": "mechanism_or_context",
         "background": "background_only",
+    }.get(normalized, normalized)
+
+
+def _answer_relation_alias(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    return {
+        "": "uncertain_relation",
+        "support": "supports_answer",
+        "supports": "supports_answer",
+        "supports_default": "supports_answer",
+        "supports_bottom_line": "supports_answer",
+        "for_answer": "supports_answer",
+        "counterweight": "challenges_answer",
+        "counter_weight": "challenges_answer",
+        "challenge": "challenges_answer",
+        "challenges": "challenges_answer",
+        "challenges_default": "challenges_answer",
+        "against_answer": "challenges_answer",
+        "opposes_answer": "challenges_answer",
+        "limit": "bounds_scope",
+        "limits": "bounds_scope",
+        "limits_answer": "bounds_scope",
+        "bounds_answer": "bounds_scope",
+        "scope": "bounds_scope",
+        "scope_boundary": "bounds_scope",
+        "applicability": "bounds_scope",
+        "crux": "identifies_crux",
+        "decision_crux": "identifies_crux",
+        "mechanism": "contextualizes_answer",
+        "context": "contextualizes_answer",
+        "background": "contextualizes_answer",
+        "not_relevant": "not_decision_relevant",
+        "irrelevant": "not_decision_relevant",
+        "uncertain": "uncertain_relation",
     }.get(normalized, normalized)
 
 

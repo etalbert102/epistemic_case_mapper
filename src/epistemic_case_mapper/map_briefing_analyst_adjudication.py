@@ -243,6 +243,8 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
         "instructions": [
             "Classify every evidence row for its actual use in a decision memo.",
             "Use semantic judgment: decide whether the item is load-bearing, background, covered by another item, or not decision-relevant.",
+            "Also classify answer_relation relative to the likely final answer: supports_answer, challenges_answer, bounds_scope, identifies_crux, contextualizes_answer, not_decision_relevant, or uncertain_relation.",
+            "Do not call evidence a counterweight merely because it counters a feared risk; use challenges_answer only when it weakens or overturns the final bottom line.",
             "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
             "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims do not support its proposed decision use.",
             "Do not drop rows. Return one row for every evidence_item_id.",
@@ -264,6 +266,15 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "not_decision_relevant",
             "needs_human_or_model_review",
         ],
+        "allowed_answer_relation": [
+            "supports_answer",
+            "challenges_answer",
+            "bounds_scope",
+            "identifies_crux",
+            "contextualizes_answer",
+            "not_decision_relevant",
+            "uncertain_relation",
+        ],
         "required_output_schema": {
             "schema_id": "analyst_adjudication_v1",
             "decision_question": ledger.get("decision_question"),
@@ -271,6 +282,7 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
                 {
                     "evidence_item_id": "stable ID from the ledger",
                     "memo_use": "one allowed_memo_use value",
+                    "answer_relation": "one allowed_answer_relation value",
                     "importance_rank": "integer 1-100, where 1 is most important",
                     "rationale": "short source-grounded reason",
                     "covered_by": ["optional evidence_item_id or group_id"],
@@ -299,6 +311,7 @@ def deterministic_adjudication_scaffold(ledger: dict[str, Any]) -> dict[str, Any
             {
                 "evidence_item_id": str(row.get("evidence_item_id") or ""),
                 "memo_use": _memo_use_for_row(row),
+                "answer_relation": _answer_relation_for_row(row),
                 "importance_rank": min(100, index + 1),
                 "rationale": _scaffold_rationale(row),
                 "covered_by": [],
@@ -413,6 +426,22 @@ def _memo_use_for_row(row: dict[str, Any]) -> str:
     if "appendix" in role or "background" in role:
         return "background_only"
     return "background_only"
+
+
+def _answer_relation_for_row(row: dict[str, Any]) -> str:
+    memo_use = _memo_use_for_row(row)
+    return {
+        "load_bearing_primary_support": "supports_answer",
+        "quantitative_anchor": "supports_answer",
+        "load_bearing_counterweight": "challenges_answer",
+        "scope_or_applicability": "bounds_scope",
+        "decision_crux": "identifies_crux",
+        "mechanism_or_context": "contextualizes_answer",
+        "background_only": "contextualizes_answer",
+        "covered_by_group": "contextualizes_answer",
+        "not_decision_relevant": "not_decision_relevant",
+        "needs_human_or_model_review": "uncertain_relation",
+    }.get(memo_use, "uncertain_relation")
 
 
 def _scaffold_rationale(row: dict[str, Any]) -> str:

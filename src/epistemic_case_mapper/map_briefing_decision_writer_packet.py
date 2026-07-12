@@ -12,6 +12,13 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_decision_writer_contract import build_decision_memo_contract
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_obligation_budget, decision_unit_diagnosticity
+from epistemic_case_mapper.map_briefing_decision_writer_helpers import (
+    answer_relation_by_evidence_id,
+    answer_relation_for_unit,
+    effective_writer_role,
+    memo_use_by_evidence_id,
+    merged_source_appraisal,
+)
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
@@ -171,17 +178,24 @@ def build_decision_writer_packet(*, global_decision_model: dict[str, Any], ledge
 def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_context: dict[str, Any] | None = None) -> dict[str, Any]:
     semantic_context = semantic_context if isinstance(semantic_context, dict) else {}
     source_labels = _string_list(unit.get("source_labels"))
-    obligation = _obligation_for_unit(unit, semantic_context=semantic_context)
+    relation = answer_relation_for_unit(unit, semantic_context=semantic_context)
+    source_role = str(unit.get("role") or "context_only").strip()
+    effective_role = effective_writer_role(source_role, relation)
+    obligation_unit = {**unit, "role": effective_role}
+    obligation = _obligation_for_unit(obligation_unit, semantic_context=semantic_context)
     quantity_plan = _quantity_plan_for_unit(unit, semantic_context=semantic_context)
     quantities = _memo_ready_quantities(unit, quantity_plan=quantity_plan)
     diagnosticity = decision_unit_diagnosticity(
-        unit,
+        obligation_unit,
         adjudication_by_id=_dict(semantic_context.get("adjudication_by_evidence_id")),
         quantity_plan=quantity_plan,
     )
     return {
         "item_id": f"decision_writer_item_{index:03d}",
-        "role": str(unit.get("role") or "context_only"),
+        "role": effective_role,
+        "source_role": source_role,
+        "answer_relation": relation["answer_relation"],
+        "answer_relation_basis": relation["basis"],
         "reader_claim": str(unit.get("claim") or "").strip(),
         "source_label": source_labels[0] if source_labels else "",
         "source_labels": source_labels,
@@ -191,6 +205,9 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "lineage": _dict(unit.get("lineage")),
         "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
         "caveat": str(unit.get("caveat") or "").strip(),
+        "source_appraisal": _dict(unit.get("source_appraisal")),
+        "source_use_warnings": _string_list(unit.get("source_use_warnings")),
+        "allowed_wording": _dict(unit.get("allowed_wording")),
         "importance_rank": unit.get("importance_rank"),
         "decision_diagnosticity": diagnosticity,
         "source_memo_role": str(unit.get("source_memo_role") or "").strip(),
@@ -382,7 +399,8 @@ def _semantic_context(
         "analyst_quantity_binding_report": analyst_quantity_binding_report if isinstance(analyst_quantity_binding_report, dict) else {},
         "quantity_obligation_plan": quantity_plan,
         "quantity_plan_by_evidence_value": _quantity_plan_by_evidence_value(quantity_plan),
-        "memo_use_by_evidence_id": _memo_use_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
+        "memo_use_by_evidence_id": memo_use_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
+        "answer_relation_by_evidence_id": answer_relation_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
         "adjudication_by_evidence_id": _adjudication_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
     }
 
@@ -438,18 +456,6 @@ def _memo_function(role: str) -> str:
         "decision_crux": "crux",
         "context_only": "background",
     }.get(role, "background")
-
-
-def _memo_use_by_evidence_id(analyst_adjudication: dict[str, Any]) -> dict[str, str]:
-    rows: dict[str, str] = {}
-    for row in _list(analyst_adjudication.get("rows")):
-        if not isinstance(row, dict):
-            continue
-        evidence_id = str(row.get("evidence_item_id") or row.get("claim_id") or "").strip()
-        memo_use = str(row.get("memo_use") or row.get("role") or "").strip()
-        if evidence_id and memo_use:
-            rows[evidence_id] = memo_use
-    return rows
 
 
 def _adjudication_by_evidence_id(analyst_adjudication: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -718,10 +724,12 @@ def _evidence_units(global_model: dict[str, Any], ledger_by_id: dict[str, dict[s
 def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
     evidence_ids = _string_list(group.get("covered_evidence_item_ids"))
     source_labels = _source_labels(evidence_ids, ledger_by_id)
+    source_appraisal = merged_source_appraisal(evidence_ids, ledger_by_id)
     return {
         "unit_id": f"decision_unit_{index:03d}",
         "section": SECTION_BY_ROLE.get(role, "context"),
         "role": role,
+        "answer_relation": str(group.get("answer_relation") or group.get("answer_relation_to_default") or "").strip(),
         "claim": _short_text(str(group.get("proposition") or ""), 720),
         "decision_relevance": _short_text(str(group.get("answer_impact") or group.get("rationale") or ""), 520),
         "caveat": _short_text("; ".join(_string_list(group.get("applicability_limits"))), 360),
@@ -729,6 +737,9 @@ def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_
         "source_memo_role": str(group.get("memo_role") or "").strip(),
         "source_labels": source_labels,
         "primary_source_label": source_labels[0] if source_labels else "",
+        "source_appraisal": source_appraisal,
+        "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
+        "allowed_wording": _dict(source_appraisal.get("allowed_wording")),
         "quantities": _quantities(evidence_ids, ledger_by_id),
         "source_excerpts": _source_excerpts(evidence_ids, ledger_by_id),
         "lineage": {

@@ -93,6 +93,8 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "bundle:one" in prompt
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
+    assert "allowed_answer_relation" in prompt
+    assert "Do not call evidence a counterweight merely because it counters a feared risk" in prompt
     assert "Raw excerpt should stay out" not in prompt
     assert "large_internal_notes" not in prompt
     assert "source_quality" in prompt
@@ -118,6 +120,7 @@ def test_analyst_adjudication_prompt_backend_scaffolds_all_rows() -> None:
     assert result["analyst_adjudication_parse_report"]["status"] == "ready"
     assert [row["evidence_item_id"] for row in result["analyst_adjudication"]["rows"]] == ["bundle:one", "warning:two"]
     assert result["analyst_adjudication"]["rows"][1]["memo_use"] == "needs_human_or_model_review"
+    assert result["analyst_adjudication"]["rows"][0]["answer_relation"] == "supports_answer"
     assert result["analyst_adjudication_chunk_reports"]["chunks"][0]["status"] == "prompt_backend_scaffold"
 
 

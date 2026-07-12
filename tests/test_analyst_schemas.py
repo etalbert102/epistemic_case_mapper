@@ -49,8 +49,20 @@ def test_analyst_adjudication_schema_accepts_valid_rows() -> None:
     report = build_analyst_adjudication_parse_report(_valid_payload(), _ledger())
 
     assert parsed.rows[0].memo_use == "load_bearing_primary_support"
+    assert parsed.rows[0].answer_relation == "uncertain_relation"
     assert report["status"] == "ready"
     assert report["valid"] is True
+
+
+def test_analyst_adjudication_schema_accepts_answer_relation_aliases() -> None:
+    payload = _valid_payload()
+    payload["rows"][0]["answer_relation"] = "supports bottom line"
+    payload["rows"][1]["answer_relation"] = "scope"
+
+    parsed = AnalystAdjudication.model_validate(payload)
+
+    assert parsed.rows[0].answer_relation == "supports_answer"
+    assert parsed.rows[1].answer_relation == "bounds_scope"
 
 
 def test_analyst_adjudication_schema_normalizes_nullable_downgrade_reason() -> None:
