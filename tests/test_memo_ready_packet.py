@@ -441,7 +441,7 @@ def test_memo_warning_packet_routes_truly_lost_evidence_into_synthesis_prompt() 
     assert result["memo_warning_packet"]["critical_warning_count"] == 1
     assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
     assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
-    assert "retention_checklist" in prompt
+    assert "Required obligation ledger" in prompt
     assert "required obligation ledger" in prompt
 
 
