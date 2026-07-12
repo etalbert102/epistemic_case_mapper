@@ -53,12 +53,13 @@ def build_writer_packet_synthesis_prompt(
     *,
     memo_ready_packet: dict[str, Any] | None = None,
 ) -> str:
+    if not (isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items")):
+        return (
+            "Decision-writer packet synthesis prompt unavailable.\n"
+            "Active memo synthesis requires a memo-ready packet with evidence_items so the writer model context can be compiled without audit-only fields.\n"
+        )
     obligations = required_memo_obligations(memo_ready_packet or {})
-    writing_interface = (
-        build_writer_decision_interface(memo_ready_packet)
-        if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items")
-        else _legacy_writer_decision_interface(writer_packet)
-    )
+    writing_interface = build_writer_decision_interface(memo_ready_packet)
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
     obligation_ledger = writing_interface.get("retention_checklist") or _obligation_ledger(obligations)
     model_context = build_writer_model_context(writing_interface)
@@ -260,27 +261,6 @@ def _obligation_ledger(obligations: list[dict[str, Any]]) -> list[dict[str, Any]
         }
         for obligation in obligations
     ]
-
-
-def _legacy_writer_decision_interface(writer_packet: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "schema_id": "writer_decision_interface_v1",
-        "decision_question": writer_packet.get("decision_question") if isinstance(writer_packet, dict) else "",
-        "bottom_line": _dict(writer_packet.get("answer")).get("bounded_answer") if isinstance(writer_packet, dict) else "",
-        "confidence": _dict(writer_packet.get("answer")).get("confidence", "not_specified") if isinstance(writer_packet, dict) else "not_specified",
-        "support_that_drives_answer": [],
-        "counterweights_and_disposition": [],
-        "scope_boundaries": [],
-        "decision_cruxes": [],
-        "practical_implications": [],
-        "must_use_evidence": [],
-        "quantity_anchors": [],
-        "source_trail": _list(writer_packet.get("source_trail")) if isinstance(writer_packet, dict) else [],
-        "retention_checklist": [],
-        "excluded_evidence_log": [],
-        "lineage_report": {"schema_id": "writer_decision_interface_lineage_report_v1", "source_packet_method": "legacy_writer_packet_without_memo_ready_packet"},
-        "quality_warnings": ["legacy_writer_packet_without_memo_ready_packet"],
-    }
 
 
 def _blueprint_move(

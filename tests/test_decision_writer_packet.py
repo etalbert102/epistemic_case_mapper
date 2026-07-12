@@ -11,7 +11,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     run_memo_ready_packet_synthesis,
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import (
+    build_memo_ready_packet_synthesis_prompt,
+    build_writer_packet_synthesis_prompt,
+)
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
@@ -280,6 +283,16 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
     assert "Use this as load-bearing support for the default answer" in prompt
     assert "Bound the answer's applicability" in prompt
     assert "analyst_synthesis_packet" not in prompt
+
+
+def test_bare_decision_writer_packet_prompt_is_explicitly_unavailable() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+
+    prompt = build_writer_packet_synthesis_prompt(bundle["decision_writer_packet"])
+
+    assert "synthesis prompt unavailable" in prompt
+    assert "writer_model_context_v1" not in prompt
+    assert "decision_writer_packet_v1" not in prompt
 
 
 def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_context() -> None:

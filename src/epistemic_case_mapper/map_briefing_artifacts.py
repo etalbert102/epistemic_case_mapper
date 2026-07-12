@@ -208,7 +208,15 @@ def _global_decision_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("decision_writer_packet", "decision_writer_packet.json", "json", _scaffold_value("decision_writer_packet"), review_label="Decision writer packet"),
         ArtifactSpec("decision_writer_packet_quality_report", "decision_writer_packet_quality_report.json", "json", _scaffold_value("decision_writer_packet_quality_report"), review_label="Decision writer packet quality"),
         ArtifactSpec("evidence_unit_traceability_matrix", "evidence_unit_traceability_matrix.json", "json", _scaffold_value("evidence_unit_traceability_matrix"), review_label="Evidence unit traceability"),
-        ArtifactSpec("decision_writer_packet_synthesis_prompt", "decision_writer_packet_synthesis_prompt.txt", "markdown", lambda ctx: build_writer_packet_synthesis_prompt(_scaffold_dict(ctx.scaffold, "decision_writer_packet"))),
+        ArtifactSpec(
+            "decision_writer_packet_synthesis_prompt",
+            "decision_writer_packet_synthesis_prompt.txt",
+            "markdown",
+            lambda ctx: build_writer_packet_synthesis_prompt(
+                _scaffold_dict(ctx.scaffold, "decision_writer_packet"),
+                memo_ready_packet=_scaffold_dict(ctx.scaffold, "memo_ready_packet"),
+            ),
+        ),
     )
 
 
