@@ -289,6 +289,31 @@ def merge_quantity_adjudication(
     try:
         parsed = AnalystQuantityAdjudication.model_validate(payload)
     except ValidationError as exc:
+        model_rows, invalid_rows = _salvage_quantity_adjudication_rows(payload, candidate_ids)
+        if model_rows:
+            merged = _merge_quantity_model_rows(
+                deterministic_report,
+                model_rows,
+                method="model_adjudicated_quantity_binding_salvaged",
+            )
+            row_ids = {str(row.get("candidate_id") or "") for row in model_rows}
+            missing = sorted(candidate_ids - row_ids)
+            return merged, {
+                "schema_id": "analyst_quantity_binding_parse_report_v1",
+                "status": "salvaged_with_warnings",
+                "valid": True,
+                "errors": _jsonable_errors(exc),
+                "candidate_count": len(candidate_ids),
+                "accepted_binding_count": len(model_rows),
+                "missing_candidate_ids": missing,
+                "unknown_candidate_ids": [],
+                "invalid_model_row_count": len(invalid_rows),
+                "invalid_model_rows": invalid_rows[:20],
+                "issues": [
+                    "invalid_schema_salvaged_rows",
+                    *(["missing_candidate_ids_used_context_only"] if missing else []),
+                ],
+            }
         return deterministic_report, {
             "schema_id": "analyst_quantity_binding_parse_report_v1",
             "status": "invalid_schema",
@@ -317,23 +342,10 @@ def merge_quantity_adjudication(
     unknown = sorted(row_ids - candidate_ids)
     missing = sorted(candidate_ids - row_ids)
     valid_rows = [row for row in model_rows if row["candidate_id"] in candidate_ids]
-    rows = []
-    by_model = {row["candidate_id"]: row for row in valid_rows}
-    for candidate in _list(deterministic_report.get("candidate_bindings")):
-        if not isinstance(candidate, dict):
-            continue
-        candidate_id = str(candidate.get("candidate_id") or "")
-        if candidate_id in by_model:
-            model_context = by_model[candidate_id]
-        elif candidate.get("model_adjudication_required"):
-            model_context = {"_missing_model_row": True}
-        else:
-            model_context = None
-        rows.append(_binding_row(candidate, model_context))
-    merged = _report_from_rows(
-        rows,
+    merged = _merge_quantity_model_rows(
+        deterministic_report,
+        valid_rows,
         method="model_adjudicated_quantity_binding",
-        decision_question=str(deterministic_report.get("decision_question") or ""),
     )
     issues = [
         *(["unknown_candidate_ids"] if unknown else []),
@@ -351,18 +363,50 @@ def merge_quantity_adjudication(
     }
 
 
-def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any], model_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    candidate_ids = {
-        str(row.get("candidate_id") or "")
-        for row in _list(deterministic_report.get("candidate_bindings"))
-        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
-    }
-    valid_rows = [
-        row
-        for row in model_rows
-        if isinstance(row, dict) and str(row.get("candidate_id") or "") in candidate_ids
-    ]
-    by_model = {str(row.get("candidate_id") or ""): row for row in valid_rows}
+def _salvage_quantity_adjudication_rows(
+    payload: Any,
+    candidate_ids: set[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    model_rows: list[dict[str, Any]] = []
+    invalid_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    raw_rows = payload.get("bindings") if isinstance(payload, dict) else None
+    for index, row in enumerate(_list(raw_rows)):
+        if not isinstance(row, dict):
+            invalid_rows.append({"row_index": index, "reason": "row_not_object"})
+            continue
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if not candidate_id:
+            invalid_rows.append({"row_index": index, "reason": "missing_candidate_id"})
+            continue
+        if candidate_id not in candidate_ids:
+            invalid_rows.append({"row_index": index, "candidate_id": candidate_id, "reason": "unknown_candidate_id"})
+            continue
+        if candidate_id in seen:
+            invalid_rows.append({"row_index": index, "candidate_id": candidate_id, "reason": "duplicate_candidate_id"})
+            continue
+        try:
+            model_rows.append(AnalystQuantityAdjudicationRow.model_validate(row).model_dump())
+            seen.add(candidate_id)
+        except ValidationError as exc:
+            invalid_rows.append(
+                {
+                    "row_index": index,
+                    "candidate_id": candidate_id,
+                    "reason": "invalid_row_schema",
+                    "errors": _jsonable_errors(exc),
+                }
+            )
+    return model_rows, invalid_rows
+
+
+def _merge_quantity_model_rows(
+    deterministic_report: dict[str, Any],
+    model_rows: list[dict[str, Any]],
+    *,
+    method: str,
+) -> dict[str, Any]:
+    by_model = {str(row.get("candidate_id") or ""): row for row in model_rows}
     rows = []
     for candidate in _list(deterministic_report.get("candidate_bindings")):
         if not isinstance(candidate, dict):
@@ -377,8 +421,26 @@ def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any],
         rows.append(_binding_row(candidate, model_context))
     return _report_from_rows(
         rows,
-        method="model_adjudicated_quantity_binding_batched",
+        method=method,
         decision_question=str(deterministic_report.get("decision_question") or ""),
+    )
+
+
+def _merge_model_rows_with_missing_context(deterministic_report: dict[str, Any], model_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    candidate_ids = {
+        str(row.get("candidate_id") or "")
+        for row in _list(deterministic_report.get("candidate_bindings"))
+        if isinstance(row, dict) and bool(row.get("model_adjudication_required"))
+    }
+    valid_rows = [
+        row
+        for row in model_rows
+        if isinstance(row, dict) and str(row.get("candidate_id") or "") in candidate_ids
+    ]
+    return _merge_quantity_model_rows(
+        deterministic_report,
+        valid_rows,
+        method="model_adjudicated_quantity_binding_batched",
     )
 
 

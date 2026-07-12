@@ -7,6 +7,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_analyst_schemas import (
     AnalystAdjudication,
+    EvidenceAdjudicationRow,
     build_analyst_adjudication_parse_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -164,6 +165,40 @@ def _run_adjudication_chunk(
             "used_scaffold": False,
             "chunk_report": _chunk_report(index, total, "accepted", parse_report),
         }
+    salvaged_rows, salvage_report = _salvage_adjudication_chunk_rows(
+        payload,
+        chunk_ledger=chunk_ledger,
+        expected_ids=expected_ids,
+        all_ids=all_ids,
+    )
+    if salvage_report["salvaged_model_row_count"]:
+        chunk_parse_report = build_analyst_adjudication_parse_report(
+            {
+                "schema_id": "analyst_adjudication_v1",
+                "decision_question": chunk_ledger.get("decision_question", ""),
+                "rows": salvaged_rows,
+                "overall_rationale": "Invalid chunk payload was salvaged row by row; scaffold rows fill missing or invalid model rows.",
+            },
+            chunk_ledger,
+            expected_evidence_item_ids=expected_ids,
+            known_evidence_item_ids=all_ids,
+        )
+        report = _chunk_report(
+            index,
+            total,
+            "model_output_invalid_salvaged_with_scaffold",
+            chunk_parse_report,
+            issues=["chunk failed whole-payload validation; valid model rows were salvaged"],
+        )
+        report.update(salvage_report)
+        report["original_parse_report"] = parse_report
+        return {
+            "prompt": prompt_block,
+            "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
+            "rows": salvaged_rows,
+            "used_scaffold": True,
+            "chunk_report": report,
+        }
     chunk_scaffold = deterministic_adjudication_scaffold(chunk_ledger)
     return {
         "prompt": prompt_block,
@@ -178,6 +213,74 @@ def _run_adjudication_chunk(
             issues=["chunk failed schema or ledger accounting checks"],
         ),
     }
+
+
+def _salvage_adjudication_chunk_rows(
+    payload: Any,
+    *,
+    chunk_ledger: dict[str, Any],
+    expected_ids: list[str],
+    all_ids: list[str],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    scaffold_rows = deterministic_adjudication_scaffold(chunk_ledger).get("rows", [])
+    scaffold_by_id = {
+        str(row.get("evidence_item_id") or ""): row
+        for row in _list(scaffold_rows)
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "")
+    }
+    accepted: dict[str, dict[str, Any]] = {}
+    rejected: list[dict[str, Any]] = []
+    known_ids = set(all_ids) | set(expected_ids)
+    for index, row in enumerate(_list(payload.get("rows") if isinstance(payload, dict) else None)):
+        if not isinstance(row, dict):
+            rejected.append({"row_index": index, "reason": "row_not_object"})
+            continue
+        evidence_id = str(row.get("evidence_item_id") or "").strip()
+        if not evidence_id:
+            rejected.append({"row_index": index, "reason": "missing_evidence_item_id"})
+            continue
+        if evidence_id not in expected_ids:
+            rejected.append({"row_index": index, "evidence_item_id": evidence_id, "reason": "unexpected_evidence_item_id"})
+            continue
+        if evidence_id in accepted:
+            rejected.append({"row_index": index, "evidence_item_id": evidence_id, "reason": "duplicate_evidence_item_id"})
+            continue
+        candidate = _adjudication_row_candidate(row, scaffold_by_id.get(evidence_id, {}), known_ids=known_ids)
+        try:
+            accepted[evidence_id] = EvidenceAdjudicationRow.model_validate(candidate).model_dump()
+        except ValueError as exc:
+            rejected.append({"row_index": index, "evidence_item_id": evidence_id, "reason": type(exc).__name__})
+    ordered = [
+        accepted.get(row_id) or scaffold_by_id[row_id]
+        for row_id in expected_ids
+        if row_id in accepted or row_id in scaffold_by_id
+    ]
+    scaffolded = [row_id for row_id in expected_ids if row_id not in accepted]
+    return ordered, {
+        "salvaged_model_row_count": len(accepted),
+        "scaffolded_row_count": len(scaffolded),
+        "invalid_model_row_count": len(rejected),
+        "scaffolded_evidence_item_ids": scaffolded,
+        "invalid_model_rows": rejected[:20],
+    }
+
+
+def _adjudication_row_candidate(row: dict[str, Any], scaffold: dict[str, Any], *, known_ids: set[str]) -> dict[str, Any]:
+    allowed_keys = {
+        "evidence_item_id",
+        "memo_use",
+        "importance_rank",
+        "rationale",
+        "answer_relation",
+        "covered_by",
+        "source_ids",
+        "quantity_values",
+        "downgrade_reason",
+    }
+    candidate = {key: scaffold.get(key) for key in allowed_keys if key in scaffold}
+    candidate.update({key: row.get(key) for key in allowed_keys if key in row})
+    candidate["covered_by"] = [target for target in _string_list(candidate.get("covered_by")) if target in known_ids]
+    return candidate
 
 
 def run_analyst_adjudication_single_call_for_test(

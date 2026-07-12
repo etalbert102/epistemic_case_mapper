@@ -179,6 +179,47 @@ def test_analyst_adjudication_invalid_live_backend_falls_back_with_report(monkey
     assert result["analyst_adjudication"]["rows"][0]["evidence_item_id"] == "bundle:one"
 
 
+def test_analyst_adjudication_salvages_valid_rows_from_invalid_chunk(monkeypatch) -> None:
+    payload = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "bundle:one",
+                "memo_use": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "importance_rank": 1,
+                "rationale": "The model identified direct outcome evidence as load-bearing.",
+                "source_ids": ["s1"],
+                "quantity_values": [],
+            },
+            {
+                "evidence_item_id": "warning:two",
+                "memo_use": "not an allowed label",
+                "importance_rank": 2,
+                "rationale": "This row should fail local validation.",
+            },
+        ],
+        "unexpected_extra_field": "makes the whole payload invalid",
+    }
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+
+    result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
+
+    rows = {row["evidence_item_id"]: row for row in result["analyst_adjudication"]["rows"]}
+    chunk_report = result["analyst_adjudication_chunk_reports"]["chunks"][0]
+    assert result["analyst_adjudication_report"]["status"] == "accepted_with_chunk_scaffold"
+    assert chunk_report["status"] == "model_output_invalid_salvaged_with_scaffold"
+    assert chunk_report["salvaged_model_row_count"] == 1
+    assert chunk_report["scaffolded_row_count"] == 1
+    assert rows["bundle:one"]["rationale"] == "The model identified direct outcome evidence as load-bearing."
+    assert rows["warning:two"]["memo_use"] == "needs_human_or_model_review"
+
+
 def test_single_call_accepts_repairable_model_json(monkeypatch) -> None:
     raw = """```json
 {

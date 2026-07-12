@@ -303,6 +303,72 @@ def test_analyst_quantity_binding_missing_model_rows_do_not_create_mandatory_qua
     )
 
 
+def test_analyst_quantity_binding_salvages_valid_rows_from_invalid_payload() -> None:
+    ledger = {
+        "decision_question": "Should option A be adopted?",
+        "rows": [
+            {
+                "evidence_item_id": "claim:support",
+                "claim": "Option A reduced losses in the main outcome study.",
+                "source_labels": ["Outcome Study"],
+                "quantity_values": ["25% reduction", "18% reduction"],
+                "residual_quantity_candidate_values": ["25% reduction", "18% reduction"],
+            }
+        ],
+    }
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "primary_reasoning_chain": [
+            {
+                "group_id": "support",
+                "memo_role": "quantitative_anchor",
+                "proposition": "Option A reduced losses.",
+                "covered_evidence_item_ids": ["claim:support"],
+            }
+        ],
+    }
+    deterministic = build_analyst_quantity_binding_report(synthesis_packet=packet, ledger=ledger)
+    first_candidate, second_candidate = deterministic["candidate_bindings"][:2]
+
+    merged, parse_report = merge_quantity_adjudication(
+        deterministic,
+        {
+            "schema_id": "analyst_quantity_binding_adjudication_v1",
+            "bindings": [
+                {
+                    "candidate_id": first_candidate["candidate_id"],
+                    "memo_use": "yes",
+                    "quantity_role": "decision_anchor",
+                    "must_retain": True,
+                    "interpretation": "The 25% reduction calibrates the answer-relevant effect.",
+                    "rationale": "It quantifies the load-bearing support proposition.",
+                    "retention_phrase": "25% reduction",
+                    "required_for_memo_reason": "The memo would be less calibrated without the effect size.",
+                    "safe_to_omit_reason": "",
+                },
+                {
+                    "candidate_id": second_candidate["candidate_id"],
+                    "memo_use": "no",
+                    "quantity_role": "audit_only",
+                    "must_retain": True,
+                    "interpretation": "",
+                    "rationale": "",
+                },
+            ],
+            "extra_field": "invalidates full payload but not the first row",
+        },
+    )
+
+    rows = {row["candidate_id"]: row for row in merged["candidate_bindings"]}
+    assert parse_report["status"] == "salvaged_with_warnings"
+    assert parse_report["accepted_binding_count"] == 1
+    assert parse_report["invalid_model_row_count"] == 1
+    assert rows[first_candidate["candidate_id"]]["binding_source"] == "model"
+    assert rows[first_candidate["candidate_id"]]["must_retain"] is True
+    assert rows[second_candidate["candidate_id"]]["binding_source"] == "model_missing_context_only"
+    assert rows[second_candidate["candidate_id"]]["memo_use"] == "context_only"
+
+
 def test_analyst_quantity_binding_batches_large_candidate_sets(monkeypatch) -> None:
     ledger = {
         "decision_question": "Should option A be adopted?",
