@@ -210,6 +210,7 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "obligation_group_skeleton" in prompt
     assert "Start from obligation_group_skeleton" in prompt
     assert "Do not bury contrary evidence inside a support group" in prompt
+    assert "Rank by decision diagnosticity" in prompt
 
 
 def test_parallel_decision_model_tasks_chunk_large_context() -> None:
@@ -331,6 +332,92 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
         "bundle:support_duplicate",
     ]
     assert result["analyst_decision_model_repair_report"]["status"] == "not_needed"
+
+
+def test_decision_model_ranking_guard_promotes_quantified_decision_anchor(monkeypatch) -> None:
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should the intervention be treated as harmful, neutral, or beneficial?",
+        "rows": [
+            {
+                "evidence_item_id": "claim:context",
+                "claim": "The intervention is included in general background guidance for in-scope users.",
+                "source_labels": ["Guidance"],
+            },
+            {
+                "evidence_item_id": "claim:outcome",
+                "claim": "Moderate exposure was not associated with the main adverse outcome.",
+                "source_labels": ["Outcome Study"],
+                "quantity_values": ["hazard ratio 0.93", "95% confidence interval 0.82 to 1.05"],
+            },
+        ],
+    }
+    adjudication = {
+        "rows": [
+            {
+                "evidence_item_id": "claim:context",
+                "memo_use": "load_bearing_primary_support",
+                "importance_rank": 10,
+                "rationale": "Relevant context.",
+            },
+            {
+                "evidence_item_id": "claim:outcome",
+                "memo_use": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "rationale": "This is the quantified outcome anchor.",
+            },
+        ],
+    }
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": ledger["decision_question"],
+        "direct_answer": "The intervention is included in general guidance.",
+        "confidence": "medium",
+        "overall_rationale": "The model overvalued contextual guidance.",
+        "evidence_groups": [
+            {
+                "group_id": "context_group",
+                "proposition": "The intervention is included in general background guidance.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["claim:context"],
+                "rationale": "In-scope guidance.",
+            },
+            {
+                "group_id": "outcome_group",
+                "proposition": "Moderate exposure was not associated with the main adverse outcome.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["claim:outcome"],
+                "rationale": "Quantified outcome evidence.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "claim:context", "disposition": "foreground", "group_id": "context_group"},
+            {"evidence_item_id": "claim:outcome", "disposition": "foreground", "group_id": "outcome_group"},
+        ],
+        "decision_logic": {"bounded_bottom_line": "Treat the intervention as neutral with caveats."},
+    }
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+
+    result = run_analyst_decision_model(
+        ledger=ledger,
+        adjudication=adjudication,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    groups = result["analyst_decision_model"]["evidence_groups"]
+    assert groups[0]["group_id"] == "outcome_group"
+    assert groups[0]["importance_rank"] == 1
+    assert groups[0]["diagnostic_priority_score"] > groups[1]["diagnostic_priority_score"]
+    assert result["analyst_decision_model_ranking_guard"]["changed_group_count"] >= 1
 
 
 def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> None:

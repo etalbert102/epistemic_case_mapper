@@ -28,6 +28,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
 from epistemic_case_mapper.model_backends import run_model_backend
 
 DEFAULT_DECISION_MODEL_NUM_PREDICT = 12_288
@@ -109,6 +110,7 @@ def run_analyst_decision_model(
         num_predict=analyst_decision_model_num_predict(context),
     )
     final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
+    final_model, ranking_guard = _apply_ranking_guard(final_model, context)
     final_parse_report = repair.get("analyst_decision_model_parse_report", parse_report) if repair.get("accepted") else parse_report
     status = "accepted" if final_parse_report.get("status") == "ready" else "accepted_with_warnings"
     if repair.get("accepted"):
@@ -126,6 +128,7 @@ def run_analyst_decision_model(
         "analyst_decision_model_repair_raw": repair.get("analyst_decision_model_repair_raw", ""),
         "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
         "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
+        "analyst_decision_model_ranking_guard": ranking_guard,
     }
 
 
@@ -163,6 +166,7 @@ def _run_parallel_decision_model_candidate(
         num_predict=analyst_decision_model_num_predict(context),
     )
     final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
+    final_model, ranking_guard = _apply_ranking_guard(final_model, context)
     final_parse_report = repair.get("analyst_decision_model_parse_report", parse_report) if repair.get("accepted") else parse_report
     status = _parallel_status(final_parse_report, repair)
     return {
@@ -179,6 +183,7 @@ def _run_parallel_decision_model_candidate(
         "analyst_decision_model_repair_raw": repair.get("analyst_decision_model_repair_raw", ""),
         "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
         "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
+        "analyst_decision_model_ranking_guard": ranking_guard,
     }
 
 
@@ -262,6 +267,9 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
             "You may merge skeleton groups or move an item to a better group when the reasoning calls for it, but every skeleton evidence_item_id should either be covered by an evidence_group or explicitly dispositioned.",
             "Rank groups by how much they should affect the answer.",
+            "Rank by decision diagnosticity, not generic topical relevance. Evidence is more diagnostic when it directly changes the answer, distinguishes live alternatives, or calibrates the decision with source-bound quantities.",
+            "Do not let in-scope contextual guidance outrank outcome, effect-size, threshold, counterweight, crux, or scope-boundary evidence unless that contextual guidance is the actual reason the answer changes.",
+            "For a question asking whether to treat something as harmful, neutral, beneficial, advisable, risky, worthwhile, or not worthwhile, put the evidence that discriminates those answer choices before general background benefits or implementation context.",
             "Use model_hints as clues only: centrality and similarity are not semantic decisions.",
             "Treat candidate_decision_edge rows as provisional analytic links; use their anchors, confidence, failure conditions, and endpoint claims to decide whether they reconcile, bound, weaken, or should be backgrounded.",
             "Do not preserve a proposed relation label when its rationale or anchors imply a different decision role; explain downgrades in evidence_dispositions or group rationale.",
@@ -415,7 +423,7 @@ def deterministic_decision_model_scaffold(
         )
     question = str(ledger.get("decision_question") or "").strip()
     direct = _scaffold_direct_answer(groups, question)
-    return {
+    model = {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": question,
         "direct_answer": direct,
@@ -447,6 +455,76 @@ def deterministic_decision_model_scaffold(
         },
         "argument_plan": _scaffold_argument_plan(groups),
     }
+    ranked_model, _report = _apply_ranking_guard(model, context or build_analyst_decision_context(ledger=ledger, adjudication=adjudication))
+    return ranked_model
+
+
+def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    groups, report = apply_decision_diagnostic_ranking(_list(model.get("evidence_groups")), _list(context.get("evidence_rows")))
+    updated = dict(model)
+    updated["evidence_groups"] = groups
+    updated["ranking_guard"] = report
+    updated["decision_logic"] = naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
+    if report.get("changed_group_count") and _answer_misses_top_support(updated, groups):
+        refreshed = _ranked_direct_answer(str(context.get("decision_question") or updated.get("decision_question") or ""), groups)
+        if refreshed:
+            updated["direct_answer"] = refreshed
+            updated["decision_logic"]["bounded_bottom_line"] = refreshed
+            updated["decision_logic"]["support_summary"] = _first_group(groups, "load_bearing_primary_support")
+            updated["decision_logic"]["strongest_counterweight"] = _first_group(groups, "load_bearing_counterweight")
+    return updated, report
+
+
+def _answer_misses_top_support(model: dict[str, Any], groups: list[dict[str, Any]]) -> bool:
+    support = _first_group(groups, "load_bearing_primary_support")
+    if not support:
+        return False
+    answer = " ".join(
+        [
+            str(model.get("direct_answer") or ""),
+            str(_dict(model.get("decision_logic")).get("bounded_bottom_line") or ""),
+        ]
+    ).lower()
+    support_terms = [term for term in _content_terms(support) if len(term) >= 5]
+    if not support_terms:
+        return False
+    overlap = sum(1 for term in support_terms[:12] if term in answer)
+    return overlap < min(3, len(support_terms))
+
+
+def _ranked_direct_answer(question: str, groups: list[dict[str, Any]]) -> str:
+    support = _first_group(groups, "load_bearing_primary_support")
+    counter = _first_group(groups, "load_bearing_counterweight")
+    if support and counter:
+        return _short_text(f"The best-supported answer to '{question}' should be based on this primary evidence: {support} The main counterweight is: {counter}", 520)
+    if support:
+        return _short_text(f"The best-supported answer to '{question}' should be based on this primary evidence: {support}", 420)
+    return ""
+
+
+def _content_terms(text: str) -> list[str]:
+    stop = {
+        "about",
+        "after",
+        "because",
+        "between",
+        "evidence",
+        "general",
+        "should",
+        "source",
+        "that",
+        "their",
+        "there",
+        "these",
+        "this",
+        "those",
+        "where",
+        "which",
+        "with",
+        "without",
+    }
+    terms = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{3,}", str(text or "").lower())
+    return [term for term in _dedupe(terms) if term not in stop]
 
 
 def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:

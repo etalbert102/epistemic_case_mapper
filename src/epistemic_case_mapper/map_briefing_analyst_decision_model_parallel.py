@@ -6,6 +6,7 @@ import re
 import time
 from typing import Any, Callable
 
+from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe, list_value as _list, short_text as _short_text, string_list as _string_list
 from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 
@@ -85,6 +86,8 @@ def build_decision_model_task_prompt(task: dict[str, Any]) -> str:
         "instructions": [
                 "Group rows when they support the same decision-relevant proposition.",
                 "Keep support, counterweight, scope, crux, mechanism/context, and quantity roles analytically distinct.",
+                "Rank groups by decision diagnosticity, not generic relevance. Outcome/effect, quantity, crux, counterweight, and scope-boundary evidence should outrank background or contextual guidance when they more directly change the answer.",
+                "If a row is merely contextual, do not make it the top support unless it is the actual reason the decision answer changes.",
                 "Every supplied evidence_item_id must appear in either evidence_groups.covered_evidence_item_ids or evidence_dispositions.",
                 "Use only supplied evidence IDs. Do not invent sources, quantities, or IDs.",
                 "Use ordinary analyst language. This is an intermediate model for later synthesis, not a memo.",
@@ -133,6 +136,8 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
             if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip():
                 dispositions_by_id[str(row.get("evidence_item_id"))] = dict(row)
     groups = _dedupe_groups(groups)
+    groups, _ranking_guard = apply_decision_diagnostic_ranking(groups, _rows(context))
+    groups = [_schema_safe_group(group) for group in groups]
     covered = {evidence_id for group in groups for evidence_id in _string_list(group.get("covered_evidence_item_ids"))}
     dispositions = _merged_dispositions(context, groups, dispositions_by_id, covered)
     return {
@@ -299,6 +304,14 @@ def _dedupe_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen_ids.add(str(group.get("group_id") or ""))
         deduped.append(group)
     return deduped
+
+
+def _schema_safe_group(group: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in group.items()
+        if key not in {"diagnostic_priority_score", "diagnostic_priority_reasons", "best_adjudicated_importance_rank"}
+    }
 
 
 def _merged_dispositions(context: dict[str, Any], groups: list[dict[str, Any]], model_dispositions: dict[str, dict[str, Any]], covered: set[str]) -> list[dict[str, Any]]:

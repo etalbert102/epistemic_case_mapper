@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_decision_writer_contract import build_decision_memo_contract
+from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_obligation_budget, decision_unit_diagnosticity
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 
 
@@ -68,7 +69,7 @@ def decision_writer_packet_to_memo_ready_packet(
         for index, unit in enumerate(_list(packet.get("evidence_units")), start=1)
         if isinstance(unit, dict)
     ]
-    _apply_obligation_budget(evidence_items)
+    apply_obligation_budget(evidence_items)
     decision_obligation_plan = build_decision_obligation_plan(evidence_items, packet=packet, semantic_context=semantic_context)
     memo_obligations = build_memo_obligation_packet(evidence_items, {"warnings": []})
     writeability = build_writer_packet_writeability_report(
@@ -161,6 +162,11 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
     obligation = _obligation_for_unit(unit, semantic_context=semantic_context)
     quantity_plan = _quantity_plan_for_unit(unit, semantic_context=semantic_context)
     quantities = _memo_ready_quantities(unit, quantity_plan=quantity_plan)
+    diagnosticity = decision_unit_diagnosticity(
+        unit,
+        adjudication_by_id=_dict(semantic_context.get("adjudication_by_evidence_id")),
+        quantity_plan=quantity_plan,
+    )
     return {
         "item_id": f"decision_writer_item_{index:03d}",
         "role": str(unit.get("role") or "context_only"),
@@ -174,6 +180,7 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
         "caveat": str(unit.get("caveat") or "").strip(),
         "importance_rank": unit.get("importance_rank"),
+        "decision_diagnosticity": diagnosticity,
         "source_memo_role": str(unit.get("source_memo_role") or "").strip(),
         "obligation_level": obligation.get("obligation_level", "optional_context"),
         "memo_function": obligation.get("memo_function", "background"),
@@ -293,50 +300,6 @@ def build_decision_obligation_plan(
     }
 
 
-def _apply_obligation_budget(evidence_items: list[dict[str, Any]]) -> None:
-    budgets = {
-        "strongest_support": 4,
-        "quantitative_anchor": 2,
-        "strongest_counterweight": 3,
-        "scope_boundary": 2,
-        "decision_crux": 2,
-    }
-    by_role: dict[str, list[dict[str, Any]]] = {}
-    for index, item in enumerate(evidence_items):
-        if not isinstance(item, dict):
-            continue
-        item["_original_order"] = index
-        by_role.setdefault(str(item.get("role") or ""), []).append(item)
-    for role, items in by_role.items():
-        if role == "context_only":
-            continue
-        budget = budgets.get(role, 2)
-        ordered = sorted(items, key=_obligation_budget_sort_key)
-        required_ids = {id(item) for item in ordered[:budget]}
-        for item in items:
-            if id(item) in required_ids:
-                item["obligation_level"] = "must_include"
-                item["must_use"] = True
-                continue
-            if item.get("obligation_level") == "must_include":
-                item["obligation_level"] = "should_include"
-                item["must_use"] = False
-                item["demotion_reason"] = (
-                    "Preserved as should-include evidence because the model selected it, but demoted from mandatory "
-                    "to keep the memo contract writeable."
-                )
-    for item in evidence_items:
-        item.pop("_original_order", None)
-
-
-def _obligation_budget_sort_key(item: dict[str, Any]) -> tuple[int, int]:
-    try:
-        rank = int(item.get("importance_rank"))
-    except (TypeError, ValueError):
-        rank = 999
-    return (rank, int(item.get("_original_order") or 0))
-
-
 def build_writer_packet_writeability_report(
     *,
     memo_obligations: dict[str, Any],
@@ -408,6 +371,7 @@ def _semantic_context(
         "quantity_obligation_plan": quantity_plan,
         "quantity_plan_by_evidence_value": _quantity_plan_by_evidence_value(quantity_plan),
         "memo_use_by_evidence_id": _memo_use_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
+        "adjudication_by_evidence_id": _adjudication_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
     }
 
 
@@ -473,6 +437,17 @@ def _memo_use_by_evidence_id(analyst_adjudication: dict[str, Any]) -> dict[str, 
         memo_use = str(row.get("memo_use") or row.get("role") or "").strip()
         if evidence_id and memo_use:
             rows[evidence_id] = memo_use
+    return rows
+
+
+def _adjudication_by_evidence_id(analyst_adjudication: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    for row in _list(analyst_adjudication.get("rows")):
+        if not isinstance(row, dict):
+            continue
+        evidence_id = str(row.get("evidence_item_id") or row.get("claim_id") or "").strip()
+        if evidence_id:
+            rows[evidence_id] = row
     return rows
 
 

@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
     run_analyst_quantity_binding,
 )
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
+from epistemic_case_mapper.map_briefing_decision_writer_packet import decision_writer_packet_to_memo_ready_packet
 from epistemic_case_mapper.map_briefing_pipeline import _promote_analyst_packet_as_active
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -725,6 +726,96 @@ def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
     assert scaffold["memo_ready_packet"]["evidence_items"][0]["reader_claim"] == "Option A reduces losses."
     assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
     assert scaffold["memo_ready_packet_quality_report"]["active_packet_source"] == "decision_writer_packet"
+
+
+def test_decision_writer_budget_keeps_adjudicated_quantified_support_mandatory() -> None:
+    packet = {
+        "schema_id": "decision_writer_packet_v1",
+        "decision_question": "Should the intervention be treated as harmful, neutral, or beneficial?",
+        "answer": {"bounded_answer": "The intervention is included in general guidance.", "confidence": "medium"},
+        "decision_logic": {},
+        "argument_plan": [],
+        "source_trail": [
+            {"source_id": "guidance", "source_label": "Guidance"},
+            {"source_id": "outcome", "source_label": "Outcome Study"},
+        ],
+        "global_reconciliation": {"issues": []},
+        "evidence_units": [
+            {
+                "unit_id": f"decision_unit_{index:03d}",
+                "role": "strongest_support",
+                "claim": f"Contextual support item {index}.",
+                "importance_rank": index,
+                "source_labels": ["Guidance"],
+                "lineage": {"covered_evidence_item_ids": [f"claim:context_{index}"]},
+            }
+            for index in range(1, 5)
+        ]
+        + [
+            {
+                "unit_id": "decision_unit_005",
+                "role": "strongest_support",
+                "claim": "Moderate exposure was not associated with the main adverse outcome.",
+                "importance_rank": 5,
+                "decision_relevance": "Quantified outcome evidence calibrates the decision.",
+                "source_labels": ["Outcome Study"],
+                "quantities": [
+                    {
+                        "value": "0.93",
+                        "source_evidence_item_id": "claim:outcome",
+                        "source_label": "Outcome Study",
+                    }
+                ],
+                "lineage": {"covered_evidence_item_ids": ["claim:outcome"]},
+            }
+        ],
+    }
+    adjudication = {
+        "rows": [
+            *[
+                {
+                    "evidence_item_id": f"claim:context_{index}",
+                    "memo_use": "load_bearing_primary_support",
+                    "importance_rank": 10 + index,
+                }
+                for index in range(1, 5)
+            ],
+            {
+                "evidence_item_id": "claim:outcome",
+                "memo_use": "load_bearing_primary_support",
+                "importance_rank": 1,
+            },
+        ]
+    }
+    quantity_binding = {
+        "schema_id": "analyst_quantity_binding_report_v1",
+        "status": "ready",
+        "candidate_bindings": [
+            {
+                "candidate_id": "q_outcome",
+                "source_evidence_item_id": "claim:outcome",
+                "value": "0.93",
+                "memo_use": "yes",
+                "quantity_role": "decision_anchor",
+                "must_retain": True,
+                "interpretation": "hazard ratio of 0.93",
+            }
+        ],
+    }
+
+    memo_ready = decision_writer_packet_to_memo_ready_packet(
+        packet,
+        analyst_adjudication=adjudication,
+        analyst_quantity_binding_report=quantity_binding,
+    )
+
+    outcome_item = next(item for item in memo_ready["evidence_items"] if item["reader_claim"].startswith("Moderate exposure"))
+    mandatory_support = [item for item in memo_ready["evidence_items"] if item["role"] == "strongest_support" and item["must_use"]]
+
+    assert outcome_item["must_use"] is True
+    assert outcome_item["decision_diagnosticity"]["best_adjudicated_importance_rank"] == 1
+    assert outcome_item["quantities"][0]["value"] == "0.93"
+    assert len(mandatory_support) == 4
 
 
 def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -> None:
