@@ -56,7 +56,17 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
                                     "line_hint": "lines 1-1",
                                 }
                             ],
-                            "quantities": ["20 percent"],
+                            "quantities": [
+                                {
+                                    "value": "20 percent",
+                                    "quantity_role": "effect_estimate",
+                                    "measures": "target risk reduction",
+                                    "local_interpretation": "This is the main effect estimate.",
+                                    "source_quote": "The program reduced target risk by 20 percent.",
+                                    "line_hint": "lines 1-1",
+                                    "retention_hint": "must_retain",
+                                }
+                            ],
                             "scope_conditions": [],
                         }
                     ],
@@ -91,6 +101,9 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert payload["claims"][0]["role"] == "source_claim"
     assert payload["claims"][0]["question_relevance"] == "direct"
     assert payload["claims"][0]["whole_doc_source_card"]["quantities"] == ["20 percent"]
+    assert payload["claims"][0]["claim_quantities"][0]["quantity_role"] == "effect_estimate"
+    assert payload["claims"][0]["claim_quantities"][0]["measures"] == "target risk reduction"
+    assert payload["claims"][0]["quantity_values"] == ["20 percent"]
     assert "decision_polarity" not in payload["claims"][0]["whole_doc_source_card"]
     report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
     assert report["repair_used"] is False

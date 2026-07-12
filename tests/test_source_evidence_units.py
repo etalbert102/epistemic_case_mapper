@@ -28,7 +28,18 @@ def test_source_evidence_units_preserve_exact_quote_and_quantity_tuple() -> None
                         "line_hint": "lines 1-1",
                     }
                 ],
-                "quantities": ["20 percent", "12 months"],
+                "quantities": [
+                    {
+                        "value": "20 percent",
+                        "quantity_role": "effect_estimate",
+                        "measures": "hospital admission reduction",
+                        "local_interpretation": "Main outcome effect estimate.",
+                        "source_quote": "Adults receiving the program had 20 percent lower hospital admissions over 12 months.",
+                        "line_hint": "lines 1-1",
+                        "retention_hint": "must_retain",
+                    },
+                    "12 months",
+                ],
                 "scope_conditions": ["adult participants"],
             }
         ],
@@ -44,9 +55,13 @@ def test_source_evidence_units_preserve_exact_quote_and_quantity_tuple() -> None
     assert units[0]["source_span"] == "lines 1-1"
     assert units[0]["warnings"] == []
     assert units[0]["quantities"][0]["quantity_type"] == "percentage"
+    assert units[0]["quantities"][0]["quantity_role"] == "effect_estimate"
+    assert units[0]["quantities"][0]["measures"] == "hospital admission reduction"
     assert units[0]["quantities"][1]["quantity_type"] == "duration"
     assert tuples[0]["unit_id"] == "demo_source_eu001"
     assert tuples[0]["value"] == "20 percent"
+    assert tuples[0]["quantity_role"] == "effect_estimate"
+    assert tuples[0]["measures"] == "hospital admission reduction"
     assert tuples[0]["endpoint"] == "hospital admissions over 12 months"
     assert report["unit_count"] == 1
     assert report["quantity_tuple_count"] == 2

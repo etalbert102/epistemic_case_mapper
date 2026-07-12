@@ -16,6 +16,7 @@ from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
+from epistemic_case_mapper.staged_semantic_claim_quantities import claim_quantity_values, merged_claim_quantities
 from epistemic_case_mapper.staged_semantic_decision_edges import (
     build_decision_edge_relation_inputs,
     decision_edge_quality_report,
@@ -360,11 +361,19 @@ def consolidate_claims_for_map(
         merged_ids = [str(claim.get("claim_id")) for claim in group_claims]
         merged_sources = _claim_supporting_sources(group_claims)
         merged_excerpts = _claim_supporting_excerpts(group_claims)
+        merged_quantities = merged_claim_quantities(group_claims)
         merged_methods = sorted({str(claim.get("extraction_method", "model")) for claim in group_claims if claim.get("extraction_method")})
         canonical = dict(canonical)
         canonical["supporting_claim_ids"] = merged_ids
         canonical["supporting_sources"] = merged_sources
         canonical["supporting_excerpts"] = merged_excerpts[:6]
+        if merged_quantities:
+            canonical["claim_quantities"] = merged_quantities
+            canonical["quantity_values"] = claim_quantity_values(merged_quantities)
+            source_card = dict(canonical.get("whole_doc_source_card")) if isinstance(canonical.get("whole_doc_source_card"), dict) else {}
+            source_card["claim_quantities"] = merged_quantities
+            source_card["quantities"] = claim_quantity_values(merged_quantities)
+            canonical["whole_doc_source_card"] = source_card
         canonical["consolidation_method"] = "tfidf_overlap_polarity_guarded_components"
         if merged_methods:
             canonical["supporting_extraction_methods"] = merged_methods

@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.staged_semantic_claim_quantities import normalize_claim_quantity_rows, quantity_type
+
 EVIDENCE_UNIT_SCHEMA_ID = "source_evidence_unit_v1"
 EVIDENCE_UNIT_REPORT_SCHEMA_ID = "source_evidence_unit_quality_report_v1"
 SOURCE_QUANTITY_TUPLES_SCHEMA_ID = "source_quantity_tuples_v1"
@@ -97,7 +99,7 @@ def _unit_from_claim(index: int, claim: dict[str, Any], *, source_id: str, sourc
     warnings = []
     if not _lexically_supported(proposition, source_quote):
         warnings.append("weak_quote_claim_overlap")
-    quantities = [_quantity_row(value) for value in _string_list(claim.get("quantities"))]
+    quantities = normalize_claim_quantity_rows(claim.get("claim_quantities") or claim.get("quantities"), supporting_quotes=quotes)
     typed = _typed_fields(proposition, quantities, claim)
     return {
         "schema_id": EVIDENCE_UNIT_SCHEMA_ID,
@@ -161,15 +163,6 @@ def _typed_fields(proposition: str, quantities: list[dict[str, Any]], claim: dic
     }
 
 
-def _quantity_row(value: str) -> dict[str, str]:
-    cleaned = _compact(value, max_chars=160)
-    return {
-        "value": cleaned,
-        "quantity_type": _quantity_type(cleaned),
-        "local_interpretation": "",
-    }
-
-
 def _quantity_tuples_for_unit(unit: dict[str, Any]) -> list[dict[str, str]]:
     tuples = []
     for index, quantity in enumerate(_list(unit.get("quantities")), start=1):
@@ -185,6 +178,9 @@ def _quantity_tuples_for_unit(unit: dict[str, Any]) -> list[dict[str, str]]:
                 "source_id": str(unit.get("source_id") or ""),
                 "value": value,
                 "quantity_type": str(quantity.get("quantity_type") or "unknown"),
+                "quantity_role": str(quantity.get("quantity_role") or ""),
+                "measures": str(quantity.get("measures") or ""),
+                "local_interpretation": str(quantity.get("local_interpretation") or ""),
                 "endpoint": str(unit.get("endpoint") or ""),
                 "comparator": str(unit.get("comparator") or ""),
                 "population": str(unit.get("population") or ""),
@@ -193,25 +189,6 @@ def _quantity_tuples_for_unit(unit: dict[str, Any]) -> list[dict[str, str]]:
             }
         )
     return tuples
-
-
-def _quantity_type(value: str) -> str:
-    text = value.lower()
-    if re.search(r"\b(19|20)\d{2}\b", text):
-        return "date"
-    if re.search(r"\b\d+(\.\d+)?\s*(years?|months?|weeks?|days?)\b", text):
-        return "duration"
-    if re.search(r"\b(n\s*=\s*)?\d{2,3}(,\d{3})+\b", text):
-        return "sample_size"
-    if "%" in text or "percent" in text or "percentage" in text:
-        return "percentage"
-    if re.search(r"\b(rr|hr|or|risk ratio|hazard ratio|odds ratio)\b", text):
-        return "ratio"
-    if re.search(r"\b\d+(\.\d+)?\s*/\s*(week|wk|day|d|month|year|yr)\b", text):
-        return "dose"
-    if re.search(r"\b\d+(\.\d+)?\b", text):
-        return "unknown"
-    return "not_numeric"
 
 
 def _evidence_type(text: str) -> str:

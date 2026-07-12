@@ -63,6 +63,17 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
                 "decision_importance_level": "high",
                 "decision_function": "answer_bearing",
                 "question_relevance": "direct",
+                "claim_quantities": [
+                    {
+                        "value": "20 percent",
+                        "quantity_role": "effect_estimate",
+                        "measures": "flood loss reduction",
+                        "local_interpretation": "Main estimated benefit.",
+                        "source_quote": "reduces flood losses by 20 percent",
+                        "line_hint": "lines 1-1",
+                        "retention_hint": "must_retain",
+                    }
+                ],
                 "whole_doc_source_card": {"quantities": ["20 percent"]},
             },
             {
@@ -142,6 +153,8 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     assert ledger["rows"][0]["source_appraisal"]["status"] == "ready"
     assert "association_not_causation" in ledger["rows"][0]["source_use_warnings"]
     assert ledger["rows"][0]["quantity_values"] == ["20 percent"]
+    assert ledger["rows"][0]["claim_quantities"][0]["quantity_role"] == "effect_estimate"
+    assert ledger["rows"][0]["claim_quantities"][0]["measures"] == "flood loss reduction"
     assert ledger["rows"][1]["existing_warning_codes"] == ["question_scope_mismatch"]
     assert ledger["rows"][1]["relation_context"][0]["relation_type"] == "in_tension_with"
     assert ledger["rows"][1]["relation_context"][0]["relation_contract"]["failure_condition"]

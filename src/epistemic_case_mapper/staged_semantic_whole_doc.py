@@ -10,6 +10,11 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import json_schema_block, render_prompt
+from epistemic_case_mapper.staged_semantic_claim_quantities import (
+    claim_quantity_json_schema,
+    claim_quantity_values,
+    normalize_claim_quantity_rows,
+)
 from epistemic_case_mapper.staged_semantic_evidence_units import build_source_evidence_units
 
 WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v5_decision_ranked_json"
@@ -275,7 +280,10 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                                 "required": ["quote", "line_hint"],
                             },
                         },
-                        "quantities": {"type": "array", "items": {"type": "string"}},
+                        "quantities": {
+                            "type": "array",
+                            "items": {"anyOf": [{"type": "string"}, claim_quantity_json_schema()]},
+                        },
                         "scope_conditions": {"type": "array", "items": {"type": "string"}},
                     },
                     "required": [
@@ -320,6 +328,8 @@ def _source_card_prompt(
                 "- Do not turn isolated table cells, headings, reference list entries, or one-word labels into standalone claims.",
                 "- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.",
                 "- Preserve key quantities inside the relevant canonical claim rather than as separate claims.",
+                "- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.",
+                "- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.",
                 "- Do not classify claims as support, counterweight, crux, scope role, mechanism role, or final map section. Later stages assign those roles after an overall answer frame exists.",
                 "- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
                 "- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.",
@@ -434,6 +444,7 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
     if not exact_quotes:
         return None
     importance = _normalize_importance(item.get("decision_importance"))
+    quantity_rows = normalize_claim_quantity_rows(item.get("quantities"), supporting_quotes=exact_quotes)
     return {
         "claim": claim,
         "question_relevance": _normalize_question_relevance(item.get("question_relevance")),
@@ -441,7 +452,8 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
         "decision_importance": importance,
         "why_it_matters": _compact(str(item.get("why_it_matters") or item.get("relevance_rationale") or "")),
         "supporting_quotes": exact_quotes[:3],
-        "quantities": _string_list(item.get("quantities")),
+        "quantities": claim_quantity_values(quantity_rows),
+        "claim_quantities": quantity_rows,
         "scope_conditions": _string_list(item.get("scope_conditions")),
     }
 
@@ -455,6 +467,8 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
     for claim in source_card["canonical_claims"]:
         quotes = claim.get("supporting_quotes", [])
         quote = str(quotes[0].get("quote", "") if quotes else "").strip()
+        claim_quantities = normalize_claim_quantity_rows(claim.get("claim_quantities") or claim.get("quantities"), supporting_quotes=quotes)
+        quantity_values = claim_quantity_values(claim_quantities)
         quote_count += len(quotes)
         exact_quote_count += sum(1 for row in quotes if _quote_matches_source(str(row.get("quote", "")), source_text))
         short_quote_count += sum(1 for row in quotes if len(str(row.get("quote", "")).strip()) < 25)
@@ -471,13 +485,16 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 "scope_flags": claim.get("scope_flags", ["none"]),
                 "decision_importance": importance,
                 "importance_rationale": claim.get("why_it_matters", ""),
+                "quantity_values": quantity_values,
+                "claim_quantities": claim_quantities,
                 "source_acronym_expansions": _used_acronym_expansions(
                     acronym_expansions,
                     text=" ".join([claim["claim"], quote]),
                 ),
                 "whole_doc_source_card": {
                     "source_bottom_line": source_card.get("source_bottom_line", ""),
-                    "quantities": claim.get("quantities", []),
+                    "quantities": quantity_values,
+                    "claim_quantities": claim_quantities,
                     "scope_conditions": claim.get("scope_conditions", []),
                     "supporting_quotes": quotes,
                 },

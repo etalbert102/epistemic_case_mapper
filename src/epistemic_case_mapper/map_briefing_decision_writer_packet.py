@@ -791,7 +791,6 @@ def _source_aliases(evidence_units: list[dict[str, Any]], ledger_by_id: dict[str
         if str(row.get("source_label") or row.get("source_id") or "").strip()
     }
 
-
 def _source_labels(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> list[str]:
     labels = []
     for evidence_id in evidence_ids:
@@ -799,13 +798,35 @@ def _source_labels(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, An
         labels.extend(_string_list(row.get("source_labels")) or _string_list(row.get("source_ids")))
     return _dedupe(labels)
 
-
 def _quantities(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for evidence_id in evidence_ids:
         ledger_row = ledger_by_id.get(evidence_id, {})
         labels = _string_list(ledger_row.get("source_labels"))
+        seen: set[str] = set()
+        for quantity in _list(ledger_row.get("claim_quantities")):
+            if not isinstance(quantity, dict):
+                continue
+            value = str(quantity.get("value") or "").strip()
+            if not value:
+                continue
+            seen.add(" ".join(value.lower().split()))
+            interpretation = str(quantity.get("local_interpretation") or quantity.get("measures") or ledger_row.get("why_it_matters") or ledger_row.get("claim") or "")
+            rows.append(
+                {
+                    "value": value,
+                    "source_evidence_item_id": evidence_id,
+                    "source_label": labels[0] if labels else "",
+                    "quantity_role": str(quantity.get("quantity_role") or ""),
+                    "quantity_type": str(quantity.get("quantity_type") or ""),
+                    "measures": str(quantity.get("measures") or ""),
+                    "interpretation": _short_text(interpretation, 360),
+                    "retention_hint": str(quantity.get("retention_hint") or ""),
+                }
+            )
         for value in _string_list(ledger_row.get("quantity_values")):
+            if " ".join(value.lower().split()) in seen:
+                continue
             rows.append(
                 {
                     "value": value,

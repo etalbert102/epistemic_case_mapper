@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.staged_semantic_claim_quantities import claim_quantity_values, normalize_claim_quantity_rows
 from epistemic_case_mapper.staged_semantic_claim_importance import normalized_decision_importance, question_fit_from_relevance
 from epistemic_case_mapper.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.staged_semantic_quote_alignment import align_source_quote_to_span, quote_alignment_metadata
@@ -245,6 +246,13 @@ def _normalize_claim_proposal(
     if question_relevance == "irrelevant":
         return None, "question_irrelevant"
     scope_flags = _normalized_scope_flags(proposal.get("scope_flags"))
+    whole_doc_source_card = _metadata_dict(proposal.get("whole_doc_source_card"))
+    claim_quantities = normalize_claim_quantity_rows(
+        proposal.get("claim_quantities")
+        or whole_doc_source_card.get("claim_quantities")
+        or proposal.get("quantity_values")
+        or whole_doc_source_card.get("quantities")
+    )
     importance = normalized_decision_importance(
         proposal,
         claim_text=claim_text,
@@ -274,7 +282,9 @@ def _normalize_claim_proposal(
             "default_use": importance["default_use"],
             "importance_rationale": importance["rationale"],
             "source_acronym_expansions": _metadata_dict(proposal.get("source_acronym_expansions")),
-            "whole_doc_source_card": _metadata_dict(proposal.get("whole_doc_source_card")),
+            "quantity_values": claim_quantity_values(claim_quantities),
+            "claim_quantities": claim_quantities,
+            "whole_doc_source_card": whole_doc_source_card,
         },
         "",
     )
