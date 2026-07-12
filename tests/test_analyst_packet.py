@@ -479,7 +479,7 @@ def test_analyst_quantity_binding_batches_large_candidate_sets(monkeypatch) -> N
 
     report = result["analyst_quantity_binding_report"]
     parse = result["analyst_quantity_binding_parse_report"]
-    assert len(calls) == 2
+    assert len(calls) == 5
     assert parse["missing_candidate_ids"] == []
     assert report["candidate_count"] == 40
     assert report["must_retain_count"] == 1

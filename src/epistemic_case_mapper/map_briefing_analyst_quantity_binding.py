@@ -134,7 +134,7 @@ def _run_model_quantity_binding_batches(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
-    batch_size: int = 36,
+    batch_size: int = 8,
 ) -> tuple[dict[str, Any], str, str, dict[str, Any]]:
     candidates = [row for row in _list(deterministic.get("candidate_bindings")) if isinstance(row, dict)]
     if not candidates:
@@ -289,6 +289,18 @@ def merge_quantity_adjudication(
             "issues": ["invalid_schema"],
         }
     model_rows = [row.model_dump() for row in parsed.bindings]
+    if candidate_ids and not model_rows:
+        return deterministic_report, {
+            "schema_id": "analyst_quantity_binding_parse_report_v1",
+            "status": "empty_bindings",
+            "valid": False,
+            "errors": [],
+            "candidate_count": len(candidate_ids),
+            "accepted_binding_count": 0,
+            "missing_candidate_ids": sorted(candidate_ids),
+            "unknown_candidate_ids": [],
+            "issues": ["empty_bindings"],
+        }
     row_ids = {row["candidate_id"] for row in model_rows}
     unknown = sorted(row_ids - candidate_ids)
     missing = sorted(candidate_ids - row_ids)
@@ -369,7 +381,7 @@ def _combined_parse_report(
     return {
         "schema_id": "analyst_quantity_binding_parse_report_v1",
         "status": "ready" if not issues else "warning",
-        "valid": not unknown and not invalid_batches,
+        "valid": not unknown and bool(row_ids & candidate_ids),
         "candidate_count": len(candidate_ids),
         "accepted_binding_count": len(row_ids & candidate_ids),
         "missing_candidate_ids": missing,
@@ -511,6 +523,7 @@ def _fallback_quantity_role(candidate: dict[str, Any], *, memo_use: str) -> str:
 
 
 def _report_from_rows(rows: list[dict[str, Any]], *, method: str, decision_question: str = "") -> dict[str, Any]:
+    _apply_quantity_obligation_budget(rows)
     approved = [row for row in rows if row.get("memo_use") == "yes"]
     must_retain = [row for row in rows if row.get("must_retain")]
     context = [row for row in rows if row.get("memo_use") == "context_only"]
@@ -539,6 +552,41 @@ def _report_from_rows(rows: list[dict[str, Any]], *, method: str, decision_quest
         "rejected_bindings": rejected,
         "issues": ["accepted_quantity_with_deterministic_warning"] if accepted_with_warning else [],
     }
+
+
+def _apply_quantity_obligation_budget(rows: list[dict[str, Any]], *, per_group_limit: int = 2, global_limit: int = 12) -> None:
+    selected = [row for row in rows if isinstance(row, dict) and row.get("must_retain")]
+    if len(selected) <= global_limit:
+        return
+    by_group: dict[str, list[dict[str, Any]]] = {}
+    for index, row in enumerate(rows):
+        if isinstance(row, dict):
+            row["_quantity_order"] = index
+    for row in selected:
+        by_group.setdefault(str(row.get("group_id") or ""), []).append(row)
+    retained_ids: set[int] = set()
+    for group_rows in by_group.values():
+        for row in sorted(group_rows, key=_quantity_budget_sort_key)[:per_group_limit]:
+            retained_ids.add(id(row))
+    retained_ordered = sorted([row for row in selected if id(row) in retained_ids], key=_quantity_budget_sort_key)[:global_limit]
+    retained_ids = {id(row) for row in retained_ordered}
+    for row in selected:
+        if id(row) in retained_ids:
+            continue
+        row["must_retain"] = False
+        row["safe_to_omit_reason"] = (
+            str(row.get("safe_to_omit_reason") or "").strip()
+            or "Model selected this as memo-relevant, but it was demoted from mandatory retention to keep the memo quantity contract writeable."
+        )
+        row["required_for_memo_reason"] = ""
+    for row in rows:
+        if isinstance(row, dict):
+            row.pop("_quantity_order", None)
+
+
+def _quantity_budget_sort_key(row: dict[str, Any]) -> tuple[int, int]:
+    role_score = {"decision_anchor": 0, "supporting_detail": 1, "study_descriptor": 2, "statistical_detail": 3, "audit_only": 4}
+    return (role_score.get(str(row.get("quantity_role") or ""), 5), int(row.get("_quantity_order") or 0))
 
 
 def _groups(synthesis_packet: dict[str, Any]) -> list[dict[str, Any]]:
