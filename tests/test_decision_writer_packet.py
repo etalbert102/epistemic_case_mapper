@@ -149,6 +149,8 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["decision_obligation_plan"]["schema_id"] == "decision_obligation_plan_v1"
     assert packet["writer_packet_writeability_report"]["schema_id"] == "writer_packet_writeability_report_v1"
     assert packet["decision_memo_contract"]["schema_id"] == "decision_memo_contract_v1"
+    assert packet["writer_decision_interface"]["schema_id"] == "writer_decision_interface_v1"
+    assert packet["writer_decision_interface_quality_report"]["schema_id"] == "writer_decision_interface_quality_report_v1"
 
 
 def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities() -> None:

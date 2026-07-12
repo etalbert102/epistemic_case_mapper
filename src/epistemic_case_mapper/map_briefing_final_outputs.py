@@ -200,15 +200,30 @@ def _run_memo_ready_final_output_path(
         run_memo_ready_presentation_normalization,
         run_memo_ready_packet_synthesis,
     )
+    from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+        build_writer_decision_interface,
+        build_writer_decision_interface_quality_report,
+    )
 
     packet = memo_package["scaffold"].get("memo_ready_packet")
     memo_ready_packet = packet if isinstance(packet, dict) else {}
+    writer_interface = build_writer_decision_interface(memo_ready_packet)
+    writer_interface_quality = build_writer_decision_interface_quality_report(writer_interface)
+    memo_package["scaffold"]["writer_decision_interface"] = writer_interface
+    memo_package["scaffold"]["writer_decision_interface_quality_report"] = writer_interface_quality
     record_memo_progress(
         artifacts,
         "memo_ready_synthesis",
         "started",
         backend=backend_config.backend,
-        details={"evidence_items": len(memo_ready_packet.get("evidence_items", [])) if isinstance(memo_ready_packet.get("evidence_items"), list) else 0},
+        details={
+            "evidence_items": len(memo_ready_packet.get("evidence_items", [])) if isinstance(memo_ready_packet.get("evidence_items"), list) else 0,
+            "writer_interface_visible_evidence": writer_interface_quality.get("must_use_evidence_count"),
+            "writer_interface_excluded_evidence": writer_interface_quality.get("excluded_evidence_count"),
+            "writer_interface_quantity_anchors": writer_interface_quality.get("quantity_anchor_count"),
+            "writer_interface_quality_status": writer_interface_quality.get("status"),
+            "writer_interface_quality_warnings": writer_interface_quality.get("warnings", []),
+        },
     )
     synthesis = run_memo_ready_packet_synthesis(
         memo_ready_packet,

@@ -20,6 +20,10 @@ from epistemic_case_mapper.map_briefing_spine_audit import (
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_writer_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
+from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+    build_writer_decision_interface,
+    build_writer_decision_interface_quality_report,
+)
 
 
 @dataclass(frozen=True)
@@ -159,6 +163,8 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         *_decision_contract_artifact_specs(),
         ArtifactSpec("active_memo_ready_packet_report", "active_memo_ready_packet_report.json", "json", _scaffold_value("active_memo_ready_packet_report"), review_label="Active memo-ready packet report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
+        ArtifactSpec("writer_decision_interface", "writer_decision_interface.json", "json", lambda ctx: _writer_decision_interface(ctx.scaffold), review_label="Writer decision interface"),
+        ArtifactSpec("writer_decision_interface_quality_report", "writer_decision_interface_quality_report.json", "json", lambda ctx: _writer_decision_interface_quality_report(ctx.scaffold), review_label="Writer decision interface quality"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),
         ArtifactSpec("decision_crux_reconstruction_report", "decision_crux_reconstruction_report.json", "json", _scaffold_value("decision_crux_reconstruction_report"), review_label="Decision crux reconstruction"),
         ArtifactSpec("quantity_slot_report", "quantity_slot_report.json", "json", _scaffold_value("quantity_slot_report"), review_label="Quantity slot report"),
@@ -697,6 +703,26 @@ def _source_appraisal_warning_counts(report: dict[str, Any]) -> dict[str, int]:
 def _scaffold_dict(scaffold: dict[str, Any], key: str) -> dict[str, Any]:
     value = scaffold.get(key, {})
     return value if isinstance(value, dict) else {}
+
+
+def _writer_decision_interface(scaffold: dict[str, Any]) -> dict[str, Any]:
+    top_level = scaffold.get("writer_decision_interface")
+    if isinstance(top_level, dict) and top_level:
+        return top_level
+    packet = _scaffold_dict(scaffold, "memo_ready_packet")
+    stored = packet.get("writer_decision_interface")
+    return stored if isinstance(stored, dict) and stored else build_writer_decision_interface(packet)
+
+
+def _writer_decision_interface_quality_report(scaffold: dict[str, Any]) -> dict[str, Any]:
+    top_level = scaffold.get("writer_decision_interface_quality_report")
+    if isinstance(top_level, dict) and top_level:
+        return top_level
+    packet = _scaffold_dict(scaffold, "memo_ready_packet")
+    stored = packet.get("writer_decision_interface_quality_report")
+    if isinstance(stored, dict) and stored:
+        return stored
+    return build_writer_decision_interface_quality_report(_writer_decision_interface(scaffold))
 
 
 def _rel(repo_root: Path, path: Path | None) -> str | None:

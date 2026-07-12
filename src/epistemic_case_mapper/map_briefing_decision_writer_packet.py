@@ -13,6 +13,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 from epistemic_case_mapper.map_briefing_decision_writer_contract import build_decision_memo_contract
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_obligation_budget, decision_unit_diagnosticity
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
+from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+    build_writer_decision_interface,
+    build_writer_decision_interface_quality_report,
+)
 
 
 ROLE_BY_GLOBAL_SECTION = {
@@ -123,6 +127,9 @@ def decision_writer_packet_to_memo_ready_packet(
             "warnings": _string_list(_dict(packet.get("global_reconciliation")).get("issues")),
         },
     }
+    writer_interface = build_writer_decision_interface(memo_ready)
+    memo_ready["writer_decision_interface"] = writer_interface
+    memo_ready["writer_decision_interface_quality_report"] = build_writer_decision_interface_quality_report(writer_interface)
     return memo_ready
 
 
