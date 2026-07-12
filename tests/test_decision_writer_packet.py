@@ -4,6 +4,7 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
+from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
@@ -279,6 +280,8 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
     assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"
+    assert interface["adaptive_memo_outline"]["schema_id"] == "adaptive_memo_outline_v1"
+    assert interface["adaptive_memo_outline"]["must_write_cards"]
     assert [move["move"] for move in interface["reasoning_hierarchy"]["reasoning_moves"]][:2] == [
         "answer_frame",
         "primary_answer_evidence",
@@ -318,6 +321,7 @@ def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() ->
     assert "excluded_evidence_log" not in model_serialized
     assert "lineage_report" not in model_serialized
     assert "decision_evidence_table" in model_serialized
+    assert "adaptive_memo_outline" in model_serialized
     assert "must_use_evidence" not in model_serialized
     assert "decision_writer_item_optional" not in model_serialized
 
@@ -351,6 +355,7 @@ def test_writer_model_context_exposes_compact_source_appraisal() -> None:
     assert "association_not_causation" in support["source_appraisal_note"]
     assert context["source_appraisal_summary"][0]["decision_directness"] == "partial"
     assert context["source_appraisal_summary"][0]["allowed_wording"]["causal_language_allowed"] is False
+    assert "source_weighting" in context["adaptive_memo_outline"]["section_selection_summary"]["selected_section_ids"]
 
 
 def test_writer_decision_interface_rescues_should_include_quantity_context() -> None:
@@ -397,12 +402,98 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
     assert "Narrative blueprint" in prompt
     assert "reasoning_hierarchy" in prompt
     assert "decision_evidence_table as the primary evidence surface" in prompt
+    assert "adaptive_memo_outline as the section plan" in prompt
+    assert "adaptive_memo_outline.must_write_cards" in prompt
+    assert "quantities_to_keep_together" in prompt
     assert "organizing spine" in prompt
     assert "Required obligation ledger" in prompt
     assert "retention checklist, not an outline" in prompt
     assert "Use this as load-bearing support for the default answer" in prompt
     assert "Bound the answer's applicability" in prompt
+    assert "Suggested memo shape" not in prompt
     assert "analyst_synthesis_packet" not in prompt
+
+
+def test_adaptive_outline_merges_duplicate_cards_without_dropping_quantities() -> None:
+    interface = {
+        "schema_id": "writer_decision_interface_v1",
+        "decision_question": "What should we believe about option A?",
+        "decision_evidence_table": [
+            {
+                "item_id": "a",
+                "role": "quantitative_anchor",
+                "answer_relation": "supports_answer",
+                "claim": "Option A changes the main outcome.",
+                "source_labels": ["Outcome Review"],
+                "quantities": [
+                    {"value": "1.17", "interpretation": "effect estimate"},
+                    {"value": "3.24%", "interpretation": "absolute difference"},
+                ],
+            }
+        ],
+        "retention_checklist": [
+            {
+                "obligation_id": "one",
+                "obligation_type": "must_interpret_quantity",
+                "role": "quantitative_anchor",
+                "statement": "Interpret this load-bearing quantity for the decision: Option A changes the main outcome.",
+                "source_labels": ["Outcome Review"],
+                "quantities": [{"value": "1.17", "interpretation": "effect estimate"}],
+                "evidence_item_ids": ["a"],
+            },
+            {
+                "obligation_id": "two",
+                "obligation_type": "must_interpret_quantity",
+                "role": "quantitative_anchor",
+                "statement": "Interpret this load-bearing quantity for the decision: Option A changes the main outcome.",
+                "source_labels": ["Outcome Review"],
+                "quantities": [{"value": "3.24%", "interpretation": "absolute difference"}],
+                "evidence_item_ids": ["a"],
+            },
+        ],
+        "source_appraisal_summary": [],
+    }
+
+    outline = build_adaptive_memo_outline(interface)
+    card = outline["must_write_cards"][0]
+
+    assert len(outline["must_write_cards"]) == 1
+    assert sorted(card["obligation_ids"]) == ["one", "two"]
+    assert [row["value"] for row in card["quantities_to_keep_together"]] == ["1.17", "3.24%"]
+    assert card["section_id"] == "answer_evidence"
+    assert outline["merge_report"]["input_card_count"] == 2
+
+
+def test_adaptive_outline_uses_evidence_roles_for_counterweight_sections() -> None:
+    interface = {
+        "schema_id": "writer_decision_interface_v1",
+        "decision_question": "Should option A be adopted?",
+        "decision_evidence_table": [
+            {
+                "item_id": "limit",
+                "role": "scope_boundary",
+                "answer_relation": "bounds_scope",
+                "claim": "Option A has only been tested in the initial setting.",
+                "source_labels": ["Scope Review"],
+            }
+        ],
+        "retention_checklist": [
+            {
+                "obligation_id": "scope",
+                "obligation_type": "must_bound_scope",
+                "role": "scope_boundary",
+                "statement": "Bound the answer's applicability using this source-backed scope boundary.",
+                "source_labels": ["Scope Review"],
+                "evidence_item_ids": ["limit"],
+            }
+        ],
+        "source_appraisal_summary": [],
+    }
+
+    outline = build_adaptive_memo_outline(interface)
+
+    assert "counterweights" in outline["section_selection_summary"]["selected_section_ids"]
+    assert outline["must_write_cards"][0]["section_id"] == "counterweights"
 
 
 def test_bare_decision_writer_packet_prompt_is_explicitly_unavailable() -> None:

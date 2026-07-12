@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -55,6 +56,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "excluded_evidence_log": [_excluded_evidence_log_row(item) for item in filtered_items],
         "lineage_report": _lineage_report(packet, visible_items, filtered_items, obligations),
     }
+    interface["adaptive_memo_outline"] = build_adaptive_memo_outline(interface)
     quality = build_writer_decision_interface_quality_report(interface)
     interface["quality_warnings"] = quality["warnings"]
     return interface
@@ -76,6 +78,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "rescued_context_table": _list(interface.get("rescued_context_table")),
         "source_appraisal_summary": _list(interface.get("source_appraisal_summary")),
         "reasoning_hierarchy": hierarchy,
+        "adaptive_memo_outline": _dict(interface.get("adaptive_memo_outline")),
         "practical_implications": _string_list(interface.get("practical_implications")),
         "quantity_anchors": _list(interface.get("quantity_anchors")),
         "critique_writer_guidance": _dict(interface.get("critique_writer_guidance")),
