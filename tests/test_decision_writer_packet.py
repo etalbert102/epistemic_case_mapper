@@ -12,6 +12,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+    build_writer_decision_interface,
+    build_writer_decision_interface_quality_report,
+)
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -204,6 +208,53 @@ def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities(
     assert packet["quantity_obligation_plan"]["must_retain_count"] == 1
     assert packet["writer_packet_writeability_report"]["model_call_accounting"]["new_default_model_call_added"] is False
     assert "analyst_quantity_binding_report" in packet["writer_packet_writeability_report"]["model_call_accounting"]["existing_judgment_artifacts_reused"]
+
+
+def test_writer_decision_interface_compiles_visible_decision_context() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    interface = build_writer_decision_interface(packet)
+    quality = build_writer_decision_interface_quality_report(interface)
+
+    assert interface["schema_id"] == "writer_decision_interface_v1"
+    assert interface["decision_question"] == "Should option A be adopted?"
+    assert interface["support_that_drives_answer"][0]["claim"] == "Option A improves the main outcome."
+    assert interface["scope_boundaries"][0]["claim"] == "The answer depends on whether the narrower setting matters."
+    assert interface["quantity_anchors"][0]["value"] == "20% improvement"
+    assert interface["retention_checklist"]
+    assert interface["lineage_report"]["model_visible_evidence_item_count"] == 2
+    assert quality["status"] == "warning"
+    assert "missing_counterweights" in quality["warnings"]
+
+
+def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    packet["evidence_items"].append(
+        {
+            "item_id": "decision_writer_item_optional",
+            "role": "strongest_support",
+            "reader_claim": "Off-question omega seafood context should not guide the memo.",
+            "source_label": "Nutrition Context",
+            "source_labels": ["Nutrition Context"],
+            "obligation_level": "optional_context",
+            "must_use": False,
+        }
+    )
+
+    interface = build_writer_decision_interface(packet)
+    serialized = str(interface)
+
+    assert "Off-question omega seafood context should not guide the memo" not in serialized
+    assert interface["excluded_evidence_log"][0]["item_id"] == "decision_writer_item_optional"
+    assert interface["excluded_evidence_log"][0]["filter_reason"] == "not_marked_must_use_for_memo_synthesis"
 
 
 def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:
