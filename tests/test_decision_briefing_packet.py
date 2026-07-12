@@ -638,6 +638,15 @@ def test_packet_critique_warning_only_outputs_become_writer_guidance(monkeypatch
                       "recommended_action": "Distinguish guidance from direct outcome evidence."
                     }
                   ],
+                  "reader_facing_guidance": [
+                    {
+                      "guidance_type": "evidence_type_distinction",
+                      "instruction": "Distinguish professional guidance from direct outcome evidence when calibrating confidence.",
+                      "why_it_matters": "The memo could otherwise overstate source quality.",
+                      "source_labels": ["Guideline Source"],
+                      "validation_terms": ["guidance", "direct outcome", "confidence"]
+                    }
+                  ],
                   "recommended_packet_edits": []
                 }
                 """
@@ -667,9 +676,12 @@ def test_packet_critique_warning_only_outputs_become_writer_guidance(monkeypatch
     assert result["packet_critique_adjudication_report"]["accepted_count"] == 0
     assert guidance["status"] == "ready"
     assert guidance["accepted_packet_edit_count"] == 0
-    assert guidance["required_obligation_count"] >= 2
-    assert any(row["guidance_type"] == "answer_frame" for row in guidance["writer_obligations"])
-    assert any("guidance" in row["instruction"].lower() for row in guidance["writer_obligations"])
+    assert guidance["model_instruction_count"] >= 2
+    assert guidance["required_obligation_count"] >= 1
+    assert any(row["guidance_type"] == "answer_frame" for row in guidance["guidance"])
+    assert not any(row["guidance_type"] == "answer_frame" for row in guidance["writer_obligations"])
+    assert any(row["guidance_type"] == "evidence_type_distinction" for row in guidance["writer_obligations"])
+    assert any("direct outcome" in " ".join(row["validation_terms"]).lower() for row in guidance["writer_obligations"])
     assert result["decision_briefing_packet"]["writer_guidance_packet"]["schema_id"] == "writer_guidance_packet_v1"
 
 

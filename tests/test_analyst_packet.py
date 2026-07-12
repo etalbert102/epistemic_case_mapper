@@ -439,6 +439,9 @@ def test_memo_ready_prompt_includes_critique_writer_guidance() -> None:
                 "instruction": "Distinguish guidance from direct outcome evidence.",
                 "why_it_matters": "The memo could otherwise overstate source quality.",
                 "validation_terms": ["guidance", "direct", "outcome"],
+                "model_instruction_ready": True,
+                "memo_obligation_ready": True,
+                "guidance_use": "memo_obligation",
             }
         ],
         "writer_obligations": [
@@ -449,6 +452,9 @@ def test_memo_ready_prompt_includes_critique_writer_guidance() -> None:
                 "instruction": "Distinguish guidance from direct outcome evidence.",
                 "why_it_matters": "The memo could otherwise overstate source quality.",
                 "validation_terms": ["guidance", "direct", "outcome"],
+                "model_instruction_ready": True,
+                "memo_obligation_ready": True,
+                "guidance_use": "memo_obligation",
             }
         ],
     }

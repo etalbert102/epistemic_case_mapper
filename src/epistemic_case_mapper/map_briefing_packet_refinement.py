@@ -21,14 +21,11 @@ from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.model_schemas import parse_model_output_report
 
-
 PacketJudgment = Literal["ready", "needs_repair", "not_sufficient"]
 PacketEditType = Literal["promote", "demote", "split", "merge", "relabel", "add_warning", "insufficiency_warning"]
 
-
 def _blank_if_none(value: Any) -> Any:
     return "" if value is None else value
-
 
 def _note_to_text(value: Any) -> str:
     if value is None:
@@ -43,10 +40,8 @@ def _note_to_text(value: Any) -> str:
         return json.dumps(value, sort_keys=True, ensure_ascii=False)
     return str(value).strip()
 
-
 class _FlexibleCritiqueModel(BaseModel):
     model_config = ConfigDict(extra="allow")
-
 
 class PacketFrameRisk(_FlexibleCritiqueModel):
     risk: str = ""
@@ -54,12 +49,10 @@ class PacketFrameRisk(_FlexibleCritiqueModel):
     why_it_matters: str = ""
     recommended_action: str = ""
 
-
 class MissingDecisionFunction(_FlexibleCritiqueModel):
     decision_function: str = ""
     evidence_ids_that_suggest_gap: list[str] = Field(default_factory=list, max_length=12)
     recommended_action: str = ""
-
 
 class MisassignedRole(_FlexibleCritiqueModel):
     bundle_id: str = ""
@@ -71,7 +64,6 @@ class MisassignedRole(_FlexibleCritiqueModel):
     @classmethod
     def coerce_nullable_text(cls, value: Any) -> Any:
         return _blank_if_none(value)
-
 
 class RecommendedPacketEdit(_FlexibleCritiqueModel):
     edit_type: PacketEditType
@@ -91,7 +83,6 @@ class RecommendedPacketEdit(_FlexibleCritiqueModel):
     def coerce_nullable_text(cls, value: Any) -> Any:
         return _blank_if_none(value)
 
-
 class BundleRoleCheck(_FlexibleCritiqueModel):
     bundle_id: str = ""
     current_role: str = ""
@@ -105,7 +96,6 @@ class BundleRoleCheck(_FlexibleCritiqueModel):
     @classmethod
     def coerce_nullable_text(cls, value: Any) -> Any:
         return _blank_if_none(value)
-
 
 class SynthesisRisk(_FlexibleCritiqueModel):
     type: str = ""
@@ -131,7 +121,6 @@ class SynthesisRisk(_FlexibleCritiqueModel):
             self.risk = self.description
         return self
 
-
 class PacketInsufficiencyWarning(_FlexibleCritiqueModel):
     type: str = ""
     bundle_id: str = ""
@@ -154,7 +143,6 @@ class PacketInsufficiencyWarning(_FlexibleCritiqueModel):
             self.warning = self.description
         return self
 
-
 class ClaimQualityIssue(_FlexibleCritiqueModel):
     bundle_id: str = ""
     claim: str = ""
@@ -173,7 +161,6 @@ class ClaimQualityIssue(_FlexibleCritiqueModel):
         if not self.issue and self.description:
             self.issue = self.description
         return self
-
 
 class SectionRoutingIssue(_FlexibleCritiqueModel):
     bundle_id: str = ""
@@ -194,7 +181,6 @@ class SectionRoutingIssue(_FlexibleCritiqueModel):
             self.issue = self.description
         return self
 
-
 class AnswerFrameIssue(_FlexibleCritiqueModel):
     component: str = ""
     critique: str = ""
@@ -207,7 +193,6 @@ class AnswerFrameIssue(_FlexibleCritiqueModel):
     def coerce_nullable_text(cls, value: Any) -> Any:
         return _blank_if_none(value)
 
-
 class PacketCritiqueOutput(_FlexibleCritiqueModel):
     schema_id: Literal["packet_critique_v1"] = "packet_critique_v1"
     decision_adequate: bool | None = None
@@ -218,6 +203,7 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     answer_frame_challenges: list[AnswerFrameIssue] = Field(default_factory=list, max_length=8)
     misleading_synthesis_risks: list[SynthesisRisk | str] = Field(default_factory=list, max_length=12)
     misleading_risks: list[SynthesisRisk | str] = Field(default_factory=list, max_length=12)
+    reader_facing_guidance: list[dict[str, Any]] = Field(default_factory=list, max_length=12)
     insufficiency_warnings: list[PacketInsufficiencyWarning] = Field(default_factory=list, max_length=12)
     claim_quality_issues: list[ClaimQualityIssue] = Field(default_factory=list, max_length=12)
     section_routing_issues: list[SectionRoutingIssue] = Field(default_factory=list, max_length=12)
@@ -230,6 +216,16 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
     section_plan_risks: list[str] = Field(default_factory=list, max_length=8)
     recommended_packet_edits: list[RecommendedPacketEdit] = Field(default_factory=list, max_length=16)
 
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_nested_critique(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or not isinstance(value.get("critique"), dict):
+            return value
+        critique = dict(value["critique"])
+        if isinstance(critique.get("answer_frame_critique"), dict) and "answer_frame_issues" not in critique:
+            critique["answer_frame_issues"] = [critique["answer_frame_critique"]]
+        return {**value, **critique, "schema_id": "packet_critique_v1"}
+
     @field_validator(
         "bundle_role_checks",
         "bad_answer_frame_risks",
@@ -237,6 +233,7 @@ class PacketCritiqueOutput(_FlexibleCritiqueModel):
         "answer_frame_challenges",
         "misleading_synthesis_risks",
         "misleading_risks",
+        "reader_facing_guidance",
         "insufficiency_warnings",
         "claim_quality_issues",
         "section_routing_issues",
@@ -475,6 +472,7 @@ def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dic
         "When adding recommended_packet_edits, use target_ids for bundle IDs; if you include a source-only insufficiency warning, use edit_type `add_warning`.\n"
         "Also check for packet problems that would mislead synthesis even when role labels are valid: malformed or non-claim claim text, off-question evidence, low-quality evidence treated as load-bearing, answer-frame problems, section-routing mistakes, missing decision functions, overcompressed scope/crux evidence, and quantity interpretation risks.\n"
         "Record these in the structured fields: misleading_synthesis_risks, insufficiency_warnings, claim_quality_issues, section_routing_issues, answer_frame_issues, missing_decision_functions, missing_or_weak_cruxes, and section_plan_risks.\n"
+        "Also return `reader_facing_guidance`: concrete memo instructions a reader should see, such as source-type distinctions, evidence-quality caveats, observational-vs-interventional distinctions, uncertainty caveats, scope/applicability caveats, and tensions that would mislead if omitted. Write each item as reader-facing analysis guidance with instruction, why_it_matters, source_labels, target_ids, and validation_terms when available.\n"
         "You may not invent new sources, quantities, or claims. Recommendations must reference existing IDs, or be recorded as insufficiency warnings.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
@@ -659,6 +657,7 @@ def _adjudication_report(critique: dict[str, Any], packet: dict[str, Any], *, sk
         "bad_answer_frame_risks": critique.get("bad_answer_frame_risks", []),
         "answer_frame_issues": normalized_issues["answer_frame_issues"],
         "misleading_synthesis_risks": normalized_issues["misleading_synthesis_risks"],
+        "reader_facing_guidance": critique.get("reader_facing_guidance", []),
         "insufficiency_warnings": normalized_issues["insufficiency_warnings"],
         "claim_quality_issues": normalized_issues["claim_quality_issues"],
         "section_routing_issues": normalized_issues["section_routing_issues"],

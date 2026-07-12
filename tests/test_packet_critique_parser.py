@@ -29,6 +29,16 @@ def test_packet_critique_parser_accepts_common_model_shape_variants() -> None:
           "description": "A bundle answers an adjacent outcome rather than the decision question."
         }
       ],
+      "reader_facing_guidance": [
+        {
+          "guidance_type": "evidence_type_distinction",
+          "instruction": "Distinguish professional guidance from direct outcome evidence.",
+          "why_it_matters": "Otherwise confidence may be overstated.",
+          "source_labels": ["Guideline Source"],
+          "target_ids": ["bundle_018"],
+          "validation_terms": ["guidance", "direct outcome", "confidence"]
+        }
+      ],
       "insufficiency_warnings": [
         {
           "type": "source_only_insufficiency",
@@ -60,6 +70,7 @@ def test_packet_critique_parser_accepts_common_model_shape_variants() -> None:
     data = report["data"]
     assert data["bundle_role_checks"][0]["recommended_role"] == ""
     assert data["misleading_synthesis_risks"][0]["type"] == "off_question_evidence"
+    assert data["reader_facing_guidance"][0]["guidance_type"] == "evidence_type_distinction"
     assert data["insufficiency_warnings"][0]["reason"] == "A high-priority counterweight source is omitted."
     assert data["claim_quality_issues"][0]["issue"] == "The claim is page chrome, not a substantive evidence claim."
     assert data["missing_or_weak_cruxes"] == ["The population boundary is present but overcompressed."]
