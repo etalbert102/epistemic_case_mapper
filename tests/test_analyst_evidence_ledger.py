@@ -165,3 +165,27 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     assert ledger["rows"][2]["relation_contract"]["source_anchor_a"] == "shifts maintenance costs"
     assert ledger["rows"][2]["candidate_pair"]["decision_edge_contract"] == "scope_bounds_outcome"
     assert ledger["rows"][2]["endpoint_claims"][0]["decision_edge_role"] == "scope_or_subgroup_boundary"
+
+
+def test_analyst_map_evidence_ledger_downroutes_population_mismatch_answer_claims() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "Infants 6 to 12 months old should receive eggs as a nutrient-dense food.",
+                "source_id": "s1",
+                "source_quote": "infants 6 to 12 months old",
+                "decision_function": "answer_bearing",
+                "decision_importance_level": "high",
+                "validation_warnings": ["question_population_mismatch"],
+            }
+        ],
+        "relations": [],
+    }
+    scaffold = {"source_display_names": {"s1": "Dietary Guidelines"}}
+
+    ledger = build_analyst_map_evidence_ledger(candidate_map, scaffold, question="Should generally healthy adults treat eggs as harmful?")
+
+    assert ledger["rows"][0]["current_role"] == "background"
+    assert ledger["rows"][0]["current_priority"] == 4
+    assert ledger["rows"][0]["existing_warning_codes"] == ["question_population_mismatch"]

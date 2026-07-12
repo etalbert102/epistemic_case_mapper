@@ -23,6 +23,7 @@ from epistemic_case_mapper.map_briefing_memo_warning_packet import (
     build_warning_resolution_report,
     unresolved_warning_repair_items,
 )
+from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -566,8 +567,8 @@ def _mandatory_items(packet: dict[str, Any]) -> list[dict[str, Any]]:
 def _item_retention_status(memo: str, item: dict[str, Any], source_aliases: dict[str, list[str]] | None = None) -> dict[str, Any]:
     claim = str(item.get("reader_claim") or "").strip()
     source = str(item.get("source_label") or "").strip()
-    quantities = _retention_quantities(item)
-    missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
+    quantities = retention_quantity_rows(item)
+    missing_quantities = [quantity["value"] for quantity in quantities if not quantity_retained(memo, quantity)]
     aliases = _dedupe([source, *(_source_aliases_for_label(source, source_aliases or {}) if source else [])])
     source_retained = not source or any(_contains_text(memo, alias) for alias in aliases)
     claim_retained = _mentions_enough_content_terms(memo, claim, minimum=4)
@@ -593,8 +594,8 @@ def _obligation_retention_status(
 ) -> dict[str, Any]:
     statement = str(obligation.get("statement") or "").strip()
     source_labels = _string_list(obligation.get("source_labels"))
-    quantities = _retention_quantities(obligation)
-    missing_quantities = [quantity for quantity in quantities if not _contains_quantity(memo, quantity)]
+    quantities = retention_quantity_rows(obligation)
+    missing_quantities = [quantity["value"] for quantity in quantities if not quantity_retained(memo, quantity)]
     source_retained = not source_labels or any(
         _contains_text(memo, alias)
         for source in source_labels
@@ -675,39 +676,7 @@ def _evidence_item_for_obligation(packet: dict[str, Any], obligation: dict[str, 
 
 
 def _retention_quantities(row: dict[str, Any]) -> list[str]:
-    quantities = []
-    for quantity in _list(row.get("quantities")):
-        if not isinstance(quantity, dict):
-            continue
-        value = str(quantity.get("value") or "").strip()
-        if value and _quantity_required_for_retention(quantity, row):
-            quantities.append(value)
-    return quantities
-
-
-def _quantity_required_for_retention(quantity: dict[str, Any], row: dict[str, Any]) -> bool:
-    value = str(quantity.get("value") or "").strip()
-    if not value:
-        return False
-    text = " ".join(
-        [
-            value,
-            str(quantity.get("quantity_type") or ""),
-            str(quantity.get("interpretation") or ""),
-            str(row.get("role") or ""),
-            str(row.get("obligation_type") or ""),
-            str(row.get("statement") or row.get("reader_claim") or ""),
-        ]
-    ).lower()
-    if re.fullmatch(r"(?:19|20)\d{2}(?:\s*[–-]\s*(?:19|20)\d{2})?", value):
-        return False
-    if re.search(r"\bci\b|\bconfidence interval\b", text):
-        return True
-    if any(token in text for token in ("risk", "ratio", "odds", "hazard", "effect", "reduction", "increase", "prevalence", "incidence", "mortality", "dose", "serving", "per day", "/day", "mg", "percent", "%")):
-        return True
-    if str(row.get("role") or "") == "quantitative_anchor":
-        return True
-    return False
+    return [quantity["value"] for quantity in retention_quantity_rows(row)]
 
 
 def _acceptable_synthesis(memo: str, retention: dict[str, Any], *, strict_contract: bool = False) -> bool:
@@ -799,16 +768,6 @@ def _parse_json(text: str) -> Any:
 def _contains_text(text: str, needle: str) -> bool:
     needle = str(needle).strip()
     return not needle or needle.lower() in text.lower()
-
-
-def _contains_quantity(text: str, quantity: str) -> bool:
-    if _contains_text(text, quantity):
-        return True
-    if "/day" in quantity.lower() and _contains_text(text, re.sub(r"/day\b", " per day", quantity, flags=re.IGNORECASE)):
-        return True
-    normalized_text = _norm(text)
-    numbers = re.findall(r"\d+(?:\.\d+)?", quantity)
-    return bool(numbers) and all(number in normalized_text for number in numbers)
 
 
 def _mentions_enough_content_terms(text: str, statement: str, *, minimum: int) -> bool:

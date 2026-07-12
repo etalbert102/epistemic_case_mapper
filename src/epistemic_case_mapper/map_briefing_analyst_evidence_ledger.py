@@ -384,6 +384,14 @@ def _quantity_lookup(scaffold: dict[str, Any]) -> dict[str, list[str]]:
 
 
 def _claim_current_role(claim: dict[str, Any]) -> str:
+    warnings = set(_claim_warning_codes(claim))
+    if warnings & {"question_population_mismatch", "question_outcome_mismatch", "question_intervention_mismatch"}:
+        decision_function = str(claim.get("decision_function") or "").strip()
+        if decision_function in {"scope_boundary", "source_quality_caveat", "confounder_or_bias"}:
+            return decision_function
+        return "background"
+    if "question_scope_mismatch" in warnings:
+        return "scope_boundary"
     decision_function = str(claim.get("decision_function") or "").strip()
     if decision_function and decision_function != "unclassified_evidence":
         return decision_function
@@ -395,6 +403,8 @@ def _claim_current_role(claim: dict[str, Any]) -> str:
 
 
 def _priority_from_claim(claim: dict[str, Any]) -> int:
+    if set(_claim_warning_codes(claim)) & {"question_population_mismatch", "question_outcome_mismatch", "question_intervention_mismatch"}:
+        return 4
     level = str(claim.get("decision_importance_level") or claim.get("importance") or "").lower()
     if level == "critical":
         return 10

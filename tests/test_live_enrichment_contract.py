@@ -59,6 +59,37 @@ def test_retention_requires_decision_quantities_but_not_artifact_dates() -> None
     assert "2020-2025" not in report["issues"][0]["missing_quantities"]
 
 
+def test_retention_accepts_semantic_dose_phrasing_and_retention_phrase() -> None:
+    packet = {
+        "decision_question": "Should adults treat eggs as harmful?",
+        "evidence_items": [
+            {
+                "item_id": "i1",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Moderate egg consumption was not associated with increased cardiovascular risk.",
+                "source_label": "Review A",
+                "quantities": [
+                    {"value": "up to one egg/day", "interpretation": "decision-relevant dose"},
+                    {"value": "more than one egg/day", "interpretation": "high-intake boundary"},
+                    {
+                        "value": "one serving per day",
+                        "retention_phrase": "one whole egg per day",
+                        "interpretation": "replacement-model unit",
+                    },
+                ],
+            }
+        ],
+        "source_trail": [{"source_label": "Review A"}],
+    }
+
+    memo = "Review A treats moderate intake as up to one whole egg per day and notes that risk may change at >1/day."
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["missing_quantity_count"] == 0
+    assert report["issues"] == []
+
+
 def test_live_source_appraisal_timeout_is_bounded() -> None:
     assert _source_appraisal_timeout("prompt", 240) == 240
     assert _source_appraisal_timeout("ollama:gemma", None) == 90
