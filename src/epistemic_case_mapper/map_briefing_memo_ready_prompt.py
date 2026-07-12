@@ -11,6 +11,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     writer_packet = memo_ready_packet.get("writer_packet") if isinstance(memo_ready_packet, dict) else None
     if isinstance(writer_packet, dict) and writer_packet.get("evidence_units"):
         return build_writer_packet_synthesis_prompt(writer_packet, memo_ready_packet=memo_ready_packet)
+    prompt_packet = model_visible_memo_ready_packet(memo_ready_packet)
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the memo-ready evidence packet.\n"
         "Use the packet as the complete evidence record, but write for a human decision-maker rather than exposing packet structure.\n"
@@ -40,7 +41,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
         "## What Could Change the Answer\n"
         "## Decision-Relevant Evidence\n\n"
         "Memo-ready packet:\n"
-        f"{json.dumps(memo_ready_packet, indent=2, ensure_ascii=False)}\n"
+        f"{json.dumps(prompt_packet, indent=2, ensure_ascii=False)}\n"
     )
 
 
@@ -181,18 +182,300 @@ def _writing_interface(writer_packet: dict[str, Any], memo_ready_packet: dict[st
         and memo_ready_packet.get("evidence_items")
         and str(memo_ready_packet.get("method") or "") == "global_decision_writer_packet_adapter"
     ):
+        visible_items = _model_visible_evidence_items(memo_ready_packet)
+        filter_report = build_model_context_filter_report(memo_ready_packet, visible_items=visible_items)
         return {
             "schema_id": "source_bound_writing_interface_v1",
             "decision_question": memo_ready_packet.get("decision_question"),
-            "answer_spine": memo_ready_packet.get("answer_spine", {}),
-            "decision_memo_contract": memo_ready_packet.get("decision_memo_contract", {}),
-            "evidence_items": memo_ready_packet.get("evidence_items", []),
+            "answer_spine": _model_visible_answer_spine(memo_ready_packet, visible_items),
+            "decision_memo_contract": _model_visible_decision_memo_contract(memo_ready_packet, visible_items),
+            "evidence_items": visible_items,
             "source_trail": memo_ready_packet.get("source_trail", []),
             "writer_packet_writeability_report": memo_ready_packet.get("writer_packet_writeability_report", {}),
-            "decision_logic": memo_ready_packet.get("analyst_decision_logic", {}),
-            "analyst_argument_plan": memo_ready_packet.get("analyst_argument_plan", []),
+            "decision_logic": _model_visible_decision_logic(memo_ready_packet, visible_items),
+            "analyst_argument_plan": _model_visible_argument_plan(memo_ready_packet, visible_items),
+            "model_context_filter_report": filter_report,
         }
     return writer_packet
+
+
+def model_visible_memo_ready_packet(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(memo_ready_packet, dict) or not memo_ready_packet.get("evidence_items"):
+        return memo_ready_packet
+    visible_items = _model_visible_evidence_items(memo_ready_packet)
+    filtered = dict(memo_ready_packet)
+    filtered["answer_spine"] = _model_visible_answer_spine(memo_ready_packet, visible_items)
+    filtered["decision_memo_contract"] = _model_visible_decision_memo_contract(memo_ready_packet, visible_items)
+    filtered["evidence_items"] = visible_items
+    filtered["analyst_decision_logic"] = _model_visible_decision_logic(memo_ready_packet, visible_items)
+    filtered["analyst_argument_plan"] = _model_visible_argument_plan(memo_ready_packet, visible_items)
+    filtered["model_context_filter_report"] = build_model_context_filter_report(
+        memo_ready_packet,
+        visible_items=visible_items,
+    )
+    return filtered
+
+
+def build_model_context_filter_report(
+    memo_ready_packet: dict[str, Any],
+    *,
+    visible_items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    items = [item for item in _list(memo_ready_packet.get("evidence_items")) if isinstance(item, dict)]
+    visible = visible_items if isinstance(visible_items, list) else _model_visible_evidence_items(memo_ready_packet)
+    visible_ids = {str(item.get("item_id") or "") for item in visible if isinstance(item, dict)}
+    filtered = [item for item in items if str(item.get("item_id") or "") not in visible_ids]
+    return {
+        "schema_id": "model_context_filter_report_v1",
+        "policy": "only_must_use_evidence_is_visible_to_writer_model",
+        "original_evidence_item_count": len(items),
+        "model_visible_evidence_item_count": len(visible),
+        "filtered_evidence_item_count": len(filtered),
+        "filtered_evidence_log": [_filtered_evidence_log_row(item) for item in filtered],
+    }
+
+
+def _model_visible_evidence_items(memo_ready_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        item
+        for item in _list(memo_ready_packet.get("evidence_items"))
+        if isinstance(item, dict) and _evidence_item_model_visible(item)
+    ]
+
+
+def _evidence_item_model_visible(item: dict[str, Any]) -> bool:
+    return bool(item.get("must_use")) or str(item.get("obligation_level") or "") == "must_include"
+
+
+def _filtered_evidence_log_row(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "item_id": item.get("item_id"),
+        "role": item.get("role"),
+        "source_label": item.get("source_label"),
+        "obligation_level": item.get("obligation_level"),
+        "must_use": bool(item.get("must_use")),
+        "filter_reason": "not_marked_must_use_for_memo_synthesis",
+    }
+
+
+def _model_visible_answer_spine(
+    memo_ready_packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    spine = _dict(memo_ready_packet.get("answer_spine"))
+    visible_reason = _visible_why_this_read(visible_items)
+    return {
+        "default_read": spine.get("default_read") or spine.get("bounded_answer"),
+        "confidence": spine.get("confidence", "not_specified"),
+        "why_this_read": visible_reason,
+        "synthesis_strategy": spine.get("synthesis_strategy") or "Write from model-visible must-use evidence.",
+    }
+
+
+def _model_visible_decision_logic(
+    memo_ready_packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    logic = _dict(memo_ready_packet.get("analyst_decision_logic"))
+    filtered_items = _filtered_evidence_items(memo_ready_packet, visible_items)
+    visible = {}
+    for key in (
+        "bounded_bottom_line",
+        "support_summary",
+        "strongest_counterweight",
+        "counterweight_weighting",
+        "confidence",
+    ):
+        value = logic.get(key)
+        if value and not _mentions_filtered_evidence(value, filtered_items):
+            visible[key] = value
+    for key in (
+        "confidence_reasons",
+        "reconciled_cruxes",
+        "scope_boundaries",
+        "practical_implications",
+        "do_not_overstate",
+    ):
+        rows = [
+            row
+            for row in _string_list(logic.get(key))
+            if not _mentions_filtered_evidence(row, filtered_items)
+        ]
+        if rows:
+            visible[key] = rows
+    return visible
+
+
+def _model_visible_decision_memo_contract(
+    memo_ready_packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    contract = _dict(memo_ready_packet.get("decision_memo_contract"))
+    filtered_items = _filtered_evidence_items(memo_ready_packet, visible_items)
+    visible = {
+        "schema_id": contract.get("schema_id"),
+        "method": contract.get("method"),
+        "decision_question": contract.get("decision_question") or memo_ready_packet.get("decision_question"),
+        "bounded_answer": _unless_filtered(contract.get("bounded_answer"), filtered_items),
+        "confidence": contract.get("confidence"),
+        "must_include_count": contract.get("must_include_count"),
+        "recommended_synthesis_strategy": contract.get("recommended_synthesis_strategy"),
+        "writeability_status": contract.get("writeability_status"),
+        "judgment_lineage": contract.get("judgment_lineage", {}),
+    }
+    for key in ("confidence_reasons",):
+        rows = [
+            row
+            for row in _string_list(contract.get(key))
+            if not _mentions_filtered_evidence(row, filtered_items)
+        ]
+        if rows:
+            visible[key] = rows
+    for key in ("decision_cruxes", "scope_boundaries", "strongest_counterweights"):
+        rows = [_filtered_contract_row(row, filtered_items) for row in _list(contract.get(key))]
+        rows = [row for row in rows if row]
+        if rows:
+            visible[key] = rows
+    obligations = [
+        row
+        for row in _list(contract.get("must_include_obligations"))
+        if isinstance(row, dict) and not _mentions_filtered_evidence(row.get("audit_claim") or row.get("statement"), filtered_items)
+    ]
+    if obligations:
+        visible["must_include_obligations"] = obligations
+    return {key: value for key, value in visible.items() if value not in ("", None, [], {})}
+
+
+def _filtered_contract_row(row: Any, filtered_items: list[dict[str, Any]]) -> dict[str, Any]:
+    if not isinstance(row, dict):
+        return {}
+    if _mentions_filtered_evidence(row.get("claim") or row.get("decision_relevance"), filtered_items):
+        return {}
+    return {
+        key: value
+        for key, value in {
+            "unit_id": row.get("unit_id"),
+            "claim": row.get("claim"),
+            "decision_relevance": row.get("decision_relevance"),
+            "source_labels": _string_list(row.get("source_labels")),
+        }.items()
+        if value
+    }
+
+
+def _model_visible_argument_plan(
+    memo_ready_packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    filtered_items = _filtered_evidence_items(memo_ready_packet, visible_items)
+    rows = []
+    for row in _list(memo_ready_packet.get("analyst_argument_plan")):
+        if not isinstance(row, dict):
+            continue
+        compact = {
+            "step_id": row.get("step_id"),
+            "section": row.get("section"),
+            "writing_goal": _unless_filtered(row.get("writing_goal"), filtered_items),
+            "transition_from_previous": _unless_filtered(row.get("transition_from_previous"), filtered_items),
+            "source_labels": _string_list(row.get("source_labels")),
+            "evidence_item_ids": [
+                item_id
+                for item_id in _string_list(row.get("evidence_item_ids"))
+                if item_id in {str(item.get("item_id") or "") for item in visible_items}
+            ],
+        }
+        required_points = [
+            point
+            for point in _string_list(row.get("required_points"))
+            if not _mentions_filtered_evidence(point, filtered_items)
+        ]
+        if required_points:
+            compact["required_points"] = required_points
+        rows.append({key: value for key, value in compact.items() if value})
+    return rows
+
+
+def _visible_why_this_read(visible_items: list[dict[str, Any]]) -> str:
+    support = [
+        _short_text(item.get("reader_claim") or item.get("claim"), limit=220)
+        for item in visible_items
+        if isinstance(item, dict) and str(item.get("role") or "") in {"strongest_support", "quantitative_anchor"}
+    ]
+    counter = [
+        _short_text(item.get("reader_claim") or item.get("claim"), limit=220)
+        for item in visible_items
+        if isinstance(item, dict) and str(item.get("role") or "") == "strongest_counterweight"
+    ]
+    reasons = [row for row in [*support[:3], *counter[:2]] if row]
+    return "; ".join(reasons)
+
+
+def _filtered_evidence_items(
+    memo_ready_packet: dict[str, Any],
+    visible_items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    visible_ids = {str(item.get("item_id") or "") for item in visible_items if isinstance(item, dict)}
+    return [
+        item
+        for item in _list(memo_ready_packet.get("evidence_items"))
+        if isinstance(item, dict) and str(item.get("item_id") or "") not in visible_ids
+    ]
+
+
+def _unless_filtered(value: Any, filtered_items: list[dict[str, Any]]) -> str:
+    return "" if _mentions_filtered_evidence(value, filtered_items) else _short_text(value)
+
+
+def _mentions_filtered_evidence(value: Any, filtered_items: list[dict[str, Any]]) -> bool:
+    text = re.sub(r"\s+", " ", str(value or "").lower()).strip()
+    if not text:
+        return False
+    text_terms = set(_content_terms(text))
+    for item in filtered_items:
+        claim = re.sub(r"\s+", " ", str(item.get("reader_claim") or item.get("claim") or "").lower()).strip()
+        if len(claim) >= 24 and (claim in text or text in claim):
+            return True
+        claim_terms = set(_content_terms(claim))
+        if len(claim_terms) >= 4:
+            overlap = claim_terms & text_terms
+            if len(overlap) >= max(4, int(len(claim_terms) * 0.45)):
+                return True
+    return False
+
+
+def _content_terms(text: str) -> list[str]:
+    stop = {
+        "about",
+        "after",
+        "against",
+        "also",
+        "answer",
+        "associated",
+        "between",
+        "claim",
+        "decision",
+        "evidence",
+        "from",
+        "general",
+        "include",
+        "including",
+        "into",
+        "rather",
+        "risk",
+        "source",
+        "specifically",
+        "that",
+        "their",
+        "this",
+        "using",
+        "with",
+        "without",
+    }
+    terms = []
+    for token in re.findall(r"[a-z][a-z0-9_-]{2,}", str(text).lower()):
+        if token not in stop:
+            terms.append(token)
+    return list(dict.fromkeys(terms))
 
 
 def _blueprint_move(

@@ -223,6 +223,35 @@ def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> N
     assert "analyst_synthesis_packet" not in prompt
 
 
+def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_context() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    packet["answer_spine"]["why_this_read"] = (
+        "Option A improves the main outcome; Off-question omega seafood context should not guide the memo."
+    )
+    packet["evidence_items"].append(
+        {
+            "item_id": "decision_writer_item_optional",
+            "role": "strongest_support",
+            "reader_claim": "Off-question omega seafood context should not guide the memo.",
+            "source_label": "Nutrition Context",
+            "source_labels": ["Nutrition Context"],
+            "obligation_level": "optional_context",
+            "must_use": False,
+        }
+    )
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "Off-question omega seafood context should not guide the memo" not in prompt
+    assert "decision_writer_item_optional" in prompt
+    assert "not_marked_must_use_for_memo_synthesis" in prompt
+    assert "model_context_filter_report" in prompt
+
+
 def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monkeypatch) -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     packet = decision_writer_packet_to_memo_ready_packet(
