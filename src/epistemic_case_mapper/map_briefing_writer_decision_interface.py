@@ -51,6 +51,27 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
     return interface
 
 
+def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, Any]:
+    """Return the subset of the writer interface that belongs in synthesis prompts."""
+
+    interface = writer_interface if isinstance(writer_interface, dict) else {}
+    return {
+        "schema_id": "writer_model_context_v1",
+        "source_schema_id": interface.get("schema_id"),
+        "decision_question": interface.get("decision_question"),
+        "bottom_line": interface.get("bottom_line"),
+        "confidence": interface.get("confidence"),
+        "support_that_drives_answer": _list(interface.get("support_that_drives_answer")),
+        "counterweights_and_disposition": _list(interface.get("counterweights_and_disposition")),
+        "scope_boundaries": _list(interface.get("scope_boundaries")),
+        "decision_cruxes": _list(interface.get("decision_cruxes")),
+        "practical_implications": _string_list(interface.get("practical_implications")),
+        "must_use_evidence": _list(interface.get("must_use_evidence")),
+        "quantity_anchors": _list(interface.get("quantity_anchors")),
+        "source_trail": _list(interface.get("source_trail")),
+    }
+
+
 def build_writer_decision_interface_quality_report(interface: dict[str, Any]) -> dict[str, Any]:
     warnings = []
     if not _list(interface.get("support_that_drives_answer")):

@@ -32,8 +32,8 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
-    assert "writer decision interface" in prompt
-    assert "writer_decision_interface_v1" in prompt
-    assert "The writer decision interface is the complete model-visible evidence and judgment record" in prompt
+    assert "writer model context" in prompt
+    assert "writer_model_context_v1" in prompt
+    assert "The writer model context is the complete model-visible evidence and judgment record" in prompt
     assert "Weigh support against counterweights and scope boundaries" in prompt
     assert "quantity_anchors" in prompt

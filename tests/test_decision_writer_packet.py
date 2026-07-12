@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_read
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
+    build_writer_model_context,
 )
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -252,11 +253,16 @@ def test_writer_decision_interface_logs_but_hides_non_visible_evidence_text() ->
     )
 
     interface = build_writer_decision_interface(packet)
+    model_context = build_writer_model_context(interface)
     serialized = str(interface)
+    model_serialized = str(model_context)
 
     assert "Off-question omega seafood context should not guide the memo" not in serialized
     assert interface["excluded_evidence_log"][0]["item_id"] == "decision_writer_item_optional"
     assert interface["excluded_evidence_log"][0]["filter_reason"] == "not_marked_must_use_for_memo_synthesis"
+    assert "excluded_evidence_log" not in model_serialized
+    assert "lineage_report" not in model_serialized
+    assert "decision_writer_item_optional" not in model_serialized
 
 
 def test_decision_writer_packet_prompt_exposes_required_obligation_ledger() -> None:
@@ -300,10 +306,11 @@ def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert "Off-question omega seafood context should not guide the memo" not in prompt
-    assert "decision_writer_item_optional" in prompt
-    assert "not_marked_must_use_for_memo_synthesis" in prompt
-    assert "writer_decision_interface_v1" in prompt
-    assert "excluded_evidence_log" in prompt
+    assert "decision_writer_item_optional" not in prompt
+    assert "not_marked_must_use_for_memo_synthesis" not in prompt
+    assert "writer_model_context_v1" in prompt
+    assert "excluded_evidence_log" not in prompt
+    assert "lineage_report" not in prompt
 
 
 def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monkeypatch) -> None:

@@ -5,7 +5,10 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
-from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
+from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+    build_writer_decision_interface,
+    build_writer_model_context,
+)
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -58,15 +61,16 @@ def build_writer_packet_synthesis_prompt(
     )
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
     obligation_ledger = writing_interface.get("retention_checklist") or _obligation_ledger(obligations)
+    model_context = build_writer_model_context(writing_interface)
     return (
-        "You are a senior decision analyst. Write a coherent decision memo from the writer decision interface.\n"
-        "The writer decision interface is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
+        "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
+        "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
         "Use the narrative blueprint as the memo's organizing spine. The required obligation ledger below is a retention checklist, not an outline: satisfy each item in natural prose when it affects the decision read. Merge related obligations into the same paragraph when that reads better.\n\n"
         "Rules:\n"
-        "- Start the first paragraph with a direct bottom-line answer to the decision question, using the bottom_line from the writer decision interface.\n"
-        "- State the confidence level and main reason for uncertainty in the opening section when the writer decision interface supplies them.\n"
-        "- Use only facts, quantities, and source labels present in the writer decision interface.\n"
+        "- Start the first paragraph with a direct bottom-line answer to the decision question, using the bottom_line from the writer model context.\n"
+        "- State the confidence level and main reason for uncertainty in the opening section when the writer model context supplies them.\n"
+        "- Use only facts, quantities, and source labels present in the writer model context or required obligation ledger.\n"
         "- Use only quantities listed inside quantity_anchors, must_use_evidence.quantities, or the required obligation ledger.\n"
         "- When a quantity value is ambiguous by itself, use its interpretation wording from quantity_anchors or must_use_evidence.quantities.\n"
         "- Cite the source label attached to the evidence unit or quantity that supports the sentence.\n"
@@ -90,8 +94,8 @@ def build_writer_packet_synthesis_prompt(
         "## Why This Is the Best Current Read\n"
         "## What Could Change the Answer\n"
         "## Practical Implications\n\n"
-        "Writer decision interface:\n"
-        f"{json.dumps(writing_interface, indent=2, ensure_ascii=False)}\n"
+        "Writer model context:\n"
+        f"{json.dumps(model_context, indent=2, ensure_ascii=False)}\n"
     )
 
 

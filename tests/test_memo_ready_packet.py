@@ -126,8 +126,8 @@ def test_synthesis_prompt_uses_memo_ready_packet_not_legacy_section_contract() -
 
     prompt = build_memo_ready_packet_synthesis_prompt(result["memo_ready_packet"])
 
-    assert "writer decision interface" in prompt
-    assert "writer_decision_interface_v1" in prompt
+    assert "writer model context" in prompt
+    assert "writer_model_context_v1" in prompt
     assert "Why This Read" not in prompt
     assert "Evidence Carrying the Conclusion" not in prompt
     assert "25%" in prompt
