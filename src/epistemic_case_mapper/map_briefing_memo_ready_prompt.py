@@ -6,6 +6,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
@@ -61,6 +62,8 @@ def build_writer_packet_synthesis_prompt(
             "decision_question": narrative_blueprint.get("decision_question"),
             "note": "Use writer_model_context.reasoning_hierarchy as the organizing spine; this placeholder preserves the prompt section without duplicating evidence.",
         }
+    model_context = project_reader_language_for_model(model_context)
+    blueprint_context = project_reader_language_for_model(blueprint_context)
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"

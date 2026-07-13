@@ -787,7 +787,8 @@ def test_memo_ready_polish_softens_overconfident_stock_phrases() -> None:
         "## Decision Brief\n\n"
         "**Answer Stance:** Neutral (Safe for moderate consumption)\n\n"
         "The option is considered neutral and safe. High-confidence data from large-scale cohort studies establish "
-        "a safe limit, so the safety profile is settled. One serving is considered safe. Dietary guidance can safely include the option.\n"
+        "a safe limit, so the safety profile is settled. One serving is considered safe. "
+        "This creates a baseline of safety and a safe standard. Dietary guidance can safely include the option.\n"
     )
 
     assert "best treated as neutral within the stated scope" in cleaned
@@ -797,6 +798,8 @@ def test_memo_ready_polish_softens_overconfident_stock_phrases() -> None:
     assert "risk profile" in cleaned
     assert "safe limit" not in cleaned
     assert "considered safe" not in cleaned
+    assert "baseline of safety" not in cleaned
+    assert "safe standard" not in cleaned
     assert "High-confidence data" not in cleaned
     assert "safely include" not in cleaned
     assert "Neutral (Neutral for moderate consumption)" not in cleaned

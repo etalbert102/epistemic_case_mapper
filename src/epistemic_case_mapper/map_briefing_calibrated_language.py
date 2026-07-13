@@ -21,10 +21,12 @@ _CALIBRATION_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     (r"\bhigh-confidence evidence\b", "strong evidence"),
     (r"\blarge-scale evidence from large-scale\b", "evidence from large-scale"),
     (r"\bbaseline safety\b", "baseline risk read"),
+    (r"\bbaseline of safety\b", "baseline interpretation"),
     (r"\bsafe limit\b", "practical reference point"),
     (r"\bsafety profile\b", "risk profile"),
     (r"\bdaily limit\b", "daily reference point"),
     (r"\bis considered safe\b", "is an evidence-bounded reference point"),
     (r"\bproven harmless\b", "not clearly shown to be harmful in the stated scope"),
     (r"\bsafely include\b", "include within the stated scope"),
+    (r"\bsafe standard\b", "practical reference point"),
 )

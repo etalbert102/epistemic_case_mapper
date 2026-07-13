@@ -112,6 +112,18 @@ def test_synthesis_prompt_exposes_calibration_fields_as_source_ids() -> None:
     assert "source_labels" not in prompt
 
 
+def test_synthesis_prompt_projects_internal_language_for_model_context() -> None:
+    packet = _balance_packet()
+    packet["evidence_items"][0]["decision_relevance"] = "This must-write card changes the decision read."
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "This required point changes the answer." in prompt
+    assert "This must-write card changes the decision read." not in prompt
+    assert '"role": "strongest_counterweight"' in prompt
+    assert '"source_id": "support_study"' in prompt
+
+
 def test_retention_warns_when_required_balance_counterweight_is_missing() -> None:
     report = build_memo_ready_packet_retention_report(
         "Support Study found Option A improved the main outcome by 20%.",
