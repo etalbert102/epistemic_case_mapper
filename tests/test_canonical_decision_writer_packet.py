@@ -19,17 +19,22 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["decision_question"] == "Should the city adopt option A for flood protection?"
     assert canonical["decision_brief_skeleton"]["direct_answer"]
     assert canonical["decision_brief_skeleton"]["main_reason"]
+    assert canonical["decision_answer_classification"]["answer_shape"]
+    assert canonical["analyst_reasoning_frame"]
     assert canonical["priority_evidence"]
+    assert canonical["organized_evidence_inventory"]["item_count"] == len(packet["evidence_items"])
     assert canonical["counterweight_dispositions"]
     assert canonical["source_weight_notes"]
     assert canonical["mandatory_retention_checklist"]
     assert canonical["citation_registry"]
     assert canonical["quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
+    assert canonical["quality_report"]["answer_shape"] == canonical["decision_answer_classification"]["answer_shape"]
     assert all(
         row.get("source_id") or row.get("source_ids")
         for row in canonical["priority_evidence"]
         if row.get("role") in {"strongest_support", "strongest_counterweight", "scope_boundary", "decision_crux"}
     )
+    assert canonical["quality_report"]["organized_evidence_count"] == len(packet["evidence_items"])
 
 
 def test_canonical_retention_routes_missing_items_to_targeted_repair() -> None:

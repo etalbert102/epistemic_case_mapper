@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -37,7 +38,10 @@ def build_canonical_decision_writer_packet(
         "schema_id": "canonical_decision_writer_packet_v1",
         "decision_question": packet.get("decision_question"),
         "decision_brief_skeleton": _decision_brief_skeleton(interface),
+        "decision_answer_classification": _decision_answer_classification(packet),
+        "analyst_reasoning_frame": _analyst_reasoning_frame(packet, interface),
         "priority_evidence": _priority_evidence(interface),
+        "organized_evidence_inventory": _organized_evidence_inventory(packet, interface),
         "counterweight_dispositions": _counterweight_dispositions(interface),
         "scope_boundaries": _scope_boundaries(interface),
         "decision_cruxes": _decision_cruxes(interface),
@@ -53,16 +57,21 @@ def build_canonical_decision_writer_packet(
 def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict[str, Any]) -> dict[str, Any]:
     packet = canonical_packet if isinstance(canonical_packet, dict) else {}
     skeleton = _dict(packet.get("decision_brief_skeleton"))
+    classification = _dict(packet.get("decision_answer_classification"))
     priority = _list(packet.get("priority_evidence"))
     counterweights = _list(packet.get("counterweight_dispositions"))
     source_notes = _list(packet.get("source_weight_notes"))
     checklist = _list(packet.get("mandatory_retention_checklist"))
+    inventory = _dict(packet.get("organized_evidence_inventory"))
+    inventory_items = _inventory_items(inventory)
     warnings = []
     for key in ("direct_answer", "scope", "confidence", "main_reason", "strongest_counterweight", "counterweight_disposition"):
         if not str(skeleton.get(key) or "").strip():
             warnings.append(f"missing_skeleton_{key}")
     if _looks_generic(skeleton.get("direct_answer")):
         warnings.append("generic_direct_answer")
+    if not str(classification.get("answer_shape") or "").strip():
+        warnings.append("missing_decision_answer_classification")
     if not priority:
         warnings.append("missing_priority_evidence")
     if not counterweights:
@@ -71,13 +80,22 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("missing_source_weight_notes")
     if not checklist:
         warnings.append("missing_mandatory_retention_checklist")
-    if any(not _source_ids(row) for row in [*priority, *counterweights, *source_notes, *checklist] if isinstance(row, dict)):
+    if not inventory_items:
+        warnings.append("missing_organized_evidence_inventory")
+    if any(
+        not _source_ids(row)
+        for row in [*priority, *counterweights, *source_notes, *checklist, *inventory_items]
+        if isinstance(row, dict)
+    ):
         warnings.append("source_id_missing_from_canonical_rows")
     return {
         "schema_id": "canonical_decision_writer_packet_quality_report_v1",
         "status": "ready" if not warnings else "warning",
         "warnings": _dedupe(warnings),
+        "answer_shape": classification.get("answer_shape"),
+        "question_option_count": len(_list(classification.get("question_options"))),
         "priority_evidence_count": len(priority),
+        "organized_evidence_count": len(inventory_items),
         "counterweight_disposition_count": len(counterweights),
         "source_weight_note_count": len(source_notes),
         "mandatory_retention_count": len(checklist),
@@ -109,10 +127,231 @@ def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _decision_answer_classification(packet: dict[str, Any]) -> dict[str, Any]:
+    contract = build_analytical_balance_contract(packet)
+    classification = _dict(contract.get("answer_classification"))
+    return _drop_empty(
+        {
+            "decision_question": classification.get("decision_question") or packet.get("decision_question"),
+            "current_answer_state": _short_text(classification.get("current_answer_state"), 900),
+            "question_options": _string_list(classification.get("question_options")),
+            "answer_shape": classification.get("answer_shape"),
+            "writing_job": _short_text(classification.get("writing_job"), 520),
+        }
+    )
+
+
 def _priority_evidence(interface: dict[str, Any]) -> list[dict[str, Any]]:
     roles = {"strongest_support", "quantitative_anchor", "strongest_counterweight", "scope_boundary", "decision_crux"}
     rows = [_evidence_row(row) for row in _list(interface.get("decision_evidence_table")) if isinstance(row, dict) and row.get("role") in roles]
     return _dedupe_rows(rows, "item_id")[:18]
+
+
+def _analyst_reasoning_frame(packet: dict[str, Any], interface: dict[str, Any]) -> dict[str, Any]:
+    spine = _dict(packet.get("answer_spine"))
+    logic = _dict(packet.get("analyst_decision_logic"))
+    excluded_claims = _excluded_inventory_claims(packet)
+    return _drop_empty(
+        {
+            "bottom_line": _short_text(_strip_excluded_claims(interface.get("bottom_line") or spine.get("default_read"), excluded_claims), 900),
+            "why_this_answer": _short_text(_strip_excluded_claims(spine.get("why_this_read"), excluded_claims), 1200),
+            "confidence": spine.get("confidence") or interface.get("confidence"),
+            "confidence_reasons": [
+                _short_text(cleaned, 700)
+                for row in _string_list(spine.get("confidence_reasons"))
+                if (cleaned := _strip_excluded_claims(row, excluded_claims))
+            ],
+            "support_summary": _short_text(_strip_excluded_claims(logic.get("support_summary"), excluded_claims), 700),
+            "counterweight_weighting": _short_text(_strip_excluded_claims(logic.get("counterweight_weighting"), excluded_claims), 700),
+            "scope_boundaries": [
+                _short_text(cleaned, 420)
+                for row in _string_list(logic.get("scope_boundaries"))
+                if (cleaned := _strip_excluded_claims(row, excluded_claims))
+            ],
+            "reconciled_cruxes": [
+                _short_text(cleaned, 520)
+                for row in _string_list(logic.get("reconciled_cruxes"))
+                if (cleaned := _strip_excluded_claims(row, excluded_claims))
+            ],
+            "practical_implications": [
+                _short_text(cleaned, 520)
+                for row in _string_list(logic.get("practical_implications"))
+                if (cleaned := _strip_excluded_claims(row, excluded_claims))
+            ],
+            "do_not_overstate": [
+                _short_text(cleaned, 420)
+                for row in _string_list(logic.get("do_not_overstate"))
+                if (cleaned := _strip_excluded_claims(row, excluded_claims))
+            ],
+            "argument_steps": _argument_steps(packet),
+            "reasoning_hierarchy": _dict(interface.get("reasoning_hierarchy")),
+            "use_policy": [
+                "Use priority_evidence for attention and ordering.",
+                "Use organized_evidence_inventory as the complete memo-facing evidence record.",
+                "Use analyst_reasoning_frame to preserve how upstream analysis says evidence should change the answer.",
+            ],
+        }
+    )
+
+
+def _argument_steps(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    steps = []
+    for index, row in enumerate(_list(packet.get("analyst_argument_plan") or _dict(packet.get("writer_packet")).get("argument_plan")), start=1):
+        if not isinstance(row, dict):
+            continue
+        steps.append(
+            _drop_empty(
+                {
+                    "step_id": row.get("step_id") or f"step_{index:03d}",
+                    "writing_goal": _short_text(row.get("writing_goal"), 360),
+                    "required_points": [_short_text(point, 520) for point in _string_list(row.get("required_points"))],
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    "transition": _short_text(row.get("transition_from_previous"), 260),
+                }
+            )
+        )
+    return steps[:12]
+
+
+def _organized_evidence_inventory(packet: dict[str, Any], interface: dict[str, Any]) -> dict[str, Any]:
+    items = [_inventory_row(row) for row in _list(packet.get("evidence_items")) if isinstance(row, dict) and _is_memo_facing_inventory_item(row)]
+    if not items:
+        items = [_inventory_row(row) for row in _list(interface.get("decision_evidence_table")) if isinstance(row, dict)]
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in sorted(items, key=lambda item: (_inventory_sort_rank(item), str(item.get("item_id") or ""))):
+        lane = _inventory_lane(row)
+        grouped.setdefault(lane, []).append(row)
+    return {
+        "schema_id": "organized_evidence_inventory_v1",
+        "organization_policy": [
+            "This is the complete memo-facing evidence inventory, organized for synthesis rather than filtered for brevity.",
+            "Explicitly optional or off-question material is excluded from synthesis context even when retained elsewhere for audit.",
+            "Priority evidence should receive attention first, but non-priority inventory items may supply practical framing, comparators, scope, or interpretive context.",
+            "Items with role context_only should not become load-bearing claims unless they clarify how to apply or interpret the answer.",
+        ],
+        "item_count": len(items),
+        "lanes": grouped,
+    }
+
+
+def _inventory_row(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "item_id": row.get("item_id"),
+            "role": row.get("role"),
+            "answer_relation": row.get("answer_relation"),
+            "memo_function": row.get("memo_function"),
+            "obligation_level": row.get("obligation_level"),
+            "claim": _short_text(row.get("reader_claim") or row.get("claim"), 760),
+            "source_labels": _string_list(row.get("source_labels")) or _string_list(row.get("source_label")),
+            "quantities": _brief_quantities(row),
+            "decision_relevance": _short_text(row.get("decision_relevance") or row.get("include_reason"), 760),
+            "caveat": _short_text(row.get("caveat"), 420),
+            "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 420),
+            "source_excerpts": _source_excerpt_rows(row),
+            "importance_rank": row.get("importance_rank"),
+            "source_memo_role": row.get("source_memo_role"),
+        }
+    )
+
+
+def _is_memo_facing_inventory_item(row: dict[str, Any]) -> bool:
+    obligation = str(row.get("obligation_level") or "").strip().lower()
+    role = str(row.get("role") or "").strip().lower()
+    relation = str(row.get("answer_relation") or "").strip().lower()
+    if obligation in {"optional_context", "off_question", "not_relevant"}:
+        return False
+    if role in {"off_question", "excluded"}:
+        return False
+    if relation in {"off_question", "not_relevant"}:
+        return False
+    return True
+
+
+def _excluded_inventory_claims(packet: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        str(row.get("reader_claim") or row.get("claim") or "").strip()
+        for row in _list(packet.get("evidence_items"))
+        if isinstance(row, dict) and not _is_memo_facing_inventory_item(row)
+    )
+
+
+def _strip_excluded_claims(value: Any, excluded_claims: list[str]) -> str:
+    text = str(value or "").strip()
+    if not text or not excluded_claims:
+        return text
+    for claim in excluded_claims:
+        if claim:
+            text = text.replace(claim, "").strip()
+    return " ".join(text.split())
+
+
+def _source_excerpt_rows(row: dict[str, Any]) -> list[dict[str, Any]]:
+    excerpts = []
+    for excerpt in _list(row.get("source_excerpts")):
+        if not isinstance(excerpt, dict):
+            continue
+        text = str(excerpt.get("source_excerpt") or excerpt.get("excerpt") or "").strip()
+        if not text:
+            continue
+        excerpts.append(
+            _drop_empty(
+                {
+                    "source_labels": _string_list(excerpt.get("source_labels")) or _string_list(row.get("source_labels")),
+                    "excerpt": _short_text(text, 900),
+                }
+            )
+        )
+    return excerpts[:3]
+
+
+def _source_appraisal_note(row: dict[str, Any]) -> str:
+    appraisal = _dict(row.get("source_appraisal"))
+    parts = []
+    directness = str(appraisal.get("decision_directness") or "").strip()
+    if directness and directness != "unknown":
+        parts.append(f"directness: {directness}")
+    recommended = ", ".join(_string_list(appraisal.get("recommended_uses"))[:3])
+    if recommended:
+        parts.append(f"use: {recommended}")
+    warnings = ", ".join(_string_list(row.get("source_use_warnings") or appraisal.get("source_use_warnings"))[:3])
+    if warnings:
+        parts.append(f"caveats: {warnings}")
+    wording = _dict(row.get("allowed_wording") or appraisal.get("allowed_wording"))
+    qualifiers = ", ".join(_string_list(wording.get("must_qualify_with"))[:3])
+    if qualifiers:
+        parts.append(f"wording: {qualifiers}")
+    return _short_text("; ".join(parts), 420)
+
+
+def _inventory_lane(row: dict[str, Any]) -> str:
+    role = str(row.get("role") or "").strip()
+    relation = str(row.get("answer_relation") or "").strip()
+    function = str(row.get("memo_function") or "").strip()
+    if role in {"strongest_support", "quantitative_anchor"} or relation == "supports_answer" or function == "answer_anchor":
+        return "answer_support"
+    if role == "strongest_counterweight" or relation == "challenges_answer" or function == "counterweight":
+        return "limiting_evidence"
+    if role == "scope_boundary" or relation == "bounds_scope" or function == "scope_boundary":
+        return "scope_and_applicability"
+    if role == "decision_crux" or relation == "identifies_crux" or function == "crux":
+        return "decision_cruxes"
+    return "interpretive_context"
+
+
+def _inventory_sort_rank(row: dict[str, Any]) -> int:
+    try:
+        return int(row.get("importance_rank") or 100)
+    except (TypeError, ValueError):
+        return 100
+
+
+def _inventory_items(inventory: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    lanes = _dict(inventory.get("lanes"))
+    for lane_rows in lanes.values():
+        rows.extend(row for row in _list(lane_rows) if isinstance(row, dict))
+    return rows
 
 
 def _evidence_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -168,7 +407,9 @@ def _normalized_counterweight_disposition(row: dict[str, Any]) -> str:
             row.get("decision_relevance"),
         ]
     ).lower()
-    if "overturn" in text:
+    if "if they do not overturn" in text or "does not overturn" in text or "do not overturn" in text:
+        return "bounds_answer"
+    if "overturns" in text or "overturned" in text or "overturns_answer" in text:
         return "overturns_answer"
     if "dose" in text:
         return "bounds_dose"

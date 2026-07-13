@@ -37,7 +37,10 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "canonical decision writer packet" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
     assert "decision_brief_skeleton" in prompt
+    assert "decision_answer_classification" in prompt
     assert "priority_evidence" in prompt
+    assert "organized_evidence_inventory" in prompt
+    assert "analyst_reasoning_frame" in prompt
     assert "mandatory_retention_checklist" in prompt
     assert "writer_model_context_v1" not in prompt
     assert "reader_brief_plan" not in prompt
@@ -94,6 +97,7 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
 
     assert "canonical_decision_writer_packet_v1" in prompt
     assert "priority_evidence" in prompt
+    assert "organized_evidence_inventory" in prompt
     assert "mandatory_retention_checklist" in prompt
     assert '"item_id": "support"' in prompt
     assert '"quantities"' in prompt
@@ -101,12 +105,19 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
     assert '"source_id": "risk_study"' in prompt
     assert "Risk Study" not in prompt
     assert "source_labels" not in prompt
+    assert "Option A has a long implementation history." in prompt
 
 
 def test_synthesis_prompt_exposes_calibration_fields_as_source_ids() -> None:
     prompt = build_memo_ready_packet_synthesis_prompt(_calibration_packet())
 
     assert "decision_brief_skeleton" in prompt
+    assert "decision_answer_classification" in prompt
+    assert '"question_options": [' in prompt
+    assert '"harmful"' in prompt
+    assert '"neutral"' in prompt
+    assert '"beneficial"' in prompt
+    assert "bounded_neutral_or_no_clear_harm" in prompt
     assert "scope_boundaries" in prompt
     assert "counterweight_dispositions" in prompt
     assert "source_weight_notes" in prompt
