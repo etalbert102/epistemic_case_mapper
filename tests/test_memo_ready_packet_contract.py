@@ -37,9 +37,11 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "writer model context" in prompt
     assert "writer_model_context_v1" in prompt
     assert "The writer model context is the complete model-visible evidence and judgment record" in prompt
-    assert "Use reader_brief_plan as the writing plan" in prompt
+    assert "Use reader_brief_plan.paragraph_jobs as the writing plan" in prompt
+    assert "Use decision_interpretation_plan as the meaning layer" in prompt
     assert "not as the memo outline" in prompt
     assert "reader_brief_plan" in prompt
+    assert "decision_interpretation_plan" in prompt
     assert "Weigh support against counterweights and scope boundaries" in prompt
     assert "Non-negotiable retention rule" in prompt
     assert "mandatory_evidence_ledger" in prompt

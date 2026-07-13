@@ -495,10 +495,12 @@ def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> Non
 
     assert "Narrative blueprint" in prompt
     assert "reasoning_hierarchy" in prompt
-    assert "reader_brief_plan as the writing plan" in prompt
+    assert "reader_brief_plan.paragraph_jobs as the writing plan" in prompt
+    assert "decision_interpretation_plan as the meaning layer" in prompt
     assert "mandatory_evidence_ledger as the non-negotiable retention check" in prompt
     assert "decision_boundary_source_contract" in prompt
     assert "reader_brief_plan" in prompt
+    assert "decision_interpretation_plan" in prompt
     assert "quantities_to_keep_together" in prompt
     assert "practical_implication_cards" in prompt
     assert "writing_priority" in prompt
