@@ -31,7 +31,11 @@ from epistemic_case_mapper.map_briefing_memo_ready_presentation import (
 from epistemic_case_mapper.map_briefing_memo_ready_polish_anchors import protected_anchor_checklist
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
-from epistemic_case_mapper.map_briefing_source_identity import compact_source_display
+from epistemic_case_mapper.map_briefing_source_identity import (
+    compact_source_display,
+    project_source_text_to_ids_for_model,
+    replace_source_aliases_with_ids,
+)
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -264,6 +268,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
     limit = 16 if strict_contract else 8
     warning_packet = _dict(packet.get("memo_warning_packet"))
     warning_resolution = _dict(retention_report.get("warning_resolution_report"))
+    source_trail = _list(packet.get("source_trail"))
     repair_packet = {
         "decision_question": packet.get("decision_question"),
         "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
@@ -285,12 +290,14 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "missing_canonical_items": canonical_repair_items(retention_report, limit=limit),
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
+    repair_packet = project_source_text_to_ids_for_model(repair_packet, source_trail)
+    memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
     return (
         "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"
         "Rewrite the affected paragraph or section naturally so missing evidence is integrated into the reasoning.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
-        "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
+        "- Preserve the decision question, source IDs, quantities, and answer stance already present.\n"
         "- Repair missing obligations and balance cards by improving the reasoning around the affected point.\n"
         "- Repair missing canonical items by restoring the affected answer skeleton, counterweight, scope, source, quantity, or evidence claim.\n"
         "- Use only the missing obligations, missing balance cards, or legacy missing items in the repair packet.\n"
@@ -299,7 +306,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- For each quantity you add, explain what it means for the decision.\n"
         "- Keep packet IDs, validation, telemetry, and internal pipeline machinery out of the prose.\n\n"
         f"Repair packet:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
-        f"Current memo:\n{memo.strip()}\n"
+        f"Current memo:\n{memo_for_model.strip()}\n"
     )
 
 
@@ -348,17 +355,20 @@ def run_memo_ready_final_polish(
 
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
+    source_trail = _list(packet.get("source_trail"))
     protected = {
         "decision_question": packet.get("decision_question"),
         "protected_anchor_checklist": protected_anchor_checklist(packet),
     }
+    protected = project_source_text_to_ids_for_model(protected, source_trail)
+    memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
     return (
         "You are doing a final prose polish on a source-grounded decision memo.\n"
         "Improve flow, sentence rhythm, and transitions while preserving every protected source-backed anchor.\n"
         "The protected anchor checklist is a factual constraint for retention, not an outline for the memo.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
-        "- Preserve protected obligations, quantities, source labels, caveats, counterweights, and scope boundaries.\n"
+        "- Preserve protected obligations, quantities, source IDs, caveats, counterweights, and scope boundaries.\n"
         "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
         "- Use facts and sources already present in the memo or protected item list.\n"
         "- Keep the decision answer direct, then make the supporting reasoning flow across paragraphs.\n"
@@ -367,10 +377,10 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "- Split dense paragraphs when they carry more than one reasoning job; prefer short paragraphs that each answer one reader question.\n"
         "- Keep citations attached to the claims they support, but avoid citation clutter by placing one source marker at the end of a sentence or clause when several nearby facts come from the same source.\n"
         "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
-        "- Fix obvious citation spacing and author-year formatting mistakes without changing the source label.\n"
+        "- Fix obvious citation spacing mistakes without changing source IDs.\n"
         "- Make the memo read like decision-ready analysis.\n\n"
         f"Protected anchor checklist:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
-        f"Memo:\n{memo.strip()}\n"
+        f"Memo:\n{memo_for_model.strip()}\n"
     )
 
 
