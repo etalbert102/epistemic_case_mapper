@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations
@@ -36,7 +37,11 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
     if next_memo != normalized:
         changes.append("normalized_source_labels")
         normalized = next_memo
-    next_memo = _replace_sources_section(normalized, packet)
+    next_memo, compacted_citation_sources = _compact_crowded_citations(normalized, packet)
+    if next_memo != normalized:
+        changes.append("compacted_crowded_citations")
+        normalized = next_memo
+    next_memo = _replace_sources_section(normalized, packet, additional_cited_displays=compacted_citation_sources)
     if next_memo != normalized:
         changes.append("deterministic_sources")
         normalized = next_memo
@@ -56,9 +61,9 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
     }
 
 
-def _replace_sources_section(memo: str, packet: dict[str, Any]) -> str:
+def _replace_sources_section(memo: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> str:
     body = _strip_sources_section(memo).rstrip()
-    sources = _cited_source_lines(body, packet)
+    sources = _cited_source_lines(body, packet, additional_cited_displays=additional_cited_displays or [])
     if not sources:
         return body + "\n"
     return "\n".join([body, "", "## Sources", "", *sources]).rstrip() + "\n"
@@ -72,16 +77,76 @@ def _strip_sources_section(memo: str) -> str:
     return str(memo or "").rstrip()
 
 
-def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
+def _cited_source_lines(body: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> list[str]:
     entries = _canonical_source_entries(packet)
     cited = []
     lowered = body.lower()
+    additional = {_norm(display) for display in additional_cited_displays or [] if display}
     for entry in entries:
         displays = [entry["inline_display"], entry["source_display"]]
         matches = [lowered.find(display.lower()) for display in displays if display and _contains_text(body, display)]
+        if _norm(entry["inline_display"]) in additional or _norm(entry["source_display"]) in additional:
+            matches.append(len(body) + len(cited))
         if matches:
             cited.append((min(index for index in matches if index >= 0), _source_line_for_entry(entry)))
     return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
+
+
+def _compact_crowded_citations(memo: str, packet: dict[str, Any]) -> tuple[str, list[str]]:
+    entries = _canonical_source_entries(packet)
+    displays = _dedupe([entry["inline_display"] for entry in entries if entry.get("inline_display")])
+    if not displays:
+        return memo, []
+    display_lookup = {_norm(display): display for display in displays}
+    additional_sources: list[str] = []
+    citation_notes: dict[tuple[str, ...], str] = {}
+
+    def replace(match: re.Match[str]) -> str:
+        content = match.group(1)
+        parts = _citation_parts(content)
+        cited = [display_lookup[_norm(part)] for part in parts if _norm(part) in display_lookup]
+        if len(cited) < 4:
+            return match.group(0)
+        kept = cited[:2]
+        omitted = cited[2:]
+        additional_sources.extend(omitted)
+        note_key = tuple(omitted)
+        if note_key not in citation_notes:
+            citation_notes[note_key] = f"sources-{len(citation_notes) + 1}"
+        note_id = citation_notes[note_key]
+        return "[" + "; ".join([*kept, f"+{len(omitted)} sources"]) + f"][^{note_id}]"
+
+    compacted = re.sub(r"\[([^\[\]\n]{1,260})\]", replace, memo)
+    compacted = _insert_citation_notes(compacted, citation_notes)
+    return compacted, _dedupe(additional_sources)
+
+
+def _insert_citation_notes(memo: str, citation_notes: dict[tuple[str, ...], str]) -> str:
+    if not citation_notes:
+        return memo
+    note_lines = [
+        f"[^{note_id}]: Additional sources: {'; '.join(sources)}."
+        for sources, note_id in citation_notes.items()
+    ]
+    lines = str(memo or "").rstrip().splitlines()
+    insert_at = len(lines)
+    for index, line in enumerate(lines):
+        if line.strip().lower() == "## sources":
+            insert_at = index
+            break
+    before = lines[:insert_at]
+    after = lines[insert_at:]
+    while before and not before[-1].strip():
+        before.pop()
+    return "\n".join([*before, "", *note_lines, "", *after]).rstrip()
+
+
+def _citation_parts(content: str) -> list[str]:
+    return [
+        part.strip()
+        for part in re.split(r"\s*(?:,|;)\s*", content)
+        if part.strip()
+    ]
 
 
 def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:

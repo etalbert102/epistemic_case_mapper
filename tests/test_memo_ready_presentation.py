@@ -45,3 +45,39 @@ def test_presentation_compact_citations_title_case_short_names() -> None:
 
     assert "[Li 2020]" in result["memo"]
     assert "[LI 2020]" not in result["memo"]
+
+
+def test_presentation_compacts_crowded_inline_citations_without_losing_sources() -> None:
+    packet = {
+        "decision_question": "Should eggs be treated as neutral?",
+        "source_trail": [
+            {"source_id": "nnr_2023_eggs_scoping_review", "source_label": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023"},
+            {"source_id": "bmj_2020_egg_consumption_cvd", "source_label": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"},
+            {"source_id": "aha_2023_dietary_cholesterol_news", "source_label": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet"},
+            {"source_id": "aha_2019_dietary_cholesterol_pubmed", "source_label": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"},
+            {"source_id": "jama_2019_dietary_cholesterol_eggs", "source_label": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality"},
+            {"source_id": "dga_2020_2025_pmc_summary", "source_label": "Dietary Guidelines for Americans, 2020-2025"},
+        ],
+        "evidence_items": [],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "Moderate intake is neutral [nnr_2023_eggs_scoping_review, bmj_2020_egg_consumption_cvd, "
+        "aha_2023_dietary_cholesterol_news, aha_2019_dietary_cholesterol_pubmed, "
+        "jama_2019_dietary_cholesterol_eggs, dga_2020_2025_pmc_summary]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "[NNR 2023; BMJ 2020; +4 sources][^sources-1]" in result["memo"]
+    assert "[^sources-1]: Additional sources: AHA 2023; AHA 2019; JAMA 2019; DGA 2020." in result["memo"]
+    assert result["memo"].index("[^sources-1]:") < result["memo"].index("## Sources")
+    assert "[NNR 2023, BMJ 2020, AHA 2023" not in result["memo"]
+    assert "* Eggs - a scoping review for Nordic Nutrition Recommendations 2023" in result["memo"]
+    assert "* Egg consumption and risk of cardiovascular disease" in result["memo"]
+    assert "* Here's the latest on dietary cholesterol" in result["memo"]
+    assert "* Dietary Cholesterol and Cardiovascular Risk" in result["memo"]
+    assert "* Associations of Dietary Cholesterol or Egg Consumption" in result["memo"]
+    assert "* Dietary Guidelines for Americans, 2020-2025" in result["memo"]
+    assert "compacted_crowded_citations" in result["report"]["changes"]
