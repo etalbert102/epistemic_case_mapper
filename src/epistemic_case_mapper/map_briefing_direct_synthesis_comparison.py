@@ -22,6 +22,8 @@ def build_direct_source_synthesis_comparison_report(
     anchors = _packet_anchors(packet)
     current = _score_text_against_anchors(briefing_text, anchors)
     baseline = _score_text_against_anchors(baseline_text, anchors) if baseline_text.strip() else {}
+    current_retention = _memo_ready_retention_summary(briefing_text, packet)
+    baseline_retention = _memo_ready_retention_summary(baseline_text, packet) if baseline_text.strip() else {}
     return {
         "schema_id": "direct_source_synthesis_comparison_report_v1",
         "status": _status(current, baseline),
@@ -36,6 +38,11 @@ def build_direct_source_synthesis_comparison_report(
         },
         "packet_memo_retention": current,
         "baseline_retention": baseline,
+        "packet_memo_mandatory_retention": current_retention,
+        "baseline_mandatory_retention": baseline_retention,
+        "mandatory_retention_delta_vs_baseline": _mandatory_delta(current_retention, baseline_retention),
+        "packet_memo_prose_diagnostics": _prose_diagnostics(briefing_text, question),
+        "baseline_prose_diagnostics": _prose_diagnostics(baseline_text, question) if baseline_text.strip() else {},
         "retention_delta_vs_baseline": _delta(current, baseline),
         "notes": _notes(current, baseline),
     }
@@ -57,10 +64,27 @@ def build_direct_source_baseline_prompt(question: str) -> str:
 
 def _packet_anchors(packet: dict[str, Any]) -> dict[str, list[Any]]:
     bundles = [row for row in packet.get("evidence_bundles", []) if isinstance(row, dict)]
+    items = [row for row in packet.get("evidence_items", []) if isinstance(row, dict)]
     return {
-        "source_labels": sorted({label for row in bundles for label in _string_list(row.get("source_labels"))}),
-        "quantities": sorted({quantity for row in bundles for quantity in _string_list(row.get("quantity_values"))}),
-        "bundle_anchors": [_bundle_anchor(row) for row in bundles if _bundle_anchor(row)["terms"]],
+        "source_labels": sorted(
+            {
+                label
+                for row in [*bundles, *items]
+                for label in [*_string_list(row.get("source_label")), *_string_list(row.get("source_labels"))]
+            }
+        ),
+        "quantities": sorted(
+            {
+                quantity
+                for row in [*bundles, *items]
+                for quantity in [*_string_list(row.get("quantity_values")), *_quantity_values(row.get("quantities"))]
+            }
+        ),
+        "bundle_anchors": [
+            anchor
+            for anchor in [*(_bundle_anchor(row) for row in bundles), *(_item_anchor(row) for row in items)]
+            if anchor["terms"]
+        ],
     }
 
 
@@ -98,6 +122,15 @@ def _bundle_anchor(bundle: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _item_anchor(item: dict[str, Any]) -> dict[str, Any]:
+    claim = str(item.get("reader_claim") or item.get("claim") or "")
+    return {
+        "bundle_id": str(item.get("item_id") or ""),
+        "decision_role": str(item.get("role") or ""),
+        "terms": _content_terms(claim)[:6],
+    }
+
+
 def _anchor_covered(anchor: dict[str, Any], lowered_text: str) -> bool:
     terms = [str(term).lower() for term in anchor.get("terms", []) if str(term).strip()]
     if not terms:
@@ -116,6 +149,19 @@ def _delta(current: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _mandatory_delta(current: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
+    if not baseline:
+        return {"status": "baseline_not_available"}
+    return {
+        "retained_mandatory_count": int(current.get("retained_mandatory_count", 0))
+        - int(baseline.get("retained_mandatory_count", 0)),
+        "missing_mandatory_count": int(current.get("missing_mandatory_count", 0))
+        - int(baseline.get("missing_mandatory_count", 0)),
+        "missing_quantity_count": int(current.get("missing_quantity_count", 0))
+        - int(baseline.get("missing_quantity_count", 0)),
+    }
+
+
 def _status(current: dict[str, Any], baseline: dict[str, Any]) -> str:
     if not baseline:
         return "comparison_pending_baseline"
@@ -126,12 +172,47 @@ def _status(current: dict[str, Any], baseline: dict[str, Any]) -> str:
 
 
 def _notes(current: dict[str, Any], baseline: dict[str, Any]) -> list[str]:
-    notes = ["This report compares traceable retention anchors only; it does not score prose quality or argument sophistication."]
+    notes = [
+        "This report combines traceable anchor retention, memo-ready mandatory retention, and lightweight prose diagnostics; it is not a substitute for human judgment."
+    ]
     if not baseline:
         notes.append("No direct-source baseline text was supplied, so only packet-memo retention and the baseline prompt are emitted.")
     elif int(current.get("quantity_mentions", 0)) < int(baseline.get("quantity_mentions", 0)):
         notes.append("The baseline retains more exact quantities than the packet-based memo.")
     return notes
+
+
+def _memo_ready_retention_summary(text: str, packet: dict[str, Any]) -> dict[str, Any]:
+    if not packet.get("evidence_items"):
+        return {"status": "not_memo_ready_packet"}
+    from epistemic_case_mapper.map_briefing_memo_ready_finalization import build_memo_ready_packet_retention_report
+
+    report = build_memo_ready_packet_retention_report(text, packet)
+    return {
+        "status": report.get("status"),
+        "mandatory_item_count": report.get("mandatory_item_count", 0),
+        "retained_mandatory_count": report.get("retained_mandatory_count", 0),
+        "missing_mandatory_count": report.get("missing_mandatory_count", 0),
+        "missing_quantity_count": report.get("missing_quantity_count", 0),
+        "unresolved_warning_count": report.get("unresolved_warning_count", 0),
+    }
+
+
+def _prose_diagnostics(text: str, question: str) -> dict[str, Any]:
+    lines = [line for line in str(text or "").splitlines() if line.strip()]
+    bullet_count = sum(1 for line in lines if re.match(r"\s*(?:[-*]|\d+\.)\s+", line))
+    heading_count = sum(1 for line in lines if line.lstrip().startswith("#") or re.match(r"\*\*[^*]+:\*\*", line.strip()))
+    json_wrapper = "memo_markdown" in text[:500] or "```json" in text[:200]
+    mechanical_score = bullet_count + max(0, heading_count - 8) + (3 if json_wrapper else 0)
+    return {
+        "word_count": len(str(text or "").split()),
+        "bullet_line_count": bullet_count,
+        "heading_like_line_count": heading_count,
+        "json_wrapper_present": json_wrapper,
+        "decision_question_present": _question_present(text, question),
+        "bottom_line_present": bool(re.search(r"\b(bottom line|executive summary|summary)\b", str(text or ""), flags=re.I)),
+        "mechanical_listing_score": mechanical_score,
+    }
 
 
 def _content_terms(text: str) -> list[str]:
@@ -152,6 +233,26 @@ def _string_list(value: Any) -> list[str]:
         return [str(item).strip() for item in value if str(item).strip()]
     text = str(value).strip()
     return [text] if text else []
+
+
+def _quantity_values(value: Any) -> list[str]:
+    rows = []
+    for row in value if isinstance(value, list) else []:
+        if isinstance(row, dict):
+            quantity = str(row.get("value") or "").strip()
+            if quantity:
+                rows.append(quantity)
+        elif str(row or "").strip():
+            rows.append(str(row).strip())
+    return rows
+
+
+def _question_present(text: str, question: str) -> bool:
+    text_terms = set(_content_terms(text))
+    question_terms = set(_content_terms(question))
+    if not question_terms:
+        return True
+    return len(text_terms.intersection(question_terms)) >= min(4, len(question_terms))
 
 
 def _ratio(numerator: int, denominator: int) -> float:

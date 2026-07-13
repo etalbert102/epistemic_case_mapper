@@ -45,3 +45,33 @@ def test_direct_source_synthesis_comparison_emits_prompt_without_baseline() -> N
     assert report["status"] == "comparison_pending_baseline"
     assert "Decision question: Should the city adopt option A" in report["direct_source_baseline_prompt"]
     assert report["retention_delta_vs_baseline"]["status"] == "baseline_not_available"
+
+
+def test_direct_source_synthesis_comparison_scores_memo_ready_packet_retention_and_prose() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "evidence_items": [
+            {
+                "item_id": "support",
+                "role": "strongest_support",
+                "must_use": True,
+                "reader_claim": "Option A reduces losses.",
+                "source_label": "Outcome Study",
+                "quantities": [{"value": "25%", "interpretation": "loss reduction"}],
+            }
+        ],
+    }
+
+    report = build_direct_source_synthesis_comparison_report(
+        question=packet["decision_question"],
+        packet=packet,
+        briefing_text="**Bottom Line:** Option A should be adopted because Outcome Study found Option A reduces losses by 25%.",
+        baseline_text="Option A should be adopted because Outcome Study found lower losses.",
+        baseline_path="baseline.md",
+    )
+
+    assert report["anchor_inventory"]["quantity_count"] == 1
+    assert report["packet_memo_mandatory_retention"]["status"] == "ready"
+    assert report["baseline_mandatory_retention"]["missing_quantity_count"] == 1
+    assert report["mandatory_retention_delta_vs_baseline"]["missing_quantity_count"] == -1
+    assert report["packet_memo_prose_diagnostics"]["bottom_line_present"] is True
