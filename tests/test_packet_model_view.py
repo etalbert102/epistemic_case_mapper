@@ -9,9 +9,10 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
         "evidence_bundles": [
             {
                 "bundle_id": "b1",
-                "claim": "Option A helps.",
+                "claim": "Outcome Study 2025 says Option A helps.",
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study 2025"],
+                "why_it_matters": "A very long source title should stay out of the model view provides direct evidence.",
                 "source_excerpt": "This raw excerpt should not be model visible.",
                 "allowed_wording": {"avoid_terms": ["proves"]},
                 "source_appraisal": {
@@ -77,6 +78,8 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
     assert "allowed_wording" not in serialized
     assert "large_internal_notes" not in serialized
     assert view["evidence_bundles"][0]["source_ids"] == ["s1"]
+    assert "s1 says Option A helps" in view["evidence_bundles"][0]["claim"]
+    assert "s1 provides direct evidence" in view["evidence_bundles"][0]["why_it_matters"]
     assert view["source_registry"] == [{"source_id": "s1"}]
     assert view["evidence_bundles"][0]["source_quality"]["decision_directness"] == "direct"
     assert view["evidence_bundles"][0]["source_quality"]["warnings"] == ["quality_limit"]

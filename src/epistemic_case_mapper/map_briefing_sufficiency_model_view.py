@@ -4,7 +4,11 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
-from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_alias_map
+from epistemic_case_mapper.map_briefing_source_identity import (
+    project_source_text_to_ids_for_model,
+    project_sources_to_ids_for_model,
+    source_id_alias_map,
+)
 
 
 def sufficiency_report_for_model(sufficiency_report: dict[str, Any], packet: dict[str, Any]) -> dict[str, Any]:
@@ -15,7 +19,7 @@ def sufficiency_report_for_model(sufficiency_report: dict[str, Any], packet: dic
         for alias, source_id in source_id_alias_map(source_trail).items()
         if alias and alias != source_id
     }
-    return _strip_source_terms(projected, source_terms)
+    return project_source_text_to_ids_for_model(_strip_source_terms(projected, source_terms), source_trail)
 
 
 def _strip_source_terms(value: Any, source_terms: set[str]) -> Any:

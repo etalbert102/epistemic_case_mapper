@@ -100,6 +100,14 @@ def source_label_variants(source_label: str) -> list[str]:
     variants = [source_label]
     if "_" in source_label:
         variants.append(source_label.replace("_", " "))
+        tokens = [token for token in source_label.split("_") if token]
+        for index, token in enumerate(tokens):
+            if index and re.fullmatch(r"(?:19|20)\d{2}", token):
+                lead = tokens[index - 1]
+                rest = "_".join(tokens[index + 1 :])
+                if lead and rest:
+                    variants.append(f"{lead.title()} et{token}_{rest}")
+                    variants.append(f"{lead.lower()} et{token}_{rest}")
     if " " in source_label:
         variants.append(source_label.replace(" ", "_"))
         variants.append(source_label.replace(" Sources ", "_Sources "))
@@ -153,6 +161,15 @@ def source_id_for_label(label: str, aliases: dict[str, str]) -> str:
 def project_sources_to_ids_for_model(payload: Any, source_trail: list[Any]) -> Any:
     aliases = source_id_alias_map(source_trail)
     return _project_sources_to_ids(payload, aliases)
+
+
+def project_source_text_to_ids_for_model(payload: Any, source_trail: list[Any]) -> Any:
+    aliases = source_id_alias_map(source_trail)
+    return _project_source_text_to_ids(payload, aliases)
+
+
+def replace_source_aliases_with_ids(text: str, source_trail: list[Any]) -> str:
+    return _replace_source_aliases_with_ids(text, source_id_alias_map(source_trail))
 
 
 def source_id_registry_for_model(source_trail: list[Any]) -> list[dict[str, Any]]:
@@ -210,6 +227,24 @@ def _project_sources_to_ids(payload: Any, aliases: dict[str, str]) -> Any:
             continue
         projected[key] = _project_sources_to_ids(value, aliases)
     return projected
+
+
+def _project_source_text_to_ids(payload: Any, aliases: dict[str, str]) -> Any:
+    if isinstance(payload, str):
+        return _replace_source_aliases_with_ids(payload, aliases)
+    if isinstance(payload, list):
+        return [_project_source_text_to_ids(row, aliases) for row in payload]
+    if isinstance(payload, dict):
+        return {key: _project_source_text_to_ids(value, aliases) for key, value in payload.items()}
+    return payload
+
+
+def _replace_source_aliases_with_ids(text: str, aliases: dict[str, str]) -> str:
+    value = str(text or "")
+    for alias, source_id in sorted(aliases.items(), key=lambda item: len(item[0]), reverse=True):
+        if alias and source_id and alias != source_id:
+            value = value.replace(alias, source_id)
+    return value
 
 
 def _merge_source_ids(existing: Any, incoming: list[str], aliases: dict[str, str]) -> list[str]:

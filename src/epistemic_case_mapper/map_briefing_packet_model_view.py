@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_source_identity import (
+    project_source_text_to_ids_for_model,
     project_sources_to_ids_for_model,
     source_id_alias_map,
     source_id_registry_for_model,
@@ -34,7 +35,7 @@ def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -
         "source_registry": source_id_registry_for_model(source_trail)[:24],
         "coverage_summary": _coverage_summary(packet.get("coverage_report")),
     }
-    return project_sources_to_ids_for_model(view, source_trail)
+    return project_source_text_to_ids_for_model(project_sources_to_ids_for_model(view, source_trail), source_trail)
 
 
 def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:

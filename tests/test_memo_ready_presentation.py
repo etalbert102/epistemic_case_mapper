@@ -90,6 +90,46 @@ def test_presentation_compact_citations_title_case_short_names() -> None:
     assert "[LI 2020]" not in result["memo"]
 
 
+def test_presentation_normalizes_malformed_source_id_and_evidence_item_citations() -> None:
+    packet = {
+        "source_trail": [
+            {
+                "source_id": "li_2020_egg_cholesterol_rct_meta",
+                "source_label": "Li et al. 2020",
+                "citation_label": "Li et al. 2020",
+                "source_url": "https://example.test/li",
+            },
+            {
+                "source_id": "nnr_2023_eggs_scoping_review",
+                "source_label": "NNR 2023",
+                "citation_label": "NNR 2023",
+                "source_url": "https://example.test/nnr",
+            },
+        ],
+        "evidence_items": [
+            {
+                "item_id": "analyst_item_004",
+                "source_ids": ["nnr_2023_eggs_scoping_review"],
+                "source_labels": ["NNR 2023"],
+                "reader_claim": "Moderate egg intake did not increase stroke risk.",
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "LDL markers moved [Li et2020_egg_cholesterol_rct_meta]. "
+        "Stroke evidence was neutral [analyst_item_004]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "[Li et2020_egg_cholesterol_rct_meta]" not in result["memo"]
+    assert "[analyst_item_004]" not in result["memo"]
+    assert "[[Li et al. 2020](CITATION_TRACE.md#li-et-al-2020)]" in result["memo"]
+    assert "[[NNR 2023](CITATION_TRACE.md#nnr-2023)]" in result["memo"]
+
+
 def test_presentation_compacts_crowded_inline_citations_without_losing_sources() -> None:
     packet = {
         "decision_question": "Should eggs be treated as neutral?",

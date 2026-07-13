@@ -119,6 +119,7 @@ def test_packet_critique_prompts_project_sufficiency_sources_to_ids() -> None:
                     "source_ids": ["s1"],
                     "source_labels": ["Source 1"],
                     "required_terms": ["Source 1", "10%"],
+                    "claim": "Source 1 reports a 10% quantity.",
                 }
             ]
         },
@@ -130,6 +131,7 @@ def test_packet_critique_prompts_project_sufficiency_sources_to_ids() -> None:
     for prompt in [critique_prompt, refinement_prompt]:
         assert "source_labels" not in prompt
         assert "Source 1" not in prompt
+        assert "s1 reports a 10% quantity" in prompt
         assert '"source_ids": [' in prompt
 
 

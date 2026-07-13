@@ -7,14 +7,14 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
-from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
+from epistemic_case_mapper.map_briefing_source_identity import project_source_text_to_ids_for_model, source_id_alias_map
 
 
 def build_packet_critique_index(packet: dict[str, Any], sufficiency_report: dict[str, Any]) -> dict[str, Any]:
     source_terms = _source_terms(_list(packet.get("source_trail")))
     bundles = [_compact_bundle(row) for row in _list(packet.get("evidence_bundles")) if isinstance(row, dict)]
     retain_items = [_compact_retain(row, source_terms=source_terms) for row in _list(packet.get("must_retain_ledger")) if isinstance(row, dict)]
-    return {
+    index = {
         "schema_id": "packet_critique_index_v1",
         "decision_question": packet.get("decision_question", ""),
         "answer_frame": _compact_answer_frame(packet.get("answer_frame")),
@@ -25,6 +25,7 @@ def build_packet_critique_index(packet: dict[str, Any], sufficiency_report: dict
         "coverage_report": packet.get("coverage_report", {}) if isinstance(packet.get("coverage_report"), dict) else {},
         "sufficiency_summary": _compact_sufficiency(sufficiency_report),
     }
+    return project_source_text_to_ids_for_model(index, _list(packet.get("source_trail")))
 
 
 def build_packet_critique_shards(index: dict[str, Any], *, max_bundles_per_shard: int = 6) -> list[dict[str, Any]]:
@@ -90,7 +91,7 @@ def targets_from_packet(packet: dict[str, Any], target_ids: list[str]) -> dict[s
         for row in _list(packet.get("must_retain_ledger"))
         if isinstance(row, dict) and str(row.get("item_id", "")) in targets
     ]
-    return {"bundles": bundles, "retain_items": retain}
+    return project_source_text_to_ids_for_model({"bundles": bundles, "retain_items": retain}, _list(packet.get("source_trail")))
 
 
 def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:

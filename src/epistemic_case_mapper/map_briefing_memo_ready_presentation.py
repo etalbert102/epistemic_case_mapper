@@ -551,6 +551,27 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
         if display and display != source_label:
             for alias in source_label_variants(source_label):
                 replacements[alias] = display
+    replacements.update(_evidence_item_alias_replacements(packet, source_lookup, common_prefix=common_prefix))
+    return replacements
+
+
+def _evidence_item_alias_replacements(packet: dict[str, Any], source_lookup: dict[str, dict[str, Any]], *, common_prefix: list[str]) -> dict[str, str]:
+    replacements: dict[str, str] = {}
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("item_id") or item.get("claim_id") or "").strip()
+        if not item_id:
+            continue
+        displays = []
+        for source_id in _string_list(item.get("source_ids")):
+            source = source_lookup.get(source_id)
+            if isinstance(source, dict):
+                display = compact_source_display(source, common_prefix=common_prefix)
+                if display:
+                    displays.append(display)
+        if displays:
+            replacements[item_id] = "; ".join(_dedupe(displays))
     return replacements
 
 
