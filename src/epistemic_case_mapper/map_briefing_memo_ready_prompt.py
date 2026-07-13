@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
@@ -35,9 +36,14 @@ def build_writer_packet_synthesis_prompt(
     writing_interface = build_writer_decision_interface(memo_ready_packet)
     narrative_blueprint = build_memo_narrative_blueprint(memo_ready_packet or {}, writing_interface=writing_interface)
     model_context = build_writer_model_context(writing_interface)
+    source_identity_trail = _list(writing_interface.get("_source_identity_trail")) or _list(writing_interface.get("source_trail"))
+    model_context["analytical_balance_contract"] = project_sources_to_ids_for_model(
+        build_analytical_balance_contract(memo_ready_packet),
+        source_identity_trail,
+    )
     blueprint_context: dict[str, Any] = project_sources_to_ids_for_model(
         narrative_blueprint,
-        _list(writing_interface.get("_source_identity_trail")) or _list(writing_interface.get("source_trail")),
+        source_identity_trail,
     )
     if _list(_dict(model_context.get("reasoning_hierarchy")).get("reasoning_moves")):
         blueprint_context = {
@@ -50,7 +56,7 @@ def build_writer_packet_synthesis_prompt(
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
-        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, reasoning_hierarchy as the organizing spine, and decision_boundary_source_contract as the guide for boundaries, source roles, source-specific cautions, and quantity priorities. Use the narrative blueprint as secondary orientation. The adaptive outline's must-write cards are the retention contract for synthesis: satisfy each card in natural prose when it affects the decision read. Merge related cards into the same paragraph when that reads better.\n\n"
+        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, reasoning_hierarchy as the organizing spine, analytical_balance_contract as the guide for balanced decision reasoning, and decision_boundary_source_contract as the guide for boundaries, source roles, source-specific cautions, and quantity priorities. Use the narrative blueprint as secondary orientation. The adaptive outline's must-write cards are the retention contract for synthesis; analytical_balance_contract.required_balance_cards are additional balance requirements. Satisfy each card in natural prose when it affects the decision read. Merge related cards into the same paragraph when that reads better.\n\n"
         "Rules:\n"
         "- Start the first paragraph with a direct bottom-line answer to the decision question, using answer_frame.direct_answer from the writer model context when present.\n"
         "- Scope the opening answer using answer_frame.scope_note and answer_frame.main_uncertainty when they are present.\n"
@@ -60,6 +66,9 @@ def build_writer_packet_synthesis_prompt(
         "- Use decision_boundary_source_contract.source_use_cards to cite sources for their specific memo job rather than citing every source generically.\n"
         "- Use decision_boundary_source_contract.quantity_priority_cards to decide which retained quantities deserve main-prose interpretation first.\n"
         "- Follow decision_boundary_source_contract.language_discipline when it gives source-appraisal cautions about association, causality, quality, or interpretation.\n"
+        "- Use analytical_balance_contract.required_balance_cards to ensure high-priority support, counterweight, scope, or crux evidence is visibly weighed even when it was not mandatory in the original packet.\n"
+        "- For every required counterweight in analytical_balance_contract, explain whether it overturns, weakens, bounds, or contextualizes the answer.\n"
+        "- Use analytical_balance_contract.evidence_type_contrasts to separate evidence types when they answer different subquestions.\n"
         "- Satisfy every adaptive_memo_outline.must_write_cards entry in natural prose; use the cards to preserve required evidence, not to create checklist rhythm.\n"
         "- When a must-write card has multiple quantities_to_keep_together, write those quantities in the same sentence or adjacent clause so the model does not split paired estimates from their interval, denominator, or interpretation.\n"
         "- Use only facts, quantities, and source IDs present in the writer model context.\n"

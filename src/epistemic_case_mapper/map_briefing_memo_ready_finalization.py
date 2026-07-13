@@ -5,6 +5,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -126,7 +127,9 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         if uses_obligations
         else evidence_statuses
     )
+    balance_statuses = [_analytical_balance_retention_status(memo, card, source_aliases) for card in required_analytical_balance_cards(packet)]
     item_issues = [row for row in statuses if not row["retained"]]
+    balance_issues = [row for row in balance_statuses if not row["retained"]]
     evidence_item_issues = [row for row in evidence_statuses if not row["retained"]]
     warning_resolution = build_warning_resolution_report(
         memo,
@@ -147,22 +150,28 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         for row in _list(warning_resolution.get("warnings_needing_repair"))
         if isinstance(row, dict)
     ]
-    issues = [*item_issues, *warning_issues]
+    issues = [*item_issues, *balance_issues, *warning_issues]
+    retained_status_count = sum(1 for row in statuses if row["retained"]) + sum(1 for row in balance_statuses if row["retained"])
     return {
         "schema_id": "memo_ready_packet_retention_report_v1",
         "validation_basis": "memo_obligations" if uses_obligations else "mandatory_evidence_items",
+        "analytical_balance_validation": "enabled",
         "status": "ready" if not issues else "warning",
-        "must_retain_count": len(statuses),
-        "retained_must_retain_count": sum(1 for row in statuses if row["retained"]),
-        "missing_critical_count": len(item_issues),
+        "must_retain_count": len(statuses) + len(balance_statuses),
+        "retained_must_retain_count": retained_status_count,
+        "missing_critical_count": len(item_issues) + len(balance_issues),
         "missing_high_count": 0,
-        "mandatory_item_count": len(statuses),
-        "retained_mandatory_count": sum(1 for row in statuses if row["retained"]),
-        "missing_mandatory_count": len(item_issues),
-        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in item_issues),
+        "mandatory_item_count": len(statuses) + len(balance_statuses),
+        "retained_mandatory_count": retained_status_count,
+        "missing_mandatory_count": len(item_issues) + len(balance_issues),
+        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in [*item_issues, *balance_issues]),
         "unresolved_warning_count": len(warning_issues),
         "warning_resolution_report": warning_resolution,
         "item_statuses": statuses,
+        "analytical_balance_statuses": balance_statuses,
+        "required_analytical_balance_count": len(balance_statuses),
+        "retained_analytical_balance_count": sum(1 for row in balance_statuses if row["retained"]),
+        "missing_analytical_balance_count": len(balance_issues),
         "evidence_item_statuses": evidence_statuses,
         "missing_evidence_item_count": len(evidence_item_issues),
         "memo_obligation_count": len(all_memo_obligations(packet)),
@@ -233,7 +242,7 @@ def run_memo_ready_packet_repair(
 
 
 def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], retention_report: dict[str, Any]) -> str:
-    uses_obligations = str(retention_report.get("validation_basis") or "") == "memo_obligations"
+    uses_obligations = str(retention_report.get("validation_basis") or "").startswith("memo_obligations")
     strict_contract = _strict_packet_contract(packet)
     limit = 16 if strict_contract else 8
     warning_packet = _dict(packet.get("memo_warning_packet"))
@@ -251,6 +260,11 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
             for issue in _list(retention_report.get("issues"))[:limit]
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_memo_ready_item"
         ],
+        "missing_balance_cards": [
+            _repair_balance_card(issue)
+            for issue in _list(retention_report.get("issues"))[:limit]
+            if isinstance(issue, dict) and issue.get("issue_type") == "missing_analytical_balance_card"
+        ],
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
     return (
@@ -259,8 +273,8 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
-        "- Repair missing obligations by improving the reasoning around the affected point.\n"
-        "- Use only the missing obligations or legacy missing items in the repair packet.\n"
+        "- Repair missing obligations and balance cards by improving the reasoning around the affected point.\n"
+        "- Use only the missing obligations, missing balance cards, or legacy missing items in the repair packet.\n"
         "- For strict writer-packet repairs, every missing obligation in the repair packet is a required decision-writing obligation; include it, merge it with related prose, or explain the scope/uncertainty it creates.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"
@@ -334,6 +348,16 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
             }
             for item in _mandatory_items(packet)[:18]
         ] if not required_memo_obligations(packet) else [],
+        "required_balance_cards": [
+            {
+                "role": card.get("role"),
+                "statement": card.get("statement"),
+                "decision_relevance": card.get("decision_relevance"),
+                "source_labels": card.get("source_labels", []),
+                "writing_job": card.get("writing_job"),
+            }
+            for card in required_analytical_balance_cards(packet)[:10]
+        ],
         "memo_warnings": _list(_dict(packet.get("memo_warning_packet")).get("warnings"))[:8],
     }
     return (
@@ -485,11 +509,15 @@ def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
             str(source.get("display_label") or "").strip(),
             str(source.get("citation_label") or "").strip(),
         ]
-        alias_values = _dedupe(value for value in values if value)
+        alias_values = _exact_dedupe(value for value in values if value)
         for key in (source_label, source_id, *alias_values):
             if key:
                 aliases[key] = alias_values
     return aliases
+
+
+def _exact_dedupe(values: Any) -> list[str]:
+    return list(dict.fromkeys(str(value or "").strip() for value in values if str(value or "").strip()))
 
 
 def _source_aliases_for_label(source_label: str, source_aliases: dict[str, list[str]]) -> list[str]:
@@ -597,7 +625,7 @@ def _item_retention_status(memo: str, item: dict[str, Any], source_aliases: dict
     source = str(item.get("source_label") or "").strip()
     quantities = retention_quantity_rows(item)
     missing_quantities = [quantity["value"] for quantity in quantities if not quantity_retained(memo, quantity)]
-    aliases = _dedupe([source, *(_source_aliases_for_label(source, source_aliases or {}) if source else [])])
+    aliases = _exact_dedupe([source, *(_source_aliases_for_label(source, source_aliases or {}) if source else [])])
     source_retained = not source or any(_contains_text(memo, alias) for alias in aliases)
     claim_retained = _mentions_enough_content_terms(memo, claim, minimum=4)
     retained = source_retained and claim_retained and not missing_quantities
@@ -656,6 +684,43 @@ def _obligation_retention_status(
     }
 
 
+def _analytical_balance_retention_status(
+    memo: str,
+    card: dict[str, Any],
+    source_aliases: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
+    statement = str(card.get("statement") or "").strip()
+    source_labels = _string_list(card.get("source_labels"))
+    source_retained = not source_labels or any(
+        _contains_text(memo, alias)
+        for source in source_labels
+        for alias in _source_aliases_for_label(source, source_aliases or {})
+    )
+    if not source_retained and source_labels:
+        source_retained = any(_contains_text(memo, source) for source in source_labels)
+    terms = _string_list(card.get("validation_terms")) or _content_terms(statement)
+    claim_retained = _mentions_enough_terms(memo, terms, minimum=min(4, max(2, len(terms) // 2)))
+    numbers = _string_list(card.get("surface_numbers"))
+    number_retained = not numbers or any(_contains_text(memo, value) for value in numbers)
+    retained = source_retained and claim_retained and number_retained
+    return {
+        "balance_card_id": card.get("card_id"),
+        "severity": "critical",
+        "issue_type": "missing_analytical_balance_card",
+        "role": card.get("role"),
+        "retained": retained,
+        "source_retained": source_retained,
+        "claim_retained": claim_retained,
+        "number_retained": number_retained,
+        "missing_quantities": [] if number_retained else numbers,
+        "statement": statement,
+        "decision_relevance": card.get("decision_relevance"),
+        "source_labels": source_labels,
+        "validation_terms": terms,
+        "writing_job": card.get("writing_job"),
+    }
+
+
 def _repair_item(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any]:
     item_id = str(issue.get("item_id") or "")
     item = next((row for row in _mandatory_items(packet) if str(row.get("item_id") or "") == item_id), {})
@@ -667,6 +732,19 @@ def _repair_item(packet: dict[str, Any], issue: dict[str, Any]) -> dict[str, Any
         "quantities": item.get("quantities", []),
         "decision_relevance": item.get("decision_relevance"),
         "caveat": item.get("caveat"),
+        "missing_quantities": issue.get("missing_quantities", []),
+    }
+
+
+def _repair_balance_card(issue: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "balance_card_id": issue.get("balance_card_id"),
+        "role": issue.get("role"),
+        "statement": issue.get("statement"),
+        "decision_relevance": issue.get("decision_relevance"),
+        "source_labels": issue.get("source_labels", []),
+        "validation_terms": issue.get("validation_terms", []),
+        "writing_job": issue.get("writing_job"),
         "missing_quantities": issue.get("missing_quantities", []),
     }
 

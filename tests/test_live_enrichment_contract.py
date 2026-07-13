@@ -90,6 +90,32 @@ def test_retention_accepts_semantic_dose_phrasing_and_retention_phrase() -> None
     assert report["issues"] == []
 
 
+def test_retention_accepts_stable_source_id_as_source_alias() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "evidence_items": [
+            {
+                "item_id": "counter",
+                "must_use": True,
+                "role": "strongest_counterweight",
+                "reader_claim": "Option A increased serious implementation failures.",
+                "source_label": "Deep Research Flood Sources Risk Study 2025",
+            }
+        ],
+        "source_trail": [
+            {
+                "source_id": "deep_research_flood_sources_risk_study_2025",
+                "source_label": "Deep Research Flood Sources Risk Study 2025",
+            }
+        ],
+    }
+    memo = "Option A increased serious implementation failures [deep_research_flood_sources_risk_study_2025]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["status"] == "ready"
+
+
 def test_live_source_appraisal_timeout_is_bounded() -> None:
     assert _source_appraisal_timeout("prompt", 240) == 240
     assert _source_appraisal_timeout("ollama:gemma", None) == 90
