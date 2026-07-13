@@ -707,6 +707,7 @@ def _stable_final_answer_frame(packet: dict[str, Any], *, question: str) -> dict
     answer_frame = _dict(packet.get("answer_frame"))
     answer_spine = _dict(packet.get("answer_spine"))
     candidate_answer_set = _dict(packet.get("candidate_answer_set"))
+    live_options = _live_answer_options(candidate_answer_set)
     direct_answer = str(
         answer_frame.get("default_answer")
         or answer_frame.get("direct_answer")
@@ -714,33 +715,108 @@ def _stable_final_answer_frame(packet: dict[str, Any], *, question: str) -> dict
         or answer_spine.get("bounded_answer")
         or ""
     ).strip()
+    selected_answer_option_id = str(
+        answer_frame.get("selected_answer_option_id")
+        or answer_frame.get("candidate_answer_id")
+        or answer_spine.get("selected_answer_option_id")
+        or answer_spine.get("candidate_answer_id")
+        or ""
+    ).strip()
+    answer_status = _answer_status(
+        answer_frame=answer_frame,
+        answer_spine=answer_spine,
+        current_best_answer=direct_answer,
+        selected_answer_option_id=selected_answer_option_id,
+        live_answer_options=live_options,
+    )
     frame = _drop_empty(
         {
             "schema_id": "stable_final_answer_frame_v1",
             "decision_question": str(question or packet.get("decision_question") or "").strip(),
+            "answer_status": answer_status,
             "current_best_answer": _short_text(direct_answer, 700),
+            "selected_answer_option_id": selected_answer_option_id,
             "classification": str(answer_frame.get("classification") or "").strip(),
             "confidence": str(answer_frame.get("confidence") or packet.get("confidence") or "").strip(),
-            "candidate_answer_options": [
-                _drop_empty(
-                    {
-                        "candidate_answer_id": row.get("candidate_answer_id") or row.get("answer_id"),
-                        "answer": _short_text(str(row.get("answer") or row.get("label") or row.get("claim") or ""), 220),
-                    }
-                )
-                for row in _list(candidate_answer_set.get("candidate_answers"))
-                if isinstance(row, dict)
-            ][:8],
-            "classification_rule": (
-                "Classify every row relative to current_best_answer. challenges_answer means the row weakens, overturns, "
-                "or materially lowers confidence in current_best_answer; evidence that argues against a rejected or feared "
-                "alternative usually supports or contextualizes current_best_answer instead."
-            ),
+            "live_answer_options": live_options,
+            "candidate_answer_options": live_options,
+            "conditions_or_scope_clauses": _conditions_or_scope_clauses(answer_frame, answer_spine),
+            "classification_target_policy": _classification_target_policy(answer_status, current_best_answer=direct_answer),
+            "classification_rule": _classification_rule(answer_status, current_best_answer=direct_answer),
         }
     )
-    if not frame.get("current_best_answer"):
-        frame["current_best_answer"] = "No stable final answer has been selected yet; classify relation conservatively and explain uncertainty."
     return frame
+
+
+def _live_answer_options(candidate_answer_set: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        _drop_empty(
+            {
+                "candidate_answer_id": row.get("candidate_answer_id") or row.get("answer_id"),
+                "answer": _short_text(str(row.get("answer") or row.get("label") or row.get("claim") or ""), 220),
+                "stance": str(row.get("stance") or "").strip(),
+                "status": str(row.get("status") or "").strip(),
+                "basis": str(row.get("basis") or "").strip(),
+            }
+        )
+        for row in _list(candidate_answer_set.get("candidate_answers"))
+        if isinstance(row, dict)
+    ][:8]
+
+
+def _answer_status(
+    *,
+    answer_frame: dict[str, Any],
+    answer_spine: dict[str, Any],
+    current_best_answer: str,
+    selected_answer_option_id: str,
+    live_answer_options: list[dict[str, Any]],
+) -> str:
+    explicit = str(answer_frame.get("answer_status") or answer_spine.get("answer_status") or "").strip().lower()
+    if explicit in {"selected", "provisional", "unresolved", "multi_option"}:
+        return explicit
+    if selected_answer_option_id:
+        return "selected"
+    if current_best_answer:
+        return "provisional"
+    if len(live_answer_options) > 1:
+        return "multi_option"
+    return "unresolved"
+
+
+def _conditions_or_scope_clauses(answer_frame: dict[str, Any], answer_spine: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            *_string_list(answer_frame.get("conditions_or_scope_clauses")),
+            *_string_list(answer_frame.get("scope")),
+            *_string_list(answer_frame.get("main_uncertainty")),
+            *_string_list(answer_spine.get("conditions_or_scope_clauses")),
+            *_string_list(answer_spine.get("scope_boundaries")),
+        ]
+    )[:8]
+
+
+def _classification_target_policy(answer_status: str, *, current_best_answer: str) -> str:
+    if answer_status == "selected":
+        return "Classify relative to selected_answer_option_id and current_best_answer; use target_answer_option for the named option affected."
+    if answer_status == "provisional" and current_best_answer:
+        return "Classify relative to the provisional current_best_answer, while preserving which live answer option or condition the evidence bears on."
+    if answer_status == "multi_option":
+        return "No single answer is selected; classify evidence by the live answer option, condition, or crux it bears on instead of forcing support or challenge to a final answer."
+    return "No stable answer is selected; use uncertain_relation or contextualizes_answer unless evidence clearly bears on a named live option, condition, or crux."
+
+
+def _classification_rule(answer_status: str, *, current_best_answer: str) -> str:
+    if answer_status in {"selected", "provisional"} and current_best_answer:
+        return (
+            "Classify relative to current_best_answer. challenges_answer means the row weakens, overturns, "
+            "or materially lowers confidence in current_best_answer; evidence that argues against a rejected or feared "
+            "alternative usually supports or contextualizes current_best_answer instead."
+        )
+    return (
+        "Because no final answer is selected, do not force evidence into support or counterweight for a nonexistent bottom line. "
+        "Use target_answer_option to name the live option, condition, or crux affected; challenges_answer means weakening that named target."
+    )
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

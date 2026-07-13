@@ -17,7 +17,9 @@ def _ledger() -> dict:
         "stable_final_answer_frame": {
             "schema_id": "stable_final_answer_frame_v1",
             "decision_question": "Should option A be adopted?",
+            "answer_status": "provisional",
             "current_best_answer": "Adopt option A only if the cost exposure is bounded.",
+            "classification_target_policy": "Classify relative to the provisional current_best_answer.",
             "classification_rule": "Classify every row relative to current_best_answer.",
         },
         "rows": [
@@ -102,7 +104,9 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "allowed_answer_relation" in prompt
     assert "stable_final_answer_frame" in prompt
     assert "current_best_answer" in prompt
-    assert "rebuts an alternative answer but supports current_best_answer" in prompt
+    assert "classification_target_policy" in prompt
+    assert "multi_option or unresolved" in prompt
+    assert "rebuts an alternative answer but supports the selected/provisional current_best_answer" in prompt
     assert "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer" in prompt
     assert "Raw excerpt should stay out" not in prompt
     assert "large_internal_notes" not in prompt

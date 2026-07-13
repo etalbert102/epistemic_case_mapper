@@ -22,7 +22,8 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
                 "target_answer_option": "the answer option or stance this group most directly bears on",
                 "effect_on_final_answer": (
                     "supports current_best_answer | weakens current_best_answer | bounds current_best_answer | "
-                    "rebuts alternative | explains tension | background"
+                    "supports target answer | weakens target answer | bounds target answer | rebuts alternative | "
+                    "distinguishes live options | explains tension | background"
                 ),
                 "tension_type": "none | clinical_outcome_vs_biomarker | subgroup_scope | dose_scope | study_conflict | mechanism | other",
                 "importance_rank": "integer 1-100; 1 is most important globally",

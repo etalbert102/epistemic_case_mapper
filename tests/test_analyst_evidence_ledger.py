@@ -51,6 +51,57 @@ def test_analyst_evidence_ledger_ids_are_stable_under_source_trail_order_changes
     ]
 
 
+def test_analyst_evidence_ledger_marks_direct_answer_as_provisional_target() -> None:
+    ledger = build_analyst_evidence_ledger(
+        {
+            "decision_question": "Should option A be adopted?",
+            "answer_frame": {
+                "default_answer": "Adopt option A only if implementation risk is bounded.",
+                "confidence": "medium",
+                "scope": "Comparable sites with implementation capacity.",
+            },
+            "candidate_answer_set": {
+                "candidate_answers": [
+                    {"candidate_answer_id": "yes_or_favor", "label": "yes / favor", "stance": "supports_proposition"},
+                    {"candidate_answer_id": "no_or_reject", "label": "no / reject", "stance": "challenges_proposition"},
+                ]
+            },
+            "evidence_bundles": [],
+        }
+    )
+
+    frame = ledger["stable_final_answer_frame"]
+
+    assert frame["answer_status"] == "provisional"
+    assert frame["current_best_answer"] == "Adopt option A only if implementation risk is bounded."
+    assert frame["classification_target_policy"].startswith("Classify relative to the provisional current_best_answer")
+    assert {row["candidate_answer_id"] for row in frame["live_answer_options"]} == {"yes_or_favor", "no_or_reject"}
+    assert frame["conditions_or_scope_clauses"] == ["Comparable sites with implementation capacity."]
+
+
+def test_analyst_evidence_ledger_keeps_multi_option_question_open_without_current_best_answer() -> None:
+    ledger = build_analyst_evidence_ledger(
+        {
+            "decision_question": "Which option should the city choose?",
+            "candidate_answer_set": {
+                "candidate_answers": [
+                    {"candidate_answer_id": "option_a", "label": "Option A", "stance": "conditional"},
+                    {"candidate_answer_id": "option_b", "label": "Option B", "stance": "conditional"},
+                ]
+            },
+            "evidence_bundles": [],
+        }
+    )
+
+    frame = ledger["stable_final_answer_frame"]
+
+    assert frame["answer_status"] == "multi_option"
+    assert "current_best_answer" not in frame
+    assert "No single answer is selected" in frame["classification_target_policy"]
+    assert "do not force evidence into support or counterweight" in frame["classification_rule"]
+    assert [row["candidate_answer_id"] for row in frame["live_answer_options"]] == ["option_a", "option_b"]
+
+
 def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relation_context() -> None:
     candidate_map = {
         "claims": [

@@ -50,15 +50,15 @@ def effective_memo_role(group: dict[str, Any]) -> str:
     memo_role = str(group.get("memo_role") or "").strip()
     relation = str(group.get("answer_relation") or "").strip()
     effect = str(group.get("effect_on_final_answer") or "").strip().lower()
-    if relation == "supports_answer" or effect.startswith("supports current_best_answer") or effect == "rebuts alternative":
+    if relation == "supports_answer" or effect.startswith(("supports current_best_answer", "supports target answer")) or effect == "rebuts alternative":
         if memo_role in {"quantitative_anchor", "decision_crux", "mechanism_or_context"}:
             return memo_role
         return "load_bearing_primary_support"
-    if relation == "bounds_scope" or effect.startswith("bounds current_best_answer"):
+    if relation == "bounds_scope" or effect.startswith(("bounds current_best_answer", "bounds target answer")):
         return "scope_or_applicability"
-    if relation == "identifies_crux" or effect == "explains tension":
+    if relation == "identifies_crux" or effect in {"explains tension", "distinguishes live options"}:
         return "decision_crux"
-    if relation == "challenges_answer" or effect.startswith(("weakens current_best_answer", "overturns current_best_answer")):
+    if relation == "challenges_answer" or effect.startswith(("weakens current_best_answer", "overturns current_best_answer", "weakens target answer")):
         return "load_bearing_counterweight"
     if relation == "contextualizes_answer" or effect == "background":
         if memo_role in {"load_bearing_primary_support", "load_bearing_counterweight"}:
