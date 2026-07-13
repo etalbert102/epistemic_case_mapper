@@ -112,6 +112,10 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "large_internal_notes" not in prompt
     assert "source_quality" in prompt
     assert "quality_limit" in prompt
+    assert "source_ids" in prompt
+    assert "source_labels" not in prompt
+    assert "Outcome Study" not in prompt
+    assert "Equity Review" not in prompt
 
 
 def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> None:

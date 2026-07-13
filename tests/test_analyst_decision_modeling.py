@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
     _decision_logic,
     build_decision_model_tasks,
 )
+from epistemic_case_mapper.map_briefing_analyst_decision_repair import build_analyst_decision_model_repair_prompt
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -226,6 +227,10 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "Start from obligation_group_skeleton" in prompt
     assert "Do not bury contrary evidence inside a support group" in prompt
     assert "Rank by decision diagnosticity" in prompt
+    assert "source_ids" in prompt
+    assert "source_labels" not in prompt
+    assert "Outcome Study" not in prompt
+    assert "Risk Review" not in prompt
 
 
 def test_parallel_decision_model_tasks_chunk_large_context() -> None:
@@ -237,6 +242,31 @@ def test_parallel_decision_model_tasks_chunk_large_context() -> None:
     assert tasks[0]["task_id"] == "analyst_decision_model_task_001"
     assert "source_excerpt" not in json.dumps(tasks)
     assert "relation_context" not in json.dumps(tasks)
+    assert "source_ids" in json.dumps(tasks)
+    assert "source_labels" not in json.dumps(tasks)
+    assert "Source 1" not in json.dumps(tasks)
+
+
+def test_decision_model_repair_prompt_uses_source_ids_not_labels() -> None:
+    repair_rows = [
+        {
+            "evidence_item_id": "bundle:support",
+            "claim": "Option A reduced losses in the main outcome study.",
+            "source_ids": ["s1"],
+            "source_labels": ["Outcome Study"],
+        }
+    ]
+
+    prompt = build_analyst_decision_model_repair_prompt(
+        current_model={"direct_answer": "Adopt option A only if operating risk is bounded.", "evidence_groups": []},
+        repair_rows=repair_rows,
+        decision_question="Should option A be adopted?",
+    )
+
+    assert "source_ids" in prompt
+    assert "s1" in prompt
+    assert "source_labels" not in prompt
+    assert "Outcome Study" not in prompt
 
 
 def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) -> None:

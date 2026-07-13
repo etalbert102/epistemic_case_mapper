@@ -309,13 +309,29 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "needs_review",
         ],
         "required_output_schema": decision_model_required_output_schema(context.get("decision_question")),
-        "context": context,
+        "context": _context_for_model(context),
     }
     return (
         "You are a senior decision analyst building the intermediate decision model for a later memo writer.\n"
         "Your job is global evidence organization, weighting, and argument construction.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
+
+
+def _context_for_model(context: dict[str, Any]) -> dict[str, Any]:
+    return _strip_model_source_labels(context)
+
+
+def _strip_model_source_labels(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_model_source_labels(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_model_source_labels(item)
+            for key, item in value.items()
+            if key not in {"source_label", "source_labels", "display_label", "citation_label"}
+        }
+    return value
 
 
 def deterministic_decision_model_scaffold(

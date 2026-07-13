@@ -141,7 +141,7 @@ def build_analyst_decision_model_repair_prompt(
             "Return strict JSON only.",
         ],
         "current_model_summary": _decision_model_assignment_summary(current_model),
-        "repair_rows": repair_rows,
+        "repair_rows": _repair_rows_for_model(repair_rows),
         "required_output_schema": {
             "schema_id": "analyst_decision_group_assignments_v1",
             "assignments": [
@@ -196,6 +196,17 @@ def _decision_model_repair_packet(parse_report: dict[str, Any], context: dict[st
     }
 
 
+def _repair_rows_for_model(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            key: value
+            for key, value in row.items()
+            if key not in {"source_label", "source_labels", "display_label", "citation_label"}
+        }
+        for row in rows
+    ]
+
+
 def _repair_batches(repair_packet: dict[str, Any]) -> list[list[dict[str, Any]]]:
     rows = _dedupe_repair_rows(
         [
@@ -246,7 +257,7 @@ def _repair_context_row(row: dict[str, Any], obligation_type: str) -> dict[str, 
             "current_role": row.get("current_role"),
             "adjudicated_memo_use": row.get("adjudicated_memo_use"),
             "quantity_values": row.get("quantity_values", []),
-            "source_labels": row.get("source_labels", []),
+            "source_ids": row.get("source_ids", []),
             "claim": _short_text(str(row.get("claim") or ""), 420),
             "source_excerpt": _short_text(str(row.get("source_excerpt") or ""), 260),
             "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 220),

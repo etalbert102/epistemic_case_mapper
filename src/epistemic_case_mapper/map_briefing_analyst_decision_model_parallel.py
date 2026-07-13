@@ -292,7 +292,7 @@ def _compact_task_row(row: dict[str, Any]) -> dict[str, Any]:
         "target_answer_option": row.get("target_answer_option"),
         "effect_on_final_answer": row.get("effect_on_final_answer"),
         "tension_type": row.get("tension_type"),
-        "source_labels": _string_list(row.get("source_labels"))[:4],
+        "source_ids": _string_list(row.get("source_ids"))[:4],
         "source_quality": row.get("source_quality") if isinstance(row.get("source_quality"), dict) else {},
         "claim": _short_text(str(row.get("claim") or ""), 320),
         "quantity_values": _string_list(row.get("quantity_values"))[:6],

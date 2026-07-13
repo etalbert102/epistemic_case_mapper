@@ -453,7 +453,7 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
         "current_weight": row.get("current_weight"),
         "directionality": row.get("directionality"),
         "relation_semantic_role": row.get("relation_semantic_role"),
-        "source_labels": row.get("source_labels", []),
+        "source_ids": _string_list(row.get("source_ids"))[:6],
         "source_quality": _source_quality_summary(row),
         "quantity_values": row.get("quantity_values", []),
         "claim": _short_text(str(row.get("claim") or ""), 360),
