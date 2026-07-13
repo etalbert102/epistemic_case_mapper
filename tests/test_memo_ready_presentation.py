@@ -132,3 +132,47 @@ def test_citation_trace_records_packet_evidence_without_replacing_source_urls() 
     assert "- External URL: https://example.test/outcome" in trace
     assert "`item_001` (scope_boundary): The effect is limited to the studied population." in trace
     assert "42%: event rate in the studied group" in trace
+
+
+def test_presentation_links_parenthetical_citations_and_records_memo_contexts() -> None:
+    packet = {
+        "decision_question": "Should advice change?",
+        "source_trail": [
+            {
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_label": "Egg consumption and risk of cardiovascular disease",
+                "source_url": "https://example.test/bmj",
+            },
+            {
+                "source_id": "nnr_2023_eggs_scoping_review",
+                "source_label": "Nordic Nutrition Recommendations evidence review authors 2023",
+                "source_url": "https://example.test/nnr",
+            },
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "role": "strongest_support",
+                "reader_claim": "Moderate egg consumption was not associated with higher cardiovascular risk.",
+                "source_label": "Egg consumption and risk of cardiovascular disease",
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "Moderate intake was not associated with higher cardiovascular risk (BMJ 2020). "
+        "The replacement-food question remains important (BMJ 2020; NNR 2023). "
+        "The BMJ 2020 authors also framed this as a replacement-food problem."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+    trace = build_citation_trace_markdown(result["memo"], packet)
+
+    assert "([BMJ 2020](CITATION_TRACE.md#bmj-2020))" in result["memo"]
+    assert "([BMJ 2020](CITATION_TRACE.md#bmj-2020); [NNR 2023](CITATION_TRACE.md#nnr-2023))" in result["memo"]
+    assert "- Memo citation contexts:" in trace
+    assert "Moderate intake was not associated with higher cardiovascular risk ([BMJ 2020](CITATION_TRACE.md#bmj-2020))." in trace
+    assert "The replacement-food question remains important ([BMJ 2020](CITATION_TRACE.md#bmj-2020); [NNR 2023](CITATION_TRACE.md#nnr-2023))." in trace
+    assert "authors also framed this" not in trace
+    assert "* [Egg consumption and risk of cardiovascular disease](https://example.test/bmj)" in result["memo"]

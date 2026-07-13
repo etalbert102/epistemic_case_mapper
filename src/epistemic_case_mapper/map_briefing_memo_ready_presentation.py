@@ -97,6 +97,7 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
         source_display = entry.get("source_display", "")
         source_label = entry.get("source_label", "")
         url = entry.get("url", "")
+        contexts = _trace_memo_contexts(memo, entry)
         items = _trace_evidence_items(packet, entry)
         lines.extend(
             [
@@ -110,6 +111,12 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
             lines.append(f"- Source ID: `{source_id}`")
         if url:
             lines.append(f"- External URL: {url}")
+        if contexts:
+            lines.append("- Memo citation contexts:")
+            for context in contexts:
+                lines.append(f"  - {context}")
+        else:
+            lines.append("- Memo citation contexts: no direct memo citation context detected")
         if items:
             lines.append("- Packet evidence:")
             for item in items:
@@ -223,28 +230,54 @@ def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_
         return memo
     display_lookup = {_norm(display): display for display in displays}
 
-    def replace(match: re.Match[str]) -> str:
+    def replace_parenthetical(match: re.Match[str]) -> str:
+        content = match.group(1)
+        if _skip_parenthetical_citation_link(content):
+            return match.group(0)
+        linked, changed = _linked_citation_content(content, display_lookup, citation_trace_href)
+        if not changed:
+            return match.group(0)
+        return f"({linked})"
+
+    def replace_bracketed(match: re.Match[str]) -> str:
         content = match.group(1)
         if "](" in content:
             return match.group(0)
-        parts = _citation_parts(content)
-        if not parts:
-            return match.group(0)
-        linked_parts = []
-        changed = False
-        for part in parts:
-            display = display_lookup.get(_norm(part))
-            if display:
-                linked_parts.append(_citation_trace_link(display, citation_trace_href))
-                changed = True
-            else:
-                linked_parts.append(part)
+        linked, changed = _linked_citation_content(content, display_lookup, citation_trace_href)
         if not changed:
             return match.group(0)
-        separator = "; " if ";" in content else ", "
-        return "[" + separator.join(linked_parts) + "]"
+        return f"[{linked}]"
 
-    return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace, memo)
+    linked = re.sub(r"\(([^\(\)\n]{1,260})\)", replace_parenthetical, memo)
+    return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace_bracketed, linked)
+
+
+def _skip_parenthetical_citation_link(content: str) -> bool:
+    content = str(content or "")
+    return any(token in content for token in ["](", "://", "#", "/", "\n"])
+
+
+def _linked_citation_content(
+    content: str,
+    display_lookup: dict[str, str],
+    citation_trace_href: str,
+) -> tuple[str, bool]:
+    parts = _citation_parts(content)
+    if not parts:
+        return content, False
+    linked_parts = []
+    changed = False
+    for part in parts:
+        display = display_lookup.get(_norm(part))
+        if display:
+            linked_parts.append(_citation_trace_link(display, citation_trace_href))
+            changed = True
+        else:
+            linked_parts.append(part)
+    if not changed:
+        return content, False
+    separator = "; " if ";" in content else ", "
+    return separator.join(linked_parts), True
 
 
 def _citation_trace_link(display: str, citation_trace_href: str) -> str:
@@ -345,6 +378,58 @@ def _cited_entry_norms(memo: str, entries: list[dict[str, str]]) -> set[str]:
             if display and _contains_text(body, display):
                 cited.add(_norm(display))
     return cited
+
+
+def _trace_memo_contexts(memo: str, entry: dict[str, str]) -> list[str]:
+    body = _strip_sources_section(memo)
+    contexts = []
+    tokens = _trace_entry_citation_tokens(entry)
+    for segment in _memo_context_segments(body):
+        if _segment_has_citation_reference(segment, tokens):
+            contexts.append(_clean_trace_context(segment))
+    return _dedupe(context for context in contexts if context)
+
+
+def _trace_entry_citation_tokens(entry: dict[str, str]) -> list[str]:
+    values = [
+        entry.get("source_id", ""),
+        entry.get("source_label", ""),
+        entry.get("source_display", ""),
+        entry.get("inline_display", ""),
+    ]
+    return _dedupe(variant for value in values for variant in source_label_variants(value) if variant)
+
+
+def _memo_context_segments(memo: str) -> list[str]:
+    segments = []
+    for line in str(memo or "").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("[^"):
+            continue
+        stripped = re.sub(r"^\s*[-*]\s+", "", stripped)
+        segments.extend(_sentence_like_segments(stripped))
+    return segments
+
+
+def _sentence_like_segments(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _segment_has_citation_reference(segment: str, tokens: list[str]) -> bool:
+    linked_targets = {f"#{_source_anchor(token)})" for token in tokens if token}
+    if any(target in segment for target in linked_targets):
+        return True
+    return any(_citation_container_mentions(segment, token) for token in tokens if token)
+
+
+def _citation_container_mentions(segment: str, token: str) -> bool:
+    token_pattern = re.escape(token)
+    return bool(re.search(rf"[\[(][^\]\)\n]*\b{token_pattern}\b[^\]\)\n]*[\])]", segment, flags=re.IGNORECASE))
+
+
+def _clean_trace_context(segment: str) -> str:
+    return re.sub(r"\s+", " ", str(segment or "").strip())
 
 
 def _trace_evidence_items(packet: dict[str, Any], entry: dict[str, str]) -> list[dict[str, Any]]:
