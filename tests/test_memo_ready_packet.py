@@ -748,6 +748,8 @@ def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() 
 
     assert "factual constraint for retention, not an outline" in prompt
     assert "Remove checklist rhythm" in prompt
+    assert "Split dense paragraphs" in prompt
+    assert "avoid citation clutter" in prompt
     assert "Protected item list" in prompt
 
 

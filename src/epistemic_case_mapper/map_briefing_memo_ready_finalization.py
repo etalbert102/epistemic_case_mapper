@@ -21,11 +21,9 @@ from epistemic_case_mapper.map_briefing_memo_obligations import (
     required_memo_obligations,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
-from epistemic_case_mapper.map_briefing_memo_warning_packet import (
-    build_warning_resolution_report,
-    unresolved_warning_repair_items,
-)
+from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
+from epistemic_case_mapper.map_briefing_source_identity import compact_source_display
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -373,6 +371,8 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "- Keep the decision answer direct, then make the supporting reasoning flow across paragraphs.\n"
         "- Preserve calibrated confidence: prefer bounded, low-concern, compatible with, not associated with, or does not clearly show over absolute safety, safe limit, proven harmless, or high-confidence unless the evidence explicitly warrants that wording.\n"
         "- Remove checklist rhythm, repeated sentence openings, and source-label-as-subject patterns when they make the memo stiff.\n"
+        "- Split dense paragraphs when they carry more than one reasoning job; prefer short paragraphs that each answer one reader question.\n"
+        "- Keep citations attached to the claims they support, but avoid citation clutter by placing one source marker at the end of a sentence or clause when several nearby facts come from the same source.\n"
         "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
         "- Fix obvious citation spacing and author-year formatting mistakes without changing the source label.\n"
         "- Make the memo read like decision-ready analysis.\n\n"
@@ -507,6 +507,7 @@ def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
         values = [
             source_label,
             source_id,
+            compact_source_display(source),
             replacements.get(source_label, ""),
             replacements.get(source_id, ""),
             str(source.get("display_label") or "").strip(),

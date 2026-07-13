@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_source_identity import (
+    compact_source_display,
     common_source_prefix,
     preferred_source_display,
     source_label_variants,
@@ -76,9 +77,10 @@ def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
     cited = []
     lowered = body.lower()
     for entry in entries:
-        display = entry["display"]
-        if display and _contains_text(body, display):
-            cited.append((lowered.find(display.lower()), _source_line_for_entry(entry)))
+        displays = [entry["inline_display"], entry["source_display"]]
+        matches = [lowered.find(display.lower()) for display in displays if display and _contains_text(body, display)]
+        if matches:
+            cited.append((min(index for index in matches if index >= 0), _source_line_for_entry(entry)))
     return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
 
 
@@ -87,12 +89,26 @@ def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
     labels = _packet_source_labels(packet)
     common_prefix = common_source_prefix(labels)
     entries = []
+    sources = _source_lookup(packet)
     for label in labels:
-        display = preferred_source_display({"source_label": label}, common_prefix=common_prefix)
-        if not display:
+        source = sources.get(label, {"source_label": label})
+        source_display = preferred_source_display(source, common_prefix=common_prefix)
+        inline_display = compact_source_display(source, common_prefix=common_prefix)
+        if not source_display:
             continue
-        entries.append({"display": display, "url": urls.get(label, "")})
+        entries.append({"source_display": source_display, "inline_display": inline_display, "url": urls.get(label, "")})
     return _dedupe_entries(entries)
+
+
+def _source_lookup(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    lookup = {}
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
+            continue
+        for value in [str(source.get("source_id") or "").strip(), str(source.get("source_label") or "").strip()]:
+            if value:
+                lookup[value] = source
+    return lookup
 
 
 def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
@@ -109,7 +125,7 @@ def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
 
 
 def _source_line_for_entry(entry: dict[str, str]) -> str:
-    display = entry.get("display", "")
+    display = entry.get("source_display", "")
     url = entry.get("url", "")
     return f"* [{display}]({url})" if display and url else f"* {display}"
 
@@ -118,7 +134,7 @@ def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
     seen = set()
     deduped = []
     for entry in entries:
-        key = _norm(entry.get("display", ""))
+        key = _norm(entry.get("source_display", ""))
         if not key or key in seen:
             continue
         seen.add(key)
@@ -167,12 +183,13 @@ def _replace_source_aliases(memo: str, replacements: dict[str, str]) -> str:
 def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
     labels = _packet_source_labels(packet)
     common_prefix = common_source_prefix(labels)
+    source_lookup = _source_lookup(packet)
     replacements: dict[str, str] = {}
     for source in _list(packet.get("source_trail")):
         if not isinstance(source, dict):
             continue
         source_label = str(source.get("source_label") or "").strip()
-        display = preferred_source_display(source, common_prefix=common_prefix)
+        display = compact_source_display(source, common_prefix=common_prefix)
         if not display:
             continue
         aliases = [
@@ -188,7 +205,8 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
     for source_label in labels:
         if not source_label:
             continue
-        display = preferred_source_display({"source_label": source_label}, common_prefix=common_prefix)
+        source = source_lookup.get(source_label, {"source_label": source_label})
+        display = compact_source_display(source, common_prefix=common_prefix)
         if display and display != source_label:
             for alias in source_label_variants(source_label):
                 replacements[alias] = display

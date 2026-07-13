@@ -45,6 +45,44 @@ def preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]
     return label
 
 
+def compact_source_display(source: dict[str, Any], *, common_prefix: list[str] | None = None) -> str:
+    label = str(source.get("source_label") or source.get("display_label") or source.get("source_id") or "").strip()
+    for key in ("citation_label", "display_label"):
+        value = str(source.get(key) or "").strip()
+        if value and value != label:
+            return value
+    source_id = str(source.get("source_id") or "").strip()
+    from_id = _compact_source_id(source_id)
+    if from_id:
+        return from_id
+    display = preferred_source_display(source, common_prefix=common_prefix)
+    return _compact_title(display) if len(display) > 64 else display
+
+
+def _compact_source_id(source_id: str) -> str:
+    tokens = [token for token in re.split(r"[_\s-]+", str(source_id or "")) if token]
+    for index, token in enumerate(tokens):
+        if re.fullmatch(r"(?:19|20)\d{2}", token):
+            lead = tokens[index - 1] if index else ""
+            if not lead:
+                return token
+            compact_lead = lead.title() if len(lead) <= 2 else lead.upper() if len(lead) <= 5 else lead.title()
+            return f"{compact_lead} {token}"
+    return ""
+
+
+def _compact_title(title: str) -> str:
+    year = re.search(r"\b((?:19|20)\d{2})\b", str(title or ""))
+    words = [word for word in re.findall(r"[A-Za-z][A-Za-z-]*", str(title or "")) if word.lower() not in _TITLE_STOPWORDS]
+    if not words:
+        return str(title or "").strip()
+    prefix = " ".join(words[:2])
+    return f"{prefix} {year.group(1)}" if year else prefix
+
+
+_TITLE_STOPWORDS = {"a", "an", "and", "between", "for", "from", "in", "into", "of", "on", "or", "the", "to", "with"}
+
+
 def strip_artifact_source_prefix(label: str) -> str:
     tokens = str(label or "").replace("_", " ").split()
     lowered = [token.lower() for token in tokens]
