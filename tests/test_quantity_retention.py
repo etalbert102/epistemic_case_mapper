@@ -33,3 +33,11 @@ def test_confidence_interval_text_retained_when_endpoints_appear_with_dash() -> 
 def test_frequency_quantity_still_uses_signature_matching() -> None:
     assert contains_quantity("The practical threshold is about one egg per day.", "1 egg/day")
 
+
+def test_fractional_frequency_quantity_matches_word_form() -> None:
+    assert contains_quantity("The estimate is reported for each additional half egg per day.", "0.5 egg/day")
+
+
+def test_fractional_frequency_quantity_matches_generic_units() -> None:
+    assert contains_quantity("The program added a quarter serving per week.", "0.25 serving/week")
+    assert contains_quantity("The treatment added seven visits per month.", "7 visits/month")

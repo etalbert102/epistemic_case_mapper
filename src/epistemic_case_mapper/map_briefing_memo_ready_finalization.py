@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
+from epistemic_case_mapper.map_briefing_calibrated_language import normalize_calibrated_language
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -370,6 +371,7 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
         "- Use facts and sources already present in the memo or protected item list.\n"
         "- Keep the decision answer direct, then make the supporting reasoning flow across paragraphs.\n"
+        "- Preserve calibrated confidence: prefer bounded, low-concern, compatible with, not associated with, or does not clearly show over absolute safety, safe limit, proven harmless, or high-confidence unless the evidence explicitly warrants that wording.\n"
         "- Remove checklist rhythm, repeated sentence openings, and source-label-as-subject patterns when they make the memo stiff.\n"
         "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
         "- Fix obvious citation spacing and author-year formatting mistakes without changing the source label.\n"
@@ -397,6 +399,7 @@ def normalize_memo_ready_polish_text(memo: str) -> str:
     ]
     for pattern, replacement in replacements:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    text = normalize_calibrated_language(text)
     text = re.sub(r"[ \t]+$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip() + "\n"

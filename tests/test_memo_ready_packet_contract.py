@@ -38,6 +38,8 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "writer_model_context_v1" in prompt
     assert "The writer model context is the complete model-visible evidence and judgment record" in prompt
     assert "Weigh support against counterweights and scope boundaries" in prompt
+    assert "Non-negotiable retention rule" in prompt
+    assert "mandatory_evidence_ledger" in prompt
     assert "quantity_anchors" in prompt
 
 
@@ -88,6 +90,10 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
     prompt = build_memo_ready_packet_synthesis_prompt(_balance_packet())
 
     assert "analytical_balance_contract" in prompt
+    assert "mandatory_evidence_ledger" in prompt
+    assert '"item_id": "support"' in prompt
+    assert '"quantities_to_preserve"' in prompt
+    assert '"source_id": "support_study"' in prompt
     assert '"source_id": "risk_study"' in prompt
     assert "Risk Study" not in prompt
     assert "source_labels" not in prompt

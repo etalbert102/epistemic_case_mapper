@@ -185,13 +185,28 @@ def _quantity_operator(text: str, symbol: str) -> str:
 
 def _quantity_words(text: str) -> str:
     lowered = str(text or "").lower()
-    replacements = {"one": "1", "a": "1", "an": "1", "two": "2", "three": "3", "four": "4", "five": "5"}
+    for word, number in _FRACTION_WORDS.items():
+        lowered = re.sub(
+            rf"\b{word}\s+(?:a|an|one)?\s*([a-z]+)s?\s+per\s+(day|week|month|year)\b",
+            rf"{number} \1 per \2",
+            lowered,
+        )
+        lowered = re.sub(
+            rf"\b{word}\s+(?:a|an|one)?\s*([a-z]+)s?\s*/\s*(day|week|month|year)\b",
+            rf"{number} \1/\2",
+            lowered,
+        )
+    replacements = {"one": "1", "a": "1", "an": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
     for word, number in replacements.items():
         lowered = re.sub(rf"\b{word}\b", number, lowered)
+    lowered = re.sub(r"\b0\.5\s+1\s+", "0.5 ", lowered)
     lowered = re.sub(r"\b(?:daily|per-day)\b", "per day", lowered)
     lowered = re.sub(r"/\s*d\b", "/day", lowered)
     lowered = re.sub(r"/\s*wk\b", "/week", lowered)
     return re.sub(r"\s+", " ", lowered)
+
+
+_FRACTION_WORDS = {"half": "0.5", "quarter": "0.25", "third": "0.333", "two-thirds": "0.667"}
 
 
 def _contains_text(text: str, needle: str) -> bool:

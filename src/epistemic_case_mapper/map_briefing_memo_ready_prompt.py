@@ -41,6 +41,15 @@ def build_writer_packet_synthesis_prompt(
         build_analytical_balance_contract(memo_ready_packet),
         source_identity_trail,
     )
+    model_context["mandatory_evidence_ledger"] = project_sources_to_ids_for_model(
+        _mandatory_evidence_ledger(memo_ready_packet),
+        source_identity_trail,
+    )
+    model_context["required_memo_obligations"] = project_sources_to_ids_for_model(
+        _required_memo_obligation_context(memo_ready_packet),
+        source_identity_trail,
+    )
+    model_context = _strict_ledger_writer_context(model_context)
     blueprint_context: dict[str, Any] = project_sources_to_ids_for_model(
         narrative_blueprint,
         source_identity_trail,
@@ -56,12 +65,25 @@ def build_writer_packet_synthesis_prompt(
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
-        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, reasoning_hierarchy as the organizing spine, analytical_balance_contract as the guide for balanced decision reasoning, and decision_boundary_source_contract as the guide for boundaries, source roles, source-specific cautions, and quantity priorities. Use the narrative blueprint as secondary orientation. The adaptive outline's must-write cards are the retention contract for synthesis; analytical_balance_contract.required_balance_cards are additional balance requirements. Satisfy each card in natural prose when it affects the decision read. Merge related cards into the same paragraph when that reads better.\n\n"
-        "Rules:\n"
-        "- Start the first paragraph with a direct bottom-line answer to the decision question, using answer_frame.direct_answer from the writer model context when present.\n"
+        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, reasoning_hierarchy as the organizing spine, analytical_balance_contract as the guide for balanced decision reasoning, and decision_boundary_source_contract as the guide for boundaries, source roles, source-specific cautions, and quantity priorities. The adaptive outline's must-write cards are the retention contract; mandatory_evidence_ledger is the non-negotiable compact ledger that operationalizes that contract for synthesis. Use the narrative blueprint as secondary orientation. Merge related ledger rows into the same paragraph when that reads better.\n\n"
+        "Required visible structure:\n"
+        "# Decision Memo: <short title>\n"
+        "**Decision Question:** <question>\n"
+        "**Bottom Line:** <direct answer>\n"
+        "## Why This Is the Best Current Read\n"
+        "## What Could Change or Bound the Answer\n"
+        "## Practical Implication\n\n"
+        "Non-negotiable retention rule:\n"
+        "- Every row in mandatory_evidence_ledger must be represented in the memo.\n"
+        "- Use at least one source_id from each ledger row in brackets in the sentence or paragraph representing it; presentation code will replace source IDs with reader-facing source names.\n"
+        "- Preserve every value in quantities_to_preserve unless it is a pure duplicate of another value in the same row.\n"
+        "- If several quantities belong together, keep them in the same sentence or adjacent clause.\n"
+        "- Do not hide required quantities in a sources section; write them where they support the reasoning.\n\n"
+        "Analyst writing rules:\n"
+        "- Start the bottom line with a direct answer to the decision question, using answer_frame.direct_answer from the writer model context when present.\n"
         "- Scope the opening answer using answer_frame.scope_note and answer_frame.main_uncertainty when they are present.\n"
         "- State the confidence level and main reason for uncertainty using answer_frame.confidence_basis when the writer model context supplies it.\n"
-        "- Use adaptive_memo_outline.sections as the memo's visible section sequence and section-title source when it is present.\n"
+        "- Use calibrated confidence language: prefer bounded, low-concern, compatible with, not associated with, or does not clearly show over absolute safety, safe limit, proven harmless, or high-confidence unless the context explicitly warrants that wording.\n"
         "- Use decision_boundary_source_contract.boundary_obligations to make the answer's population, dose, endpoint, setting, counterweight, crux, or missing-evidence boundaries visible when the contract supplies them.\n"
         "- Use decision_boundary_source_contract.source_use_cards to cite sources for their specific memo job rather than citing every source generically.\n"
         "- Use decision_boundary_source_contract.quantity_priority_cards to decide which retained quantities deserve main-prose interpretation first.\n"
@@ -74,14 +96,15 @@ def build_writer_packet_synthesis_prompt(
         "- Use analytical_balance_contract.subgroup_boundary_cards to state subgroup, population, setting, or applicability boundaries when they affect how the answer should be used.\n"
         "- For every required counterweight in analytical_balance_contract, explain whether it overturns, weakens, bounds, or contextualizes the answer.\n"
         "- Use analytical_balance_contract.evidence_type_contrasts to separate evidence types when they answer different subquestions.\n"
-        "- Satisfy every adaptive_memo_outline.must_write_cards entry in natural prose; use the cards to preserve required evidence, not to create checklist rhythm.\n"
+        "- Satisfy adaptive_memo_outline.must_write_cards in natural prose when they add useful routing detail; mandatory_evidence_ledger is the primary retention contract.\n"
+        "- Satisfy required_memo_obligations when they add source warnings or critique-derived guidance not already represented in mandatory_evidence_ledger.\n"
         "- When a must-write card has multiple quantities_to_keep_together, write those quantities in the same sentence or adjacent clause so the model does not split paired estimates from their interval, denominator, or interpretation.\n"
         "- Use only facts, quantities, and source IDs present in the writer model context.\n"
         "- Use only quantities listed inside adaptive_memo_outline.must_write_cards, quantity_anchors, decision_evidence_table.quantities, or practical_implication_cards.\n"
         "- When a quantity value is ambiguous by itself, use its interpretation wording from quantity_anchors or decision_evidence_table.quantities.\n"
         "- Cite the source_id attached to the evidence unit or quantity that supports the sentence; presentation code will replace source IDs with reader-facing source names.\n"
         "- Use source_appraisal_summary and source_appraisal_note to calibrate wording, confidence, and source weight.\n"
-        "- Explain what the most important quantities mean for the decision; omit lower-value numbers when prose would become cluttered.\n"
+        "- Explain what the required quantities mean for the decision; optional lower-value numbers may be omitted when prose would become cluttered.\n"
         "- Use a longer memo when the packet has many load-bearing units; do not compress away decision-relevant quantities, caveats, source-appraisal constraints, or counterweights just to stay brief.\n"
         "- Weigh support against counterweights and scope boundaries instead of listing evidence mechanically.\n"
         "- Use the hierarchy's counterweight, scope, and crux moves to explain whether counterevidence overturns, weakens, bounds, or contextualizes the answer.\n"
@@ -95,7 +118,8 @@ def build_writer_packet_synthesis_prompt(
         "- Write from the blueprint's reasoning moves rather than from the ledger's order.\n"
         "- Avoid checklist rhythm: do not make source labels or obligation statements the repeated grammatical subject.\n"
         "- Turn bare statistics into decision interpretation before moving to the next point.\n"
-        "- Use natural Markdown; do not use To/From/Subject memo headers.\n\n"
+        "- Use natural Markdown; do not use To/From/Subject memo headers.\n"
+        "- Do not include a sources section; the final source list is added deterministically.\n\n"
         "Narrative blueprint:\n"
         f"{json.dumps(blueprint_context, indent=2, ensure_ascii=False)}\n\n"
         "Writer model context:\n"
@@ -232,6 +256,90 @@ def _writer_interface_narrative_blueprint(writer_interface: dict[str, Any]) -> d
             "Use adaptive must-write cards only to check retention after drafting.",
         ],
     }
+
+
+def _strict_ledger_writer_context(model_context: dict[str, Any]) -> dict[str, Any]:
+    outline = _dict(model_context.get("adaptive_memo_outline"))
+    return {
+        "schema_id": "writer_model_context_v1",
+        "source_schema_id": model_context.get("source_schema_id"),
+        "decision_question": model_context.get("decision_question"),
+        "bottom_line": model_context.get("bottom_line"),
+        "confidence": model_context.get("confidence"),
+        "answer_frame": _dict(model_context.get("answer_frame")),
+        "reasoning_hierarchy": _dict(model_context.get("reasoning_hierarchy")),
+        "adaptive_memo_outline": {
+            "schema_id": outline.get("schema_id"),
+            "sections": _list(outline.get("sections")),
+        },
+        "decision_evidence_table": _list(model_context.get("decision_evidence_table"))[:8],
+        "source_appraisal_summary": _list(model_context.get("source_appraisal_summary")),
+        "decision_boundary_source_contract": _dict(model_context.get("decision_boundary_source_contract")),
+        "analytical_balance_contract": _dict(model_context.get("analytical_balance_contract")),
+        "quantity_anchors": _list(model_context.get("quantity_anchors")),
+        "mandatory_evidence_ledger": _list(model_context.get("mandatory_evidence_ledger")),
+        "required_memo_obligations": _list(model_context.get("required_memo_obligations")),
+        "critique_writer_guidance": _dict(model_context.get("critique_writer_guidance")),
+        "source_registry": _list(model_context.get("source_registry")),
+    }
+
+
+def _mandatory_evidence_ledger(memo_ready_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for item in _list(memo_ready_packet.get("evidence_items")):
+        if not isinstance(item, dict) or not item.get("must_use"):
+            continue
+        rows.append(
+            {
+                "item_id": item.get("item_id"),
+                "role": item.get("role"),
+                "claim": _short_text(item.get("reader_claim") or item.get("claim"), limit=640),
+                "decision_relevance": _short_text(item.get("decision_relevance"), limit=360),
+                "source_label": item.get("source_label"),
+                "source_labels": _string_list(item.get("source_labels")),
+                "quantities_to_preserve": _ledger_quantities(item),
+            }
+        )
+    return rows
+
+
+def _ledger_quantities(item: dict[str, Any]) -> list[dict[str, str]]:
+    rows = []
+    for quantity in _list(item.get("quantities")):
+        if not isinstance(quantity, dict):
+            continue
+        value = str(quantity.get("value") or "").strip()
+        if not value:
+            continue
+        rows.append(
+            {
+                "value": value,
+                "retention_phrase": str(quantity.get("retention_phrase") or "").strip(),
+                "interpretation": _short_text(quantity.get("interpretation"), limit=240),
+            }
+        )
+    return rows
+
+
+def _required_memo_obligation_context(memo_ready_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for obligation in required_memo_obligations(memo_ready_packet):
+        if not isinstance(obligation, dict):
+            continue
+        rows.append(
+            {
+                "obligation_id": obligation.get("obligation_id"),
+                "role": obligation.get("role"),
+                "obligation_type": obligation.get("obligation_type"),
+                "statement": _short_text(obligation.get("statement"), limit=520),
+                "prose_instruction": _short_text(obligation.get("prose_instruction"), limit=280),
+                "source_label": obligation.get("source_label"),
+                "source_labels": _string_list(obligation.get("source_labels")),
+                "quantities": _quantity_values(obligation.get("quantities")),
+                "validation_terms": _string_list(obligation.get("validation_terms"))[:8],
+            }
+        )
+    return rows
 
 
 def _blueprint_points(items: list[Any]) -> list[dict[str, Any]]:

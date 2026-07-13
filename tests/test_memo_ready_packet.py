@@ -780,6 +780,27 @@ def test_memo_ready_polish_cleanup_is_narrow() -> None:
     assert "The main support for this neutral stance is Zhong et al. 2019 reporting 0.93." in cleaned
 
 
+def test_memo_ready_polish_softens_overconfident_stock_phrases() -> None:
+    cleaned = normalize_memo_ready_polish_text(
+        "## Decision Brief\n\n"
+        "**Answer Stance:** Neutral (Safe for moderate consumption)\n\n"
+        "The option is considered neutral and safe. High-confidence data from large-scale cohort studies establish "
+        "a safe limit, so the safety profile is settled. One serving is considered safe. Dietary guidance can safely include the option.\n"
+    )
+
+    assert "best treated as neutral within the stated scope" in cleaned
+    assert "evidence from large-scale cohort studies" in cleaned
+    assert "practical reference point" in cleaned
+    assert "evidence-bounded reference point" in cleaned
+    assert "risk profile" in cleaned
+    assert "safe limit" not in cleaned
+    assert "considered safe" not in cleaned
+    assert "High-confidence data" not in cleaned
+    assert "safely include" not in cleaned
+    assert "Neutral (Neutral for moderate consumption)" not in cleaned
+    assert "Neutral for moderate consumption" in cleaned
+
+
 def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None:
     scaffold = _scaffold()
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
