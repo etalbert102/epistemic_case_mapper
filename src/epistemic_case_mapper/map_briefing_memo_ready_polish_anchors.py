@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model
 
 
 def protected_anchor_checklist(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -19,7 +20,8 @@ def protected_anchor_checklist(packet: dict[str, Any]) -> list[dict[str, Any]]:
         anchors = [_mandatory_item_anchor(item) for item in _mandatory_items(packet)[:18]]
     anchors.extend(_balance_anchor(card) for card in required_analytical_balance_cards(packet)[:10])
     anchors.extend(_warning_anchor(warning) for warning in _list(_dict(packet.get("memo_warning_packet")).get("warnings"))[:6])
-    return [_drop_empty(anchor) for anchor in anchors if _drop_empty(anchor)]
+    checklist = [_drop_empty(anchor) for anchor in anchors if _drop_empty(anchor)]
+    return project_sources_to_ids_for_model(checklist, _list(packet.get("source_trail")))
 
 
 def _obligation_anchor(obligation: dict[str, Any]) -> dict[str, Any]:

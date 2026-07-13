@@ -10,10 +10,12 @@ from epistemic_case_mapper.map_briefing_analyst_decision_logic import naturalize
 from epistemic_case_mapper.map_briefing_analyst_schemas import AnalystPacketRefinement
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dict_value as _dict,
+    dedupe as _dedupe,
     list_value as _list,
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map, source_ids_for_labels
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -78,6 +80,8 @@ def build_analyst_packet_refinement_prompt(
     synthesis_packet: dict[str, Any],
     warning_packet: dict[str, Any],
 ) -> str:
+    source_trail = _list(synthesis_packet.get("source_trail"))
+    aliases = source_id_alias_map(source_trail)
     packet = {
         "decision_question": synthesis_packet.get("decision_question"),
         "task": [
@@ -94,16 +98,16 @@ def build_analyst_packet_refinement_prompt(
             "Convert raw warning excerpts into analyst obligations: what the memo should do with the warning.",
         ],
         "current_bottom_line": synthesis_packet.get("bottom_line"),
-        "primary_support": _prompt_groups(synthesis_packet.get("primary_reasoning_chain"), limit=5),
-        "counterweights": _prompt_groups(synthesis_packet.get("main_counterweights"), limit=5),
-        "scope": _prompt_groups(synthesis_packet.get("scope_and_applicability"), limit=4),
-        "cruxes": _prompt_groups(synthesis_packet.get("decision_cruxes"), limit=4),
+        "primary_support": _prompt_groups(synthesis_packet.get("primary_reasoning_chain"), limit=5, source_trail=source_trail),
+        "counterweights": _prompt_groups(synthesis_packet.get("main_counterweights"), limit=5, source_trail=source_trail),
+        "scope": _prompt_groups(synthesis_packet.get("scope_and_applicability"), limit=4, source_trail=source_trail),
+        "cruxes": _prompt_groups(synthesis_packet.get("decision_cruxes"), limit=4, source_trail=source_trail),
         "warnings": [
             {
                 "warning_id": warning.get("warning_id"),
                 "severity": warning.get("severity"),
                 "warning_type": warning.get("warning_type"),
-                "source_labels": warning.get("source_labels", []),
+                "source_ids": _source_ids(warning, source_trail, aliases),
                 "claim": _short_text(str(warning.get("claim") or ""), 420),
                 "quantity_values": warning.get("quantity_values", []),
             }
@@ -137,7 +141,7 @@ def build_analyst_packet_refinement_prompt(
                     "memo_action": "one allowed_memo_action value",
                     "obligation": "clear memo-facing obligation, not a raw excerpt",
                     "rationale": "why the warning should be incorporated, bounded, backgrounded, or omitted",
-                    "source_labels": ["source labels copied from warning"],
+                    "source_ids": ["source IDs copied from warning when available"],
                     "key_terms": ["short terms that should appear if the memo addresses this obligation"],
                 }
             ],
@@ -148,7 +152,7 @@ def build_analyst_packet_refinement_prompt(
                     "writing_goal": "what this paragraph or bullet must accomplish",
                     "required_points": ["specific claims, quantities, caveats, or comparisons to include"],
                     "evidence_item_ids": ["covered evidence IDs or warning IDs from the packet"],
-                    "source_labels": ["source labels to cite"],
+                    "source_ids": ["source IDs to cite"],
                     "transition_from_previous": "how this step should connect to the prior step",
                 }
             ],
@@ -243,7 +247,8 @@ def build_analyst_packet_refinement_parse_report(payload: Any, warning_packet: d
     }
 
 
-def _prompt_groups(groups: Any, *, limit: int) -> list[dict[str, Any]]:
+def _prompt_groups(groups: Any, *, limit: int, source_trail: list[Any]) -> list[dict[str, Any]]:
+    aliases = source_id_alias_map(source_trail)
     rows = []
     for group in _list(groups)[:limit]:
         if not isinstance(group, dict):
@@ -253,12 +258,22 @@ def _prompt_groups(groups: Any, *, limit: int) -> list[dict[str, Any]]:
                 "group_id": group.get("group_id"),
                 "proposition": group.get("proposition"),
                 "memo_role": group.get("memo_role"),
-                "source_labels": group.get("source_labels", []),
+                "source_ids": _source_ids(group, source_trail, aliases),
                 "quantity_values": group.get("quantity_values", []),
                 "rationale": group.get("rationale"),
             }
         )
     return rows
+
+
+def _source_ids(row: dict[str, Any], source_trail: list[Any], aliases: dict[str, str]) -> list[str]:
+    ids = _string_list(row.get("source_ids"))
+    labels = _string_list(row.get("source_labels"))
+    if labels and source_trail:
+        ids.extend(source_ids_for_labels(labels, source_trail))
+    if not ids and labels:
+        ids.extend(source_id for source_id in (aliases.get(label) for label in labels) if source_id)
+    return _dedupe(ids)
 
 
 def _scaffold_warning_obligation(warning: dict[str, Any]) -> dict[str, Any]:

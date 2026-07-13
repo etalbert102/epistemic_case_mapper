@@ -20,7 +20,7 @@ def quantity_prompt_candidate(row: dict[str, Any]) -> dict[str, Any]:
         "source_evidence_item_id": row.get("source_evidence_item_id"),
         "source_claim": _short_text(_sanitize_quantity_context(str(row.get("source_claim") or ""), row), 320),
         "local_quantity_context": _local_quantity_context(row),
-        "source_labels": row.get("source_labels", []),
+        "source_ids": _string_list(row.get("source_ids")),
     }
     flags = _string_list(row.get("deterministic_warnings"))
     if flags:

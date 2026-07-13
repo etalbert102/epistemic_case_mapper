@@ -242,7 +242,7 @@ def _task_report(status: str, *, parse_report: dict[str, Any] | None = None, iss
 
 
 def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
-    keys = ("bundle_id", "decision_role", "weight", "directionality", "section_use", "section_targets", "source_ids", "source_labels", "quantity_values")
+    keys = ("bundle_id", "decision_role", "weight", "directionality", "section_use", "section_targets", "source_ids", "quantity_values")
     compact = {key: row.get(key) for key in keys if row.get(key) not in (None, "", [])}
     compact["claim"] = _short_text(str(row.get("claim") or ""), 520)
     compact["why_it_matters"] = _short_text(str(row.get("why_it_matters") or ""), 360)

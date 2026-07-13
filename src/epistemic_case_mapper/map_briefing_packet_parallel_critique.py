@@ -262,7 +262,7 @@ def build_global_critique_prompt(view: dict[str, Any]) -> str:
                 "Look across all shards for recurring evidence-type distinctions, confidence limits, subgroup boundaries, source-type caveats, and synthesis traps.",
                 "Return 4 to 6 reader_facing_guidance items total. Each item should be a consolidated theme, not a duplicate local issue.",
                 "Merge overlapping themes such as association-vs-causation, observational-vs-outcome limits, moderate-vs-high intake, subgroup boundaries, and biomarker-vs-clinical-outcome distinctions.",
-                "Each reader_facing_guidance item must include instruction, why_it_matters, source_labels, target_ids when available, and validation_terms.",
+                "Each reader_facing_guidance item must include instruction, why_it_matters, source_ids, target_ids when available, and validation_terms.",
                 "Recommend edits only for existing IDs visible in the inventory.",
                 "Use warning-only fields when the problem is global but not target-local.",
                 "Return JSON matching packet_critique_v1.",

@@ -7,11 +7,13 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 
 
 def build_packet_critique_index(packet: dict[str, Any], sufficiency_report: dict[str, Any]) -> dict[str, Any]:
+    source_terms = _source_terms(_list(packet.get("source_trail")))
     bundles = [_compact_bundle(row) for row in _list(packet.get("evidence_bundles")) if isinstance(row, dict)]
-    retain_items = [_compact_retain(row) for row in _list(packet.get("must_retain_ledger")) if isinstance(row, dict)]
+    retain_items = [_compact_retain(row, source_terms=source_terms) for row in _list(packet.get("must_retain_ledger")) if isinstance(row, dict)]
     return {
         "schema_id": "packet_critique_index_v1",
         "decision_question": packet.get("decision_question", ""),
@@ -63,7 +65,7 @@ def compact_global_critique_view(index: dict[str, Any], local_reports: list[dict
                 "weight": row.get("weight"),
                 "directionality": row.get("directionality"),
                 "section_targets": row.get("section_targets", []),
-                "source_labels": row.get("source_labels", []),
+                "source_ids": row.get("source_ids", []),
                 "claim": row.get("claim"),
             }
             for row in _list(index.get("bundles"))
@@ -77,13 +79,14 @@ def compact_global_critique_view(index: dict[str, Any], local_reports: list[dict
 
 def targets_from_packet(packet: dict[str, Any], target_ids: list[str]) -> dict[str, Any]:
     targets = set(target_ids)
+    source_terms = _source_terms(_list(packet.get("source_trail")))
     bundles = [
         _compact_bundle(row)
         for row in _list(packet.get("evidence_bundles"))
         if isinstance(row, dict) and str(row.get("bundle_id", "")) in targets
     ]
     retain = [
-        _compact_retain(row)
+        _compact_retain(row, source_terms=source_terms)
         for row in _list(packet.get("must_retain_ledger"))
         if isinstance(row, dict) and str(row.get("item_id", "")) in targets
     ]
@@ -99,7 +102,6 @@ def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
         "section_use",
         "section_targets",
         "source_ids",
-        "source_labels",
         "quantity_values",
         "relation_ids",
     )
@@ -128,13 +130,13 @@ def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _compact_retain(row: dict[str, Any]) -> dict[str, Any]:
+def _compact_retain(row: dict[str, Any], *, source_terms: set[str]) -> dict[str, Any]:
     return {
         "item_id": row.get("item_id"),
         "importance": row.get("importance"),
         "statement": _short_text(str(row.get("statement") or ""), 420),
         "bundle_ids": _string_list(row.get("bundle_ids"))[:12],
-        "required_terms": _string_list(row.get("required_terms"))[:10],
+        "required_terms": _non_source_terms(row.get("required_terms"), source_terms)[:10],
     }
 
 
@@ -167,3 +169,19 @@ def _retain_items_for_bundles(index: dict[str, Any], bundles: list[dict[str, Any
         if bundle_ids.intersection(_string_list(item.get("bundle_ids"))):
             retain.append(item)
     return retain[:12]
+
+
+def _source_terms(source_trail: list[Any]) -> set[str]:
+    return {
+        _normalize_source_term(alias)
+        for alias, source_id in source_id_alias_map(source_trail).items()
+        if alias and alias != source_id
+    }
+
+
+def _non_source_terms(value: Any, source_terms: set[str]) -> list[str]:
+    return [term for term in _string_list(value) if _normalize_source_term(term) not in source_terms]
+
+
+def _normalize_source_term(value: str) -> str:
+    return " ".join(str(value or "").strip().lower().split())

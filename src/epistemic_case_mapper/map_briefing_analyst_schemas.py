@@ -309,10 +309,11 @@ class AnalystWarningObligation(BaseModel):
     memo_action: WarningMemoAction
     obligation: str = Field(min_length=1)
     rationale: str = Field(min_length=1)
+    source_ids: list[str] = Field(default_factory=list)
     source_labels: list[str] = Field(default_factory=list)
     key_terms: list[str] = Field(default_factory=list)
 
-    @field_validator("source_labels", "key_terms", mode="before")
+    @field_validator("source_ids", "source_labels", "key_terms", mode="before")
     @classmethod
     def _list_field(cls, value: Any) -> list[str]:
         if value is None:

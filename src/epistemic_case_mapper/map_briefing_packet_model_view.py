@@ -2,30 +2,39 @@ from __future__ import annotations
 
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_source_identity import (
+    project_sources_to_ids_for_model,
+    source_id_alias_map,
+    source_id_registry_for_model,
+)
+
 
 def packet_summary_for_model(packet: dict[str, Any], *, max_bundles: int = 18) -> dict[str, Any]:
     """Return a compact, model-facing view for critique/refinement/writing."""
 
+    source_trail = packet.get("source_trail", []) if isinstance(packet.get("source_trail"), list) else []
+    source_terms = _source_terms(source_trail)
     bundles = [
         _compact_bundle(row)
         for row in packet.get("evidence_bundles", [])
         if isinstance(row, dict) and not row.get("synthesis_suppressed")
     ]
     retain_rows = [
-        _compact_retain(row)
+        _compact_retain(row, source_terms=source_terms)
         for row in packet.get("must_retain_ledger", [])
         if isinstance(row, dict) and not row.get("synthesis_suppressed")
     ]
-    return {
+    view = {
         "schema_id": "decision_briefing_packet_model_view_v1",
         "decision_question": packet.get("decision_question"),
         "answer_frame": packet.get("answer_frame", {}),
         "must_retain_ledger": retain_rows[:18],
         "evidence_bundles": bundles[:max_bundles],
         "section_summary": _section_summary(packet.get("section_views")),
-        "source_trail": packet.get("source_trail", [])[:24],
+        "source_registry": source_id_registry_for_model(source_trail)[:24],
         "coverage_summary": _coverage_summary(packet.get("coverage_report")),
     }
+    return project_sources_to_ids_for_model(view, source_trail)
 
 
 def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
@@ -37,7 +46,6 @@ def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
         "section_use",
         "section_targets",
         "source_ids",
-        "source_labels",
         "quantity_values",
         "relation_ids",
     )
@@ -49,7 +57,7 @@ def _compact_bundle(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in compact.items() if value not in (None, "", [], {})}
 
 
-def _compact_retain(row: dict[str, Any]) -> dict[str, Any]:
+def _compact_retain(row: dict[str, Any], *, source_terms: set[str]) -> dict[str, Any]:
     return {
         key: value
         for key, value in {
@@ -58,7 +66,7 @@ def _compact_retain(row: dict[str, Any]) -> dict[str, Any]:
             "importance": row.get("importance"),
             "statement": _short_text(str(row.get("statement") or ""), 420),
             "bundle_ids": _string_list(row.get("bundle_ids"))[:12],
-            "required_terms": _string_list(row.get("required_terms"))[:10],
+            "required_terms": _non_source_terms(row.get("required_terms"), source_terms)[:10],
             "source_ids": _string_list(row.get("source_ids"))[:8],
             "quantity_ids": _string_list(row.get("quantity_ids"))[:8],
         }.items()
@@ -147,3 +155,19 @@ def _string_list(value: Any) -> list[str]:
     if value in (None, ""):
         return []
     return [str(value).strip()]
+
+
+def _source_terms(source_trail: list[Any]) -> set[str]:
+    return {
+        _normalize_source_term(alias)
+        for alias, source_id in source_id_alias_map(source_trail).items()
+        if alias and alias != source_id
+    }
+
+
+def _non_source_terms(value: Any, source_terms: set[str]) -> list[str]:
+    return [term for term in _string_list(value) if _normalize_source_term(term) not in source_terms]
+
+
+def _normalize_source_term(value: str) -> str:
+    return " ".join(str(value or "").strip().lower().split())

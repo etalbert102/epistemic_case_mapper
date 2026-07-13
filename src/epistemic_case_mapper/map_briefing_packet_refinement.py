@@ -7,7 +7,6 @@ from copy import deepcopy
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 from epistemic_case_mapper.map_briefing_decision_packet import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_decision_packet_progress import critique_progress_details, packet_counts, packet_progress, refinement_progress_details
 from epistemic_case_mapper.map_briefing_packet_critique_issues import dedupe_issue_rows, normalized_critique_issues
@@ -16,6 +15,7 @@ from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissi
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
 from epistemic_case_mapper.map_briefing_packet_sufficiency import build_packet_sufficiency_report
 from epistemic_case_mapper.map_briefing_packet_targeted_refinement import run_targeted_packet_refinement
+from epistemic_case_mapper.map_briefing_sufficiency_model_view import sufficiency_report_for_model
 from epistemic_case_mapper.map_briefing_writer_guidance import attach_writer_guidance, build_writer_guidance_packet
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -23,7 +23,6 @@ from epistemic_case_mapper.model_schemas import parse_model_output_report
 
 PacketJudgment = Literal["ready", "needs_repair", "not_sufficient"]
 PacketEditType = Literal["promote", "demote", "split", "merge", "relabel", "add_warning", "insufficiency_warning"]
-
 def _blank_if_none(value: Any) -> Any:
     return "" if value is None else value
 
@@ -39,7 +38,6 @@ def _note_to_text(value: Any) -> str:
                 return text
         return json.dumps(value, sort_keys=True, ensure_ascii=False)
     return str(value).strip()
-
 class _FlexibleCritiqueModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -463,6 +461,7 @@ def run_packet_refinement(
     )
 def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dict[str, Any]) -> str:
     view = packet_summary_for_model(packet, max_bundles=24)
+    sufficiency_view = sufficiency_report_for_model(sufficiency_report, packet)
     return (
         "You are an adversarial analyst reviewing a source-grounded decision briefing packet before prose synthesis.\n"
         "Do not write the memo. Identify whether the packet is decision-adequate and where it may mislead synthesis.\n"
@@ -474,13 +473,13 @@ def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dic
         "When adding recommended_packet_edits, use target_ids for bundle IDs; if you include a source-only insufficiency warning, use edit_type `add_warning`.\n"
         "Also check for packet problems that would mislead synthesis even when role labels are valid: malformed or non-claim claim text, off-question evidence, low-quality evidence treated as load-bearing, answer-frame problems, section-routing mistakes, missing decision functions, overcompressed scope/crux evidence, and quantity interpretation risks.\n"
         "Record these in the structured fields: misleading_synthesis_risks, insufficiency_warnings, claim_quality_issues, section_routing_issues, answer_frame_issues, missing_decision_functions, missing_or_weak_cruxes, and section_plan_risks.\n"
-        "Also return `reader_facing_guidance`: concrete memo instructions a reader should see, such as source-type distinctions, evidence-quality caveats, observational-vs-interventional distinctions, uncertainty caveats, scope/applicability caveats, and tensions that would mislead if omitted. Write each item as reader-facing analysis guidance with instruction, why_it_matters, source_labels, target_ids, and validation_terms when available.\n"
+        "Also return `reader_facing_guidance`: concrete memo instructions a reader should see, such as source-type distinctions, evidence-quality caveats, observational-vs-interventional distinctions, uncertainty caveats, scope/applicability caveats, and tensions that would mislead if omitted. Write each item as reader-facing analysis guidance with instruction, why_it_matters, source_ids, target_ids, and validation_terms when available.\n"
         "You may not invent new sources, quantities, or claims. Recommendations must reference existing IDs, or be recorded as insufficiency warnings.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
         f"{json.dumps(view, indent=2, ensure_ascii=False)}\n\n"
         "Packet sufficiency report:\n"
-        f"{json.dumps(sufficiency_report, indent=2, ensure_ascii=False)}\n"
+        f"{json.dumps(sufficiency_view, indent=2, ensure_ascii=False)}\n"
     )
 
 
@@ -490,6 +489,7 @@ def build_packet_refinement_prompt(
     critique_adjudication: dict[str, Any],
 ) -> str:
     view = packet_summary_for_model(packet, max_bundles=24)
+    sufficiency_view = sufficiency_report_for_model(sufficiency_report, packet)
     return (
         "You are improving a structured decision briefing packet, not writing prose.\n"
         "Use the accepted critique recommendations and sufficiency report to improve roles, weights, salience, crux clarity, and bundle rationales.\n"
@@ -500,7 +500,7 @@ def build_packet_refinement_prompt(
         "Packet summary:\n"
         f"{json.dumps(view, indent=2, ensure_ascii=False)}\n\n"
         "Packet sufficiency report:\n"
-        f"{json.dumps(sufficiency_report, indent=2, ensure_ascii=False)}\n\n"
+        f"{json.dumps(sufficiency_view, indent=2, ensure_ascii=False)}\n\n"
         "Accepted critique/adjudication:\n"
         f"{json.dumps(critique_adjudication, indent=2, ensure_ascii=False)}\n"
     )

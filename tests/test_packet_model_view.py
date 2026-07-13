@@ -10,6 +10,8 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
             {
                 "bundle_id": "b1",
                 "claim": "Option A helps.",
+                "source_ids": ["s1"],
+                "source_labels": ["Outcome Study 2025"],
                 "source_excerpt": "This raw excerpt should not be model visible.",
                 "allowed_wording": {"avoid_terms": ["proves"]},
                 "source_appraisal": {
@@ -19,6 +21,13 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
                     "large_internal_notes": "This bulky source appraisal detail should not be visible.",
                 },
                 "source_use_warnings": ["quality_limit"],
+            }
+        ],
+        "source_trail": [
+            {
+                "source_id": "s1",
+                "source_label": "Outcome Study 2025",
+                "display_label": "A very long source title should stay out of the model view",
             }
         ],
         "must_retain_ledger": [],
@@ -62,7 +71,12 @@ def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:
     assert "raw_candidate_pool" not in serialized
     assert "extra-9" not in serialized
     assert "source_excerpt" not in serialized
+    assert "source_labels" not in serialized
+    assert "Outcome Study 2025" not in serialized
+    assert "A very long source title" not in serialized
     assert "allowed_wording" not in serialized
     assert "large_internal_notes" not in serialized
+    assert view["evidence_bundles"][0]["source_ids"] == ["s1"]
+    assert view["source_registry"] == [{"source_id": "s1"}]
     assert view["evidence_bundles"][0]["source_quality"]["decision_directness"] == "direct"
     assert view["evidence_bundles"][0]["source_quality"]["warnings"] == ["quality_limit"]

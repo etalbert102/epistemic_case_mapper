@@ -4,8 +4,14 @@ import json
 import time
 
 from epistemic_case_mapper.map_briefing_packet_critique_index import build_packet_critique_index, build_packet_critique_shards
-from epistemic_case_mapper.map_briefing_packet_parallel_critique import _merge_critique_payloads, run_parallel_packet_critique
+from epistemic_case_mapper.map_briefing_packet_parallel_critique import (
+    _merge_critique_payloads,
+    build_global_critique_prompt,
+    build_local_critique_prompt,
+    run_parallel_packet_critique,
+)
 from epistemic_case_mapper.map_briefing_packet_refinement import PacketCritiqueOutput, _adjudication_report, run_packet_critique
+from epistemic_case_mapper.map_briefing_packet_refinement import build_packet_critique_prompt, build_packet_refinement_prompt
 
 
 class FakeResult:
@@ -35,6 +41,10 @@ def _packet(count: int = 10) -> dict:
                 },
                 "source_use_warnings": ["quality_limit"],
             }
+            for index in range(1, count + 1)
+        ],
+        "source_trail": [
+            {"source_id": f"s{index}", "source_label": f"Source {index}"}
             for index in range(1, count + 1)
         ],
         "must_retain_ledger": [],
@@ -70,6 +80,8 @@ def _critique_json(*, target: str = "", role: str = "counterweight") -> str:
 def test_packet_critique_index_shards_large_packet() -> None:
     index = build_packet_critique_index(_packet(13), {"status": "warning"})
     shards = build_packet_critique_shards(index, max_bundles_per_shard=6)
+    global_prompt = build_global_critique_prompt({"bundle_inventory": index["bundles"][:2]})
+    local_prompt = build_local_critique_prompt(shards[0])
 
     assert index["bundle_count"] == 13
     assert len(shards) == 3
@@ -78,8 +90,47 @@ def test_packet_critique_index_shards_large_packet() -> None:
     serialized = json.dumps(index)
     assert "Raw excerpt should not be forwarded" not in serialized
     assert "large_internal_notes" not in serialized
+    assert "source_labels" not in serialized
+    assert "Source 1" not in serialized
+    assert "source_labels" not in global_prompt
+    assert "source_labels" not in local_prompt
     assert index["bundles"][0]["source_quality"]["decision_directness"] == "direct"
     assert index["bundles"][0]["source_quality"]["warnings"] == ["quality_limit"]
+
+
+def test_packet_critique_prompts_project_sufficiency_sources_to_ids() -> None:
+    packet = _packet(2)
+    packet["must_retain_ledger"] = [
+        {
+            "item_id": "retain_001",
+            "statement": "Evidence item 1 bears on option A.",
+            "bundle_ids": ["bundle_001"],
+            "required_terms": ["Source 1", "Evidence item 1"],
+            "source_ids": ["s1"],
+            "source_labels": ["Source 1"],
+        }
+    ]
+    sufficiency = {
+        "status": "warning",
+        "quantity_obligation_ledger": {
+            "obligations": [
+                {
+                    "quantity": "10%",
+                    "source_ids": ["s1"],
+                    "source_labels": ["Source 1"],
+                    "required_terms": ["Source 1", "10%"],
+                }
+            ]
+        },
+    }
+
+    critique_prompt = build_packet_critique_prompt(packet, sufficiency)
+    refinement_prompt = build_packet_refinement_prompt(packet, sufficiency, {"accepted_recommendations": []})
+
+    for prompt in [critique_prompt, refinement_prompt]:
+        assert "source_labels" not in prompt
+        assert "Source 1" not in prompt
+        assert '"source_ids": [' in prompt
 
 
 def test_parallel_packet_critique_merges_and_verifies_recommendations() -> None:
