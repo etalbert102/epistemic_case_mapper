@@ -440,7 +440,8 @@ def test_memo_obligations_make_moderate_context_optional() -> None:
     report = build_memo_ready_packet_retention_report(memo, packet)
 
     assert optional and optional[0]["required"] is False
-    assert report["validation_basis"] == "memo_obligations"
+    assert report["validation_basis"] == "canonical_decision_writer_packet"
+    assert report["memo_obligation_count"] >= len(obligations)
     assert report["unresolved_warning_count"] == 0
 
 

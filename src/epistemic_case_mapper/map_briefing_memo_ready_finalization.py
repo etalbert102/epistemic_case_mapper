@@ -7,6 +7,10 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
 from epistemic_case_mapper.map_briefing_calibrated_language import normalize_calibrated_language
+from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
+    build_canonical_packet_retention_report,
+    canonical_repair_items,
+)
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -153,21 +157,24 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         for row in _list(warning_resolution.get("warnings_needing_repair"))
         if isinstance(row, dict)
     ]
-    issues = [*item_issues, *balance_issues, *warning_issues]
+    canonical_retention = build_canonical_packet_retention_report(memo, packet, source_aliases=source_aliases)
+    canonical_issues = _list(canonical_retention.get("issues"))
+    issues = [*item_issues, *balance_issues, *canonical_issues, *warning_issues]
     retained_status_count = sum(1 for row in statuses if row["retained"]) + sum(1 for row in balance_statuses if row["retained"])
     return {
         "schema_id": "memo_ready_packet_retention_report_v1",
-        "validation_basis": "memo_obligations" if uses_obligations else "mandatory_evidence_items",
+        "validation_basis": "canonical_decision_writer_packet" if canonical_retention.get("status") != "not_available" else "memo_obligations" if uses_obligations else "mandatory_evidence_items",
         "analytical_balance_validation": "enabled",
+        "canonical_packet_validation": canonical_retention.get("status", "not_available"),
         "status": "ready" if not issues else "warning",
-        "must_retain_count": len(statuses) + len(balance_statuses),
+        "must_retain_count": len(statuses) + len(balance_statuses) + int(canonical_retention.get("mandatory_retention_count", 0) or 0),
         "retained_must_retain_count": retained_status_count,
-        "missing_critical_count": len(item_issues) + len(balance_issues),
+        "missing_critical_count": len(item_issues) + len(balance_issues) + len(canonical_issues),
         "missing_high_count": 0,
         "mandatory_item_count": len(statuses) + len(balance_statuses),
         "retained_mandatory_count": retained_status_count,
-        "missing_mandatory_count": len(item_issues) + len(balance_issues),
-        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in [*item_issues, *balance_issues]),
+        "missing_mandatory_count": len(item_issues) + len(balance_issues) + len(canonical_issues),
+        "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in [*item_issues, *balance_issues, *canonical_issues]),
         "unresolved_warning_count": len(warning_issues),
         "warning_resolution_report": warning_resolution,
         "item_statuses": statuses,
@@ -180,6 +187,7 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "memo_obligation_count": len(all_memo_obligations(packet)),
         "required_memo_obligation_count": len(obligations),
         "warning_issues": warning_issues,
+        "canonical_packet_retention_report": canonical_retention,
         "issues": issues,
     }
 
@@ -268,6 +276,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
             for issue in _list(retention_report.get("issues"))[:limit]
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_analytical_balance_card"
         ],
+        "missing_canonical_items": canonical_repair_items(retention_report, limit=limit),
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
     return (
@@ -277,6 +286,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- Return the full revised memo in Markdown.\n"
         "- Preserve the decision question, source labels, quantities, and answer stance already present.\n"
         "- Repair missing obligations and balance cards by improving the reasoning around the affected point.\n"
+        "- Repair missing canonical items by restoring the affected answer skeleton, counterweight, scope, source, quantity, or evidence claim.\n"
         "- Use only the missing obligations, missing balance cards, or legacy missing items in the repair packet.\n"
         "- For strict writer-packet repairs, every missing obligation in the repair packet is a required decision-writing obligation; include it, merge it with related prose, or explain the scope/uncertainty it creates.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
