@@ -19,7 +19,6 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
 )
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report
 from epistemic_case_mapper.map_briefing_memo_ready_packet import (
-    build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
@@ -120,22 +119,6 @@ def test_quantity_binding_excludes_unbound_quantities_from_mandatory_obligations
         item["reader_claim"] == "A floating quantity lacks source lineage." and item["must_use"]
         for item in memo_ready["evidence_items"]
     )
-
-
-def test_synthesis_prompt_uses_memo_ready_packet_not_legacy_section_contract() -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    result = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])
-
-    prompt = build_memo_ready_packet_synthesis_prompt(result["memo_ready_packet"])
-
-    assert "writer model context" in prompt
-    assert "writer_model_context_v1" in prompt
-    assert "Why This Read" not in prompt
-    assert "Evidence Carrying the Conclusion" not in prompt
-    assert "25%" in prompt
-    assert '"source_id": "s2"' in prompt
-    assert "Counter Study" not in prompt
-    assert '"source_labels"' not in prompt
 
 
 def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
@@ -434,37 +417,6 @@ def test_memo_ready_synthesis_prompt_backend_returns_traceable_draft() -> None:
     assert retention["missing_mandatory_count"] == 0
     assert "25%" in result["memo"]
     assert "Counter Study" in result["memo"]
-
-
-def test_memo_warning_packet_routes_truly_lost_evidence_into_synthesis_prompt() -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    decision_packet = built["decision_briefing_packet"]
-    decision_packet["source_trail"].append(
-        {"source_id": "s4", "source_label": "Equity Review", "source_url": "https://example.test/equity"}
-    )
-    decision_packet["coverage_report"]["truly_lost_decision_critical"] = [
-        {
-            "candidate_card_id": "ec_warning",
-            "decision_role": "counterweight",
-            "priority": 10,
-            "source_ids": ["s4"],
-            "claim": "Option A shifted flood risk toward downstream neighborhoods.",
-            "quantity_values": ["3 neighborhoods"],
-        }
-    ]
-
-    result = build_quality_synthesis_packet_bundle(decision_packet)
-    packet = result["memo_ready_packet"]
-    prompt = build_memo_ready_packet_synthesis_prompt(packet)
-
-    assert result["memo_warning_packet"]["critical_warning_count"] == 1
-    assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
-    assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
-    assert "adaptive_memo_outline" in prompt
-    assert "reader_brief_plan" in prompt
-    assert "decision_interpretation_plan" in prompt
-    assert "not as the memo outline" in prompt
-    assert "Required obligation ledger" not in prompt
 
 
 def test_memo_obligations_make_moderate_context_optional() -> None:

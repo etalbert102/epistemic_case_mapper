@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
+from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_decision_interpretation_plan import build_decision_interpretation_plan
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_reader_brief_plan import build_reader_brief_plan
@@ -17,13 +18,48 @@ from epistemic_case_mapper.map_briefing_writer_decision_interface import (
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
-    writer_packet = memo_ready_packet.get("writer_packet") if isinstance(memo_ready_packet, dict) else None
     if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
-        return build_writer_packet_synthesis_prompt(_dict(writer_packet), memo_ready_packet=memo_ready_packet)
+        canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
+        return build_canonical_decision_writer_packet_synthesis_prompt(canonical)
     return (
         "Memo-ready packet synthesis prompt unavailable.\n"
         "Active memo synthesis requires memo_ready_packet.evidence_items so the writer model context can be compiled without raw packet or audit-only fields.\n"
     )
+
+
+def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: dict[str, Any]) -> str:
+    packet = _canonical_packet_for_prompt(canonical_packet)
+    return (
+        "You are a senior decision analyst. Write a decision-ready memo from the canonical decision writer packet.\n"
+        "The packet is the sole semantic handoff from upstream analysis: it contains the resolved answer skeleton, priority evidence, counterweight dispositions, source-weight notes, mandatory retention checklist, and citation registry.\n"
+        "Write for a human decision-maker. Make the answer crisp before explaining the evidence.\n\n"
+        "Required visible structure:\n"
+        "# Decision Memo: <short title>\n"
+        "**Decision Question:** <question>\n"
+        "**Bottom Line:** <direct answer with scope and confidence>\n"
+        "## Why This Is the Best Current Read\n"
+        "## What Could Change or Bound the Answer\n"
+        "## Practical Implication\n\n"
+        "Writing rules:\n"
+        "- Use decision_brief_skeleton as the spine of the memo.\n"
+        "- Start with the direct answer, scope, confidence, main reason, and strongest counterweight disposition.\n"
+        "- Use priority_evidence to support the answer; interpret important quantities in decision terms.\n"
+        "- Use counterweight_dispositions to say whether each major counterweight overturns, weakens, bounds, explains, or creates a crux for the answer.\n"
+        "- Use scope_boundaries and decision_cruxes to state where the answer applies and what would change it.\n"
+        "- Use source_weight_notes when source type, directness, or limitations affect confidence.\n"
+        "- Preserve each mandatory_retention_checklist item in natural prose.\n"
+        "- Cite source_ids in brackets near the claims they support; presentation code will replace them with reader-facing source names.\n"
+        "- Keep source IDs and quantities attached to their claims.\n"
+        "- Write naturally; do not expose packet keys, IDs other than source_ids, validation machinery, or audit language.\n"
+        "- Do not include a sources section; the final source list is added deterministically.\n\n"
+        "Canonical decision writer packet:\n"
+        f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def _canonical_packet_for_prompt(canonical_packet: dict[str, Any]) -> dict[str, Any]:
+    packet = canonical_packet if isinstance(canonical_packet, dict) else {}
+    return {key: value for key, value in packet.items() if key != "quality_report"}
 
 
 def build_writer_packet_synthesis_prompt(
