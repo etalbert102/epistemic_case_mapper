@@ -43,7 +43,6 @@ SECTION_BY_ROLE = {
     "context_only": "context",
 }
 
-
 def build_decision_writer_packet_bundle(
     *,
     global_decision_model: dict[str, Any],
@@ -142,6 +141,9 @@ def decision_writer_packet_to_memo_ready_packet(
     writer_interface = build_writer_decision_interface(memo_ready)
     memo_ready["writer_decision_interface"] = writer_interface
     memo_ready["writer_decision_interface_quality_report"] = build_writer_decision_interface_quality_report(writer_interface)
+    from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
+    memo_ready["canonical_decision_writer_packet"] = canonical = build_canonical_decision_writer_packet(memo_ready, writer_interface=writer_interface)
+    memo_ready["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
     return memo_ready
 
 

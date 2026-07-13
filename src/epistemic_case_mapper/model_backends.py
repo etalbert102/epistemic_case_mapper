@@ -76,6 +76,7 @@ def run_model_backend(
     max_retries: int = 1,
     response_schema: dict | None = None,
     num_predict: int | None = None,
+    json_mode: bool = True,
 ) -> ModelBackendResult:
     spec = backend.strip()
     if not spec or spec == "prompt":
@@ -94,7 +95,14 @@ def run_model_backend(
         if not model:
             raise ValueError("empty ollama model")
         text, attempts = _run_with_retries(
-            lambda: _run_ollama(model, prompt, timeout_seconds, response_schema=response_schema, num_predict=num_predict),
+            lambda: _run_ollama(
+                model,
+                prompt,
+                timeout_seconds,
+                response_schema=response_schema,
+                num_predict=num_predict,
+                json_mode=json_mode,
+            ),
             max_retries=max_retries,
         )
         return ModelBackendResult(text=text, backend=spec, attempts=attempts)
@@ -143,15 +151,23 @@ def _run_ollama(
     *,
     response_schema: dict | None = None,
     num_predict: int | None = None,
+    json_mode: bool = True,
 ) -> str:
     if os.environ.get("ECM_OLLAMA_BACKEND", "http").strip().lower() == "cli":
-        return _run_ollama_cli(model, prompt, timeout_seconds)
+        return _run_ollama_cli(model, prompt, timeout_seconds, json_mode=json_mode)
     try:
-        return _run_ollama_http(model, prompt, timeout_seconds, response_schema=response_schema, num_predict=num_predict)
+        return _run_ollama_http(
+            model,
+            prompt,
+            timeout_seconds,
+            response_schema=response_schema,
+            num_predict=num_predict,
+            json_mode=json_mode,
+        )
     except RuntimeError as exc:
         if not _should_fallback_to_ollama_cli(exc):
             raise
-        return _run_ollama_cli(model, prompt, timeout_seconds)
+        return _run_ollama_cli(model, prompt, timeout_seconds, json_mode=json_mode)
 
 
 def _run_ollama_http(
@@ -161,19 +177,23 @@ def _run_ollama_http(
     *,
     response_schema: dict | None = None,
     num_predict: int | None = None,
+    json_mode: bool = True,
 ) -> str:
     host = _ollama_host()
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
-        "format": response_schema or "json",
         "think": False,
         "options": {
             "temperature": float(os.environ.get("ECM_OLLAMA_TEMPERATURE", "0")),
             "num_predict": int(num_predict or os.environ.get("ECM_OLLAMA_NUM_PREDICT", "2048")),
         },
     }
+    if response_schema is not None:
+        payload["format"] = response_schema
+    elif json_mode:
+        payload["format"] = "json"
     body = json.dumps(payload).encode("utf-8")
     req = request.Request(
         f"{host}/api/chat",
@@ -211,10 +231,13 @@ def _should_fallback_to_ollama_cli(exc: RuntimeError) -> bool:
     return "unavailable" in message or "non-json envelope" in message or "empty content" in message
 
 
-def _run_ollama_cli(model: str, prompt: str, timeout_seconds: int | None) -> str:
+def _run_ollama_cli(model: str, prompt: str, timeout_seconds: int | None, *, json_mode: bool = True) -> str:
+    args = ["ollama", "run", model, "--hidethinking", "--nowordwrap"]
+    if json_mode:
+        args.extend(["--format", "json"])
     try:
         result = subprocess.run(
-            ["ollama", "run", model, "--format", "json", "--hidethinking", "--nowordwrap"],
+            args,
             input=prompt,
             capture_output=True,
             text=True,

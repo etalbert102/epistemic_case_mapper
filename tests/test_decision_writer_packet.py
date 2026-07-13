@@ -655,7 +655,7 @@ def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monke
     assert result["report"]["contract_mode"] == "strict_writer_packet"
     assert result["report"]["status"] == "accepted_with_retention_warnings"
     assert result["report"]["accepted"] is False
-    assert result["report"]["missing_mandatory_count"] == 1
+    assert result["report"]["missing_mandatory_count"] == 3
 
 
 def test_decision_writer_packet_repair_partial_improvement_is_visible(monkeypatch) -> None:
@@ -680,12 +680,12 @@ def test_decision_writer_packet_repair_partial_improvement_is_visible(monkeypatc
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert before["missing_mandatory_count"] == 2
+    assert before["missing_mandatory_count"] == 6
     assert result["report"]["contract_mode"] == "strict_writer_packet"
     assert result["report"]["status"] == "partial_retention_improvement_applied_with_warnings"
     assert result["report"]["accepted"] is False
     assert result["report"]["applied"] is True
-    assert result["report"]["final_missing_mandatory_count"] == 1
+    assert result["report"]["final_missing_mandatory_count"] == 3
     assert "Outcome Review" in result["memo"]
 
 

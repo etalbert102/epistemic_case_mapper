@@ -427,6 +427,9 @@ def _cluster_from_bundle(cluster_id: str, bundle: dict[str, Any]) -> dict[str, A
         "quality": bundle.get("quality"),
         "source_excerpt": str(bundle.get("source_excerpt") or "").strip(),
         "directionality": str(bundle.get("directionality") or "").strip(),
+        "source_appraisal": bundle.get("source_appraisal") if isinstance(bundle.get("source_appraisal"), dict) else {},
+        "source_use_warnings": _string_list(bundle.get("source_use_warnings")),
+        "allowed_wording": bundle.get("allowed_wording") if isinstance(bundle.get("allowed_wording"), dict) else {},
         "assembly_confidence": "high" if bundle.get("source_labels") or bundle.get("source_ids") else "medium",
     }
 
@@ -454,6 +457,13 @@ def _merge_bundle_into_cluster(cluster: dict[str, Any], bundle: dict[str, Any]) 
         cluster["representative_claim"] = str(bundle.get("claim") or "").strip()
     if not cluster.get("why_it_matters") and bundle.get("why_it_matters"):
         cluster["why_it_matters"] = str(bundle.get("why_it_matters") or "")
+    if not _dict(cluster.get("source_appraisal")).get("status") and isinstance(bundle.get("source_appraisal"), dict):
+        cluster["source_appraisal"] = bundle.get("source_appraisal")
+    cluster["source_use_warnings"] = _dedupe(
+        [*_string_list(cluster.get("source_use_warnings")), *_string_list(bundle.get("source_use_warnings"))]
+    )
+    if not _dict(cluster.get("allowed_wording")) and isinstance(bundle.get("allowed_wording"), dict):
+        cluster["allowed_wording"] = bundle.get("allowed_wording")
 
 
 def _kept_separate_near_duplicates(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -586,6 +596,9 @@ def _memo_ready_item(
             "rebuttal": _rebuttal(role, cluster),
         },
         "caveat": _primary_caution(cluster, role),
+        "source_appraisal": _dict(cluster.get("source_appraisal")),
+        "source_use_warnings": _string_list(cluster.get("source_use_warnings")),
+        "allowed_wording": _dict(cluster.get("allowed_wording")),
         "lineage": {
             "derived_from_claim_ids": _string_list(cluster.get("claim_ids")),
             "derived_from_relation_ids": _string_list(cluster.get("relation_ids")),

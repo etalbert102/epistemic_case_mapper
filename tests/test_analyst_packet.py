@@ -576,6 +576,8 @@ def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
     assert scaffold["memo_ready_packet"]["method"] == "global_decision_writer_packet_adapter"
     assert scaffold["memo_ready_packet"]["writer_packet"]["schema_id"] == "decision_writer_packet_v1"
     assert scaffold["memo_ready_packet"]["evidence_items"][0]["reader_claim"] == "Option A reduces losses."
+    assert scaffold["memo_ready_packet"]["canonical_decision_writer_packet"]["schema_id"] == "canonical_decision_writer_packet_v1"
+    assert scaffold["memo_ready_packet"]["canonical_decision_writer_packet_quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
     assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
     assert scaffold["memo_ready_packet_quality_report"]["active_packet_source"] == "decision_writer_packet"
 

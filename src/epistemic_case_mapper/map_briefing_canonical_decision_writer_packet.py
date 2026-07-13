@@ -61,6 +61,7 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
     priority = _list(packet.get("priority_evidence"))
     counterweights = _list(packet.get("counterweight_dispositions"))
     source_notes = _list(packet.get("source_weight_notes"))
+    informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
     checklist = _list(packet.get("mandatory_retention_checklist"))
     inventory = _dict(packet.get("organized_evidence_inventory"))
     inventory_items = _inventory_items(inventory)
@@ -78,6 +79,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("missing_counterweight_dispositions")
     if not source_notes:
         warnings.append("missing_source_weight_notes")
+    elif informative_source_notes == 0:
+        warnings.append("source_weight_notes_uninformative")
     if not checklist:
         warnings.append("missing_mandatory_retention_checklist")
     if not inventory_items:
@@ -98,6 +101,7 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         "organized_evidence_count": len(inventory_items),
         "counterweight_disposition_count": len(counterweights),
         "source_weight_note_count": len(source_notes),
+        "informative_source_weight_note_count": informative_source_notes,
         "mandatory_retention_count": len(checklist),
     }
 
@@ -488,6 +492,19 @@ def _source_weight_notes(interface: dict[str, Any]) -> list[dict[str, Any]]:
         if note.get("source_labels"):
             notes.append(note)
     return _dedupe_rows(notes, "source_labels")[:16]
+
+
+def _informative_source_weight_note(row: Any) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if str(row.get("decision_directness") or "").strip() not in {"", "unknown", "unspecified"}:
+        return True
+    return bool(
+        _list(row.get("useful_for"))
+        or _list(row.get("not_enough_for"))
+        or _list(row.get("key_claims"))
+        or _list(row.get("key_quantities"))
+    )
 
 
 def _mandatory_retention_checklist(packet: dict[str, Any], interface: dict[str, Any]) -> list[dict[str, Any]]:

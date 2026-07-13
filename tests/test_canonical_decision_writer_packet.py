@@ -6,6 +6,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_retention_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.map_briefing_source_appraisal import build_source_appraisal_report
 
 from test_decision_briefing_packet import _scaffold
 
@@ -35,6 +36,38 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
         if row.get("role") in {"strongest_support", "strongest_counterweight", "scope_boundary", "decision_crux"}
     )
     assert canonical["quality_report"]["organized_evidence_count"] == len(packet["evidence_items"])
+
+
+def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() -> None:
+    scaffold = _scaffold()
+    scaffold["source_evidence_cards"]["cards"][0]["source_title"] = "Outcome Study"
+    scaffold["source_evidence_cards"]["cards"][0]["evidence_type"] = "observational cohort study"
+    scaffold["source_evidence_cards"]["cards"][0]["outcome_or_endpoint"] = "final outcome"
+    scaffold["evidence_quality_report"] = {
+        "schema_id": "evidence_quality_report_v1",
+        "quality_components": {"sc0001": {"directness": "direct", "overall": "usable"}},
+    }
+    scaffold["source_appraisal_report"] = build_source_appraisal_report(
+        source_evidence_cards=scaffold["source_evidence_cards"],
+        evidence_quality_report=scaffold["evidence_quality_report"],
+    )
+    built = build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"])
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    appraised_items = [
+        item
+        for item in packet["evidence_items"]
+        if item.get("source_appraisal", {}).get("status") == "ready"
+    ]
+    canonical = packet["canonical_decision_writer_packet"]
+
+    assert appraised_items
+    assert canonical["quality_report"]["informative_source_weight_note_count"] >= 1
+    assert "source_weight_notes_uninformative" not in canonical["quality_report"]["warnings"]
+    assert any(
+        "association_not_causation" in row.get("not_enough_for", [])
+        for row in canonical["source_weight_notes"]
+    )
 
 
 def test_canonical_retention_routes_missing_items_to_targeted_repair() -> None:

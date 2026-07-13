@@ -55,7 +55,13 @@ def run_memo_ready_packet_synthesis(
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            json_mode=False,
+        )
     except RuntimeError as exc:
         report.update(
             {
@@ -845,10 +851,16 @@ def _extract_markdown(raw: str) -> str:
         cleaned = re.sub(r"\s*```$", "", cleaned).strip()
     payload = _parse_json(cleaned)
     if isinstance(payload, dict):
-        for key in ("memo_markdown", "markdown", "memo", "text"):
+        for key in ("memo_markdown", "markdown", "memo", "text", "content"):
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+        args = payload.get("args")
+        if isinstance(args, dict):
+            for key in ("memo_markdown", "markdown", "memo", "text", "content"):
+                value = args.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
         return ""
     if isinstance(payload, list):
         return ""

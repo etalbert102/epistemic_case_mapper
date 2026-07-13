@@ -31,6 +31,39 @@ def test_live_synthesis_backend_failure_is_visible_not_accepted(monkeypatch: pyt
     assert "live_model_enrichment_failed" in result["report"]["issues"]
 
 
+def test_live_synthesis_requests_plain_text_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "answer_spine": {"default_read": "Option A is plausible but bounded."},
+        "evidence_items": [
+            {
+                "item_id": "i1",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Option A reduces losses.",
+                "source_label": "Outcome Review",
+            }
+        ],
+        "source_trail": [{"source_label": "Outcome Review"}],
+    }
+
+    def fake_backend(*args, **kwargs):
+        captured.update(kwargs)
+        from epistemic_case_mapper.model_backends import ModelBackendResult
+
+        return ModelBackendResult(
+            text="# Decision Memo\n\nOutcome Review says Option A reduces losses.",
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
+
+    assert captured["json_mode"] is False
+
+
 def test_retention_requires_decision_quantities_but_not_artifact_dates() -> None:
     packet = {
         "decision_question": "Should adults treat eggs as harmful?",
