@@ -16,12 +16,13 @@ def build_reader_brief_plan(model_context: dict[str, Any]) -> dict[str, Any]:
     answer_frame = _dict(context.get("answer_frame"))
     evidence = _list(context.get("decision_evidence_table"))
     ledger = _list(context.get("mandatory_evidence_ledger"))
+    interpretations = _list(_dict(context.get("decision_interpretation_plan")).get("interpretations"))
     return {
-        "schema_id": "reader_brief_plan_v1",
-        "writing_priority": "Use this as the writing plan; use the evidence ledger as the retention check.",
+        "schema_id": "reader_brief_plan_v2",
+        "writing_priority": "Use paragraph_jobs as the prose plan; use the evidence ledger as the retention check.",
         "opening_answer": _short_text(answer_frame.get("direct_answer") or context.get("bottom_line"), 420),
         "why_sentence": _why_sentence(answer_frame, evidence),
-        "paragraph_jobs": _paragraph_jobs(context),
+        "paragraph_jobs": _paragraph_jobs(context, interpretations),
         "hero_evidence": _evidence_rows(evidence, roles={"strongest_support", "quantitative_anchor"}, limit=4),
         "supporting_detail": _supporting_detail(ledger, limit=6),
         "caveats": _evidence_rows(evidence, roles={"strongest_counterweight", "scope_boundary", "decision_crux"}, limit=6),
@@ -39,13 +40,68 @@ def _why_sentence(answer_frame: dict[str, Any], evidence: list[Any]) -> str:
     return ""
 
 
-def _paragraph_jobs(context: dict[str, Any]) -> list[dict[str, str]]:
+def _paragraph_jobs(context: dict[str, Any], interpretations: list[Any]) -> list[dict[str, Any]]:
     return [
-        {"section": "bottom_line", "job": "Give the answer, the main reason, and the main boundary without listing evidence."},
-        {"section": "why", "job": "Explain the strongest reason the answer follows, using the highest-value quantity if one is available."},
-        {"section": "bounds", "job": "Explain what would weaken, narrow, or change the answer."},
-        {"section": "practical", "job": _practical_takeaway(context) or "Translate the answer into a practical next step."},
+        {
+            "section": "bottom_line",
+            "job": "Give the answer, the main reason, and the main boundary before listing evidence.",
+            "use_interpretations": _job_interpretations(
+                interpretations,
+                reader_uses={"main_reason", "scope_or_exception"},
+                limit=3,
+            ),
+        },
+        {
+            "section": "why_this_read",
+            "job": "Explain why the answer follows, turning the strongest quantity into plain decision meaning.",
+            "use_interpretations": _job_interpretations(interpretations, reader_uses={"main_reason"}, limit=4),
+        },
+        {
+            "section": "evidence_tension",
+            "job": "Explain important counterweights, measurement contrasts, or cruxes and say whether they overturn, weaken, or bound the answer.",
+            "use_interpretations": _job_interpretations(
+                interpretations,
+                reader_uses={"counterweight_disposition", "crux_or_uncertainty"},
+                limit=5,
+            ),
+        },
+        {
+            "section": "scope_and_practical_use",
+            "job": _practical_takeaway(context) or "Translate scope boundaries and cruxes into practical use of the answer.",
+            "use_interpretations": _job_interpretations(
+                interpretations,
+                reader_uses={"scope_or_exception", "crux_or_uncertainty", "interpretive_context"},
+                limit=5,
+            ),
+        },
     ]
+
+
+def _job_interpretations(
+    rows: list[Any],
+    *,
+    reader_uses: set[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    selected = []
+    for row in rows:
+        if not isinstance(row, dict) or str(row.get("reader_use") or "") not in reader_uses:
+            continue
+        selected.append(_brief_interpretation_row(row))
+    return selected[:limit]
+
+
+def _brief_interpretation_row(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "item_id": row.get("item_id"),
+            "answer_effect": row.get("answer_effect"),
+            "decision_interpretation": _short_text(row.get("decision_interpretation"), 360),
+            "quantity_meanings": _list(row.get("quantity_meanings"))[:4],
+            "source_id": row.get("source_id"),
+            "source_ids": row.get("source_ids"),
+        }
+    )
 
 
 def _evidence_rows(rows: list[Any], *, roles: set[str], limit: int) -> list[dict[str, Any]]:
@@ -67,13 +123,15 @@ def _supporting_detail(rows: list[Any], *, limit: int) -> list[dict[str, Any]]:
 
 
 def _brief_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
-    return {
+    return _drop_empty(
+        {
         "role": row.get("role"),
         "claim": _short_text(row.get("claim") or row.get("reader_claim"), 360),
         "source_id": row.get("source_id"),
         "source_ids": row.get("source_ids"),
         "quantities": _brief_quantities(row),
-    }
+        }
+    )
 
 
 def _brief_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
@@ -95,3 +153,7 @@ def _practical_takeaway(context: dict[str, Any]) -> str:
         if str(text or "").strip():
             return _short_text(text, 260)
     return ""
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in ("", None, []) and value != {}}
