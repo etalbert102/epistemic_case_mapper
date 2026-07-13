@@ -9,6 +9,9 @@ class FinalReaderOutputPaths:
     briefing: Path
     evidence_appendix: Path
     citation_trace: Path
+    canonical_decision_writer_packet: Path
+    canonical_decision_writer_packet_quality: Path
+    canonical_writer_prompt_context_audit: Path
     polish_report: Path
     memo_quality: Path
     curation_report: Path
@@ -58,6 +61,9 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         briefing=artifacts / "BRIEFING.md",
         evidence_appendix=artifacts / "EVIDENCE_APPENDIX.md",
         citation_trace=artifacts / "CITATION_TRACE.md",
+        canonical_decision_writer_packet=artifacts / "canonical_decision_writer_packet.json",
+        canonical_decision_writer_packet_quality=artifacts / "canonical_decision_writer_packet_quality_report.json",
+        canonical_writer_prompt_context_audit=artifacts / "canonical_writer_prompt_context_audit.json",
         polish_report=artifacts / "briefing_polish_report.json",
         memo_quality=artifacts / "memo_quality_report.json",
         curation_report=artifacts / "evidence_curation_report.json",

@@ -499,6 +499,11 @@ def _write_final_reader_artifacts(
         paths.citation_trace,
         build_citation_trace_markdown(reader_memo, memo_package["scaffold"].get("memo_ready_packet", {})),
     )
+    memo_ready_packet = memo_package["scaffold"].get("memo_ready_packet", {})
+    canonical_packet = memo_ready_packet.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready_packet, dict) else {}
+    write_json(paths.canonical_decision_writer_packet, canonical_packet)
+    write_json(paths.canonical_decision_writer_packet_quality, canonical_packet.get("quality_report", {}) if isinstance(canonical_packet, dict) else {})
+    write_json(paths.canonical_writer_prompt_context_audit, _canonical_writer_prompt_context_audit(memo_ready_synthesis_result))
     write_json(paths.final_traceability, diagnostics["traceability_matrix"])
     write_markdown(paths.final_traceability_markdown, render_decision_traceability_matrix_markdown(diagnostics["traceability_matrix"]))
     write_json(paths.memo_coherence, diagnostics["memo_coherence"])
@@ -551,6 +556,9 @@ def _final_reader_summary_paths(
         "memo_quality_report": paths.memo_quality,
         "evidence_curation_report": paths.curation_report,
         "citation_trace": paths.citation_trace,
+        "canonical_decision_writer_packet": paths.canonical_decision_writer_packet,
+        "canonical_decision_writer_packet_quality_report": paths.canonical_decision_writer_packet_quality,
+        "canonical_writer_prompt_context_audit": paths.canonical_writer_prompt_context_audit,
         "section_rewrite_report": paths.section_rewrite_report,
         "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
         "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),
@@ -621,6 +629,26 @@ def _memo_ready_summary_paths(
         "memo_ready_final_polish_prompt": paths.memo_ready_final_polish_prompt if final_polish_result and final_polish_result.get("prompt") else None,
         "memo_ready_final_polish_raw": paths.memo_ready_final_polish_raw if final_polish_result and final_polish_result.get("raw") else None,
         "memo_creation_progress": memo_progress_path(paths.briefing.parent),
+    }
+
+
+def _canonical_writer_prompt_context_audit(memo_ready_synthesis_result: dict[str, Any]) -> dict[str, Any]:
+    prompt = str(memo_ready_synthesis_result.get("prompt") or "")
+    retired = [
+        "writer_model_context_v1",
+        "reader_brief_plan",
+        "decision_interpretation_plan",
+        "analytical_balance_contract",
+        "decision_boundary_source_contract",
+        "adaptive_memo_outline",
+    ]
+    present = [token for token in retired if token in prompt]
+    return {
+        "schema_id": "canonical_writer_prompt_context_audit_v1",
+        "status": "pass" if "canonical_decision_writer_packet_v1" in prompt and not present else "warning",
+        "canonical_packet_present": "canonical_decision_writer_packet_v1" in prompt,
+        "retired_context_surfaces_present": present,
+        "prompt_character_count": len(prompt),
     }
 
 

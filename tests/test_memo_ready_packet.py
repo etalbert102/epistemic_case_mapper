@@ -783,6 +783,11 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert paths["memo_ready_repair_report"].exists()
     assert paths["memo_ready_final_polish_report"].exists()
     assert paths["citation_trace"].exists()
+    assert paths["canonical_decision_writer_packet"].exists()
+    assert paths["canonical_decision_writer_packet_quality_report"].exists()
+    assert paths["canonical_writer_prompt_context_audit"].exists()
+    prompt_audit = json.loads(paths["canonical_writer_prompt_context_audit"].read_text(encoding="utf-8"))
+    assert prompt_audit["status"] == "pass"
     assert "Inline memo citations link here" in paths["citation_trace"].read_text(encoding="utf-8")
     assert paths["memo_creation_progress"].exists()
     progress = [
