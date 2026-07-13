@@ -4,6 +4,7 @@ from collections import Counter
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -68,7 +69,7 @@ def _boundary_obligations(
                 "boundary_id": f"boundary_{len(rows) + 1:03d}",
                 "boundary_type": _boundary_type(item),
                 "writing_job": _boundary_writing_job(item),
-                "statement": _short_text(str(item.get("reader_claim") or item.get("claim") or ""), 420),
+                "statement": _short_text(_calibrated_claim(item), 420),
                 "source_labels": _source_labels(item),
                 "quantities": _quantity_values(item),
                 "evidence_item_ids": _evidence_item_ids(item),
@@ -82,7 +83,7 @@ def _boundary_obligations(
                 "boundary_id": f"boundary_{len(rows) + 1:03d}",
                 "boundary_type": "model_supplied_boundary",
                 "writing_job": "Use this to bound the answer if it is not already covered by source-linked boundary evidence.",
-                "statement": _short_text(statement, 420),
+                "statement": _short_text(calibrate_text_for_writer(statement), 420),
                 "source_labels": [],
                 "quantities": [],
                 "evidence_item_ids": [],
@@ -96,7 +97,7 @@ def _boundary_obligations(
                 "boundary_id": f"boundary_{len(rows) + 1:03d}",
                 "boundary_type": "missing_evidence_boundary",
                 "writing_job": "Use this only to explain uncertainty or what evidence would change the answer.",
-                "statement": _short_text(statement, 420),
+                "statement": _short_text(calibrate_text_for_writer(statement), 420),
                 "source_labels": [],
                 "quantities": [],
                 "evidence_item_ids": [],
@@ -119,7 +120,7 @@ def _source_use_cards(visible_items: list[dict[str, Any]], selected_context: lis
             {
                 "source_label": label,
                 "use_for": _source_use_roles(items),
-                "key_claims": [_short_text(str(item.get("reader_claim") or item.get("claim") or ""), 260) for item in items[:3]],
+                "key_claims": [_short_text(_calibrated_claim(item), 260) for item in items[:3]],
                 "key_quantities": _source_quantities(items),
                 "wording_cautions": _source_wording_cautions(items),
                 "evidence_item_ids": _dedupe([evidence_id for item in items for evidence_id in _evidence_item_ids(item)])[:12],
@@ -147,7 +148,7 @@ def _quantity_priority_cards(visible_items: list[dict[str, Any]], selected_conte
                     "quantity": value,
                     "quantity_kind": _quantity_kind(value, str(quantity.get("interpretation") or "")),
                     "priority": _quantity_priority(item, quantity),
-                    "interpretation": _short_text(str(quantity.get("interpretation") or ""), 300),
+                    "interpretation": _short_text(calibrate_text_for_writer(str(quantity.get("interpretation") or ""), item), 300),
                     "source_labels": _source_labels(quantity) or _source_labels(item),
                     "evidence_item_id": item.get("item_id"),
                     "quantity_role": str(quantity.get("quantity_role") or "").strip(),
@@ -167,7 +168,7 @@ def _language_discipline(visible_items: list[dict[str, Any]], selected_context: 
             {
                 "target": item.get("item_id"),
                 "source_labels": _source_labels(item),
-                "claim": _short_text(str(item.get("reader_claim") or item.get("claim") or ""), 240),
+                "claim": _short_text(_calibrated_claim(item), 240),
                 "wording_cautions": cautions,
             }
         )
@@ -231,6 +232,13 @@ def _dedupe_boundaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
+def _calibrated_claim(item: dict[str, Any]) -> str:
+    return str(
+        calibrate_claim_for_writer(str(item.get("reader_claim") or item.get("claim") or ""), item).get("claim")
+        or ""
+    ).strip()
+
+
 def _source_use_roles(items: list[dict[str, Any]]) -> list[str]:
     roles = []
     for item in items:
@@ -252,7 +260,7 @@ def _source_quantities(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             rows.append(
                 {
                     "value": value,
-                    "interpretation": _short_text(str(quantity.get("interpretation") or ""), 240),
+                    "interpretation": _short_text(calibrate_text_for_writer(str(quantity.get("interpretation") or ""), item), 240),
                     "quantity_role": str(quantity.get("quantity_role") or "").strip(),
                 }
             )

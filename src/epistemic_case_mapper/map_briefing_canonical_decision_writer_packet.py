@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
+from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -115,18 +116,18 @@ def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:
     most_important_quantity = _most_important_quantity(interface)
     return _drop_empty(
         {
-            "direct_answer": _short_text(answer_frame.get("direct_answer") or interface.get("bottom_line"), 520),
-            "scope": _short_text(answer_frame.get("scope_note") or answer_frame.get("scoping_policy"), 520),
+            "direct_answer": _calibrated_short(answer_frame.get("direct_answer") or interface.get("bottom_line"), limit=520),
+            "scope": _calibrated_short(answer_frame.get("scope_note") or answer_frame.get("scoping_policy"), limit=520),
             "confidence": answer_frame.get("confidence") or interface.get("confidence"),
-            "confidence_basis": _short_text(answer_frame.get("confidence_basis"), 520),
-            "main_reason": _short_text(answer_frame.get("main_support"), 520),
+            "confidence_basis": _calibrated_short(answer_frame.get("confidence_basis"), limit=520),
+            "main_reason": _calibrated_short(answer_frame.get("main_support"), limit=520),
             "most_important_quantity": most_important_quantity,
-            "strongest_counterweight": _short_text(answer_frame.get("main_counterweight"), 520),
+            "strongest_counterweight": _calibrated_short(answer_frame.get("main_counterweight"), limit=520),
             "counterweight_disposition": counterweights[0].get("disposition") if counterweights else "",
-            "exceptions": [_short_text(row.get("statement") or row.get("claim"), 300) for row in scope[:4] if isinstance(row, dict)],
-            "decision_crux": _short_text(_first_text(cruxes, keys=("statement", "claim")), 420),
-            "practical_implication": _short_text(_first_text(practical_cards, keys=("statement",)), 520)
-            or _short_text(answer_frame.get("decision_application"), 520),
+            "exceptions": [_calibrated_short(row.get("statement") or row.get("claim"), row, limit=300) for row in scope[:4] if isinstance(row, dict)],
+            "decision_crux": _calibrated_short(_first_text(cruxes, keys=("statement", "claim")), limit=420),
+            "practical_implication": _calibrated_short(_first_text(practical_cards, keys=("statement",)), limit=520)
+            or _calibrated_short(answer_frame.get("decision_application"), limit=520),
         }
     )
 
@@ -157,33 +158,33 @@ def _analyst_reasoning_frame(packet: dict[str, Any], interface: dict[str, Any]) 
     excluded_claims = _excluded_inventory_claims(packet)
     return _drop_empty(
         {
-            "bottom_line": _short_text(_strip_excluded_claims(interface.get("bottom_line") or spine.get("default_read"), excluded_claims), 900),
-            "why_this_answer": _short_text(_strip_excluded_claims(spine.get("why_this_read"), excluded_claims), 1200),
+            "bottom_line": _calibrated_short(_strip_excluded_claims(interface.get("bottom_line") or spine.get("default_read"), excluded_claims), limit=900),
+            "why_this_answer": _calibrated_short(_strip_excluded_claims(spine.get("why_this_read"), excluded_claims), limit=1200),
             "confidence": spine.get("confidence") or interface.get("confidence"),
             "confidence_reasons": [
-                _short_text(cleaned, 700)
+                _calibrated_short(cleaned, limit=700)
                 for row in _string_list(spine.get("confidence_reasons"))
                 if (cleaned := _strip_excluded_claims(row, excluded_claims))
             ],
-            "support_summary": _short_text(_strip_excluded_claims(logic.get("support_summary"), excluded_claims), 700),
-            "counterweight_weighting": _short_text(_strip_excluded_claims(logic.get("counterweight_weighting"), excluded_claims), 700),
+            "support_summary": _calibrated_short(_strip_excluded_claims(logic.get("support_summary"), excluded_claims), limit=700),
+            "counterweight_weighting": _calibrated_short(_strip_excluded_claims(logic.get("counterweight_weighting"), excluded_claims), limit=700),
             "scope_boundaries": [
-                _short_text(cleaned, 420)
+                _calibrated_short(cleaned, limit=420)
                 for row in _string_list(logic.get("scope_boundaries"))
                 if (cleaned := _strip_excluded_claims(row, excluded_claims))
             ],
             "reconciled_cruxes": [
-                _short_text(cleaned, 520)
+                _calibrated_short(cleaned, limit=520)
                 for row in _string_list(logic.get("reconciled_cruxes"))
                 if (cleaned := _strip_excluded_claims(row, excluded_claims))
             ],
             "practical_implications": [
-                _short_text(cleaned, 520)
+                _calibrated_short(cleaned, limit=520)
                 for row in _string_list(logic.get("practical_implications"))
                 if (cleaned := _strip_excluded_claims(row, excluded_claims))
             ],
             "do_not_overstate": [
-                _short_text(cleaned, 420)
+                _calibrated_short(cleaned, limit=420)
                 for row in _string_list(logic.get("do_not_overstate"))
                 if (cleaned := _strip_excluded_claims(row, excluded_claims))
             ],
@@ -207,10 +208,10 @@ def _argument_steps(packet: dict[str, Any]) -> list[dict[str, Any]]:
             _drop_empty(
                 {
                     "step_id": row.get("step_id") or f"step_{index:03d}",
-                    "writing_goal": _short_text(row.get("writing_goal"), 360),
-                    "required_points": [_short_text(point, 520) for point in _string_list(row.get("required_points"))],
+                    "writing_goal": _calibrated_short(row.get("writing_goal"), limit=360),
+                    "required_points": [_calibrated_short(point, limit=520) for point in _string_list(row.get("required_points"))],
                     "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
-                    "transition": _short_text(row.get("transition_from_previous"), 260),
+                    "transition": _calibrated_short(row.get("transition_from_previous"), limit=260),
                 }
             )
         )
@@ -239,6 +240,7 @@ def _organized_evidence_inventory(packet: dict[str, Any], interface: dict[str, A
 
 
 def _inventory_row(row: dict[str, Any]) -> dict[str, Any]:
+    calibrated = _calibrated_claim_row(row)
     return _drop_empty(
         {
             "item_id": row.get("item_id"),
@@ -246,11 +248,14 @@ def _inventory_row(row: dict[str, Any]) -> dict[str, Any]:
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
             "obligation_level": row.get("obligation_level"),
-            "claim": _short_text(row.get("reader_claim") or row.get("claim"), 760),
+            "claim": _short_text(calibrated.get("claim"), 760),
+            "original_claim": _short_text(row.get("original_claim") or calibrated.get("original_claim"), 760),
+            "claim_calibration_notes": _dedupe([*_string_list(row.get("claim_calibration_notes")), *_string_list(calibrated.get("calibration_notes"))]),
+            "not_allowed_terms": _dedupe([*_string_list(row.get("not_allowed_terms")), *_string_list(calibrated.get("not_allowed_terms"))]),
             "source_labels": _string_list(row.get("source_labels")) or _string_list(row.get("source_label")),
             "quantities": _brief_quantities(row),
-            "decision_relevance": _short_text(row.get("decision_relevance") or row.get("include_reason"), 760),
-            "caveat": _short_text(row.get("caveat"), 420),
+            "decision_relevance": _calibrated_short(row.get("decision_relevance") or row.get("include_reason"), row, limit=760),
+            "caveat": _calibrated_short(row.get("caveat"), row, limit=420),
             "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 420),
             "source_excerpts": _source_excerpt_rows(row),
             "importance_rank": row.get("importance_rank"),
@@ -359,16 +364,20 @@ def _inventory_items(inventory: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _evidence_row(row: dict[str, Any]) -> dict[str, Any]:
+    calibrated = _calibrated_claim_row(row)
     return _drop_empty(
         {
             "item_id": row.get("item_id"),
             "role": row.get("role"),
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
-            "claim": _short_text(row.get("claim") or row.get("reader_claim"), 520),
+            "claim": _short_text(calibrated.get("claim"), 520),
+            "original_claim": _short_text(row.get("original_claim") or calibrated.get("original_claim"), 520),
+            "claim_calibration_notes": _dedupe([*_string_list(row.get("claim_calibration_notes")), *_string_list(calibrated.get("calibration_notes"))]),
+            "not_allowed_terms": _dedupe([*_string_list(row.get("not_allowed_terms")), *_string_list(calibrated.get("not_allowed_terms"))]),
             "source_labels": _string_list(row.get("source_labels")),
             "quantities": _brief_quantities(row),
-            "decision_relevance": _short_text(row.get("decision_relevance"), 420),
+            "decision_relevance": _calibrated_short(row.get("decision_relevance"), row, limit=420),
             "source_appraisal_note": _short_text(row.get("source_appraisal_note"), 260),
             "importance_rank": row.get("importance_rank"),
         }
@@ -388,9 +397,9 @@ def _counterweight_dispositions(interface: dict[str, Any]) -> list[dict[str, Any
             _drop_empty(
                 {
                     "item_id": row.get("item_id"),
-                    "claim": _short_text(row.get("claim") or row.get("reader_claim"), 520),
+                    "claim": _short_text(_calibrated_claim_row(row).get("claim"), 520),
                     "disposition": disposition,
-                    "disposition_rationale": _short_text(row.get("disposition_rationale") or row.get("decision_relevance"), 420),
+                    "disposition_rationale": _calibrated_short(row.get("disposition_rationale") or row.get("decision_relevance"), row, limit=420),
                     "source_labels": _string_list(row.get("source_labels")),
                     "quantities": _brief_quantities(row),
                     "uncertainty": "uncertain" if disposition == "creates_unresolved_crux" else "",
@@ -441,7 +450,7 @@ def _scope_boundaries(interface: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "boundary_id": row.get("boundary_id"),
                     "boundary_type": row.get("boundary_type"),
-                    "statement": _short_text(row.get("statement"), 420),
+                    "statement": _calibrated_short(row.get("statement"), row, limit=420),
                     "writing_job": row.get("writing_job"),
                     "source_labels": _string_list(row.get("source_labels")),
                     "quantities": _list(row.get("quantities")),
@@ -510,7 +519,8 @@ def _informative_source_weight_note(row: Any) -> bool:
 def _mandatory_retention_checklist(packet: dict[str, Any], interface: dict[str, Any]) -> list[dict[str, Any]]:
     obligations = required_memo_obligations(packet)
     if obligations:
-        return [_mandatory_obligation_row(row) for row in obligations[:24] if isinstance(row, dict)]
+        evidence_by_id = _interface_evidence_by_id(interface)
+        return [_mandatory_obligation_row(row, evidence_by_id=evidence_by_id) for row in obligations[:24] if isinstance(row, dict)]
     return [
         _mandatory_evidence_row(row)
         for row in _list(interface.get("decision_evidence_table"))
@@ -518,19 +528,34 @@ def _mandatory_retention_checklist(packet: dict[str, Any], interface: dict[str, 
     ][:24]
 
 
-def _mandatory_obligation_row(row: dict[str, Any]) -> dict[str, Any]:
+def _mandatory_obligation_row(row: dict[str, Any], *, evidence_by_id: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    evidence_by_id = evidence_by_id or {}
+    evidence_ids = _string_list(row.get("evidence_item_ids"))
+    evidence = next((evidence_by_id[evidence_id] for evidence_id in evidence_ids if evidence_id in evidence_by_id), {})
+    statement = str(row.get("statement") or "")
+    calibrated = calibrate_claim_for_writer(statement, evidence) if evidence else {"claim": statement}
     return _drop_empty(
         {
             "obligation_id": row.get("obligation_id"),
             "obligation_type": row.get("obligation_type"),
             "role": row.get("role"),
-            "statement": _short_text(row.get("statement"), 520),
+            "statement": _short_text(calibrated.get("claim"), 520),
+            "original_statement": _short_text(calibrated.get("original_claim"), 520),
+            "claim_calibration_notes": _string_list(calibrated.get("calibration_notes")),
             "prose_instruction": _short_text(row.get("prose_instruction"), 360),
             "source_labels": _string_list(row.get("source_labels")),
             "quantities": _brief_quantities(row),
-            "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+            "evidence_item_ids": evidence_ids,
         }
     )
+
+
+def _interface_evidence_by_id(interface: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    rows = {}
+    for row in _list(interface.get("decision_evidence_table")):
+        if isinstance(row, dict) and row.get("item_id"):
+            rows[str(row.get("item_id"))] = row
+    return rows
 
 
 def _mandatory_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -538,7 +563,7 @@ def _mandatory_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
         {
             "item_id": row.get("item_id"),
             "role": row.get("role"),
-            "statement": _short_text(row.get("claim") or row.get("reader_claim"), 520),
+            "statement": _short_text(_calibrated_claim_row(row).get("claim"), 520),
             "source_labels": _string_list(row.get("source_labels")),
             "quantities": _brief_quantities(row),
         }
@@ -566,13 +591,13 @@ def _citation_registry(source_trail: list[Any]) -> list[dict[str, Any]]:
 def _most_important_quantity(interface: dict[str, Any]) -> str:
     for row in _list(interface.get("quantity_anchors")):
         if isinstance(row, dict) and str(row.get("value") or "").strip():
-            interpretation = str(row.get("interpretation") or "").strip()
+            interpretation = calibrate_text_for_writer(str(row.get("interpretation") or "").strip())
             return f"{row.get('value')}: {interpretation}" if interpretation else str(row.get("value"))
     for row in _list(interface.get("decision_evidence_table")):
         quantities = _brief_quantities(row) if isinstance(row, dict) else []
         if quantities:
             first = quantities[0]
-            interpretation = str(first.get("interpretation") or "").strip()
+            interpretation = calibrate_text_for_writer(str(first.get("interpretation") or "").strip())
             return f"{first.get('value')}: {interpretation}" if interpretation else str(first.get("value"))
     return ""
 
@@ -589,7 +614,7 @@ def _brief_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
             _drop_empty(
                 {
                     "value": value,
-                    "interpretation": _short_text(quantity.get("interpretation"), 220),
+                    "interpretation": _calibrated_short(quantity.get("interpretation"), row, limit=220),
                     "quantity_role": quantity.get("quantity_role"),
                     "source_labels": _string_list(quantity.get("source_labels")),
                 }
@@ -628,6 +653,17 @@ def _dedupe_rows(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         seen.add(marker)
         deduped.append(row)
     return deduped
+
+
+def _calibrated_claim_row(row: dict[str, Any]) -> dict[str, Any]:
+    claim = str(row.get("reader_claim") or row.get("claim") or row.get("statement") or "").strip()
+    if not claim:
+        return {"claim": ""}
+    return calibrate_claim_for_writer(claim, row)
+
+
+def _calibrated_short(value: Any, evidence: dict[str, Any] | None = None, *, limit: int) -> str:
+    return _short_text(calibrate_text_for_writer(str(value or ""), evidence or {}), limit)
 
 
 def _looks_generic(value: Any) -> bool:

@@ -4,18 +4,10 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
-from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import (
-    build_decision_boundary_source_contract,
-    contract_quality_summary,
-)
+from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
+from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract, contract_quality_summary
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
-from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
-    dedupe as _dedupe,
-    dict_value as _dict,
-    list_value as _list,
-    short_text as _short_text,
-    string_list as _string_list,
-)
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe, dict_value as _dict, list_value as _list, short_text as _short_text, string_list as _string_list
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_registry_for_model
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
@@ -174,11 +166,11 @@ def _bottom_line(packet: dict[str, Any], visible_items: list[dict[str, Any]]) ->
     for value in (spine.get("default_read"), spine.get("bounded_answer"), logic.get("bounded_bottom_line")):
         text = _clean_answer_text(value)
         if text:
-            return text
+            return calibrate_text_for_writer(text)
     support = _first_claim(visible_items, {"strongest_support", "quantitative_anchor"})
     counter = _first_claim(visible_items, {"strongest_counterweight"})
     if support and counter:
-        return f"{support} The main counterweight is: {counter}"
+        return calibrate_text_for_writer(f"{support} The main counterweight is: {counter}")
     return support or counter
 
 
@@ -233,7 +225,7 @@ def _implication_card(implication_type: str, statement: str, item: dict[str, Any
     return {
         "implication_id": f"implication_{index:03d}",
         "implication_type": implication_type,
-        "statement": _short_text(statement, 420),
+        "statement": _short_text(calibrate_text_for_writer(statement, item), 420),
         "source_labels": _source_labels(item),
         "basis_evidence_item_ids": _string_list(item.get("item_id")),
     }
@@ -243,7 +235,7 @@ def _practical_implications(packet: dict[str, Any], visible_items: list[dict[str
     logic = _dict(packet.get("analyst_decision_logic"))
     rows = _string_list(logic.get("practical_implications"))
     if rows:
-        return rows[:5]
+        return [calibrate_text_for_writer(row) for row in rows[:5]]
     return [card["statement"] for card in _practical_implication_cards(packet, visible_items)[:5]]
 
 
@@ -255,7 +247,7 @@ def _practical_implication_cards(packet: dict[str, Any], visible_items: list[dic
             {
                 "implication_id": f"implication_{index:03d}",
                 "implication_type": "model_supplied",
-                "statement": _short_text(statement, 420),
+                "statement": _short_text(calibrate_text_for_writer(statement), 420),
                 "source_labels": [],
                 "basis_evidence_item_ids": [],
             }
@@ -284,9 +276,9 @@ def _confidence_basis(packet: dict[str, Any], visible_items: list[dict[str, Any]
     support_summary = _clean_answer_text(logic.get("support_summary"))
     main_counterweight = _clean_answer_text(logic.get("strongest_counterweight"))
     if support_summary and main_counterweight:
-        return _short_text(f"Primary support: {support_summary} Main counterweight: {main_counterweight}", 420)
+        return _short_text(calibrate_text_for_writer(f"Primary support: {support_summary} Main counterweight: {main_counterweight}"), 420)
     if support_summary:
-        return _short_text(support_summary, 420)
+        return _short_text(calibrate_text_for_writer(support_summary), 420)
     candidates = [
         *_string_list(spine.get("confidence_reasons")),
         str(logic.get("counterweight_weighting") or ""),
@@ -295,12 +287,12 @@ def _confidence_basis(packet: dict[str, Any], visible_items: list[dict[str, Any]
     for candidate in candidates:
         text = _clean_answer_text(candidate)
         if text and not _contains_generic_judgment(text):
-            return _short_text(text, 420)
+            return _short_text(calibrate_text_for_writer(text), 420)
     support = _first_claim(visible_items, {"strongest_support", "quantitative_anchor"})
     counter = _first_claim(visible_items, {"strongest_counterweight"})
     if support and counter:
-        return _short_text(f"Support is bounded by this counterweight: {counter}", 420)
-    return _short_text(support or counter, 420)
+        return _short_text(calibrate_text_for_writer(f"Support is bounded by this counterweight: {counter}"), 420)
+    return _short_text(calibrate_text_for_writer(support or counter), 420)
 
 
 def _decision_application_statement(direct_answer: str, main_counterweight: str, scope_note: str) -> str:
@@ -308,14 +300,16 @@ def _decision_application_statement(direct_answer: str, main_counterweight: str,
     scope = _strip_terminal_punctuation(scope_note)
     if main_counterweight and scope_note:
         return _short_text(
+            calibrate_text_for_writer(
             f"Use the default answer where it applies; treat this as the main exception or caution: {counterweight}. Scope boundary: {scope}.",
+            ),
             520,
         )
     if main_counterweight:
-        return _short_text(f"Use the default answer while treating this as the main exception or caution: {counterweight}.", 520)
+        return _short_text(calibrate_text_for_writer(f"Use the default answer while treating this as the main exception or caution: {counterweight}."), 520)
     if scope_note:
-        return _short_text(f"Use the default answer within this scope boundary: {scope}.", 520)
-    return _short_text(direct_answer, 520)
+        return _short_text(calibrate_text_for_writer(f"Use the default answer within this scope boundary: {scope}."), 520)
+    return _short_text(calibrate_text_for_writer(direct_answer), 520)
 
 
 def _reasoning_hierarchy(
@@ -573,17 +567,21 @@ def _evidence_group(visible_items: list[dict[str, Any]], *, roles: set[str]) -> 
 
 
 def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
+    calibrated = calibrate_claim_for_writer(str(item.get("reader_claim") or ""), item)
     return {
         "item_id": item.get("item_id"),
         "role": item.get("role"),
         "source_role": item.get("source_role"),
         "answer_relation": _answer_relation(item),
         "answer_relation_basis": item.get("answer_relation_basis"),
-        "claim": item.get("reader_claim"),
+        "claim": calibrated["claim"],
+        "original_claim": calibrated.get("original_claim"),
+        "claim_calibration_notes": calibrated.get("calibration_notes"),
+        "not_allowed_terms": calibrated.get("not_allowed_terms"),
         "source_labels": _source_labels(item),
-        "quantities": _quantity_values(item.get("quantities")),
-        "decision_relevance": _short_text(str(item.get("decision_relevance") or ""), 360),
-        "caveat": _short_text(str(item.get("caveat") or ""), 260),
+        "quantities": _quantity_values(item.get("quantities"), evidence=item),
+        "decision_relevance": _short_text(calibrate_text_for_writer(str(item.get("decision_relevance") or ""), item), 360),
+        "caveat": _short_text(calibrate_text_for_writer(str(item.get("caveat") or ""), item), 260),
         "source_appraisal_note": _source_appraisal_note(item),
         "lineage": _dict(item.get("lineage")),
         "obligation_level": item.get("obligation_level"),
@@ -609,7 +607,7 @@ def _answer_relation(item: dict[str, Any]) -> str:
 
 
 def _claim_text(item: dict[str, Any]) -> str:
-    return str(item.get("reader_claim") or item.get("claim") or "").strip()
+    return str(calibrate_claim_for_writer(str(item.get("reader_claim") or item.get("claim") or ""), item).get("claim") or "").strip()
 
 
 def _source_appraisal_note(item: dict[str, Any]) -> str:
@@ -645,7 +643,7 @@ def _quantity_anchors(visible_items: list[dict[str, Any]]) -> list[dict[str, Any
             rows.append(
                 {
                     "value": value,
-                    "interpretation": str(quantity.get("interpretation") or "").strip(),
+                    "interpretation": calibrate_text_for_writer(str(quantity.get("interpretation") or "").strip(), item),
                     "source_labels": _source_labels(quantity) or _source_labels(item),
                     "evidence_item_id": item.get("item_id"),
                     "role": item.get("role"),
@@ -886,7 +884,7 @@ def _source_labels(item: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(item.get("source_labels")), str(item.get("source_label") or "").strip()])
 
 
-def _quantity_values(value: Any) -> list[dict[str, str]]:
+def _quantity_values(value: Any, *, evidence: dict[str, Any] | None = None) -> list[dict[str, str]]:
     rows = []
     for row in _list(value):
         if isinstance(row, dict):
@@ -896,5 +894,5 @@ def _quantity_values(value: Any) -> list[dict[str, str]]:
             quantity = str(row or "").strip()
             interpretation = ""
         if quantity:
-            rows.append({"value": quantity, "interpretation": interpretation})
+            rows.append({"value": quantity, "interpretation": calibrate_text_for_writer(interpretation, evidence or {})})
     return rows

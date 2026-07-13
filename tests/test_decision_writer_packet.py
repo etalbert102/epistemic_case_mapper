@@ -424,6 +424,43 @@ def test_writer_model_context_exposes_compact_source_appraisal() -> None:
     assert "source_weighting" in context["adaptive_memo_outline"]["section_selection_summary"]["selected_section_ids"]
 
 
+def test_writer_model_context_calibrates_overclaiming_claim_surfaces() -> None:
+    ledger = _ledger()
+    ledger["rows"][0]["claim"] = "Option A is safe and is independent of implementation conditions."
+    ledger["rows"][0]["source_appraisal"] = {
+        "status": "ready",
+        "recommended_uses": ["load_bearing_with_qualification"],
+        "decision_directness": "partial",
+        "allowed_wording": {
+            "causal_language_allowed": False,
+            "avoid_terms": ["safe", "independent"],
+            "must_qualify_with": ["observational evidence"],
+        },
+        "source_use_warnings": ["association_not_causation"],
+    }
+    model = _global_model()
+    model["strongest_support"][0]["proposition"] = "Option A is safe and is independent of implementation conditions."
+    bundle = build_decision_writer_packet_bundle(global_decision_model=model, ledger=ledger)
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    context = build_writer_model_context(build_writer_decision_interface(packet))
+    support = context["decision_evidence_table"][0]
+    canonical = packet["canonical_decision_writer_packet"]
+    priority = canonical["priority_evidence"][0]
+
+    assert "safe" not in support["claim"].lower()
+    assert "independent of" not in support["claim"].lower()
+    assert "not clearly harmful in the stated scope" in support["claim"]
+    assert "not fully explained by" in support["claim"]
+    assert support["original_claim"] == "Option A is safe and is independent of implementation conditions."
+    assert "source_appraisal_requires_qualified_wording" in support["claim_calibration_notes"]
+    assert priority["claim"] == support["claim"]
+    assert priority["original_claim"] == support["original_claim"]
+
+
 def test_boundary_source_contract_prioritizes_effect_quantities_before_context_quantities() -> None:
     contract = build_decision_boundary_source_contract(
         {"decision_question": "Should option A be adopted?"},
