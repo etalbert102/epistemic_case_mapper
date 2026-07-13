@@ -29,4 +29,8 @@ _CALIBRATION_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     (r"\bproven harmless\b", "not clearly shown to be harmful in the stated scope"),
     (r"\bsafely include\b", "include within the stated scope"),
     (r"\bsafe standard\b", "practical reference point"),
+    (r"\bdoes not harm heart health\b", "does not clearly show higher cardiovascular risk in the stated scope"),
+    (r"\bis fully accounted for by\b", "may be partly accounted for by"),
+    (r"\bfully accounted for by\b", "partly accounted for by"),
+    (r"\bindependent of\b", "not fully explained by"),
 )
