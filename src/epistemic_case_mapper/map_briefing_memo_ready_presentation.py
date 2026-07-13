@@ -18,7 +18,15 @@ from epistemic_case_mapper.map_briefing_source_identity import (
 )
 
 
-def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+DEFAULT_CITATION_TRACE_HREF = "CITATION_TRACE.md"
+
+
+def run_memo_ready_presentation_normalization(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    citation_trace_href: str = DEFAULT_CITATION_TRACE_HREF,
+) -> dict[str, Any]:
     """Apply deterministic presentation-only fixes without changing analysis."""
     question = str(packet.get("decision_question") or "").strip()
     source_aliases = _source_alias_replacements(packet)
@@ -37,9 +45,17 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
     if next_memo != normalized:
         changes.append("normalized_source_labels")
         normalized = next_memo
-    next_memo, compacted_citation_sources = _compact_crowded_citations(normalized, packet)
+    next_memo, compacted_citation_sources = _compact_crowded_citations(
+        normalized,
+        packet,
+        citation_trace_href=citation_trace_href,
+    )
     if next_memo != normalized:
         changes.append("compacted_crowded_citations")
+        normalized = next_memo
+    next_memo = _link_inline_citations(normalized, packet, citation_trace_href=citation_trace_href)
+    if next_memo != normalized:
+        changes.append("linked_inline_citations_to_trace")
         normalized = next_memo
     next_memo = _replace_sources_section(normalized, packet, additional_cited_displays=compacted_citation_sources)
     if next_memo != normalized:
@@ -56,9 +72,52 @@ def run_memo_ready_presentation_normalization(memo: str, packet: dict[str, Any])
             "accepted": True,
             "changes": changes,
             "source_alias_count": len(source_aliases),
+            "citation_trace_href": citation_trace_href,
+            "citation_trace_source_count": len(_canonical_source_entries(packet)),
             "issues": [],
         },
     }
+
+
+def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
+    """Render the local citation trace target used by inline memo citations."""
+    entries = _canonical_source_entries(packet)
+    if not entries:
+        return "# Citation Trace\n\nNo source trail was available for this memo.\n"
+    cited = _cited_entry_norms(memo, entries)
+    lines = [
+        "# Citation Trace",
+        "",
+        "Inline memo citations link here for packet-level traceability. External URLs are kept in the memo source list.",
+        "",
+    ]
+    for entry in entries:
+        display = entry.get("inline_display") or entry.get("source_display") or "Source"
+        source_id = entry.get("source_id", "")
+        source_display = entry.get("source_display", "")
+        source_label = entry.get("source_label", "")
+        url = entry.get("url", "")
+        items = _trace_evidence_items(packet, entry)
+        lines.extend(
+            [
+                f"## {display}",
+                "",
+                f"- Cited in memo: {'yes' if _norm(display) in cited or _norm(source_display) in cited else 'not detected'}",
+                f"- Source title: {source_display or source_label or display}",
+            ]
+        )
+        if source_id:
+            lines.append(f"- Source ID: `{source_id}`")
+        if url:
+            lines.append(f"- External URL: {url}")
+        if items:
+            lines.append("- Packet evidence:")
+            for item in items:
+                lines.extend(_trace_evidence_lines(item))
+        else:
+            lines.append("- Packet evidence: no directly matched evidence item")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _replace_sources_section(memo: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> str:
@@ -92,7 +151,12 @@ def _cited_source_lines(body: str, packet: dict[str, Any], *, additional_cited_d
     return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
 
 
-def _compact_crowded_citations(memo: str, packet: dict[str, Any]) -> tuple[str, list[str]]:
+def _compact_crowded_citations(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    citation_trace_href: str,
+) -> tuple[str, list[str]]:
     entries = _canonical_source_entries(packet)
     displays = _dedupe([entry["inline_display"] for entry in entries if entry.get("inline_display")])
     if not displays:
@@ -114,18 +178,24 @@ def _compact_crowded_citations(memo: str, packet: dict[str, Any]) -> tuple[str, 
         if note_key not in citation_notes:
             citation_notes[note_key] = f"sources-{len(citation_notes) + 1}"
         note_id = citation_notes[note_key]
-        return "[" + "; ".join([*kept, f"+{len(omitted)} sources"]) + f"][^{note_id}]"
+        linked_kept = [_citation_trace_link(display, citation_trace_href) for display in kept]
+        return "[" + "; ".join([*linked_kept, f"+{len(omitted)} sources"]) + f"][^{note_id}]"
 
     compacted = re.sub(r"\[([^\[\]\n]{1,260})\]", replace, memo)
-    compacted = _insert_citation_notes(compacted, citation_notes)
+    compacted = _insert_citation_notes(compacted, citation_notes, citation_trace_href=citation_trace_href)
     return compacted, _dedupe(additional_sources)
 
 
-def _insert_citation_notes(memo: str, citation_notes: dict[tuple[str, ...], str]) -> str:
+def _insert_citation_notes(
+    memo: str,
+    citation_notes: dict[tuple[str, ...], str],
+    *,
+    citation_trace_href: str,
+) -> str:
     if not citation_notes:
         return memo
     note_lines = [
-        f"[^{note_id}]: Additional sources: {'; '.join(sources)}."
+        f"[^{note_id}]: Additional sources: {'; '.join(_citation_trace_link(source, citation_trace_href) for source in sources)}."
         for sources, note_id in citation_notes.items()
     ]
     lines = str(memo or "").rstrip().splitlines()
@@ -139,6 +209,56 @@ def _insert_citation_notes(memo: str, citation_notes: dict[tuple[str, ...], str]
     while before and not before[-1].strip():
         before.pop()
     return "\n".join([*before, "", *note_lines, "", *after]).rstrip()
+
+
+def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_href: str) -> str:
+    entries = _canonical_source_entries(packet)
+    displays = _dedupe(
+        display
+        for entry in entries
+        for display in [entry.get("inline_display", ""), entry.get("source_display", "")]
+        if display
+    )
+    if not displays:
+        return memo
+    display_lookup = {_norm(display): display for display in displays}
+
+    def replace(match: re.Match[str]) -> str:
+        content = match.group(1)
+        if "](" in content:
+            return match.group(0)
+        parts = _citation_parts(content)
+        if not parts:
+            return match.group(0)
+        linked_parts = []
+        changed = False
+        for part in parts:
+            display = display_lookup.get(_norm(part))
+            if display:
+                linked_parts.append(_citation_trace_link(display, citation_trace_href))
+                changed = True
+            else:
+                linked_parts.append(part)
+        if not changed:
+            return match.group(0)
+        separator = "; " if ";" in content else ", "
+        return "[" + separator.join(linked_parts) + "]"
+
+    return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace, memo)
+
+
+def _citation_trace_link(display: str, citation_trace_href: str) -> str:
+    display = str(display or "").strip()
+    if not display:
+        return display
+    if "](" in display:
+        return display
+    return f"[{display}]({citation_trace_href}#{_source_anchor(display)})"
+
+
+def _source_anchor(display: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(display or "").lower()).strip("-")
+    return slug or "source"
 
 
 def _citation_parts(content: str) -> list[str]:
@@ -161,7 +281,17 @@ def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
         inline_display = compact_source_display(source, common_prefix=common_prefix)
         if not source_display:
             continue
-        entries.append({"source_display": source_display, "inline_display": inline_display, "url": urls.get(label, "")})
+        source_id = str(source.get("source_id") or "").strip()
+        source_label = str(source.get("source_label") or label).strip()
+        entries.append(
+            {
+                "source_display": source_display,
+                "inline_display": inline_display,
+                "url": urls.get(label, ""),
+                "source_id": source_id,
+                "source_label": source_label,
+            }
+        )
     return _dedupe_entries(entries)
 
 
@@ -205,6 +335,67 @@ def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
         seen.add(key)
         deduped.append(entry)
     return deduped
+
+
+def _cited_entry_norms(memo: str, entries: list[dict[str, str]]) -> set[str]:
+    cited: set[str] = set()
+    body = _strip_sources_section(memo)
+    for entry in entries:
+        for display in [entry.get("inline_display", ""), entry.get("source_display", "")]:
+            if display and _contains_text(body, display):
+                cited.add(_norm(display))
+    return cited
+
+
+def _trace_evidence_items(packet: dict[str, Any], entry: dict[str, str]) -> list[dict[str, Any]]:
+    matched = []
+    for item in _list(packet.get("evidence_items")):
+        if isinstance(item, dict) and _trace_item_matches_entry(item, entry):
+            matched.append(item)
+    return matched
+
+
+def _trace_item_matches_entry(item: dict[str, Any], entry: dict[str, str]) -> bool:
+    candidate_labels = set()
+    for value in [
+        entry.get("source_id", ""),
+        entry.get("source_label", ""),
+        entry.get("source_display", ""),
+        entry.get("inline_display", ""),
+    ]:
+        candidate_labels.update(_norm(variant) for variant in source_label_variants(value) if variant)
+    item_labels = _string_list(item.get("source_labels"))
+    item_labels.append(str(item.get("source_label") or "").strip())
+    item_norms = {_norm(variant) for label in item_labels for variant in source_label_variants(label) if variant}
+    return bool(candidate_labels & item_norms)
+
+
+def _trace_evidence_lines(item: dict[str, Any]) -> list[str]:
+    item_id = str(item.get("item_id") or item.get("claim_id") or "evidence_item").strip()
+    role = str(item.get("role") or "evidence").strip()
+    claim = str(item.get("reader_claim") or item.get("claim") or item.get("summary") or "").strip()
+    lines = [f"  - `{item_id}` ({role}): {claim}" if claim else f"  - `{item_id}` ({role})"]
+    quantities = _trace_quantity_strings(item)
+    if quantities:
+        lines.append(f"    - Quantities: {'; '.join(quantities)}")
+    return lines
+
+
+def _trace_quantity_strings(item: dict[str, Any]) -> list[str]:
+    values = []
+    for quantity in _list(item.get("quantities")):
+        if isinstance(quantity, dict):
+            value = str(quantity.get("value") or quantity.get("text") or "").strip()
+            interpretation = str(quantity.get("interpretation") or quantity.get("meaning") or "").strip()
+            if value and interpretation:
+                values.append(f"{value}: {interpretation}")
+            elif value:
+                values.append(value)
+        else:
+            text = str(quantity or "").strip()
+            if text:
+                values.append(text)
+    return _dedupe(values)
 
 
 def _ensure_decision_question(memo: str, question: str) -> str:

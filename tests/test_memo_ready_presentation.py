@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_citation_trace_markdown,
     build_memo_ready_packet_retention_report,
     run_memo_ready_presentation_normalization,
 )
@@ -10,7 +11,13 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     source = "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"
     packet = {
         "decision_question": "Should dietary advice treat eggs as neutral?",
-        "source_trail": [{"source_id": "bmj_2020_egg_consumption_cvd", "source_label": source}],
+        "source_trail": [
+            {
+                "source_id": "bmj_2020_egg_consumption_cvd",
+                "source_label": source,
+                "source_url": "https://example.test/bmj-2020",
+            }
+        ],
         "evidence_items": [
             {
                 "item_id": "item_001",
@@ -29,8 +36,10 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     retention = build_memo_ready_packet_retention_report(result["memo"], packet)
 
     assert "[BMJ 2020]" in result["memo"]
+    assert "[[BMJ 2020](CITATION_TRACE.md#bmj-2020)]" in result["memo"]
     assert "[bmj_2020_egg_consumption_cvd]" not in result["memo"]
-    assert "* Egg consumption and risk of cardiovascular disease" in result["memo"]
+    assert "* [Egg consumption and risk of cardiovascular disease" in result["memo"]
+    assert "](https://example.test/bmj-2020)" in result["memo"]
     assert retention["missing_mandatory_count"] == 0
 
 
@@ -43,7 +52,7 @@ def test_presentation_compact_citations_title_case_short_names() -> None:
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "[Li 2020]" in result["memo"]
+    assert "[[Li 2020](CITATION_TRACE.md#li-2020)]" in result["memo"]
     assert "[LI 2020]" not in result["memo"]
 
 
@@ -70,8 +79,15 @@ def test_presentation_compacts_crowded_inline_citations_without_losing_sources()
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "[NNR 2023; BMJ 2020; +4 sources][^sources-1]" in result["memo"]
-    assert "[^sources-1]: Additional sources: AHA 2023; AHA 2019; JAMA 2019; DGA 2020." in result["memo"]
+    assert (
+        "[[NNR 2023](CITATION_TRACE.md#nnr-2023); "
+        "[BMJ 2020](CITATION_TRACE.md#bmj-2020); +4 sources][^sources-1]"
+    ) in result["memo"]
+    assert (
+        "[^sources-1]: Additional sources: [AHA 2023](CITATION_TRACE.md#aha-2023); "
+        "[AHA 2019](CITATION_TRACE.md#aha-2019); [JAMA 2019](CITATION_TRACE.md#jama-2019); "
+        "[DGA 2020](CITATION_TRACE.md#dga-2020)."
+    ) in result["memo"]
     assert result["memo"].index("[^sources-1]:") < result["memo"].index("## Sources")
     assert "[NNR 2023, BMJ 2020, AHA 2023" not in result["memo"]
     assert "* Eggs - a scoping review for Nordic Nutrition Recommendations 2023" in result["memo"]
@@ -81,3 +97,38 @@ def test_presentation_compacts_crowded_inline_citations_without_losing_sources()
     assert "* Associations of Dietary Cholesterol or Egg Consumption" in result["memo"]
     assert "* Dietary Guidelines for Americans, 2020-2025" in result["memo"]
     assert "compacted_crowded_citations" in result["report"]["changes"]
+
+
+def test_citation_trace_records_packet_evidence_without_replacing_source_urls() -> None:
+    packet = {
+        "decision_question": "Should advice change?",
+        "source_trail": [
+            {
+                "source_id": "outcome_2025",
+                "source_label": "Outcome Study 2025",
+                "source_url": "https://example.test/outcome",
+            }
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "role": "scope_boundary",
+                "reader_claim": "The effect is limited to the studied population.",
+                "source_labels": ["Outcome Study 2025"],
+                "quantities": [{"value": "42%", "interpretation": "event rate in the studied group"}],
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "## Decision Brief\n\nThe effect is limited to the studied population [outcome_2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+    trace = build_citation_trace_markdown(result["memo"], packet)
+
+    assert "[[Outcome 2025](CITATION_TRACE.md#outcome-2025)]" in result["memo"]
+    assert "* [Outcome Study 2025](https://example.test/outcome)" in result["memo"]
+    assert "## Outcome 2025" in trace
+    assert "- Source ID: `outcome_2025`" in trace
+    assert "- External URL: https://example.test/outcome" in trace
+    assert "`item_001` (scope_boundary): The effect is limited to the studied population." in trace
+    assert "42%: event rate in the studied group" in trace

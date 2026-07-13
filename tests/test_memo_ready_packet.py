@@ -829,6 +829,8 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert paths["memo_ready_synthesis_prompt"].exists()
     assert paths["memo_ready_repair_report"].exists()
     assert paths["memo_ready_final_polish_report"].exists()
+    assert paths["citation_trace"].exists()
+    assert "Inline memo citations link here" in paths["citation_trace"].read_text(encoding="utf-8")
     assert paths["memo_creation_progress"].exists()
     progress = [
         json.loads(line)

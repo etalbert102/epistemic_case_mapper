@@ -20,7 +20,10 @@ from epistemic_case_mapper.map_briefing_memo_obligations import (
     all_memo_obligations,
     required_memo_obligations,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
+from epistemic_case_mapper.map_briefing_memo_ready_presentation import (
+    build_citation_trace_markdown,
+    run_memo_ready_presentation_normalization,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_polish_anchors import protected_anchor_checklist
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows

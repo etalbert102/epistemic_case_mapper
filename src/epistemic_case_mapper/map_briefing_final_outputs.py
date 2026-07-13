@@ -462,6 +462,7 @@ def _write_final_reader_artifacts(
 ) -> None:
     from epistemic_case_mapper.decision_argument_artifacts import render_decision_traceability_matrix_markdown
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import write_reader_memo_edit_artifacts
+    from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown
 
     if rewrite_result.get("prompt"):
         write_markdown(paths.reader_memo_rewrite_prompt, str(rewrite_result.get("prompt", "")))
@@ -494,6 +495,10 @@ def _write_final_reader_artifacts(
     write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
     write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
     write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
+    write_markdown(
+        paths.citation_trace,
+        build_citation_trace_markdown(reader_memo, memo_package["scaffold"].get("memo_ready_packet", {})),
+    )
     write_json(paths.final_traceability, diagnostics["traceability_matrix"])
     write_markdown(paths.final_traceability_markdown, render_decision_traceability_matrix_markdown(diagnostics["traceability_matrix"]))
     write_json(paths.memo_coherence, diagnostics["memo_coherence"])
@@ -545,6 +550,7 @@ def _final_reader_summary_paths(
         "briefing_polish_report": paths.polish_report,
         "memo_quality_report": paths.memo_quality,
         "evidence_curation_report": paths.curation_report,
+        "citation_trace": paths.citation_trace,
         "section_rewrite_report": paths.section_rewrite_report,
         "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
         "section_context_acceptance_report": section_rewrite_result.get("section_context_acceptance_report_path"),

@@ -8,6 +8,7 @@ from pathlib import Path
 class FinalReaderOutputPaths:
     briefing: Path
     evidence_appendix: Path
+    citation_trace: Path
     polish_report: Path
     memo_quality: Path
     curation_report: Path
@@ -56,6 +57,7 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
     return FinalReaderOutputPaths(
         briefing=artifacts / "BRIEFING.md",
         evidence_appendix=artifacts / "EVIDENCE_APPENDIX.md",
+        citation_trace=artifacts / "CITATION_TRACE.md",
         polish_report=artifacts / "briefing_polish_report.json",
         memo_quality=artifacts / "memo_quality_report.json",
         curation_report=artifacts / "evidence_curation_report.json",
