@@ -25,7 +25,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_cit
 from epistemic_case_mapper.map_briefing_memo_ready_polish_anchors import protected_anchor_checklist
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
-from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, replace_source_aliases_with_ids
+from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
 from epistemic_case_mapper.model_backends import run_model_backend
 
 
@@ -280,7 +280,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "missing_canonical_items": canonical_repair_items(retention_report, limit=limit),
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
-    repair_packet = project_source_text_to_ids_for_model(repair_packet, source_trail)
+    repair_packet = project_source_text_to_ids_for_model(project_sources_to_ids_for_model(repair_packet, source_trail), source_trail)
     memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
     return (
         "You are repairing a decision memo using only a memo-ready evidence repair packet.\n"

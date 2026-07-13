@@ -59,4 +59,5 @@ def test_memo_ready_repair_prompt_projects_reader_source_labels_to_ids() -> None
 
     assert "source IDs" in prompt
     assert "s1" in prompt
+    assert "source_labels" not in prompt
     assert "Deep Research Flood Sources Outcome Study 2025" not in prompt
