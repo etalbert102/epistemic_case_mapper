@@ -748,11 +748,13 @@ def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() 
 
     prompt = build_memo_ready_final_polish_prompt("## Decision Brief\n\nOption A may help.", packet)
 
-    assert "factual constraint for retention, not an outline" in prompt
+    assert "protected anchor checklist is a factual constraint for retention, not an outline" in prompt
     assert "Remove checklist rhythm" in prompt
     assert "Split dense paragraphs" in prompt
     assert "avoid citation clutter" in prompt
-    assert "Protected item list" in prompt
+    assert "Protected anchor checklist" in prompt
+    assert "protected_anchor_checklist" in prompt
+    assert "legacy_mandatory_items" not in prompt
 
 
 def test_memo_ready_final_polish_normalizes_safe_citation_and_phrase_defects(monkeypatch) -> None:
