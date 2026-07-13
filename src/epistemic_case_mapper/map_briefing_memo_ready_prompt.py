@@ -6,6 +6,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
+from epistemic_case_mapper.map_briefing_reader_brief_plan import build_reader_brief_plan
 from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
@@ -62,13 +63,14 @@ def build_writer_packet_synthesis_prompt(
             "decision_question": narrative_blueprint.get("decision_question"),
             "note": "Use writer_model_context.reasoning_hierarchy as the organizing spine; this placeholder preserves the prompt section without duplicating evidence.",
         }
+    model_context["reader_brief_plan"] = build_reader_brief_plan(model_context)
     model_context = project_reader_language_for_model(model_context)
     blueprint_context = project_reader_language_for_model(blueprint_context)
     return (
         "You are a senior decision analyst. Write a coherent decision memo from the writer model context.\n"
         "The writer model context is the complete model-visible evidence and judgment record. It already reflects upstream evidence selection, quantity binding, and analyst planning.\n"
         "Write for a human decision-maker; do not expose packet structure.\n"
-        "Use decision_evidence_table as the primary evidence surface, adaptive_memo_outline as the section plan, reasoning_hierarchy as the organizing spine, analytical_balance_contract as the guide for balanced decision reasoning, and decision_boundary_source_contract as the guide for boundaries, source roles, source-specific cautions, and quantity priorities. The adaptive outline's must-write cards are the retention contract; mandatory_evidence_ledger is the non-negotiable compact ledger that operationalizes that contract for synthesis. Use the narrative blueprint as secondary orientation. Merge related ledger rows into the same paragraph when that reads better.\n\n"
+        "Use reader_brief_plan as the writing plan. Use decision_evidence_table, reasoning_hierarchy, analytical_balance_contract, and decision_boundary_source_contract to support that plan. Use mandatory_evidence_ledger as the non-negotiable retention check after drafting, not as the memo outline. Merge related ledger rows into the same paragraph when that reads better.\n\n"
         "Required visible structure:\n"
         "# Decision Memo: <short title>\n"
         "**Decision Question:** <question>\n"

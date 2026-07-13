@@ -495,16 +495,15 @@ def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> Non
 
     assert "Narrative blueprint" in prompt
     assert "reasoning_hierarchy" in prompt
-    assert "decision_evidence_table as the primary evidence surface" in prompt
-    assert "adaptive_memo_outline as the section plan" in prompt
-    assert "decision_boundary_source_contract as the guide" in prompt
+    assert "reader_brief_plan as the writing plan" in prompt
+    assert "mandatory_evidence_ledger as the non-negotiable retention check" in prompt
     assert "decision_boundary_source_contract" in prompt
-    assert "adaptive_memo_outline.must_write_cards" in prompt
+    assert "reader_brief_plan" in prompt
     assert "quantities_to_keep_together" in prompt
     assert "practical_implication_cards" in prompt
-    assert "organizing spine" in prompt
+    assert "writing_priority" in prompt
     assert "Required obligation ledger" not in prompt
-    assert "adaptive outline's must-write cards are the retention contract" in prompt
+    assert "not as the memo outline" in prompt
     assert "Option A improves the main outcome" in prompt
     assert "The answer depends on whether the narrower setting matters" in prompt
     assert "Suggested memo shape" not in prompt

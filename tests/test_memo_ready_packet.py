@@ -461,7 +461,8 @@ def test_memo_warning_packet_routes_truly_lost_evidence_into_synthesis_prompt() 
     assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
     assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
     assert "adaptive_memo_outline" in prompt
-    assert "must-write cards are the retention contract" in prompt
+    assert "reader_brief_plan" in prompt
+    assert "not as the memo outline" in prompt
     assert "Required obligation ledger" not in prompt
 
 
