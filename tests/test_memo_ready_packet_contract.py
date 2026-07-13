@@ -34,18 +34,16 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
-    assert "writer model context" in prompt
-    assert "writer_model_context_v1" in prompt
-    assert "The writer model context is the complete model-visible evidence and judgment record" in prompt
-    assert "Use reader_brief_plan.paragraph_jobs as the writing plan" in prompt
-    assert "Use decision_interpretation_plan as the meaning layer" in prompt
-    assert "not as the memo outline" in prompt
-    assert "reader_brief_plan" in prompt
-    assert "decision_interpretation_plan" in prompt
-    assert "Weigh support against counterweights and scope boundaries" in prompt
-    assert "Non-negotiable retention rule" in prompt
-    assert "mandatory_evidence_ledger" in prompt
-    assert "quantity_anchors" in prompt
+    assert "canonical decision writer packet" in prompt
+    assert "canonical_decision_writer_packet_v1" in prompt
+    assert "decision_brief_skeleton" in prompt
+    assert "priority_evidence" in prompt
+    assert "mandatory_retention_checklist" in prompt
+    assert "writer_model_context_v1" not in prompt
+    assert "reader_brief_plan" not in prompt
+    assert "decision_interpretation_plan" not in prompt
+    assert "mandatory_evidence_ledger" not in prompt
+    assert "quantity_anchors" not in prompt
 
 
 def test_memo_ready_prompt_without_evidence_items_does_not_dump_raw_packet() -> None:
@@ -94,10 +92,11 @@ def test_analytical_calibration_contract_exposes_answer_scope_quantity_and_causa
 def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() -> None:
     prompt = build_memo_ready_packet_synthesis_prompt(_balance_packet())
 
-    assert "analytical_balance_contract" in prompt
-    assert "mandatory_evidence_ledger" in prompt
+    assert "canonical_decision_writer_packet_v1" in prompt
+    assert "priority_evidence" in prompt
+    assert "mandatory_retention_checklist" in prompt
     assert '"item_id": "support"' in prompt
-    assert '"quantities_to_preserve"' in prompt
+    assert '"quantities"' in prompt
     assert '"source_id": "support_study"' in prompt
     assert '"source_id": "risk_study"' in prompt
     assert "Risk Study" not in prompt
@@ -107,11 +106,10 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
 def test_synthesis_prompt_exposes_calibration_fields_as_source_ids() -> None:
     prompt = build_memo_ready_packet_synthesis_prompt(_calibration_packet())
 
-    assert "answer_classification" in prompt
-    assert "scope_dose_guardrails" in prompt
-    assert "targeted_quantity_requirements" in prompt
-    assert "causal_language_discipline" in prompt
-    assert "subgroup_boundary_cards" in prompt
+    assert "decision_brief_skeleton" in prompt
+    assert "scope_boundaries" in prompt
+    assert "counterweight_dispositions" in prompt
+    assert "source_weight_notes" in prompt
     assert '"source_id": "boundary_source"' in prompt
     assert "Boundary Source" not in prompt
     assert "source_labels" not in prompt
@@ -125,7 +123,7 @@ def test_synthesis_prompt_projects_internal_language_for_model_context() -> None
 
     assert "This required point changes the answer." in prompt
     assert "This must-write card changes the decision read." not in prompt
-    assert '"role": "strongest_counterweight"' in prompt
+    assert "counterweight_dispositions" in prompt
     assert '"source_id": "support_study"' in prompt
 
 

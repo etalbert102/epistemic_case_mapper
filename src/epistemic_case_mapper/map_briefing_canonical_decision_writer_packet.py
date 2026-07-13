@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     project_sources_to_ids_for_model,
     source_id_registry_for_model,
 )
+from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
 
 
@@ -44,7 +45,7 @@ def build_canonical_decision_writer_packet(
         "mandatory_retention_checklist": _mandatory_retention_checklist(packet, interface),
         "citation_registry": _citation_registry(source_trail),
     }
-    canonical = project_sources_to_ids_for_model(canonical, source_trail)
+    canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))
     canonical["quality_report"] = build_canonical_decision_writer_packet_quality_report(canonical)
     return canonical
 

@@ -493,19 +493,15 @@ def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> Non
 
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
-    assert "Narrative blueprint" in prompt
-    assert "reasoning_hierarchy" in prompt
-    assert "reader_brief_plan.paragraph_jobs as the writing plan" in prompt
-    assert "decision_interpretation_plan as the meaning layer" in prompt
-    assert "mandatory_evidence_ledger as the non-negotiable retention check" in prompt
-    assert "decision_boundary_source_contract" in prompt
-    assert "reader_brief_plan" in prompt
-    assert "decision_interpretation_plan" in prompt
-    assert "quantities_to_keep_together" in prompt
-    assert "practical_implication_cards" in prompt
-    assert "writing_priority" in prompt
+    assert "canonical_decision_writer_packet_v1" in prompt
+    assert "decision_brief_skeleton" in prompt
+    assert "mandatory_retention_checklist" in prompt
+    assert "counterweight_dispositions" in prompt
+    assert "reader_brief_plan" not in prompt
+    assert "decision_interpretation_plan" not in prompt
+    assert "mandatory_evidence_ledger" not in prompt
+    assert "decision_boundary_source_contract" not in prompt
     assert "Required obligation ledger" not in prompt
-    assert "not as the memo outline" in prompt
     assert "Option A improves the main outcome" in prompt
     assert "The answer depends on whether the narrower setting matters" in prompt
     assert "Suggested memo shape" not in prompt
@@ -630,7 +626,8 @@ def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_
     assert "Off-question omega seafood context should not guide the memo" not in prompt
     assert "decision_writer_item_optional" not in prompt
     assert "not_marked_must_use_for_memo_synthesis" not in prompt
-    assert "writer_model_context_v1" in prompt
+    assert "canonical_decision_writer_packet_v1" in prompt
+    assert "writer_model_context_v1" not in prompt
     assert "excluded_evidence_log" not in prompt
     assert "lineage_report" not in prompt
 
