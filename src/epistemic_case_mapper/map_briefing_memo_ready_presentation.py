@@ -353,7 +353,7 @@ def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
 
 
 def _source_line_for_entry(entry: dict[str, str]) -> str:
-    display = entry.get("source_display", "")
+    display = entry.get("inline_display", "") or entry.get("source_display", "")
     url = entry.get("url", "")
     return f"* [{display}]({url})" if display and url else f"* {display}"
 

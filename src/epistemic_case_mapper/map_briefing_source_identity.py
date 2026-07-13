@@ -46,15 +46,17 @@ def preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]
 
 
 def compact_source_display(source: dict[str, Any], *, common_prefix: list[str] | None = None) -> str:
-    label = str(source.get("source_label") or source.get("display_label") or source.get("source_id") or "").strip()
-    for key in ("citation_label", "display_label"):
-        value = str(source.get(key) or "").strip()
-        if value and value != label:
-            return value
+    citation = str(source.get("citation_label") or "").strip()
+    if citation:
+        return citation
     source_id = str(source.get("source_id") or "").strip()
     from_id = _compact_source_id(source_id)
     if from_id:
         return from_id
+    label = str(source.get("source_label") or "").strip()
+    if label and label != source_id:
+        label = strip_artifact_source_prefix(label)
+        return _compact_title(label) if len(label) > 64 else label
     display = preferred_source_display(source, common_prefix=common_prefix)
     return _compact_title(display) if len(display) > 64 else display
 
