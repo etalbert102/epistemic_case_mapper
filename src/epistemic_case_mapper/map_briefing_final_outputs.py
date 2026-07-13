@@ -191,6 +191,20 @@ def _run_memo_ready_final_output_path(
         backend=backend_config.backend,
         details=_progress_report_details(synthesis),
     )
+    if _memo_ready_synthesis_failed(synthesis):
+        rewrite_result = _memo_ready_rewrite_result(synthesis)
+        failure_result = _memo_ready_failure_result(rewrite_result)
+        return {
+            "section_rewrite_result": failure_result,
+            "rewrite_result": rewrite_result,
+            "packet_plan_result": None,
+            "reader_packet_repair_result": failure_result,
+            "packet_repair_result": failure_result,
+            "editorial_result": failure_result,
+            "memo_ready_synthesis_result": synthesis,
+            "memo_ready_repair_result": failure_result,
+            "memo_ready_final_polish_result": failure_result,
+        }
     section_rewrite_result = _memo_ready_section_rewrite_result(synthesis, artifacts=artifacts)
     memo_package["scaffold"]["section_context_acceptance_status"] = "ready"
     rewrite_result = _memo_ready_rewrite_result(synthesis)
@@ -303,6 +317,35 @@ def _memo_ready_rewrite_result(synthesis_result: dict[str, Any]) -> dict[str, An
         "prompt": synthesis_result.get("prompt", ""),
         "raw": synthesis_result.get("raw", ""),
         "report": report,
+    }
+
+
+def _memo_ready_synthesis_failed(synthesis_result: dict[str, Any]) -> bool:
+    report = synthesis_result.get("report") if isinstance(synthesis_result, dict) else {}
+    if not isinstance(report, dict):
+        return True
+    if report.get("accepted") is True:
+        return False
+    status = str(report.get("status") or "")
+    return status in {
+        "backend_error_live_enrichment_failed",
+        "empty_or_unparseable_live_enrichment_failed",
+    }
+
+
+def _memo_ready_failure_result(rewrite_result: dict[str, Any]) -> dict[str, Any]:
+    report = dict(rewrite_result.get("report", {}))
+    report.setdefault("status", "memo_ready_synthesis_failed")
+    return {
+        "memo": "",
+        "prompt": "",
+        "raw": "",
+        "report": {
+            **report,
+            "accepted": False,
+            "memo_ready_packet_path": True,
+            "stopped_after_failed_synthesis": True,
+        },
     }
 
 

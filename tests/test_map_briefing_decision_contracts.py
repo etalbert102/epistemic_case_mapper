@@ -251,7 +251,10 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     fake_model = tmp_path / "fake_briefing_model.py"
     fake_model.write_text(
         "import json, sys\n"
-        "sys.stdin.read()\n"
+        "prompt = sys.stdin.read()\n"
+        "if 'You are a senior decision analyst' in prompt:\n"
+        "    print('## Decision Brief\\n\\n**Confidence:** medium\\n\\nThe case turns on whether priors or likelihood updates explain the disagreement. [FLF COVID Case Brief]')\n"
+        "    raise SystemExit\n"
         "print(json.dumps({\n"
         "  'decision_brief': 'flf_covid_case_brief says the decision depends on priors and likelihood updates.',\n"
         "  'confidence': 'high',\n"
@@ -351,7 +354,10 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
     fake_model = tmp_path / "fake_model.py"
     fake_model.write_text(
         "import json, sys\n"
-        "sys.stdin.read()\n"
+        "prompt = sys.stdin.read()\n"
+        "if 'You are a senior decision analyst' in prompt:\n"
+        "    print('## Decision Brief\\n\\n**Confidence:** low\\n\\nAlpha matters for the decision. [doc_a]')\n"
+        "    raise SystemExit\n"
         "print(json.dumps({'decision_brief': 'doc_a says Alpha matters.', 'confidence': 'high', 'decision_implications': [], 'top_cruxes': [], 'evidence_roles': {'main_support': [], 'conflicting_evidence': [], 'scope_limits': [], 'method_limits': []}, 'stress_caveats': [], 'audit_trail': []}))\n",
         encoding="utf-8",
     )
@@ -414,6 +420,9 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
         "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'Gamma changes whether Alpha should guide the decision.', 'crux_candidates': ['Gamma is a crux.'], 'similar_but_not_identical': []}\n"
         "elif 'Deterministic briefing scaffold:' in prompt:\n"
         "    payload = {'decision_brief': 'Demo Case Doc A and Demo Case Doc B jointly make Gamma the crux.', 'confidence': 'high', 'decision_implications': ['Treat Gamma as the first review target.'], 'top_cruxes': [], 'evidence_roles': {'main_support': [], 'conflicting_evidence': [], 'scope_limits': [], 'method_limits': []}, 'stress_caveats': [], 'audit_trail': []}\n"
+        "elif 'You are a senior decision analyst' in prompt:\n"
+        "    print('## Decision Brief\\n\\nDemo Case Doc A and Doc B make Gamma the crux. Alpha supports the decision. [Doc A] [Doc B]')\n"
+        "    raise SystemExit\n"
         "else:\n"
         "    payload = {}\n"
         "print(json.dumps(payload))\n",

@@ -70,7 +70,7 @@ def run_memo_ready_packet_synthesis(
                 "issues": ["live_model_enrichment_failed", str(exc)],
             }
         )
-        return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
+        return {"memo": "", "prompt": prompt, "raw": "", "report": report}
     raw = result.text
     candidate = repair_markdown_structure(_extract_markdown(raw))
     if not candidate:
@@ -81,7 +81,7 @@ def run_memo_ready_packet_synthesis(
                 "issues": ["live_model_enrichment_failed", "synthesis returned no markdown"],
             }
         )
-        return {"memo": draft, "prompt": prompt, "raw": raw, "report": report}
+        return {"memo": "", "prompt": prompt, "raw": raw, "report": report}
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)

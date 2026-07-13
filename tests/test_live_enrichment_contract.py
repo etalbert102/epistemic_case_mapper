@@ -24,11 +24,34 @@ def test_live_synthesis_backend_failure_is_visible_not_accepted(monkeypatch: pyt
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 
-    assert "Option A is plausible but bounded." in result["memo"]
+    assert result["memo"] == ""
     assert result["report"]["live_enrichment_required"] is True
     assert result["report"]["accepted"] is False
     assert result["report"]["status"] == "backend_error_live_enrichment_failed"
     assert "live_model_enrichment_failed" in result["report"]["issues"]
+
+
+def test_live_synthesis_unparseable_output_is_visible_without_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "answer_spine": {"default_read": "Option A is plausible but bounded."},
+        "evidence_items": [],
+        "source_trail": [],
+    }
+
+    def fake_backend(*args, **kwargs):
+        from epistemic_case_mapper.model_backends import ModelBackendResult
+
+        return ModelBackendResult(text='{"unexpected": "shape"}', backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
+
+    assert result["memo"] == ""
+    assert result["raw"] == '{"unexpected": "shape"}'
+    assert result["report"]["accepted"] is False
+    assert result["report"]["status"] == "empty_or_unparseable_live_enrichment_failed"
 
 
 def test_live_synthesis_requests_plain_text_backend(monkeypatch: pytest.MonkeyPatch) -> None:
