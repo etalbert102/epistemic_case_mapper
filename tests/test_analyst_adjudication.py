@@ -14,6 +14,12 @@ def _ledger() -> dict:
     return {
         "schema_id": "analyst_evidence_ledger_v1",
         "decision_question": "Should option A be adopted?",
+        "stable_final_answer_frame": {
+            "schema_id": "stable_final_answer_frame_v1",
+            "decision_question": "Should option A be adopted?",
+            "current_best_answer": "Adopt option A only if the cost exposure is bounded.",
+            "classification_rule": "Classify every row relative to current_best_answer.",
+        },
         "rows": [
             {
                 "evidence_item_id": "bundle:one",
@@ -94,7 +100,10 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
     assert "allowed_answer_relation" in prompt
-    assert "Do not call evidence a counterweight merely because it counters a feared risk" in prompt
+    assert "stable_final_answer_frame" in prompt
+    assert "current_best_answer" in prompt
+    assert "rebuts an alternative answer but supports current_best_answer" in prompt
+    assert "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer" in prompt
     assert "Raw excerpt should stay out" not in prompt
     assert "large_internal_notes" not in prompt
     assert "source_quality" in prompt

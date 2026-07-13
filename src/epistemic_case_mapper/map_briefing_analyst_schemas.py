@@ -42,6 +42,9 @@ class EvidenceAdjudicationRow(BaseModel):
     covered_by: list[str] = Field(default_factory=list)
     source_ids: list[str] = Field(default_factory=list)
     quantity_values: list[str] = Field(default_factory=list)
+    target_answer_option: str = ""
+    effect_on_final_answer: str = ""
+    tension_type: str = ""
     downgrade_reason: str = ""
 
     @field_validator("covered_by", "source_ids", "quantity_values", mode="before")
@@ -59,7 +62,7 @@ class EvidenceAdjudicationRow(BaseModel):
     def _strip_required_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
-    @field_validator("downgrade_reason", mode="before")
+    @field_validator("downgrade_reason", "target_answer_option", "effect_on_final_answer", "tension_type", mode="before")
     @classmethod
     def _strip_optional_text(cls, value: Any) -> str:
         return str(value or "").strip()
@@ -123,12 +126,17 @@ class AnalystEvidenceGroup(BaseModel):
     group_id: str
     proposition: str = Field(min_length=1)
     memo_role: MemoUse
+    source_memo_role: str = ""
     importance_rank: int = Field(default=100, ge=1, le=100)
     covered_evidence_item_ids: list[str] = Field(min_length=1)
     source_ids: list[str] = Field(default_factory=list)
     source_labels: list[str] = Field(default_factory=list)
     quantity_values: list[str] = Field(default_factory=list)
     applicability_limits: list[str] = Field(default_factory=list)
+    answer_relation: AnswerRelation = "uncertain_relation"
+    target_answer_option: str = ""
+    effect_on_final_answer: str = ""
+    tension_type: str = ""
     rationale: str = Field(min_length=1)
     conflict_note: str = ""
     evidence_strength: str = ""
@@ -137,6 +145,16 @@ class AnalystEvidenceGroup(BaseModel):
     source_appraisal: dict[str, Any] = Field(default_factory=dict)
     source_use_warnings: list[str] = Field(default_factory=list)
     allowed_wording: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("answer_relation", mode="before")
+    @classmethod
+    def _normalize_answer_relation(cls, value: Any) -> str:
+        return _answer_relation_alias(str(value or ""))
+
+    @field_validator("source_memo_role", "target_answer_option", "effect_on_final_answer", "tension_type", mode="before")
+    @classmethod
+    def _strip_optional_text(cls, value: Any) -> str:
+        return str(value or "").strip()
 
 
 class AnalystSynthesisPacket(BaseModel):
@@ -167,8 +185,13 @@ class AnalystDecisionEvidenceGroup(BaseModel):
     group_id: str
     proposition: str = Field(min_length=1)
     memo_role: MemoUse
+    source_memo_role: str = ""
     importance_rank: int = Field(default=100, ge=1, le=100)
     covered_evidence_item_ids: list[str] = Field(min_length=1)
+    answer_relation: AnswerRelation = "uncertain_relation"
+    target_answer_option: str = ""
+    effect_on_final_answer: str = ""
+    tension_type: str = ""
     rationale: str = Field(min_length=1)
     evidence_strength: str = ""
     answer_impact: str = ""
@@ -190,6 +213,16 @@ class AnalystDecisionEvidenceGroup(BaseModel):
     @classmethod
     def _normalize_memo_role(cls, value: Any) -> str:
         return _memo_use_alias(str(value or ""))
+
+    @field_validator("answer_relation", mode="before")
+    @classmethod
+    def _normalize_answer_relation(cls, value: Any) -> str:
+        return _answer_relation_alias(str(value or ""))
+
+    @field_validator("source_memo_role", "target_answer_option", "effect_on_final_answer", "tension_type", mode="before")
+    @classmethod
+    def _strip_optional_text(cls, value: Any) -> str:
+        return str(value or "").strip()
 
 
 class AnalystEvidenceDisposition(BaseModel):

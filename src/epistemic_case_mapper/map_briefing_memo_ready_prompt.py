@@ -47,6 +47,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Use decision_brief_skeleton as the spine of the memo.\n"
         "- Use decision_answer_classification in the Bottom Line: state the supported answer shape or option directly, name the scope, and state any named options the evidence does not support at that scope.\n"
         "- Use analyst_reasoning_frame to decide how the evidence should change, bound, or calibrate the answer.\n"
+        "- Use source_weighted_answer_frame before priority_evidence: explain what class of evidence carries the answer, what calibrates it, what bounds it, and what is only context.\n"
         "- Use priority_evidence for attention and ordering, not as the whole evidence universe.\n"
         "- Use organized_evidence_inventory as the complete memo-facing evidence record; draw from non-priority items when they add practical framing, comparators, scope, or interpretive context.\n"
         "- Interpret important quantities in decision terms.\n"

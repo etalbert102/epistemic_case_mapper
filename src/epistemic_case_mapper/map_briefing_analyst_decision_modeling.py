@@ -12,6 +12,7 @@ from epistemic_case_mapper import map_briefing_analyst_decision_logic as decisio
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
 from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import run_parallel_analyst_decision_model, should_use_parallel_analyst_decision_model
+from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract import decision_model_required_output_schema
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
     compact_decision_model_repair_report,
     run_analyst_decision_model_repair,
@@ -238,6 +239,7 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
     return {
         "schema_id": "analyst_decision_context_v1",
         "decision_question": str(ledger.get("decision_question") or "").strip(),
+        "stable_final_answer_frame": _dict(ledger.get("stable_final_answer_frame")),
         "row_count": len(rows),
         "evidence_rows": rows,
         "retention_obligations": retention_obligations,
@@ -261,8 +263,10 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
 def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
     packet = {
         "decision_question": context.get("decision_question"),
+        "stable_final_answer_frame": _dict(context.get("stable_final_answer_frame")),
         "task": [
             "Construct a global decision model from the evidence ledger.",
+            "Use stable_final_answer_frame.current_best_answer as the target answer when deciding whether evidence supports, weakens, bounds, or contextualizes the final answer.",
             "Use evidence IDs to form higher-level evidence groups; do not merely classify rows one by one.",
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
             "You may merge skeleton groups or move an item to a better group when the reasoning calls for it, but every skeleton evidence_item_id should either be covered by an evidence_group or explicitly dispositioned.",
@@ -273,6 +277,8 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Use model_hints as clues only: centrality and similarity are not semantic decisions.",
             "Treat candidate_decision_edge rows as provisional analytic links; use their anchors, confidence, failure conditions, and endpoint claims to decide whether they reconcile, bound, weaken, or should be backgrounded.",
             "Do not preserve a proposed relation label when its rationale or anchors imply a different decision role; explain downgrades in evidence_dispositions or group rationale.",
+            "Do not use load_bearing_counterweight for evidence that only rebuts a rejected or feared alternative while supporting current_best_answer. In that case use load_bearing_primary_support, mechanism_or_context, or decision_crux and make effect_on_final_answer explicit.",
+            "Use scope_or_applicability for subgroup, dose, population, or applicability boundaries unless the row directly weakens current_best_answer inside its stated scope.",
             "Put redundant or subordinate rows into the same group when they support the same proposition.",
             "Include counterweights, scope boundaries, cruxes, mechanisms, and quantitative anchors when they materially change the decision read.",
             "Before compressing evidence, check retention_obligations and obligation_group_skeleton. Quantitative anchors, counterweights, cruxes, and scope boundaries listed there should normally appear in evidence_groups; if one is backgrounded or excluded, make that decision explicit in evidence_dispositions with a rationale.",
@@ -300,58 +306,7 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "covered_by_group",
             "needs_review",
         ],
-        "required_output_schema": {
-            "schema_id": "analyst_decision_model_v1",
-            "decision_question": context.get("decision_question"),
-            "direct_answer": "one sentence answering the decision question",
-            "confidence": "low | medium | high | not_specified",
-            "overall_rationale": "why the evidence groups support this answer",
-            "evidence_groups": [
-                {
-                    "group_id": "stable group label",
-                    "proposition": "decision-relevant proposition synthesized across covered evidence",
-                    "memo_role": "one allowed_memo_role value",
-                    "importance_rank": "integer 1-100; 1 is most important globally",
-                    "covered_evidence_item_ids": ["evidence IDs from context"],
-                    "rationale": "why this group matters to the decision",
-                    "evidence_strength": "brief strength assessment",
-                    "answer_impact": "how this group supports, weakens, bounds, or changes the answer",
-                    "uncertainty_type": "measurement, external validity, confounding, missing evidence, implementation, none, or other",
-                    "applicability_limits": ["scope/population/context limits"],
-                    "conflict_note": "how this group relates to conflicting evidence, if any",
-                }
-            ],
-            "evidence_dispositions": [
-                {
-                    "evidence_item_id": "evidence ID from context",
-                    "disposition": "one allowed_disposition value",
-                    "group_id": "group that uses or covers this item, if applicable",
-                    "rationale": "why it is backgrounded, excluded, or needs review; omit rows already covered by evidence_groups unless there is a special reason",
-                }
-            ],
-            "quantitative_anchors": ["quantities that should survive final synthesis"],
-            "what_would_change_the_answer": ["cruxes or missing evidence that would change the answer"],
-            "decision_logic": {
-                "bounded_bottom_line": "specific answer with confidence boundary",
-                "support_summary": "load-bearing support in one or two sentences",
-                "strongest_counterweight": "strongest contrary or limiting consideration",
-                "counterweight_weighting": "why it changes, weakens, or only bounds the answer",
-                "reconciled_cruxes": ["cruxes written as resolved analyst guidance where possible"],
-                "scope_boundaries": ["where the answer applies or does not apply"],
-                "practical_implications": ["decision implications"],
-                "do_not_overstate": ["claims the memo must not imply"],
-            },
-            "argument_plan": [
-                {
-                    "step_id": "stable step label",
-                    "section": "memo section",
-                    "writing_goal": "what this paragraph must accomplish",
-                    "required_points": ["claims, quantities, caveats, or comparisons to include"],
-                    "evidence_item_ids": ["evidence IDs this step uses"],
-                    "transition_from_previous": "how this reasoning step should connect",
-                }
-            ],
-        },
+        "required_output_schema": decision_model_required_output_schema(context.get("decision_question")),
         "context": context,
     }
     return (
@@ -403,6 +358,10 @@ def deterministic_decision_model_scaffold(
                 "group_id": group_id,
                 "proposition": _short_text(str(ledger_row.get("claim") or row.get("rationale") or evidence_id), 520),
                 "memo_role": memo_use,
+                "answer_relation": row.get("answer_relation") or "uncertain_relation",
+                "target_answer_option": row.get("target_answer_option") or "",
+                "effect_on_final_answer": row.get("effect_on_final_answer") or "",
+                "tension_type": row.get("tension_type") or "",
                 "importance_rank": int(row.get("importance_rank", 100) or 100),
                 "covered_evidence_item_ids": [evidence_id],
                 "rationale": _short_text(str(row.get("rationale") or ledger_row.get("why_it_matters") or "Adjudicated as relevant."), 320),
@@ -542,7 +501,11 @@ def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str,
         "directionality": row.get("directionality"),
         "relation_semantic_role": row.get("relation_semantic_role"),
         "adjudicated_memo_use": adjudicated.get("memo_use"),
+        "adjudicated_answer_relation": adjudicated.get("answer_relation"),
         "adjudicated_importance_rank": adjudicated.get("importance_rank"),
+        "target_answer_option": adjudicated.get("target_answer_option"),
+        "effect_on_final_answer": adjudicated.get("effect_on_final_answer"),
+        "tension_type": adjudicated.get("tension_type"),
         "source_labels": row.get("source_labels", []),
         "source_ids": row.get("source_ids", []),
         "source_quality": _source_quality_summary(row),

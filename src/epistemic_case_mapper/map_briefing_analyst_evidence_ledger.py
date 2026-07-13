@@ -38,6 +38,7 @@ def build_analyst_evidence_ledger(
         "schema_id": "analyst_evidence_ledger_v1",
         "method": "stable_inventory_for_llm_adjudicated_packet_construction",
         "decision_question": str(packet.get("decision_question") or "").strip(),
+        "stable_final_answer_frame": _stable_final_answer_frame(packet, question=str(packet.get("decision_question") or "")),
         "row_count": len(rows),
         "summary": _summary(rows),
         "coverage_checks": _coverage_checks(packet, warning_packet, rows),
@@ -76,10 +77,12 @@ def build_analyst_map_evidence_ledger(
     rows.extend(_decision_edge_rows(candidate_map, source_labels=source_labels, source_appraisal_report=source_appraisal_report))
     rows.extend(_warning_rows(warning_packet))
     rows = _dedupe_rows(rows)
+    packet = _dict(scaffold.get("decision_briefing_packet"))
     return {
         "schema_id": "analyst_evidence_ledger_v1",
         "method": "retained_claim_map_inventory_for_llm_adjudicated_packet_construction",
         "decision_question": str(question or scaffold.get("question") or "").strip(),
+        "stable_final_answer_frame": _stable_final_answer_frame(packet, question=str(question or scaffold.get("question") or "")),
         "row_count": len(rows),
         "summary": _summary(rows),
         "coverage_checks": _map_coverage_checks(candidate_map, warning_packet, rows),
@@ -698,6 +701,46 @@ def _counts(values: Any) -> dict[str, int]:
     for value in values:
         counts[value] = counts.get(value, 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _stable_final_answer_frame(packet: dict[str, Any], *, question: str) -> dict[str, Any]:
+    answer_frame = _dict(packet.get("answer_frame"))
+    answer_spine = _dict(packet.get("answer_spine"))
+    candidate_answer_set = _dict(packet.get("candidate_answer_set"))
+    direct_answer = str(
+        answer_frame.get("default_answer")
+        or answer_frame.get("direct_answer")
+        or answer_spine.get("default_read")
+        or answer_spine.get("bounded_answer")
+        or ""
+    ).strip()
+    frame = _drop_empty(
+        {
+            "schema_id": "stable_final_answer_frame_v1",
+            "decision_question": str(question or packet.get("decision_question") or "").strip(),
+            "current_best_answer": _short_text(direct_answer, 700),
+            "classification": str(answer_frame.get("classification") or "").strip(),
+            "confidence": str(answer_frame.get("confidence") or packet.get("confidence") or "").strip(),
+            "candidate_answer_options": [
+                _drop_empty(
+                    {
+                        "candidate_answer_id": row.get("candidate_answer_id") or row.get("answer_id"),
+                        "answer": _short_text(str(row.get("answer") or row.get("label") or row.get("claim") or ""), 220),
+                    }
+                )
+                for row in _list(candidate_answer_set.get("candidate_answers"))
+                if isinstance(row, dict)
+            ][:8],
+            "classification_rule": (
+                "Classify every row relative to current_best_answer. challenges_answer means the row weakens, overturns, "
+                "or materially lowers confidence in current_best_answer; evidence that argues against a rejected or feared "
+                "alternative usually supports or contextualizes current_best_answer instead."
+            ),
+        }
+    )
+    if not frame.get("current_best_answer"):
+        frame["current_best_answer"] = "No stable final answer has been selected yet; classify relation conservatively and explain uncertainty."
+    return frame
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

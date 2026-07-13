@@ -38,6 +38,7 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "canonical_decision_writer_packet_v1" in prompt
     assert "decision_brief_skeleton" in prompt
     assert "decision_answer_classification" in prompt
+    assert "source_weighted_answer_frame" in prompt
     assert "priority_evidence" in prompt
     assert "organized_evidence_inventory" in prompt
     assert "analyst_reasoning_frame" in prompt
@@ -47,6 +48,7 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "decision_interpretation_plan" not in prompt
     assert "mandatory_evidence_ledger" not in prompt
     assert "quantity_anchors" not in prompt
+    assert prompt.find("source_weighted_answer_frame") < prompt.find("priority_evidence")
 
 
 def test_memo_ready_prompt_without_evidence_items_does_not_dump_raw_packet() -> None:
@@ -96,6 +98,7 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
     prompt = build_memo_ready_packet_synthesis_prompt(_balance_packet())
 
     assert "canonical_decision_writer_packet_v1" in prompt
+    assert "source_weighted_answer_frame" in prompt
     assert "priority_evidence" in prompt
     assert "organized_evidence_inventory" in prompt
     assert "mandatory_retention_checklist" in prompt
@@ -113,6 +116,7 @@ def test_synthesis_prompt_exposes_calibration_fields_as_source_ids() -> None:
 
     assert "decision_brief_skeleton" in prompt
     assert "decision_answer_classification" in prompt
+    assert "source_weighted_answer_frame" in prompt
     assert '"question_options": [' in prompt
     assert '"harmful"' in prompt
     assert '"neutral"' in prompt

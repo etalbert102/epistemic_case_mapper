@@ -41,6 +41,7 @@ def build_canonical_decision_writer_packet(
         "decision_brief_skeleton": _decision_brief_skeleton(interface),
         "decision_answer_classification": _decision_answer_classification(packet),
         "analyst_reasoning_frame": _analyst_reasoning_frame(packet, interface),
+        "source_weighted_answer_frame": _source_weighted_answer_frame(interface),
         "priority_evidence": _priority_evidence(interface),
         "organized_evidence_inventory": _organized_evidence_inventory(packet, interface),
         "counterweight_dispositions": _counterweight_dispositions(interface),
@@ -61,6 +62,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
     classification = _dict(packet.get("decision_answer_classification"))
     priority = _list(packet.get("priority_evidence"))
     counterweights = _list(packet.get("counterweight_dispositions"))
+    weighted_frame = _dict(packet.get("source_weighted_answer_frame"))
+    weighted_lanes = _dict(weighted_frame.get("lanes"))
     source_notes = _list(packet.get("source_weight_notes"))
     informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
     checklist = _list(packet.get("mandatory_retention_checklist"))
@@ -76,6 +79,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("missing_decision_answer_classification")
     if not priority:
         warnings.append("missing_priority_evidence")
+    if not weighted_lanes:
+        warnings.append("missing_source_weighted_answer_frame")
     if not counterweights:
         warnings.append("missing_counterweight_dispositions")
     if not source_notes:
@@ -99,6 +104,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         "answer_shape": classification.get("answer_shape"),
         "question_option_count": len(_list(classification.get("question_options"))),
         "priority_evidence_count": len(priority),
+        "source_weighted_lane_count": len(weighted_lanes),
+        "source_weighted_item_count": sum(len(_list(rows)) for rows in weighted_lanes.values()),
         "organized_evidence_count": len(inventory_items),
         "counterweight_disposition_count": len(counterweights),
         "source_weight_note_count": len(source_notes),
@@ -150,6 +157,117 @@ def _priority_evidence(interface: dict[str, Any]) -> list[dict[str, Any]]:
     roles = {"strongest_support", "quantitative_anchor", "strongest_counterweight", "scope_boundary", "decision_crux"}
     rows = [_evidence_row(row) for row in _list(interface.get("decision_evidence_table")) if isinstance(row, dict) and row.get("role") in roles]
     return _dedupe_rows(rows, "item_id")[:18]
+
+
+def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
+    rows = [
+        row
+        for row in sorted(
+            _list(interface.get("decision_evidence_table")),
+            key=lambda item: (_inventory_sort_rank(item) if isinstance(item, dict) else 100, str(_dict(item).get("item_id") or "")),
+        )
+        if isinstance(row, dict)
+    ]
+    lanes: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        lane = _source_weight_lane(row)
+        lanes.setdefault(lane, []).append(_source_weighted_evidence_row(row, lane=lane))
+
+    capped_lanes = {
+        lane: _dedupe_rows(lane_rows, "item_id")[: _source_weight_lane_cap(lane)]
+        for lane, lane_rows in lanes.items()
+        if lane_rows
+    }
+    return _drop_empty(
+        {
+            "schema_id": "source_weighted_answer_frame_v1",
+            "weighting_thesis": (
+                "Use primary answer drivers for the main answer; use calibrators, counterweights, cruxes, and scope limiters "
+                "to explain confidence and boundaries; use context-only material for framing rather than independent confirmation."
+            ),
+            "required_weighting_moves": [
+                "Explain what class of evidence carries the main answer before discussing limiting evidence.",
+                "Use quantitative or interpretive calibrators to explain magnitude, mechanism, or plausibility without replacing outcome evidence.",
+                "Use counterweights and cruxes to state what would weaken, overturn, or require narrower wording for the answer.",
+                "Use scope limiters to define where the answer stops applying.",
+                "Use context-only sources only for application or interpretation unless upstream analysis gives them a stronger role.",
+            ],
+            "lanes": capped_lanes,
+        }
+    )
+
+
+def _source_weighted_evidence_row(row: dict[str, Any], *, lane: str) -> dict[str, Any]:
+    calibrated = _calibrated_claim_row(row)
+    return _drop_empty(
+        {
+            "item_id": row.get("item_id"),
+            "source_weight_role": lane,
+            "upstream_role": row.get("role"),
+            "answer_relation": row.get("answer_relation"),
+            "memo_function": row.get("memo_function"),
+            "claim": _short_text(calibrated.get("claim"), 620),
+            "source_labels": _string_list(row.get("source_labels")),
+            "quantities": _brief_quantities(row),
+            "why_this_weight": _source_weight_reason(row, lane),
+            "decision_relevance": _calibrated_short(row.get("decision_relevance") or row.get("include_reason"), row, limit=520),
+            "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 360),
+            "not_enough_for": _string_list(row.get("source_use_warnings") or _dict(row.get("source_appraisal")).get("source_use_warnings"))[:4],
+            "importance_rank": row.get("importance_rank"),
+        }
+    )
+
+
+def _source_weight_lane(row: dict[str, Any]) -> str:
+    role = str(row.get("role") or "").strip()
+    relation = str(row.get("answer_relation") or "").strip()
+    function = str(row.get("memo_function") or "").strip()
+    obligation = str(row.get("obligation_level") or "").strip()
+    warnings = set(_string_list(row.get("source_use_warnings") or _dict(row.get("source_appraisal")).get("source_use_warnings")))
+    if role in {"off_question", "excluded"} or relation in {"off_question", "not_relevant"} or obligation in {"off_question", "not_relevant"}:
+        return "excluded_from_answer"
+    if role == "context_only" or function == "context_only" or "guidance_not_independent_empirical_evidence" in warnings:
+        return "context_only"
+    if role == "scope_boundary" or relation == "bounds_scope" or function == "scope_boundary":
+        return "scope_limiters"
+    if role == "strongest_counterweight" or relation == "challenges_answer" or function == "counterweight":
+        return "counterweights_or_tensions"
+    if role == "decision_crux" or relation == "identifies_crux" or function == "crux":
+        return "decision_cruxes"
+    if role == "quantitative_anchor" or function in {"quantity_anchor", "mechanism", "explanation"}:
+        return "quantitative_or_interpretive_calibrators"
+    if role == "strongest_support" or relation == "supports_answer" or function == "answer_anchor":
+        return "primary_answer_drivers"
+    return "context_only"
+
+
+def _source_weight_lane_cap(lane: str) -> int:
+    caps = {
+        "primary_answer_drivers": 8,
+        "quantitative_or_interpretive_calibrators": 8,
+        "counterweights_or_tensions": 8,
+        "scope_limiters": 8,
+        "decision_cruxes": 6,
+        "context_only": 6,
+        "excluded_from_answer": 4,
+    }
+    return caps.get(lane, 6)
+
+
+def _source_weight_reason(row: dict[str, Any], lane: str) -> str:
+    role = str(row.get("role") or "").strip() or "unspecified"
+    relation = str(row.get("answer_relation") or "").strip()
+    function = str(row.get("memo_function") or "").strip()
+    appraisal = _dict(row.get("source_appraisal"))
+    directness = str(appraisal.get("decision_directness") or "").strip()
+    parts = [f"Positioned as {lane.replace('_', ' ')} because upstream role is {role}"]
+    if relation:
+        parts.append(f"answer relation is {relation}")
+    if function:
+        parts.append(f"memo function is {function}")
+    if directness and directness != "unknown":
+        parts.append(f"source directness is {directness}")
+    return _short_text("; ".join(parts) + ".", 420)
 
 
 def _analyst_reasoning_frame(packet: dict[str, Any], interface: dict[str, Any]) -> dict[str, Any]:

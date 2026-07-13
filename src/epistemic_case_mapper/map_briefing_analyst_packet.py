@@ -12,6 +12,13 @@ from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
     quantity_binding_quality_summary,
     quantity_bindings_for_group,
 )
+from epistemic_case_mapper.map_briefing_analyst_role_projection import (
+    FOREGROUND_MEMO_USES,
+    SECTION_BY_MEMO_USE,
+    effective_memo_role as _effective_memo_role,
+    memo_ready_role_for_group as _memo_ready_role_for_group,
+    project_group_role as _project_group_role,
+)
 from epistemic_case_mapper.map_briefing_analyst_packet_helpers import (
     applicability_limits as _applicability_limits,
     clean_answer_text as _clean_answer_text,
@@ -37,38 +44,6 @@ from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_oblig
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
 from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
-
-
-FOREGROUND_MEMO_USES = {
-    "load_bearing_primary_support",
-    "load_bearing_counterweight",
-    "quantitative_anchor",
-    "scope_or_applicability",
-    "decision_crux",
-    "mechanism_or_context",
-}
-
-MEMO_READY_ROLE_BY_ANALYST_USE = {
-    "load_bearing_primary_support": "strongest_support",
-    "load_bearing_counterweight": "strongest_counterweight",
-    "quantitative_anchor": "quantitative_anchor",
-    "scope_or_applicability": "scope_boundary",
-    "decision_crux": "decision_crux",
-    "mechanism_or_context": "mechanism_or_explanation",
-    "background_only": "context_only",
-    "needs_human_or_model_review": "uncertain_role",
-}
-
-SECTION_BY_MEMO_USE = {
-    "load_bearing_primary_support": "primary_reasoning_chain",
-    "load_bearing_counterweight": "main_counterweights",
-    "decision_crux": "decision_cruxes",
-    "scope_or_applicability": "scope_and_applicability",
-    "quantitative_anchor": "quantitative_anchors",
-    "mechanism_or_context": "background_context",
-    "background_only": "background_context",
-    "needs_human_or_model_review": "background_context",
-}
 
 
 def build_analyst_packet_bundle(
@@ -472,7 +447,8 @@ def _memo_ready_item_from_group(
     must_use: bool,
     quantity_bindings: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    memo_role = str(group.get("memo_role") or "")
+    memo_role = str(group.get("source_memo_role") or group.get("memo_role") or "")
+    reader_role = _memo_ready_role_for_group(group)
     source_labels = _string_list(group.get("source_labels"))
     proposition = str(group.get("proposition") or "")
     quantities = [
@@ -483,7 +459,12 @@ def _memo_ready_item_from_group(
     claim = _reader_claim_with_key_quantities(proposition, [row["value"] for row in quantities])
     return {
         "item_id": f"analyst_item_{index:03d}",
-        "role": MEMO_READY_ROLE_BY_ANALYST_USE.get(memo_role, "uncertain_role"),
+        "role": reader_role,
+        "source_memo_role": memo_role,
+        "answer_relation": str(group.get("answer_relation") or "").strip(),
+        "target_answer_option": str(group.get("target_answer_option") or "").strip(),
+        "effect_on_final_answer": str(group.get("effect_on_final_answer") or "").strip(),
+        "tension_type": str(group.get("tension_type") or "").strip(),
         "reader_claim": claim,
         "source_label": source_labels[0] if source_labels else "",
         "source_labels": source_labels,
@@ -574,6 +555,10 @@ def _group_from_row(index: int, adjudication_row: dict[str, Any], ledger_row: di
         "group_id": f"analyst_group_{index:03d}",
         "proposition": _short_text(str(ledger_row.get("claim") or adjudication_row.get("rationale") or evidence_id), 520),
         "memo_role": memo_use if memo_use in SECTION_BY_MEMO_USE else "needs_human_or_model_review",
+        "answer_relation": str(adjudication_row.get("answer_relation") or "").strip(),
+        "target_answer_option": _short_text(str(adjudication_row.get("target_answer_option") or ""), 220),
+        "effect_on_final_answer": _short_text(str(adjudication_row.get("effect_on_final_answer") or ""), 260),
+        "tension_type": str(adjudication_row.get("tension_type") or "").strip(),
         "importance_rank": int(adjudication_row.get("importance_rank", 100) or 100),
         "covered_evidence_item_ids": [evidence_id],
         "source_ids": _dedupe([*_string_list(ledger_row.get("source_ids")), *_string_list(adjudication_row.get("source_ids"))]),
@@ -786,7 +771,7 @@ def _deterministic_argument_plan(groups: list[dict[str, Any]], warning_obligatio
         ("cruxes", "What Could Change the Answer", {"decision_crux"}, "Explain what evidence would change the answer."),
         ("scope", "Decision-Relevant Evidence", {"scope_or_applicability"}, "State the population and applicability boundaries."),
     ):
-        selected = [group for group in groups if group.get("memo_role") in roles][:4]
+        selected = [group for group in groups if _effective_memo_role(group) in roles][:4]
         if not selected:
             continue
         steps.append(
@@ -889,12 +874,12 @@ def _sorted_adjudication_rows(adjudication: dict[str, Any]) -> list[dict[str, An
 
 
 def _groups_for(groups: list[dict[str, Any]], memo_use: str, *, limit: int) -> list[dict[str, Any]]:
-    return [group for group in groups if group.get("memo_role") == memo_use][:limit]
+    return [_project_group_role(group, memo_use) for group in groups if _effective_memo_role(group) == memo_use][:limit]
 
 
 def _background_groups(groups: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
     return [
-        group
+        _project_group_role(group, _effective_memo_role(group))
         for group in groups
-        if group.get("memo_role") in {"mechanism_or_context", "background_only", "needs_human_or_model_review"}
+        if _effective_memo_role(group) in {"mechanism_or_context", "background_only", "needs_human_or_model_review"}
     ][:limit]

@@ -204,6 +204,57 @@ def test_analyst_packet_prefers_global_decision_model_groups() -> None:
     assert synthesis["argument_plan"][0]["step_id"] == "support_then_risk"
 
 
+def test_analyst_packet_uses_answer_relation_to_avoid_false_counterweight() -> None:
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A only if operating risk is bounded.",
+        "confidence": "medium",
+        "overall_rationale": "The apparent counter-evidence actually supports the bounded answer.",
+        "evidence_groups": [
+            {
+                "group_id": "alt_rebuttal",
+                "proposition": "Outcome evidence rebuts the rejected view that option A has no measurable benefit.",
+                "memo_role": "load_bearing_counterweight",
+                "answer_relation": "supports_answer",
+                "target_answer_option": "do not adopt option A",
+                "effect_on_final_answer": "rebuts alternative",
+                "tension_type": "study_conflict",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "This is counter-evidence to the rejected alternative, not to the final bounded answer.",
+            },
+            {
+                "group_id": "risk_group",
+                "proposition": "Operating-budget risk bounds adoption.",
+                "memo_role": "scope_or_applicability",
+                "answer_relation": "bounds_scope",
+                "effect_on_final_answer": "bounds current_best_answer",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["bundle:risk"],
+                "rationale": "This bounds the recommendation.",
+            },
+        ],
+    }
+
+    result = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+        decision_model=decision_model,
+    )
+
+    synthesis = result["analyst_synthesis_packet"]
+    memo_ready = result["analyst_memo_ready_packet"]
+    support_item = next(item for item in memo_ready["evidence_items"] if item["lineage"]["analyst_group_id"] == "alt_rebuttal")
+
+    assert synthesis["primary_reasoning_chain"][0]["group_id"] == "alt_rebuttal"
+    assert not synthesis["main_counterweights"]
+    assert support_item["role"] == "strongest_support"
+    assert support_item["source_memo_role"] == "load_bearing_counterweight"
+    assert support_item["answer_relation"] == "supports_answer"
+
+
 def test_analyst_packet_binds_quantity_rows_by_source_label_when_source_id_is_missing() -> None:
     ledger = _ledger()
     ledger["rows"][1] = {

@@ -22,6 +22,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["decision_brief_skeleton"]["main_reason"]
     assert canonical["decision_answer_classification"]["answer_shape"]
     assert canonical["analyst_reasoning_frame"]
+    assert canonical["source_weighted_answer_frame"]["lanes"]
     assert canonical["priority_evidence"]
     assert canonical["organized_evidence_inventory"]["item_count"] == len(packet["evidence_items"])
     assert canonical["counterweight_dispositions"]
@@ -30,12 +31,28 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["citation_registry"]
     assert canonical["quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
     assert canonical["quality_report"]["answer_shape"] == canonical["decision_answer_classification"]["answer_shape"]
+    assert canonical["quality_report"]["source_weighted_lane_count"] >= 1
     assert all(
         row.get("source_id") or row.get("source_ids")
         for row in canonical["priority_evidence"]
         if row.get("role") in {"strongest_support", "strongest_counterweight", "scope_boundary", "decision_crux"}
     )
     assert canonical["quality_report"]["organized_evidence_count"] == len(packet["evidence_items"])
+
+
+def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    frame = packet["canonical_decision_writer_packet"]["source_weighted_answer_frame"]
+    lanes = frame["lanes"]
+
+    assert frame["schema_id"] == "source_weighted_answer_frame_v1"
+    assert "Use primary answer drivers" in frame["weighting_thesis"]
+    assert lanes["primary_answer_drivers"][0]["source_ids"]
+    assert lanes["counterweights_or_tensions"][0]["source_ids"]
+    assert lanes["scope_limiters"][0]["source_ids"]
+    assert "source_labels" not in str(frame)
+    assert any("main answer" in move for move in frame["required_weighting_moves"])
 
 
 def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() -> None:

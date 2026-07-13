@@ -275,6 +275,9 @@ def _adjudication_row_candidate(row: dict[str, Any], scaffold: dict[str, Any], *
         "covered_by",
         "source_ids",
         "quantity_values",
+        "target_answer_option",
+        "effect_on_final_answer",
+        "tension_type",
         "downgrade_reason",
     }
     candidate = {key: scaffold.get(key) for key in allowed_keys if key in scaffold}
@@ -343,11 +346,14 @@ def run_analyst_adjudication_single_call_for_test(
 def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
     packet = {
         "decision_question": ledger.get("decision_question"),
+        "stable_final_answer_frame": _dict(ledger.get("stable_final_answer_frame")),
         "instructions": [
             "Classify every evidence row for its actual use in a decision memo.",
             "Use semantic judgment: decide whether the item is load-bearing, background, covered by another item, or not decision-relevant.",
-            "Also classify answer_relation relative to the likely final answer: supports_answer, challenges_answer, bounds_scope, identifies_crux, contextualizes_answer, not_decision_relevant, or uncertain_relation.",
-            "Do not call evidence a counterweight merely because it counters a feared risk; use challenges_answer only when it weakens or overturns the final bottom line.",
+            "Use stable_final_answer_frame.current_best_answer as the target answer for all answer_relation and effect_on_final_answer labels.",
+            "Classify answer_relation relative to stable_final_answer_frame.current_best_answer: supports_answer, challenges_answer, bounds_scope, identifies_crux, contextualizes_answer, not_decision_relevant, or uncertain_relation.",
+            "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer. Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in current_best_answer.",
+            "When a row rebuts an alternative answer but supports current_best_answer, use supports_answer or contextualizes_answer and explain that in effect_on_final_answer.",
             "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
             "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims do not support its proposed decision use.",
             "Do not drop rows. Return one row for every evidence_item_id.",
@@ -388,6 +394,9 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
                     "answer_relation": "one allowed_answer_relation value",
                     "importance_rank": "integer 1-100, where 1 is most important",
                     "rationale": "short source-grounded reason",
+                    "target_answer_option": "the answer option or stance this row most directly bears on",
+                    "effect_on_final_answer": "supports current_best_answer | weakens current_best_answer | bounds current_best_answer | rebuts alternative | explains tension | background",
+                    "tension_type": "none | clinical_outcome_vs_biomarker | subgroup_scope | dose_scope | study_conflict | mechanism | other",
                     "covered_by": ["optional evidence_item_id or group_id"],
                     "source_ids": ["optional source IDs copied from ledger"],
                     "quantity_values": ["optional quantities copied from ledger"],
@@ -417,6 +426,9 @@ def deterministic_adjudication_scaffold(ledger: dict[str, Any]) -> dict[str, Any
                 "answer_relation": _answer_relation_for_row(row),
                 "importance_rank": min(100, index + 1),
                 "rationale": _scaffold_rationale(row),
+                "target_answer_option": "",
+                "effect_on_final_answer": _effect_for_relation(_answer_relation_for_row(row)),
+                "tension_type": "",
                 "covered_by": [],
                 "source_ids": _string_list(row.get("source_ids")),
                 "quantity_values": _string_list(row.get("quantity_values")),
@@ -545,6 +557,17 @@ def _answer_relation_for_row(row: dict[str, Any]) -> str:
         "not_decision_relevant": "not_decision_relevant",
         "needs_human_or_model_review": "uncertain_relation",
     }.get(memo_use, "uncertain_relation")
+
+
+def _effect_for_relation(relation: str) -> str:
+    return {
+        "supports_answer": "supports current_best_answer",
+        "challenges_answer": "weakens current_best_answer",
+        "bounds_scope": "bounds current_best_answer",
+        "identifies_crux": "explains tension",
+        "contextualizes_answer": "background",
+        "not_decision_relevant": "background",
+    }.get(str(relation or ""), "")
 
 
 def _scaffold_rationale(row: dict[str, Any]) -> str:
