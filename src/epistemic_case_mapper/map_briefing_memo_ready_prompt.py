@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
+from epistemic_case_mapper.map_briefing_decision_interpretation_plan import build_decision_interpretation_plan
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_reader_brief_plan import build_reader_brief_plan
 from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
@@ -63,6 +64,7 @@ def build_writer_packet_synthesis_prompt(
             "decision_question": narrative_blueprint.get("decision_question"),
             "note": "Use writer_model_context.reasoning_hierarchy as the organizing spine; this placeholder preserves the prompt section without duplicating evidence.",
         }
+    model_context["decision_interpretation_plan"] = build_decision_interpretation_plan(model_context)
     model_context["reader_brief_plan"] = build_reader_brief_plan(model_context)
     model_context = project_reader_language_for_model(model_context)
     blueprint_context = project_reader_language_for_model(blueprint_context)
