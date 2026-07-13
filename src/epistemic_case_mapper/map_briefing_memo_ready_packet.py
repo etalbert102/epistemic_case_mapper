@@ -26,6 +26,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_read
 from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
+from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 
 
 MEMO_READY_ROLES = {
@@ -349,6 +350,9 @@ def build_memo_ready_packet(
         },
     }
     memo_ready_packet["decision_synthesis_contract"] = build_memo_ready_decision_synthesis_contract(memo_ready_packet)
+    canonical = build_canonical_decision_writer_packet(memo_ready_packet)
+    memo_ready_packet["canonical_decision_writer_packet"] = canonical
+    memo_ready_packet["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
     return memo_ready_packet
 
 
