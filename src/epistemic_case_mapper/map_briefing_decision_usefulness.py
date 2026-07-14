@@ -219,6 +219,7 @@ def run_decision_usefulness_builder(
     if backend.strip() == "prompt":
         packet = empty_decision_usefulness_packet("prompt_backend")
         packet["decision_question"] = str(_dict(canonical_packet).get("decision_question") or "")
+        packet["quality_report"] = build_decision_usefulness_quality_report(packet, canonical_packet=canonical_packet)
         report = _run_report(
             status="skipped_prompt_backend",
             packet=packet,
@@ -226,7 +227,14 @@ def run_decision_usefulness_builder(
             raw="",
             issues=["decision usefulness builder skipped because backend=prompt"],
         )
-        return _bundle(context=context, prompt=prompt, raw="", packet=packet, report=report)
+        return _bundle(
+            context=context,
+            prompt=prompt,
+            raw="",
+            packet=packet,
+            report=report,
+            parse_report=_parse_report(status="skipped_prompt_backend", raw="", issues=[]),
+        )
     try:
         raw = run_model_backend(
             prompt,
@@ -238,9 +246,18 @@ def run_decision_usefulness_builder(
     except RuntimeError as exc:
         packet = empty_decision_usefulness_packet("backend_error")
         packet["decision_question"] = str(_dict(canonical_packet).get("decision_question") or "")
+        packet["quality_report"] = build_decision_usefulness_quality_report(packet, canonical_packet=canonical_packet)
         report = _run_report(status="backend_error", packet=packet, prompt=prompt, raw="", issues=[str(exc)])
-        return _bundle(context=context, prompt=prompt, raw="", packet=packet, report=report)
+        return _bundle(
+            context=context,
+            prompt=prompt,
+            raw="",
+            packet=packet,
+            report=report,
+            parse_report=_parse_report(status="backend_error", raw="", issues=[str(exc)]),
+        )
     packet, parse_issues = _parse_decision_usefulness_raw(raw, canonical_packet=canonical_packet)
+    initial_parse_report = _parse_report(status="parse_error" if parse_issues else "parsed", raw=raw, issues=parse_issues)
     report = _run_report(status="parsed" if not parse_issues else "parse_error", packet=packet, prompt=prompt, raw=raw, issues=parse_issues)
     if parse_issues or _repairable_quality_report(packet.get("quality_report")):
         repair = _run_decision_usefulness_repair(
@@ -263,12 +280,77 @@ def run_decision_usefulness_builder(
                 repair_report=repair.get("decision_usefulness_repair_report", {}),
             )
             return {
-                **_bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report),
+                **_bundle(
+                    context=context,
+                    prompt=prompt,
+                    raw=raw,
+                    packet=packet,
+                    report=report,
+                    parse_report=initial_parse_report,
+                ),
                 "decision_usefulness_repair_prompt": repair.get("decision_usefulness_repair_prompt", ""),
                 "decision_usefulness_repair_raw": repair.get("decision_usefulness_repair_raw", ""),
                 "decision_usefulness_repair_report": repair.get("decision_usefulness_repair_report", {}),
             }
-    return _bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report)
+    return _bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report, parse_report=initial_parse_report)
+
+
+def build_decision_usefulness_inventory_report(
+    *,
+    canonical_packet: dict[str, Any] | None = None,
+    scaffold: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    canonical = _dict(canonical_packet)
+    scaffold = _dict(scaffold)
+    utility_status = {
+        "option_comparison": "legacy_diagnostic_only",
+        "crux_contract": "legacy_diagnostic_only",
+        "decision_crux_reconstruction_report": "diagnostic_only",
+        "decision_slots": "diagnostic_or_packet_input",
+        "decision_obligation_plan": "diagnostic_or_packet_input",
+        "decision_writer_packet": "active_input_via_canonical_packet",
+        "global_decision_model": "active_input_via_canonical_packet",
+        "lightweight_writer_guidance": "separate_wording_guidance",
+    }
+    utilities = []
+    exposed_legacy_keys = []
+    for key, status in utility_status.items():
+        present_in_scaffold = key in scaffold
+        present_in_canonical = key in canonical
+        if status.startswith("legacy") and present_in_canonical:
+            exposed_legacy_keys.append(key)
+        utilities.append(
+            {
+                "key": key,
+                "status": status,
+                "present_in_scaffold": present_in_scaffold,
+                "present_in_canonical_packet": present_in_canonical,
+                "use_in_decision_usefulness_layer": _inventory_use(status),
+            }
+        )
+    active_fields = [
+        key
+        for key in (
+            "decision_question",
+            "decision_answer_classification",
+            "decision_brief_skeleton",
+            "source_weight_judgments",
+            "evidence_weighted_argument_spine",
+            "priority_evidence",
+            "counterweight_dispositions",
+            "organized_evidence_inventory",
+        )
+        if key in canonical
+    ]
+    return {
+        "schema_id": "decision_usefulness_inventory_report_v1",
+        "status": "warning" if exposed_legacy_keys else "ready",
+        "active_handoff": "canonical_decision_writer_packet_v1",
+        "active_fields_used": active_fields,
+        "utilities": utilities,
+        "legacy_keys_exposed_to_canonical_packet": exposed_legacy_keys,
+        "final_prompt_policy": "only compact decision_usefulness_packet is exposed; legacy option/crux surfaces are not passed through directly",
+    }
 
 
 def attach_decision_usefulness_to_packet(memo_ready_packet: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any]:
@@ -563,14 +645,27 @@ def _bundle(
     raw: str,
     packet: dict[str, Any],
     report: dict[str, Any],
+    parse_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "decision_usefulness_context": context,
         "decision_usefulness_prompt": prompt,
         "decision_usefulness_raw": raw,
+        "decision_usefulness_parse_report": parse_report
+        or _parse_report(status=str(report.get("status") or ""), raw=raw, issues=_string_list(report.get("issues"))),
         "decision_usefulness_packet": packet,
         "decision_usefulness_quality_report": packet.get("quality_report", {}),
         "decision_usefulness_report": report,
+    }
+
+
+def _parse_report(*, status: str, raw: str, issues: list[str]) -> dict[str, Any]:
+    return {
+        "schema_id": "decision_usefulness_parse_report_v1",
+        "status": status,
+        "raw_chars": len(raw),
+        "issue_count": len(issues),
+        "issues": issues,
     }
 
 
@@ -602,6 +697,16 @@ def _run_report(
         "issues": issues,
         "repair_report": repair_report or {},
     }
+
+
+def _inventory_use(status: str) -> str:
+    if status == "active_input_via_canonical_packet":
+        return "reuse indirectly through canonical_decision_writer_packet"
+    if status == "separate_wording_guidance":
+        return "run separately after decision-usefulness packet construction"
+    if status == "diagnostic_or_packet_input":
+        return "may inform upstream canonical fields but is not exposed directly"
+    return "do not expose directly; use only as regression fixture or diagnostic"
 
 
 def _decision_usefulness_schema() -> dict[str, Any]:

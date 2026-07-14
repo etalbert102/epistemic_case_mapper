@@ -4,6 +4,7 @@ from epistemic_case_mapper.map_briefing_decision_packet import build_decision_br
 from epistemic_case_mapper.map_briefing_decision_usefulness import (
     attach_decision_usefulness_to_packet,
     build_decision_usefulness_context,
+    build_decision_usefulness_inventory_report,
     build_decision_usefulness_prompt,
     build_decision_usefulness_quality_report,
     compact_decision_usefulness_for_prompt,
@@ -180,6 +181,21 @@ def test_attach_decision_usefulness_to_packet_updates_canonical_handoff() -> Non
     assert updated["canonical_decision_writer_packet"]["decision_usefulness_report"]["status"] == "parsed"
 
 
+def test_decision_usefulness_inventory_report_keeps_legacy_utilities_diagnostic() -> None:
+    canonical = _canonical_packet()
+
+    report = build_decision_usefulness_inventory_report(
+        canonical_packet=canonical,
+        scaffold={"option_comparison": {"legacy": True}, "decision_writer_packet": {"active": True}},
+    )
+
+    utilities = {row["key"]: row for row in report["utilities"]}
+    assert report["schema_id"] == "decision_usefulness_inventory_report_v1"
+    assert report["active_handoff"] == "canonical_decision_writer_packet_v1"
+    assert utilities["option_comparison"]["use_in_decision_usefulness_layer"].startswith("do not expose directly")
+    assert utilities["decision_writer_packet"]["use_in_decision_usefulness_layer"].startswith("reuse indirectly")
+
+
 def test_run_decision_usefulness_builder_skips_on_prompt_backend() -> None:
     canonical = _canonical_packet()
 
@@ -191,6 +207,7 @@ def test_run_decision_usefulness_builder_skips_on_prompt_backend() -> None:
     )
 
     assert result["decision_usefulness_report"]["status"] == "skipped_prompt_backend"
+    assert result["decision_usefulness_parse_report"]["status"] == "skipped_prompt_backend"
     assert result["decision_usefulness_prompt"]
     assert result["decision_usefulness_packet"]["answer_shape"] == "insufficient_information"
 
@@ -228,6 +245,7 @@ def test_run_decision_usefulness_builder_parses_fake_backend(monkeypatch) -> Non
     )
 
     assert result["decision_usefulness_report"]["status"] == "parsed"
+    assert result["decision_usefulness_parse_report"]["status"] == "parsed"
     assert result["decision_usefulness_packet"]["recommended_stance"]["stance"] == "Adopt option A conditionally."
     assert result["decision_usefulness_quality_report"]["status"] == "ready"
 
@@ -284,5 +302,6 @@ def test_run_decision_usefulness_builder_repairs_bad_references(monkeypatch) -> 
 
     assert calls["count"] == 2
     assert result["decision_usefulness_report"]["status"] == "accepted_after_repair"
+    assert result["decision_usefulness_parse_report"]["status"] == "parsed"
     assert result["decision_usefulness_repair_report"]["status"] == "accepted"
     assert result["decision_usefulness_quality_report"]["invalid_reference_count"] == 0

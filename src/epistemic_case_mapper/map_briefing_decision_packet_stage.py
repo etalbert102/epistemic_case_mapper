@@ -148,6 +148,7 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
     from epistemic_case_mapper.map_briefing_decision_usefulness import (
         attach_decision_usefulness_to_packet,
+        build_decision_usefulness_inventory_report,
         run_decision_usefulness_builder,
     )
     from epistemic_case_mapper.map_briefing_lightweight_guidance import (
@@ -203,6 +204,10 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     _promote_analyst_packet_as_active(scaffold)
     memo_ready = scaffold.get("memo_ready_packet")
     canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
+    scaffold["decision_usefulness_inventory_report"] = build_decision_usefulness_inventory_report(
+        canonical_packet=canonical if isinstance(canonical, dict) else {},
+        scaffold=scaffold,
+    )
     _progress(progress, "decision_usefulness", "started")
     decision_usefulness_bundle = run_decision_usefulness_builder(
         canonical_packet=canonical if isinstance(canonical, dict) else {},
