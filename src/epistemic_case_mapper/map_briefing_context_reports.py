@@ -304,7 +304,8 @@ def _first_body_paragraph(markdown: str) -> str:
 def _repetition_count(markdown: str) -> int:
     seen: set[str] = set()
     repeated = 0
-    for sentence in re.findall(r"[^.!?]+[.!?]", re.sub(r"\s+", " ", markdown)):
+    prose = _memo_prose_for_repetition(markdown)
+    for sentence in re.findall(r"[^.!?]+[.!?]", re.sub(r"\s+", " ", prose)):
         normalized = _normalize(sentence)
         if len(normalized) < 40:
             continue
@@ -312,6 +313,25 @@ def _repetition_count(markdown: str) -> int:
             repeated += 1
         seen.add(normalized)
     return repeated
+
+
+def _memo_prose_for_repetition(markdown: str) -> str:
+    lines = []
+    in_sources = False
+    for line in str(markdown or "").splitlines():
+        stripped = line.strip()
+        if stripped.lower() == "## sources":
+            in_sources = True
+            continue
+        if in_sources:
+            continue
+        if not stripped or stripped.startswith("#") or stripped.startswith("[^"):
+            continue
+        lines.append(stripped)
+    prose = " ".join(lines)
+    prose = re.sub(r"\[([^\]\n]+)\]\([^\)\n]+\)", r"\1", prose)
+    prose = re.sub(r"\[\^[^\]\n]+\]", "", prose)
+    return prose
 
 
 def _normalize(text: str) -> str:

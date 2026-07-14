@@ -523,7 +523,7 @@ def test_memo_ready_prompt_includes_critique_writer_guidance() -> None:
 
     assert memo_ready["writer_guidance_packet"]["status"] == "ready"
     assert any(row["role"] == "critique_writer_guidance" for row in memo_ready["memo_obligations"]["obligations"])
-    assert "critique_writer_guidance" in prompt
+    assert "must_include_points" in prompt
     assert "Distinguish guidance from direct outcome evidence" in prompt
     assert "excluded_evidence_log" not in prompt
 

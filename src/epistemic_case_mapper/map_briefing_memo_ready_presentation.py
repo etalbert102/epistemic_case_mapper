@@ -63,6 +63,10 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("linked_inline_citations_to_trace")
         normalized = next_memo
+    next_memo = _dedupe_linked_citation_clusters(normalized)
+    if next_memo != normalized:
+        changes.append("deduplicated_inline_citations")
+        normalized = next_memo
     next_memo = _replace_sources_section(normalized, packet, additional_cited_displays=compacted_citation_sources)
     if next_memo != normalized:
         changes.append("deterministic_sources")
@@ -91,6 +95,7 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
     if not entries:
         return "# Citation Trace\n\nNo source trail was available for this memo.\n"
     cited = _cited_entry_norms(memo, entries)
+    judgments_by_source = _source_weight_judgments_by_source(packet)
     lines = [
         "# Citation Trace",
         "",
@@ -117,6 +122,15 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
             lines.append(f"- Source ID: `{source_id}`")
         if url:
             lines.append(f"- External URL: {url}")
+        judgment = judgments_by_source.get(str(source_id or ""))
+        if judgment:
+            lines.append(f"- Source weight: {_readable_main_use(judgment.get('main_use'))}")
+            summary = str(judgment.get("why_weight_this_way") or "").strip()
+            if summary:
+                lines.append(f"- Weight rationale: {summary}")
+            limits = _string_list(judgment.get("what_not_to_use_it_for"))
+            if limits:
+                lines.append(f"- Use limits: {', '.join(_readable_warning(item) for item in limits[:4])}")
         if contexts:
             lines.append("- Memo citation contexts:")
             for context in contexts:
@@ -131,6 +145,22 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
             lines.append("- Packet evidence: no directly matched evidence item")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _source_weight_judgments_by_source(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    judgments = _list(canonical.get("source_weight_judgments"))
+    by_source: dict[str, dict[str, Any]] = {}
+    for judgment in judgments:
+        if not isinstance(judgment, dict):
+            continue
+        for source_id in _string_list(judgment.get("source_ids")):
+            by_source[source_id] = judgment
+    return by_source
+
+
+def _readable_main_use(value: Any) -> str:
+    return str(value or "unspecified").replace("_", " ")
 
 
 def _replace_sources_section(memo: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> str:
@@ -202,9 +232,9 @@ def _source_weighting_from_judgments(judgments: list[Any]) -> str:
     lines = [
         "## How to Weight the Evidence",
         "",
-        "Read the sources by decision use: which sources drive the answer, which calibrate it, which bound it, and which mainly contextualize it.",
-        "",
+        _source_weighting_summary(groups),
     ]
+    bullets = []
     for use, label in [
         ("drives_answer", "Main answer drivers"),
         ("calibrates_magnitude", "Calibrators"),
@@ -213,20 +243,39 @@ def _source_weighting_from_judgments(judgments: list[Any]) -> str:
         ("identifies_crux", "Decision cruxes"),
         ("contextualizes", "Context sources"),
     ]:
-        lines.extend(_judgment_bullets(label, groups.get(use, [])[:3]))
+        bullet = _judgment_group_bullet(label, groups.get(use, [])[:4])
+        if bullet:
+            bullets.append(bullet)
+    if bullets:
+        lines.extend(["", *bullets])
     return "\n".join(lines).strip()
 
 
-def _judgment_bullets(label: str, rows: list[dict[str, Any]]) -> list[str]:
-    bullets = []
-    for row in rows:
-        sources = _cite_list(_string_list(row.get("source_ids")))
-        reason = str(row.get("why_weight_this_way") or "").strip()
-        limits = _string_list(row.get("what_not_to_use_it_for"))
-        suffix = f" Limits: {', '.join(_readable_warning(item) for item in limits[:2])}." if limits else ""
-        if sources and reason:
-            bullets.append(f"- **{label}:** ({sources}) {reason}{suffix}")
-    return bullets
+def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
+    drivers = _source_group_citations(groups.get("drives_answer", [])[:3])
+    bounds = _source_group_citations(groups.get("bounds_answer", [])[:3])
+    calibrators = _source_group_citations(groups.get("calibrates_magnitude", [])[:2])
+    parts = []
+    if drivers:
+        parts.append(f"The bottom line should be driven mainly by {drivers}.")
+    if calibrators:
+        parts.append(f"Use {calibrators} to calibrate magnitude or mechanism rather than to replace direct answer evidence.")
+    if bounds:
+        parts.append(f"Use {bounds} to bound the answer and explain where confidence should narrow.")
+    return " ".join(parts) or "Read sources by decision role: answer drivers carry the bottom line, while calibrators, counterweights, cruxes, and scope sources bound the answer."
+
+
+def _judgment_group_bullet(label: str, rows: list[dict[str, Any]]) -> str:
+    sources = _source_group_citations(rows)
+    if not sources:
+        return ""
+    limits = _dedupe(limit for row in rows for limit in _string_list(row.get("what_not_to_use_it_for")))[:3]
+    limit_text = f" Main limits: {', '.join(_readable_warning(item) for item in limits)}." if limits else ""
+    return f"- **{label}:** {sources}.{limit_text}"
+
+
+def _source_group_citations(rows: list[dict[str, Any]]) -> str:
+    return _cite_list(_dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids"))))
 
 
 def _weighting_thesis(
@@ -409,6 +458,38 @@ def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_
     return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace_bracketed, linked)
 
 
+def _dedupe_linked_citation_clusters(memo: str) -> str:
+    link_pattern = re.compile(r"\[[^\]\n]+\]\([^\)\n]+\)")
+
+    def replace(match: re.Match[str]) -> str:
+        content = match.group(1)
+        links = link_pattern.findall(content)
+        if len(links) == 1 and content.strip() == links[0]:
+            return links[0]
+        if len(links) < 2:
+            return match.group(0)
+        deduped = _dedupe_by_norm(links)
+        if len(deduped) == len(links):
+            return match.group(0)
+        if len(deduped) == 1:
+            return deduped[0]
+        return "[" + "; ".join(deduped) + "]"
+
+    return re.sub(r"\[((?:\[[^\]\n]+\]\([^\)\n]+\)(?:\s*(?:;|,)\s*)?)+)\]", replace, memo)
+
+
+def _dedupe_by_norm(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped = []
+    for value in values:
+        marker = _norm(value)
+        if not marker or marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append(value)
+    return deduped
+
+
 def _skip_parenthetical_citation_link(content: str) -> bool:
     content = str(content or "")
     return any(token in content for token in ["](", "://", "#", "/", "\n"])
@@ -423,9 +504,16 @@ def _linked_citation_content(
     if not parts:
         return content, False
     linked_parts = []
+    seen_parts: set[str] = set()
     changed = False
     for part in parts:
         display = display_lookup.get(_norm(part))
+        marker = _norm(display or part)
+        if marker and marker in seen_parts:
+            changed = True
+            continue
+        if marker:
+            seen_parts.add(marker)
         if display:
             linked_parts.append(_citation_trace_link(display, citation_trace_href))
             changed = True

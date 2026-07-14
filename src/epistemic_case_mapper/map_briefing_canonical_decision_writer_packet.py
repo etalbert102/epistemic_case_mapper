@@ -42,12 +42,14 @@ def build_canonical_decision_writer_packet(
     weighted_frame = _source_weighted_answer_frame(interface)
     counterweights = _counterweight_dispositions(interface)
     scope_boundaries = _scope_boundaries(interface)
+    mandatory_checklist = _mandatory_retention_checklist(packet, interface)
     argument_spine = build_evidence_weighted_argument_spine(
         skeleton=skeleton,
         source_weighted_frame=weighted_frame,
         counterweights=counterweights,
         scope_boundaries=scope_boundaries,
         source_weight_judgments=source_weight_bundle["source_weight_judgments"],
+        mandatory_retention_checklist=mandatory_checklist,
     )
     canonical = {
         "schema_id": "canonical_decision_writer_packet_v1",
@@ -65,7 +67,7 @@ def build_canonical_decision_writer_packet(
         "source_weight_judgments": source_weight_bundle["source_weight_judgments"],
         "source_weight_judgment_report": source_weight_bundle["source_weight_judgment_report"],
         "source_weight_notes": _source_weight_notes(interface),
-        "mandatory_retention_checklist": _mandatory_retention_checklist(packet, interface),
+        "mandatory_retention_checklist": mandatory_checklist,
         "citation_registry": _citation_registry(source_trail),
     }
     canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))

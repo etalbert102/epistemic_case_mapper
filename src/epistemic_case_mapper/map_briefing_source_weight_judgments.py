@@ -72,7 +72,8 @@ def _source_weight_judgments(interface: dict[str, Any], source_trail: list[Any])
                     "population_fit": _short_text(appraisal.get("population_fit") or _common_value(rows, "population_fit"), 220),
                     "endpoint_fit": _short_text(appraisal.get("endpoint_fit") or _common_value(rows, "endpoint_fit"), 220),
                     "main_use": main_use,
-                    "why_weight_this_way": _why_weight_this_way(rows, appraisal, main_use),
+                    "why_weight_this_way": _reader_weight_summary(rows, appraisal, main_use),
+                    "internal_weight_rationale": _internal_weight_rationale(rows, appraisal, main_use),
                     "omission_reason": _omission_reason(rows),
                     "what_not_to_use_it_for": _not_enough_for(rows, appraisal),
                     "evidence_item_ids": _dedupe(str(row.get("item_id") or "").strip() for row in rows if row.get("item_id"))[:12],
@@ -124,7 +125,28 @@ def _row_main_use(row: dict[str, Any]) -> str:
     return "contextualizes"
 
 
-def _why_weight_this_way(rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
+def _reader_weight_summary(rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
+    if not rows:
+        directness = str(appraisal.get("decision_directness") or "").strip()
+        reason = "No memo-facing evidence item is assigned to this source, so treat it as context or traceability rather than as load-bearing evidence"
+        if directness and directness not in {"unknown", "unspecified"}:
+            reason += f"; its decision directness is {directness}"
+        return _short_text(reason + ".", 520)
+    directness = str(appraisal.get("decision_directness") or "").strip()
+    claims = _dedupe(
+        _short_text(_clean_sentence(_reader_relevant_reason(row)), 220)
+        for row in rows
+        if _reader_relevant_reason(row)
+    )
+    parts = [f"Use this source to {_main_use_verb(main_use)}"]
+    if directness and directness not in {"unknown", "unspecified"}:
+        parts.append(f"because its decision evidence is {directness}")
+    if claims:
+        parts.append(f"it contributes: {claims[0]}")
+    return _short_text("; ".join(parts) + ".", 520)
+
+
+def _internal_weight_rationale(rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
     if not rows:
         directness = str(appraisal.get("decision_directness") or "").strip()
         reason = "No memo-facing evidence item is assigned to this source; use it only for context, application, or source traceability unless a later model judgment supplies a specific evidence item"
@@ -132,11 +154,7 @@ def _why_weight_this_way(rows: list[dict[str, Any]], appraisal: dict[str, Any], 
             reason += f"; source directness is appraised as {directness}"
         return _short_text(reason + ".", 520)
     directness = str(appraisal.get("decision_directness") or "").strip()
-    claims = _dedupe(
-        _short_text(_reader_relevant_reason(row), 180)
-        for row in rows
-        if _reader_relevant_reason(row)
-    )
+    claims = _dedupe(_short_text(_reader_relevant_reason(row), 180) for row in rows if _reader_relevant_reason(row))
     parts = [f"Use primarily to {_main_use_verb(main_use)}"]
     if directness and directness not in {"unknown", "unspecified"}:
         parts.append(f"because upstream appraisal marks decision directness as {directness}")
@@ -167,6 +185,13 @@ def _main_use_verb(main_use: str) -> str:
         "identifies_crux": "identify what would change the answer",
         "contextualizes": "contextualize the answer",
     }.get(main_use, str(main_use or "contextualize").replace("_", " "))
+
+
+def _clean_sentence(value: str) -> str:
+    text = " ".join(str(value or "").split()).strip()
+    if text.endswith("..."):
+        return text.rstrip(".").strip()
+    return text.rstrip(".").strip()
 
 
 def _not_enough_for(rows: list[dict[str, Any]], appraisal: dict[str, Any]) -> list[str]:

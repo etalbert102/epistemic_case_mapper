@@ -36,25 +36,30 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
 
     assert "canonical decision writer packet" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
-    assert "decision_brief_skeleton" in prompt
-    assert "decision_answer_classification" in prompt
-    assert "source_weight_judgments" in prompt
-    assert "evidence_weighted_argument_spine" in prompt
+    assert "reader_synthesis_packet_v1" in prompt
+    assert "answer_frame" in prompt
+    assert "source_weighting" in prompt
+    assert "argument_spine" in prompt
     assert "section_plan" in prompt
     assert "primary_section" in prompt
-    assert "source_weighted_answer_frame" in prompt
+    assert "section_writing_packets" in prompt
+    assert "section_retention_requirements" in prompt
+    assert "evidence_context" in prompt
+    assert "retention_requirements" in prompt
     assert "priority_evidence" in prompt
-    assert "organized_evidence_inventory" in prompt
-    assert "analyst_reasoning_frame" in prompt
-    assert "mandatory_retention_checklist" in prompt
+    assert "supplemental_evidence" in prompt
+    assert "must_include_points" in prompt
+    assert "source_weighted_answer_frame" not in prompt
+    assert "organized_evidence_inventory" not in prompt
+    assert "analyst_reasoning_frame" not in prompt
+    assert "mandatory_retention_checklist" not in prompt
     assert "writer_model_context_v1" not in prompt
     assert "reader_brief_plan" not in prompt
     assert "decision_interpretation_plan" not in prompt
     assert "mandatory_evidence_ledger" not in prompt
     assert "quantity_anchors" not in prompt
-    assert prompt.find("source_weight_judgments") < prompt.find("evidence_weighted_argument_spine")
-    assert prompt.find("evidence_weighted_argument_spine") < prompt.find("source_weighted_answer_frame")
-    assert prompt.find("source_weighted_answer_frame") < prompt.find("priority_evidence")
+    assert prompt.find("source_weighting") < prompt.find("argument_spine")
+    assert prompt.find("argument_spine") < prompt.find("supplemental_evidence")
 
 
 def test_memo_ready_prompt_without_evidence_items_does_not_dump_raw_packet() -> None:
@@ -104,12 +109,16 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
     prompt = build_memo_ready_packet_synthesis_prompt(_balance_packet())
 
     assert "canonical_decision_writer_packet_v1" in prompt
-    assert "source_weight_judgments" in prompt
-    assert "evidence_weighted_argument_spine" in prompt
-    assert "source_weighted_answer_frame" in prompt
+    assert "reader_synthesis_packet_v1" in prompt
+    assert "source_weighting" in prompt
+    assert "argument_spine" in prompt
+    assert "section_writing_packets" in prompt
+    assert "source_weighted_answer_frame" not in prompt
+    assert "section_retention_requirements" in prompt
     assert "priority_evidence" in prompt
-    assert "organized_evidence_inventory" in prompt
-    assert "mandatory_retention_checklist" in prompt
+    assert "supplemental_evidence" in prompt
+    assert "organized_evidence_inventory" not in prompt
+    assert "mandatory_retention_checklist" not in prompt
     assert '"item_id": "support"' in prompt
     assert '"quantities"' in prompt
     assert '"source_id": "support_study"' in prompt
@@ -122,18 +131,16 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
 def test_synthesis_prompt_exposes_calibration_fields_as_source_ids() -> None:
     prompt = build_memo_ready_packet_synthesis_prompt(_calibration_packet())
 
-    assert "decision_brief_skeleton" in prompt
-    assert "decision_answer_classification" in prompt
-    assert "source_weighted_answer_frame" in prompt
-    assert "evidence_weighted_argument_spine" in prompt
+    assert "answer_frame" in prompt
+    assert "source_weighted_answer_frame" not in prompt
+    assert "argument_spine" in prompt
     assert '"question_options": [' in prompt
     assert '"harmful"' in prompt
     assert '"neutral"' in prompt
     assert '"beneficial"' in prompt
     assert "bounded_neutral_or_no_clear_harm" in prompt
-    assert "scope_boundaries" in prompt
-    assert "counterweight_dispositions" in prompt
-    assert "source_weight_notes" in prompt
+    assert "limiting_evidence" in prompt
+    assert "section_retention_requirements" in prompt
     assert '"source_id": "boundary_source"' in prompt
     assert "Boundary Source" not in prompt
     assert "source_labels" not in prompt
@@ -147,7 +154,7 @@ def test_synthesis_prompt_projects_internal_language_for_model_context() -> None
 
     assert "This required point changes the answer." in prompt
     assert "This must-write card changes the decision read." not in prompt
-    assert "counterweight_dispositions" in prompt
+    assert "limiting_evidence" in prompt
     assert '"source_id": "support_study"' in prompt
 
 

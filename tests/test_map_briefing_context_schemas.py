@@ -564,6 +564,30 @@ The current map supports a bounded read over the provided documents, with limite
     assert evaluation["status"] == "pass"
 
 
+def test_memo_coherence_ignores_repeated_markdown_citation_fragments() -> None:
+    memo = """## Decision Brief
+
+**Decision question:** Should the decision change?
+
+The direct outcome evidence supports a bounded yes [Outcome 2025](CITATION_TRACE.md#outcome-2025).
+
+The practical implication is to move, while tracking implementation risk [Outcome 2025](CITATION_TRACE.md#outcome-2025).
+
+## Sources
+
+* [Outcome 2025](https://example.test/outcome)
+"""
+
+    report = build_memo_coherence_report(
+        memo_markdown=memo,
+        decision_question="Should the decision change?",
+        scaffold={"source_display_names": {"s1": "Outcome 2025"}},
+    )
+
+    assert report["status"] == "pass"
+    assert not any(issue["kind"] == "repetition" for issue in report["issues"])
+
+
 def test_stage_value_report_surfaces_weak_retention_and_stage_signals() -> None:
     report = build_stage_value_report(
         scaffold={

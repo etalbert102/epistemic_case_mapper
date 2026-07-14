@@ -531,9 +531,12 @@ def test_decision_writer_packet_prompt_exposes_adaptive_retention_cards() -> Non
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert "canonical_decision_writer_packet_v1" in prompt
-    assert "decision_brief_skeleton" in prompt
-    assert "mandatory_retention_checklist" in prompt
-    assert "counterweight_dispositions" in prompt
+    assert "reader_synthesis_packet_v1" in prompt
+    assert "answer_frame" in prompt
+    assert "must_include_points" in prompt
+    assert "limiting_evidence" in prompt
+    assert "mandatory_retention_checklist" not in prompt
+    assert "counterweight_dispositions" not in prompt
     assert "reader_brief_plan" not in prompt
     assert "decision_interpretation_plan" not in prompt
     assert "mandatory_evidence_ledger" not in prompt

@@ -17,11 +17,12 @@ def test_synthesis_prompt_uses_canonical_packet_not_legacy_context_surfaces() ->
 
     assert "canonical decision writer packet" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
-    assert "decision_brief_skeleton" in prompt
-    assert "source_weight_judgments" in prompt
-    assert "evidence_weighted_argument_spine" in prompt
-    assert "counterweight_dispositions" in prompt
-    assert "mandatory_retention_checklist" in prompt
+    assert "reader_synthesis_packet_v1" in prompt
+    assert "answer_frame" in prompt
+    assert "source_weighting" in prompt
+    assert "argument_spine" in prompt
+    assert "limiting_evidence" in prompt
+    assert "mandatory_retention_checklist" not in prompt
     assert "writer_model_context_v1" not in prompt
     assert "reader_brief_plan" not in prompt
     assert "decision_interpretation_plan" not in prompt
@@ -61,7 +62,9 @@ def test_warning_evidence_routes_through_canonical_prompt() -> None:
     assert packet["memo_warning_packet"]["warnings"][0]["source_labels"] == ["Equity Review"]
     assert "Option A shifted flood risk toward downstream neighborhoods" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
-    assert "mandatory_retention_checklist" in prompt
+    assert "must_include_points" in prompt
+    assert "section_retention_requirements" in prompt
+    assert "mandatory_retention_checklist" not in prompt
     assert "adaptive_memo_outline" not in prompt
     assert "reader_brief_plan" not in prompt
     assert "decision_interpretation_plan" not in prompt

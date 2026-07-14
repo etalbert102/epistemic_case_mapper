@@ -19,6 +19,7 @@ def build_evidence_weighted_argument_spine(
     counterweights: list[dict[str, Any]],
     scope_boundaries: list[dict[str, Any]],
     source_weight_judgments: list[dict[str, Any]],
+    mandatory_retention_checklist: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     steps = [
         _answer_step(skeleton),
@@ -31,7 +32,7 @@ def build_evidence_weighted_argument_spine(
     ]
     steps = [step for step in steps if step]
     steps = [_with_section_owner(step) for step in steps]
-    section_plan = _section_plan(steps)
+    section_plan = _section_plan(steps, mandatory_retention_checklist or [])
     report = build_argument_spine_quality_report(steps, source_weight_judgments)
     return {
         "schema_id": "evidence_weighted_argument_spine_v1",
@@ -108,7 +109,7 @@ def _with_section_owner(step: dict[str, Any]) -> dict[str, Any]:
     return owned
 
 
-def _section_plan(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _section_plan(steps: list[dict[str, Any]], mandatory_retention_checklist: list[dict[str, Any]]) -> list[dict[str, Any]]:
     sections = [
         ("Bottom Line", "State the answer, scope, and confidence without previewing every evidence detail."),
         ("Why This Is the Best Current Read", "Weigh the main answer drivers and calibrators into the affirmative case for the answer."),
@@ -118,6 +119,7 @@ def _section_plan(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for section, writing_job in sections:
         owned_steps = [step for step in steps if step.get("primary_section") == section]
+        obligations = [row for row in mandatory_retention_checklist if _obligation_section(row) == section]
         rows.append(
             _drop_empty(
                 {
@@ -129,10 +131,36 @@ def _section_plan(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         for step in owned_steps
                         for evidence_id in _string_list(step.get("evidence_item_ids"))
                     ),
+                    "owned_mandatory_obligation_ids": [
+                        str(row.get("obligation_id") or row.get("item_id") or "")
+                        for row in obligations
+                        if row.get("obligation_id") or row.get("item_id")
+                    ],
+                    "must_include_points": [
+                        _short_text(row.get("statement") or row.get("claim") or row.get("prose_instruction"), 360)
+                        for row in obligations[:8]
+                        if row.get("statement") or row.get("claim") or row.get("prose_instruction")
+                    ],
                 }
             )
         )
     return rows
+
+
+def _obligation_section(row: dict[str, Any]) -> str:
+    role = str(row.get("role") or row.get("obligation_type") or "").lower()
+    text = str(row.get("statement") or row.get("claim") or row.get("prose_instruction") or "").lower()
+    if any(token in role for token in ("counter", "boundary", "scope", "crux", "limit", "risk")):
+        return "What Could Change or Bound the Answer"
+    if any(token in text for token in ("subgroup", "scope", "bound", "risk factor", "exception", "threshold", "high-risk")):
+        return "What Could Change or Bound the Answer"
+    if any(token in role for token in ("practical", "application", "implementation")):
+        return "Practical Implication"
+    if any(token in text for token in ("practical", "application", "implementation", "advice", "recommend", "replacement", "action", "translate")):
+        return "Practical Implication"
+    if "bottom" in role or "answer" in role:
+        return "Bottom Line"
+    return "Why This Is the Best Current Read"
 
 
 def _lane_steps(memo_job: str, rows: list[dict[str, Any]], instruction: str) -> list[dict[str, Any]]:
