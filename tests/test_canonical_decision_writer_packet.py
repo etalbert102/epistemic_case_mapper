@@ -69,6 +69,8 @@ def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> N
     assert all(row.get("source_ids") for row in judgments)
     assert all(row.get("main_use") for row in judgments)
     assert all(row.get("why_weight_this_way") for row in judgments)
+    assert "to drives answer" not in str(judgments)
+    assert "Scaffold assignment" not in str(judgments)
     assert "source_labels" not in str(judgments)
 
 

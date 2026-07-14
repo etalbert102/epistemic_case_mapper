@@ -124,16 +124,34 @@ def _row_main_use(row: dict[str, Any]) -> str:
 def _why_weight_this_way(rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
     directness = str(appraisal.get("decision_directness") or "").strip()
     claims = _dedupe(
-        _short_text(row.get("decision_relevance") or row.get("claim") or row.get("reader_claim"), 180)
+        _short_text(_reader_relevant_reason(row), 180)
         for row in rows
-        if row.get("decision_relevance") or row.get("claim") or row.get("reader_claim")
+        if _reader_relevant_reason(row)
     )
-    parts = [f"Use primarily to {main_use.replace('_', ' ')}"]
+    parts = [f"Use primarily to {_main_use_verb(main_use)}"]
     if directness and directness not in {"unknown", "unspecified"}:
         parts.append(f"because upstream appraisal marks decision directness as {directness}")
     if claims:
         parts.append(f"and links the source to: {claims[0]}")
     return _short_text("; ".join(parts) + ".", 520)
+
+
+def _reader_relevant_reason(row: dict[str, Any]) -> str:
+    relevance = str(row.get("decision_relevance") or "").strip()
+    if relevance and not relevance.lower().startswith("scaffold assignment"):
+        return relevance
+    return str(row.get("claim") or row.get("reader_claim") or "").strip()
+
+
+def _main_use_verb(main_use: str) -> str:
+    return {
+        "drives_answer": "drive the answer",
+        "bounds_answer": "bound the answer",
+        "calibrates_magnitude": "calibrate magnitude or mechanism",
+        "defines_scope": "define the scope",
+        "identifies_crux": "identify what would change the answer",
+        "contextualizes": "contextualize the answer",
+    }.get(main_use, str(main_use or "contextualize").replace("_", " "))
 
 
 def _not_enough_for(rows: list[dict[str, Any]], appraisal: dict[str, Any]) -> list[str]:
