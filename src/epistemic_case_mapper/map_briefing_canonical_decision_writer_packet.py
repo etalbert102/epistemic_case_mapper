@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     project_sources_to_ids_for_model,
     source_id_registry_for_model,
 )
+from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_bundle
 from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
 
@@ -35,6 +36,7 @@ def build_canonical_decision_writer_packet(
         else build_writer_decision_interface(packet)
     )
     source_trail = _list(packet.get("source_trail"))
+    source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
     canonical = {
         "schema_id": "canonical_decision_writer_packet_v1",
         "decision_question": packet.get("decision_question"),
@@ -47,6 +49,8 @@ def build_canonical_decision_writer_packet(
         "counterweight_dispositions": _counterweight_dispositions(interface),
         "scope_boundaries": _scope_boundaries(interface),
         "decision_cruxes": _decision_cruxes(interface),
+        "source_weight_judgments": source_weight_bundle["source_weight_judgments"],
+        "source_weight_judgment_report": source_weight_bundle["source_weight_judgment_report"],
         "source_weight_notes": _source_weight_notes(interface),
         "mandatory_retention_checklist": _mandatory_retention_checklist(packet, interface),
         "citation_registry": _citation_registry(source_trail),
@@ -65,6 +69,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
     weighted_frame = _dict(packet.get("source_weighted_answer_frame"))
     weighted_lanes = _dict(weighted_frame.get("lanes"))
     source_notes = _list(packet.get("source_weight_notes"))
+    source_judgments = _list(packet.get("source_weight_judgments"))
+    source_judgment_report = _dict(packet.get("source_weight_judgment_report"))
     informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
     checklist = _list(packet.get("mandatory_retention_checklist"))
     inventory = _dict(packet.get("organized_evidence_inventory"))
@@ -87,6 +93,10 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("missing_source_weight_notes")
     elif informative_source_notes == 0:
         warnings.append("source_weight_notes_uninformative")
+    if not source_judgments:
+        warnings.append("missing_source_weight_judgments")
+    if source_judgment_report.get("status") == "warning":
+        warnings.append("source_weight_judgments_warning")
     if not checklist:
         warnings.append("missing_mandatory_retention_checklist")
     if not inventory_items:
@@ -109,6 +119,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         "organized_evidence_count": len(inventory_items),
         "counterweight_disposition_count": len(counterweights),
         "source_weight_note_count": len(source_notes),
+        "source_weight_judgment_count": len(source_judgments),
+        "source_weight_judgment_status": source_judgment_report.get("status"),
         "informative_source_weight_note_count": informative_source_notes,
         "mandatory_retention_count": len(checklist),
     }
