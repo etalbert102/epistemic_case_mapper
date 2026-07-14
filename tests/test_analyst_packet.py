@@ -120,6 +120,8 @@ def test_analyst_packet_accounts_for_rows_and_groups_quantity_anchors() -> None:
     assert quality["packet_accounted_row_count"] == 4
     assert "bundle:off_question" in synthesis["evidence_accounting_summary"]["explicitly_downgraded_evidence_item_ids"]
     assert memo_ready["method"] == "analyst_adjudicated_packet_adapter"
+    assert memo_ready["canonical_decision_writer_packet"]["schema_id"] == "canonical_decision_writer_packet_v1"
+    assert memo_ready["canonical_decision_writer_packet_quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
     assert len([item for item in memo_ready["evidence_items"] if item["must_use"]]) == 2
     assert not any(
         "bundle:off_question" in item.get("lineage", {}).get("evidence_item_ids", [])
@@ -574,6 +576,7 @@ def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet(
     _promote_analyst_packet_as_active(scaffold)
 
     assert scaffold["memo_ready_packet"]["method"] == "analyst_adjudicated_packet_adapter"
+    assert scaffold["memo_ready_packet"]["canonical_decision_writer_packet"]["schema_id"] == "canonical_decision_writer_packet_v1"
     assert "legacy_deterministic_memo_ready_packet" not in scaffold
     assert "legacy_deterministic_memo_ready_packet_quality_report" not in scaffold
     assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "memo_ready_packet"

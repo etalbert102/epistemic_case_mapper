@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_analyst_packet_helpers import (
     why_this_read as _why_this_read,
 )
 from epistemic_case_mapper.map_briefing_analyst_schemas import AnalystSynthesisPacket
+from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -335,6 +336,8 @@ def _build_analyst_memo_ready_packet(
     memo_ready["writer_packet"] = writer_packet
     memo_ready["writer_packet_quality_report"] = writer_packet.get("writer_packet_quality_report", {})
     memo_ready["decision_synthesis_contract"] = build_memo_ready_decision_synthesis_contract(memo_ready)
+    memo_ready["canonical_decision_writer_packet"] = canonical = build_canonical_decision_writer_packet(memo_ready)
+    memo_ready["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
     return memo_ready
 
 

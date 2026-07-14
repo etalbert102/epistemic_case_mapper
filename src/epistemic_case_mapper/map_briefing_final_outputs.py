@@ -505,6 +505,7 @@ def _write_final_reader_artifacts(
 ) -> None:
     from epistemic_case_mapper.decision_argument_artifacts import render_decision_traceability_matrix_markdown
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import write_reader_memo_edit_artifacts
+    from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
     from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown
 
     if rewrite_result.get("prompt"):
@@ -544,6 +545,8 @@ def _write_final_reader_artifacts(
     )
     memo_ready_packet = memo_package["scaffold"].get("memo_ready_packet", {})
     canonical_packet = memo_ready_packet.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready_packet, dict) else {}
+    if not canonical_packet and isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
+        canonical_packet = build_canonical_decision_writer_packet(memo_ready_packet)
     write_json(paths.canonical_decision_writer_packet, canonical_packet)
     write_json(paths.canonical_decision_writer_packet_quality, canonical_packet.get("quality_report", {}) if isinstance(canonical_packet, dict) else {})
     write_json(paths.canonical_writer_prompt_context_audit, _canonical_writer_prompt_context_audit(memo_ready_synthesis_result))
