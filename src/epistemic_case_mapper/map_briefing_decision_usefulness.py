@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -11,6 +12,8 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.model_outputs import canonical_json_output
 
 
 ANSWER_SHAPES = {
@@ -204,6 +207,108 @@ def empty_decision_usefulness_packet(reason: str = "") -> dict[str, Any]:
     }
 
 
+def run_decision_usefulness_builder(
+    *,
+    canonical_packet: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    context = build_decision_usefulness_context(canonical_packet)
+    prompt = build_decision_usefulness_prompt(context)
+    if backend.strip() == "prompt":
+        packet = empty_decision_usefulness_packet("prompt_backend")
+        packet["decision_question"] = str(_dict(canonical_packet).get("decision_question") or "")
+        report = _run_report(
+            status="skipped_prompt_backend",
+            packet=packet,
+            prompt=prompt,
+            raw="",
+            issues=["decision usefulness builder skipped because backend=prompt"],
+        )
+        return _bundle(context=context, prompt=prompt, raw="", packet=packet, report=report)
+    try:
+        raw = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            json_mode=True,
+        ).text
+    except RuntimeError as exc:
+        packet = empty_decision_usefulness_packet("backend_error")
+        packet["decision_question"] = str(_dict(canonical_packet).get("decision_question") or "")
+        report = _run_report(status="backend_error", packet=packet, prompt=prompt, raw="", issues=[str(exc)])
+        return _bundle(context=context, prompt=prompt, raw="", packet=packet, report=report)
+    packet, parse_issues = _parse_decision_usefulness_raw(raw, canonical_packet=canonical_packet)
+    report = _run_report(status="parsed" if not parse_issues else "parse_error", packet=packet, prompt=prompt, raw=raw, issues=parse_issues)
+    if parse_issues or _repairable_quality_report(packet.get("quality_report")):
+        repair = _run_decision_usefulness_repair(
+            initial_packet=packet,
+            initial_report=report,
+            context=context,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            canonical_packet=canonical_packet,
+        )
+        if repair.get("accepted"):
+            packet = repair["decision_usefulness_packet"]
+            report = _run_report(
+                status="accepted_after_repair",
+                packet=packet,
+                prompt=prompt,
+                raw=raw,
+                issues=[],
+                repair_report=repair.get("decision_usefulness_repair_report", {}),
+            )
+            return {
+                **_bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report),
+                "decision_usefulness_repair_prompt": repair.get("decision_usefulness_repair_prompt", ""),
+                "decision_usefulness_repair_raw": repair.get("decision_usefulness_repair_raw", ""),
+                "decision_usefulness_repair_report": repair.get("decision_usefulness_repair_report", {}),
+            }
+    return _bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report)
+
+
+def build_decision_usefulness_prompt(context: dict[str, Any]) -> str:
+    return (
+        "You are building a compact decision-support layer for a source-grounded memo.\n"
+        "Do not write the memo. Convert the canonical decision context into explicit decision structure.\n"
+        "Use options only when they are natural for the question; do not force fake alternatives for a factual or classification question.\n"
+        "Focus on what helps a decision-maker act: options or stances, criteria, diagnostic evidence, tradeoffs, crux thresholds, premortem risks, and monitoring triggers.\n"
+        "Use only source_ids and evidence_item_ids from the context. Preserve those IDs exactly.\n"
+        "Return JSON only using this shape:\n"
+        f"{json.dumps(_decision_usefulness_schema(), indent=2, ensure_ascii=False)}\n\n"
+        "Canonical decision context:\n"
+        f"{json.dumps(context, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def build_decision_usefulness_repair_prompt(
+    *,
+    initial_packet: dict[str, Any],
+    initial_report: dict[str, Any],
+    context: dict[str, Any],
+) -> str:
+    repair_packet = {
+        "run_report": {
+            "status": initial_report.get("status"),
+            "issues": initial_report.get("issues", []),
+        },
+        "quality_report": initial_packet.get("quality_report", {}),
+        "initial_packet": initial_packet,
+        "canonical_context": context,
+    }
+    return (
+        "Repair this decision-usefulness JSON so it is valid and source-grounded.\n"
+        "Keep useful rows when possible, but remove or fix rows that cite unknown source_ids, unknown evidence_item_ids, unknown option_ids, or unknown criterion_ids.\n"
+        "Do not invent source_ids or evidence_item_ids. If a row cannot be grounded, remove it or mark the related option as insufficiently_supported.\n"
+        "Return JSON only using the same decision_usefulness_packet_v1 shape.\n\n"
+        f"Repair input:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
 def build_decision_usefulness_context(canonical_packet: dict[str, Any]) -> dict[str, Any]:
     packet = canonical_packet if isinstance(canonical_packet, dict) else {}
     spine = _dict(packet.get("evidence_weighted_argument_spine"))
@@ -365,6 +470,190 @@ def compact_decision_usefulness_for_prompt(packet: dict[str, Any] | None) -> dic
         "premortem": _trim_rows(_list(row.get("premortem")), 4),
         "monitoring_triggers": _trim_rows(_list(row.get("monitoring_triggers")), 5),
     }
+
+
+def _run_decision_usefulness_repair(
+    *,
+    initial_packet: dict[str, Any],
+    initial_report: dict[str, Any],
+    context: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    canonical_packet: dict[str, Any],
+) -> dict[str, Any]:
+    prompt = build_decision_usefulness_repair_prompt(
+        initial_packet=initial_packet,
+        initial_report=initial_report,
+        context=context,
+    )
+    try:
+        raw = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            json_mode=True,
+        ).text
+    except RuntimeError as exc:
+        return {
+            "accepted": False,
+            "decision_usefulness_repair_prompt": prompt,
+            "decision_usefulness_repair_raw": "",
+            "decision_usefulness_repair_report": {
+                "schema_id": "decision_usefulness_repair_report_v1",
+                "status": "backend_error",
+                "issues": [str(exc)],
+            },
+        }
+    packet, parse_issues = _parse_decision_usefulness_raw(raw, canonical_packet=canonical_packet)
+    initial_quality = _dict(initial_packet.get("quality_report"))
+    repaired_quality = _dict(packet.get("quality_report"))
+    accepted = not parse_issues and _quality_better_or_equal(initial_quality, repaired_quality) and not _repairable_quality_report(repaired_quality)
+    return {
+        "accepted": accepted,
+        "decision_usefulness_packet": packet,
+        "decision_usefulness_repair_prompt": prompt,
+        "decision_usefulness_repair_raw": raw,
+        "decision_usefulness_repair_report": {
+            "schema_id": "decision_usefulness_repair_report_v1",
+            "status": "accepted" if accepted else "rejected_kept_initial",
+            "issues": parse_issues if parse_issues else ([] if accepted else ["repair did not remove grounding/reference errors"]),
+            "initial_invalid_reference_count": initial_quality.get("invalid_reference_count", 0),
+            "final_invalid_reference_count": repaired_quality.get("invalid_reference_count", 0),
+            "initial_invalid_matrix_reference_count": initial_quality.get("invalid_matrix_reference_count", 0),
+            "final_invalid_matrix_reference_count": repaired_quality.get("invalid_matrix_reference_count", 0),
+        },
+    }
+
+
+def _parse_decision_usefulness_raw(raw: str, *, canonical_packet: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    try:
+        parsed = json.loads(canonical_json_output(raw))
+    except Exception as exc:
+        packet = empty_decision_usefulness_packet("parse_error")
+        packet["decision_question"] = str(_dict(canonical_packet).get("decision_question") or "")
+        packet["quality_report"] = build_decision_usefulness_quality_report(packet, canonical_packet=canonical_packet)
+        return packet, [str(exc)]
+    return normalize_decision_usefulness_packet(parsed, canonical_packet=canonical_packet), []
+
+
+def _bundle(
+    *,
+    context: dict[str, Any],
+    prompt: str,
+    raw: str,
+    packet: dict[str, Any],
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "decision_usefulness_context": context,
+        "decision_usefulness_prompt": prompt,
+        "decision_usefulness_raw": raw,
+        "decision_usefulness_packet": packet,
+        "decision_usefulness_quality_report": packet.get("quality_report", {}),
+        "decision_usefulness_report": report,
+    }
+
+
+def _run_report(
+    *,
+    status: str,
+    packet: dict[str, Any],
+    prompt: str,
+    raw: str,
+    issues: list[str],
+    repair_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    quality = _dict(packet.get("quality_report"))
+    return {
+        "schema_id": "decision_usefulness_report_v1",
+        "status": status,
+        "method": "model_decision_usefulness_builder",
+        "prompt_chars": len(prompt),
+        "raw_chars": len(raw),
+        "quality_status": quality.get("status", "missing"),
+        "option_count": quality.get("option_count", 0),
+        "criterion_count": quality.get("criterion_count", 0),
+        "diagnostic_evidence_count": quality.get("diagnostic_evidence_count", 0),
+        "tradeoff_count": quality.get("tradeoff_count", 0),
+        "crux_threshold_count": quality.get("crux_threshold_count", 0),
+        "monitoring_trigger_count": quality.get("monitoring_trigger_count", 0),
+        "invalid_reference_count": quality.get("invalid_reference_count", 0),
+        "invalid_matrix_reference_count": quality.get("invalid_matrix_reference_count", 0),
+        "issues": issues,
+        "repair_report": repair_report or {},
+    }
+
+
+def _decision_usefulness_schema() -> dict[str, Any]:
+    return {
+        "schema_id": "decision_usefulness_packet_v1",
+        "decision_question": "string",
+        "answer_shape": "single_stance|multi_option|threshold|classification|insufficient_information",
+        "recommended_stance": {
+            "stance": "string",
+            "confidence": "string",
+            "scope": "string",
+            "why_this_stance": "string",
+            "source_ids": ["source_id"],
+            "evidence_item_ids": ["evidence_item_id"],
+        },
+        "decision_options": [
+            {
+                "option_id": "option_001",
+                "label": "string",
+                "description": "string",
+                "status": "live|dominated|insufficiently_supported|context_only",
+                "source_ids": ["source_id"],
+                "evidence_item_ids": ["evidence_item_id"],
+            }
+        ],
+        "decision_criteria": [
+            {
+                "criterion_id": "criterion_001",
+                "label": "string",
+                "why_it_matters": "string",
+                "criterion_type": "benefit|harm|certainty|scope|feasibility|cost|values|equity|implementation|other",
+                "source_ids": ["source_id"],
+                "evidence_item_ids": ["evidence_item_id"],
+            }
+        ],
+        "option_criteria_matrix": [
+            {
+                "option_id": "option_001",
+                "criterion_id": "criterion_001",
+                "assessment": "favors|weakens|mixed|uncertain|not_applicable",
+                "rationale": "string",
+                "source_ids": ["source_id"],
+                "evidence_item_ids": ["evidence_item_id"],
+            }
+        ],
+        "diagnostic_evidence": [
+            {
+                "evidence_item_ids": ["evidence_item_id"],
+                "source_ids": ["source_id"],
+                "distinguishes": ["option_001", "option_002"],
+                "diagnosticity": "high|medium|low",
+                "why_diagnostic": "string",
+            }
+        ],
+        "tradeoffs": [{"tradeoff": "string", "choose_a_if": "string", "choose_b_if": "string", "source_ids": ["source_id"], "evidence_item_ids": ["evidence_item_id"]}],
+        "cruxes_and_thresholds": [{"crux": "string", "current_read": "string", "would_change_if": "string", "threshold": "string", "source_ids": ["source_id"], "evidence_item_ids": ["evidence_item_id"]}],
+        "premortem": [{"failure_mode": "string", "why_plausible": "string", "mitigation_or_monitoring": "string", "source_ids": ["source_id"], "evidence_item_ids": ["evidence_item_id"]}],
+        "monitoring_triggers": [{"trigger": "string", "would_update": "string", "priority": "high|medium|low", "source_ids": ["source_id"], "evidence_item_ids": ["evidence_item_id"]}],
+    }
+
+
+def _repairable_quality_report(report: Any) -> bool:
+    row = _dict(report)
+    return bool(row.get("invalid_reference_count") or row.get("invalid_matrix_reference_count"))
+
+
+def _quality_better_or_equal(initial: dict[str, Any], repaired: dict[str, Any]) -> bool:
+    initial_errors = int(initial.get("invalid_reference_count", 0) or 0) + int(initial.get("invalid_matrix_reference_count", 0) or 0)
+    repaired_errors = int(repaired.get("invalid_reference_count", 0) or 0) + int(repaired.get("invalid_matrix_reference_count", 0) or 0)
+    return repaired_errors <= initial_errors
 
 
 def _stance_row(row: dict[str, Any]) -> dict[str, Any]:

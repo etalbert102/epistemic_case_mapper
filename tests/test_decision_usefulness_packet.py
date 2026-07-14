@@ -3,9 +3,11 @@ from __future__ import annotations
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_decision_usefulness import (
     build_decision_usefulness_context,
+    build_decision_usefulness_prompt,
     build_decision_usefulness_quality_report,
     compact_decision_usefulness_for_prompt,
     normalize_decision_usefulness_packet,
+    run_decision_usefulness_builder,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 
@@ -31,6 +33,17 @@ def test_decision_usefulness_context_uses_canonical_packet_without_debug_surface
     assert context["organized_evidence_inventory"]["lanes"]
     assert "parse_report" not in str(context)
     assert "prompt" not in str(context)
+
+
+def test_decision_usefulness_prompt_instructs_model_not_to_force_options() -> None:
+    context = build_decision_usefulness_context(_canonical_packet())
+
+    prompt = build_decision_usefulness_prompt(context)
+
+    assert "decision_usefulness_packet_v1" in prompt
+    assert "do not force fake alternatives" in prompt
+    assert "diagnostic evidence" in prompt
+    assert "Canonical decision context" in prompt
 
 
 def test_decision_usefulness_packet_normalizes_and_validates_references() -> None:
@@ -138,3 +151,111 @@ def test_compact_decision_usefulness_for_prompt_keeps_decision_critical_fields()
     assert compact["recommended_stance"]["stance"] == "Adopt option A conditionally."
     assert compact["decision_options"][0]["label"] == "adopt option A"
     assert compact["tradeoffs"][0]["tradeoff"] == "Protection versus implementation burden."
+
+
+def test_run_decision_usefulness_builder_skips_on_prompt_backend() -> None:
+    canonical = _canonical_packet()
+
+    result = run_decision_usefulness_builder(
+        canonical_packet=canonical,
+        backend="prompt",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["decision_usefulness_report"]["status"] == "skipped_prompt_backend"
+    assert result["decision_usefulness_prompt"]
+    assert result["decision_usefulness_packet"]["answer_shape"] == "insufficient_information"
+
+
+def test_run_decision_usefulness_builder_parses_fake_backend(monkeypatch) -> None:
+    canonical = _canonical_packet()
+    evidence_id = canonical["priority_evidence"][0]["item_id"]
+    source_id = canonical["priority_evidence"][0]["source_ids"][0]
+
+    class FakeResult:
+        text = f"""
+        {{
+          "schema_id": "decision_usefulness_packet_v1",
+          "decision_question": "{canonical['decision_question']}",
+          "answer_shape": "single_stance",
+          "recommended_stance": {{"stance": "Adopt option A conditionally.", "source_ids": ["{source_id}"], "evidence_item_ids": ["{evidence_id}"]}},
+          "decision_options": [{{"option_id": "option_001", "label": "adopt option A", "source_ids": ["{source_id}"], "evidence_item_ids": ["{evidence_id}"]}}],
+          "decision_criteria": [{{"criterion_id": "criterion_001", "label": "flood protection", "criterion_type": "benefit", "evidence_item_ids": ["{evidence_id}"]}}],
+          "option_criteria_matrix": [{{"option_id": "option_001", "criterion_id": "criterion_001", "assessment": "favors", "evidence_item_ids": ["{evidence_id}"]}}],
+          "diagnostic_evidence": [{{"evidence_item_ids": ["{evidence_id}"], "source_ids": ["{source_id}"], "distinguishes": ["option_001"], "diagnosticity": "high", "why_diagnostic": "Distinguishes action from delay."}}],
+          "tradeoffs": [{{"tradeoff": "protection versus implementation risk"}}],
+          "cruxes_and_thresholds": [{{"crux": "whether implementation risk is bounded"}}],
+          "premortem": [{{"failure_mode": "implementation risk dominates"}}],
+          "monitoring_triggers": [{{"trigger": "new implementation failure evidence", "priority": "high"}}]
+        }}
+        """
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_decision_usefulness.run_model_backend", lambda *args, **kwargs: FakeResult())
+
+    result = run_decision_usefulness_builder(
+        canonical_packet=canonical,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["decision_usefulness_report"]["status"] == "parsed"
+    assert result["decision_usefulness_packet"]["recommended_stance"]["stance"] == "Adopt option A conditionally."
+    assert result["decision_usefulness_quality_report"]["status"] == "ready"
+
+
+def test_run_decision_usefulness_builder_repairs_bad_references(monkeypatch) -> None:
+    canonical = _canonical_packet()
+    evidence_id = canonical["priority_evidence"][0]["item_id"]
+    source_id = canonical["priority_evidence"][0]["source_ids"][0]
+    calls = {"count": 0}
+
+    class FakeResult:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    def fake_backend(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return FakeResult(
+                """
+                {
+                  "schema_id": "decision_usefulness_packet_v1",
+                  "decision_options": [{"option_id": "option_001", "label": "adopt", "source_ids": ["missing_source"]}],
+                  "decision_criteria": [{"criterion_id": "criterion_001", "label": "outcomes"}],
+                  "option_criteria_matrix": [{"option_id": "missing_option", "criterion_id": "criterion_001", "evidence_item_ids": ["missing_evidence"]}]
+                }
+                """
+            )
+        return FakeResult(
+            f"""
+            {{
+              "schema_id": "decision_usefulness_packet_v1",
+              "decision_question": "{canonical['decision_question']}",
+              "answer_shape": "single_stance",
+              "recommended_stance": {{"stance": "Adopt option A conditionally.", "source_ids": ["{source_id}"], "evidence_item_ids": ["{evidence_id}"]}},
+              "decision_options": [{{"option_id": "option_001", "label": "adopt", "source_ids": ["{source_id}"], "evidence_item_ids": ["{evidence_id}"]}}],
+              "decision_criteria": [{{"criterion_id": "criterion_001", "label": "outcomes", "evidence_item_ids": ["{evidence_id}"]}}],
+              "option_criteria_matrix": [{{"option_id": "option_001", "criterion_id": "criterion_001", "assessment": "favors", "source_ids": ["{source_id}"], "evidence_item_ids": ["{evidence_id}"]}}],
+              "diagnostic_evidence": [{{"evidence_item_ids": ["{evidence_id}"], "source_ids": ["{source_id}"], "distinguishes": ["option_001"], "diagnosticity": "high", "why_diagnostic": "It distinguishes adoption from delay."}}],
+              "tradeoffs": [{{"tradeoff": "protection versus risk"}}],
+              "cruxes_and_thresholds": [{{"crux": "implementation risk threshold"}}],
+              "monitoring_triggers": [{{"trigger": "new evidence"}}]
+            }}
+            """
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_decision_usefulness.run_model_backend", fake_backend)
+
+    result = run_decision_usefulness_builder(
+        canonical_packet=canonical,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert calls["count"] == 2
+    assert result["decision_usefulness_report"]["status"] == "accepted_after_repair"
+    assert result["decision_usefulness_repair_report"]["status"] == "accepted"
+    assert result["decision_usefulness_quality_report"]["invalid_reference_count"] == 0
