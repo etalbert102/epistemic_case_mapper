@@ -792,7 +792,11 @@ def test_final_reader_outputs_use_memo_ready_packet_path(tmp_path: Path) -> None
     assert paths["citation_trace"].exists()
     assert paths["canonical_decision_writer_packet"].exists()
     assert paths["canonical_decision_writer_packet_quality_report"].exists()
+    assert paths["source_weight_judgment_report"].exists()
+    assert paths["argument_spine_quality_report"].exists()
     assert paths["canonical_writer_prompt_context_audit"].exists()
+    assert json.loads(paths["source_weight_judgment_report"].read_text(encoding="utf-8"))["schema_id"] == "source_weight_judgment_report_v1"
+    assert json.loads(paths["argument_spine_quality_report"].read_text(encoding="utf-8"))["schema_id"] == "argument_spine_quality_report_v1"
     prompt_audit = json.loads(paths["canonical_writer_prompt_context_audit"].read_text(encoding="utf-8"))
     assert prompt_audit["status"] == "pass"
     assert "Inline memo citations link here" in paths["citation_trace"].read_text(encoding="utf-8")

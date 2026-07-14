@@ -11,6 +11,8 @@ class FinalReaderOutputPaths:
     citation_trace: Path
     canonical_decision_writer_packet: Path
     canonical_decision_writer_packet_quality: Path
+    source_weight_judgment_report: Path
+    argument_spine_quality_report: Path
     canonical_writer_prompt_context_audit: Path
     polish_report: Path
     memo_quality: Path
@@ -63,6 +65,8 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         citation_trace=artifacts / "CITATION_TRACE.md",
         canonical_decision_writer_packet=artifacts / "canonical_decision_writer_packet.json",
         canonical_decision_writer_packet_quality=artifacts / "canonical_decision_writer_packet_quality_report.json",
+        source_weight_judgment_report=artifacts / "source_weight_judgment_report.json",
+        argument_spine_quality_report=artifacts / "argument_spine_quality_report.json",
         canonical_writer_prompt_context_audit=artifacts / "canonical_writer_prompt_context_audit.json",
         polish_report=artifacts / "briefing_polish_report.json",
         memo_quality=artifacts / "memo_quality_report.json",

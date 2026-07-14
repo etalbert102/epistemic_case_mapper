@@ -547,8 +547,11 @@ def _write_final_reader_artifacts(
     canonical_packet = memo_ready_packet.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready_packet, dict) else {}
     if not canonical_packet and isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
         canonical_packet = build_canonical_decision_writer_packet(memo_ready_packet)
+    argument_spine = canonical_packet.get("evidence_weighted_argument_spine", {}) if isinstance(canonical_packet, dict) else {}
     write_json(paths.canonical_decision_writer_packet, canonical_packet)
     write_json(paths.canonical_decision_writer_packet_quality, canonical_packet.get("quality_report", {}) if isinstance(canonical_packet, dict) else {})
+    write_json(paths.source_weight_judgment_report, canonical_packet.get("source_weight_judgment_report", {}) if isinstance(canonical_packet, dict) else {})
+    write_json(paths.argument_spine_quality_report, argument_spine.get("quality_report", {}) if isinstance(argument_spine, dict) else {})
     write_json(paths.canonical_writer_prompt_context_audit, _canonical_writer_prompt_context_audit(memo_ready_synthesis_result))
     write_json(paths.final_traceability, diagnostics["traceability_matrix"])
     write_markdown(paths.final_traceability_markdown, render_decision_traceability_matrix_markdown(diagnostics["traceability_matrix"]))
@@ -604,6 +607,8 @@ def _final_reader_summary_paths(
         "citation_trace": paths.citation_trace,
         "canonical_decision_writer_packet": paths.canonical_decision_writer_packet,
         "canonical_decision_writer_packet_quality_report": paths.canonical_decision_writer_packet_quality,
+        "source_weight_judgment_report": paths.source_weight_judgment_report,
+        "argument_spine_quality_report": paths.argument_spine_quality_report,
         "canonical_writer_prompt_context_audit": paths.canonical_writer_prompt_context_audit,
         "section_rewrite_report": paths.section_rewrite_report,
         "section_synthesis_packets": section_rewrite_result.get("section_packets_path"),
