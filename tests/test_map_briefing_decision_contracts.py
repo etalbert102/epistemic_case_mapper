@@ -250,8 +250,13 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     )
     fake_model = tmp_path / "fake_briefing_model.py"
     fake_model.write_text(
-        "import json, sys\n"
+        "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
+        "if 'You are writing one section of a source-grounded decision memo' in prompt:\n"
+        "    match = re.search(r'exactly: ## (.+)', prompt)\n"
+        "    heading = match.group(1).strip() if match else 'Why This Is the Best Current Read'\n"
+        "    print(f'## {heading}\\n\\n**Confidence:** medium\\n\\nThe case turns on whether priors or likelihood updates explain the disagreement. [flf_covid_case_brief]')\n"
+        "    raise SystemExit\n"
         "if 'You are a senior decision analyst' in prompt:\n"
         "    print('## Decision Brief\\n\\n**Confidence:** medium\\n\\nThe case turns on whether priors or likelihood updates explain the disagreement. [FLF COVID Case Brief]')\n"
         "    raise SystemExit\n"
@@ -353,8 +358,13 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
     quality_path.write_text(json.dumps({"status": "needs_repair", "score": 50, "issues": []}), encoding="utf-8")
     fake_model = tmp_path / "fake_model.py"
     fake_model.write_text(
-        "import json, sys\n"
+        "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
+        "if 'You are writing one section of a source-grounded decision memo' in prompt:\n"
+        "    match = re.search(r'exactly: ## (.+)', prompt)\n"
+        "    heading = match.group(1).strip() if match else 'Why This Is the Best Current Read'\n"
+        "    print(f'## {heading}\\n\\n**Confidence:** low\\n\\nAlpha matters for the decision. [doc_a]')\n"
+        "    raise SystemExit\n"
         "if 'You are a senior decision analyst' in prompt:\n"
         "    print('## Decision Brief\\n\\n**Confidence:** low\\n\\nAlpha matters for the decision. [doc_a]')\n"
         "    raise SystemExit\n"
@@ -405,7 +415,7 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     decision_question = "Should this demo decision rely on Alpha or Gamma?"
     fake_model = tmp_path / "fake_staged_brief_model.py"
     fake_model.write_text(
-        "import json, sys\n"
+        "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
         f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
         "    if 'Source ID: demo_case_doc_a' in prompt:\n"
@@ -420,6 +430,11 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
         "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'Gamma changes whether Alpha should guide the decision.', 'crux_candidates': ['Gamma is a crux.'], 'similar_but_not_identical': []}\n"
         "elif 'Deterministic briefing scaffold:' in prompt:\n"
         "    payload = {'decision_brief': 'Demo Case Doc A and Demo Case Doc B jointly make Gamma the crux.', 'confidence': 'high', 'decision_implications': ['Treat Gamma as the first review target.'], 'top_cruxes': [], 'evidence_roles': {'main_support': [], 'conflicting_evidence': [], 'scope_limits': [], 'method_limits': []}, 'stress_caveats': [], 'audit_trail': []}\n"
+        "elif 'You are writing one section of a source-grounded decision memo' in prompt:\n"
+        "    match = re.search(r'exactly: ## (.+)', prompt)\n"
+        "    heading = match.group(1).strip() if match else 'Why This Is the Best Current Read'\n"
+        "    print(f'## {heading}\\n\\nDemo Case Doc A and Doc B make Gamma the crux. Alpha supports the decision. [demo_case_doc_a, demo_case_doc_b]')\n"
+        "    raise SystemExit\n"
         "elif 'You are a senior decision analyst' in prompt:\n"
         "    print('## Decision Brief\\n\\nDemo Case Doc A and Doc B make Gamma the crux. Alpha supports the decision. [Doc A] [Doc B]')\n"
         "    raise SystemExit\n"
@@ -461,7 +476,7 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     assert cli.main() == 0
     assert (tmp_path / "generated_map.json").exists()
     rendered = (tmp_path / "brief/BRIEFING.md").read_text(encoding="utf-8")
-    assert "## Decision Brief" in rendered
+    assert "# Decision Memo" in rendered
     assert "Doc A" in rendered
     assert "Alpha supports the decision" in rendered
     assert "demo_case_doc_a" not in rendered

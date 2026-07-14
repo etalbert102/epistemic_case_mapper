@@ -13,6 +13,8 @@ from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
 )
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -48,6 +50,35 @@ def run_memo_ready_packet_synthesis(
     }
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
+    section_plan = build_memo_ready_section_synthesis_plan(memo_ready_packet)
+    if section_plan.get("status") == "ready" and _list(section_plan.get("sections")):
+        return _run_parallel_memo_ready_section_synthesis(
+            memo_ready_packet,
+            section_plan=section_plan,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            whole_prompt=prompt,
+        )
+    return _run_whole_memo_ready_packet_synthesis(
+        memo_ready_packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        prompt=prompt,
+        report=report,
+    )
+
+
+def _run_whole_memo_ready_packet_synthesis(
+    memo_ready_packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    prompt: str,
+    report: dict[str, Any],
+) -> dict[str, Any]:
     try:
         result = run_model_backend(
             prompt,
@@ -108,6 +139,70 @@ def run_memo_ready_packet_synthesis(
         }
     )
     return {"memo": candidate, "prompt": prompt, "raw": raw, "report": report}
+
+
+def _run_parallel_memo_ready_section_synthesis(
+    memo_ready_packet: dict[str, Any],
+    *,
+    section_plan: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    whole_prompt: str,
+) -> dict[str, Any]:
+    generated = run_parallel_memo_ready_section_generation(
+        section_plan,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        whole_prompt=whole_prompt,
+        run_model=run_model_backend,
+    )
+    section_report = _dict(generated.get("report"))
+    base_report = {
+        **section_report,
+        "schema_id": "memo_ready_packet_synthesis_report_v1",
+        "section_generation_schema_id": section_report.get("schema_id"),
+        "contract_mode": "strict_writer_packet" if _strict_packet_contract(memo_ready_packet) else "standard_packet",
+        "live_enrichment_required": True,
+        "used_default_path": False,
+    }
+    if not generated.get("memo"):
+        return {"memo": "", "prompt": generated.get("prompt", ""), "raw": generated.get("raw", ""), "report": base_report}
+
+    report = dict(base_report)
+    candidate = str(generated["memo"])
+    retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_repair = run_decision_usefulness_memo_repair(
+        candidate,
+        memo_ready_packet,
+        decision_usefulness_retention,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if decision_usefulness_repair.get("report", {}).get("applied"):
+        candidate = decision_usefulness_repair["memo"]
+        retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+        decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    strict_contract = _strict_packet_contract(memo_ready_packet)
+    accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
+    report.update(
+        {
+            "status": "accepted" if accepted else "accepted_with_retention_warnings",
+            "accepted": accepted if strict_contract else True,
+            "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
+            "retention_status": retention.get("status"),
+            "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
+            "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
+            "warning_resolution_report": retention.get("warning_resolution_report", {}),
+            "decision_usefulness_retention_report": decision_usefulness_retention,
+            "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
+            "issues": [] if accepted else ["synthesis has packet-retention warnings"],
+        }
+    )
+    return {"memo": candidate, "prompt": generated.get("prompt", ""), "raw": generated.get("raw", ""), "report": report}
 
 
 def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:

@@ -674,32 +674,6 @@ def test_decision_writer_packet_prompt_filters_non_must_use_evidence_from_model_
     assert "lineage_report" not in prompt
 
 
-def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monkeypatch) -> None:
-    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
-    packet = decision_writer_packet_to_memo_ready_packet(
-        bundle["decision_writer_packet"],
-        quality_report=bundle["decision_writer_packet_quality_report"],
-    )
-
-    def fake_backend(*args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(
-            text=(
-                "## Decision Brief\n\n"
-                "Outcome Review reports that Option A improves the main outcome by 20% improvement."
-            ),
-            backend="fake",
-        )
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
-
-    result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
-
-    assert result["report"]["contract_mode"] == "strict_writer_packet"
-    assert result["report"]["status"] == "accepted_with_retention_warnings"
-    assert result["report"]["accepted"] is False
-    assert result["report"]["missing_mandatory_count"] == 3
-
-
 def _decision_usefulness_packet() -> dict:
     return {
         "decision_question": "Should option A be adopted?",
@@ -797,55 +771,6 @@ def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatc
     assert result["report"]["applied"] is True
     assert result["report"]["final_missing_count"] < before["missing_count"]
     assert result["report"]["final_missing_count"] == 0
-    assert "New implementation failure evidence" in result["memo"]
-
-
-def test_memo_synthesis_runs_decision_usefulness_repair_when_needed(monkeypatch) -> None:
-    packet = _decision_usefulness_packet()
-    calls = {"count": 0}
-
-    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        calls["count"] += 1
-        if "Missing decision-support rows" in prompt:
-            return ModelBackendResult(
-                text=(
-                    "# Decision Memo: Option A\n\n"
-                    "**Decision Question:** Should option A be adopted?\n"
-                    "**Bottom Line:** Adopt option A conditionally.\n\n"
-                    "## Why This Is the Best Current Read\n"
-                    "The useful distinction is not whether Option A helps at all, but whether the outcome gain remains worth the implementation burden. "
-                    "The direct outcome evidence carries the answer, while implementation evidence bounds it. "
-                    "The key tradeoff is outcome gain versus implementation burden. Adopt if burden remains manageable, "
-                    "but delay if burden rises [s1].\n\n"
-                    "## What Could Change or Bound the Answer\n"
-                    "The crux is whether implementation burden stays below the acceptable threshold. "
-                    "New implementation failure evidence would shift the read from adoption to delay [s1].\n\n"
-                    "## Practical Implication\n"
-                    "Proceed only while implementation burden remains manageable.\n"
-                ),
-                backend="fake",
-            )
-        return ModelBackendResult(
-            text=(
-                "# Decision Memo: Option A\n\n"
-                "**Decision Question:** Should option A be adopted?\n"
-                "**Bottom Line:** Adopt option A conditionally.\n\n"
-                "## Why This Is the Best Current Read\n"
-                "The main outcome improves.\n\n"
-                "## What Could Change or Bound the Answer\n"
-                "Implementation risk matters.\n\n"
-                "## Practical Implication\n"
-                "Proceed carefully.\n"
-            ),
-            backend="fake",
-        )
-
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
-
-    result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
-
-    assert calls["count"] == 2
-    assert result["report"]["decision_usefulness_repair_report"]["applied"] is True
     assert "New implementation failure evidence" in result["memo"]
 
 

@@ -330,6 +330,7 @@ def _memo_ready_synthesis_failed(synthesis_result: dict[str, Any]) -> bool:
     return status in {
         "backend_error_live_enrichment_failed",
         "empty_or_unparseable_live_enrichment_failed",
+        "section_synthesis_failed",
     }
 
 

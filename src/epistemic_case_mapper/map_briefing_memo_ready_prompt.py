@@ -21,6 +21,70 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     )
 
 
+def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
+    """Build section-local synthesis prompts from the canonical writer handoff."""
+
+    if not isinstance(memo_ready_packet, dict) or not memo_ready_packet.get("evidence_items"):
+        return {
+            "schema_id": "memo_ready_section_synthesis_plan_v1",
+            "status": "unavailable",
+            "sections": [],
+            "issues": ["memo_ready_packet.evidence_items unavailable"],
+        }
+    canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
+    canonical = _with_top_level_guidance(canonical, memo_ready_packet)
+    reader_packet = _reader_synthesis_packet(canonical)
+    section_packets = _section_synthesis_packets(reader_packet)
+    known_source_ids = _known_source_ids(memo_ready_packet, canonical, reader_packet)
+    return {
+        "schema_id": "memo_ready_section_synthesis_plan_v1",
+        "status": "ready" if section_packets else "unavailable",
+        "reader_packet_schema_id": reader_packet.get("schema_id"),
+        "decision_question": reader_packet.get("decision_question"),
+        "title": _short_decision_title(reader_packet.get("decision_question")),
+        "bottom_line": _bottom_line_from_reader_packet(reader_packet),
+        "known_source_ids": known_source_ids,
+        "sections": [
+            {
+                "section_id": packet["section_id"],
+                "heading": packet["heading"],
+                "prompt": build_memo_ready_section_synthesis_prompt(packet, known_source_ids=known_source_ids),
+                "packet": packet,
+            }
+            for packet in section_packets
+        ],
+        "issues": [] if section_packets else ["canonical writer packet has no section writing packets"],
+    }
+
+
+def build_memo_ready_section_synthesis_prompt(
+    section_packet: dict[str, Any],
+    *,
+    known_source_ids: list[str],
+) -> str:
+    heading = str(section_packet.get("heading") or "").strip()
+    return (
+        "You are writing one section of a source-grounded decision memo from a section-local packet.\n"
+        "Use the packet as the sole semantic handoff for this section.\n\n"
+        "Output rules:\n"
+        f"- Return Markdown for this section only, starting with exactly: ## {heading}\n"
+        "- Use bracketed citations only for source_id values listed in known_source_ids.\n"
+        "- Never cite analyst_item IDs, claim IDs, evidence item IDs, source labels, article titles, or author-year names inside brackets.\n"
+        "- Every bracketed citation must be one or more known source_ids separated by comma-space.\n"
+        "- Keep packet IDs, validation machinery, and audit language out of the prose.\n"
+        "- Write natural expert analyst prose, not a checklist, unless bullets are the clearest form for concrete boundaries.\n"
+        "- Make each paragraph do a distinct reasoning job and avoid repeating earlier-section sentences.\n\n"
+        "Writing priorities:\n"
+        "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
+        "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
+        "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
+        "- Translate source weighting into prose instead of generic labels.\n"
+        "- For practical sections, state the concrete implication for the decision-maker within the packet's scope.\n\n"
+        f"known_source_ids:\n{json.dumps(known_source_ids, indent=2, ensure_ascii=False)}\n\n"
+        f"section_packet:\n{json.dumps(section_packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
 def build_writer_packet_synthesis_prompt(
     writer_packet: dict[str, Any],
     *,
@@ -112,6 +176,116 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         },
         "citation_registry": packet.get("citation_registry"),
     }
+
+
+def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    top_context = _drop_empty(
+        {
+            "decision_question": reader_packet.get("decision_question"),
+            "answer_frame": reader_packet.get("answer_frame"),
+            "decision_usefulness": reader_packet.get("decision_usefulness"),
+            "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
+            "citation_registry": reader_packet.get("citation_registry"),
+        }
+    )
+    packets = []
+    for raw in _list(reader_packet.get("section_writing_packets")):
+        if not isinstance(raw, dict):
+            continue
+        source_section = str(raw.get("section") or "").strip()
+        section_id = _section_id_from_heading(source_section)
+        heading = _canonical_section_heading(source_section)
+        if section_id == "bottom_line" or not heading:
+            continue
+        packets.append(
+            _drop_empty(
+                {
+                    "schema_id": "memo_ready_section_writer_packet_v1",
+                    "section_id": section_id,
+                    "heading": heading,
+                    "source_section": source_section,
+                    "section_job": raw.get("writing_job"),
+                    "top_context": top_context,
+                    "section_argument_steps": raw.get("argument_steps"),
+                    "required_points": raw.get("required_points"),
+                    "section_retention_requirements": raw.get("retention_requirements"),
+                    "evidence_context": raw.get("evidence_context"),
+                    "source_weighting": raw.get("source_weighting"),
+                }
+            )
+        )
+    return packets
+
+
+def _canonical_section_heading(heading: str) -> str:
+    section_id = _section_id_from_heading(heading)
+    return {
+        "answer_evidence": "Why This Is the Best Current Read",
+        "counterweights": "What Could Change or Bound the Answer",
+        "source_weighting": "How to Weight the Evidence",
+        "practical_implication": "Practical Implication",
+    }.get(section_id, "")
+
+
+def _section_id_from_heading(heading: str) -> str:
+    text = str(heading or "").strip().lower()
+    if not text:
+        return ""
+    if "bottom" in text or text in {"decision brief", "current read"}:
+        return "bottom_line"
+    if "practical" in text or "use this read" in text:
+        return "practical_implication"
+    if "weight" in text and "evidence" in text:
+        return "source_weighting"
+    if any(token in text for token in ("change", "bound", "limit", "counter", "crux")):
+        return "counterweights"
+    if "evidence carrying" in text or "best current" in text or "why this" in text:
+        return "answer_evidence"
+    return "answer_evidence"
+
+
+def _known_source_ids(
+    memo_ready_packet: dict[str, Any],
+    canonical_packet: dict[str, Any],
+    reader_packet: dict[str, Any],
+) -> list[str]:
+    ids = []
+    for source in _list(memo_ready_packet.get("source_trail")):
+        if isinstance(source, dict):
+            ids.append(str(source.get("source_id") or "").strip())
+    registry = _dict(reader_packet.get("citation_registry")) or _dict(canonical_packet.get("citation_registry"))
+    for value in registry.values():
+        if isinstance(value, dict):
+            ids.append(str(value.get("source_id") or value.get("id") or "").strip())
+        else:
+            ids.append(str(value or "").strip())
+    return _dedupe([source_id for source_id in ids if source_id])
+
+
+def _bottom_line_from_reader_packet(reader_packet: dict[str, Any]) -> str:
+    answer_frame = _dict(reader_packet.get("answer_frame"))
+    skeleton = _dict(answer_frame.get("skeleton"))
+    classification = _dict(answer_frame.get("classification"))
+    for value in (
+        skeleton.get("direct_answer"),
+        skeleton.get("bottom_line"),
+        classification.get("current_answer_state"),
+        classification.get("recommended_stance"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _short_decision_title(question: Any) -> str:
+    text = str(question or "").strip().rstrip("?")
+    if not text:
+        return "Decision Memo"
+    text = " ".join(text.split())
+    if len(text) <= 72:
+        return text
+    return text[:69].rstrip(" ,;:") + "..."
 
 
 def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
