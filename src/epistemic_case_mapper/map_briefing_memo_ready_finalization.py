@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_read
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
     build_memo_polish_diagnostics,
+    high_confidence_unsupported_additions,
     prose_quality_diagnostics,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -562,19 +563,121 @@ def run_memo_ready_final_polish(
     after = build_memo_ready_packet_retention_report(candidate, packet)
     structure_issues = markdown_structure_issues(candidate, original=memo)
     diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
-    accepted = _retention_not_worse(before, after) and not structure_issues
+    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    repair = (
+        run_memo_ready_final_polish_drift_repair(
+            original_memo=memo,
+            polished_memo=candidate,
+            packet=packet,
+            polish_diagnostics=diagnostics,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+        if unsupported_additions
+        else {"memo": candidate, "prompt": "", "raw": "", "report": {"status": "not_needed", "accepted": False}}
+    )
+    if repair.get("report", {}).get("accepted"):
+        candidate = str(repair.get("memo") or candidate)
+        after = build_memo_ready_packet_retention_report(candidate, packet)
+        structure_issues = markdown_structure_issues(candidate, original=memo)
+        diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
+        unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    accepted = _retention_not_worse(before, after) and not structure_issues and not unsupported_additions
+    status = "accepted" if accepted else "rejected_kept_original"
+    if unsupported_additions:
+        status = "rejected_unsupported_additions_kept_original"
     report.update(
         {
-            "status": "accepted" if accepted else "rejected_kept_original",
+            "status": status,
             "accepted": accepted,
             "before_missing_mandatory_count": before.get("missing_mandatory_count", 0),
             "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
             "structure_issues": structure_issues,
             "polish_diagnostics": diagnostics,
-            "issues": [] if accepted else ["final polish regressed retention or damaged markdown"],
+            "drift_repair_report": repair.get("report", {}),
+            "issues": [] if accepted else [_final_polish_issue(unsupported_additions, structure_issues=structure_issues)],
         }
     )
     return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def run_memo_ready_final_polish_drift_repair(
+    *,
+    original_memo: str,
+    polished_memo: str,
+    packet: dict[str, Any],
+    polish_diagnostics: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    warnings = high_confidence_unsupported_additions(polish_diagnostics)
+    report = {
+        "schema_id": "memo_ready_final_polish_drift_repair_report_v1",
+        "status": "not_needed" if not warnings else "not_run",
+        "accepted": False,
+        "initial_high_confidence_warning_count": len(warnings),
+        "final_high_confidence_warning_count": len(warnings),
+        "issues": [],
+    }
+    if not warnings:
+        return {"memo": polished_memo, "prompt": "", "raw": "", "report": report}
+    prompt = build_memo_ready_final_polish_drift_repair_prompt(
+        original_memo=original_memo,
+        polished_memo=polished_memo,
+        polish_diagnostics=polish_diagnostics,
+    )
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_polish_candidate_for_rejection", "issues": [str(exc)]})
+        return {"memo": polished_memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = normalize_memo_ready_polish_text(repair_markdown_structure(_extract_markdown(raw)))
+    if not candidate:
+        report.update({"status": "empty_response_kept_polish_candidate_for_rejection", "issues": ["repair returned no markdown"]})
+        return {"memo": polished_memo, "prompt": prompt, "raw": raw, "report": report}
+    before_retention = build_memo_ready_packet_retention_report(original_memo, packet)
+    after_retention = build_memo_ready_packet_retention_report(candidate, packet)
+    after_diagnostics = build_memo_polish_diagnostics(original_memo, candidate, packet)
+    after_warnings = high_confidence_unsupported_additions(after_diagnostics)
+    structure_issues = markdown_structure_issues(candidate, original=original_memo)
+    accepted = _retention_not_worse(before_retention, after_retention) and not after_warnings and not structure_issues
+    report.update(
+        {
+            "status": "accepted" if accepted else "rejected_kept_polish_candidate_for_rejection",
+            "accepted": accepted,
+            "final_high_confidence_warning_count": len(after_warnings),
+            "structure_issues": structure_issues,
+            "final_polish_diagnostics": after_diagnostics,
+            "issues": [] if accepted else ["drift repair did not remove unsupported additions without retention or markdown regression"],
+        }
+    )
+    return {"memo": candidate if accepted else polished_memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def build_memo_ready_final_polish_drift_repair_prompt(
+    *,
+    original_memo: str,
+    polished_memo: str,
+    polish_diagnostics: dict[str, Any],
+) -> str:
+    repair_packet = {
+        "unsupported_addition_warnings": high_confidence_unsupported_additions(polish_diagnostics),
+    }
+    return (
+        "Repair a polished decision memo by removing unsupported additions while preserving the improved prose.\n"
+        "Use the original memo as the source of permissible concepts and the polished memo as the preferred prose style.\n\n"
+        "Rules:\n"
+        "- Return the full revised memo in Markdown.\n"
+        "- Remove or rewrite the warned sentences so they no longer introduce new comparisons, substitutes, populations, recommendations, or examples.\n"
+        "- Preserve source IDs, quantities, scope limits, update triggers, headings, and the bottom-line stance.\n"
+        "- Do not add new evidence or sources.\n\n"
+        f"Unsupported-addition warnings:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
+        f"Original memo:\n{original_memo.strip()}\n\n"
+        f"Polished memo to repair:\n{polished_memo.strip()}\n"
+    )
 
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
@@ -1453,6 +1556,14 @@ def _repair_issue(
     if strict_contract and improved and not complete:
         return "repair improved retention but did not satisfy all strict writer-packet obligations"
     return "repair did not improve packet retention without markdown damage"
+
+
+def _final_polish_issue(unsupported_additions: list[dict[str, Any]], *, structure_issues: list[str]) -> str:
+    if unsupported_additions:
+        return "final polish introduced unsupported additions"
+    if structure_issues:
+        return "final polish damaged markdown structure"
+    return "final polish regressed retention or damaged markdown"
 
 
 def _retention_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:
