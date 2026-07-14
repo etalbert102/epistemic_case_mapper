@@ -561,6 +561,8 @@ def run_memo_ready_final_polish(
         report.update({"status": "empty_response_kept_original", "issues": ["final polish returned no markdown"]})
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     after = build_memo_ready_packet_retention_report(candidate, packet)
+    before_decision_usefulness = build_decision_usefulness_retention_report(memo, packet)
+    after_decision_usefulness = build_decision_usefulness_retention_report(candidate, packet)
     structure_issues = markdown_structure_issues(candidate, original=memo)
     diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
     unsupported_additions = high_confidence_unsupported_additions(diagnostics)
@@ -580,6 +582,7 @@ def run_memo_ready_final_polish(
     if repair.get("report", {}).get("accepted"):
         candidate = str(repair.get("memo") or candidate)
         after = build_memo_ready_packet_retention_report(candidate, packet)
+        after_decision_usefulness = build_decision_usefulness_retention_report(candidate, packet)
         structure_issues = markdown_structure_issues(candidate, original=memo)
         diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
         unsupported_additions = high_confidence_unsupported_additions(diagnostics)
@@ -595,6 +598,15 @@ def run_memo_ready_final_polish(
             "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
             "structure_issues": structure_issues,
             "polish_diagnostics": diagnostics,
+            "polish_comparison": _final_polish_comparison(
+                before_memo=memo,
+                after_memo=candidate,
+                before_retention=before,
+                after_retention=after,
+                before_decision_usefulness=before_decision_usefulness,
+                after_decision_usefulness=after_decision_usefulness,
+                diagnostics=diagnostics,
+            ),
             "drift_repair_report": repair.get("report", {}),
             "issues": [] if accepted else [_final_polish_issue(unsupported_additions, structure_issues=structure_issues)],
         }
@@ -678,6 +690,36 @@ def build_memo_ready_final_polish_drift_repair_prompt(
         f"Original memo:\n{original_memo.strip()}\n\n"
         f"Polished memo to repair:\n{polished_memo.strip()}\n"
     )
+
+
+def _final_polish_comparison(
+    *,
+    before_memo: str,
+    after_memo: str,
+    before_retention: dict[str, Any],
+    after_retention: dict[str, Any],
+    before_decision_usefulness: dict[str, Any],
+    after_decision_usefulness: dict[str, Any],
+    diagnostics: dict[str, Any],
+) -> dict[str, Any]:
+    before_words = len(re.findall(r"\b\w+\b", before_memo))
+    after_words = len(re.findall(r"\b\w+\b", after_memo))
+    prose = _dict(diagnostics.get("prose_quality"))
+    return {
+        "schema_id": "memo_ready_final_polish_comparison_v1",
+        "before_word_count": before_words,
+        "after_word_count": after_words,
+        "word_count_delta": after_words - before_words,
+        "before_missing_mandatory_count": before_retention.get("missing_mandatory_count", 0),
+        "after_missing_mandatory_count": after_retention.get("missing_mandatory_count", 0),
+        "before_missing_quantity_count": before_retention.get("missing_quantity_count", 0),
+        "after_missing_quantity_count": after_retention.get("missing_quantity_count", 0),
+        "before_decision_usefulness_missing_count": before_decision_usefulness.get("missing_count", 0),
+        "after_decision_usefulness_missing_count": after_decision_usefulness.get("missing_count", 0),
+        "unsupported_addition_count": diagnostics.get("unsupported_addition_count", 0),
+        "prose_warning_count": prose.get("warning_count", 0),
+        "prose_warnings": _list(prose.get("warnings")),
+    }
 
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:

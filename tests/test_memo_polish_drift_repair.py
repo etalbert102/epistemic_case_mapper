@@ -50,6 +50,9 @@ def test_final_polish_accepts_targeted_repair_that_removes_unsupported_addition(
     assert calls["count"] == 2
     assert result["report"]["status"] == "accepted"
     assert result["report"]["drift_repair_report"]["status"] == "accepted"
+    assert result["report"]["polish_comparison"]["schema_id"] == "memo_ready_final_polish_comparison_v1"
+    assert result["report"]["polish_comparison"]["after_missing_mandatory_count"] <= result["report"]["polish_comparison"]["before_missing_mandatory_count"]
+    assert result["report"]["polish_comparison"]["unsupported_addition_count"] == 0
     assert "legacy systems" not in result["memo"]
 
 
