@@ -22,7 +22,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations, required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown, run_memo_ready_presentation_normalization
-from epistemic_case_mapper.map_briefing_memo_ready_polish_anchors import protected_anchor_checklist
+from epistemic_case_mapper.map_briefing_memo_ready_polish_guardrails import build_memo_ready_final_polish_guardrails
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
 from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
@@ -346,30 +346,30 @@ def run_memo_ready_final_polish(
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
     source_trail = _list(packet.get("source_trail"))
-    protected = {
-        "decision_question": packet.get("decision_question"),
-        "protected_anchor_checklist": protected_anchor_checklist(packet),
-    }
-    protected = project_source_text_to_ids_for_model(protected, source_trail)
+    guardrails = build_memo_ready_final_polish_guardrails(packet)
+    guardrails = project_source_text_to_ids_for_model(guardrails, source_trail)
     memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
     return (
         "You are doing a final prose polish on a source-grounded decision memo.\n"
-        "Improve flow, sentence rhythm, and transitions while preserving every protected source-backed anchor.\n"
-        "The protected anchor checklist is a factual constraint for retention, not an outline for the memo.\n\n"
+        "Improve flow, sentence rhythm, paragraph order, and transitions without changing the analysis.\n"
+        "The guardrails below are validation constraints, not memo content or an outline.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
-        "- Preserve protected obligations, quantities, source IDs, caveats, counterweights, and scope boundaries.\n"
-        "- Preserve or naturally integrate protected warning evidence; if it is only a limitation, keep it as a limitation.\n"
-        "- Use facts and sources already present in the memo or protected item list.\n"
-        "- Keep the decision answer direct, then make the supporting reasoning flow across paragraphs.\n"
+        "- Use the memo as the source of prose; use guardrails only to avoid dropping protected content.\n"
+        "- Preserve the decision question, confidence, bottom-line stance, uncertainty, subgroup caveats, counterweights, source IDs, and required quantities.\n"
+        "- Do not add new facts, sources, numbers, populations, recommendations, or causal interpretations.\n"
+        "- Rewrite at paragraph level when the prose is stiff; preserving meaning does not mean preserving wording.\n"
+        "- Do not return a near-identical memo unless the prose is already publication-ready.\n"
+        "- Make the opening answer direct, then make the supporting reasoning flow across paragraphs.\n"
         "- Preserve calibrated confidence: prefer bounded, low-concern, compatible with, not associated with, or does not clearly show over absolute safety, safe limit, proven harmless, or high-confidence unless the evidence explicitly warrants that wording.\n"
-        "- Remove checklist rhythm, repeated sentence openings, and source-label-as-subject patterns when they make the memo stiff.\n"
-        "- Split dense paragraphs when they carry more than one reasoning job; prefer short paragraphs that each answer one reader question.\n"
+        "- Remove checklist rhythm, repeated sentence openings, and source-ID-as-subject patterns when they make the memo stiff.\n"
+        "- Prefer analyst prose over formulaic labels: for example, use 'The strongest support is...' or 'The main caveat is...' rather than 'The primary evidence stems from...' or 'A significant counterweight is...'.\n"
+        "- Shape paragraphs around reader questions: bottom line, why, limits, and practical implication.\n"
         "- Keep citations attached to the claims they support, but avoid citation clutter by placing one source marker at the end of a sentence or clause when several nearby facts come from the same source.\n"
         "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
         "- Fix obvious citation spacing mistakes without changing source IDs.\n"
         "- Make the memo read like decision-ready analysis.\n\n"
-        f"Protected anchor checklist:\n{json.dumps(protected, indent=2, ensure_ascii=False)}\n\n"
+        f"Polish guardrails:\n{json.dumps(guardrails, indent=2, ensure_ascii=False)}\n\n"
         f"Memo:\n{memo_for_model.strip()}\n"
     )
 

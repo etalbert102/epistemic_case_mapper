@@ -701,12 +701,18 @@ def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() 
 
     prompt = build_memo_ready_final_polish_prompt("## Decision Brief\n\nOption A may help.", packet)
 
-    assert "protected anchor checklist is a factual constraint for retention, not an outline" in prompt
+    assert "guardrails below are validation constraints, not memo content or an outline" in prompt
+    assert "Rewrite at paragraph level" in prompt
+    assert "Do not return a near-identical memo" in prompt
     assert "Remove checklist rhythm" in prompt
-    assert "Split dense paragraphs" in prompt
+    assert "Shape paragraphs around reader questions" in prompt
     assert "avoid citation clutter" in prompt
-    assert "Protected anchor checklist" in prompt
-    assert "protected_anchor_checklist" in prompt
+    assert "Polish guardrails" in prompt
+    assert "memo_ready_final_polish_guardrails_v1" in prompt
+    assert "source_ids_that_must_remain_traceable" in prompt
+    assert "quantities_that_must_remain_visible" in prompt
+    assert "scope_or_counterweight_cues_to_preserve" in prompt
+    assert "protected_anchor_checklist" not in prompt
     assert "legacy_mandatory_items" not in prompt
 
 
