@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
+from epistemic_case_mapper.map_briefing_argument_spine import build_evidence_weighted_argument_spine
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -37,17 +38,29 @@ def build_canonical_decision_writer_packet(
     )
     source_trail = _list(packet.get("source_trail"))
     source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
+    skeleton = _decision_brief_skeleton(interface)
+    weighted_frame = _source_weighted_answer_frame(interface)
+    counterweights = _counterweight_dispositions(interface)
+    scope_boundaries = _scope_boundaries(interface)
+    argument_spine = build_evidence_weighted_argument_spine(
+        skeleton=skeleton,
+        source_weighted_frame=weighted_frame,
+        counterweights=counterweights,
+        scope_boundaries=scope_boundaries,
+        source_weight_judgments=source_weight_bundle["source_weight_judgments"],
+    )
     canonical = {
         "schema_id": "canonical_decision_writer_packet_v1",
         "decision_question": packet.get("decision_question"),
-        "decision_brief_skeleton": _decision_brief_skeleton(interface),
+        "decision_brief_skeleton": skeleton,
         "decision_answer_classification": _decision_answer_classification(packet),
         "analyst_reasoning_frame": _analyst_reasoning_frame(packet, interface),
-        "source_weighted_answer_frame": _source_weighted_answer_frame(interface),
+        "source_weighted_answer_frame": weighted_frame,
+        "evidence_weighted_argument_spine": argument_spine,
         "priority_evidence": _priority_evidence(interface),
         "organized_evidence_inventory": _organized_evidence_inventory(packet, interface),
-        "counterweight_dispositions": _counterweight_dispositions(interface),
-        "scope_boundaries": _scope_boundaries(interface),
+        "counterweight_dispositions": counterweights,
+        "scope_boundaries": scope_boundaries,
         "decision_cruxes": _decision_cruxes(interface),
         "source_weight_judgments": source_weight_bundle["source_weight_judgments"],
         "source_weight_judgment_report": source_weight_bundle["source_weight_judgment_report"],
@@ -71,6 +84,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
     source_notes = _list(packet.get("source_weight_notes"))
     source_judgments = _list(packet.get("source_weight_judgments"))
     source_judgment_report = _dict(packet.get("source_weight_judgment_report"))
+    argument_spine = _dict(packet.get("evidence_weighted_argument_spine"))
+    argument_spine_report = _dict(argument_spine.get("quality_report"))
     informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
     checklist = _list(packet.get("mandatory_retention_checklist"))
     inventory = _dict(packet.get("organized_evidence_inventory"))
@@ -99,6 +114,10 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("source_weight_judgments_warning")
     if not checklist:
         warnings.append("missing_mandatory_retention_checklist")
+    if not _list(argument_spine.get("steps")):
+        warnings.append("missing_evidence_weighted_argument_spine")
+    if argument_spine_report.get("status") == "warning":
+        warnings.append("argument_spine_warning")
     if not inventory_items:
         warnings.append("missing_organized_evidence_inventory")
     if any(
@@ -121,6 +140,8 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         "source_weight_note_count": len(source_notes),
         "source_weight_judgment_count": len(source_judgments),
         "source_weight_judgment_status": source_judgment_report.get("status"),
+        "argument_spine_step_count": len(_list(argument_spine.get("steps"))),
+        "argument_spine_status": argument_spine_report.get("status"),
         "informative_source_weight_note_count": informative_source_notes,
         "mandatory_retention_count": len(checklist),
     }

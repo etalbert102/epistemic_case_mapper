@@ -23,6 +23,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["decision_answer_classification"]["answer_shape"]
     assert canonical["analyst_reasoning_frame"]
     assert canonical["source_weighted_answer_frame"]["lanes"]
+    assert canonical["evidence_weighted_argument_spine"]["schema_id"] == "evidence_weighted_argument_spine_v1"
     assert canonical["source_weight_judgments"]
     assert canonical["source_weight_judgment_report"]["schema_id"] == "source_weight_judgment_report_v1"
     assert canonical["priority_evidence"]
@@ -35,6 +36,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["quality_report"]["answer_shape"] == canonical["decision_answer_classification"]["answer_shape"]
     assert canonical["quality_report"]["source_weighted_lane_count"] >= 1
     assert canonical["quality_report"]["source_weight_judgment_count"] == len(canonical["source_weight_judgments"])
+    assert canonical["quality_report"]["argument_spine_step_count"] == len(canonical["evidence_weighted_argument_spine"]["steps"])
     assert all(
         row.get("source_id") or row.get("source_ids")
         for row in canonical["priority_evidence"]
@@ -68,6 +70,20 @@ def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> N
     assert all(row.get("main_use") for row in judgments)
     assert all(row.get("why_weight_this_way") for row in judgments)
     assert "source_labels" not in str(judgments)
+
+
+def test_canonical_packet_builds_evidence_weighted_argument_spine() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    spine = packet["canonical_decision_writer_packet"]["evidence_weighted_argument_spine"]
+    jobs = {step["memo_job"] for step in spine["steps"]}
+
+    assert spine["quality_report"]["schema_id"] == "argument_spine_quality_report_v1"
+    assert "answer" in jobs
+    assert "primary_driver" in jobs
+    assert "counterweight_or_boundary" in jobs
+    assert spine["quality_report"]["step_count"] == len(spine["steps"])
+    assert "source_labels" not in str(spine)
 
 
 def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() -> None:
