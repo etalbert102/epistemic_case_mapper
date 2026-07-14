@@ -43,6 +43,82 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     assert retention["missing_mandatory_count"] == 0
 
 
+def test_presentation_inserts_source_weighting_section_from_canonical_packet() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "outcome_2025", "source_label": "Outcome Study 2025", "source_url": "https://example.test/outcome"},
+            {"source_id": "mechanism_2024", "source_label": "Mechanism Trial 2024", "source_url": "https://example.test/mechanism"},
+            {"source_id": "guidance_2023", "source_label": "Guidance Note 2023", "source_url": "https://example.test/guidance"},
+        ],
+        "evidence_items": [],
+        "canonical_decision_writer_packet": {
+            "source_weighted_answer_frame": {
+                "lanes": {
+                    "primary_answer_drivers": [{"source_ids": ["outcome_2025"]}],
+                    "quantitative_or_interpretive_calibrators": [{"source_ids": ["mechanism_2024"]}],
+                    "context_only": [{"source_ids": ["guidance_2023"]}],
+                }
+            },
+            "source_weight_notes": [
+                {
+                    "source_ids": ["outcome_2025"],
+                    "decision_directness": "direct",
+                    "not_enough_for": ["association_not_causation"],
+                },
+                {
+                    "source_ids": ["guidance_2023"],
+                    "decision_directness": "indirect",
+                    "not_enough_for": ["guidance_not_independent_empirical_evidence"],
+                },
+            ],
+        },
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo: Option A\n\n"
+        "**Bottom Line:** Adopt option A if implementation risk is bounded.\n\n"
+        "## Supporting Evidence\n\n"
+        "Outcome evidence supports adoption [outcome_2025]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "## How to Weight the Evidence" in result["memo"]
+    assert result["memo"].index("## How to Weight the Evidence") < result["memo"].index("## Supporting Evidence")
+    assert "Main answer drivers" in result["memo"]
+    assert "Context sources" in result["memo"]
+    assert "Source credibility is bounded by decision directness" in result["memo"]
+    assert "association not causation" in result["memo"]
+    assert "[[Outcome 2025](CITATION_TRACE.md#outcome-2025)]" in result["memo"]
+    assert "[outcome_2025]" not in result["memo"]
+    assert "inserted_source_weighting" in result["report"]["changes"]
+
+
+def test_presentation_source_weighting_section_is_idempotent() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
+        "canonical_decision_writer_packet": {
+            "source_weighted_answer_frame": {"lanes": {"primary_answer_drivers": [{"source_ids": ["outcome_2025"]}]}},
+            "source_weight_notes": [],
+        },
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "**Decision question:** Should option A be adopted?\n\n"
+        "**Bottom Line:** Adopt option A.\n\n"
+        "## How to Weight the Evidence\n\n"
+        "Use outcome evidence first [[Outcome Study 2025](CITATION_TRACE.md#outcome-study-2025)]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert result["memo"].count("## How to Weight the Evidence") == 1
+    assert "inserted_source_weighting" not in result["report"]["changes"]
+
+
 def test_presentation_prefers_citation_label_over_long_display_label() -> None:
     long_title = (
         "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, "

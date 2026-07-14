@@ -252,11 +252,16 @@ def _drop_repeated_prefixed_evidence_clauses(markdown: str) -> str:
             or stripped.startswith("|")
             or stripped.startswith("- ")
             or "**Decision question:**" in stripped
+            or _contains_markdown_link(stripped)
         ):
             lines.append(line)
             continue
         lines.append(_drop_repeated_prefixed_clauses_in_line(line))
     return "\n".join(lines)
+
+
+def _contains_markdown_link(text: str) -> bool:
+    return bool(re.search(r"\[[^\]\n]+\]\([^)]+\)", str(text or "")))
 
 
 def _drop_repeated_prefixed_clauses_in_line(line: str) -> str:

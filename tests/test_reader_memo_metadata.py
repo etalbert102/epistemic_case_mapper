@@ -157,3 +157,35 @@ Default population: Moderate intake was not associated with worse outcomes (Stud
     assert "The current map supports a neutral under stated conditions read." in updated
     assert updated.count("Moderate intake was not associated with worse outcomes") == 1
     assert "Better evidence used clinical events" in updated
+
+
+def test_reader_memo_metadata_does_not_truncate_trace_linked_citations() -> None:
+    memo = """## Decision Brief
+
+Current evidence suggests the risk is not explained by baseline differences [[Carson et al. 2019](CITATION_TRACE.md#carson-et-al-2019)]. Furthermore, research indicates the effect is specifically linked to the exposure [[Zhong et al. 2019](CITATION_TRACE.md#zhong-et-al-2019); [American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)].
+
+## Sources
+
+- [Carson et al. 2019](https://example.org/carson)
+- [Zhong et al. 2019](https://example.org/zhong)
+- [American Heart Association News 2023](https://example.org/aha)
+"""
+
+    updated = ensure_reader_memo_metadata(
+        memo,
+        {
+            "source_display_names": {
+                "carson": "Carson et al. 2019",
+                "zhong": "Zhong et al. 2019",
+                "aha": "American Heart Association News 2023",
+            },
+            "source_urls": {
+                "carson": "https://example.org/carson",
+                "zhong": "https://example.org/zhong",
+                "aha": "https://example.org/aha",
+            },
+        },
+    )
+
+    assert "[[Zhong et al. 2019](CITATION_TRACE.md#zhong-et-al-2019); [American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)]" in updated
+    assert "[[Zhong et al.\n" not in updated

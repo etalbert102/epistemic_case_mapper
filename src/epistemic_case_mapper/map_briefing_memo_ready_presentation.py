@@ -3,9 +3,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
+    dict_value as _dict,
     list_value as _list,
     norm as _norm,
     string_list as _string_list,
@@ -40,6 +42,10 @@ def run_memo_ready_presentation_normalization(
     next_memo = _remove_duplicate_decision_heading(normalized)
     if next_memo != normalized:
         changes.append("removed_duplicate_decision_heading")
+        normalized = next_memo
+    next_memo = _ensure_source_weighting_section(normalized, packet)
+    if next_memo != normalized:
+        changes.append("inserted_source_weighting")
         normalized = next_memo
     next_memo = _replace_source_aliases(normalized, source_aliases)
     if next_memo != normalized:
@@ -133,6 +139,111 @@ def _replace_sources_section(memo: str, packet: dict[str, Any], *, additional_ci
     if not sources:
         return body + "\n"
     return "\n".join([body, "", "## Sources", "", *sources]).rstrip() + "\n"
+
+
+def _ensure_source_weighting_section(memo: str, packet: dict[str, Any]) -> str:
+    if _has_heading(memo, "how to weight the evidence"):
+        return memo
+    section = _source_weighting_section(packet)
+    if not section:
+        return memo
+    return _insert_after_bottom_line(memo, section)
+
+
+def _source_weighting_section(packet: dict[str, Any]) -> str:
+    canonical = _dict(packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(packet)
+    frame = _dict(canonical.get("source_weighted_answer_frame"))
+    lanes = _dict(frame.get("lanes"))
+    notes = _list(canonical.get("source_weight_notes"))
+    if not lanes and not notes:
+        return ""
+    primary = _lane_sources(lanes, "primary_answer_drivers", limit=3)
+    calibrators = _lane_sources(lanes, "quantitative_or_interpretive_calibrators", limit=2)
+    counterweights = _lane_sources(lanes, "counterweights_or_tensions", limit=2)
+    scope = _lane_sources(lanes, "scope_limiters", limit=2)
+    context = _lane_sources(lanes, "context_only", limit=2)
+    lines = ["## How to Weight the Evidence", ""]
+    thesis = _weighting_thesis(primary, calibrators, counterweights, scope, context)
+    if thesis:
+        lines.extend([thesis, ""])
+    bullets = _dedupe(
+        [
+            _weighting_bullet("Main answer drivers", primary, "carry the bottom-line answer"),
+            _weighting_bullet("Calibrators", calibrators, "calibrate magnitude, mechanism, or plausibility"),
+            _weighting_bullet("Counterweights", counterweights, "bound or weaken the answer rather than automatically overturning it"),
+            _weighting_bullet("Scope limiters", scope, "define where the answer stops applying"),
+            _weighting_bullet("Context sources", context, "help translate advice but should not be treated as independent causal evidence"),
+        ]
+    )
+    if bullets:
+        lines.extend(bullets)
+    credibility = _source_credibility_sentence(notes)
+    if credibility:
+        lines.extend(["", credibility])
+    return "\n".join(lines).strip()
+
+
+def _weighting_thesis(
+    primary: list[str],
+    calibrators: list[str],
+    counterweights: list[str],
+    scope: list[str],
+    context: list[str],
+) -> str:
+    if not any([primary, calibrators, counterweights, scope, context]):
+        return ""
+    if primary:
+        return (
+            f"The main read should be driven first by the sources assigned as primary answer drivers ({_cite_list(primary)}). "
+            "Other evidence should be used to calibrate confidence, explain mechanisms, identify counterweights, or set scope boundaries."
+        )
+    return "No single source class carries the whole answer; weigh the evidence by decision role rather than by source count."
+
+
+def _weighting_bullet(label: str, sources: list[str], rationale: str) -> str:
+    if not sources:
+        return ""
+    return f"- **{label}:** ({_cite_list(sources)}) {rationale}."
+
+
+def _source_credibility_sentence(notes: list[Any]) -> str:
+    rows = [row for row in notes if isinstance(row, dict)]
+    warnings = _dedupe(warning for row in rows for warning in _string_list(row.get("not_enough_for")))
+    directness = _dedupe(str(row.get("decision_directness") or "").strip() for row in rows if row.get("decision_directness"))
+    parts = []
+    if directness:
+        parts.append(f"Source credibility is bounded by decision directness ({', '.join(directness[:3])})")
+    readable = [_readable_warning(warning) for warning in warnings[:4]]
+    if readable:
+        parts.append("Known limits: " + "; ".join(readable))
+    return ". ".join(parts) + "." if parts else ""
+
+
+def _lane_sources(lanes: dict[str, Any], lane: str, *, limit: int) -> list[str]:
+    return _dedupe(source for row in _list(lanes.get(lane)) if isinstance(row, dict) for source in _string_list(row.get("source_ids")))[:limit]
+
+
+def _cite_list(source_ids: list[str]) -> str:
+    return ", ".join(f"[{source_id}]" for source_id in source_ids if source_id)
+
+
+def _readable_warning(warning: str) -> str:
+    return str(warning or "").replace("_", " ")
+
+
+def _has_heading(memo: str, heading: str) -> bool:
+    wanted = heading.strip().lower()
+    return any(line.lstrip("# ").strip().lower() == wanted for line in str(memo or "").splitlines())
+
+
+def _insert_after_bottom_line(memo: str, section: str) -> str:
+    lines = str(memo or "").rstrip().splitlines()
+    if not lines:
+        return section + "\n"
+    for index, line in enumerate(lines):
+        if line.strip().startswith("## ") and "bottom" not in line.lower() and index > 0:
+            return "\n".join([*lines[:index], "", section, "", *lines[index:]]).rstrip()
+    return "\n".join([*lines, "", section]).rstrip()
 
 
 def _strip_sources_section(memo: str) -> str:
