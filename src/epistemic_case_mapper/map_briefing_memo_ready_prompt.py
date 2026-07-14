@@ -34,8 +34,8 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
     packet = _canonical_packet_for_prompt(canonical_packet)
     return (
         "You are a senior decision analyst. Write a decision-ready memo from the canonical decision writer packet.\n"
-        "The packet is the sole semantic handoff from upstream analysis. It preserves the full memo-facing evidence record, organized so the strongest evidence is easy to use without dropping context.\n"
-        "Write for a human decision-maker. Make the answer crisp before explaining the evidence.\n\n"
+        "The packet is the sole semantic handoff from upstream analysis. It now leads with source_weight_judgments and evidence_weighted_argument_spine so the memo can explain why the evidence hierarchy implies the answer.\n"
+        "Write for a human decision-maker. Make the answer crisp before explaining the evidence, and make each paragraph do one distinct reasoning job.\n\n"
         "Required visible structure:\n"
         "# Decision Memo: <short title>\n"
         "**Decision Question:** <question>\n"
@@ -44,12 +44,12 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "## What Could Change or Bound the Answer\n"
         "## Practical Implication\n\n"
         "Writing rules:\n"
-        "- Use decision_brief_skeleton as the spine of the memo.\n"
+        "- Use source_weight_judgments to explain why sources drive, calibrate, bound, or contextualize the answer.\n"
+        "- Use evidence_weighted_argument_spine as the primary writing plan; do not restate parallel packet sections as separate checklists.\n"
+        "- Use decision_brief_skeleton and decision_answer_classification to state the bottom-line answer, scope, confidence, and unsupported options.\n"
         "- Use decision_answer_classification in the Bottom Line: state the supported answer shape or option directly, name the scope, and state any named options the evidence does not support at that scope.\n"
-        "- Use analyst_reasoning_frame to decide how the evidence should change, bound, or calibrate the answer.\n"
-        "- Use source_weighted_answer_frame before priority_evidence: explain what class of evidence carries the answer, what calibrates it, what bounds it, and what is only context.\n"
-        "- Use priority_evidence for attention and ordering, not as the whole evidence universe.\n"
-        "- Use organized_evidence_inventory as the complete memo-facing evidence record; draw from non-priority items when they add practical framing, comparators, scope, or interpretive context.\n"
+        "- Use source_weighted_answer_frame and priority_evidence as supporting detail for the argument spine, not as a second outline.\n"
+        "- Use organized_evidence_inventory as the complete memo-facing evidence record; draw from non-priority items only when they add practical framing, comparators, scope, or interpretive context.\n"
         "- Interpret important quantities in decision terms.\n"
         "- Use counterweight_dispositions to say whether each major limiting point overturns, weakens, bounds, explains, or creates a crux for the answer. Preserve uncertainty when the packet says a point may only bound the answer.\n"
         "- Use scope_boundaries and decision_cruxes to state where the answer applies and what would change it.\n"
@@ -66,7 +66,26 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
 
 def _canonical_packet_for_prompt(canonical_packet: dict[str, Any]) -> dict[str, Any]:
     packet = canonical_packet if isinstance(canonical_packet, dict) else {}
-    return {key: value for key, value in packet.items() if key != "quality_report"}
+    ordered_keys = [
+        "schema_id",
+        "decision_question",
+        "decision_brief_skeleton",
+        "decision_answer_classification",
+        "source_weight_judgments",
+        "source_weight_judgment_report",
+        "evidence_weighted_argument_spine",
+        "source_weighted_answer_frame",
+        "priority_evidence",
+        "organized_evidence_inventory",
+        "counterweight_dispositions",
+        "scope_boundaries",
+        "decision_cruxes",
+        "source_weight_notes",
+        "analyst_reasoning_frame",
+        "mandatory_retention_checklist",
+        "citation_registry",
+    ]
+    return {key: packet[key] for key in ordered_keys if key in packet}
 
 
 def _dict(value: Any) -> dict[str, Any]:

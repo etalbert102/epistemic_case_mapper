@@ -18,6 +18,8 @@ def test_synthesis_prompt_uses_canonical_packet_not_legacy_context_surfaces() ->
     assert "canonical decision writer packet" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
     assert "decision_brief_skeleton" in prompt
+    assert "source_weight_judgments" in prompt
+    assert "evidence_weighted_argument_spine" in prompt
     assert "counterweight_dispositions" in prompt
     assert "mandatory_retention_checklist" in prompt
     assert "writer_model_context_v1" not in prompt
