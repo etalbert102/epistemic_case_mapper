@@ -7,8 +7,10 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
 from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_decision_usefulness_retention_report,
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
+    run_decision_usefulness_memo_repair,
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
 )
@@ -696,6 +698,136 @@ def test_decision_writer_packet_synthesis_warnings_are_not_marked_accepted(monke
     assert result["report"]["status"] == "accepted_with_retention_warnings"
     assert result["report"]["accepted"] is False
     assert result["report"]["missing_mandatory_count"] == 3
+
+
+def _decision_usefulness_packet() -> dict:
+    return {
+        "decision_question": "Should option A be adopted?",
+        "evidence_items": [],
+        "source_trail": [{"source_id": "s1", "source_label": "Outcome Review"}],
+        "decision_usefulness_packet": {
+            "schema_id": "decision_usefulness_packet_v1",
+            "answer_shape": "single_stance",
+            "recommended_stance": {
+                "stance": "Adopt option A conditionally.",
+                "why_this_stance": "The main outcome improves when implementation risk is bounded.",
+                "source_ids": ["s1"],
+                "evidence_item_ids": ["item:support"],
+            },
+            "tradeoffs": [
+                {
+                    "tradeoff": "Outcome gain versus implementation burden.",
+                    "choose_a_if": "Adopt if burden remains manageable.",
+                    "choose_b_if": "Delay if burden rises.",
+                    "source_ids": ["s1"],
+                    "evidence_item_ids": ["item:support"],
+                }
+            ],
+            "cruxes_and_thresholds": [
+                {
+                    "crux": "Whether implementation burden stays below the acceptable threshold.",
+                    "would_change_if": "New evidence shows burden overwhelms the outcome gain.",
+                    "source_ids": ["s1"],
+                    "evidence_item_ids": ["item:support"],
+                }
+            ],
+            "monitoring_triggers": [
+                {
+                    "trigger": "New implementation failure evidence.",
+                    "would_update": "Shift from adoption to delay.",
+                    "source_ids": ["s1"],
+                    "evidence_item_ids": ["item:support"],
+                }
+            ],
+        },
+    }
+
+
+def test_decision_usefulness_retention_warns_on_missing_tradeoff_and_trigger() -> None:
+    memo = "## Decision Memo\n\nAdopt option A conditionally because the main outcome improves."
+
+    report = build_decision_usefulness_retention_report(memo, _decision_usefulness_packet())
+
+    assert report["status"] == "warning"
+    issue_types = {row["obligation_type"] for row in report["issues"]}
+    assert "tradeoff" in issue_types
+    assert "monitoring_trigger" in issue_types
+
+
+def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatch) -> None:
+    packet = _decision_usefulness_packet()
+    memo = "## Decision Memo\n\nAdopt option A conditionally because the main outcome improves."
+    before = build_decision_usefulness_retention_report(memo, packet)
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        assert "Missing decision-support rows" in prompt
+        assert "Outcome gain versus implementation burden" in prompt
+        return ModelBackendResult(
+            text=(
+                "## Decision Memo\n\n"
+                "Adopt option A conditionally because the main outcome improves. "
+                "The key tradeoff is outcome gain versus implementation burden: adopt if the burden remains manageable, "
+                "but delay if it rises. The crux is whether implementation burden stays below the acceptable threshold. "
+                "New implementation failure evidence would shift the read from adoption to delay [s1]."
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_decision_usefulness_memo_repair(memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "accepted"
+    assert result["report"]["applied"] is True
+    assert result["report"]["final_missing_count"] < before["missing_count"]
+    assert "New implementation failure evidence" in result["memo"]
+
+
+def test_memo_synthesis_runs_decision_usefulness_repair_when_needed(monkeypatch) -> None:
+    packet = _decision_usefulness_packet()
+    calls = {"count": 0}
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls["count"] += 1
+        if "Missing decision-support rows" in prompt:
+            return ModelBackendResult(
+                text=(
+                    "# Decision Memo: Option A\n\n"
+                    "**Decision Question:** Should option A be adopted?\n"
+                    "**Bottom Line:** Adopt option A conditionally.\n\n"
+                    "## Why This Is the Best Current Read\n"
+                    "The key tradeoff is outcome gain versus implementation burden. Adopt if burden remains manageable, "
+                    "but delay if burden rises [s1].\n\n"
+                    "## What Could Change or Bound the Answer\n"
+                    "The crux is whether implementation burden stays below the acceptable threshold. "
+                    "New implementation failure evidence would shift the read from adoption to delay [s1].\n\n"
+                    "## Practical Implication\n"
+                    "Proceed only while implementation burden remains manageable.\n"
+                ),
+                backend="fake",
+            )
+        return ModelBackendResult(
+            text=(
+                "# Decision Memo: Option A\n\n"
+                "**Decision Question:** Should option A be adopted?\n"
+                "**Bottom Line:** Adopt option A conditionally.\n\n"
+                "## Why This Is the Best Current Read\n"
+                "The main outcome improves.\n\n"
+                "## What Could Change or Bound the Answer\n"
+                "Implementation risk matters.\n\n"
+                "## Practical Implication\n"
+                "Proceed carefully.\n"
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert calls["count"] == 2
+    assert result["report"]["decision_usefulness_repair_report"]["applied"] is True
+    assert "New implementation failure evidence" in result["memo"]
 
 
 def test_decision_writer_packet_repair_partial_improvement_is_visible(monkeypatch) -> None:

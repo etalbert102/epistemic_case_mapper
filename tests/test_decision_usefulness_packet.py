@@ -132,6 +132,28 @@ def test_decision_usefulness_quality_report_flags_bad_ids_and_sparse_matrix() ->
     assert report["invalid_matrix_reference_count"] == 1
 
 
+def test_decision_usefulness_quality_report_does_not_require_matrix_for_single_stance() -> None:
+    canonical = _canonical_packet()
+    evidence_id = canonical["priority_evidence"][0]["item_id"]
+    packet = normalize_decision_usefulness_packet(
+        {
+            "decision_question": canonical["decision_question"],
+            "answer_shape": "single_stance",
+            "recommended_stance": {"stance": "Adopt option A conditionally.", "evidence_item_ids": [evidence_id]},
+            "decision_criteria": [{"label": "flood protection", "evidence_item_ids": [evidence_id]}],
+            "diagnostic_evidence": [{"why_diagnostic": "Distinguishes the stance.", "evidence_item_ids": [evidence_id]}],
+            "tradeoffs": [{"tradeoff": "Protection versus implementation burden."}],
+            "cruxes_and_thresholds": [{"crux": "Whether implementation burden is bounded."}],
+        },
+        canonical_packet=canonical,
+    )
+
+    report = build_decision_usefulness_quality_report(packet, canonical_packet=canonical)
+
+    assert report["matrix_expected"] is False
+    assert "criteria_without_matrix_evidence" not in report["warnings"]
+
+
 def test_compact_decision_usefulness_for_prompt_keeps_decision_critical_fields() -> None:
     canonical = _canonical_packet()
     packet = normalize_decision_usefulness_packet(

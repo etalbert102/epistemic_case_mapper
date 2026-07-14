@@ -77,6 +77,19 @@ def run_memo_ready_packet_synthesis(
         )
         return {"memo": "", "prompt": prompt, "raw": raw, "report": report}
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_repair = run_decision_usefulness_memo_repair(
+        candidate,
+        memo_ready_packet,
+        decision_usefulness_retention,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if decision_usefulness_repair.get("report", {}).get("applied"):
+        candidate = decision_usefulness_repair["memo"]
+        retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+        decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     report.update(
@@ -89,6 +102,8 @@ def run_memo_ready_packet_synthesis(
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
             "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
             "warning_resolution_report": retention.get("warning_resolution_report", {}),
+            "decision_usefulness_retention_report": decision_usefulness_retention,
+            "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
         }
     )
@@ -190,6 +205,115 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "canonical_packet_retention_report": canonical_retention,
         "issues": issues,
     }
+
+
+def build_decision_usefulness_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+    usefulness = _decision_usefulness_packet(packet)
+    if not usefulness:
+        return {
+            "schema_id": "decision_usefulness_retention_report_v1",
+            "status": "not_available",
+            "obligation_count": 0,
+            "retained_count": 0,
+            "missing_count": 0,
+            "issues": [],
+        }
+    obligations = _decision_usefulness_obligations(usefulness)
+    statuses = [_decision_usefulness_obligation_status(memo, row) for row in obligations]
+    issues = [row for row in statuses if not row["retained"]]
+    return {
+        "schema_id": "decision_usefulness_retention_report_v1",
+        "status": "ready" if not issues else "warning",
+        "answer_shape": usefulness.get("answer_shape", ""),
+        "obligation_count": len(statuses),
+        "retained_count": sum(1 for row in statuses if row["retained"]),
+        "missing_count": len(issues),
+        "statuses": statuses,
+        "issues": issues,
+    }
+
+
+def run_decision_usefulness_memo_repair(
+    memo: str,
+    packet: dict[str, Any],
+    decision_usefulness_retention: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    issues = _list(decision_usefulness_retention.get("issues"))
+    report = {
+        "schema_id": "decision_usefulness_memo_repair_report_v1",
+        "status": "not_needed" if not issues else "not_run",
+        "accepted": False,
+        "applied": False,
+        "initial_missing_count": len(issues),
+        "final_missing_count": len(issues),
+        "issues": [],
+    }
+    if not issues:
+        return {"memo": memo, "prompt": "", "raw": "", "report": report}
+    prompt = build_decision_usefulness_memo_repair_prompt(memo, packet, decision_usefulness_retention)
+    if backend.strip() == "prompt":
+        report.update({"status": "skipped_prompt_backend", "issues": ["decision-usefulness repair backend returned prompt only"]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    try:
+        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries, json_mode=False)
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = repair_markdown_structure(_extract_markdown(raw))
+    if not candidate:
+        report.update({"status": "empty_response_kept_original", "issues": ["repair returned no markdown"]})
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    after = build_decision_usefulness_retention_report(candidate, packet)
+    structure_issues = markdown_structure_issues(candidate, original=memo)
+    improved = int(after.get("missing_count", 0) or 0) < int(decision_usefulness_retention.get("missing_count", 0) or 0)
+    retained_regular = _retention_not_worse(
+        build_memo_ready_packet_retention_report(memo, packet),
+        build_memo_ready_packet_retention_report(candidate, packet),
+    )
+    applied = improved and retained_regular and not structure_issues
+    report.update(
+        {
+            "status": "accepted" if applied else "no_decision_usefulness_improvement_kept_original",
+            "accepted": applied,
+            "applied": applied,
+            "final_missing_count": after.get("missing_count", 0),
+            "final_retention_report": after,
+            "structure_issues": structure_issues,
+            "regular_retention_not_worse": retained_regular,
+            "issues": [] if applied else ["repair did not improve decision-usefulness retention without retention or markdown regression"],
+        }
+    )
+    return {"memo": candidate if applied else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def build_decision_usefulness_memo_repair_prompt(
+    memo: str,
+    packet: dict[str, Any],
+    decision_usefulness_retention: dict[str, Any],
+) -> str:
+    repair_packet = {
+        "schema_id": "decision_usefulness_memo_repair_packet_v1",
+        "decision_question": packet.get("decision_question") or _dict(packet.get("canonical_decision_writer_packet")).get("decision_question"),
+        "missing_decision_support_moves": [
+            _decision_usefulness_repair_row(row)
+            for row in _list(decision_usefulness_retention.get("issues"))[:8]
+            if isinstance(row, dict)
+        ],
+    }
+    return (
+        "Revise the decision memo so it naturally includes the missing decision-support moves.\n"
+        "Keep the same headings and overall conclusion. Preserve source_ids exactly as bracketed citations near the claims they support.\n"
+        "Use only the missing rows below; do not add new evidence, new sources, or a new matrix.\n"
+        "If a row is awkward, integrate its substance in a natural sentence rather than naming the packet field.\n"
+        "Return the complete revised memo in markdown only.\n\n"
+        f"Current memo:\n{memo.rstrip()}\n\n"
+        f"Missing decision-support rows:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n"
+    )
 
 
 def run_memo_ready_packet_repair(
@@ -422,6 +546,164 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
         elif label:
             rows.append(f"- {label}")
     return _dedupe(rows)
+
+
+def _decision_usefulness_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    usefulness = _dict(packet.get("decision_usefulness_packet"))
+    if usefulness:
+        return usefulness
+    return _dict(_dict(packet.get("canonical_decision_writer_packet")).get("decision_usefulness_packet"))
+
+
+def _decision_usefulness_obligations(usefulness: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    stance = _dict(usefulness.get("recommended_stance"))
+    if str(stance.get("stance") or "").strip():
+        rows.append(
+            {
+                "obligation_type": "recommended_stance",
+                "label": "recommended stance",
+                "required_text": _join_nonempty([stance.get("stance"), stance.get("scope"), stance.get("why_this_stance")]),
+                "source_ids": _string_list(stance.get("source_ids")),
+                "evidence_item_ids": _string_list(stance.get("evidence_item_ids")),
+                "packet_row": stance,
+            }
+        )
+    for index, row in enumerate(_list(usefulness.get("tradeoffs")), start=1):
+        if isinstance(row, dict) and str(row.get("tradeoff") or "").strip():
+            rows.append(
+                {
+                    "obligation_type": "tradeoff",
+                    "label": f"tradeoff {index}",
+                    "required_text": _join_nonempty([row.get("tradeoff"), row.get("choose_a_if"), row.get("choose_b_if")]),
+                    "source_ids": _string_list(row.get("source_ids")),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    "packet_row": row,
+                }
+            )
+    for index, row in enumerate(_list(usefulness.get("cruxes_and_thresholds")), start=1):
+        if isinstance(row, dict) and str(row.get("crux") or "").strip():
+            rows.append(
+                {
+                    "obligation_type": "crux_threshold",
+                    "label": f"crux threshold {index}",
+                    "required_text": _join_nonempty([row.get("crux"), row.get("current_read"), row.get("would_change_if"), row.get("threshold")]),
+                    "source_ids": _string_list(row.get("source_ids")),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    "packet_row": row,
+                }
+            )
+    for index, row in enumerate(_list(usefulness.get("monitoring_triggers")), start=1):
+        if isinstance(row, dict) and str(row.get("trigger") or "").strip():
+            rows.append(
+                {
+                    "obligation_type": "monitoring_trigger",
+                    "label": f"monitoring trigger {index}",
+                    "required_text": _join_nonempty([row.get("trigger"), row.get("would_update")]),
+                    "source_ids": _string_list(row.get("source_ids")),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    "packet_row": row,
+                }
+            )
+    return rows
+
+
+def _decision_usefulness_obligation_status(memo: str, obligation: dict[str, Any]) -> dict[str, Any]:
+    required_text = str(obligation.get("required_text") or "").strip()
+    terms = _decision_usefulness_terms(required_text)
+    memo_norm = _norm(memo)
+    matched_terms = [term for term in terms if term in memo_norm]
+    return {
+        "obligation_type": obligation.get("obligation_type"),
+        "label": obligation.get("label"),
+        "retained": _decision_usefulness_obligation_retained(memo, obligation),
+        "required_text": required_text,
+        "source_ids": _string_list(obligation.get("source_ids")),
+        "evidence_item_ids": _string_list(obligation.get("evidence_item_ids")),
+        "matched_terms": matched_terms[:12],
+        "missing_terms": [term for term in terms if term not in matched_terms][:12],
+        "packet_row": obligation.get("packet_row", {}),
+    }
+
+
+def _decision_usefulness_obligation_retained(memo: str, obligation: dict[str, Any]) -> bool:
+    row = _dict(obligation.get("packet_row"))
+    obligation_type = str(obligation.get("obligation_type") or "")
+    if obligation_type == "monitoring_trigger":
+        trigger_retained = _decision_usefulness_text_retained(memo, str(row.get("trigger") or ""), ratio=0.6)
+        update_retained = _decision_usefulness_text_retained(memo, str(row.get("would_update") or ""), ratio=0.55)
+        return trigger_retained and update_retained and _has_update_cue(memo)
+    if obligation_type == "crux_threshold":
+        return _decision_usefulness_text_retained(memo, str(obligation.get("required_text") or ""), ratio=0.45) and _has_crux_cue(memo)
+    return _decision_usefulness_text_retained(memo, str(obligation.get("required_text") or ""), ratio=0.45)
+
+
+def _decision_usefulness_text_retained(memo: str, text: str, *, ratio: float = 0.45) -> bool:
+    memo_norm = _norm(memo)
+    text_norm = _norm(text)
+    if not text_norm:
+        return True
+    if text_norm in memo_norm:
+        return True
+    terms = _decision_usefulness_terms(text)
+    if not terms:
+        return False
+    matched = sum(1 for term in terms if term in memo_norm)
+    return matched >= max(2, min(len(terms), int(round(len(terms) * ratio))))
+
+
+def _has_update_cue(memo: str) -> bool:
+    memo_norm = _norm(memo)
+    return any(cue in memo_norm for cue in ("new evidence", "would change", "would update", "would shift", "monitor", "trigger"))
+
+
+def _has_crux_cue(memo: str) -> bool:
+    memo_norm = _norm(memo)
+    return any(cue in memo_norm for cue in ("hinges on", "rests on", "crux", "would change", "threshold", "bounded by", "bound the answer"))
+
+
+def _decision_usefulness_terms(text: str) -> list[str]:
+    stop = {
+        "about",
+        "adult",
+        "adults",
+        "because",
+        "between",
+        "could",
+        "current",
+        "decision",
+        "evidence",
+        "focus",
+        "general",
+        "rather",
+        "should",
+        "source",
+        "stance",
+        "their",
+        "there",
+        "these",
+        "those",
+        "would",
+    }
+    return _dedupe(
+        token
+        for token in re.findall(r"[a-z0-9][a-z0-9-]{3,}", _norm(text))
+        if token not in stop
+    )[:24]
+
+
+def _decision_usefulness_repair_row(issue: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "obligation_type": issue.get("obligation_type"),
+        "required_text": issue.get("required_text"),
+        "source_ids": _string_list(issue.get("source_ids")),
+        "evidence_item_ids": _string_list(issue.get("evidence_item_ids")),
+        "packet_row": issue.get("packet_row", {}),
+    }
+
+
+def _join_nonempty(values: list[Any]) -> str:
+    return " ".join(str(value).strip() for value in values if str(value or "").strip())
 
 
 def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:

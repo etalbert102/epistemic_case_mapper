@@ -510,10 +510,16 @@ def build_decision_usefulness_quality_report(
             or (criterion_ids and str(row.get("criterion_id") or "") not in criterion_ids)
         )
     ]
-    thin_criteria = sorted(
-        criterion_id
-        for criterion_id in criterion_ids
-        if not any(str(row.get("criterion_id") or "") == criterion_id and _string_list(row.get("evidence_item_ids")) for row in _list(packet.get("option_criteria_matrix")) if isinstance(row, dict))
+    answer_shape = str(packet.get("answer_shape") or "")
+    matrix_expected = answer_shape == "multi_option" and bool(option_ids) and bool(criterion_ids)
+    thin_criteria = (
+        sorted(
+            criterion_id
+            for criterion_id in criterion_ids
+            if not any(str(row.get("criterion_id") or "") == criterion_id and _string_list(row.get("evidence_item_ids")) for row in _list(packet.get("option_criteria_matrix")) if isinstance(row, dict))
+        )
+        if matrix_expected
+        else []
     )
     warnings = []
     if not _list(packet.get("decision_options")) and str(packet.get("answer_shape")) == "multi_option":
@@ -536,7 +542,8 @@ def build_decision_usefulness_quality_report(
         "schema_id": "decision_usefulness_quality_report_v1",
         "status": "ready" if not warnings else "warning",
         "warnings": _dedupe(warnings),
-        "answer_shape": packet.get("answer_shape", ""),
+        "answer_shape": answer_shape,
+        "matrix_expected": matrix_expected,
         "option_count": len(_list(packet.get("decision_options"))),
         "criterion_count": len(_list(packet.get("decision_criteria"))),
         "matrix_cell_count": len(_list(packet.get("option_criteria_matrix"))),
