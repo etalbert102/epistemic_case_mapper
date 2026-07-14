@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structu
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
+from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import build_memo_polish_diagnostics
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -557,6 +558,7 @@ def run_memo_ready_final_polish(
         return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
     after = build_memo_ready_packet_retention_report(candidate, packet)
     structure_issues = markdown_structure_issues(candidate, original=memo)
+    diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
     accepted = _retention_not_worse(before, after) and not structure_issues
     report.update(
         {
@@ -565,6 +567,7 @@ def run_memo_ready_final_polish(
             "before_missing_mandatory_count": before.get("missing_mandatory_count", 0),
             "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
             "structure_issues": structure_issues,
+            "polish_diagnostics": diagnostics,
             "issues": [] if accepted else ["final polish regressed retention or damaged markdown"],
         }
     )
