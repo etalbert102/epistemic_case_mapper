@@ -707,6 +707,10 @@ def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() 
     assert "Remove checklist rhythm" in prompt
     assert "Shape paragraphs around reader questions" in prompt
     assert "avoid citation clutter" in prompt
+    assert "This is an editing pass over the memo, not a new synthesis pass." in prompt
+    assert "Do not add new comparisons, substitutes, alternatives, or practical examples" in prompt
+    assert "Current prose diagnostics" in prompt
+    assert "memo_prose_quality_diagnostics_v1" in prompt
     assert "Polish guardrails" in prompt
     assert "memo_ready_final_polish_guardrails_v1" in prompt
     assert "source_ids_that_must_remain_traceable" in prompt

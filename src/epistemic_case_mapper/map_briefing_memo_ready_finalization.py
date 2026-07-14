@@ -15,7 +15,10 @@ from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structu
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
-from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import build_memo_polish_diagnostics
+from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
+    build_memo_polish_diagnostics,
+    prose_quality_diagnostics,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -578,16 +581,21 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
     source_trail = _list(packet.get("source_trail"))
     guardrails = build_memo_ready_final_polish_guardrails(packet)
     guardrails = project_source_text_to_ids_for_model(guardrails, source_trail)
+    prose_diagnostics = prose_quality_diagnostics(memo)
     memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
     return (
         "You are doing a final prose polish on a source-grounded decision memo.\n"
         "Improve flow, sentence rhythm, paragraph order, and transitions without changing the analysis.\n"
-        "The guardrails below are validation constraints, not memo content or an outline.\n\n"
+        "This is an editing pass over the memo, not a new synthesis pass.\n"
+        "The guardrails below are validation constraints, not memo content or an outline.\n"
+        "The prose diagnostics identify likely style problems in the current memo; fix them only when doing so preserves meaning.\n\n"
         "Rules:\n"
         "- Return the full revised memo in Markdown.\n"
         "- Use the memo as the source of prose; use guardrails only to avoid dropping protected content.\n"
         "- Preserve the decision question, confidence, bottom-line stance, uncertainty, subgroup caveats, counterweights, source IDs, and required quantities.\n"
         "- Do not add new facts, sources, numbers, populations, recommendations, or causal interpretations.\n"
+        "- Do not add new comparisons, substitutes, alternatives, or practical examples unless those concepts already appear in the memo text.\n"
+        "- If a sentence is awkward but evidence-bearing, rewrite it locally rather than replacing it with broader advice.\n"
         "- Rewrite at paragraph level when the prose is stiff; preserving meaning does not mean preserving wording.\n"
         "- Do not return a near-identical memo unless the prose is already publication-ready.\n"
         "- Make the opening answer direct, then make the supporting reasoning flow across paragraphs.\n"
@@ -600,6 +608,7 @@ def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> s
         "- Fix obvious citation spacing mistakes without changing source IDs.\n"
         "- Make the memo read like decision-ready analysis.\n\n"
         f"Polish guardrails:\n{json.dumps(guardrails, indent=2, ensure_ascii=False)}\n\n"
+        f"Current prose diagnostics:\n{json.dumps(prose_diagnostics, indent=2, ensure_ascii=False)}\n\n"
         f"Memo:\n{memo_for_model.strip()}\n"
     )
 
