@@ -586,7 +586,13 @@ def run_memo_ready_final_polish(
         structure_issues = markdown_structure_issues(candidate, original=memo)
         diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
         unsupported_additions = high_confidence_unsupported_additions(diagnostics)
-    accepted = _retention_not_worse(before, after) and not structure_issues and not unsupported_additions
+    decision_usefulness_not_worse = _decision_usefulness_not_worse(before_decision_usefulness, after_decision_usefulness)
+    accepted = (
+        _retention_not_worse(before, after)
+        and decision_usefulness_not_worse
+        and not structure_issues
+        and not unsupported_additions
+    )
     status = "accepted" if accepted else "rejected_kept_original"
     if unsupported_additions:
         status = "rejected_unsupported_additions_kept_original"
@@ -608,6 +614,7 @@ def run_memo_ready_final_polish(
                 diagnostics=diagnostics,
             ),
             "drift_repair_report": repair.get("report", {}),
+            "decision_usefulness_not_worse": decision_usefulness_not_worse,
             "issues": [] if accepted else [_final_polish_issue(unsupported_additions, structure_issues=structure_issues)],
         }
     )
@@ -1605,7 +1612,13 @@ def _final_polish_issue(unsupported_additions: list[dict[str, Any]], *, structur
         return "final polish introduced unsupported additions"
     if structure_issues:
         return "final polish damaged markdown structure"
-    return "final polish regressed retention or damaged markdown"
+    return "final polish regressed retention, decision usefulness, or damaged markdown"
+
+
+def _decision_usefulness_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    if before.get("status") == "not_available" or after.get("status") == "not_available":
+        return True
+    return int(after.get("missing_count", 0) or 0) <= int(before.get("missing_count", 0) or 0)
 
 
 def _retention_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:

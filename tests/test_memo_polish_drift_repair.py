@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_s
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
+from test_decision_writer_packet import _decision_usefulness_packet
 
 
 def test_final_polish_rejects_unsupported_addition_when_repair_fails(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -54,6 +55,40 @@ def test_final_polish_accepts_targeted_repair_that_removes_unsupported_addition(
     assert result["report"]["polish_comparison"]["after_missing_mandatory_count"] <= result["report"]["polish_comparison"]["before_missing_mandatory_count"]
     assert result["report"]["polish_comparison"]["unsupported_addition_count"] == 0
     assert "legacy systems" not in result["memo"]
+
+
+def test_final_polish_rejects_decision_usefulness_regression(monkeypatch: pytest.MonkeyPatch) -> None:
+    packet = _decision_usefulness_packet()
+    memo = (
+        "# Decision Memo: Option A\n\n"
+        "**Decision Question:** Should option A be adopted?\n"
+        "**Bottom Line:** Adopt option A conditionally.\n\n"
+        "## Why This Is the Best Current Read\n"
+        "The useful distinction is whether the outcome gain remains worth the implementation burden. "
+        "The direct outcome evidence carries the answer, while implementation evidence bounds it. "
+        "The key tradeoff is outcome gain versus implementation burden: adopt if burden remains manageable, "
+        "but delay if burden rises [s1].\n\n"
+        "## What Could Change or Bound the Answer\n"
+        "The crux is whether implementation burden stays below the acceptable threshold. "
+        "New implementation failure evidence would shift the read from adoption to delay [s1].\n\n"
+        "## Practical Implication\n"
+        "Proceed only while implementation burden remains manageable.\n"
+    )
+    regressed = memo.replace(
+        "New implementation failure evidence would shift the read from adoption to delay [s1].",
+        "Implementation evidence remains worth monitoring [s1].",
+    )
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=regressed, backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] == "rejected_kept_original"
+    assert result["report"]["decision_usefulness_not_worse"] is False
+    assert result["memo"] == memo
 
 
 def _packet_and_memo() -> tuple[dict, str]:
