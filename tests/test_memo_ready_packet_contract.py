@@ -40,6 +40,8 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "decision_answer_classification" in prompt
     assert "source_weight_judgments" in prompt
     assert "evidence_weighted_argument_spine" in prompt
+    assert "section_plan" in prompt
+    assert "primary_section" in prompt
     assert "source_weighted_answer_frame" in prompt
     assert "priority_evidence" in prompt
     assert "organized_evidence_inventory" in prompt

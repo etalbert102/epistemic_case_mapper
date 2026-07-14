@@ -187,7 +187,13 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
 
 
 def _source_weighting_from_judgments(judgments: list[Any]) -> str:
-    rows = [row for row in judgments if isinstance(row, dict) and _string_list(row.get("source_ids"))]
+    rows = [
+        row
+        for row in judgments
+        if isinstance(row, dict)
+        and _string_list(row.get("source_ids"))
+        and (_string_list(row.get("evidence_item_ids")) or not row.get("omission_reason"))
+    ]
     if not rows:
         return ""
     groups: dict[str, list[dict[str, Any]]] = {}

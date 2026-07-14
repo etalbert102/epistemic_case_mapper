@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import (
+    build_canonical_decision_writer_packet_quality_report,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
@@ -74,6 +77,23 @@ def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> N
     assert "source_labels" not in str(judgments)
 
 
+def test_canonical_packet_gives_unassigned_sources_contextual_judgments() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    built["decision_briefing_packet"]["source_trail"].append(
+        {"source_id": "context_source", "source_label": "Context Source", "source_url": "https://example.test/context"}
+    )
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    canonical = packet["canonical_decision_writer_packet"]
+    judgments = canonical["source_weight_judgments"]
+
+    context_judgment = next(row for row in judgments if row.get("source_ids") == ["context_source"])
+    assert context_judgment["main_use"] == "contextualizes"
+    assert context_judgment["omission_reason"]
+    assert "No memo-facing evidence item" in context_judgment["why_weight_this_way"]
+    assert canonical["source_weight_judgment_report"]["status"] == "ready"
+    assert "source_ids_without_weight_judgment" not in canonical["source_weight_judgment_report"]["warnings"]
+
+
 def test_canonical_packet_builds_evidence_weighted_argument_spine() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
@@ -84,8 +104,28 @@ def test_canonical_packet_builds_evidence_weighted_argument_spine() -> None:
     assert "answer" in jobs
     assert "primary_driver" in jobs
     assert "counterweight_or_boundary" in jobs
+    assert spine["section_plan"]
+    assert all(step.get("primary_section") for step in spine["steps"] if step["memo_job"] != "")
+    assert any(row["section"].startswith("Why This Is the Best") for row in spine["section_plan"])
     assert spine["quality_report"]["step_count"] == len(spine["steps"])
     assert "source_labels" not in str(spine)
+
+
+def test_canonical_quality_allows_source_free_writer_guidance() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    canonical = packet["canonical_decision_writer_packet"]
+    canonical["mandatory_retention_checklist"].append(
+        {
+            "obligation_id": "guidance_only",
+            "role": "critique_writer_guidance",
+            "statement": "Separate direct outcome evidence from application guidance.",
+        }
+    )
+
+    report = build_canonical_decision_writer_packet_quality_report(canonical)
+
+    assert "source_id_missing_from_canonical_rows" not in report["warnings"]
 
 
 def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() -> None:

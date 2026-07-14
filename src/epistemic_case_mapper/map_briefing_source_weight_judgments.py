@@ -56,7 +56,9 @@ def _source_weight_judgments(interface: dict[str, Any], source_trail: list[Any])
             rows_by_source[source_id].append(row)
     appraisal_by_source = _appraisal_by_source(interface, source_trail)
     judgments = []
-    for index, source_id in enumerate(sorted(rows_by_source), start=1):
+    all_source_ids = _dedupe(str(row.get("source_id") or row.get("source_label") or "").strip() for row in source_trail if isinstance(row, dict))
+    judgment_source_ids = sorted(_dedupe([*rows_by_source.keys(), *all_source_ids]))
+    for index, source_id in enumerate(judgment_source_ids, start=1):
         rows = rows_by_source[source_id]
         appraisal = appraisal_by_source.get(source_id, {})
         main_use = _main_use(rows)
@@ -71,6 +73,7 @@ def _source_weight_judgments(interface: dict[str, Any], source_trail: list[Any])
                     "endpoint_fit": _short_text(appraisal.get("endpoint_fit") or _common_value(rows, "endpoint_fit"), 220),
                     "main_use": main_use,
                     "why_weight_this_way": _why_weight_this_way(rows, appraisal, main_use),
+                    "omission_reason": _omission_reason(rows),
                     "what_not_to_use_it_for": _not_enough_for(rows, appraisal),
                     "evidence_item_ids": _dedupe(str(row.get("item_id") or "").strip() for row in rows if row.get("item_id"))[:12],
                 }
@@ -122,6 +125,12 @@ def _row_main_use(row: dict[str, Any]) -> str:
 
 
 def _why_weight_this_way(rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
+    if not rows:
+        directness = str(appraisal.get("decision_directness") or "").strip()
+        reason = "No memo-facing evidence item is assigned to this source; use it only for context, application, or source traceability unless a later model judgment supplies a specific evidence item"
+        if directness and directness not in {"unknown", "unspecified"}:
+            reason += f"; source directness is appraised as {directness}"
+        return _short_text(reason + ".", 520)
     directness = str(appraisal.get("decision_directness") or "").strip()
     claims = _dedupe(
         _short_text(_reader_relevant_reason(row), 180)
@@ -134,6 +143,12 @@ def _why_weight_this_way(rows: list[dict[str, Any]], appraisal: dict[str, Any], 
     if claims:
         parts.append(f"and links the source to: {claims[0]}")
     return _short_text("; ".join(parts) + ".", 520)
+
+
+def _omission_reason(rows: list[dict[str, Any]]) -> str:
+    if rows:
+        return ""
+    return "No memo-facing evidence item was assigned to this source in the current decision packet."
 
 
 def _reader_relevant_reason(row: dict[str, Any]) -> str:
@@ -172,7 +187,7 @@ def _common_value(rows: list[dict[str, Any]], key: str) -> str:
 
 def _informative_rationale(row: dict[str, Any]) -> bool:
     text = str(row.get("why_weight_this_way") or "").lower()
-    markers = ("directness", "endpoint", "population", "source", "appraisal", "links", "limitation", "scope")
+    markers = ("directness", "endpoint", "population", "source", "appraisal", "links", "limitation", "scope", "memo-facing", "context")
     return any(marker in text for marker in markers)
 
 

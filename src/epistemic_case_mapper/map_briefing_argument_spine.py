@@ -30,14 +30,18 @@ def build_evidence_weighted_argument_spine(
         _practical_step(skeleton),
     ]
     steps = [step for step in steps if step]
+    steps = [_with_section_owner(step) for step in steps]
+    section_plan = _section_plan(steps)
     report = build_argument_spine_quality_report(steps, source_weight_judgments)
     return {
         "schema_id": "evidence_weighted_argument_spine_v1",
         "writing_policy": [
             "Write the memo from this ordered spine rather than restating every packet field.",
-            "Each step owns a distinct memo job; repeat evidence only when the memo job changes.",
+            "Each step has a primary_section; use that section as the evidence owner's home in the memo.",
+            "When another section needs the same evidence, refer to the prior role briefly and add a new decision function instead of repeating the same sentence.",
             "Use source_weight_judgments to explain why a source drives, calibrates, bounds, or contextualizes the answer.",
         ],
+        "section_plan": section_plan,
         "steps": steps,
         "quality_report": report,
     }
@@ -84,6 +88,51 @@ def _answer_step(skeleton: dict[str, Any]) -> dict[str, Any]:
             "scope": _short_text(skeleton.get("scope"), 420),
         }
     )
+
+
+def _with_section_owner(step: dict[str, Any]) -> dict[str, Any]:
+    job = str(step.get("memo_job") or "").strip()
+    owner = {
+        "answer": "Bottom Line",
+        "primary_driver": "Why This Is the Best Current Read",
+        "calibrator": "Why This Is the Best Current Read",
+        "counterweight_or_boundary": "What Could Change or Bound the Answer",
+        "crux": "What Could Change or Bound the Answer",
+        "scope_boundary": "What Could Change or Bound the Answer",
+        "practical_implication": "Practical Implication",
+    }.get(job, "")
+    if not owner:
+        return step
+    owned = dict(step)
+    owned["primary_section"] = owner
+    return owned
+
+
+def _section_plan(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sections = [
+        ("Bottom Line", "State the answer, scope, and confidence without previewing every evidence detail."),
+        ("Why This Is the Best Current Read", "Weigh the main answer drivers and calibrators into the affirmative case for the answer."),
+        ("What Could Change or Bound the Answer", "Handle counterweights, cruxes, and scope boundaries as limits on the answer."),
+        ("Practical Implication", "Translate the answer into action guidance without reopening the whole evidence argument."),
+    ]
+    rows = []
+    for section, writing_job in sections:
+        owned_steps = [step for step in steps if step.get("primary_section") == section]
+        rows.append(
+            _drop_empty(
+                {
+                    "section": section,
+                    "writing_job": writing_job,
+                    "owned_step_ids": [str(step.get("step_id") or "") for step in owned_steps if step.get("step_id")],
+                    "owned_evidence_item_ids": _dedupe(
+                        evidence_id
+                        for step in owned_steps
+                        for evidence_id in _string_list(step.get("evidence_item_ids"))
+                    ),
+                }
+            )
+        )
+    return rows
 
 
 def _lane_steps(memo_job: str, rows: list[dict[str, Any]], instruction: str) -> list[dict[str, Any]]:

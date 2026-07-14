@@ -120,9 +120,9 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         warnings.append("argument_spine_warning")
     if not inventory_items:
         warnings.append("missing_organized_evidence_inventory")
-    if any(
-        not _source_ids(row)
-        for row in [*priority, *counterweights, *source_notes, *checklist, *inventory_items]
+    if any(not _source_ids(row) for row in [*priority, *counterweights, *source_notes, *inventory_items] if isinstance(row, dict)) or any(
+        _checklist_row_requires_source(row) and not _source_ids(row)
+        for row in checklist
         if isinstance(row, dict)
     ):
         warnings.append("source_id_missing_from_canonical_rows")
@@ -776,6 +776,17 @@ def _brief_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
 
 def _source_ids(row: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(row.get("source_ids")), str(row.get("source_id") or "").strip()])
+
+
+def _checklist_row_requires_source(row: dict[str, Any]) -> bool:
+    role = str(row.get("role") or "").strip().lower()
+    if role.endswith("writer_guidance") or role in {"writer_guidance", "critique_writer_guidance"}:
+        return False
+    if _list(row.get("evidence_item_ids")) or _list(row.get("quantities")):
+        return True
+    if str(row.get("obligation_type") or "").strip():
+        return True
+    return bool(str(row.get("claim") or row.get("statement") or "").strip())
 
 
 def _source_key(row: dict[str, Any]) -> str:
