@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
@@ -11,6 +12,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
     if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
         canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
+        canonical = _with_top_level_guidance(canonical, memo_ready_packet)
         return build_canonical_decision_writer_packet_synthesis_prompt(canonical)
     return (
         "Memo-ready packet synthesis prompt unavailable.\n"
@@ -25,6 +27,7 @@ def build_writer_packet_synthesis_prompt(
 ) -> str:
     if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
         canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
+        canonical = _with_top_level_guidance(canonical, memo_ready_packet)
         return build_canonical_decision_writer_packet_synthesis_prompt(canonical)
     return (
         "Decision-writer packet synthesis prompt unavailable.\n"
@@ -46,6 +49,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "## What Could Change or Bound the Answer\n"
         "## Practical Implication\n\n"
         "Writing rules:\n"
+        "- Use lightweight_writer_guidance to avoid misleading wording, generic source-quality labels, quantity endpoint mixups, and overstatement.\n"
         "- Use source_weighting to explain why sources drive, calibrate, bound, or contextualize the answer.\n"
         "- Use argument_spine as the primary writing plan; follow its section_plan and primary_section fields to decide where each evidence step belongs.\n"
         "- Treat section_writing_packets as the primary section-local context. Each section packet contains the argument steps, evidence rows, source roles, and retention requirements for that section.\n"
@@ -54,6 +58,8 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Use answer_frame to state the bottom-line answer, scope, confidence, and unsupported options.\n"
         "- Use supplemental_evidence only when it adds practical framing, comparators, scope, or interpretive context missing from the argument spine.\n"
         "- Interpret important quantities in decision terms.\n"
+        "- If lightweight_writer_guidance says a quantity could be confused with another endpoint, keep those endpoints in separate clauses.\n"
+        "- Surface evidence-quality caveats specifically; do not use generic labels such as quality limit as a substitute for explanation.\n"
         "- Use limiting_evidence to say whether each major limiting point overturns, weakens, bounds, explains, or creates a crux for the answer. Preserve uncertainty when the packet says a point may only bound the answer.\n"
         "- Preserve each section_plan must_include_point in natural prose within that section.\n"
         "- Include every required visible structure heading exactly once, including Practical Implication.\n"
@@ -80,6 +86,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
             }
         ),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
+        "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
         "argument_spine": _drop_empty(
             {
                 "section_plan": spine.get("section_plan"),
@@ -95,6 +102,13 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         },
         "citation_registry": packet.get("citation_registry"),
     }
+
+
+def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
+    guidance = _dict(canonical.get("lightweight_writer_guidance")) or _dict(memo_ready_packet.get("lightweight_writer_guidance"))
+    if not guidance:
+        return canonical
+    return {**canonical, "lightweight_writer_guidance": guidance}
 
 
 def _compact_source_judgment(row: dict[str, Any]) -> dict[str, Any]:

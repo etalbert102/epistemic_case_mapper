@@ -146,6 +146,10 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
     from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
+    from epistemic_case_mapper.map_briefing_lightweight_guidance import (
+        attach_lightweight_guidance_to_packet,
+        run_lightweight_writer_guidance,
+    )
 
     _progress(progress, "analyst_packet_bundle", "started")
     scaffold.update(build_analyst_packet_bundle(packet=packet, ledger=ledger, adjudication=scaffold.get("analyst_adjudication", {}), decision_model=scaffold.get("analyst_decision_model", {}), memo_warning_packet=scaffold.get("memo_warning_packet", {})))
@@ -193,6 +197,20 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
         )
     )
     _promote_analyst_packet_as_active(scaffold)
+    memo_ready = scaffold.get("memo_ready_packet")
+    canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
+    _progress(progress, "lightweight_writer_guidance", "started")
+    guidance_bundle = run_lightweight_writer_guidance(
+        canonical_packet=canonical if isinstance(canonical, dict) else {},
+        scaffold=scaffold,
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
+    )
+    scaffold.update(guidance_bundle)
+    if isinstance(memo_ready, dict):
+        scaffold["memo_ready_packet"] = attach_lightweight_guidance_to_packet(memo_ready, guidance_bundle)
+    _progress(progress, "lightweight_writer_guidance", "completed", _report_status(scaffold, "lightweight_writer_guidance_report"))
     _progress(progress, "analyst_packet_finalization", "completed", _report_status(scaffold, "active_memo_ready_packet_report"))
 
 

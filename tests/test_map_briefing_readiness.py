@@ -55,6 +55,53 @@ def test_packet_quality_gate_does_not_block_on_parse_failure_alone() -> None:
     assert report["issues"][0]["issue_type"] == "packet_critique_parse_failed"
 
 
+def test_packet_quality_gate_treats_intentional_auto_skip_as_clean() -> None:
+    report = build_packet_quality_gate_report(
+        {
+            "decision_briefing_packet": {
+                "evidence_bundles": [{"bundle_id": "bundle_001"}],
+                "must_retain_ledger": [{"item_id": "retain_001"}],
+            },
+            "packet_sufficiency_report": {"status": "ready", "issues": []},
+            "packet_critique_report": {
+                "status": "skipped",
+                "reason": "auto_skipped_lightweight_guidance_default",
+            },
+            "packet_critique_adjudication_report": {
+                "status": "skipped",
+                "accepted_count": 0,
+                "rejected_count": 0,
+                "warning_only_count": 0,
+            },
+        }
+    )
+
+    assert report["status"] == "ready"
+    assert not report["issues"]
+
+
+def test_packet_quality_gate_still_warns_on_prompt_backend_skip() -> None:
+    report = build_packet_quality_gate_report(
+        {
+            "decision_briefing_packet": {
+                "evidence_bundles": [{"bundle_id": "bundle_001"}],
+                "must_retain_ledger": [{"item_id": "retain_001"}],
+            },
+            "packet_sufficiency_report": {"status": "ready", "issues": []},
+            "packet_critique_report": {"status": "skipped_prompt_backend"},
+            "packet_critique_adjudication_report": {
+                "status": "skipped_prompt_backend",
+                "accepted_count": 0,
+                "rejected_count": 0,
+                "warning_only_count": 0,
+            },
+        }
+    )
+
+    assert report["status"] == "warning"
+    assert report["issues"][0]["issue_type"] == "packet_critique_not_run"
+
+
 def test_packet_quality_gate_allows_warning_only_adjudication() -> None:
     report = build_packet_quality_gate_report(
         {

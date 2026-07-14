@@ -69,3 +69,37 @@ def test_warning_evidence_routes_through_canonical_prompt() -> None:
     assert "reader_brief_plan" not in prompt
     assert "decision_interpretation_plan" not in prompt
     assert "Required obligation ledger" not in prompt
+
+
+def test_lightweight_writer_guidance_routes_through_canonical_prompt() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    result = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])
+    packet = result["memo_ready_packet"]
+    packet["lightweight_writer_guidance"] = {
+        "schema_id": "lightweight_writer_guidance_v1",
+        "overall_judgment": "Use observational evidence carefully.",
+        "reader_guidance": [
+            {
+                "instruction": "Explain that the main source supports direction but not causal certainty.",
+                "source_ids": ["s1"],
+            }
+        ],
+        "evidence_quality_caveats": [
+            {"caveat": "This source is indirect for implementation outcomes.", "source_ids": ["s1"]}
+        ],
+        "quantity_wording_risks": [
+            {
+                "risk": "Do not mix implementation failure rates with outcome rates.",
+                "safe_wording": "Keep failure and outcome endpoints in separate clauses.",
+            }
+        ],
+        "do_not_overstate": ["Do not state unconditional adoption."],
+        "suggested_reader_flow": ["answer first, then source weighting"],
+    }
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "lightweight_writer_guidance_v1" in prompt
+    assert "This source is indirect for implementation outcomes." in prompt
+    assert "Keep failure and outcome endpoints in separate clauses." in prompt
+    assert "Do not state unconditional adoption." in prompt

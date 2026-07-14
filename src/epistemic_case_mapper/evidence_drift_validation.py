@@ -10,13 +10,29 @@ SOURCE_LABEL_RE = re.compile(
     r"(?:Study|Trial|Review|Report|Guidance|Guideline|Meta-Analysis|Meta Analysis|Analysis|Cohort|Survey|Memo|Dataset|Database)\b"
 )
 CITATION_LIKE_RE = re.compile(r"\(([A-Z][A-Za-z&'.-]*(?:\s+[A-Z][A-Za-z&'.-]*){0,3}\s+(?:19|20)\d{2}[a-z]?)\)")
+METRIC_ALIASES = {
+    "hr": "hr",
+    "hazard ratio": "hr",
+    "rr": "rr",
+    "relative risk": "rr",
+    "risk ratio": "rr",
+    "or": "or",
+    "odds ratio": "or",
+    "ci": "ci",
+    "confidence interval": "ci",
+    "i2": "i2",
+    "p": "p",
+    "n": "n",
+}
+METRIC_PATTERN = r"HR|RR|OR|CI|I2|p|n|N|hazard ratio|relative risk|risk ratio|odds ratio|confidence interval"
+VALUE_PATTERN = r"\d+(?:,\d{3})*(?:\.\d+)?"
 QUANTITY_RE = re.compile(
     r"(?<![A-Za-z0-9])"
-    r"(?:RR|OR|HR|CI|I2|p|n|N)?\s*"
+    rf"(?:{METRIC_PATTERN})?\s*"
     r"(?:[<>]=?\s*)?"
-    r"\d+(?:,\d{3})*(?:\.\d+)?"
+    rf"{VALUE_PATTERN}"
     r"(?:\s*(?:%|mg|g|kg|mcg|ug|µg|mL|ml|L|IU|ppm|ppb|PM2\.5|per\s+\d+(?:,\d{3})?|\bCI\b|\bRR\b|\bOR\b|\bHR\b))"
-    r"|(?<![A-Za-z0-9])(?:RR|OR|HR|CI)\s*\d+(?:\.\d+)?"
+    rf"|(?<![A-Za-z0-9])(?:{METRIC_PATTERN})\s*[:=]?\s*{VALUE_PATTERN}"
 )
 STRONG_UNSUPPORTED_MARKERS = (
     "proves",
@@ -39,13 +55,13 @@ STRONG_UNSUPPORTED_MARKERS = (
 def evidence_drift_issues(text: str, allowed: Any, *, subject: str = "text") -> list[str]:
     allowed_text = _stringify_allowed(allowed)
     allowed_norm = _normalize(allowed_text)
-    text_norm = _normalize(text)
+    allowed_quantities = _allowed_quantity_index(allowed_text)
     issues: list[str] = []
 
     unsupported_quantities = [
         quantity
         for quantity in _distinct(_normalize_quantity(match.group(0)) for match in QUANTITY_RE.finditer(text))
-        if quantity and quantity not in allowed_norm
+        if quantity and quantity not in allowed_norm and not _quantity_supported(quantity, allowed_quantities)
     ]
     for quantity in unsupported_quantities[:5]:
         issues.append(f"{subject} introduces unsupported quantity `{quantity}`")
@@ -125,6 +141,71 @@ def _normalize_quantity(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", text.lower().replace(",", "")).strip()
     cleaned = cleaned.replace("µ", "u")
     return cleaned
+
+
+def _allowed_quantity_index(allowed_text: str) -> dict[str, set[str]]:
+    """Index allowed quantities by exact form, value, and metric/value equivalence.
+
+    The memo may say "HR 1.10" while source excerpts often write one metric
+    label followed by several values, e.g. "hazard ratio 1.15 ..., unprocessed
+    red meat (1.10...)".  This index treats those notation variants as the same
+    allowed quantity without inventing quantities whose numeric value is absent.
+    """
+
+    exact: set[str] = set()
+    values: set[str] = set()
+    metric_values: set[str] = set()
+    text = str(allowed_text or "")
+    for match in QUANTITY_RE.finditer(text):
+        quantity = _normalize_quantity(match.group(0))
+        if not quantity:
+            continue
+        exact.add(quantity)
+        for value in _quantity_values(quantity):
+            values.add(value)
+        parsed = _quantity_metric_values(quantity)
+        if parsed["metric"]:
+            for value in parsed["values"]:
+                metric_values.add(f"{parsed['metric']}:{value}")
+    for sentence in _sentences(text):
+        metric = _sentence_metric(sentence)
+        if not metric:
+            continue
+        for value in _quantity_values(sentence):
+            metric_values.add(f"{metric}:{value}")
+    values.update(_quantity_values(text))
+    return {"exact": exact, "values": values, "metric_values": metric_values}
+
+
+def _quantity_supported(quantity: str, allowed_quantities: dict[str, set[str]]) -> bool:
+    normalized = _normalize_quantity(quantity)
+    if normalized in allowed_quantities["exact"]:
+        return True
+    parsed = _quantity_metric_values(normalized)
+    if parsed["metric"]:
+        return any(
+            f"{parsed['metric']}:{value}" in allowed_quantities["metric_values"] or value in allowed_quantities["values"]
+            for value in parsed["values"]
+        )
+    return any(value in allowed_quantities["values"] for value in parsed["values"])
+
+
+def _quantity_metric_values(quantity: str) -> dict[str, Any]:
+    normalized = _normalize_quantity(quantity)
+    metric = _sentence_metric(normalized)
+    return {"metric": metric, "values": _quantity_values(normalized)}
+
+
+def _sentence_metric(text: str) -> str:
+    for match in re.finditer(METRIC_PATTERN, str(text), flags=re.IGNORECASE):
+        metric = METRIC_ALIASES.get(match.group(0).lower())
+        if metric:
+            return metric
+    return ""
+
+
+def _quantity_values(text: str) -> list[str]:
+    return _distinct([match.group(0).replace(",", "") for match in re.finditer(VALUE_PATTERN, str(text))])
 
 
 def _contradictory_statistical_significance(text: str) -> bool:

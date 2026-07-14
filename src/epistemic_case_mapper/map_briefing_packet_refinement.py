@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from copy import deepcopy
 from typing import Any, Callable, Literal
 
@@ -10,6 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from epistemic_case_mapper.map_briefing_decision_packet import packet_summary_for_model
 from epistemic_case_mapper.map_briefing_decision_packet_progress import critique_progress_details, packet_counts, packet_progress, refinement_progress_details
 from epistemic_case_mapper.map_briefing_packet_critique_issues import dedupe_issue_rows, normalized_critique_issues
+from epistemic_case_mapper.map_briefing_packet_critique_gate import (
+    packet_critique_skip_reason as _packet_critique_skip_reason,
+    run_skipped_packet_critique_and_refinement,
+)
+from epistemic_case_mapper.map_briefing_packet_edit_normalization import normalize_recommended_edit as _normalize_recommended_edit
 from epistemic_case_mapper.map_briefing_packet_parallel_critique import run_parallel_packet_critique, should_use_parallel_packet_critique
 from epistemic_case_mapper.map_briefing_omission_priority import preserve_omissions_with_recomputed_quantities
 from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
@@ -320,6 +324,16 @@ def run_packet_critique_and_refinement(
     progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     pre_sufficiency = deepcopy(sufficiency_report)
+    skip_reason = _packet_critique_skip_reason(pre_sufficiency, backend=backend)
+    if skip_reason:
+        return run_skipped_packet_critique_and_refinement(
+            packet,
+            pre_sufficiency,
+            skip_reason=skip_reason,
+            progress=progress,
+            candidate_pool=_post_refinement_candidate_pool,
+            sync_coverage=_sync_packet_coverage_with_sufficiency,
+        )
     packet_progress(progress, "packet_critique", "started", packet_counts(packet))
     critique = run_packet_critique(
         packet,
@@ -372,6 +386,8 @@ def run_packet_critique_and_refinement(
         "decision_briefing_packet_refinement_raw": refined["raw"],
         "decision_briefing_packet_refinement_report": refined["report"],
     }
+
+
 
 
 def run_packet_critique(
@@ -688,72 +704,6 @@ def _recommended_edits_from_role_checks(critique: dict[str, Any]) -> list[dict[s
             }
         )
     return edits
-
-
-def _normalize_recommended_edit(edit: dict[str, Any]) -> dict[str, Any]:
-    normalized = dict(edit)
-    target_ids = _string_list(normalized.get("target_ids"))
-    if not target_ids and str(normalized.get("target_id", "")).strip():
-        target_ids = [str(normalized.get("target_id", "")).strip()]
-    if not target_ids and str(normalized.get("bundle_id", "")).strip():
-        target_ids = [str(normalized.get("bundle_id", "")).strip()]
-    if target_ids:
-        normalized["target_ids"] = target_ids
-    if not normalized.get("rationale") and normalized.get("description"):
-        normalized["rationale"] = normalized.get("description")
-    if normalized.get("edit_type") == "insufficiency_warning":
-        normalized["edit_type"] = "add_warning"
-        if normalized.get("description") and not normalized.get("warning"):
-            normalized["warning"] = normalized.get("description")
-    if normalized.get("edit_type") == "relabel" and not str(normalized.get("recommended_role", "")).strip():
-        inferred = _infer_recommended_role_from_text(
-            " ".join(
-                item
-                for item in (
-                    str(normalized.get("rationale", "")),
-                    str(normalized.get("description", "")),
-                    str(normalized.get("warning", "")),
-                )
-                if item.strip()
-            )
-        )
-        if inferred:
-            normalized["recommended_role"] = inferred
-    return normalized
-
-
-def _infer_recommended_role_from_text(text: str) -> str:
-    lowered = text.lower()
-    roles = (
-        "strongest_support",
-        "counterweight",
-        "scope_boundary",
-        "quantitative_anchor",
-        "decision_crux",
-        "mechanism/context",
-        "mechanism",
-        "context",
-    )
-    phrase_map = {
-        "strongest support": "strongest_support",
-        "primary support": "strongest_support",
-        "scope boundary": "scope_boundary",
-        "quantitative anchor": "quantitative_anchor",
-        "decision crux": "decision_crux",
-    }
-    for role in roles:
-        if re.search(rf"\bto\s+{re.escape(role)}\b", lowered):
-            return role
-    for phrase, role in phrase_map.items():
-        if re.search(rf"\bto\s+{re.escape(phrase)}\b", lowered):
-            return role
-    for role in roles:
-        if role in lowered:
-            return role
-    for phrase, role in phrase_map.items():
-        if phrase in lowered:
-            return role
-    return ""
 
 
 def _apply_bundle_update(target: dict[str, Any], update: dict[str, Any]) -> list[str]:

@@ -233,7 +233,7 @@ def build_final_brief_evaluation(
         "source_grounded": 1 if "## Sources" in memo_markdown else 0,
         "coherent_memo": 1 if coherence_report.get("status") == "pass" else 0,
         "bounded_when_sources_insufficient": 1 if not sufficiency.get("bounded_answer_required") or ("provided document" in memo_markdown.lower() or "current map" in memo_markdown.lower()) else 0,
-        "evidence_quality_visible": 1 if not evidence_quality.get("weak_or_indirect_count") or any(term in memo_markdown.lower() for term in ("limited", "indirect", "weak", "uncertain")) else 0,
+        "evidence_quality_visible": 1 if not evidence_quality.get("weak_or_indirect_count") or _has_visible_evidence_quality_caveat(memo_markdown) else 0,
     }
     issues = _final_eval_issues(scores, coherence_report)
     status = "fail" if scores["answers_decision_question"] == 0 else "warning" if issues else "pass"
@@ -290,6 +290,28 @@ def _final_eval_issues(scores: dict[str, int], coherence_report: dict[str, Any])
         if isinstance(issue, dict) and issue.get("message"):
             issues.append(str(issue["message"]))
     return _dedupe(issues)
+
+
+def _has_visible_evidence_quality_caveat(memo_markdown: str) -> bool:
+    text = _normalize(memo_markdown)
+    return any(
+        term in text
+        for term in (
+            "limited",
+            "indirect",
+            "weak",
+            "uncertain",
+            "observational evidence",
+            "association does not imply causation",
+            "not causal",
+            "causal proof",
+            "guidance based",
+            "not independent empirical evidence",
+            "confidence interval",
+            "interval crosses",
+            "not statistically significant",
+        )
+    )
 
 
 def _first_body_paragraph(markdown: str) -> str:

@@ -588,6 +588,34 @@ The practical implication is to move, while tracking implementation risk [Outcom
     assert not any(issue["kind"] == "repetition" for issue in report["issues"])
 
 
+def test_final_brief_evaluation_accepts_specific_quality_caveats() -> None:
+    memo = """# Decision Memo
+
+**Decision Question:** Should option A be adopted?
+
+**Confidence:** Medium
+
+**Bottom Line:** Option A is probably reasonable.
+
+The main source is observational evidence; association does not imply causation.
+
+## Sources
+
+* Source One
+"""
+
+    report = build_final_brief_evaluation(
+        memo_markdown=memo,
+        memo_path="BRIEFING.md",
+        decision_question="Should option A be adopted?",
+        coherence_report={"status": "pass", "issues": []},
+        scaffold={"evidence_quality_report": {"weak_or_indirect_count": 1}},
+    )
+
+    assert report["status"] == "pass"
+    assert report["rubric_scores"]["evidence_quality_visible"] == 1
+
+
 def test_stage_value_report_surfaces_weak_retention_and_stage_signals() -> None:
     report = build_stage_value_report(
         scaffold={

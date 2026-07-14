@@ -156,6 +156,38 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
 
 
+def test_presentation_source_weighting_uses_lightweight_quality_caveats() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["outcome_2025"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Use as the main outcome source.",
+                    "what_not_to_use_it_for": ["quality_limit"],
+                }
+            ],
+            "lightweight_writer_guidance": {
+                "schema_id": "lightweight_writer_guidance_v1",
+                "evidence_quality_caveats": [
+                    {
+                        "caveat": "This is observational evidence, so it should not be framed as causal proof.",
+                        "source_ids": ["outcome_2025"],
+                    }
+                ],
+            },
+        },
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Adopt option A if risk is bounded."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "this is observational evidence, so it should not be framed as causal proof" in result["memo"]
+    assert "quality limit" not in result["memo"]
+
+
 def test_citation_trace_includes_detailed_source_weight_judgments() -> None:
     packet = {
         "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],

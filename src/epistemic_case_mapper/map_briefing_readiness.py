@@ -19,7 +19,7 @@ def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]
         issues.append(_issue("warning", "packet_sufficiency_warnings", sufficiency.get("issues", [])))
     if critique.get("status") == "parse_failed":
         issues.append(_issue("warning", "packet_critique_parse_failed", _parse_errors(critique)))
-    elif critique.get("status") in {"skipped", "skipped_prompt_backend"}:
+    elif critique.get("status") in {"skipped", "skipped_prompt_backend"} and not _intentional_packet_critique_skip(critique):
         issues.append(_issue("warning", "packet_critique_not_run", critique.get("status")))
     if _int(adjudication.get("rejected_count")):
         issues.append(_issue("warning", "packet_critique_rejected_recommendations", adjudication.get("rejected_count")))
@@ -177,6 +177,10 @@ def _parse_errors(report: dict[str, Any]) -> list[dict[str, Any]]:
         return []
     errors = parse_report.get("errors")
     return errors if isinstance(errors, list) else []
+
+
+def _intentional_packet_critique_skip(report: dict[str, Any]) -> bool:
+    return str(report.get("reason") or "").startswith("auto_skipped_")
 
 
 def _dict(value: Any) -> dict[str, Any]:

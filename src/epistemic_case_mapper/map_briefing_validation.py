@@ -286,7 +286,7 @@ def validate_briefing_against_scaffold(
         issues.extend(_briefing_evidence_fit_issues(rendered, evidence_ledger, candidate_map))
     for issue in evidence_drift_issues(
         _main_memo_reliance_text(rendered),
-        {"scaffold": scaffold, "candidate_map": candidate_map},
+        {"scaffold": scaffold, "candidate_map": candidate_map, "memo_ready_packet": scaffold.get("memo_ready_packet", {})},
         subject="briefing",
     ):
         issues.append(

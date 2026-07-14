@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
+from epistemic_case_mapper.map_briefing_lightweight_guidance import evidence_quality_caveat_text
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -182,7 +183,8 @@ def _ensure_source_weighting_section(memo: str, packet: dict[str, Any]) -> str:
 
 def _source_weighting_section(packet: dict[str, Any]) -> str:
     canonical = _dict(packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(packet)
-    judgment_section = _source_weighting_from_judgments(_list(canonical.get("source_weight_judgments")))
+    guidance = _dict(packet.get("lightweight_writer_guidance")) or _dict(canonical.get("lightweight_writer_guidance"))
+    judgment_section = _source_weighting_from_judgments(_list(canonical.get("source_weight_judgments")), guidance=guidance)
     if judgment_section:
         return judgment_section
     frame = _dict(canonical.get("source_weighted_answer_frame"))
@@ -216,7 +218,7 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _source_weighting_from_judgments(judgments: list[Any]) -> str:
+def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str, Any] | None = None) -> str:
     rows = [
         row
         for row in judgments
@@ -243,7 +245,7 @@ def _source_weighting_from_judgments(judgments: list[Any]) -> str:
         ("identifies_crux", "Decision cruxes"),
         ("contextualizes", "Context sources"),
     ]:
-        bullet = _judgment_group_bullet(label, groups.get(use, [])[:4])
+        bullet = _judgment_group_bullet(label, groups.get(use, [])[:4], guidance=guidance)
         if bullet:
             bullets.append(bullet)
     if bullets:
@@ -265,12 +267,14 @@ def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
     return " ".join(parts) or "Read sources by decision role: answer drivers carry the bottom line, while calibrators, counterweights, cruxes, and scope sources bound the answer."
 
 
-def _judgment_group_bullet(label: str, rows: list[dict[str, Any]]) -> str:
+def _judgment_group_bullet(label: str, rows: list[dict[str, Any]], *, guidance: dict[str, Any] | None = None) -> str:
     sources = _source_group_citations(rows)
     if not sources:
         return ""
+    source_ids = _dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids")))
     limits = _dedupe(limit for row in rows for limit in _string_list(row.get("what_not_to_use_it_for")))[:3]
-    limit_text = f" Main limits: {', '.join(_readable_warning(item) for item in limits)}." if limits else ""
+    readable_limits = _readable_limits(limits, source_ids=source_ids, guidance=guidance)
+    limit_text = f" Main limits: {', '.join(readable_limits)}." if readable_limits else ""
     return f"- **{label}:** {sources}.{limit_text}"
 
 
@@ -323,7 +327,28 @@ def _cite_list(source_ids: list[str]) -> str:
 
 
 def _readable_warning(warning: str) -> str:
-    return str(warning or "").replace("_", " ")
+    warning = str(warning or "").strip()
+    if warning == "quality_limit":
+        return "weak, indirect, or unknown evidence-quality status"
+    return warning.replace("_", " ")
+
+
+def _readable_limits(limits: list[str], *, source_ids: list[str], guidance: dict[str, Any] | None) -> list[str]:
+    rows: list[str] = []
+    caveats = evidence_quality_caveat_text(guidance, source_ids)
+    for limit in limits:
+        if limit == "quality_limit" and caveats:
+            rows.extend(_clean_limit_phrase(caveat) for caveat in caveats)
+        else:
+            rows.append(_clean_limit_phrase(_readable_warning(limit)))
+    return _dedupe(rows)[:3]
+
+
+def _clean_limit_phrase(value: str) -> str:
+    phrase = str(value or "").strip().rstrip(".;")
+    if not phrase:
+        return ""
+    return phrase[:1].lower() + phrase[1:]
 
 
 def _has_heading(memo: str, heading: str) -> bool:
