@@ -119,6 +119,41 @@ def test_presentation_source_weighting_section_is_idempotent() -> None:
     assert "inserted_source_weighting" not in result["report"]["changes"]
 
 
+def test_presentation_source_weighting_section_uses_source_weight_judgments() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "outcome_2025", "source_label": "Outcome Study 2025", "source_url": "https://example.test/outcome"},
+            {"source_id": "risk_2024", "source_label": "Risk Review 2024", "source_url": "https://example.test/risk"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["outcome_2025"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Use primarily to drive the answer because upstream appraisal links it to target-population outcomes.",
+                },
+                {
+                    "source_ids": ["risk_2024"],
+                    "main_use": "bounds_answer",
+                    "why_weight_this_way": "Use primarily to bound the answer because it identifies implementation risk.",
+                    "what_not_to_use_it_for": ["not_enough_for_unconditional_adoption"],
+                },
+            ],
+            "source_weighted_answer_frame": {"lanes": {}},
+            "source_weight_notes": [],
+        },
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Adopt option A if risk is bounded.\n\n## Support\n\nOutcome evidence supports adoption [outcome_2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "Read the sources by decision use" in result["memo"]
+    assert "target-population outcomes" in result["memo"]
+    assert "not enough for unconditional adoption" in result["memo"]
+    assert "[[Outcome 2025](CITATION_TRACE.md#outcome-2025)]" in result["memo"]
+
+
 def test_presentation_prefers_citation_label_over_long_display_label() -> None:
     long_title = (
         "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, "

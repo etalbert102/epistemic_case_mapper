@@ -152,6 +152,9 @@ def _ensure_source_weighting_section(memo: str, packet: dict[str, Any]) -> str:
 
 def _source_weighting_section(packet: dict[str, Any]) -> str:
     canonical = _dict(packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(packet)
+    judgment_section = _source_weighting_from_judgments(_list(canonical.get("source_weight_judgments")))
+    if judgment_section:
+        return judgment_section
     frame = _dict(canonical.get("source_weighted_answer_frame"))
     lanes = _dict(frame.get("lanes"))
     notes = _list(canonical.get("source_weight_notes"))
@@ -181,6 +184,43 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
     if credibility:
         lines.extend(["", credibility])
     return "\n".join(lines).strip()
+
+
+def _source_weighting_from_judgments(judgments: list[Any]) -> str:
+    rows = [row for row in judgments if isinstance(row, dict) and _string_list(row.get("source_ids"))]
+    if not rows:
+        return ""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        groups.setdefault(str(row.get("main_use") or "contextualizes"), []).append(row)
+    lines = [
+        "## How to Weight the Evidence",
+        "",
+        "Read the sources by decision use: which sources drive the answer, which calibrate it, which bound it, and which mainly contextualize it.",
+        "",
+    ]
+    for use, label in [
+        ("drives_answer", "Main answer drivers"),
+        ("calibrates_magnitude", "Calibrators"),
+        ("bounds_answer", "Counterweights"),
+        ("defines_scope", "Scope limiters"),
+        ("identifies_crux", "Decision cruxes"),
+        ("contextualizes", "Context sources"),
+    ]:
+        lines.extend(_judgment_bullets(label, groups.get(use, [])[:3]))
+    return "\n".join(lines).strip()
+
+
+def _judgment_bullets(label: str, rows: list[dict[str, Any]]) -> list[str]:
+    bullets = []
+    for row in rows:
+        sources = _cite_list(_string_list(row.get("source_ids")))
+        reason = str(row.get("why_weight_this_way") or "").strip()
+        limits = _string_list(row.get("what_not_to_use_it_for"))
+        suffix = f" Limits: {', '.join(_readable_warning(item) for item in limits[:2])}." if limits else ""
+        if sources and reason:
+            bullets.append(f"- **{label}:** ({sources}) {reason}{suffix}")
+    return bullets
 
 
 def _weighting_thesis(
