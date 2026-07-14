@@ -29,6 +29,7 @@ def build_runtime_budget_report(
         _runtime_stage_from_report("packet_critique", scaffold.get("packet_critique_report")),
         _runtime_stage_from_report("packet_refinement", scaffold.get("decision_briefing_packet_refinement_report")),
         _runtime_stage_from_report("analyst_decision_model", scaffold.get("analyst_decision_model_report")),
+        _runtime_stage_from_report("decision_usefulness", scaffold.get("decision_usefulness_report")),
         _runtime_stage_from_report("lightweight_writer_guidance", scaffold.get("lightweight_writer_guidance_report")),
         _runtime_stage_from_report("reader_packet_verbalization", _reader_packet_verbalization_runtime_report(packet_plan_report)),
         {"stage": "section_rewrite", "model_call_count": section_attempts},
@@ -50,6 +51,7 @@ def build_runtime_budget_report(
             reader_packet_repair_report=reader_packet_repair_report,
             packet_repair_report=packet_repair_report,
             editorial_report=editorial_report,
+            decision_usefulness_report=scaffold.get("decision_usefulness_report"),
             lightweight_guidance_report=scaffold.get("lightweight_writer_guidance_report"),
         ),
         most_expensive_stage=most_expensive,
@@ -67,6 +69,8 @@ def build_stage_value_report(
     packet_critique_adjudication = _dict(scaffold.get("packet_critique_adjudication_report"))
     packet_refinement = _dict(scaffold.get("decision_briefing_packet_refinement_report"))
     analyst_decision_model = _dict(scaffold.get("analyst_decision_model_report"))
+    decision_usefulness = _dict(scaffold.get("decision_usefulness_report"))
+    decision_usefulness_quality = _dict(scaffold.get("decision_usefulness_quality_report"))
     lightweight_guidance = _dict(scaffold.get("lightweight_writer_guidance_report"))
     source_cards = _dict(scaffold.get("source_evidence_cards"))
     packet = _dict(scaffold.get("decision_briefing_packet"))
@@ -114,6 +118,28 @@ def build_stage_value_report(
                 f"{_int_value(lightweight_guidance.get('evidence_quality_caveat_count'))} evidence caveats; "
                 f"{_int_value(lightweight_guidance.get('quantity_wording_risk_count'))} quantity risks; "
                 f"status={lightweight_guidance.get('status', 'missing')}"
+            ),
+        },
+        {
+            "stage": "decision_usefulness",
+            "status": _value_status_from_counts(
+                accepted=_int_value(decision_usefulness_quality.get("option_count"))
+                + _int_value(decision_usefulness_quality.get("criterion_count"))
+                + _int_value(decision_usefulness_quality.get("diagnostic_evidence_count"))
+                + _int_value(decision_usefulness_quality.get("tradeoff_count"))
+                + _int_value(decision_usefulness_quality.get("crux_count"))
+                + _int_value(decision_usefulness_quality.get("monitoring_trigger_count")),
+                warnings=_issue_count(decision_usefulness_quality)
+                + _int_value(decision_usefulness_quality.get("invalid_reference_count"))
+                + _int_value(decision_usefulness_quality.get("invalid_matrix_reference_count")),
+                report_status=str(decision_usefulness.get("status", "")),
+            ),
+            "primary_signal": (
+                f"{_int_value(decision_usefulness_quality.get('option_count'))} options; "
+                f"{_int_value(decision_usefulness_quality.get('criterion_count'))} criteria; "
+                f"{_int_value(decision_usefulness_quality.get('tradeoff_count'))} tradeoffs; "
+                f"{_int_value(decision_usefulness_quality.get('crux_count'))} cruxes; "
+                f"status={decision_usefulness.get('status', 'missing')}"
             ),
         },
         {
@@ -187,6 +213,7 @@ def _runtime_degraded_triggers(
     reader_packet_repair_report: dict[str, Any] | None = None,
     packet_repair_report: dict[str, Any] | None = None,
     editorial_report: dict[str, Any] | None = None,
+    decision_usefulness_report: dict[str, Any] | None = None,
     lightweight_guidance_report: dict[str, Any] | None = None,
 ) -> list[str]:
     triggers: list[str] = []
@@ -200,6 +227,7 @@ def _runtime_degraded_triggers(
     if reader_rewrite_report.get("status") == "skipped_prompt_backend":
         triggers.append("reader_memo_rewrite_prompt_backend")
     for stage, report in (
+        ("decision_usefulness", decision_usefulness_report),
         ("lightweight_writer_guidance", lightweight_guidance_report),
         ("reader_packet_verbalization", packet_plan_report),
         ("reader_packet_retention_repair", reader_packet_repair_report),

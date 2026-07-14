@@ -634,6 +634,16 @@ def test_stage_value_report_surfaces_weak_retention_and_stage_signals() -> None:
                 "status": "applied",
                 "applied_update_count": 1,
             },
+            "decision_usefulness_report": {"status": "parsed"},
+            "decision_usefulness_quality_report": {
+                "status": "ready",
+                "option_count": 2,
+                "criterion_count": 3,
+                "diagnostic_evidence_count": 4,
+                "tradeoff_count": 2,
+                "crux_count": 1,
+                "monitoring_trigger_count": 1,
+            },
         },
         section_rewrite_report={"status": "ready"},
         reader_rewrite_report={"status": "accepted"},
@@ -647,3 +657,5 @@ def test_stage_value_report_surfaces_weak_retention_and_stage_signals() -> None:
     stages = {row["stage"]: row for row in report["stages"]}
     assert stages["packet_critique"]["status"] == "useful"
     assert "1 accepted edits" in stages["packet_critique"]["primary_signal"]
+    assert stages["decision_usefulness"]["status"] == "useful"
+    assert "2 options" in stages["decision_usefulness"]["primary_signal"]

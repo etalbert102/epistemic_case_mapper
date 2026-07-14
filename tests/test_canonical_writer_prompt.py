@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_decision_usefulness import (
+    attach_decision_usefulness_to_packet,
+    normalize_decision_usefulness_packet,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
@@ -103,3 +107,39 @@ def test_lightweight_writer_guidance_routes_through_canonical_prompt() -> None:
     assert "This source is indirect for implementation outcomes." in prompt
     assert "Keep failure and outcome endpoints in separate clauses." in prompt
     assert "Do not state unconditional adoption." in prompt
+
+
+def test_decision_usefulness_routes_through_canonical_prompt() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    result = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])
+    packet = result["memo_ready_packet"]
+    canonical = packet["canonical_decision_writer_packet"]
+    usefulness = normalize_decision_usefulness_packet(
+        {
+            "decision_question": canonical["decision_question"],
+            "answer_shape": "threshold",
+            "recommended_stance": {"stance": "Adopt only if implementation risk stays below the acceptable threshold."},
+            "decision_options": [{"label": "conditional adoption"}],
+            "decision_criteria": [{"label": "outcome improvement"}],
+            "tradeoffs": [{"tradeoff": "Outcome improvement versus implementation burden."}],
+            "cruxes_and_thresholds": [{"crux": "Whether burden remains below the threshold."}],
+            "monitoring_triggers": [{"trigger": "New implementation failure evidence."}],
+        },
+        canonical_packet=canonical,
+    )
+    attach_decision_usefulness_to_packet(
+        packet,
+        {
+            "decision_usefulness_packet": usefulness,
+            "decision_usefulness_report": {"status": "parsed"},
+            "decision_usefulness_quality_report": usefulness["quality_report"],
+        },
+    )
+
+    prompt = build_memo_ready_packet_synthesis_prompt(packet)
+
+    assert "decision_usefulness_packet_v1" in prompt
+    assert "Outcome improvement versus implementation burden." in prompt
+    assert "Whether burden remains below the threshold." in prompt
+    assert "New implementation failure evidence." in prompt
+    assert "do not dump the option-criteria matrix" in prompt

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_decision_usefulness import compact_decision_usefulness_for_prompt
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
@@ -50,6 +51,9 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "## Practical Implication\n\n"
         "Writing rules:\n"
         "- Use lightweight_writer_guidance to avoid misleading wording, generic source-quality labels, quantity endpoint mixups, and overstatement.\n"
+        "- Use decision_usefulness to make the answer's options, criteria, tradeoffs, crux thresholds, and update triggers explicit when available.\n"
+        "- If decision_usefulness says the answer shape is a single stance, threshold, or classification, explain the relevant choice without inventing fake alternatives.\n"
+        "- Use decision_usefulness tradeoffs and cruxes as prose scaffolding; do not dump the option-criteria matrix unless the decision question genuinely needs a matrix.\n"
         "- Use source_weighting to explain why sources drive, calibrate, bound, or contextualize the answer.\n"
         "- Use argument_spine as the primary writing plan; follow its section_plan and primary_section fields to decide where each evidence step belongs.\n"
         "- Treat section_writing_packets as the primary section-local context. Each section packet contains the argument steps, evidence rows, source roles, and retention requirements for that section.\n"
@@ -87,6 +91,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         ),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
+        "decision_usefulness": compact_decision_usefulness_for_prompt(_dict(packet.get("decision_usefulness_packet"))),
         "argument_spine": _drop_empty(
             {
                 "section_plan": spine.get("section_plan"),
@@ -106,9 +111,18 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
 
 def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
     guidance = _dict(canonical.get("lightweight_writer_guidance")) or _dict(memo_ready_packet.get("lightweight_writer_guidance"))
-    if not guidance:
+    usefulness = _dict(canonical.get("decision_usefulness_packet")) or _dict(memo_ready_packet.get("decision_usefulness_packet"))
+    quality = _dict(canonical.get("decision_usefulness_quality_report")) or _dict(memo_ready_packet.get("decision_usefulness_quality_report"))
+    additions = _drop_empty(
+        {
+            "lightweight_writer_guidance": guidance,
+            "decision_usefulness_packet": usefulness,
+            "decision_usefulness_quality_report": quality,
+        }
+    )
+    if not additions:
         return canonical
-    return {**canonical, "lightweight_writer_guidance": guidance}
+    return {**canonical, **additions}
 
 
 def _compact_source_judgment(row: dict[str, Any]) -> dict[str, Any]:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_decision_usefulness import (
+    attach_decision_usefulness_to_packet,
     build_decision_usefulness_context,
     build_decision_usefulness_prompt,
     build_decision_usefulness_quality_report,
@@ -151,6 +152,32 @@ def test_compact_decision_usefulness_for_prompt_keeps_decision_critical_fields()
     assert compact["recommended_stance"]["stance"] == "Adopt option A conditionally."
     assert compact["decision_options"][0]["label"] == "adopt option A"
     assert compact["tradeoffs"][0]["tradeoff"] == "Protection versus implementation burden."
+
+
+def test_attach_decision_usefulness_to_packet_updates_canonical_handoff() -> None:
+    canonical = _canonical_packet()
+    memo_ready = {"canonical_decision_writer_packet": canonical}
+    packet = normalize_decision_usefulness_packet(
+        {
+            "decision_question": canonical["decision_question"],
+            "recommended_stance": {"stance": "Adopt option A conditionally."},
+            "decision_options": [{"label": "adopt option A"}],
+            "decision_criteria": [{"label": "flood protection"}],
+            "tradeoffs": [{"tradeoff": "Protection versus implementation burden."}],
+        },
+        canonical_packet=canonical,
+    )
+    bundle = {
+        "decision_usefulness_packet": packet,
+        "decision_usefulness_report": {"status": "parsed"},
+        "decision_usefulness_quality_report": packet["quality_report"],
+    }
+
+    updated = attach_decision_usefulness_to_packet(memo_ready, bundle)
+
+    assert updated["decision_usefulness_packet"]["recommended_stance"]["stance"] == "Adopt option A conditionally."
+    assert updated["canonical_decision_writer_packet"]["decision_usefulness_packet"]["decision_options"][0]["label"] == "adopt option A"
+    assert updated["canonical_decision_writer_packet"]["decision_usefulness_report"]["status"] == "parsed"
 
 
 def test_run_decision_usefulness_builder_skips_on_prompt_backend() -> None:

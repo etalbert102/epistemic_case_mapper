@@ -271,6 +271,24 @@ def run_decision_usefulness_builder(
     return _bundle(context=context, prompt=prompt, raw=raw, packet=packet, report=report)
 
 
+def attach_decision_usefulness_to_packet(memo_ready_packet: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(memo_ready_packet, dict):
+        return memo_ready_packet
+    packet = _dict(bundle.get("decision_usefulness_packet"))
+    report = _dict(bundle.get("decision_usefulness_report"))
+    quality = _dict(bundle.get("decision_usefulness_quality_report"))
+    memo_ready_packet["decision_usefulness_packet"] = packet
+    memo_ready_packet["decision_usefulness_report"] = report
+    memo_ready_packet["decision_usefulness_quality_report"] = quality
+    canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet"))
+    if canonical:
+        canonical["decision_usefulness_packet"] = packet
+        canonical["decision_usefulness_report"] = report
+        canonical["decision_usefulness_quality_report"] = quality
+        memo_ready_packet["canonical_decision_writer_packet"] = canonical
+    return memo_ready_packet
+
+
 def build_decision_usefulness_prompt(context: dict[str, Any]) -> str:
     return (
         "You are building a compact decision-support layer for a source-grounded memo.\n"

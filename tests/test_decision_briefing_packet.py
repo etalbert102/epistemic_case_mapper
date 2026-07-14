@@ -288,6 +288,9 @@ def test_scaffold_artifacts_write_packet_reports(tmp_path: Path) -> None:
     scaffold = _scaffold()
     scaffold.update(build_decision_briefing_packet_bundle(scaffold, question=scaffold["question"]))
     scaffold.update(build_quality_synthesis_packet_bundle(scaffold["decision_briefing_packet"]))
+    scaffold["decision_usefulness_packet"] = {"schema_id": "decision_usefulness_packet_v1", "decision_options": []}
+    scaffold["decision_usefulness_report"] = {"status": "parsed"}
+    scaffold["decision_usefulness_quality_report"] = {"status": "ready"}
 
     paths = write_scaffold_artifacts(
         artifacts=tmp_path,
@@ -304,6 +307,9 @@ def test_scaffold_artifacts_write_packet_reports(tmp_path: Path) -> None:
     assert paths["packet_assembly_clusters"].exists()
     assert paths["diagnosticity_matrix"].exists()
     assert paths["quantity_binding_report"].exists()
+    assert paths["decision_usefulness_packet"].exists()
+    assert paths["decision_usefulness_report"].exists()
+    assert paths["decision_usefulness_quality_report"].exists()
     assert paths["memo_ready_packet"].exists()
     assert paths["memo_ready_packet_synthesis_prompt"].exists()
 

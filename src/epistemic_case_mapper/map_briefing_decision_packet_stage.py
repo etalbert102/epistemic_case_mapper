@@ -146,6 +146,10 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
     from epistemic_case_mapper.map_briefing_analyst_quantity_binding import run_analyst_quantity_binding
+    from epistemic_case_mapper.map_briefing_decision_usefulness import (
+        attach_decision_usefulness_to_packet,
+        run_decision_usefulness_builder,
+    )
     from epistemic_case_mapper.map_briefing_lightweight_guidance import (
         attach_lightweight_guidance_to_packet,
         run_lightweight_writer_guidance,
@@ -199,6 +203,19 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     _promote_analyst_packet_as_active(scaffold)
     memo_ready = scaffold.get("memo_ready_packet")
     canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
+    _progress(progress, "decision_usefulness", "started")
+    decision_usefulness_bundle = run_decision_usefulness_builder(
+        canonical_packet=canonical if isinstance(canonical, dict) else {},
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
+    )
+    scaffold.update(decision_usefulness_bundle)
+    if isinstance(memo_ready, dict):
+        scaffold["memo_ready_packet"] = attach_decision_usefulness_to_packet(memo_ready, decision_usefulness_bundle)
+    memo_ready = scaffold.get("memo_ready_packet")
+    canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
+    _progress(progress, "decision_usefulness", "completed", _report_status(scaffold, "decision_usefulness_report"))
     _progress(progress, "lightweight_writer_guidance", "started")
     guidance_bundle = run_lightweight_writer_guidance(
         canonical_packet=canonical if isinstance(canonical, dict) else {},
