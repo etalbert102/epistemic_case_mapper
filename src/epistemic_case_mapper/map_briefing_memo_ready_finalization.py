@@ -220,15 +220,22 @@ def build_decision_usefulness_retention_report(memo: str, packet: dict[str, Any]
         }
     obligations = _decision_usefulness_obligations(usefulness)
     statuses = [_decision_usefulness_obligation_status(memo, row) for row in obligations]
-    issues = [row for row in statuses if not row["retained"]]
+    presentation_statuses = _decision_usefulness_presentation_statuses(memo, packet, usefulness)
+    issues = [row for row in [*statuses, *presentation_statuses] if not row["retained"]]
     return {
         "schema_id": "decision_usefulness_retention_report_v1",
         "status": "ready" if not issues else "warning",
         "answer_shape": usefulness.get("answer_shape", ""),
-        "obligation_count": len(statuses),
-        "retained_count": sum(1 for row in statuses if row["retained"]),
+        "obligation_count": len(statuses) + len(presentation_statuses),
+        "decision_support_obligation_count": len(statuses),
+        "presentation_obligation_count": len(presentation_statuses),
+        "retained_count": sum(1 for row in [*statuses, *presentation_statuses] if row["retained"]),
+        "retained_decision_support_count": sum(1 for row in statuses if row["retained"]),
+        "retained_presentation_count": sum(1 for row in presentation_statuses if row["retained"]),
         "missing_count": len(issues),
+        "presentation_gap_count": sum(1 for row in presentation_statuses if not row["retained"]),
         "statuses": statuses,
+        "presentation_statuses": presentation_statuses,
         "issues": issues,
     }
 
@@ -299,16 +306,17 @@ def build_decision_usefulness_memo_repair_prompt(
     repair_packet = {
         "schema_id": "decision_usefulness_memo_repair_packet_v1",
         "decision_question": packet.get("decision_question") or _dict(packet.get("canonical_decision_writer_packet")).get("decision_question"),
-        "missing_decision_support_moves": [
+        "missing_decision_support_or_presentation_moves": [
             _decision_usefulness_repair_row(row)
             for row in _list(decision_usefulness_retention.get("issues"))[:8]
             if isinstance(row, dict)
         ],
     }
     return (
-        "Revise the decision memo so it naturally includes the missing decision-support moves.\n"
+        "Revise the decision memo so it naturally includes the missing decision-support or presentation moves.\n"
         "Keep the same headings and overall conclusion. Preserve source_ids exactly as bracketed citations near the claims they support.\n"
         "Use only the missing rows below; do not add new evidence, new sources, or a new matrix.\n"
+        "For presentation_gap rows, improve the local prose in one or two sentences; do not rewrite the memo broadly.\n"
         "If a row is awkward, integrate its substance in a natural sentence rather than naming the packet field.\n"
         "Return the complete revised memo in markdown only.\n\n"
         f"Current memo:\n{memo.rstrip()}\n\n"
@@ -638,6 +646,218 @@ def _decision_usefulness_obligation_retained(memo: str, obligation: dict[str, An
     return _decision_usefulness_text_retained(memo, str(obligation.get("required_text") or ""), ratio=0.45)
 
 
+def _decision_usefulness_presentation_statuses(
+    memo: str,
+    packet: dict[str, Any],
+    usefulness: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if _list(usefulness.get("diagnostic_evidence")) or _list(usefulness.get("cruxes_and_thresholds")):
+        rows.append(
+            _presentation_status(
+                memo,
+                presentation_type="key_distinction",
+                retained=_has_key_distinction_cue(memo),
+                repair_instruction="Add one analyst sentence that frames the key distinction that resolves the decision.",
+                context={
+                    "diagnostic_evidence": _trim_for_repair(_list(usefulness.get("diagnostic_evidence")), 2),
+                    "cruxes_and_thresholds": _trim_for_repair(_list(usefulness.get("cruxes_and_thresholds")), 2),
+                },
+            )
+        )
+    if _source_weight_context(packet):
+        rows.append(
+            _presentation_status(
+                memo,
+                presentation_type="evidence_hierarchy",
+                retained=_has_evidence_hierarchy_cue(memo),
+                repair_instruction="Add or revise one sentence explaining which evidence carries the answer, which evidence bounds it, and which evidence only contextualizes practical advice.",
+                context={"source_weighting": _source_weight_context(packet)},
+            )
+        )
+    if _list(usefulness.get("tradeoffs")):
+        rows.append(
+            _presentation_status(
+                memo,
+                presentation_type="tradeoff_prose",
+                retained=_has_tradeoff_presentation_cue(memo),
+                repair_instruction="Turn the tradeoff into natural prose about what the decision-maker is choosing to privilege.",
+                context={"tradeoffs": _trim_for_repair(_list(usefulness.get("tradeoffs")), 2)},
+            )
+        )
+    rows.append(
+        _presentation_status(
+            memo,
+            presentation_type="practical_specificity",
+            retained=_has_specific_practical_implication(memo),
+            repair_instruction="Make the Practical Implication concrete: state what the reader should do, not just what the evidence says.",
+            context={},
+        )
+    )
+    return rows
+
+
+def _presentation_status(
+    memo: str,
+    *,
+    presentation_type: str,
+    retained: bool,
+    repair_instruction: str,
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "obligation_type": "presentation_gap",
+        "presentation_type": presentation_type,
+        "label": presentation_type,
+        "retained": retained,
+        "required_text": repair_instruction,
+        "source_ids": _dedupe(_collect_source_ids(context)),
+        "evidence_item_ids": _dedupe(_collect_evidence_item_ids(context)),
+        "repair_instruction": repair_instruction,
+        "presentation_context": context,
+    }
+
+
+def _has_key_distinction_cue(memo: str) -> bool:
+    memo_norm = _norm(memo)
+    return any(
+        cue in memo_norm
+        for cue in (
+            "key distinction",
+            "useful distinction",
+            "hinges on",
+            "not whether",
+            "not simply",
+            "rather than",
+            "the question is",
+            "the issue is",
+            "discrepancy between",
+        )
+    )
+
+
+def _has_evidence_hierarchy_cue(memo: str) -> bool:
+    memo_norm = _norm(memo)
+    return any(
+        cue in memo_norm
+        for cue in (
+            "carries the answer",
+            "carries more weight",
+            "most weight",
+            "more weight",
+            "less weight",
+            "main support",
+            "primary support",
+            "strongest support",
+            "calibrates",
+            "bounds",
+            "contextualizes",
+            "directly measures",
+            "direct evidence",
+            "driven by",
+            "primarily driven",
+            "serve to bound",
+            "serves to bound",
+            "bounds the recommendation",
+        )
+    )
+
+
+def _has_tradeoff_presentation_cue(memo: str) -> bool:
+    memo_norm = _norm(memo)
+    return any(cue in memo_norm for cue in ("tradeoff", "trade-off", "weigh", "balance", "privilege", "prioritize"))
+
+
+def _has_specific_practical_implication(memo: str) -> bool:
+    section = _section_text(memo, "Practical Implication")
+    if len(section.split()) < 18:
+        return False
+    section_norm = _norm(section)
+    return any(
+        cue in section_norm
+        for cue in (
+            "advise",
+            "do not",
+            "avoid",
+            "recommend",
+            "treat",
+            "proceed",
+            "monitor",
+            "separate",
+            "prioritize",
+            "shift",
+            "use",
+        )
+    )
+
+
+def _section_text(memo: str, heading: str) -> str:
+    pattern = re.compile(rf"^##\s+{re.escape(heading)}\s*$", re.IGNORECASE | re.MULTILINE)
+    match = pattern.search(memo)
+    if not match:
+        return ""
+    start = match.end()
+    next_match = re.search(r"^##\s+", memo[start:], flags=re.MULTILINE)
+    end = start + next_match.start() if next_match else len(memo)
+    return memo[start:end].strip()
+
+
+def _source_weight_context(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    rows = _list(canonical.get("source_weight_judgments")) or _list(packet.get("source_weight_judgments"))
+    compact = []
+    for row in rows[:5]:
+        if not isinstance(row, dict):
+            continue
+        compact.append(
+            {
+                "source_ids": _string_list(row.get("source_ids")),
+                "main_use": row.get("main_use"),
+                "why_weight_this_way": row.get("why_weight_this_way"),
+                "what_not_to_use_it_for": row.get("what_not_to_use_it_for"),
+                "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+            }
+        )
+    return [row for row in compact if any(row.values())]
+
+
+def _trim_for_repair(rows: list[Any], limit: int) -> list[Any]:
+    output = []
+    for row in rows[:limit]:
+        if not isinstance(row, dict):
+            continue
+        output.append(
+            {
+                key: value
+                for key, value in row.items()
+                if key in {"tradeoff", "choose_a_if", "choose_b_if", "crux", "current_read", "would_change_if", "threshold", "why_diagnostic", "source_ids", "evidence_item_ids"}
+            }
+        )
+    return output
+
+
+def _collect_source_ids(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [source_id for row in value for source_id in _collect_source_ids(row)]
+    if isinstance(value, dict):
+        rows = _string_list(value.get("source_ids"))
+        for row in value.values():
+            rows.extend(_collect_source_ids(row))
+        return rows
+    return []
+
+
+def _collect_evidence_item_ids(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [item_id for row in value for item_id in _collect_evidence_item_ids(row)]
+    if isinstance(value, dict):
+        rows = _string_list(value.get("evidence_item_ids"))
+        for row in value.values():
+            rows.extend(_collect_evidence_item_ids(row))
+        return rows
+    return []
+
+
 def _decision_usefulness_text_retained(memo: str, text: str, *, ratio: float = 0.45) -> bool:
     memo_norm = _norm(memo)
     text_norm = _norm(text)
@@ -693,13 +913,22 @@ def _decision_usefulness_terms(text: str) -> list[str]:
 
 
 def _decision_usefulness_repair_row(issue: dict[str, Any]) -> dict[str, Any]:
-    return {
+    row = {
         "obligation_type": issue.get("obligation_type"),
         "required_text": issue.get("required_text"),
         "source_ids": _string_list(issue.get("source_ids")),
         "evidence_item_ids": _string_list(issue.get("evidence_item_ids")),
         "packet_row": issue.get("packet_row", {}),
     }
+    if issue.get("obligation_type") == "presentation_gap":
+        row.update(
+            {
+                "presentation_type": issue.get("presentation_type"),
+                "repair_instruction": issue.get("repair_instruction") or issue.get("required_text"),
+                "presentation_context": issue.get("presentation_context", {}),
+            }
+        )
+    return row
 
 
 def _join_nonempty(values: list[Any]) -> str:

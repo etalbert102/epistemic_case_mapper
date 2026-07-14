@@ -705,6 +705,17 @@ def _decision_usefulness_packet() -> dict:
         "decision_question": "Should option A be adopted?",
         "evidence_items": [],
         "source_trail": [{"source_id": "s1", "source_label": "Outcome Review"}],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["s1"],
+                    "main_use": "drives the main outcome read",
+                    "why_weight_this_way": "directly measures the outcome that matters",
+                    "what_not_to_use_it_for": "does not settle implementation burden alone",
+                    "evidence_item_ids": ["item:support"],
+                }
+            ]
+        },
         "decision_usefulness_packet": {
             "schema_id": "decision_usefulness_packet_v1",
             "answer_shape": "single_stance",
@@ -752,6 +763,7 @@ def test_decision_usefulness_retention_warns_on_missing_tradeoff_and_trigger() -
     issue_types = {row["obligation_type"] for row in report["issues"]}
     assert "tradeoff" in issue_types
     assert "monitoring_trigger" in issue_types
+    assert "presentation_gap" in issue_types
 
 
 def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatch) -> None:
@@ -766,12 +778,16 @@ def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatc
             text=(
                 "## Decision Memo\n\n"
                 "Adopt option A conditionally because the main outcome improves. "
+                "The useful distinction is not whether Option A helps at all, but whether the outcome gain remains worth the implementation burden. "
+                "The direct outcome evidence carries the answer, while implementation evidence bounds it. "
                 "The key tradeoff is outcome gain versus implementation burden: adopt if the burden remains manageable, "
                 "but delay if it rises. The crux is whether implementation burden stays below the acceptable threshold. "
-                "New implementation failure evidence would shift the read from adoption to delay [s1]."
-            ),
-            backend="fake",
-        )
+                    "New implementation failure evidence would shift the read from adoption to delay [s1].\n\n"
+                    "## Practical Implication\n"
+                    "Proceed only while implementation burden remains manageable, and delay adoption if new implementation evidence shows the burden is rising."
+                ),
+                backend="fake",
+            )
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
@@ -780,6 +796,7 @@ def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatc
     assert result["report"]["status"] == "accepted"
     assert result["report"]["applied"] is True
     assert result["report"]["final_missing_count"] < before["missing_count"]
+    assert result["report"]["final_missing_count"] == 0
     assert "New implementation failure evidence" in result["memo"]
 
 
@@ -796,6 +813,8 @@ def test_memo_synthesis_runs_decision_usefulness_repair_when_needed(monkeypatch)
                     "**Decision Question:** Should option A be adopted?\n"
                     "**Bottom Line:** Adopt option A conditionally.\n\n"
                     "## Why This Is the Best Current Read\n"
+                    "The useful distinction is not whether Option A helps at all, but whether the outcome gain remains worth the implementation burden. "
+                    "The direct outcome evidence carries the answer, while implementation evidence bounds it. "
                     "The key tradeoff is outcome gain versus implementation burden. Adopt if burden remains manageable, "
                     "but delay if burden rises [s1].\n\n"
                     "## What Could Change or Bound the Answer\n"
