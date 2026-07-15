@@ -5,6 +5,7 @@ import re
 from typing import Any, Callable
 
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import prose_quality_diagnostics
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dict_value as _dict
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import list_value as _list
 from epistemic_case_mapper.map_briefing_memo_ready_polish_guardrails import build_memo_ready_final_polish_guardrails
 from epistemic_case_mapper.map_briefing_source_identity import (
@@ -76,6 +77,7 @@ def collect_parallel_section_memo_polish_proposals(
     sections = split_memo_into_polish_sections(memo)
     source_trail = _list(packet.get("source_trail"))
     known_source_ids = _known_source_ids(packet)
+    guardrails = build_memo_ready_final_polish_guardrails(packet)
     prompts_by_id = {
         section["section_id"]: build_section_memo_polish_prompt(
             section,
@@ -109,7 +111,7 @@ def collect_parallel_section_memo_polish_proposals(
         raw = result.text
         parse = parse_section_memo_polish_response(raw)
         replacement = str(parse.get("section_markdown") or "").strip()
-        issues = _section_candidate_issues(section, replacement, known_source_ids=known_source_ids)
+        issues = _section_candidate_issues(section, replacement, known_source_ids=known_source_ids, guardrails=guardrails)
         report.update(
             {
                 "raw": raw,
@@ -156,6 +158,7 @@ def collect_parallel_hybrid_section_memo_polish_proposals(
     modes = [dict(mode) for mode in SECTION_POLISH_MODES]
     source_trail = _list(packet.get("source_trail"))
     known_source_ids = _known_source_ids(packet)
+    guardrails = build_memo_ready_final_polish_guardrails(packet)
     tasks = [
         (section, mode)
         for section in sections
@@ -195,7 +198,7 @@ def collect_parallel_hybrid_section_memo_polish_proposals(
         raw = result.text
         parse = parse_section_memo_polish_response(raw)
         replacement = str(parse.get("section_markdown") or "").strip()
-        issues = _section_candidate_issues(section, replacement, known_source_ids=known_source_ids)
+        issues = _section_candidate_issues(section, replacement, known_source_ids=known_source_ids, guardrails=guardrails)
         mode_id = str(mode.get("mode_id") or "")
         score_report = score_section_polish_candidate(section, replacement, issues=issues, mode_id=mode_id)
         accepted_candidate = parse.get("status") == "parsed" and not issues and _score_is_selectable(score_report, mode_id=mode_id)
@@ -449,7 +452,13 @@ def parse_section_memo_polish_response(raw: str) -> dict[str, Any]:
     }
 
 
-def _section_candidate_issues(section: dict[str, Any], replacement: str, *, known_source_ids: set[str]) -> list[str]:
+def _section_candidate_issues(
+    section: dict[str, Any],
+    replacement: str,
+    *,
+    known_source_ids: set[str],
+    guardrails: dict[str, Any] | None = None,
+) -> list[str]:
     if not replacement.strip():
         return ["empty_section_replacement"]
     heading = str(section.get("heading") or "").strip()
@@ -463,7 +472,36 @@ def _section_candidate_issues(section: dict[str, Any], replacement: str, *, know
     unknown = sorted(ref for ref in _bracket_source_refs(replacement) if ref not in known_source_ids and ref not in _bracket_source_refs(str(section.get("markdown") or "")))
     if unknown:
         return [f"unknown_source_ids:{', '.join(unknown)}"]
-    return []
+    language_issues = _language_contract_issues(str(section.get("markdown") or ""), replacement, _dict(guardrails))
+    return language_issues
+
+
+def _language_contract_issues(original: str, replacement: str, guardrails: dict[str, Any]) -> list[str]:
+    contracts = [row for row in _list(guardrails.get("evidence_language_contracts")) if isinstance(row, dict)]
+    if not contracts:
+        return []
+    issues = []
+    replacement_lower = str(replacement or "").lower()
+    original_lower = str(original or "").lower()
+    replacement_refs = _bracket_source_refs(replacement)
+    for contract in contracts:
+        source_ids = set(_list(contract.get("source_ids")))
+        if source_ids and not source_ids.intersection(replacement_refs):
+            continue
+        for phrase in _list(contract.get("avoid_language")):
+            phrase_text = str(phrase or "").strip().lower()
+            if not phrase_text:
+                continue
+            if _contains_language_phrase(replacement_lower, phrase_text) and not _contains_language_phrase(original_lower, phrase_text):
+                issues.append(f"unsupported_language_for_sources:{','.join(sorted(source_ids))}:{phrase_text}")
+    return issues
+
+
+def _contains_language_phrase(text: str, phrase: str) -> bool:
+    if not phrase:
+        return False
+    pattern = r"\b" + r"\s+".join(re.escape(part) for part in phrase.split()) + r"\b"
+    return bool(re.search(pattern, text, flags=re.IGNORECASE))
 
 
 def _section_row(section_id: str, heading: str, markdown: str, section_index: int) -> dict[str, Any]:

@@ -22,6 +22,7 @@ def build_memo_ready_final_polish_guardrails(packet: dict[str, Any]) -> dict[str
         "source_ids_that_must_remain_traceable": _guardrail_source_ids(anchors),
         "quantities_that_must_remain_visible": _guardrail_quantities(anchors),
         "scope_or_counterweight_cues_to_preserve": _guardrail_scope_cues(anchors),
+        "evidence_language_contracts": _guardrail_language_contracts(packet),
         "protected_anchor_count": len(anchors),
     }
 
@@ -69,6 +70,27 @@ def _guardrail_scope_cues(anchors: list[dict[str, Any]]) -> list[dict[str, str]]
             )
         )
     return rows[:10]
+
+
+def _guardrail_language_contracts(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    rows = []
+    for row in _list(canonical.get("evidence_language_contracts")):
+        if not isinstance(row, dict):
+            continue
+        compact = _drop_empty_guardrail(
+            {
+                "contract_id": row.get("contract_id"),
+                "source_ids": _string_list(row.get("source_ids")),
+                "evidence_design": row.get("evidence_design"),
+                "allowed_language": _string_list(row.get("allowed_language")),
+                "avoid_language": _string_list(row.get("avoid_language")),
+                "wording_rule": str(row.get("wording_rule") or "").strip(),
+            }
+        )
+        if compact.get("source_ids") and (compact.get("avoid_language") or compact.get("wording_rule")):
+            rows.append(compact)
+    return rows[:24]
 
 
 def _is_scope_or_counterweight_role(role: str, meaning: str) -> bool:

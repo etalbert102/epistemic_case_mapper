@@ -57,6 +57,7 @@ def test_section_polish_collects_one_prompt_per_polishable_section() -> None:
     assert result["report"]["section_count"] == 4
     assert result["report"]["accepted_candidate_count"] == 4
     assert all("Current section markdown" in prompt for prompt in prompts)
+    assert all("evidence_language_contracts" in prompt for prompt in prompts)
 
 
 def test_section_final_polish_experiment_accepts_section_replacement(monkeypatch) -> None:
@@ -135,6 +136,31 @@ def test_hybrid_section_polish_falls_through_to_next_candidate(monkeypatch) -> N
     assert "mortality mechanism" not in result["memo"]
 
 
+def test_section_polish_rejects_new_forbidden_language_from_contract() -> None:
+    memo = _memo()
+    packet = _packet()
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        heading = _heading_for_prompt(prompt)
+        markdown = _section_markdown_for_heading(memo, heading)
+        if heading == "Why This Is the Best Current Read":
+            markdown = "## Why This Is the Best Current Read\n\nOutcome evidence proves option A causes better results by 20% [s1]."
+        return ModelBackendResult(text=json.dumps({"section_markdown": markdown, "reason": "too strong"}), backend="fake")
+
+    result = collect_parallel_section_memo_polish_proposals(
+        memo,
+        packet,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        run_model=fake_backend,
+    )
+
+    why = [row for row in result["section_reports"] if row["section_id"] == "why_this_is_the_best_current_read"][0]
+    assert why["accepted_candidate"] is False
+    assert any("unsupported_language_for_sources:s1" in issue for issue in why["issues"])
+
+
 def test_hybrid_section_polish_adds_completion_only_for_unfinished_sections() -> None:
     memo = _memo().replace("Option A may help [s1].", "Option A may help when monitoring...")
     packet = _packet()
@@ -200,6 +226,18 @@ def _packet() -> dict:
                 "must_use": True,
             }
         ],
+        "canonical_decision_writer_packet": {
+            "evidence_language_contracts": [
+                {
+                    "contract_id": "language_contract_001",
+                    "source_ids": ["s1"],
+                    "evidence_design": "observational",
+                    "allowed_language": ["is associated with", "suggests"],
+                    "avoid_language": ["proves", "proven", "causes"],
+                    "wording_rule": "Phrase as association or suggestive evidence unless another source supplies causal support.",
+                }
+            ]
+        },
     }
 
 
