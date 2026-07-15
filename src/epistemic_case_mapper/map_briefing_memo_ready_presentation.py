@@ -20,7 +20,6 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     source_label_variants,
 )
 
-
 DEFAULT_CITATION_TRACE_HREF = "CITATION_TRACE.md"
 
 
@@ -38,7 +37,7 @@ def run_memo_ready_presentation_normalization(
     if question:
         next_memo = _ensure_decision_question(normalized, question)
         if next_memo != normalized:
-            changes.append("inserted_decision_question")
+            changes.append("normalized_decision_title" if normalized.splitlines()[:1] != next_memo.splitlines()[:1] else "inserted_decision_question")
             normalized = next_memo
     next_memo = _remove_duplicate_decision_heading(normalized)
     if next_memo != normalized:
@@ -250,6 +249,7 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
         _source_weighting_summary(groups),
     ]
     paragraphs = []
+    caveat_rows: list[dict[str, Any]] = []
     for use, template in [
         ("drives_answer", "Start with {sources}; these are the closest sources to the bottom-line answer."),
         ("calibrates_magnitude", "Use {sources} to calibrate magnitude, mechanism, or plausibility rather than to replace direct answer evidence."),
@@ -258,11 +258,16 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
         ("identifies_crux", "Treat {sources} as crux evidence because they identify what could change the answer."),
         ("contextualizes", "Use {sources} for translation and background rather than as independent proof."),
     ]:
-        sentence = _judgment_group_sentence(template, groups.get(use, [])[:4], guidance=guidance)
+        sentence, caveat_row = _judgment_group_sentence(template, groups.get(use, [])[:4], guidance=guidance)
         if sentence:
             paragraphs.append(sentence)
+        if caveat_row:
+            caveat_rows.append(caveat_row)
     if paragraphs:
         lines.extend(["", "\n\n".join(paragraphs)])
+    caveat_note = _source_weighting_caveat_note(caveat_rows)
+    if caveat_note:
+        lines.extend(["", "Detailed source caveats are in [^source-weight-caveats].", "", caveat_note])
     return "\n".join(lines).strip()
 
 
@@ -275,32 +280,32 @@ def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
     return "Weigh the sources by what they can actually decide: some carry the answer, while others mainly size effects, expose counterweights, identify cruxes, or set boundaries."
 
 
-def _judgment_group_sentence(template: str, rows: list[dict[str, Any]], *, guidance: dict[str, Any] | None = None) -> str:
+def _judgment_group_sentence(template: str, rows: list[dict[str, Any]], *, guidance: dict[str, Any] | None = None) -> tuple[str, dict[str, Any] | None]:
     sources = _source_group_citations(rows)
     if not sources:
-        return ""
+        return "", None
     source_ids = _dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids")))
     limits = _dedupe(limit for row in rows for limit in _string_list(row.get("what_not_to_use_it_for")))[:3]
     readable_limits = _readable_limits(limits, source_ids=source_ids, guidance=guidance)
     sentence = template.format(sources=sources)
-    if readable_limits:
-        sentence += _limit_sentence(readable_limits, plural=len(source_ids) != 1)
-    return sentence
+    caveat_row = {"sources": sources, "limits": readable_limits} if readable_limits else None
+    return sentence, caveat_row
 
 
 def _source_group_citations(rows: list[dict[str, Any]]) -> str:
     return _cite_list(_dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids"))))
 
 
-def _limit_sentence(readable_limits: list[str], *, plural: bool) -> str:
-    limits = [limit for limit in readable_limits if limit]
-    if not limits:
+def _source_weighting_caveat_note(caveat_rows: list[dict[str, Any]]) -> str:
+    parts = [
+        f"{row['sources']}: {limits}"
+        for row in caveat_rows
+        if row.get("sources")
+        if (limits := "; ".join(_dedupe(str(limit).strip() for limit in _list(row.get("limits")) if str(limit).strip())))
+    ]
+    if not parts:
         return ""
-    if len(limits) == 1:
-        subject = "them" if plural else "it"
-        return f" Read {subject} with this caveat: {limits[0]}."
-    subject = "them" if plural else "it"
-    return f" Read {subject} with these caveats: {'; '.join(limits)}."
+    return "[^source-weight-caveats]: Source-weighting caveats: " + "; ".join(parts) + "."
 
 
 def _weighting_thesis(
@@ -775,6 +780,13 @@ def _trace_quantity_strings(item: dict[str, Any]) -> list[str]:
 
 
 def _ensure_decision_question(memo: str, question: str) -> str:
+    lines = memo.splitlines()
+    if lines and lines[0].strip().lower().startswith("# decision memo"):
+        title = question.strip().rstrip("?")
+        repaired = f"# Decision Memo: {title}" if title else lines[0]
+        if repaired != lines[0]:
+            lines[0] = repaired
+            memo = "\n".join(lines)
     if _contains_text(memo, question):
         return memo
     line = f"**Decision question:** {question}"

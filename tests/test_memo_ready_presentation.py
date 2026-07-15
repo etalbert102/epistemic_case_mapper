@@ -122,6 +122,25 @@ def test_presentation_source_weighting_section_is_idempotent() -> None:
     assert "inserted_source_weighting" not in result["report"]["changes"]
 
 
+def test_presentation_repairs_truncated_decision_memo_title() -> None:
+    packet = {
+        "decision_question": "What should an investigator believe about the health effects of eating eggs?",
+        "source_trail": [],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo: What should an investigator believe about the health effects of eatin...\n\n"
+        "**Decision Question:** What should an investigator believe about the health effects of eating eggs?\n\n"
+        "**Bottom Line:** Moderate consumption is bounded by subgroup risk."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert result["memo"].startswith("# Decision Memo: What should an investigator believe about the health effects of eating eggs")
+    assert "eatin..." not in result["memo"]
+    assert "normalized_decision_title" in result["report"]["changes"]
+
+
 def test_presentation_source_weighting_section_uses_source_weight_judgments() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",
@@ -155,6 +174,9 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "where confidence should narrow" in result["memo"]
     assert "Start with [Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
     assert "Let [RISK 2024](CITATION_TRACE.md#risk-2024) narrow the claim" in result["memo"]
+    assert result["memo"].count("[^source-weight-caveats]") == 2
+    assert "Detailed source caveats are in [^source-weight-caveats]" in result["memo"]
+    assert "[^source-weight-caveats]: Source-weighting caveats:" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
     assert "not enough for unconditional adoption" in result["memo"]

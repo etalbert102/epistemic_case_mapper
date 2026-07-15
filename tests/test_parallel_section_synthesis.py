@@ -39,6 +39,10 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
     assert len(calls) == 3
+    assert all("section_role_contract" in prompt for prompt in calls)
+    assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
+    assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
+    assert any("translate_the_read_into_action" in prompt for prompt in calls)
     assert result["report"]["synthesis_mode"] == "parallel_section_synthesis"
     assert result["report"]["section_count"] == 3
     assert all(row["accepted"] for row in result["report"]["section_reports"])

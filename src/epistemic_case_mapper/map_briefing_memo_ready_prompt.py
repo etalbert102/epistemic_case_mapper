@@ -66,6 +66,10 @@ def build_memo_ready_section_synthesis_prompt(
     return (
         "You are writing one section of a source-grounded decision memo from a section-local packet.\n"
         "Use the packet as the sole semantic handoff for this section.\n\n"
+        "Section role discipline:\n"
+        "- Follow section_role_contract as the controlling job for this section.\n"
+        "- If evidence appears in another section, mention it only to perform this section's distinct job.\n"
+        "- Do not re-prove the bottom line unless this section's contract asks for the proof.\n\n"
         "Output rules:\n"
         f"- Return Markdown for this section only, starting with exactly: ## {heading}\n"
         "- Use bracketed citations only for source_id values listed in known_source_ids.\n"
@@ -78,6 +82,8 @@ def build_memo_ready_section_synthesis_prompt(
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
         "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
+        "- Section role discipline never overrides retention: include every protected quantity and source_id listed in section_retention_requirements.\n"
+        "- If one claim has several protected quantities, keep the full set together rather than sampling representative values.\n"
         "- Translate source weighting into prose instead of generic labels.\n"
         "- For practical sections, state the concrete implication for the decision-maker within the packet's scope.\n\n"
         f"known_source_ids:\n{json.dumps(known_source_ids, indent=2, ensure_ascii=False)}\n\n"
@@ -128,6 +134,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Treat section_writing_packets as the primary section-local context. Each section packet contains the argument steps, evidence rows, source roles, and retention requirements for that section.\n"
         "- Write each section around its owned spine steps. If a later section needs evidence already used earlier, make a short cross-reference and add the new decision function instead of repeating the earlier sentence.\n"
         "- Use section_retention_requirements as exact section-level obligations; preserve their source_ids and protected quantities near the claims they support.\n"
+        "- Use section_role_contract to keep sections distinct: answer-evidence explains why the read is best; counterweight sections bound or update it; practical sections translate it into action.\n"
         "- Use answer_frame to state the bottom-line answer, scope, confidence, and unsupported options.\n"
         "- Use supplemental_evidence only when it adds practical framing, comparators, scope, or interpretive context missing from the argument spine.\n"
         "- Interpret important quantities in decision terms.\n"
@@ -205,6 +212,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "heading": heading,
                     "source_section": source_section,
                     "section_job": raw.get("writing_job"),
+                    "section_role_contract": _section_role_contract(heading),
                     "top_context": top_context,
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
@@ -225,6 +233,63 @@ def _canonical_section_heading(heading: str) -> str:
         "source_weighting": "How to Weight the Evidence",
         "practical_implication": "Practical Implication",
     }.get(section_id, "")
+
+
+def _section_role_contract(heading: str) -> dict[str, Any]:
+    section_id = _section_id_from_heading(heading)
+    contracts = {
+        "answer_evidence": {
+            "role": "explain_why_this_read_is_best",
+            "do": [
+                "integrate the strongest supporting evidence into the reason for the current answer",
+                "interpret key quantities only where they carry the main read",
+                "name the main uncertainty only as it affects confidence in this read",
+            ],
+            "avoid": [
+                "turning into a source inventory",
+                "listing every scope boundary or practical action",
+                "repeating the bottom line without adding evidential reasoning",
+            ],
+        },
+        "counterweights": {
+            "role": "bound_or_change_the_answer",
+            "do": [
+                "explain what could weaken, reverse, or narrow the answer",
+                "separate causal limits, subgroup limits, endpoint limits, and update triggers",
+                "say whether each limit overturns the answer or only narrows confidence/scope",
+            ],
+            "avoid": [
+                "repeating the full affirmative case",
+                "presenting caveats as generic uncertainty",
+                "turning every limitation into an equal-weight objection",
+            ],
+        },
+        "source_weighting": {
+            "role": "explain_how_to_read_the_sources",
+            "do": [
+                "state which sources carry the answer and which mainly calibrate, bound, or contextualize it",
+                "explain source caveats compactly without restating the evidence argument",
+            ],
+            "avoid": [
+                "using schema labels as prose",
+                "repeating the same support and counterweight paragraphs from other sections",
+            ],
+        },
+        "practical_implication": {
+            "role": "translate_the_read_into_action",
+            "do": [
+                "state what the reader should do with the answer inside the stated scope",
+                "turn the main boundary into a practical condition or monitoring point",
+                "keep the implication proportional to the evidence strength",
+            ],
+            "avoid": [
+                "reopening the whole evidence argument",
+                "adding new evidence not needed for action",
+                "restating the bottom line without a practical consequence",
+            ],
+        },
+    }
+    return contracts.get(section_id, contracts["answer_evidence"])
 
 
 def _section_id_from_heading(heading: str) -> str:
