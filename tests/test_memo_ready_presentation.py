@@ -399,6 +399,28 @@ def test_presentation_compacts_overlong_citation_label_inline() -> None:
     assert "[DGA 2020]: CITATION_TRACE.md#dga-2020" in result["memo"]
 
 
+def test_presentation_recognizes_punctuation_dropped_institutional_source_alias() -> None:
+    packet = {
+        "source_trail": [
+            {
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_label": "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020",
+                "citation_label": "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020",
+                "display_label": "Dietary Guidelines for Americans, 2020-2025",
+                "source_url": "https://example.test/dga",
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "## Decision Brief\n\nThe source weighting cites [U S 2020]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "The source weighting cites [DGA 2020]." in result["memo"]
+    assert "[U S 2020]" not in result["memo"]
+    assert "* [DGA 2020](https://example.test/dga)" in result["memo"]
+
+
 def test_presentation_compact_citations_title_case_short_names() -> None:
     packet = {
         "source_trail": [{"source_id": "li_2020_egg_cholesterol_rct_meta", "source_label": "Long Source"}],

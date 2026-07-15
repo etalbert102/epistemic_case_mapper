@@ -141,6 +141,8 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_adjudication_parse_report", "analyst_adjudication_parse_report.json", "json", _scaffold_value("analyst_adjudication_parse_report"), review_label="Analyst adjudication parse report"),
         ArtifactSpec("analyst_adjudication_chunk_reports", "analyst_adjudication_chunk_reports.json", "json", _scaffold_value("analyst_adjudication_chunk_reports"), review_label="Analyst adjudication chunk reports"),
         ArtifactSpec("analyst_adjudication_report", "analyst_adjudication_report.json", "json", _scaffold_value("analyst_adjudication_report"), review_label="Analyst adjudication report"),
+        ArtifactSpec("analyst_evidence_routing", "analyst_evidence_routing.json", "json", _scaffold_value("analyst_evidence_routing"), review_label="Analyst evidence routing"),
+        ArtifactSpec("analyst_evidence_routing_report", "analyst_evidence_routing_report.json", "json", _scaffold_value("analyst_evidence_routing_report"), review_label="Analyst evidence routing report"),
         ArtifactSpec("analyst_decision_context", "analyst_decision_context.json", "json", _scaffold_value("analyst_decision_context"), review_label="Analyst decision context"),
         ArtifactSpec("analyst_decision_model_prompt", "analyst_decision_model_prompt.txt", "markdown", _scaffold_text("analyst_decision_model_prompt")),
         ArtifactSpec("analyst_decision_model_raw", "analyst_decision_model_raw.txt", "markdown", _scaffold_text("analyst_decision_model_raw")),

@@ -122,8 +122,26 @@ def test_global_decision_model_accounts_for_deferred_and_missing_evidence() -> N
     issues = bundle["global_decision_model_reconciliation_report"]["issues"]
 
     assert model["routing_accounting"]["deferred_count"] == 1
-    assert model["evidence_accounting"]["missing_accounting_ids"] == ["item:extra"]
+    assert model["evidence_accounting"]["missing_accounting_ids"] == []
+    assert model["evidence_accounting"]["reported_missing_accounting_ids"] == ["item:extra"]
     assert report["status"] == "ready_with_warnings"
-    assert "missing_evidence_accounting" in issues
+    assert "missing_evidence_accounting" not in issues
     assert "retention_obligations_not_fully_grouped" in issues
     assert "deferred_evidence_not_in_global_model" in issues
+
+
+def test_global_decision_model_flags_only_actually_unaccounted_evidence() -> None:
+    model = _decision_model()
+    model["evidence_dispositions"] = [
+        row for row in model["evidence_dispositions"] if row["evidence_item_id"] != "item:extra"
+    ]
+
+    bundle = build_global_decision_model_bundle(
+        ledger=_ledger(),
+        analyst_decision_model=model,
+        analyst_decision_model_report={"status": "accepted"},
+        analyst_decision_model_parse_report={"status": "warning", "missing_accounting_ids": ["item:extra"]},
+    )
+
+    assert bundle["global_decision_model"]["evidence_accounting"]["missing_accounting_ids"] == ["item:extra"]
+    assert "missing_evidence_accounting" in bundle["global_decision_model_reconciliation_report"]["issues"]

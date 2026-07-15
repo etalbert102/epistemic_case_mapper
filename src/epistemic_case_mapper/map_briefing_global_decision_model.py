@@ -203,7 +203,8 @@ def _evidence_accounting(
         for evidence_id, row in disposition_rows.items()
         if str(row.get("disposition") or "") == "foreground"
     )
-    missing_ids = _string_list(parse_report.get("missing_accounting_ids")) or sorted(set(ledger_ids) - set(accounted_ids))
+    reported_missing_ids = _string_list(parse_report.get("missing_accounting_ids"))
+    actual_missing_ids = sorted(set(ledger_ids) - set(accounted_ids))
     return {
         "schema_id": "global_decision_model_evidence_accounting_v1",
         "ledger_row_count": len(ledger_ids),
@@ -213,7 +214,8 @@ def _evidence_accounting(
         "foreground_disposition_ids": foreground_ids,
         "downgraded_or_background_evidence_item_ids": downgraded_ids,
         "accounted_evidence_item_ids": accounted_ids,
-        "missing_accounting_ids": missing_ids,
+        "missing_accounting_ids": actual_missing_ids,
+        "reported_missing_accounting_ids": reported_missing_ids,
         "obligation_omissions": _dict(parse_report.get("obligation_omissions")),
     }
 

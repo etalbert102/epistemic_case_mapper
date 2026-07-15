@@ -105,15 +105,27 @@ def _run_analyst_adjudication(scaffold: dict[str, Any], ledger: dict[str, Any], 
 
 
 def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
+    from epistemic_case_mapper.map_briefing_analyst_evidence_routing import build_analyst_evidence_routing_bundle
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
     from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
     from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
 
+    _progress(progress, "analyst_evidence_routing", "started", {"row_count": _ledger_row_count(ledger)})
+    scaffold.update(
+        build_analyst_evidence_routing_bundle(
+            ledger=ledger,
+            adjudication=scaffold.get("analyst_adjudication", {}),
+            adjudication_report=scaffold.get("analyst_adjudication_report", {}),
+            adjudication_parse_report=scaffold.get("analyst_adjudication_parse_report", {}),
+        )
+    )
+    _progress(progress, "analyst_evidence_routing", "completed", _report_status(scaffold, "analyst_evidence_routing_report"))
     _progress(progress, "analyst_decision_model", "started", {"row_count": _ledger_row_count(ledger)})
     scaffold.update(
         run_analyst_decision_model(
             ledger=ledger,
             adjudication=scaffold.get("analyst_adjudication", {}),
+            evidence_routing=scaffold.get("analyst_evidence_routing", {}),
             backend=backend_config.backend,
             backend_timeout=backend_config.timeout,
             backend_retries=backend_config.retries,

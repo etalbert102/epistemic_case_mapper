@@ -1,6 +1,6 @@
 case_id: eggs
 title: "Eggs and Health"
-question: "What should an investigator believe about the health effects of eating eggs?"
+question: "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?"
 case_type: "messy everyday evidence case"
 evidence_mode: source_grounded
 review_status: draft

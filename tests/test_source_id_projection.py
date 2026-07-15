@@ -47,6 +47,32 @@ def test_presentation_normalizes_opaque_source_ids_to_reader_labels() -> None:
     assert "[Zhong et al. 2019]: CITATION_TRACE.md#zhong-et-al-2019" in result["memo"]
 
 
+def test_presentation_compacts_projected_institutional_source_from_original_slug() -> None:
+    packet = {
+        "decision_question": "Should dietary advice treat eggs as neutral?",
+        "source_trail": [
+            {
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_label": "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020",
+                "source_url": "https://example.test/dga",
+            }
+        ],
+        "evidence_items": [],
+        "canonical_decision_writer_packet": {},
+        "memo_warning_packet": {"warnings": []},
+    }
+    projected = project_memo_ready_packet_source_ids(packet)
+    source_id = projected["source_trail"][0]["source_id"]
+    memo = f"# Decision Memo\n\nThe guidance context cites [{source_id}] and [U S 2020]."
+
+    result = run_memo_ready_presentation_normalization(memo, projected)
+
+    assert "The guidance context cites [DGA 2020]" in result["memo"]
+    assert "[U S 2020]" not in result["memo"]
+    assert f"[{source_id}]" not in result["memo"]
+    assert "* [DGA 2020](https://example.test/dga)" in result["memo"]
+
+
 def _packet() -> dict:
     return {
         "decision_question": "What should an investigator believe about eating eggs?",

@@ -821,8 +821,14 @@ def _sections(evidence_units: list[dict[str, Any]]) -> dict[str, list[str]]:
 
 def _missing_critical_evidence(global_model: dict[str, Any]) -> list[str]:
     accounting = _dict(global_model.get("evidence_accounting"))
-    missing = _string_list(accounting.get("missing_accounting_ids"))
+    ledger_ids = set(_string_list(accounting.get("ledger_evidence_item_ids")))
+    accounted_ids = set(_string_list(accounting.get("accounted_evidence_item_ids")))
+    accounted_ids.update(_string_list(accounting.get("covered_evidence_item_ids")))
+    accounted_ids.update(_string_list(accounting.get("downgraded_or_background_evidence_item_ids")))
+    missing = sorted(ledger_ids - accounted_ids) if ledger_ids else _string_list(accounting.get("missing_accounting_ids"))
     omissions = _dict(accounting.get("obligation_omissions"))
     for value in omissions.values():
-        missing.extend(_string_list(value))
+        for evidence_id in _string_list(value):
+            if evidence_id not in accounted_ids:
+                missing.append(evidence_id)
     return _dedupe(missing)

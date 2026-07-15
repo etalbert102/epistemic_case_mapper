@@ -9,6 +9,11 @@ from epistemic_case_mapper.map_briefing_analyst_decision_modeling import (
     build_analyst_decision_model_prompt,
     run_analyst_decision_model,
 )
+from epistemic_case_mapper.map_briefing_analyst_evidence_routing import (
+    apply_routed_away_accounting,
+    build_analyst_evidence_routing_bundle,
+)
+from epistemic_case_mapper.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
 from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
     _decision_logic,
     build_decision_model_tasks,
@@ -187,8 +192,12 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
 
     assert context["schema_id"] == "analyst_decision_context_v1"
     assert context["row_count"] == 3
+    assert context["decision_model_row_count"] == 2
+    assert context["routed_away_row_count"] == 1
     assert context["model_hints"]["top_central_evidence_item_ids"]
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
+    assert {row["evidence_item_id"] for row in context["evidence_rows"]} == {"bundle:support", "bundle:risk"}
+    assert context["routed_away_evidence_summary"][0]["evidence_item_id"] == "bundle:support_duplicate"
     assert "source_excerpt" not in context["evidence_rows"][0]
     assert "relation_context" not in context["evidence_rows"][0]
     assert context["evidence_rows"][0]["source_quality"]["decision_directness"] == "direct"
@@ -199,6 +208,66 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     skeleton_ids = {row["skeleton_group_id"] for row in context["obligation_group_skeleton"]}
     assert "must_account_quantitative_anchors" in skeleton_ids
     assert "must_account_counterweights" in skeleton_ids
+
+
+def test_evidence_routing_escalates_risky_background_quantity() -> None:
+    ledger = _ledger()
+    ledger["rows"][1]["quantity_values"] = ["42%"]
+    adjudication = _adjudication()
+    adjudication["rows"][1]["memo_use"] = "background_only"
+    adjudication["rows"][1].pop("covered_by", None)
+
+    routing = build_analyst_evidence_routing_bundle(ledger=ledger, adjudication=adjudication)["analyst_evidence_routing"]
+    routed = {row["evidence_item_id"]: row for row in routing["rows"]}
+
+    assert routed["bundle:support_duplicate"]["route"] == "full_decision_model"
+    assert "row_has_quantities" in routed["bundle:support_duplicate"]["guardrail_escalations"]
+
+
+def test_routed_away_rows_are_accounted_without_full_decision_model_reasoning() -> None:
+    context = build_analyst_decision_context(ledger=_ledger(), adjudication=_adjudication())
+    model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A with attention to operating-budget risk.",
+        "confidence": "medium",
+        "overall_rationale": "The main support and counterweight are modeled directly.",
+        "evidence_groups": [
+            {
+                "group_id": "support",
+                "proposition": "Option A reduced losses.",
+                "memo_role": "load_bearing_primary_support",
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support"],
+                "rationale": "Main support.",
+            },
+            {
+                "group_id": "risk",
+                "proposition": "Option A shifts risk to the operating budget.",
+                "memo_role": "load_bearing_counterweight",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["bundle:risk"],
+                "rationale": "Main limitation.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:support", "disposition": "foreground", "group_id": "support", "rationale": "Grouped."},
+            {"evidence_item_id": "bundle:risk", "disposition": "foreground", "group_id": "risk", "rationale": "Grouped."},
+        ],
+        "memo_relevance_decisions": [],
+        "quantity_relevance_decisions": [],
+        "quantitative_anchors": ["25% reduction"],
+        "what_would_change_the_answer": [],
+        "argument_plan": [],
+        "decision_logic": {"bounded_bottom_line": "Adopt option A with attention to operating-budget risk.", "practical_implications": ["Track budget risk."]},
+    }
+
+    accounted = apply_routed_away_accounting(model, context)
+    report = build_analyst_decision_model_parse_report(accounted, _ledger(), retention_obligations=context["retention_obligations"])
+
+    dispositions = {row["evidence_item_id"]: row for row in accounted["evidence_dispositions"]}
+    assert dispositions["bundle:support_duplicate"]["disposition"] == "covered_by_group"
+    assert report["missing_accounting_ids"] == []
 
 
 def test_decision_context_and_prompt_expose_candidate_relation_metadata() -> None:

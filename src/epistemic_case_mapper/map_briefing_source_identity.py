@@ -49,10 +49,13 @@ def compact_source_display(source: dict[str, Any], *, common_prefix: list[str] |
     citation = str(source.get("citation_label") or "").strip()
     if citation and len(citation) <= 64:
         return citation
-    source_id = str(source.get("source_id") or "").strip()
-    from_id = _compact_source_id(source_id)
-    if from_id:
-        return from_id
+    for key in ("source_id", "source_slug", "original_source_id"):
+        source_id = str(source.get(key) or "").strip()
+        if key == "source_id" and re.fullmatch(r"SRC_[A-Z2-7]{8}", source_id):
+            continue
+        from_id = _compact_source_id(source_id)
+        if from_id:
+            return from_id
     if citation:
         return _compact_title(citation)
     label = str(source.get("source_label") or "").strip()
@@ -118,7 +121,37 @@ def source_label_variants(source_label: str) -> list[str]:
         variants.append(source_label.replace("_Sources ", " Sources "))
     if "_sources " in source_label:
         variants.append(source_label.replace("_sources ", " sources "))
+    variants.extend(_acronym_year_variants(source_label))
     return list(dict.fromkeys(variant for variant in variants if variant))
+
+
+def _acronym_year_variants(source_label: str) -> list[str]:
+    text = str(source_label or "").strip()
+    year = re.search(r"\b((?:19|20)\d{2})\b", text)
+    if not year:
+        return []
+    words = [word for word in re.findall(r"[A-Za-z]+", text) if word != year.group(1)]
+    variants: list[str] = []
+    leading_initials = []
+    for word in words:
+        if len(word) == 1:
+            leading_initials.append(word.upper())
+            continue
+        if leading_initials:
+            break
+        break
+    if len(leading_initials) >= 2:
+        spaced = " ".join(leading_initials)
+        compact = "".join(leading_initials)
+        variants.extend([f"{spaced} {year.group(1)}", f"{compact} {year.group(1)}"])
+    content_words = [word for word in words if word.lower() not in _TITLE_STOPWORDS]
+    if len(content_words) >= 2:
+        acronym = "".join(word[0].upper() for word in content_words[:4])
+        variants.append(f"{acronym} {year.group(1)}")
+    if len(content_words) >= 3:
+        acronym = "".join(word[0].upper() for word in content_words[:3])
+        variants.append(f"{acronym} {year.group(1)}")
+    return variants
 
 
 def source_id_alias_map(source_trail: list[Any]) -> dict[str, str]:

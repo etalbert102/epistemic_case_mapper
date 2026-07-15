@@ -17,6 +17,16 @@ from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
     compact_decision_model_repair_report,
     run_analyst_decision_model_repair,
 )
+from epistemic_case_mapper.map_briefing_analyst_evidence_routing import (
+    COMPACT_CONTEXT,
+    FULL_DECISION_MODEL,
+    OUT_OF_SCOPE,
+    TRACE_ONLY,
+    apply_routed_away_accounting,
+    build_analyst_evidence_routing,
+    compact_routed_away_summary,
+    routing_by_evidence_id,
+)
 from epistemic_case_mapper.map_briefing_analyst_schemas import (
     AnalystDecisionModel,
     analyst_decision_retention_obligations,
@@ -40,11 +50,12 @@ def run_analyst_decision_model(
     *,
     ledger: dict[str, Any],
     adjudication: dict[str, Any],
+    evidence_routing: dict[str, Any] | None = None,
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
-    context = build_analyst_decision_context(ledger=ledger, adjudication=adjudication)
+    context = build_analyst_decision_context(ledger=ledger, adjudication=adjudication, evidence_routing=evidence_routing)
     prompt = build_analyst_decision_model_prompt(context)
     if backend.strip() == "prompt":
         scaffold = deterministic_decision_model_scaffold(ledger=ledger, adjudication=adjudication, context=context)
@@ -94,6 +105,7 @@ def run_analyst_decision_model(
             }
         raw = result.text
         payload = _extract_json(raw)
+        payload = apply_routed_away_accounting(payload if isinstance(payload, dict) else {}, context)
         parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
         retry_reports.append(model_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
         if parse_report.get("valid"):
@@ -112,7 +124,7 @@ def run_analyst_decision_model(
                 retry_reports=retry_reports,
             ),
         }
-    parsed = AnalystDecisionModel.model_validate(payload).model_dump()
+    parsed = AnalystDecisionModel.model_validate(apply_routed_away_accounting(payload, context)).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
@@ -163,7 +175,7 @@ def _run_parallel_decision_model_candidate(
         num_predict=analyst_decision_model_num_predict(context),
         run_backend=run_model_backend,
     )
-    payload = parallel["payload"]
+    payload = apply_routed_away_accounting(parallel["payload"], context)
     parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
     if not parse_report.get("valid"):
         return _invalid_parallel_decision_model_result(context, parallel, parse_report)
@@ -235,8 +247,20 @@ def analyst_decision_model_num_predict(context: dict[str, Any] | None = None) ->
         return DEFAULT_DECISION_MODEL_NUM_PREDICT
 
 
-def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:
-    rows = [_context_row(row, adjudication) for row in _ledger_rows(ledger)]
+def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict[str, Any], evidence_routing: dict[str, Any] | None = None) -> dict[str, Any]:
+    all_rows = [_context_row(row, adjudication) for row in _ledger_rows(ledger)]
+    routing = evidence_routing if isinstance(evidence_routing, dict) and evidence_routing.get("schema_id") == "analyst_evidence_routing_v1" else build_analyst_evidence_routing(ledger=ledger, adjudication=adjudication)
+    route_by_id = routing_by_evidence_id(routing)
+    for row in all_rows:
+        route = route_by_id.get(str(row.get("evidence_item_id") or ""), {})
+        if route:
+            row["routing_route"] = route.get("route")
+            row["routing_rationale"] = route.get("rationale")
+    rows = [
+        row
+        for row in all_rows
+        if str(route_by_id.get(str(row.get("evidence_item_id") or ""), {}).get("route") or FULL_DECISION_MODEL) == FULL_DECISION_MODEL
+    ]
     ids = [str(row.get("evidence_item_id") or "") for row in rows]
     texts = [str(row.get("claim") or "") for row in rows]
     duplicate_pairs = tfidf_near_duplicate_pairs(texts, ids, threshold=0.42)
@@ -247,13 +271,18 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
         cluster_id = clusters.get(str(row.get("evidence_item_id") or ""))
         if cluster_id:
             row["similarity_cluster_id"] = cluster_id
-    retention_obligations = _retention_obligation_context(ledger, rows)
+    retention_obligations = _retention_obligation_context(ledger, all_rows)
+    routed_summary = compact_routed_away_summary(all_rows, routing)
     return {
         "schema_id": "analyst_decision_context_v1",
         "decision_question": str(ledger.get("decision_question") or "").strip(),
         "stable_final_answer_frame": _dict(ledger.get("stable_final_answer_frame")),
-        "row_count": len(rows),
+        "row_count": len(all_rows),
+        "decision_model_row_count": len(rows),
+        "routed_away_row_count": len(routed_summary),
         "evidence_rows": rows,
+        "routed_away_evidence_summary": routed_summary,
+        "analyst_evidence_routing": routing,
         "retention_obligations": retention_obligations,
         "obligation_group_skeleton": _obligation_group_skeleton(retention_obligations),
         "model_hints": {
@@ -267,7 +296,8 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
                 row_id
                 for row_id, _score in sorted(centrality.items(), key=lambda item: (-item[1], item[0]))[:20]
             ],
-            "memo_use_counts": dict(Counter(str(row.get("adjudicated_memo_use") or "unknown") for row in rows)),
+            "memo_use_counts": dict(Counter(str(row.get("adjudicated_memo_use") or "unknown") for row in all_rows)),
+            "routing_counts": dict(Counter(str(route_by_id.get(str(row.get("evidence_item_id") or ""), {}).get("route") or FULL_DECISION_MODEL) for row in all_rows)),
         },
     }
 
@@ -282,6 +312,8 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "When answer_status is selected or provisional and current_best_answer is present, classify relative to that answer while preserving the affected live option in target_answer_option.",
             "When answer_status is multi_option or unresolved, organize evidence around the live answer options, conditions, and cruxes instead of forcing a single final-answer polarity.",
             "Use evidence IDs to form higher-level evidence groups; do not merely classify rows one by one.",
+            "The context.evidence_rows list is the full-reasoning lane selected by analyst evidence routing.",
+            "The context.routed_away_evidence_summary list is an audit lane; do not build full groups from it unless its own rationale shows that routing is unsafe.",
             "For every evidence row that could affect the memo, also fill memo_relevance_decisions with a transparent memo_inclusion choice.",
             "Use memo_spine only for evidence the memo would be materially worse without; use supporting_context for useful but non-core evidence; use trace_only for evidence that should remain available for audit but should not burden the memo prose; use exclude for off-question evidence.",
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
@@ -304,6 +336,7 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Mark a quantity must_use only when it calibrates the answer, threshold, tradeoff, scope boundary, or update trigger; mark statistical details, dates, eligibility windows, and background nutrient amounts trace_only unless they are decision-load-bearing for this question.",
             "Give every memo-facing quantity a reader-safe retention_phrase that says what the number measures.",
             "Use covered_evidence_item_ids inside evidence_groups for foreground accounting.",
+            "Routed-away rows may be dispositioned as background, trace-only, or excluded according to their routing rationale; keep those decisions explicit rather than re-reasoning over every routed-away row.",
             "Keep evidence_dispositions short: include only rows not covered by any evidence group or rows whose exclusion/backgrounding/review status needs to be explicit.",
             "Use ordinary analyst language for direct_answer, proposition, rationale, answer_impact, and decision_logic.",
             "Return strict JSON only.",
@@ -572,6 +605,8 @@ def _retention_obligation_context(ledger: dict[str, Any], rows: list[dict[str, A
     for row in rows:
         evidence_id = str(row.get("evidence_item_id") or "").strip()
         if not evidence_id:
+            continue
+        if str(row.get("routing_route") or "") in {COMPACT_CONTEXT, TRACE_ONLY, OUT_OF_SCOPE}:
             continue
         adjudicated = str(row.get("adjudicated_memo_use") or "").strip()
         if adjudicated == "quantitative_anchor":
