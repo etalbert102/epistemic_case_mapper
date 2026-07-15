@@ -187,7 +187,7 @@ def _crux_candidates(requirements: tuple[RewriteRequirement, ...]) -> list[dict[
     return candidates
 def _crux_why_it_matters(section: str) -> str:
     if section == "conflicting_evidence":
-        return "It marks evidence that should not be collapsed into one bottom-line answer without resolving the disagreement."
+        return "It marks evidence that should remain separate until the disagreement is resolved."
     if section == "scope_limits":
         return "It bounds where the conclusion applies and prevents over-generalizing the packet."
     if section == "method_limits":

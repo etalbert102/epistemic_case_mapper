@@ -578,7 +578,7 @@ def _map_quality_repair_prompt(
             "- Preserve accepted claims and relations that remain source-grounded.",
             "- Address fail/risk issues in the deterministic quality report before adding polish.",
             "- Add claims only when they are supported by exact excerpts already present in the candidate or staged artifacts.",
-            "- Do not invent source IDs, claim IDs, relation IDs, source spans, excerpts, effect sizes, or consensus.",
+            "- Use source IDs, claim IDs, relation IDs, source spans, excerpts, effect sizes, and consensus claims already present in the candidate or staged artifacts.",
             "- If a quality issue cannot be fixed from available artifacts, add an evidence_check row naming the missing source or review need.",
             "- Keep relation types within the allowed relation ontology listed in the scaffold.",
             "Deterministic quality report:\n" + json.dumps(quality_report, indent=2),

@@ -48,8 +48,8 @@ def build_memo_warning_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "warnings": warnings,
         "synthesis_guidance": [
             "Address each warning naturally if the provided claim and source label are sufficient.",
-            "If the evidence should not change the answer, use it to bound scope or state a limitation.",
-            "Do not mention warning IDs, telemetry, packet trimming, or internal validation.",
+            "If the evidence leaves the answer unchanged, use it to bound scope or state a limitation.",
+            "Write reader-facing prose focused on claims, source labels, scope, and limitations.",
         ],
     }
 

@@ -60,7 +60,7 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
                 "memo_inclusion": "must_use | supporting_context | trace_only | exclude",
                 "quantity_role": "decision_anchor | supporting_detail | study_descriptor | statistical_detail | audit_only",
                 "retention_phrase": "reader-facing wording to use if this quantity is must_use or supporting_context, otherwise empty",
-                "rationale": "why this quantity should or should not be reader-facing for the decision question",
+                "rationale": "why this quantity is reader-facing or audit-only for the decision question",
             }
         ],
         "quantitative_anchors": ["quantities that should survive final synthesis"],
@@ -71,9 +71,9 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
             "strongest_counterweight": "strongest contrary or limiting consideration",
             "counterweight_weighting": "why it changes, weakens, or only bounds the answer",
             "reconciled_cruxes": ["cruxes written as resolved analyst guidance where possible"],
-            "scope_boundaries": ["where the answer applies or does not apply"],
+            "scope_boundaries": ["where the answer applies and its relevant boundaries"],
             "practical_implications": ["decision implications"],
-            "do_not_overstate": ["claims the memo must not imply"],
+            "do_not_overstate": ["claims outside the supported conclusion"],
         },
         "argument_plan": [
             {

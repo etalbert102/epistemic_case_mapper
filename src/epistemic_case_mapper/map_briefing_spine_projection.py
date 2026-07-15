@@ -72,7 +72,7 @@ def _projection_for_section(
     owned_fields = _select_fields(title, fields, owned_roles)
     reference_fields = [field for field in _select_fields(title, fields, reference_roles) if field not in owned_fields]
     owned_evidence = _evidence_from_fields(owned_fields, cards_by_id, use="This section may explain this evidence fully.")
-    reference_evidence = _evidence_from_fields(reference_fields, cards_by_id, use="Reference only; do not restate full detail.")
+    reference_evidence = _evidence_from_fields(reference_fields, cards_by_id, use="Reference briefly; reserve full detail for owned evidence.")
     missing_context = _missing_context(title, spine, owned_fields)
     telemetry_context = _telemetry_context(title, spine)
     status, issues = _context_status(title, owned_fields, owned_evidence, missing_context, telemetry_context)
@@ -428,7 +428,7 @@ def _decision_move(title: str) -> str:
         "Why This Read": "Explain the reasoning path from support and counterevidence to the answer.",
         "Evidence Carrying the Conclusion": "Identify which evidence actually carries the answer and what weakens it.",
         "Practical Read": "Translate the answer into practical decision implications.",
-        "Practical Scope and Exceptions": "Bound where the answer applies and where it should not be used.",
+        "Practical Scope and Exceptions": "Bound where the answer applies and the scope it supports.",
         "Decision Cruxes": "Name what would change the answer.",
         "Limits of the Current Map": "State the evidence gaps and source limitations without implying they were resolved.",
     }

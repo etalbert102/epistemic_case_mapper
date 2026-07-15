@@ -17,8 +17,8 @@ def retry_section_prompt(base_prompt: str, issues: list[str], *, attempt: int, r
         "Correct the rejected section instead of starting over. Make the smallest changes needed to satisfy the rejection reasons and the original section contract. "
         "Return the same section only. Preserve the heading, required evidence, required gaps, and required cruxes. "
         "If a required main-memo obligation was dropped, satisfy it using the required obligation search terms from the original section contract. "
-        "Do not invent or abbreviate parenthetical source labels. "
-        "Return regular Markdown only, beginning with the same ## heading. Do not use JSON or a code fence.\n"
+        "Use parenthetical source labels exactly as supplied. "
+        "Return regular Markdown only, beginning with the same ## heading.\n"
     )
 
 

@@ -96,7 +96,7 @@ def test_decision_model_clusters_claims_into_neutral_default_with_subgroup_cauti
     assert decision_model["default_answer"]["classification"] == "neutral_or_low_concern_under_stated_conditions"
     assert decision_model["main_reasons"]
     assert decision_model["strongest_counterarguments"]
-    assert any("Do not" in item or "Avoid" in item for item in decision_model["prose_requirements"])
+    assert any("Use benefit framing only" in item for item in decision_model["prose_requirements"])
 
 
 def test_decision_model_lint_softens_benefit_framing_for_neutral_default() -> None:

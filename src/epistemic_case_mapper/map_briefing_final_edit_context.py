@@ -25,10 +25,9 @@ PROSE_EDIT_TYPES = {
 def model_facing_reader_memo_edit_context(contract: dict[str, Any]) -> dict[str, Any]:
     """Return only the compact context needed by the optional final edit pass.
 
-    The full rewrite contract remains available to deterministic validators. The
-    model-facing editor should not see answer frames, option comparisons, slot
-    models, or required evidence rows because those can make a local prose pass
-    behave like a second synthesis pass.
+    The full rewrite contract remains available to deterministic validators.
+    The model-facing editor receives only memo-local prose context so the pass
+    stays focused on editing instead of second synthesis.
     """
     return {
         "schema_id": "reader_memo_final_edit_context_v1",
@@ -45,14 +44,14 @@ def model_facing_reader_memo_edit_context(contract: dict[str, Any]) -> dict[str,
             if str(lint).strip()
         ],
         "protected_content_rules": [
-            "Do not edit the decision question line.",
-            "Do not edit section headings.",
-            "Do not edit the confidence label.",
-            "Do not edit source labels, source names, evidence identifiers, or the final source list.",
-            "Do not edit numbers, measured quantities, confidence intervals, or dose/frequency thresholds.",
-            "Do not remove uncertainty, missing-evidence, or bounded-answer wording.",
+            "Preserve the decision question line exactly.",
+            "Preserve section headings exactly.",
+            "Preserve the confidence label exactly.",
+            "Preserve source labels, source names, evidence identifiers, and the final source list exactly.",
+            "Preserve numbers, measured quantities, confidence intervals, and dose/frequency thresholds exactly.",
+            "Preserve uncertainty, missing-evidence, and bounded-answer wording.",
         ],
-        "edit_scope": "Suggest local prose edits only; do not synthesize new evidence or change the recommendation.",
+        "edit_scope": "Suggest local prose edits only, using the existing evidence and recommendation.",
     }
 
 

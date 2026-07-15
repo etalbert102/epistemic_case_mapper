@@ -251,7 +251,7 @@ def _reader_memo_paragraph_specs(scaffold: dict[str, Any]) -> dict[str, dict[str
         },
         "evidence": {
             "slot_ids": ("main_support", "counterevidence_or_tension", "evidence_type_limits", "safety_or_risk"),
-            "lead": "The evidence mix should be read by function: direct support, counterevidence, proxies, guidance, and method limits should not be collapsed into one confidence signal.",
+            "lead": "Read the evidence mix by function: direct support, counterevidence, proxies, guidance, and method limits each contribute a different confidence signal.",
         },
         "practical": {
             "slot_ids": ("alternatives_or_comparators", "implementation_constraints", "scope_conditions"),
@@ -862,7 +862,7 @@ def _practical_implication_rules() -> tuple[tuple[str, str], ...]:
         ("hard_outcome_support", "For the mapped default population, let direct outcome evidence carry more weight than indirect evidence."),
         ("mechanism_surrogate", "Keep mechanism and surrogate evidence visible because it can bound confidence without settling direct outcomes by itself."),
         ("comparator_substitution", "Frame practical advice around the relevant alternatives, since comparator evidence can change the recommendation."),
-        ("high_risk_subgroup", "Do not automatically generalize the default answer to higher-risk subgroups; treat those as separate scope decisions."),
+        ("high_risk_subgroup", "Treat higher-risk subgroups as separate scope decisions before generalizing the default answer."),
     )
 
 def _crux_rows_to_table(cruxes: list[dict[str, Any]], *, max_chars: int) -> str:

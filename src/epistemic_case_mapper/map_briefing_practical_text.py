@@ -27,7 +27,7 @@ def _reader_facing_practical_item(item: str) -> str:
         condition = "" if "under the stated conditions" in default.lower() else " under the stated conditions"
         sentence = f"The default practical read is {default}{condition}"
         if forbidden:
-            sentence += f"; it should not be treated as {forbidden.strip()}"
+            sentence += f"; keep it distinct from {forbidden.strip()}"
         return sentence + "."
     boundary_match = re.match(r"preserve this dose/intensity boundary in practical guidance:\s*(.+)$", text, flags=re.IGNORECASE)
     if boundary_match:
@@ -36,7 +36,7 @@ def _reader_facing_practical_item(item: str) -> str:
     if subgroup_match:
         return f"Treat {subgroup_match.group(1).strip()} as a separate subgroup rather than folding that group into the default case."
     if lowered.startswith("do not "):
-        return text[:1].upper() + text[1:] + "."
+        return f"Keep this practical boundary visible: {text[7:].strip()}."
     return text[:1].upper() + text[1:] + "." if text else ""
 
 

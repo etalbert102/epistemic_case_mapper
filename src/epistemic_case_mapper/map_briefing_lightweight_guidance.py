@@ -82,10 +82,10 @@ def build_lightweight_writer_guidance_prompt(*, canonical_packet: dict[str, Any]
     compact = build_lightweight_guidance_input(canonical_packet=canonical_packet, scaffold=scaffold)
     return (
         "You are creating lightweight reader-facing writing guidance for a source-grounded decision memo.\n"
-        "Do not repair the packet and do not write the memo. Tell the memo writer what must be made clear so a human decision-maker is not misled.\n"
+        "Create guidance for the later memo writer by naming what must be made clear for a human decision-maker.\n"
         "Focus on source weighting, evidence-quality caveats, quantity wording, scope boundaries, and overstatement risks.\n"
         "Prefer specific caveats over generic phrases. If a quantity could be confused with another endpoint, give safe wording.\n"
-        "Return concise JSON only. Do not include raw claim IDs, memo obligation IDs, validation machinery, or packet keys as reader-facing prose.\n\n"
+        "Return concise JSON only. Keep reader-facing prose limited to source weighting, evidence caveats, quantity wording, scope, and overstatement risks.\n\n"
         "Required JSON shape:\n"
         f"{json.dumps(_guidance_schema(), indent=2, ensure_ascii=False)}\n\n"
         "Compact packet evidence:\n"

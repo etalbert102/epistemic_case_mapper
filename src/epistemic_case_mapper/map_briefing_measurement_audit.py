@@ -118,7 +118,7 @@ def build_pipeline_measurement_audit(
         "status": "warning" if any(issue["severity"] == "warning" for issue in issues) else "pass",
         "issues": issues,
         "measurement_principles": [
-            "Do not compare metrics unless their scopes match.",
+            "Compare metrics only when their scopes match.",
             "Treat heuristic text-retention misses as repair targets, not proof of absence.",
             "Treat non-computable telemetry as a data-shape bug, not a weak score.",
         ],

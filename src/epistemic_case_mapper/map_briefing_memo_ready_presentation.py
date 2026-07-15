@@ -258,7 +258,7 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
 def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
     if any(groups.values()):
         return (
-            "Do not read the source count as a vote. The useful question is what each source can decide: "
+            "Read source weight by what each source can decide: "
             "some sources carry the answer, while others mainly size effects, expose limits, identify cruxes, "
             "or show where confidence should narrow."
         )

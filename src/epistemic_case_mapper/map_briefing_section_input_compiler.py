@@ -143,7 +143,7 @@ def _projection_owned_evidence(projection: dict[str, Any]) -> list[dict[str, Any
 
 
 def _projection_reference_evidence(projection: dict[str, Any]) -> list[dict[str, Any]]:
-    return _projection_cards(projection, "reference_only_evidence", use="Briefly reference only; do not restate full source detail.")
+    return _projection_cards(projection, "reference_only_evidence", use="Briefly reference only; reserve full source detail for its owning section.")
 
 
 def _role_aware_owned_evidence(

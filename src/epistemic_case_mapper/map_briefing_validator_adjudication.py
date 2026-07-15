@@ -61,7 +61,7 @@ def _adjudication_prompt(
         "A deterministic validator flagged candidate blocking issues. Your job is to decide which issues are truly blocking.\n"
         "Use only the validation context and candidate section below as the source of truth.\n"
         "Confirm an issue only if the candidate materially changes the answer, invents facts, drops a required source-grounded obligation, changes required structure, or breaks source grounding.\n"
-        "Do not confirm an issue just because wording differs, a citation label is absent but the evidence is faithfully paraphrased, or a heuristic is overly strict.\n"
+        "Confirm an issue only for material failures; treat harmless wording differences, faithful paraphrases with missing labels, and overly strict heuristics as nonblocking.\n"
         "If an issue is real but easy to repair, mark it blocking and give a repair instruction. If it is not actually blocking, mark it not blocking and explain briefly.\n"
         "Return only JSON matching the schema. Preserve issue_index values from the provided list.\n\n"
         f"Section title: {section_title}\n\n"

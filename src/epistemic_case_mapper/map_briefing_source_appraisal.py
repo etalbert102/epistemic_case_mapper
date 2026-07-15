@@ -373,7 +373,7 @@ def build_source_caveat_appraisal_prompt(packet: dict[str, Any]) -> str:
     }
     return (
         "You are appraising one source for decision-ready evidence use.\n"
-        "Judge how claims from this source may be used. Do not decide the final answer.\n"
+        "Judge how claims from this source may be used for later decision analysis.\n"
         "Use only the supplied source-card excerpts and quality components. If information is absent, mark it as not_found or unknown.\n"
         "Return strict JSON matching this shape:\n"
         f"{json.dumps(contract, indent=2)}\n\n"
@@ -644,7 +644,7 @@ def _interpretation_caveats(flags: set[str]) -> list[str]:
         "indirect_endpoint": "Treat endpoint evidence as indirect for final decision outcomes.",
         "guidance_not_independent_empirical_evidence": "Use guidance as decision context, not independent empirical confirmation.",
         "context_not_primary_evidence": "Use summary or explainer material for context rather than load-bearing evidence.",
-        "synthesis_depends_on_included_sources": "Do not double count synthesis and included-source evidence as fully independent without an independence check.",
+        "synthesis_depends_on_included_sources": "Treat synthesis and included-source evidence as related until an independence check supports independence.",
         "scope_sensitive": "Use this evidence to bound scope or applicability when it concerns narrower populations, settings, or endpoints.",
         "anchor_limit": "Source anchoring is incomplete for at least one card from this source.",
         "explicit_limitations": "Carry explicit source limitations into memo wording when this source is load-bearing.",

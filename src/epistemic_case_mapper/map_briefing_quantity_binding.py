@@ -78,7 +78,7 @@ def _quantity_object(quantity: str, cluster: dict[str, Any]) -> dict[str, str]:
         obj["interpretation"] = "source-local quantity tuple member"
     elif _is_effect_or_interval(quantity):
         obj["binding_warning"] = "not_locally_paired_in_source_excerpt"
-        obj["interpretation"] = "unpaired source quantity; do not infer direction, pairing, or effect meaning"
+        obj["interpretation"] = "unpaired source quantity; direction, pairing, and effect meaning remain unspecified"
     return obj
 
 

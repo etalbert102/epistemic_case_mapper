@@ -529,7 +529,7 @@ def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dic
     sufficiency_view = sufficiency_report_for_model(sufficiency_report, packet)
     return (
         "You are an adversarial analyst reviewing a source-grounded decision briefing packet before prose synthesis.\n"
-        "Do not write the memo. Identify whether the packet is decision-adequate and where it may mislead synthesis.\n"
+        "Review the packet for decision adequacy and synthesis risks before memo writing.\n"
         "You must check every evidence_bundles row in the packet summary for role/direction consistency.\n"
         "For each bundle, decide whether `decision_role` matches the claim text, source role, directionality, and section_use.\n"
         "Use these role meanings: strongest_support = evidence supporting the main/default answer; counterweight = evidence that challenges, weakens, or cautions against the answer; scope_boundary = evidence limiting where the answer applies; quantitative_anchor = a load-bearing numeric estimate; decision_crux = a fact or uncertainty that could change the answer; mechanism/context = explanatory or background evidence.\n"
@@ -539,7 +539,7 @@ def build_packet_critique_prompt(packet: dict[str, Any], sufficiency_report: dic
         "Also check for packet problems that would mislead synthesis even when role labels are valid: malformed or non-claim claim text, off-question evidence, low-quality evidence treated as load-bearing, answer-frame problems, section-routing mistakes, missing decision functions, overcompressed scope/crux evidence, and quantity interpretation risks.\n"
         "Record these in the structured fields: misleading_synthesis_risks, insufficiency_warnings, claim_quality_issues, section_routing_issues, answer_frame_issues, missing_decision_functions, missing_or_weak_cruxes, and section_plan_risks.\n"
         "Also return `reader_facing_guidance`: concrete memo instructions a reader should see, such as source-type distinctions, evidence-quality caveats, observational-vs-interventional distinctions, uncertainty caveats, scope/applicability caveats, and tensions that would mislead if omitted. Write each item as reader-facing analysis guidance with instruction, why_it_matters, source_ids, target_ids, and validation_terms when available.\n"
-        "You may not invent new sources, quantities, or claims. Recommendations must reference existing IDs, or be recorded as insufficiency warnings.\n"
+        "Base recommendations on existing IDs; record source, quantity, or claim gaps as insufficiency warnings.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
         f"{json.dumps(view, indent=2, ensure_ascii=False)}\n\n"
@@ -560,7 +560,7 @@ def build_packet_refinement_prompt(
         "Use the accepted critique recommendations and sufficiency report to improve roles, weights, salience, crux clarity, and bundle rationales.\n"
         "For accepted recommendations with edit_type `relabel`, return a bundle_update for each target bundle with the recommended decision_role and rewrite all role-dependent fields you touch, especially section_use and why_it_matters, so they no longer describe the old role.\n"
         "Role-dependent language must be internally consistent: strongest_support should explain how the item supports the current answer; counterweight should explain how it challenges, limits, or cautions against the current answer; scope_boundary should explain where the answer applies; quantitative_anchor should explain the numeric estimate carried by the item.\n"
-        "Do not add new sources, quantities, claims, or IDs. Preserve every critical/high must-retain item unless you explicitly demote it with an anchored rationale.\n"
+        "Use existing sources, quantities, claims, and IDs. Preserve every critical/high must-retain item unless you explicitly demote it with an anchored rationale.\n"
         "Return only JSON matching the requested schema.\n\n"
         "Packet summary:\n"
         f"{json.dumps(view, indent=2, ensure_ascii=False)}\n\n"

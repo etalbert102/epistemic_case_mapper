@@ -89,15 +89,15 @@ Return only JSON matching this shape:
 Hard JSON requirements:
 - Every claim must be an object with these exact keys: "claim_id", "claim", "source_id", "source_span", "excerpt", "entailed_by_excerpt", "role".
 - Every relation must be an object with these exact keys: "relation_id", "source_claim", "target_claim", "relation_type", "rationale".
-- Put IDs as values, never as object keys. Do not write keys like "{region.id_prefix}_c001: claim text".
+- Put IDs as values, with claim and relation text inside object fields.
 - Use claim IDs like "{region.id_prefix}_c001", "{region.id_prefix}_c002", and relation IDs like "{region.id_prefix}_r001".
 - Include at least {region.thresholds.min_evidence_rows} evidence_check rows.
 
 Rules:
 - Extract only claims supported by exact excerpts in the source packet.
-- Do not convert a weak local note into a stronger external-evidence claim.
+- Keep weak local notes at their original strength.
 - Preserve implementation constraints, endpoint distinctions, and source limitations as claims or cruxes when they affect the answer.
-- Do not invent sources, IDs, spans, effect sizes, or consensus.
+- Use only sources, IDs, spans, effect sizes, and consensus claims present in the source packet.
 - Use only allowed relation types unless the package manifest defines a custom relation type.
 - Prefer fewer, more inspectable claims over broad narrative coverage.
 """
@@ -147,7 +147,7 @@ Critique rules:
 - Flag claims that are faithful to local notes but would need primary sources before policy-strength use.
 - Flag relation labels that imply too much.
 - Flag cases where the map is not much better than the flat baseline.
-- Do not propose unsupported new claims as fixes.
+- Propose fixes grounded in the supplied source packet and candidate map.
 """
 
 

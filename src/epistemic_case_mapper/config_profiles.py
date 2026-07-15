@@ -217,7 +217,7 @@ def build_config_recommendation_prompt(
                 "- Choose the built-in profile that best fits the decision question and source mix.",
                 "- Prefer the most general adequate profile over a narrow one.",
                 "- profile_id must be one of the available profile IDs.",
-                "- Do not invent a new full schema; put lightweight additions under suggested_overrides.",
+                "- Put lightweight additions under suggested_overrides using the existing schema.",
                 "- Name uncertainties when the source packet is too thin to justify a specialized profile.",
             ],
         ),
@@ -406,7 +406,7 @@ def _base_relations() -> list[RelationTypeConfig]:
         RelationTypeConfig(
             relation_type="contextualizes",
             description="One claim supplies interpretation context for another without directly supporting, challenging, or narrowing it.",
-            use_when="Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim but should not be treated as load-bearing support.",
+            use_when="Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim as context rather than load-bearing support.",
             sharpness_markers=["context", "compared with", "interpretation", "helps explain"],
         ),
         RelationTypeConfig(
@@ -550,7 +550,7 @@ def _biomedical_nutrition_case() -> EpistemicConfigProfile:
             SourceRoleConfig(role_id="guideline_or_review", description="Guideline, advisory, or evidence review.", keyword_markers=["guideline", "recommendation", "review"], limitations=["Guidance may mix evidence with policy judgment."]),
         ],
         relation_prompt_rules=[
-            "Do not collapse direct health outcomes, biomarkers, mechanisms, and guideline advice into one evidence type.",
+            "Keep direct health outcomes, biomarkers, mechanisms, and guideline advice as distinct evidence types.",
             "Represent dose, population, and substitution context as explicit scope or depends_on relations.",
         ],
         vocabulary=_biomedical_nutrition_vocabulary(),
@@ -584,7 +584,7 @@ def _legal_regulatory_case() -> EpistemicConfigProfile:
             SourceRoleConfig(role_id="guidance_or_commentary", description="Agency guidance or legal commentary.", keyword_markers=["guidance", "commentary", "analysis"], limitations=["May not be binding authority."]),
         ],
         relation_prompt_rules=[
-            "Do not treat commentary as equivalent to statutory authority.",
+            "Treat commentary and statutory authority as distinct source types.",
             "Use refines for jurisdictional or scope boundaries and depends_on for compliance conditions.",
         ],
     )

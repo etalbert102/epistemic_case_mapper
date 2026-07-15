@@ -145,10 +145,10 @@ def _cluster_prompt(cluster_ids: list[str], claim_lookup: dict[str, dict[str, An
             "Rules",
             [
                 "- Merge only claims that state the same evidence proposition.",
-                "- Do not merge claims that differ in endpoint, population, geography, exposure dose, comparator, adjustment set, study design, or direction of effect.",
+                "- Keep claims separate when they differ in endpoint, population, geography, exposure dose, comparator, adjustment set, study design, or direction of effect.",
                 "- If claims are related but meaningfully different, preserve them as separate claims.",
                 "- A canonical claim must be entailed by every member claim's quoted evidence.",
-                "- If numeric estimates differ, write a general canonical claim about direction/statistical interpretation; do not copy one member's exact number.",
+                "- If numeric estimates differ, write a general canonical claim about direction/statistical interpretation.",
                 "- Use only claim IDs shown in the cards.",
                 "- Prefer several smaller groups over one broad group.",
             ],

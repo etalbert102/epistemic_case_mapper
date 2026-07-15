@@ -420,7 +420,7 @@ def _cluster_is_scope_specific(cluster: dict[str, Any]) -> bool:
 def _classification_instruction(classification: str) -> str:
     return {
         "neutral_or_low_concern_under_stated_conditions": (
-            "State the default as neutral or low-concern under the stated conditions; do not frame the default as beneficial."
+            "State the default as neutral or low-concern under the stated conditions; use beneficial framing only for directly supported benefits."
         ),
         "caution_or_harm_under_specific_conditions": (
             "State that caution is warranted under the named conditions, and separate those conditions from the general case."
@@ -522,7 +522,7 @@ def _practical_recommendations(
         if reps and isinstance(reps[0], dict):
             recommendations.append(f"Apply the answer only with this boundary visible: {reps[0].get('claim')}")
     if method_clusters:
-        recommendations.append("Do not turn method-limited or surrogate evidence into a stronger practical recommendation than the map supports.")
+        recommendations.append("Keep method-limited or surrogate evidence at the practical strength supported by the map.")
     return _dedupe(recommendations)
 
 def _what_would_change_answer(
@@ -545,7 +545,7 @@ def _decision_model_prose_requirements(classification: str) -> list[str]:
         "Name the strongest counterargument before listing caveats.",
     ]
     if classification == "neutral_or_low_concern_under_stated_conditions":
-        requirements.append("Avoid benefit framing such as beneficial, protective, or lower-risk default unless explicitly scoped as subgroup evidence.")
+        requirements.append("Use benefit framing only when it is explicitly scoped as subgroup evidence.")
     if classification in {"mixed_or_context_dependent", "caution_or_harm_under_specific_conditions"}:
         requirements.append("Separate the default case from conditions where caution or uncertainty dominates.")
     return requirements
@@ -619,12 +619,12 @@ def _default_stance_instruction(support_profile: dict[str, Any], conflict: list[
     if absence_count and direct_benefit_count == 0:
         return (
             "Phrase the default stance as low-concern, neutral, or not-shown-harmful under stated conditions; "
-            "do not characterize it as generally beneficial."
+            "reserve generally beneficial characterization for direct benefit evidence."
         )
     if conflict:
         return (
             "Phrase the default stance with visible uncertainty and name the strongest counterposition; "
-            "do not present the answer as settled."
+            "present the answer as unsettled where conflict remains."
         )
     return "Phrase the default stance no stronger than the direct evidence in supports_default_stance."
 
@@ -664,7 +664,7 @@ def _active_overstatement_lints(
     lints = [
         {
             "lint_id": "confidence_language",
-            "rule": "Do not use settled-certainty language such as proven, clearly, no risk, or safe unless confidence is high and no counterposition is present.",
+            "rule": "Use settled-certainty language such as proven, clearly, no risk, or safe only when confidence is high and no counterposition is present.",
         },
         {
             "lint_id": "counterposition_visibility",
@@ -675,21 +675,21 @@ def _active_overstatement_lints(
         lints.append(
             {
                 "lint_id": "null_evidence_not_benefit",
-                "rule": "Do not translate no-association, no-significant-difference, or no-adverse-effect evidence into a general beneficial claim.",
+                "rule": "Translate no-association, no-significant-difference, or no-adverse-effect evidence as neutral or bounded evidence rather than general benefit.",
             }
         )
     if scope_ledger.get("population_or_actor") or scope_ledger.get("dose_intensity_or_scale"):
         lints.append(
             {
                 "lint_id": "subgroup_to_generalization",
-                "rule": "Do not generalize subgroup, dose, or scale-specific evidence to the whole question without naming the condition.",
+                "rule": "Name the condition when using subgroup, dose, or scale-specific evidence for the broader question.",
             }
         )
     if scope_ledger.get("measurement_endpoint") or _any_text_contains(method_limits, ("biomarker", "surrogate", "endpoint")):
         lints.append(
             {
                 "lint_id": "surrogate_to_hard_outcome",
-                "rule": "Do not present short-term, biomarker, or surrogate-endpoint evidence as direct long-term outcome evidence.",
+                "rule": "Present short-term, biomarker, or surrogate-endpoint evidence as the endpoint it actually measures.",
             }
         )
     if quality_report.get("status") != "usable_with_review" or any(
@@ -699,7 +699,7 @@ def _active_overstatement_lints(
         lints.append(
             {
                 "lint_id": "quality_cap",
-                "rule": "Do not exceed the confidence cap or hide quality limitations.",
+                "rule": "Stay within the confidence cap and name quality limitations.",
             }
         )
     return lints

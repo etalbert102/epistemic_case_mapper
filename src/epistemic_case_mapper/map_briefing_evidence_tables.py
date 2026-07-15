@@ -314,8 +314,8 @@ def _coverage_why_it_matters(concept: str, row: dict[str, Any]) -> str:
         "substitution_or_comparator": "Comparator evidence affects practical advice because the best answer can change with the alternative.",
         "alternative_or_comparator": "Comparator evidence affects practical advice because the best answer can change with the alternative.",
         "hard_outcome_endpoint": "Hard outcomes are more decision-direct than surrogate movement.",
-        "surrogate_or_biomarker_endpoint": "Proxy evidence can support mechanism but should not by itself settle decision-relevant outcomes.",
-        "mechanism_or_causal_path": "Mechanism evidence helps explain why an effect may transfer, but it should not be read as direct outcome proof.",
+        "surrogate_or_biomarker_endpoint": "Proxy evidence can support mechanism and should be weighed separately from decision-relevant outcomes.",
+        "mechanism_or_causal_path": "Mechanism evidence helps explain why an effect may transfer and should be presented separately from direct outcome proof.",
         "mechanism_ldl_apob": "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible.",
         "subgroup_diabetes_or_metabolic_risk": "Subgroup evidence controls whether the default answer travels to higher-risk people.",
         "subgroup_fh_hyper_responder": "This subgroup can invalidate a generic population-level recommendation.",
@@ -751,7 +751,7 @@ def _compressed_claim_text(claim: str, noise: dict[str, Any]) -> str:
     if kind == "boilerplate_disclosure":
         return "The source includes extensive funding or conflict-of-interest disclosures; treat this as source context, not substantive outcome evidence."
     if kind == "publisher_or_license_boilerplate":
-        return "The source includes publisher, copyright, license, or metadata boilerplate; do not use it as substantive evidence."
+        return "Treat publisher, copyright, license, or metadata boilerplate as non-substantive context."
     return _short_claim_fragment(claim, max_chars=260)
 
 def _compression_why_it_matters(row: dict[str, Any]) -> str:
@@ -760,7 +760,7 @@ def _compression_why_it_matters(row: dict[str, Any]) -> str:
     if "mechanism_ldl_apob" in concepts:
         return "Mechanistic lipid evidence bounds whether the hard-outcome read is biologically plausible."
     if "mechanism_or_causal_path" in concepts:
-        return "Mechanism evidence helps explain transfer but should not be treated as direct outcome evidence."
+        return "Present mechanism evidence as transfer explanation rather than direct outcome evidence."
     if "technical_performance_or_capacity" in concepts:
         return "Technical capacity evidence gates whether the option can deliver the intended effect."
     if "implementation_constraint" in concepts:

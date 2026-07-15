@@ -70,7 +70,7 @@ CAVEAT_MARKERS = (
 
 
 def build_memo_protected_spans(memo: str, contract: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Build prompt-visible and validator-visible spans that final editors must not alter."""
+    """Build prompt-visible and validator-visible spans that final editors preserve."""
     contract = contract or {}
     spans: list[dict[str, Any]] = []
     _add_section_heading_spans(spans, memo)
@@ -87,12 +87,12 @@ def build_memo_protected_spans(memo: str, contract: dict[str, Any] | None = None
         "span_count": len(spans),
         "spans": _dedupe_spans(spans),
         "rules": [
-            "Do not edit the decision question line.",
-            "Do not edit section headings.",
-            "Do not edit the confidence label.",
-            "Do not edit source labels, source names, evidence identifiers, or the final source list.",
-            "Do not edit numbers, measured quantities, confidence intervals, or dose/frequency thresholds.",
-            "Do not remove uncertainty, missing-evidence, or bounded-answer wording.",
+            "Preserve the decision question line exactly.",
+            "Preserve section headings exactly.",
+            "Preserve the confidence label exactly.",
+            "Preserve source labels, source names, evidence identifiers, and the final source list exactly.",
+            "Preserve numbers, measured quantities, confidence intervals, and dose/frequency thresholds exactly.",
+            "Preserve uncertainty, missing-evidence, and bounded-answer wording.",
         ],
     }
 
@@ -183,7 +183,7 @@ def build_memo_final_diagnosis(memo: str, contract: dict[str, Any] | None = None
         prose_issues.append(
             {
                 "kind": "section_role_quality",
-                "message": "Some sections do not perform their decision-memo role cleanly.",
+                "message": "Some sections need cleaner decision-memo role discipline.",
                 "items": role_quality.get("issues", [])[:8],
             }
         )

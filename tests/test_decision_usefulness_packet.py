@@ -43,7 +43,7 @@ def test_decision_usefulness_prompt_instructs_model_not_to_force_options() -> No
     prompt = build_decision_usefulness_prompt(context)
 
     assert "decision_usefulness_packet_v1" in prompt
-    assert "do not force fake alternatives" in prompt
+    assert "for factual or classification questions, use stances, thresholds, or classifications" in prompt
     assert "diagnostic evidence" in prompt
     assert "Canonical decision context" in prompt
 
@@ -214,7 +214,7 @@ def test_decision_usefulness_inventory_report_keeps_legacy_utilities_diagnostic(
     utilities = {row["key"]: row for row in report["utilities"]}
     assert report["schema_id"] == "decision_usefulness_inventory_report_v1"
     assert report["active_handoff"] == "canonical_decision_writer_packet_v1"
-    assert utilities["option_comparison"]["use_in_decision_usefulness_layer"].startswith("do not expose directly")
+    assert utilities["option_comparison"]["use_in_decision_usefulness_layer"].startswith("keep internal")
     assert utilities["decision_writer_packet"]["use_in_decision_usefulness_layer"].startswith("reuse indirectly")
 
 

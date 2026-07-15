@@ -313,7 +313,7 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "retention_obligations" in prompt
     assert "obligation_group_skeleton" in prompt
     assert "Start from obligation_group_skeleton" in prompt
-    assert "Do not bury contrary evidence inside a support group" in prompt
+    assert "give contrary evidence its own visible role" in prompt
     assert "Rank by decision diagnosticity" in prompt
     assert "decision_contribution" in prompt
     assert "misuse_warning" in prompt

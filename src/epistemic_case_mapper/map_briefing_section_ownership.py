@@ -192,14 +192,14 @@ def _reference_instruction(owner: str, style: str) -> str:
         return "This section may carry the full evidence."
     if style == "short_reference":
         return (
-            f"If useful, use only a brief cross-reference to {owner}; do not include source-level details."
+            f"If useful, use only a brief cross-reference to {owner}; reserve source-level details for that section."
             if owner
             else "If useful, use only a brief cross-reference."
         )
     return (
-        f"Do not mention this evidence here; leave it to {owner}."
+        f"Omit this evidence here; leave it to {owner}."
         if owner
-        else "Do not mention this evidence here."
+        else "Omit this evidence here."
     )
 
 

@@ -48,10 +48,10 @@ def build_spine_arbitration_prompt(spine: dict[str, Any]) -> str:
     }
     return (
         "You are reviewing a canonical decision-support spine.\n"
-        "Choose salience only among the provided pre-validated fields. Do not invent sources or IDs.\n"
+        "Choose salience only among the provided pre-validated fields. Use only supplied sources and IDs.\n"
         "Also write a concise default_answer_claim that directly answers the decision question using only the listed fields.\n"
         "The answer must name the subject of the question and use the question's natural answer vocabulary when it supplies options.\n"
-        "Lead with the decision read, then include the most important caveat. Do not lead with a single-study result or a research-gap statement.\n"
+        "Lead with the decision read, then include the most important caveat after it.\n"
         "If any counterevidence fields are listed, select at least one counterevidence_field_id and explain why it does or does not change the answer.\n"
         "The answer should be decision-ready prose, not a label, instruction, or study-by-study summary.\n"
         "Return only JSON with this schema:\n"

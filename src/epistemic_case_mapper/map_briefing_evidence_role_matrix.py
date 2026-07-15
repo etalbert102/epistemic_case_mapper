@@ -417,17 +417,17 @@ def _default_section_use(role: str) -> str:
     if role == "contextual":
         return "Mention only if it clarifies the section-specific implication."
     if role == "do_not_use":
-        return "Do not use this card in this section."
+        return "Omit this card from this section."
     return "Use this as load-bearing evidence for this section's analytic move."
 
 
 def _model_use_instruction(role: str, title: str) -> str:
     if role == "contrast":
-        return "Use to explain the section-specific counterweight or crux; do not bury it as generic context."
+        return "Use to explain the section-specific counterweight or crux as a visible analytic point."
     if role == "boundary":
         return "Use to define where the answer does and does not travel."
     if role == "contextual":
         return "Use briefly only if it improves the reader's understanding of this section."
     if role == "do_not_use":
-        return "Do not use in this section."
+        return "Omit from this section."
     return f"Use as primary evidence for {title}; synthesize rather than list."

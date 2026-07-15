@@ -380,7 +380,7 @@ def test_quantity_binding_does_not_interpret_unpaired_quantities_directionally()
     ]
     assert unpaired
     assert all("direction" not in quantity for quantity in unpaired)
-    assert all("do not infer direction" in quantity["interpretation"] for quantity in unpaired)
+    assert all("direction, pairing, and effect meaning remain unspecified" in quantity["interpretation"] for quantity in unpaired)
 
 
 def test_memo_ready_quality_warns_when_default_support_is_missing() -> None:

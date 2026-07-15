@@ -91,7 +91,7 @@ def unsafe_quantity_pairings(
                 "cluster_id": cluster.get("cluster_id"),
                 "quantity": value,
                 "warning": "quantity_not_locally_paired_in_source_excerpt",
-                "instruction": "Do not combine this quantity with another estimate or interval in prose unless the source-local tuple is explicit.",
+                "instruction": "Keep this quantity separate from other estimates or intervals unless the source-local tuple explicitly pairs them.",
             }
         )
     if len(quantity_tuples) >= 2 and any(is_effect_or_interval(str(row.get("value") or "")) for row in quantities):

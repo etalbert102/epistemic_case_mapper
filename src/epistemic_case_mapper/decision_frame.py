@@ -152,7 +152,7 @@ def memo_quality_report(markdown: str, scaffold: dict[str, Any]) -> dict[str, An
                 {
                     "severity": "warning",
                     "issue_type": str(issue.get("issue_type")),
-                    "message": "Upstream map relation structure is weak, so memo polish should not be read as strong synthesis quality.",
+                    "message": "Upstream map relation structure is weak, so treat memo polish separately from synthesis quality.",
                 }
             )
     score = max(0, 100 - sum(20 if issue["severity"] == "risk" else 8 for issue in issues))
@@ -264,7 +264,7 @@ def _decision_object(frame_type: str) -> str:
 def _section_jobs(frame_type: str) -> dict[str, str]:
     if frame_type == "representation_decision":
         return {
-            "Decision Brief": "Answer how the evidence should be represented and name the main distinction that must not be flattened.",
+            "Decision Brief": "Answer how the evidence should be represented and name the main distinction to preserve.",
             "Practical Read": "Name concrete uses for the representation, including what a reviewer can inspect next.",
             "Why This Read": "Explain which support, tensions, and scope limits make this representation necessary.",
             "Decision Cruxes": "Name conditions that would change how the evidence should be represented.",
@@ -272,7 +272,7 @@ def _section_jobs(frame_type: str) -> dict[str, str]:
         }
     if frame_type == "process_or_method_evaluation":
         return {
-            "Decision Brief": "State what the packet is useful for and what it should not be used to adjudicate.",
+            "Decision Brief": "State what the packet is useful for and the adjudication scope it supports.",
             "Practical Read": "Name concrete uses for future investigations, debate design, or postmortem review.",
             "Why This Read": "Explain the process or method failure modes, not just the evidence inventory.",
             "Decision Cruxes": "Name conditions that would change the process/method lesson.",
@@ -291,7 +291,7 @@ def _practical_actions(frame_type: str) -> list[str]:
     if frame_type == "process_or_method_evaluation":
         return [
             "Use the packet for postmortem and process critique.",
-            "Do not treat public-debate nonresponse as evidence by itself.",
+            "Treat public-debate nonresponse as process context rather than standalone evidence.",
             "Keep method-feedback failures separate from the underlying factual dispute.",
             "Compare adjudication methods before treating a debate result as decisive.",
         ]

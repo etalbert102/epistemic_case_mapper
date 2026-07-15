@@ -335,7 +335,7 @@ def _reason_for_inclusion(title: str, slot_id: str, slot_status: str, row: dict[
     role = _role_label(row) or slot_id.replace("_", " ") or "evidence"
     claim = _short_text(str(row.get("claim", "")), 120)
     if slot_status == "mention_only":
-        return f"This card belongs in {title} as contextual {role}; it can bound the analysis but should not carry the main conclusion."
+        return f"This card belongs in {title} as contextual {role}; it can bound the analysis while other evidence carries the main conclusion."
     if slot_status == "missing":
         return f"This row belongs in {title} to name a decision-relevant gap, not to fill it."
     if slot_status == "boundary":
@@ -352,26 +352,26 @@ def _use_boundaries(title: str, slot_id: str, slot_status: str, row: dict[str, A
     if slot_status == "mention_only":
         return (
             f"Use it to frame a caveat or contextual boundary for {title}.",
-            "Do not present it as clean, load-bearing evidence for the default answer.",
+            "Present it as caveat or context rather than clean, load-bearing evidence for the default answer.",
         )
     if slot_status == "missing":
         return (
             "Use it to state what the source set does not establish.",
-            "Do not infer the missing fact from adjacent evidence.",
+            "Leave the missing fact unresolved unless adjacent evidence directly establishes it.",
         )
     if slot_status == "boundary":
         return (
             f"Use it to limit or scope the section's conclusion.",
-            "Do not let this boundary replace the main support/counterweight balance.",
+            "Keep this boundary alongside the main support/counterweight balance.",
         )
     if slot_status == "counterweight":
         return (
             f"Use it to qualify the answer or describe a risk/tension.",
-            "Do not overstate it beyond the source's population, comparator, or endpoint.",
+            "State it within the source's population, comparator, and endpoint.",
         )
     return (
         f"Use it as {role} for this section's assigned analytic job.",
-        "Do not repeat it as a generic source summary without explaining its section-specific implication.",
+        "Explain its section-specific implication rather than repeating a generic source summary.",
     )
 
 

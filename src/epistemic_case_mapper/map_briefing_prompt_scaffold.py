@@ -191,7 +191,7 @@ def _compressed_claim_text(claim: str, noise: dict[str, Any]) -> str:
     if kind == "boilerplate_disclosure":
         return "The source includes extensive disclosures; treat this as source context, not substantive evidence."
     if kind == "publisher_or_license_boilerplate":
-        return "The source includes publisher, license, or metadata boilerplate; do not use it as substantive evidence."
+        return "Treat publisher, license, or metadata boilerplate as non-substantive context."
     return _short_text(claim, max_chars=260)
 
 

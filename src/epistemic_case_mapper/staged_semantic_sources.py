@@ -91,7 +91,7 @@ def _relation_batch_prompt(
 
 def _relation_rules(profile_rules: str) -> list[str]:
     rules = [
-        "- Do not include relation_id. Deterministic code assigns IDs later.",
+        "- Omit relation_id. Deterministic code assigns IDs later.",
         "- Use only the claim IDs shown in the pair.",
         '- Use only allowed relation types, or use relation_type "none".',
         "- Treat each pair's relation_intent and suggested_relation_types as the default decision menu.",
@@ -102,13 +102,13 @@ def _relation_rules(profile_rules: str) -> list[str]:
         "- Prefer decision-relevant relations over generic links.",
         "- Use crux_for only when the rationale says what answer would change if one claim were false.",
         "- Use depends_on only when the rationale names a condition that must hold.",
-        "- Use in_tension_with only when the rationale names what cannot comfortably both be true.",
+        "- Use in_tension_with only when the rationale names the propositions that are hard to jointly accept.",
         "- Use challenges only when the rationale names what proposition is weakened or contradicted.",
         "- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or condition being narrowed.",
         "- Use supports only when the rationale names same-proposition support, a mechanism that explains the target claim, or quantitative/statistical evidence that strengthens the target claim.",
         "- Use contextualizes when a claim helps interpret another claim but does not directly support, challenge, narrow, or condition it.",
-        "- Do not use supports merely because both claims lean harmful, neutral, or beneficial.",
-        "- Do not use a study-specific population/scope claim to refine findings from a different source.",
+        "- Use supports when the rationale names same-proposition support, mechanism support, or quantitative/statistical strengthening.",
+        "- Use refines for same-source or explicitly transferable boundaries, populations, endpoints, mechanisms, or conditions.",
         "- Fill the relation evidence contract for every non-none relation.",
         "- Ground anchors in visible evidence-quote phrases rather than introducing new facts.",
     ]
@@ -173,8 +173,8 @@ def _relation_pair_contract(packet: dict[str, Any]) -> str:
 
 def _relation_intent_decision_rule(intent_name: str) -> str:
     rules = {
-        "cross_source_study_scope_to_finding": "Do not transfer a study-specific population or design boundary onto another source's finding.",
-        "cross_source_mechanism_scope_to_finding": "A mechanistic caveat from one source can support, challenge, or create tension with another finding only when the mechanism changes how that finding should be interpreted; do not call this refines.",
+        "cross_source_study_scope_to_finding": "Apply a study-specific population or design boundary only to findings from the same study or to explicitly transferable claims.",
+        "cross_source_mechanism_scope_to_finding": "A mechanistic caveat from one source can support, challenge, or create tension with another finding only when the mechanism changes how that finding should be interpreted; reserve refines for true narrowing.",
         "cross_source_general_scope_to_finding": "Use refines only when the scope boundary is portable to the other source's finding and names a specific population, endpoint, condition, or generalizability boundary.",
         "same_source_scope_to_finding": "Use refines when the scope card states the population, endpoint, intervention, or design boundary for the same source's finding.",
         "crux_to_decision_claim": "Use crux_for only when one claim would change the answer to the decision question or the interpretation of the other claim.",
@@ -187,7 +187,7 @@ def _relation_intent_decision_rule(intent_name: str) -> str:
         "outcome_disagreement": "Use in_tension_with or challenges only when the two findings point in different directions on the same decision-relevant proposition.",
         "scope_bounds_outcome": "Use refines or depends_on when the scope claim names where an outcome finding applies. Use in_tension_with when the subgroup or boundary points in a materially different direction from the broad finding.",
         "method_limits_headline": "Use challenges or refines when the method claim changes how strongly the headline finding should be used.",
-        "comparator_contextualizes_outcome": "Use contextualizes when comparator evidence helps interpret the outcome claim without directly supporting it; use refines only when it narrows the target claim, and supports only when it directly strengthens the target claim. Do not imply absolute benefit from relative substitution evidence.",
+        "comparator_contextualizes_outcome": "Use contextualizes when comparator evidence helps interpret the outcome claim without directly supporting it; use refines only when it narrows the target claim, and supports only when it directly strengthens the target claim. State relative substitution evidence as relative substitution evidence.",
         "guidance_supported_or_bounded_by_evidence": "Use supports when the evidence directly backs the guidance, contextualizes when it only frames the guidance, and refines or depends_on when it narrows the guidance.",
         "scope_bounds_guidance": "Use depends_on or refines when the scope claim names the population or condition where the guidance holds.",
         "method_limits_guidance": "Use challenges or refines when the method limitation changes confidence in the guidance.",
@@ -568,7 +568,7 @@ def _fallback_relation_contract(left: dict[str, Any], right: dict[str, Any]) -> 
         "source_anchor_a": _short_anchor(left),
         "source_anchor_b": _short_anchor(right),
         "why_decision_relevant": "The paired claim roles indicate a possible decision-relevant dependency that needs review.",
-        "failure_condition": "A reviewer should reject the edge if the excerpts do not bear on the same decision-relevant proposition.",
+        "failure_condition": "A reviewer should reject the edge unless the excerpts bear on the same decision-relevant proposition.",
     }
 
 def _relation_confidence(proposal: dict[str, Any], contract: dict[str, str]) -> str:

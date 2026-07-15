@@ -305,7 +305,7 @@ def _scope_dose_guardrails(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "evidence_item_id": item.get("item_id"),
                     "source_labels": _source_labels(item),
                     "writing_job": (
-                        "Use this as context for the source, subgroup, setting, or study design; do not turn it into a broad recommendation unless the answer scope separately supports that."
+                        "Use this as context for the source, subgroup, setting, or study design; make broad recommendations only when the answer scope separately supports them."
                         if scope_use == "study_or_context_specific"
                         else "Use this as a candidate scope or dose boundary only if it matches the decision question and the answer frame."
                     ),
@@ -428,7 +428,7 @@ def _evidence_type_contrasts(items: list[dict[str, Any]]) -> list[dict[str, Any]
                 "evidence_proximity": proximity[:4],
                 "decision_directness": directness,
                 "required_evidence_type_move": _evidence_type_move(proximity, directness),
-                "writing_job": "Explain what this evidence type can establish for the decision, what it cannot establish, and how it should be weighed against other evidence types.",
+                "writing_job": "Explain what this evidence type establishes for the decision, its limits, and how it should be weighed against other evidence types.",
                 "example_item_id": item.get("item_id"),
                 "source_labels": _source_labels(item),
             }

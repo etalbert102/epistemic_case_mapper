@@ -97,7 +97,7 @@ def _relation_ledger() -> dict:
 def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     prompt = build_analyst_adjudication_prompt(_ledger())
 
-    assert "Return strict JSON only" in prompt
+    assert "Return a strict JSON object only" in prompt
     assert "bundle:one" in prompt
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
@@ -107,7 +107,7 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "classification_target_policy" in prompt
     assert "multi_option or unresolved" in prompt
     assert "rebuts an alternative answer but supports the selected/provisional current_best_answer" in prompt
-    assert "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer" in prompt
+    assert "Use challenges_answer only when the row weakens" in prompt
     assert "decision_contribution" in prompt
     assert "use_in_reasoning" in prompt
     assert "key_qualifier" in prompt

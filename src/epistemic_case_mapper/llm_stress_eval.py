@@ -44,7 +44,7 @@ PROMPT_SPECS = (
         "title": "Adversarial source and rhetoric critique",
         "instruction": (
             "Red-team the map for unsupported confidence, rhetoric treated as evidence, missing "
-            "caveats, asymmetric burden framing, and source-status confusion. Do not adjudicate "
+            "caveats, asymmetric burden framing, and source-status confusion. Focus on stress signals rather than final adjudication "
             "truth. Identify boundary failures and fragile claims."
         ),
         "schema": {
@@ -410,7 +410,7 @@ def _build_prompt(spec: dict[str, Any], packet: str, map_artifact: dict[str, Any
             [
                 "- Return valid JSON only.",
                 "- Use only known IDs from the packet.",
-                "- Do not certify truth; produce source-linked stress signals and candidate improvements.",
+                "- Produce source-linked stress signals and candidate improvements.",
                 "- If there is insufficient evidence, return an empty list for the relevant field.",
                 f"- Known claim IDs: {known_claims}",
                 f"- Known relation IDs: {known_relations}",

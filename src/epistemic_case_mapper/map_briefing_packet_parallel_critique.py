@@ -243,7 +243,7 @@ def build_local_critique_prompt(shard: dict[str, Any]) -> str:
                 "Use target_ids for existing bundle IDs when recommending edits.",
                 "Use warning-only insufficiency fields for source-level or packet-level problems without a concrete target.",
                 "Leave reader_facing_guidance empty; global reader-facing guidance will be consolidated in a separate pass.",
-                "Do not invent sources, quantities, claims, or IDs.",
+                "Use sources, quantities, claims, and IDs already present in this shard.",
                 "Return JSON matching packet_critique_v1.",
             ],
         },

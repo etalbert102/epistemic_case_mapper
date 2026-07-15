@@ -814,8 +814,8 @@ def _classification_rule(answer_status: str, *, current_best_answer: str) -> str
             "alternative usually supports or contextualizes current_best_answer instead."
         )
     return (
-        "Because no final answer is selected, do not force evidence into support or counterweight for a nonexistent bottom line. "
-        "Use target_answer_option to name the live option, condition, or crux affected; challenges_answer means weakening that named target."
+        "Because no final answer is selected, classify evidence by the live option, condition, or crux it affects. "
+        "Use target_answer_option to name that target; challenges_answer means weakening that named target."
     )
 
 

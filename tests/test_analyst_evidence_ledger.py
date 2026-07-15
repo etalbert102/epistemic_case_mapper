@@ -98,7 +98,7 @@ def test_analyst_evidence_ledger_keeps_multi_option_question_open_without_curren
     assert frame["answer_status"] == "multi_option"
     assert "current_best_answer" not in frame
     assert "No single answer is selected" in frame["classification_target_policy"]
-    assert "do not force evidence into support or counterweight" in frame["classification_rule"]
+    assert "classify evidence by the live option, condition, or crux it affects" in frame["classification_rule"]
     assert [row["candidate_answer_id"] for row in frame["live_answer_options"]] == ["option_a", "option_b"]
 
 

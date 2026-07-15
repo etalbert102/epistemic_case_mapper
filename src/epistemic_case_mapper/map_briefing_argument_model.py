@@ -261,9 +261,9 @@ def _missing_items(scaffold: dict[str, Any]) -> list[ArgumentEvidenceItem]:
     report = _dict(scaffold.get("map_sufficiency_report"))
     items: list[ArgumentEvidenceItem] = []
     for slot in report.get("missing_expected_decision_slots", []) if isinstance(report.get("missing_expected_decision_slots"), list) else []:
-        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="The memo should not fill this by inference.", evidence_type="unresolved_slot", weight="low"))
+        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="The memo should leave this gap explicit unless source-backed evidence fills it.", evidence_type="unresolved_slot", weight="low"))
     for family in report.get("missing_expected_evidence_families", []) if isinstance(report.get("missing_expected_evidence_families"), list) else []:
-        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="The memo should not imply this evidence was assessed.", evidence_type="unresolved_evidence_family", weight="low"))
+        items.append(ArgumentEvidenceItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="The memo should state that this evidence remains unassessed.", evidence_type="unresolved_evidence_family", weight="low"))
     return _dedupe_items(items)[:6]
 
 

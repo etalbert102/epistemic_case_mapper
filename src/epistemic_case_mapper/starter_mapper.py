@@ -75,7 +75,7 @@ def build_starter_case_map(manifest: CaseManifest, *, repo_root: Path) -> CaseMa
         audit_notes=[
             "Starter map is deterministic and intentionally conservative.",
             "Claims are heuristic candidates; human/AI workflow should classify, merge, and audit them.",
-            "Relations are seed links only and should not be treated as settled assessment.",
+            "Relations are seed links for review rather than settled assessment.",
         ],
         metadata={
             "builder": "starter_mapper_v0",

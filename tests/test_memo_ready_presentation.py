@@ -195,7 +195,7 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "Do not read the source count as a vote" in result["memo"]
+    assert "Read source weight by what each source can decide" in result["memo"]
     assert "where confidence should narrow" in result["memo"]
     assert "put the most weight on [Outcome 2025] for the core answer" in result["memo"]
     assert "use [RISK 2024] as the main check on how far the answer travels" in result["memo"]

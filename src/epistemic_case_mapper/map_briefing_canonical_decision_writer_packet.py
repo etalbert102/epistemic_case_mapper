@@ -390,7 +390,7 @@ def _organized_evidence_inventory(packet: dict[str, Any], interface: dict[str, A
             "This is the complete memo-facing evidence inventory, organized for synthesis rather than filtered for brevity.",
             "Explicitly optional or off-question material is excluded from synthesis context even when retained elsewhere for audit.",
             "Priority evidence should receive attention first, but non-priority inventory items may supply practical framing, comparators, scope, or interpretive context.",
-            "Items with role context_only should not become load-bearing claims unless they clarify how to apply or interpret the answer.",
+            "Items with role context_only should remain contextual unless they clarify how to apply or interpret the answer.",
         ],
         "item_count": len(items),
         "lanes": grouped,

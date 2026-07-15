@@ -74,7 +74,7 @@ def build_bluf_contract(
                 "Answer the decision question in the first sentence.",
                 "Add the main scope or exception in the same sentence or the next sentence.",
                 "Name confidence without turning uncertainty into a research-status lead.",
-                "Do not lead with a single study, method caveat, or generic evidence inventory.",
+                "Lead with the synthesized decision read before study details, method caveats, or evidence inventory.",
             ],
         }
     )
@@ -131,7 +131,7 @@ def _overstatement_limits(analyst_reasoning_frame: dict[str, Any], lanes: dict[s
         [
             *explicit,
             *_source_use_limits(lanes),
-            "Do not state stronger causal or confidence claims than the source-specific appraisals support.",
+            "Keep causal and confidence claims within the strength supported by source-specific appraisals.",
         ]
     )[:8]
 

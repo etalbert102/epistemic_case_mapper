@@ -297,7 +297,7 @@ def _sufficiency_output_obligations(
                 "obligation_id": f"missing_{slot}",
                 "kind": "acknowledge_missing_slot",
                 "slot": slot,
-                "instruction": f"Do not invent a {_slot_label(slot)}; state that the current map does not cleanly establish it if relevant.",
+                "instruction": f"State that the current map does not cleanly establish a {_slot_label(slot)} if relevant.",
                 "candidate_values": [],
             }
         )
@@ -307,7 +307,7 @@ def _sufficiency_output_obligations(
                 "obligation_id": f"missing_family_{family}",
                 "kind": "acknowledge_missing_family",
                 "evidence_family": family,
-                "instruction": f"Do not imply that {family.replace('_', ' ')} evidence was assessed if the current map does not cleanly establish it.",
+                "instruction": f"State that {family.replace('_', ' ')} evidence is unassessed when the current map does not cleanly establish it.",
                 "candidate_values": [],
             }
         )
@@ -537,8 +537,8 @@ def build_briefing_plan(
             },
         ],
         "section_transition_rules": [
-            "Do not repeat evidence-role bullets verbatim when a synthesis sentence can combine them.",
-            "Do not let low-weight evidence drive the bottom line unless it is the only evidence on a decision-critical caveat.",
+            "Combine evidence-role bullets into synthesis sentences when that preserves the meaning.",
+            "Let low-weight evidence drive the bottom line only when it is the only evidence on a decision-critical caveat.",
             "When evidence conflicts, state what scope or method difference explains the tension if the map supports one.",
         ],
     }

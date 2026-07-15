@@ -746,14 +746,14 @@ def _warrant(role: str, claim: str) -> str:
     if role == "strongest_counterweight":
         return "If this source-backed claim holds, the default answer needs qualification or lower confidence."
     if role == "scope_boundary":
-        return "If this boundary holds, the answer should not be generalized beyond the named scope."
+        return "If this boundary holds, keep the answer within the named scope."
     if role == "decision_crux":
         return "If this distinction is resolved differently, the answer could change."
     if role == "quantitative_anchor":
         return "The quantity constrains how strongly the memo can state the associated claim."
     if role == "mechanism_or_explanation":
         return "The mechanism helps explain why the observed evidence may matter for the decision."
-    return "This item provides context but should not carry the decision by itself."
+    return "This item provides context while other evidence carries the decision."
 
 
 def _qualifier(cluster: dict[str, Any], role: str) -> str:
@@ -790,7 +790,7 @@ def _primary_caution(cluster: dict[str, Any], role: str) -> str:
     if role == "scope_boundary":
         return "Scope-sensitive item."
     if role == "mechanism_or_explanation":
-        return "Mechanism evidence should not be over-weighted as direct outcome evidence."
+        return "Weight mechanism evidence as explanatory rather than direct outcome evidence."
     return "Evidence quality not fully assessed in minimal slice."
 
 

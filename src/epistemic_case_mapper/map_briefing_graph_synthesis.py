@@ -279,7 +279,7 @@ def _synthesis_guidance(
     if orphan_claims:
         guidance.append("Keep orphan claims out of the main answer unless they are high-weight scope boundaries.")
     if issue_clusters:
-        guidance.append("Do not ask the reader to infer the graph; name the issue clusters in human terms.")
+        guidance.append("Name the issue clusters in human terms so the reader can follow the graph.")
     return guidance
 
 

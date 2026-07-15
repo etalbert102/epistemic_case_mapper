@@ -10,7 +10,7 @@ BASELINE_PROMPT_VERSION = "flat_baseline_prompt_v1_blinded_ollama"
 BASELINE_PROMPT = (
     "Using only the listed source excerpts for this worked region, write a concise synthesis "
     "that answers the region question for an informed reader. Preserve important caveats "
-    "where they affect the answer, but do not create a structured claim map."
+    "where they affect the answer, while keeping the output as a direct research memo."
 )
 
 
@@ -63,7 +63,7 @@ def build_prompt(repo_root: Path, config: BaselineConfig) -> str:
     return "\n\n".join(
         (
             "You are writing a blinded flat synthesis baseline.",
-            "Do not create a claim map, relation map, audit, or critique of a map.",
+            "Create a direct research memo rather than a claim map, relation map, audit, or map critique.",
             f"Baseline ID: {config.baseline_id}",
             f"Region ID: {config.region_id}",
             f"Worked region question: {config.question}",

@@ -360,8 +360,8 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "Use semantic judgment: decide whether the item is load-bearing, background, covered by another item, or not decision-relevant.",
             "Use stable_final_answer_frame.classification_target_policy to decide the target for answer_relation and effect_on_final_answer labels.",
             "When answer_status is selected or provisional and current_best_answer is present, classify relative to current_best_answer while preserving the affected live option in target_answer_option.",
-            "When answer_status is multi_option or unresolved, do not force evidence into support or counterweight for a nonexistent final answer; classify relative to the live answer option, condition, or crux the row bears on.",
-            "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer. Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in the selected/provisional current_best_answer or the named target_answer_option.",
+            "When answer_status is multi_option or unresolved, classify relative to the live answer option, condition, or crux the row bears on.",
+            "Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in the selected/provisional current_best_answer or the named target_answer_option.",
             "When a row rebuts an alternative answer but supports the selected/provisional current_best_answer, use supports_answer or contextualizes_answer and explain that in effect_on_final_answer.",
             "Create a compact decision contribution card for each row so later stages can use the evidence without reinterpreting it from scratch.",
             "Write decision_contribution as the exact analytic contribution this row makes to answering the decision question.",
@@ -369,15 +369,15 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "Write key_qualifier as the caveat that must travel with this evidence if used.",
             "Write quantity_takeaway only for numbers that are decision-facing; say what each number measures rather than listing numbers without interpretation.",
             "Write source_weight_note as how strongly this source should move the answer and why, using source_quality when available.",
-            "Write misuse_warning as the inference a downstream model or reader must not draw from this row.",
+            "Write misuse_warning as the unsafe inference a downstream model or reader might otherwise draw from this row.",
             "Write if_omitted as the analytical damage if this row is left out of the global decision model or final memo.",
             "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
-            "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims do not support its proposed decision use.",
-            "Do not drop rows. Return one row for every evidence_item_id.",
+            "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims undercut its proposed decision use.",
+            "Return one row for every evidence_item_id.",
             "Use covered_by only when another evidence item or future group explicitly covers the item.",
-            "Do not invent source IDs, quantities, or claims.",
-            "Use [] for empty covered_by, source_ids, and quantity_values. Do not use null.",
-            "Do not use trailing commas.",
+            "Use only source IDs, quantities, and claims supplied in the ledger.",
+            "Use [] for empty covered_by, source_ids, and quantity_values.",
+            "Return valid JSON with comma placement accepted by a standard JSON parser.",
         ],
         "chunk": ledger.get("adjudication_chunk", {}),
         "allowed_memo_use": [
@@ -419,7 +419,7 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
                     "key_qualifier": "caveat that must travel with this evidence if used",
                     "quantity_takeaway": "reader-safe interpretation of decision-facing quantities, or empty string",
                     "source_weight_note": "how strongly this source should move the answer and why",
-                    "misuse_warning": "what downstream synthesis must not infer from this row",
+                    "misuse_warning": "unsafe inference this row should prevent in downstream synthesis",
                     "if_omitted": "what analytical loss occurs if this row is omitted",
                     "covered_by": ["optional evidence_item_id or group_id"],
                     "source_ids": ["optional source IDs copied from ledger"],
@@ -433,7 +433,7 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
     }
     return (
         "You are an analyst adjudicating evidence for a decision-support memo.\n"
-        "Return strict JSON only. Do not return Markdown.\n\n"
+        "Return a strict JSON object only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
 
@@ -645,7 +645,7 @@ def _if_omitted_for_row(row: dict[str, Any]) -> str:
         return "The decision model may lose a load-bearing support, counterweight, quantity, crux, or scope boundary."
     if memo_use == "needs_human_or_model_review":
         return "The decision model may miss a warning that needs explicit review."
-    return "The audit trail may lose context, but the main answer should not change."
+    return "The audit trail may lose context while the main answer remains stable."
 
 
 def _scaffold_rationale(row: dict[str, Any]) -> str:

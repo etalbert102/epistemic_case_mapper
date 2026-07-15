@@ -38,7 +38,7 @@ def test_lightweight_writer_guidance_prompt_uses_compact_post_analyst_context() 
     assert "Should dietary advice treat one egg per day as acceptable?" in prompt
     assert "observational evidence" in prompt
     assert "quantity wording" in prompt
-    assert "Do not repair the packet" in prompt
+    assert "Create guidance for the later memo writer" in prompt
 
 
 def test_lightweight_writer_guidance_normalizes_and_compacts_model_output() -> None:

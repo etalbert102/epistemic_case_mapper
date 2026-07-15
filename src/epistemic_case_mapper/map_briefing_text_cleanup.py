@@ -38,11 +38,11 @@ def reader_facing_sufficiency_limit(status: str) -> str:
     if status == "sufficient_for_scaffolded_briefing":
         return (
             "The current source packet is strong enough to organize a bounded briefing, "
-            "but it should not be read as exhausting the wider evidence base."
+            "while leaving the wider evidence base open."
         )
     return (
         "The current source packet has enough structure to name the relevant limits, "
-        "but unresolved gaps should not be filled by inference."
+        "with unresolved gaps kept explicit until source-backed evidence fills them."
     )
 
 

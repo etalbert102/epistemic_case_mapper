@@ -316,7 +316,7 @@ def build_full_memo_rewrite_polish_prompt(memo: str, packet: dict[str, Any]) -> 
         "Rules:\n"
         "- Return the full memo in Markdown.\n"
         "- Preserve the decision question, answer stance, source IDs, quantities, uncertainty, caveats, and practical implications.\n"
-        "- You may reorganize sentences for flow, but do not add new facts, sources, populations, mechanisms, comparisons, or recommendations.\n"
+        "- You may reorganize sentences for flow using existing facts, sources, populations, mechanisms, comparisons, and recommendations.\n"
         "- Keep citations near the claims they support.\n"
         "- Make the memo readable enough for a thoughtful human judge.\n\n"
         f"Validation guardrails:\n{json.dumps(guardrails, indent=2, ensure_ascii=False)}\n\n"

@@ -20,9 +20,9 @@ def build_section_use_projections(title: str, evidence: list[dict[str, Any]]) ->
 def projection_guidance(title: str) -> str:
     section_kind = _section_kind(title)
     if section_kind == "practical_read":
-        return "Convert reused evidence into bounded decision implications; do not restate study details unless needed to name a boundary."
+        return "Convert reused evidence into bounded decision implications; include study details only when needed to name a boundary."
     if section_kind == "why_this_read":
-        return "Use reused evidence to explain the reasoning path; do not list studies or write practical advice."
+        return "Use reused evidence to explain the reasoning path rather than list studies or write practical advice."
     if section_kind == "evidence_carrying":
         return "Use reused evidence to compare weight, direction, and limits; this is the main place for source-level detail."
     if section_kind == "scope":

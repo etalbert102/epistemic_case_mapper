@@ -241,8 +241,8 @@ def build_analyst_quantity_binding_prompt(
         "task": [
             "For each candidate quantity, decide whether it should be a reader-facing obligation in the final memo.",
             "Use yes only when the quantity directly helps answer the decision question or calibrates a load-bearing claim.",
-            "Use context_only when the quantity may be useful trace context but should not be a memo obligation.",
-            "Use no when the quantity describes a different population, scope, method statistic, source context, or otherwise does not quantify the proposition.",
+            "Use context_only when the quantity may be useful trace context while staying out of memo obligations.",
+            "Use no when the quantity describes a different population, scope, method statistic, source context, or otherwise falls outside the proposition.",
             "Set must_retain=true only for quantities the memo would be materially worse without.",
             "Prefer a small set of reader-facing anchors over raw statistical clutter.",
             "Classify p-values, heterogeneity statistics, dates, and eligibility windows as statistical_detail or study_descriptor unless the decision question makes them load-bearing.",
@@ -272,7 +272,7 @@ def build_analyst_quantity_binding_prompt(
     }
     return (
         "You are adjudicating whether extracted quantities are valid memo-facing evidence.\n"
-        "Return strict JSON only. Do not return Markdown.\n\n"
+        "Return a strict JSON object only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
 

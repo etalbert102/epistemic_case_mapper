@@ -24,7 +24,7 @@ def adapt_decision_model_to_frame(decision_model: dict[str, Any], decision_frame
         [
             "Use the packet to inspect which claims carry the representation, which claims bound it, and which tensions remain live.",
             "Keep adjudication outcomes, participant postmortems, forecasts, and later methodological critiques in separate evidence roles.",
-            "Do not convert the mapped slice into a full-case conclusion unless missing source families are added.",
+            "Convert the mapped slice into a full-case conclusion only after adding the missing source families.",
             *[
                 item
                 for item in _string_list(decision_model.get("practical_recommendations"))

@@ -142,7 +142,7 @@ def test_decision_usefulness_routes_through_canonical_prompt() -> None:
     assert "Outcome improvement versus implementation burden." in prompt
     assert "Whether burden remains below the threshold." in prompt
     assert "New implementation failure evidence." in prompt
-    assert "do not dump the option-criteria matrix" in prompt
+    assert "include a matrix only when the decision question genuinely needs one" in prompt
     assert "evidence hierarchy" in prompt
     assert "Convert tradeoff labels into natural prose" in prompt
     assert "what would change the answer" in prompt

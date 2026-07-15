@@ -99,13 +99,13 @@ def _repair_synthesis_prompt(
             "\"stress_caveats\": [\"decision-relevant caveat\"], "
             "\"audit_trail\": [\"map-backed distinction or source-role boundary\"]}",
             "Repair rules:",
-            "- Preserve the existing readable decision brief where it is correct, but do not bury checklist residue in it.",
+            "- Preserve the existing readable decision brief where it is correct, and put checklist residue in audit fields.",
             "- Correct any reversed directional distinction.",
             "- Add missing mapped distinctions below to `audit_trail`, unless they are decision-changing cruxes.",
             "- Put decision-changing missing distinctions in `top_cruxes` with why they matter and what would change the decision.",
-            "- Do not put bare claim IDs or relation IDs in reader-facing fields; write the actual distinction in words.",
+            "- Write the actual distinction in words in reader-facing fields.",
             "- Use exact directional/boundary phrases when supplied, unless grammar requires a minimal surrounding phrase.",
-            "- Do not add facts beyond the mapped claim and relation anchors.",
+            "- Use facts from the mapped claim and relation anchors.",
             "Failed requirements:\n" + ("\n\n".join(failed_blocks) or "none"),
             "Deterministic repair scaffold:\n" + _packet_scaffold_prompt_block(tuple(failed_requirements)),
             "Current synthesis:\n" + synthesis,
@@ -240,4 +240,3 @@ def _replace_obvious_reversal(text: str, required_phrase: str) -> str:
     if reversed_phrase in text and required_phrase not in text:
         return text.replace(reversed_phrase, required_phrase)
     return text
-

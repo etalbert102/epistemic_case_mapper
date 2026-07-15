@@ -60,9 +60,9 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("has applicability_scope" in prompt for prompt in calls)
     assert all("Use quantity_collision_warnings" in prompt for prompt in calls)
     assert all("protected_quantity_sets" in prompt for prompt in calls)
-    assert all("do not repeat it as the section opener" in prompt for prompt in calls)
+    assert all("use section_focus for the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
-    assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
+    assert all("Section role discipline preserves retention" in prompt for prompt in calls)
     assert any("translate_the_read_into_action" in prompt for prompt in calls)
     assert result["report"]["synthesis_mode"] == "parallel_section_synthesis"
     assert result["report"]["section_count"] == 3

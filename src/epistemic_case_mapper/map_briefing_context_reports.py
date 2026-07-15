@@ -526,8 +526,7 @@ def _semantic_sufficiency_signals(
 
     This is intentionally conservative: deterministic code can confirm that a
     semantic category is present when multiple structured signals point to it,
-    but it should not declare a category absent merely because one coarse label
-    is missing.
+    while absence decisions stay with richer semantic judgment.
     """
 
     card_roles = Counter(str(card.get("supports_challenges_or_scopes") or "uncategorized") for card in cards)
@@ -578,7 +577,7 @@ def _semantic_sufficiency_signals(
     )
 
     # The older map-sufficiency report is still useful as a missing-slot signal,
-    # but it should not override stronger positive evidence found above.
+    # with stronger positive evidence found above taking precedence.
     missing = set(_string_list(map_sufficiency.get("missing_expected_evidence_families")))
     if "counterweight_evidence" in missing and counter_sources:
         missing.remove("counterweight_evidence")

@@ -486,9 +486,9 @@ def deterministic_briefing_payload(
 def _sufficiency_implications(sufficiency_report: dict[str, Any]) -> list[str]:
     items: list[str] = []
     for slot in _string_list(sufficiency_report.get("missing_expected_decision_slots")):
-        items.append(f"{reader_facing_unresolved_slot(slot)} Do not fill that gap by inference.")
+        items.append(f"{reader_facing_unresolved_slot(slot)} Leave that gap explicit unless source-backed evidence fills it.")
     for family in _string_list(sufficiency_report.get("missing_expected_evidence_families")):
-        items.append(f"{reader_facing_unresolved_family(family)} Do not imply it was assessed.")
+        items.append(f"{reader_facing_unresolved_family(family)} State that this evidence family remains unassessed.")
     return items
 
 def _deterministic_decision_brief(scaffold: dict[str, Any], *, extracted_brief: str | None = None) -> str:

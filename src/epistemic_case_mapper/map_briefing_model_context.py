@@ -103,7 +103,7 @@ def build_model_context_audit(
         "policy": {
             "model_context": "Only compact task-specific packets should be sent to model calls.",
             "debug_records": "Full packets, prompts, raw outputs, and validation reports remain artifact-facing records.",
-            "negative_context": "Model-facing prohibition rules should avoid including facts the model should not mention.",
+            "negative_context": "Model-facing constraints should focus on allowed context rather than forbidden facts.",
             "active_prompt_audit": "Prompt records flag stage-inappropriate debug fields in report-only mode; stable evidence IDs are allowed when the model must return structured references.",
             "upstream_prompt_inventory": "Upstream prompt artifacts should be inventoried by path so extraction, relation, source appraisal, and source weighting calls are visible in run artifacts.",
         },
@@ -359,7 +359,7 @@ def _model_packet_pollution_flags(model_packet: dict[str, Any]) -> list[str]:
 
 
 def _reader_rewrite_prompt_pollution_flags(prompt: str) -> list[str]:
-    """Flag broad scaffold/debug context that should not be model-visible to final editors."""
+    """Flag broad scaffold/debug context intended for validators instead of final editors."""
     text = prompt.lower()
     flags: list[str] = []
     broad_contract_fields = {

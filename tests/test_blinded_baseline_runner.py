@@ -10,7 +10,7 @@ def test_blinded_baseline_prompt_omits_map_artifacts() -> None:
     assert "decision_space_erosion_audit.md" not in prompt
     assert "BEST_REGIONS.md" not in prompt
     assert "Common Flat-Synthesis Losses" not in prompt
-    assert "Do not create a claim map" in prompt
+    assert "Create a direct research memo rather than a claim map" in prompt
 
 
 def test_clean_model_output_removes_thinking_block_and_control_chars() -> None:

@@ -339,8 +339,8 @@ def _do_not_overstate(packet: dict[str, Any]) -> list[str]:
     values.extend(_string_list(_dict(packet.get("analyst_synthesis_packet")).get("must_not_overstate")))
     values.extend(
         [
-            "Avoid causal wording unless the source-backed unit itself supports causal inference.",
-            "Avoid calling the answer 'safe' without scope and uncertainty boundaries.",
+            "Use causal wording only when the source-backed unit itself supports causal inference.",
+            "Use 'safe' only with explicit scope and uncertainty boundaries.",
         ]
     )
     return _dedupe(values)[:10]

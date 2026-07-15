@@ -350,7 +350,7 @@ def _confidence_drivers(scaffold: dict[str, Any], quality_report: dict[str, Any]
     items = [
         DecisionModelItem(
             statement=f"Confidence is capped at {_confidence(quality_report, scaffold)} by the map quality report.",
-            why_it_matters="The brief should not state stronger certainty than the map supports.",
+            why_it_matters="The brief should keep certainty within what the map supports.",
         )
     ]
     for issue in quality_report.get("issues", []) if isinstance(quality_report.get("issues"), list) else []:
@@ -365,9 +365,9 @@ def _missing_evidence(scaffold: dict[str, Any]) -> list[DecisionModelItem]:
     report = _sufficiency_report(scaffold)
     items: list[DecisionModelItem] = []
     for slot in report.get("missing_expected_decision_slots", []) if isinstance(report.get("missing_expected_decision_slots"), list) else []:
-        items.append(DecisionModelItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="Do not fill this by inference."))
+        items.append(DecisionModelItem(statement=reader_facing_unresolved_slot(str(slot)), why_it_matters="Leave this gap explicit unless source-backed evidence fills it."))
     for family in report.get("missing_expected_evidence_families", []) if isinstance(report.get("missing_expected_evidence_families"), list) else []:
-        items.append(DecisionModelItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="Do not imply this evidence was assessed."))
+        items.append(DecisionModelItem(statement=reader_facing_unresolved_family(str(family)), why_it_matters="State that this evidence remains unassessed."))
     return _dedupe_items(items)
 
 

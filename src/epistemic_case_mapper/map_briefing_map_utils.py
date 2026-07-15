@@ -609,7 +609,7 @@ def _reader_safe_claim_text(text: str, claim: dict[str, Any]) -> str:
     if kind == "boilerplate_disclosure":
         return "The source contains extensive funding or conflict-of-interest disclosures that should be treated as source context rather than substantive outcome evidence."
     if kind == "publisher_or_license_boilerplate":
-        return "The source contains publisher, license, or metadata boilerplate that should not be treated as substantive evidence."
+        return "Treat publisher, license, or metadata boilerplate as source context rather than substantive evidence."
     if len(text) > 700:
         return _short_claim_fragment(text, max_chars=320)
     return text
@@ -686,7 +686,7 @@ def _relation_crux_reason(relation_type: str) -> str:
     return {
         "crux_for": "This relation marks a claim that would change the bottom-line answer.",
         "depends_on": "This relation identifies a condition that gates whether the recommendation holds.",
-        "in_tension_with": "This relation preserves a tension that the final answer should not flatten.",
+        "in_tension_with": "This relation preserves a tension for the final answer to keep visible.",
         "challenges": "This relation names counterevidence that could weaken the bottom-line answer.",
     }.get(relation_type, "This relation changes how strongly the mapped conclusion can be used.")
 

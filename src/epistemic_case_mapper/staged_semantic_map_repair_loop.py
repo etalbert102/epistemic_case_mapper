@@ -484,7 +484,7 @@ def _label_audit_findings(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 category="label_audit_warning",
                 target_id=str(claim.get("claim_id", "")),
                 issue="Audited routing disagrees with or qualifies model-provided labels.",
-                recommended_fix="Use audited routing labels for relation selection and synthesis; do not delete the claim.",
+                recommended_fix="Use audited routing labels for relation selection and synthesis while preserving the claim.",
                 evidence={"warnings": warnings, "label_audit": claim.get("label_audit", {})},
             )
         )

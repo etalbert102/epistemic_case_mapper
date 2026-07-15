@@ -20,7 +20,7 @@ PATTERNS: tuple[tuple[str, str, str, str, re.Pattern[str]], ...] = (
     (
         "hard_missing_from_count",
         "high",
-        "Do not assert semantic absence from one label/count source; reconcile with relations, spine fields, and source-backed candidates.",
+        "Assert semantic absence only after reconciling labels, counts, relations, spine fields, and source-backed candidates.",
         "count-driven missing evidence or slot assertion",
         re.compile(r"(role_counts\.get|_missing_major_dimensions|missing_expected_|missing_source_categories|source set is missing)", re.I),
     ),

@@ -374,8 +374,8 @@ def attach_decision_usefulness_to_packet(memo_ready_packet: dict[str, Any], bund
 def build_decision_usefulness_prompt(context: dict[str, Any]) -> str:
     return (
         "You are building a compact decision-support layer for a source-grounded memo.\n"
-        "Do not write the memo. Convert the canonical decision context into explicit decision structure.\n"
-        "Use options only when they are natural for the question; do not force fake alternatives for a factual or classification question.\n"
+        "Convert the canonical decision context into explicit decision structure for a later memo writer.\n"
+        "Use options only when they are natural for the question; for factual or classification questions, use stances, thresholds, or classifications.\n"
         "Focus on what helps a decision-maker act: options or stances, criteria, diagnostic evidence, tradeoffs, crux thresholds, premortem risks, and monitoring triggers.\n"
         "Use only source_ids and evidence_item_ids from the context. Preserve those IDs exactly.\n"
         "Return JSON only using this shape:\n"
@@ -403,7 +403,7 @@ def build_decision_usefulness_repair_prompt(
     return (
         "Repair this decision-usefulness JSON so it is valid and source-grounded.\n"
         "Keep useful rows when possible, but remove or fix rows that cite unknown source_ids, unknown evidence_item_ids, unknown option_ids, or unknown criterion_ids.\n"
-        "Do not invent source_ids or evidence_item_ids. If a row cannot be grounded, remove it or mark the related option as insufficiently_supported.\n"
+        "Use only source_ids and evidence_item_ids present in the context. If a row lacks grounding, remove it or mark the related option as insufficiently_supported.\n"
         "Return JSON only using the same decision_usefulness_packet_v1 shape.\n\n"
         f"Repair input:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n"
     )
@@ -713,7 +713,7 @@ def _inventory_use(status: str) -> str:
         return "run separately after decision-usefulness packet construction"
     if status == "diagnostic_or_packet_input":
         return "may inform upstream canonical fields but is not exposed directly"
-    return "do not expose directly; use only as regression fixture or diagnostic"
+    return "keep internal; use only as regression fixture or diagnostic"
 
 
 def _decision_usefulness_schema() -> dict[str, Any]:

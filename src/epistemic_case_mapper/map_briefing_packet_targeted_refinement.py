@@ -122,7 +122,7 @@ def build_targeted_refinement_prompt(task: dict[str, Any]) -> str:
         "rationale": "short task-level rationale",
     }
     packet = {
-        "task": "Repair only the supplied packet targets. Do not edit unrelated bundle or retain IDs.",
+        "task": "Repair only the supplied packet targets and leave unrelated bundle or retain IDs unchanged.",
         "decision_question": task.get("decision_question"),
         "accepted_recommendation": task.get("recommendation"),
         "affected_bundles": [_compact_bundle(row) for row in _list(task.get("bundles")) if isinstance(row, dict)],
@@ -131,8 +131,8 @@ def build_targeted_refinement_prompt(task: dict[str, Any]) -> str:
         "rules": [
             "Return strict JSON only.",
             "Reference only affected IDs.",
-            "Do not add new sources, claims, quantities, or IDs.",
-            "Use empty arrays for update lists you do not need.",
+            "Use sources, claims, quantities, and IDs already present in the task packet.",
+            "Use empty arrays for unused update lists.",
         ],
         "required_output_schema": contract,
     }

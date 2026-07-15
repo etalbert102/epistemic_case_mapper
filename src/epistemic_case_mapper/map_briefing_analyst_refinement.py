@@ -160,7 +160,7 @@ def build_analyst_packet_refinement_prompt(
                 "reconciled_cruxes": ["what would change the answer, written without unresolved contradiction"],
                 "scope_boundaries": ["population, comparator, dose, duration, or context boundaries"],
                 "practical_implications": ["advice/action implications that follow from the weighted read"],
-                "do_not_overstate": ["claims the memo must not imply"],
+                "do_not_overstate": ["claims outside the supported conclusion"],
             },
             "warning_obligations": [
                 {
@@ -187,7 +187,7 @@ def build_analyst_packet_refinement_prompt(
     }
     return (
         "You are refining an analyst synthesis packet before memo writing.\n"
-        "Return strict JSON only. Do not return Markdown.\n\n"
+        "Return a strict JSON object only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
 
@@ -359,7 +359,7 @@ def _scaffold_argument_plan(synthesis_packet: dict[str, Any], warning_packet: di
                 "step_id": "warning_obligations",
                 "section": "Decision-Relevant Evidence",
                 "writing_goal": "Integrate warning obligations as scope, context, or confidence bounds.",
-                "required_points": ["Use warning obligations naturally; do not expose warning IDs."],
+                "required_points": ["Use warning obligations naturally with reader-facing wording."],
                 "evidence_item_ids": warning_ids,
                 "source_labels": [],
                 "transition_from_previous": "Use these as bounds on the answer, not as a separate validation checklist.",
