@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map, source_ids_for_labels
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 
 
 def run_analyst_packet_refinement(
@@ -38,20 +39,32 @@ def run_analyst_packet_refinement(
             "analyst_packet_refinement_parse_report": parse_report,
             "analyst_packet_refinement_report": _report("prompt_backend_scaffold", parse_report),
         }
-    try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-    except RuntimeError as exc:
-        parse_report = build_analyst_packet_refinement_parse_report({}, warning_packet)
-        return {
-            "analyst_packet_refinement": _invalid_packet_refinement(synthesis_packet),
-            "analyst_packet_refinement_prompt": prompt,
-            "analyst_packet_refinement_raw": "",
-            "analyst_packet_refinement_parse_report": parse_report,
-            "analyst_packet_refinement_report": _report("backend_error", parse_report, issues=[str(exc)]),
-        }
-    raw = result.text
-    payload = _extract_json(raw)
-    parse_report = build_analyst_packet_refinement_parse_report(payload, warning_packet)
+    retry_reports: list[dict[str, Any]] = []
+    raw = ""
+    payload: Any = {}
+    parse_report: dict[str, Any] = {}
+    attempts = model_stage_attempts()
+    for attempt in range(1, attempts + 1):
+        try:
+            result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        except RuntimeError as exc:
+            parse_report = build_analyst_packet_refinement_parse_report({}, warning_packet)
+            retry_reports.append(_retry_report(attempt, "backend_error", parse_report, str(exc)))
+            if attempt < attempts:
+                continue
+            return {
+                "analyst_packet_refinement": _invalid_packet_refinement(synthesis_packet),
+                "analyst_packet_refinement_prompt": prompt,
+                "analyst_packet_refinement_raw": "",
+                "analyst_packet_refinement_parse_report": parse_report,
+                "analyst_packet_refinement_report": _report("backend_error", parse_report, issues=[str(exc)], retry_reports=retry_reports),
+            }
+        raw = result.text
+        payload = _extract_json(raw)
+        parse_report = build_analyst_packet_refinement_parse_report(payload, warning_packet)
+        retry_reports.append(_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
+        if parse_report.get("valid"):
+            break
     if not parse_report.get("valid"):
         return {
             "analyst_packet_refinement": payload if isinstance(payload, dict) else _invalid_packet_refinement(synthesis_packet),
@@ -62,6 +75,7 @@ def run_analyst_packet_refinement(
                 "model_output_invalid",
                 parse_report,
                 issues=["model refinement failed schema or warning accounting checks"],
+                retry_reports=retry_reports,
             ),
         }
     parsed = AnalystPacketRefinement.model_validate(payload).model_dump()
@@ -71,7 +85,7 @@ def run_analyst_packet_refinement(
         "analyst_packet_refinement_prompt": prompt,
         "analyst_packet_refinement_raw": raw,
         "analyst_packet_refinement_parse_report": parse_report,
-        "analyst_packet_refinement_report": _report("accepted", parse_report),
+        "analyst_packet_refinement_report": _report("accepted", parse_report, retry_reports=retry_reports),
     }
 
 
@@ -421,7 +435,24 @@ def _jsonable_errors(exc: ValidationError) -> list[dict[str, Any]]:
     ]
 
 
-def _report(status: str, parse_report: dict[str, Any], *, issues: list[str] | None = None) -> dict[str, Any]:
+def _retry_report(attempt: int, status: str, parse_report: dict[str, Any], error: str = "") -> dict[str, Any]:
+    return {
+        "attempt": attempt,
+        "status": status,
+        "parse_status": parse_report.get("status"),
+        "valid": parse_report.get("valid", False),
+        "issues": [str(issue) for issue in parse_report.get("issues", [])],
+        **({"error": error} if error else {}),
+    }
+
+
+def _report(
+    status: str,
+    parse_report: dict[str, Any],
+    *,
+    issues: list[str] | None = None,
+    retry_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     return {
         "schema_id": "analyst_packet_refinement_report_v1",
         "status": status,
@@ -429,4 +460,6 @@ def _report(status: str, parse_report: dict[str, Any], *, issues: list[str] | No
         "parse_status": parse_report.get("status"),
         "warning_obligation_count": parse_report.get("warning_obligation_count", 0),
         "issues": [*(issues or []), *[str(issue) for issue in parse_report.get("issues", [])]],
+        "attempt_count": len(retry_reports or []),
+        "retry_reports": retry_reports or [],
     }

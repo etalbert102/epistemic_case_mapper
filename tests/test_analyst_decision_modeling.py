@@ -612,7 +612,12 @@ def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(mo
         backend_retries=0,
     )
 
-    assert result["analyst_decision_model_parallel_report"]["failed_count"] == 1
+    assert result["analyst_decision_model_parallel_report"]["failed_count"] == 0
+    assert any(
+        report.get("attempt_count", 0) > 1
+        and any(row.get("status") == "backend_error" for row in report.get("retry_reports", []))
+        for report in result["analyst_decision_model_parallel_report"]["task_reports"]
+    )
     assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
     assert result["analyst_decision_model_parse_report"]["valid"] is True
 

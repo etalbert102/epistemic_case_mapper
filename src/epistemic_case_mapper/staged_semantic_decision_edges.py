@@ -8,6 +8,7 @@ from typing import Any, Callable
 from epistemic_case_mapper.classical_ml import diverse_ranked_edges, tfidf_pair_similarities
 from epistemic_case_mapper.model_backends import ModelBackendResult, run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 
 
 ROLE_OUTCOME = "outcome_finding"
@@ -93,28 +94,42 @@ def prepare_claim_decision_edge_roles(
         "model_missing_claim_count": len(claims),
         "invalid_model_rows": [],
         "model_deterministic_disagreements": [],
+        "attempt_count": 0,
+        "retry_reports": [],
     }
     accepted_rows: dict[str, dict[str, Any]] = {}
+    known_claim_ids = {str(claim.get("claim_id", "")) for claim in claims}
     if backend.strip() == "prompt":
         report["status"] = "skipped_prompt_backend"
     elif claims:
-        try:
-            result = run_backend(
-                prompt,
-                backend,
-                timeout_seconds=backend_timeout,
-                max_retries=backend_retries,
-            )
-            report["raw"] = canonical_json_output(result.text)
-            if result.prompt_only:
-                report["status"] = "skipped_prompt_backend"
-            else:
-                accepted_rows, invalid_rows = _parse_model_role_rows(report["raw"], {str(claim.get("claim_id", "")) for claim in claims})
-                report["status"] = "completed"
+        retry_reports: list[dict[str, Any]] = []
+        for attempt in range(1, model_stage_attempts() + 1):
+            try:
+                result = run_backend(
+                    prompt,
+                    backend,
+                    timeout_seconds=backend_timeout,
+                    max_retries=backend_retries,
+                )
+                report["raw"] = canonical_json_output(result.text)
+                if result.prompt_only:
+                    retry_reports.append({"attempt": attempt, "status": "skipped_prompt_backend"})
+                    report["status"] = "skipped_prompt_backend"
+                    break
+                accepted_rows, invalid_rows = _parse_model_role_rows(report["raw"], known_claim_ids)
                 report["invalid_model_rows"] = invalid_rows
-        except Exception as exc:  # pragma: no cover - exercised by backend integration tests.
-            report["status"] = "backend_error_no_role_fallback"
-            report["backend_error"] = str(exc)
+                missing_count = len(known_claim_ids - set(accepted_rows))
+                status = "completed" if missing_count == 0 else "incomplete_model_roles"
+                retry_reports.append({"attempt": attempt, "status": status, "accepted_model_role_count": len(accepted_rows), "model_missing_claim_count": missing_count})
+                report["status"] = "completed" if accepted_rows else "model_output_invalid_no_role_fallback"
+                if missing_count == 0:
+                    break
+            except Exception as exc:  # pragma: no cover - exercised by backend integration tests.
+                retry_reports.append({"attempt": attempt, "status": "backend_error", "error": str(exc)})
+                report["status"] = "backend_error_no_role_fallback"
+                report["backend_error"] = str(exc)
+        report["attempt_count"] = len(retry_reports)
+        report["retry_reports"] = retry_reports
 
     prepared: list[dict[str, Any]] = []
     disagreements: list[dict[str, Any]] = []

@@ -31,6 +31,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
 from epistemic_case_mapper.model_backends import run_model_backend
+from epistemic_case_mapper.model_stage_retry import model_retry_report, model_stage_attempts
 
 DEFAULT_DECISION_MODEL_NUM_PREDICT = 12_288
 
@@ -64,37 +65,51 @@ def run_analyst_decision_model(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
         )
-    try:
-        result = run_model_backend(
-            prompt,
-            backend,
-            timeout_seconds=backend_timeout,
-            max_retries=backend_retries,
-            num_predict=analyst_decision_model_num_predict(context),
-        )
-    except RuntimeError as exc:
-        parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
-        return {
-            "analyst_decision_context": context,
-            "analyst_decision_model": _invalid_decision_model(context),
-            "analyst_decision_model_prompt": prompt,
-            "analyst_decision_model_raw": "",
-            "analyst_decision_model_parse_report": parse_report,
-            "analyst_decision_model_report": _report("backend_error", parse_report, issues=[str(exc)]),
-        }
-    payload = _extract_json(result.text)
-    parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
+    retry_reports: list[dict[str, Any]] = []
+    raw = ""
+    payload: Any = {}
+    parse_report: dict[str, Any] = {}
+    attempts = model_stage_attempts()
+    for attempt in range(1, attempts + 1):
+        try:
+            result = run_model_backend(
+                prompt,
+                backend,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+                num_predict=analyst_decision_model_num_predict(context),
+            )
+        except RuntimeError as exc:
+            parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
+            retry_reports.append(model_retry_report(attempt, "backend_error", parse_report, str(exc)))
+            if attempt < attempts:
+                continue
+            return {
+                "analyst_decision_context": context,
+                "analyst_decision_model": _invalid_decision_model(context),
+                "analyst_decision_model_prompt": prompt,
+                "analyst_decision_model_raw": "",
+                "analyst_decision_model_parse_report": parse_report,
+                "analyst_decision_model_report": _report("backend_error", parse_report, issues=[str(exc)], retry_reports=retry_reports),
+            }
+        raw = result.text
+        payload = _extract_json(raw)
+        parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
+        retry_reports.append(model_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
+        if parse_report.get("valid"):
+            break
     if not parse_report.get("valid"):
         return {
             "analyst_decision_context": context,
             "analyst_decision_model": payload if isinstance(payload, dict) else _invalid_decision_model(context),
             "analyst_decision_model_prompt": prompt,
-            "analyst_decision_model_raw": result.text,
+            "analyst_decision_model_raw": raw,
             "analyst_decision_model_parse_report": parse_report,
             "analyst_decision_model_report": _report(
                 "model_output_invalid",
                 parse_report,
                 issues=["model decision model failed schema or evidence ID checks"],
+                retry_reports=retry_reports,
             ),
         }
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
@@ -119,9 +134,9 @@ def run_analyst_decision_model(
         "analyst_decision_context": context,
         "analyst_decision_model": final_model,
         "analyst_decision_model_prompt": prompt,
-        "analyst_decision_model_raw": result.text,
+        "analyst_decision_model_raw": raw,
         "analyst_decision_model_parse_report": final_parse_report,
-        "analyst_decision_model_report": _report(status, final_parse_report, issues=_list(repair.get("issues"))),
+        "analyst_decision_model_report": _report(status, final_parse_report, issues=_list(repair.get("issues")), retry_reports=retry_reports),
         "analyst_decision_model_initial": parsed,
         "analyst_decision_model_initial_parse_report": parse_report,
         "analyst_decision_model_repair_prompt": repair.get("analyst_decision_model_repair_prompt", ""),
@@ -460,58 +475,6 @@ def _invalid_decision_model(context: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _answer_misses_top_support(model: dict[str, Any], groups: list[dict[str, Any]]) -> bool:
-    support = _first_group(groups, "load_bearing_primary_support")
-    if not support:
-        return False
-    answer = " ".join(
-        [
-            str(model.get("direct_answer") or ""),
-            str(_dict(model.get("decision_logic")).get("bounded_bottom_line") or ""),
-        ]
-    ).lower()
-    support_terms = [term for term in _content_terms(support) if len(term) >= 5]
-    if not support_terms:
-        return False
-    overlap = sum(1 for term in support_terms[:12] if term in answer)
-    return overlap < min(3, len(support_terms))
-
-
-def _ranked_direct_answer(question: str, groups: list[dict[str, Any]]) -> str:
-    support = _first_group(groups, "load_bearing_primary_support")
-    counter = _first_group(groups, "load_bearing_counterweight")
-    if support and counter:
-        return _short_text(f"The best-supported answer to '{question}' should be based on this primary evidence: {support} The main counterweight is: {counter}", 520)
-    if support:
-        return _short_text(f"The best-supported answer to '{question}' should be based on this primary evidence: {support}", 420)
-    return ""
-
-
-def _content_terms(text: str) -> list[str]:
-    stop = {
-        "about",
-        "after",
-        "because",
-        "between",
-        "evidence",
-        "general",
-        "should",
-        "source",
-        "that",
-        "their",
-        "there",
-        "these",
-        "this",
-        "those",
-        "where",
-        "which",
-        "with",
-        "without",
-    }
-    terms = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{3,}", str(text or "").lower())
-    return [term for term in _dedupe(terms) if term not in stop]
-
-
 def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str, Any]:
     evidence_id = str(row.get("evidence_item_id") or "").strip()
     adjudicated = _adjudication_by_id(adjudication).get(evidence_id, {})
@@ -779,7 +742,13 @@ def _repair_json(text: str) -> str:
     return text
 
 
-def _report(status: str, parse_report: dict[str, Any], *, issues: list[str] | None = None) -> dict[str, Any]:
+def _report(
+    status: str,
+    parse_report: dict[str, Any],
+    *,
+    issues: list[str] | None = None,
+    retry_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     return {
         "schema_id": "analyst_decision_model_report_v1",
         "status": status,
@@ -790,6 +759,8 @@ def _report(status: str, parse_report: dict[str, Any], *, issues: list[str] | No
         "group_count": parse_report.get("group_count", 0),
         "covered_evidence_item_count": parse_report.get("covered_evidence_item_count", 0),
         "issues": _dedupe([*(issues or []), *[str(issue) for issue in _list(parse_report.get("issues"))]]),
+        "attempt_count": len(retry_reports or []),
+        "retry_reports": retry_reports or [],
     }
 
 

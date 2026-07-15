@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 
 DEFAULT_CHUNK_SIZE = 6
@@ -134,35 +135,50 @@ def _run_adjudication_chunk(
     chunk_ledger = _chunk_ledger(ledger, rows, index=index, total=total)
     chunk_prompt = build_analyst_adjudication_prompt(chunk_ledger)
     prompt_block = f"<!-- analyst adjudication chunk {index}/{total} -->\n{chunk_prompt}"
-    try:
-        result = run_model_backend(chunk_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-        raw = result.text
-    except RuntimeError as exc:
-        parse_report = build_analyst_adjudication_parse_report({}, chunk_ledger)
-        return {
-            "prompt": prompt_block,
-            "raw_block": f"<!-- chunk {index} backend error: {exc} -->",
-            "rows": [],
-            "chunk_failed": True,
-            "chunk_report": _chunk_report(index, total, "backend_error", parse_report, issues=[str(exc)]),
-        }
-    payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
     expected_ids = [str(row.get("evidence_item_id")) for row in rows if str(row.get("evidence_item_id") or "")]
-    parse_report = build_analyst_adjudication_parse_report(
-        payload,
-        chunk_ledger,
-        expected_evidence_item_ids=expected_ids,
-        known_evidence_item_ids=all_ids,
-    )
-    if parse_report.get("valid"):
-        parsed = AnalystAdjudication.model_validate(payload).model_dump()
-        return {
-            "prompt": prompt_block,
-            "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
-            "rows": parsed.get("rows", []),
-            "used_scaffold": False,
-            "chunk_report": _chunk_report(index, total, "accepted", parse_report),
-        }
+    attempts = model_stage_attempts()
+    retry_reports: list[dict[str, Any]] = []
+    raw = ""
+    payload: Any = {}
+    parse_report: dict[str, Any] = {}
+    for attempt in range(1, attempts + 1):
+        try:
+            result = run_model_backend(chunk_prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+            raw = result.text
+        except RuntimeError as exc:
+            parse_report = build_analyst_adjudication_parse_report({}, chunk_ledger)
+            retry_reports.append(_retry_report(attempt, "backend_error", parse_report, str(exc)))
+            if attempt < attempts:
+                continue
+            return {
+                "prompt": prompt_block,
+                "raw_block": f"<!-- chunk {index} backend error after {attempts} attempt(s): {exc} -->",
+                "rows": [],
+                "chunk_failed": True,
+                "chunk_report": _with_retry_report(
+                    _chunk_report(index, total, "backend_error", parse_report, issues=[str(exc)]),
+                    retry_reports,
+                ),
+            }
+        payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
+        parse_report = build_analyst_adjudication_parse_report(
+            payload,
+            chunk_ledger,
+            expected_evidence_item_ids=expected_ids,
+            known_evidence_item_ids=all_ids,
+        )
+        retry_reports.append(_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
+        if parse_report.get("valid"):
+            parsed = AnalystAdjudication.model_validate(payload).model_dump()
+            return {
+                "prompt": prompt_block,
+                "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
+                "rows": parsed.get("rows", []),
+                "used_scaffold": False,
+                "chunk_report": _with_retry_report(_chunk_report(index, total, "accepted", parse_report), retry_reports),
+            }
+        if attempt < attempts:
+            continue
     salvaged_rows, salvage_report = _salvage_adjudication_chunk_rows(
         payload,
         chunk_ledger=chunk_ledger,
@@ -190,6 +206,7 @@ def _run_adjudication_chunk(
         )
         report.update(salvage_report)
         report["original_parse_report"] = parse_report
+        report = _with_retry_report(report, retry_reports)
         return {
             "prompt": prompt_block,
             "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
@@ -202,12 +219,15 @@ def _run_adjudication_chunk(
         "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
         "rows": [],
         "chunk_failed": True,
-        "chunk_report": _chunk_report(
-            index,
-            total,
-            "model_output_invalid",
-            parse_report,
-            issues=["chunk failed schema or ledger accounting checks"],
+        "chunk_report": _with_retry_report(
+            _chunk_report(
+                index,
+                total,
+                "model_output_invalid",
+                parse_report,
+                issues=["chunk failed schema or ledger accounting checks"],
+            ),
+            retry_reports,
         ),
     }
 
@@ -669,6 +689,24 @@ def _chunk_report(
         "errors": parse_report.get("errors", []),
         "issues": [*(issues or []), *[str(issue) for issue in parse_report.get("issues", [])]],
     }
+
+
+def _retry_report(attempt: int, status: str, parse_report: dict[str, Any], error: str = "") -> dict[str, Any]:
+    return {
+        "attempt": attempt,
+        "status": status,
+        "parse_status": parse_report.get("status"),
+        "valid": parse_report.get("valid", False),
+        "issues": [str(issue) for issue in parse_report.get("issues", [])],
+        **({"error": error} if error else {}),
+    }
+
+
+def _with_retry_report(report: dict[str, Any], retry_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    updated = dict(report)
+    updated["attempt_count"] = len(retry_reports)
+    updated["retry_reports"] = retry_reports
+    return updated
 
 
 def _chunk_report_bundle(chunks: list[dict[str, Any]], *, scaffold_chunk_count: int) -> dict[str, Any]:

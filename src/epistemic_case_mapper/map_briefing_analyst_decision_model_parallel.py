@@ -21,6 +21,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 
 
 def should_use_parallel_analyst_decision_model(context: dict[str, Any]) -> bool:
@@ -198,17 +199,37 @@ def _run_task(
 ) -> dict[str, Any]:
     prompt = build_decision_model_task_prompt(task)
     started = time.monotonic()
-    try:
-        result = run_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries, num_predict=max(2048, min(num_predict, _task_num_predict())))
-    except RuntimeError as exc:
-        return _task_result(task, "backend_error", prompt, "", started, issues=[str(exc)])
-    raw = str(getattr(result, "text", result))
-    payload = _extract_json(raw)
-    status = "parsed" if isinstance(payload, dict) and payload.get("schema_id") == "analyst_decision_model_v1" else "parse_failed"
-    return _task_result(task, status, prompt, raw, started, payload=payload if status == "parsed" else {})
+    retry_reports: list[dict[str, Any]] = []
+    raw = ""
+    attempts = model_stage_attempts()
+    for attempt in range(1, attempts + 1):
+        try:
+            result = run_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries, num_predict=max(2048, min(num_predict, _task_num_predict())))
+        except RuntimeError as exc:
+            retry_reports.append({"attempt": attempt, "status": "backend_error", "error": str(exc)})
+            if attempt < attempts:
+                continue
+            return _task_result(task, "backend_error", prompt, "", started, issues=[str(exc)], retry_reports=retry_reports)
+        raw = str(getattr(result, "text", result))
+        payload = _extract_json(raw)
+        status = "parsed" if isinstance(payload, dict) and payload.get("schema_id") == "analyst_decision_model_v1" else "parse_failed"
+        retry_reports.append({"attempt": attempt, "status": status})
+        if status == "parsed":
+            return _task_result(task, status, prompt, raw, started, payload=payload, retry_reports=retry_reports)
+    return _task_result(task, "parse_failed", prompt, raw, started, retry_reports=retry_reports)
 
 
-def _task_result(task: dict[str, Any], status: str, prompt: str, raw: str, started: float, *, payload: dict[str, Any] | None = None, issues: list[str] | None = None) -> dict[str, Any]:
+def _task_result(
+    task: dict[str, Any],
+    status: str,
+    prompt: str,
+    raw: str,
+    started: float,
+    *,
+    payload: dict[str, Any] | None = None,
+    issues: list[str] | None = None,
+    retry_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     return {
         "task_id": task.get("task_id"),
         "status": status,
@@ -219,6 +240,8 @@ def _task_result(task: dict[str, Any], status: str, prompt: str, raw: str, start
         "prompt_chars": len(prompt),
         "raw_chars": len(raw),
         "issues": issues or [],
+        "attempt_count": len(retry_reports or []),
+        "retry_reports": retry_reports or [],
     }
 
 
@@ -529,7 +552,7 @@ def _merged_logic_list(
 
 
 def _public_task_report(row: dict[str, Any]) -> dict[str, Any]:
-    return {key: row.get(key) for key in ("task_id", "status", "duration_seconds", "prompt_chars", "raw_chars", "issues")}
+    return {key: row.get(key) for key in ("task_id", "status", "duration_seconds", "prompt_chars", "raw_chars", "issues", "attempt_count", "retry_reports")}
 
 
 def _join(texts: list[str], label: str) -> str:
