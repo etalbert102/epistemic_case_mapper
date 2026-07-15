@@ -15,7 +15,7 @@ def finalize_sparse_relation_graph(
     relation_index: int,
     seen: set[tuple[str, str, str]],
     min_relation_count: int = 0,
-    allow_deterministic_fallback: bool = True,
+    allow_deterministic_fallback: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     if not accepted and allow_deterministic_fallback:
         from epistemic_case_mapper.staged_semantic_sources import _fallback_relation

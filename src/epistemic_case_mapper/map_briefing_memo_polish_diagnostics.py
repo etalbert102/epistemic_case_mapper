@@ -80,6 +80,11 @@ def prose_quality_diagnostics(text: str) -> dict[str, Any]:
         for index, paragraph in enumerate(paragraphs)
         if paragraph.count("[") >= 5
     ]
+    unfinished = [
+        {"paragraph_index": index + 1, "ending": paragraph[-80:]}
+        for index, paragraph in enumerate(paragraphs)
+        if _looks_unfinished(paragraph)
+    ]
     warnings = []
     if repeated_starts:
         warnings.append("repeated_sentence_starts")
@@ -87,6 +92,8 @@ def prose_quality_diagnostics(text: str) -> dict[str, Any]:
         warnings.append("overlong_paragraphs")
     if citation_dense:
         warnings.append("citation_dense_paragraphs")
+    if unfinished:
+        warnings.append("unfinished_sentence_markers")
     return {
         "schema_id": "memo_prose_quality_diagnostics_v1",
         "status": "warning" if warnings else "ready",
@@ -97,6 +104,7 @@ def prose_quality_diagnostics(text: str) -> dict[str, Any]:
         "repeated_sentence_starts": repeated_starts,
         "overlong_paragraphs": long_paragraphs,
         "citation_dense_paragraphs": citation_dense,
+        "unfinished_sentence_markers": unfinished,
     }
 
 
@@ -156,6 +164,15 @@ def _repeated_sentence_starts(sentences: list[str]) -> list[dict[str, Any]]:
 
 def _words(text: str) -> list[str]:
     return re.findall(r"[A-Za-z0-9][A-Za-z0-9'-]*", str(text or ""))
+
+
+def _looks_unfinished(paragraph: str) -> bool:
+    text = str(paragraph or "").rstrip()
+    if not text:
+        return False
+    if text.endswith(("...", "…")):
+        return True
+    return bool(re.search(r"\b(?:and|or|but|because|with|without|including|such as|to|of|for|by|in)$", text, flags=re.IGNORECASE))
 
 
 _STOPWORDS = {

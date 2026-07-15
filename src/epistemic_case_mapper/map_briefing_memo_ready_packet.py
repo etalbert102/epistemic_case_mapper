@@ -364,8 +364,14 @@ def build_memo_ready_packet_quality_report(
     mandatory = [item for item in items if isinstance(item, dict) and item.get("must_use")]
     quantitative = [item for item in mandatory if item.get("role") == "quantitative_anchor"]
     issues: list[dict[str, Any]] = []
-    if not memo_ready_packet.get("answer_spine"):
+    answer_spine = _dict(memo_ready_packet.get("answer_spine"))
+    default_read = str(answer_spine.get("default_read") or "").strip()
+    if not answer_spine:
         issues.append({"severity": "high", "issue_type": "missing_answer_spine"})
+    if not default_read:
+        issues.append({"severity": "high", "issue_type": "missing_answer_spine_default_read"})
+    elif _answer_frame_needs_rebuild(default_read):
+        issues.append({"severity": "high", "issue_type": "invalid_or_scaffolded_answer_spine_default_read"})
     if not any(item.get("role") == "strongest_support" for item in mandatory):
         issues.append({"severity": "warning", "issue_type": "missing_strongest_support"})
     if not any(item.get("role") == "strongest_counterweight" for item in mandatory):
@@ -615,8 +621,6 @@ def _memo_ready_item(
 def _answer_spine(packet: dict[str, Any], diagnosticity: dict[str, Any], mandatory: list[dict[str, Any]]) -> dict[str, Any]:
     answer = _dict(packet.get("answer_frame"))
     default_read = str(answer.get("default_answer") or "").strip()
-    if _answer_frame_needs_rebuild(default_read):
-        default_read = _why_this_read(mandatory)
     decisive = [
         item["item_id"]
         for item in mandatory

@@ -283,7 +283,8 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["answer_frame"]["direct_answer"] == "Adopt option A only where the narrower setting is not decisive."
     assert interface["answer_frame"]["main_support"] == "Option A improves the main outcome."
     assert interface["answer_frame"]["main_counterweight"] == ""
-    assert interface["practical_implication_cards"][0]["implication_type"] == "default_application"
+    assert interface["practical_implication_cards"] == []
+    assert "missing_model_practical_implications" in quality["warnings"]
     assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
     assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"

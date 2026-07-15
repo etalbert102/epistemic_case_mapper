@@ -98,6 +98,10 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
             warnings.append(f"missing_skeleton_{key}")
     if _looks_generic(skeleton.get("direct_answer")):
         warnings.append("generic_direct_answer")
+    if _looks_truncated_or_scaffolded(skeleton.get("direct_answer")):
+        warnings.append("truncated_or_scaffolded_direct_answer")
+    if _looks_truncated_or_scaffolded(skeleton.get("practical_implication")):
+        warnings.append("truncated_or_scaffolded_practical_implication")
     if not str(classification.get("answer_shape") or "").strip():
         warnings.append("missing_decision_answer_classification")
     if not priority:
@@ -168,8 +172,7 @@ def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:
             "counterweight_disposition": counterweights[0].get("disposition") if counterweights else "",
             "exceptions": [_calibrated_short(row.get("statement") or row.get("claim"), row, limit=300) for row in scope[:4] if isinstance(row, dict)],
             "decision_crux": _calibrated_short(_first_text(cruxes, keys=("statement", "claim")), limit=420),
-            "practical_implication": _calibrated_short(_first_text(practical_cards, keys=("statement",)), limit=520)
-            or _calibrated_short(answer_frame.get("decision_application"), limit=520),
+            "practical_implication": _calibrated_short(_first_text(practical_cards, keys=("statement",)), limit=520),
         }
     )
 
@@ -833,6 +836,20 @@ def _calibrated_short(value: Any, evidence: dict[str, Any] | None = None, *, lim
 def _looks_generic(value: Any) -> bool:
     text = _norm(str(value or ""))
     return text in {"state the default answer", "answer the decision question", "not specified"} or len(text.split()) < 5
+
+
+def _looks_truncated_or_scaffolded(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    lowered = text.lower()
+    return (
+        text.endswith("...")
+        or text.endswith("…")
+        or "{'classification'" in text
+        or "use the grouped evidence to answer" in lowered
+        or "state the default" in lowered
+    )
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

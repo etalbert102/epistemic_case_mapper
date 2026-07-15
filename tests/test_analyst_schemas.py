@@ -219,7 +219,8 @@ def test_analyst_decision_model_parse_report_accepts_global_groups() -> None:
     report = build_analyst_decision_model_parse_report(payload, _ledger())
 
     assert parsed.evidence_groups[0].memo_role == "load_bearing_primary_support"
-    assert report["status"] == "ready"
+    assert report["status"] == "warning"
+    assert "missing_practical_implications" in report["issues"]
     assert report["valid"] is True
     assert report["covered_evidence_item_count"] == 2
 
@@ -381,7 +382,9 @@ def test_analyst_decision_model_parse_report_counts_grouped_rows_as_accounted() 
 
     assert report["missing_accounting_ids"] == []
     assert "missing_dispositions" not in report["issues"]
-    assert report["status"] == "ready"
+    assert report["status"] == "warning"
+    assert "missing_bounded_bottom_line" in report["issues"]
+    assert "missing_practical_implications" in report["issues"]
 
 
 def test_analyst_decision_model_parse_report_warns_on_ungrouped_retention_obligations() -> None:

@@ -512,6 +512,8 @@ def build_analyst_decision_model_parse_report(
         *(["crux_not_grouped"] if obligation_omissions["ungrouped_crux_ids"] else []),
         *(["scope_boundary_not_grouped"] if obligation_omissions["ungrouped_scope_boundary_ids"] else []),
         *(["no_evidence_groups"] if not parsed.evidence_groups else []),
+        *(["missing_bounded_bottom_line"] if not str(parsed.decision_logic.get("bounded_bottom_line") or "").strip() else []),
+        *(["missing_practical_implications"] if not parsed.decision_logic.get("practical_implications") else []),
     ]
     issues = [*fatal_issues, *warning_issues]
     valid = not fatal_issues and bool(parsed.evidence_groups)

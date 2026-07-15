@@ -218,7 +218,7 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
     _init_demo_case(monkeypatch, tmp_path)
     fake_model = tmp_path / "fake_staged_model.py"
     fake_model.write_text(
-        "import json, sys\n"
+        "import json, re, sys\n"
         "prompt = sys.stdin.read()\n"
         f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
         "    if 'Source ID: demo_case_doc_a' in prompt:\n"
@@ -230,6 +230,9 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
         "        payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma is relevant.', 'canonical_claims': [\n"
         "            {'claim': 'Gamma supplies a staged crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It changes how Alpha is read.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "        ], 'excluded_as_not_decision_relevant': []}\n"
+        "elif 'preparing claims for relation-building' in prompt:\n"
+        "    ids = sorted(set(re.findall(r'[a-zA-Z0-9_]+_c[0-9]{3}', prompt)))\n"
+        "    payload = {'roles': [{'claim_id': claim_id, 'decision_edge_role': 'outcome_finding', 'role_confidence': 'high', 'rationale': 'Fixture model role for relation selection.'} for claim_id in ids]}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    payload = {'pair_id': 'pair_001', 'source_claim': 'demo_case_c002', 'target_claim': 'demo_case_c001', 'relation_type': 'crux_for', 'rationale': 'The Gamma claim is a crux because it would change how the Alpha claim should be read.', 'crux_candidates': ['demo_case_c002 is a crux for demo_case_c001.'], 'similar_but_not_identical': []}\n"
         "else:\n"
@@ -242,18 +245,9 @@ def test_staged_semantic_map_assigns_ids_and_rejects_bad_chunk_claims(monkeypatc
         cli.sys,
         "argv",
         [
-            "ecm.py",
-            "--repo-root",
-            str(tmp_path),
-            "--package",
-            "package.yaml",
-            "semantic",
-            "staged",
-            "map",
-            "--region",
-            "demo_case_initial_region",
-            "--backend",
-            f"command:{sys.executable} {fake_model}",
+            "ecm.py", "--repo-root", str(tmp_path), "--package", "package.yaml",
+            "semantic", "staged", "map", "--region", "demo_case_initial_region",
+            "--backend", f"command:{sys.executable} {fake_model}",
         ],
     )
     assert cli.main() == 0
@@ -455,6 +449,9 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
         "    payload = {'source_id': source_id, 'source_bottom_line': 'Budget source-card claim.', 'canonical_claims': [\n"
         "        {'claim': 'Budgeted staged source-card claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the map despite chunk budgeting.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "    ], 'excluded_as_not_decision_relevant': []}\n"
+        "elif 'preparing claims for relation-building' in prompt:\n"
+        "    ids = sorted(set(re.findall(r'[a-zA-Z0-9_]+_c[0-9]{3}', prompt)))\n"
+        "    payload = {'roles': [{'claim_id': claim_id, 'decision_edge_role': 'outcome_finding', 'role_confidence': 'high', 'rationale': 'Fixture model role for relation selection.'} for claim_id in ids]}\n"
         f"elif {RELATION_PROMPT_VERSION!r} in prompt:\n"
         "    pair_id = re.search(r'Pair ID: ([^\\n]+)', prompt).group(1)\n"
         "    ids = re.findall(r'claim_id: ([^\\n]+)', prompt)\n"
@@ -469,24 +466,10 @@ def test_staged_semantic_map_records_chunk_budget(monkeypatch, tmp_path: Path) -
         cli.sys,
         "argv",
         [
-            "ecm.py",
-            "--repo-root",
-            str(tmp_path),
-            "--package",
-            "package.yaml",
-            "semantic",
-            "staged",
-            "map",
-            "--region",
-            "demo_case_initial_region",
-            "--backend",
-            f"command:{sys.executable} {fake_model}",
-            "--chunk-lines",
-            "1",
-            "--chunk-overlap-lines",
-            "0",
-            "--max-total-chunks",
-            "2",
+            "ecm.py", "--repo-root", str(tmp_path), "--package", "package.yaml",
+            "semantic", "staged", "map", "--region", "demo_case_initial_region",
+            "--backend", f"command:{sys.executable} {fake_model}",
+            "--chunk-lines", "1", "--chunk-overlap-lines", "0", "--max-total-chunks", "2",
         ],
     )
     assert cli.main() == 0
@@ -604,6 +587,9 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
         "    payload = {'source_id': source_id, 'source_bottom_line': 'Batched relation source claim.', 'canonical_claims': [\n"
         "        {'claim': 'Batched relation source claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter relation batching.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "    ], 'excluded_as_not_decision_relevant': []}\n"
+        "elif 'preparing claims for relation-building' in prompt:\n"
+        "    ids = sorted(set(re.findall(r'[a-zA-Z0-9_]+_c[0-9]{3}', prompt)))\n"
+        "    payload = {'roles': [{'claim_id': claim_id, 'decision_edge_role': 'outcome_finding', 'role_confidence': 'high', 'rationale': 'Fixture model role for relation selection.'} for claim_id in ids]}\n"
         f"elif {RELATION_BATCH_PROMPT_VERSION!r} in prompt:\n"
         "    pairs = re.findall(r'Pair ID: (pair_[0-9]+)', prompt)\n"
         "    blocks = prompt.split('Pair ID: ')[1:]\n"
@@ -624,22 +610,10 @@ def test_staged_semantic_map_batches_relation_pairs(monkeypatch, tmp_path: Path)
         cli.sys,
         "argv",
         [
-            "ecm.py",
-            "--repo-root",
-            str(tmp_path),
-            "--package",
-            "package.yaml",
-            "semantic",
-            "staged",
-            "map",
-            "--region",
-            "demo_case_initial_region",
-            "--backend",
-            f"command:{sys.executable} {fake_model}",
-            "--max-relation-pairs",
-            "2",
-            "--relation-batch-size",
-            "2",
+            "ecm.py", "--repo-root", str(tmp_path), "--package", "package.yaml",
+            "semantic", "staged", "map", "--region", "demo_case_initial_region",
+            "--backend", f"command:{sys.executable} {fake_model}",
+            "--max-relation-pairs", "2", "--relation-batch-size", "2",
         ],
     )
     assert cli.main() == 0

@@ -45,8 +45,8 @@ def run_analyst_decision_model(
 ) -> dict[str, Any]:
     context = build_analyst_decision_context(ledger=ledger, adjudication=adjudication)
     prompt = build_analyst_decision_model_prompt(context)
-    scaffold = deterministic_decision_model_scaffold(ledger=ledger, adjudication=adjudication, context=context)
     if backend.strip() == "prompt":
+        scaffold = deterministic_decision_model_scaffold(ledger=ledger, adjudication=adjudication, context=context)
         parse_report = build_analyst_decision_model_parse_report(scaffold, ledger, retention_obligations=context.get("retention_obligations"))
         return {
             "analyst_decision_context": context,
@@ -60,7 +60,6 @@ def run_analyst_decision_model(
         return _run_parallel_decision_model_candidate(
             context=context,
             ledger=ledger,
-            scaffold=scaffold,
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
@@ -74,26 +73,26 @@ def run_analyst_decision_model(
             num_predict=analyst_decision_model_num_predict(context),
         )
     except RuntimeError as exc:
-        parse_report = build_analyst_decision_model_parse_report(scaffold, ledger, retention_obligations=context.get("retention_obligations"))
+        parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
         return {
             "analyst_decision_context": context,
-            "analyst_decision_model": scaffold,
+            "analyst_decision_model": _invalid_decision_model(context),
             "analyst_decision_model_prompt": prompt,
             "analyst_decision_model_raw": "",
             "analyst_decision_model_parse_report": parse_report,
-            "analyst_decision_model_report": _report("backend_error_scaffold", parse_report, issues=[str(exc)]),
+            "analyst_decision_model_report": _report("backend_error", parse_report, issues=[str(exc)]),
         }
     payload = _extract_json(result.text)
     parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
     if not parse_report.get("valid"):
         return {
             "analyst_decision_context": context,
-            "analyst_decision_model": scaffold,
+            "analyst_decision_model": payload if isinstance(payload, dict) else _invalid_decision_model(context),
             "analyst_decision_model_prompt": prompt,
             "analyst_decision_model_raw": result.text,
             "analyst_decision_model_parse_report": parse_report,
             "analyst_decision_model_report": _report(
-                "model_output_invalid_scaffold",
+                "model_output_invalid",
                 parse_report,
                 issues=["model decision model failed schema or evidence ID checks"],
             ),
@@ -137,7 +136,6 @@ def _run_parallel_decision_model_candidate(
     *,
     context: dict[str, Any],
     ledger: dict[str, Any],
-    scaffold: dict[str, Any],
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
@@ -153,7 +151,7 @@ def _run_parallel_decision_model_candidate(
     payload = parallel["payload"]
     parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
     if not parse_report.get("valid"):
-        return _invalid_parallel_decision_model_result(context, scaffold, parallel, parse_report)
+        return _invalid_parallel_decision_model_result(context, parallel, parse_report)
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     repair = run_analyst_decision_model_repair(
@@ -190,19 +188,18 @@ def _run_parallel_decision_model_candidate(
 
 def _invalid_parallel_decision_model_result(
     context: dict[str, Any],
-    scaffold: dict[str, Any],
     parallel: dict[str, Any],
     parse_report: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "analyst_decision_context": context,
-        "analyst_decision_model": scaffold,
+        "analyst_decision_model": parallel["payload"] if isinstance(parallel.get("payload"), dict) else _invalid_decision_model(context),
         "analyst_decision_model_prompt": parallel["prompt"],
         "analyst_decision_model_raw": parallel["raw"],
         "analyst_decision_model_parse_report": parse_report,
         "analyst_decision_model_parallel_report": parallel["report"],
         "analyst_decision_model_report": _report(
-            "parallel_model_output_invalid_scaffold",
+            "parallel_model_output_invalid",
             parse_report,
             issues=["parallel analyst decision model failed schema or evidence ID checks"],
         ),
@@ -444,14 +441,23 @@ def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tupl
     updated["evidence_groups"] = groups
     updated["ranking_guard"] = report
     updated["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
-    if report.get("changed_group_count") and _answer_misses_top_support(updated, groups):
-        refreshed = _ranked_direct_answer(str(context.get("decision_question") or updated.get("decision_question") or ""), groups)
-        if refreshed:
-            updated["direct_answer"] = refreshed
-            updated["decision_logic"]["bounded_bottom_line"] = refreshed
-            updated["decision_logic"]["support_summary"] = _first_group(groups, "load_bearing_primary_support")
-            updated["decision_logic"]["strongest_counterweight"] = _first_group(groups, "load_bearing_counterweight")
     return updated, report
+
+
+def _invalid_decision_model(context: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": str(context.get("decision_question") or ""),
+        "direct_answer": "",
+        "confidence": "not_specified",
+        "overall_rationale": "",
+        "evidence_groups": [],
+        "evidence_dispositions": [],
+        "quantitative_anchors": [],
+        "what_would_change_the_answer": [],
+        "decision_logic": {},
+        "argument_plan": [],
+    }
 
 
 def _answer_misses_top_support(model: dict[str, Any], groups: list[dict[str, Any]]) -> bool:

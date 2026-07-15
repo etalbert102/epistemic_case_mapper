@@ -18,7 +18,15 @@ from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
     build_memo_polish_diagnostics,
     high_confidence_unsupported_additions,
-    prose_quality_diagnostics,
+)
+from epistemic_case_mapper.map_briefing_memo_json_polish import (
+    build_memo_ready_json_edit_polish_prompt,
+    candidate_for_json_polish_edit,
+    collect_parallel_memo_ready_json_polish_proposals,
+)
+from epistemic_case_mapper.map_briefing_memo_section_polish import (
+    collect_parallel_hybrid_section_memo_polish_proposals,
+    collect_parallel_section_memo_polish_proposals,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -29,7 +37,6 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations, required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown, run_memo_ready_presentation_normalization
-from epistemic_case_mapper.map_briefing_memo_ready_polish_guardrails import build_memo_ready_final_polish_guardrails
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
 from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
@@ -540,7 +547,35 @@ def run_memo_ready_final_polish(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
+    result = run_memo_ready_hybrid_section_final_polish_experiment(
+        memo,
+        packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    report = dict(result.get("report", {}))
+    report.update(
+        {
+            "schema_id": "memo_ready_final_polish_report_v1",
+            "method": "hybrid_section_completion",
+            "experimental_schema_id": result.get("report", {}).get("schema_id"),
+        }
+    )
+    result["report"] = report
+    return result
+
+
+def run_memo_ready_json_final_polish_experiment(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
     before = build_memo_ready_packet_retention_report(memo, packet)
+    before_decision_usefulness = build_decision_usefulness_retention_report(memo, packet)
     prompt = build_memo_ready_final_polish_prompt(memo, packet)
     report = {
         "schema_id": "memo_ready_final_polish_report_v1",
@@ -550,50 +585,58 @@ def run_memo_ready_final_polish(
     }
     if backend.strip() == "prompt":
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
-    try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
-    except RuntimeError as exc:
-        report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
-        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
-    raw = result.text
-    candidate = normalize_memo_ready_polish_text(repair_markdown_structure(_extract_markdown(raw)))
-    if not candidate:
-        report.update({"status": "empty_response_kept_original", "issues": ["final polish returned no markdown"]})
-        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
-    after = build_memo_ready_packet_retention_report(candidate, packet)
-    before_decision_usefulness = build_decision_usefulness_retention_report(memo, packet)
-    after_decision_usefulness = build_decision_usefulness_retention_report(candidate, packet)
-    structure_issues = markdown_structure_issues(candidate, original=memo)
-    diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
-    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
-    repair = (
-        run_memo_ready_final_polish_drift_repair(
-            original_memo=memo,
-            polished_memo=candidate,
-            packet=packet,
-            polish_diagnostics=diagnostics,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-        )
-        if unsupported_additions
-        else {"memo": candidate, "prompt": "", "raw": "", "report": {"status": "not_needed", "accepted": False}}
+    proposal_bundle = collect_parallel_memo_ready_json_polish_proposals(
+        memo,
+        packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        run_model=run_model_backend,
     )
-    if repair.get("report", {}).get("accepted"):
-        candidate = str(repair.get("memo") or candidate)
-        after = build_memo_ready_packet_retention_report(candidate, packet)
-        after_decision_usefulness = build_decision_usefulness_retention_report(candidate, packet)
-        structure_issues = markdown_structure_issues(candidate, original=memo)
-        diagnostics = build_memo_polish_diagnostics(memo, candidate, packet)
-        unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    prompt = str(proposal_bundle.get("prompt") or prompt)
+    raw = str(proposal_bundle.get("raw") or "")
+    parse_report = _dict(proposal_bundle.get("parse_report"))
+    current = memo
+    accepted_edits: list[dict[str, Any]] = []
+    rejected_edits: list[dict[str, Any]] = []
+    if parse_report.get("status") == "parsed":
+        for index, edit in enumerate(_list(proposal_bundle.get("edits")), start=1):
+            proposal = candidate_for_json_polish_edit(current, _dict(edit), packet)
+            if not proposal.get("mechanically_applicable"):
+                rejected_edits.append(_json_polish_edit_rejection(index, edit, str(proposal.get("issue") or "not_applicable")))
+                continue
+            candidate = normalize_memo_ready_polish_text(repair_markdown_structure(str(proposal.get("memo") or "")))
+            rejection = _json_polish_semantic_rejection(
+                original_memo=memo,
+                candidate=candidate,
+                packet=packet,
+                before_retention=before,
+                before_decision_usefulness=before_decision_usefulness,
+            )
+            if rejection:
+                rejected_edits.append(_json_polish_edit_rejection(index, edit, rejection))
+                continue
+            current = candidate
+            accepted_edits.append(_json_polish_edit_acceptance(index, edit))
+    after = build_memo_ready_packet_retention_report(current, packet)
+    after_decision_usefulness = build_decision_usefulness_retention_report(current, packet)
+    structure_issues = markdown_structure_issues(current, original=memo)
+    diagnostics = build_memo_polish_diagnostics(memo, current, packet)
+    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
     decision_usefulness_not_worse = _decision_usefulness_not_worse(before_decision_usefulness, after_decision_usefulness)
     accepted = (
-        _retention_not_worse(before, after)
+        bool(accepted_edits)
+        and parse_report.get("status") == "parsed"
+        and _retention_not_worse(before, after)
         and decision_usefulness_not_worse
         and not structure_issues
         and not unsupported_additions
     )
-    status = "accepted" if accepted else "rejected_kept_original"
+    status = "accepted" if accepted else "no_safe_json_edits_kept_original"
+    if parse_report.get("status") != "parsed":
+        status = "json_edit_parse_failed_kept_original"
+    elif not _list(parse_report.get("edits")):
+        status = "no_json_edits_returned_kept_original"
     if unsupported_additions:
         status = "rejected_unsupported_additions_kept_original"
     report.update(
@@ -606,19 +649,366 @@ def run_memo_ready_final_polish(
             "polish_diagnostics": diagnostics,
             "polish_comparison": _final_polish_comparison(
                 before_memo=memo,
-                after_memo=candidate,
+                after_memo=current,
                 before_retention=before,
                 after_retention=after,
                 before_decision_usefulness=before_decision_usefulness,
                 after_decision_usefulness=after_decision_usefulness,
                 diagnostics=diagnostics,
             ),
-            "drift_repair_report": repair.get("report", {}),
+            "json_edit_parse_report": parse_report,
+            "accepted_edit_count": len(accepted_edits),
+            "rejected_edit_count": len(rejected_edits),
+            "accepted_edits": accepted_edits,
+            "rejected_edits": rejected_edits,
             "decision_usefulness_not_worse": decision_usefulness_not_worse,
-            "issues": [] if accepted else [_final_polish_issue(unsupported_additions, structure_issues=structure_issues)],
+            "issues": [] if accepted else _json_polish_issues(parse_report, rejected_edits, unsupported_additions, structure_issues=structure_issues),
         }
     )
-    return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+    return {"memo": current if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def run_memo_ready_section_final_polish_experiment(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    before = build_memo_ready_packet_retention_report(memo, packet)
+    before_decision_usefulness = build_decision_usefulness_retention_report(memo, packet)
+    report = {
+        "schema_id": "memo_ready_section_final_polish_experiment_report_v1",
+        "status": "skipped_prompt_backend" if backend.strip() == "prompt" else "not_run",
+        "accepted": False,
+        "issues": [],
+    }
+    proposal_bundle = collect_parallel_section_memo_polish_proposals(
+        memo,
+        packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        run_model=run_model_backend,
+    )
+    if backend.strip() == "prompt":
+        return {"memo": memo, "prompt": proposal_bundle.get("prompt", ""), "raw": "", "report": report}
+    current = memo
+    accepted_sections: list[dict[str, Any]] = []
+    rejected_sections: list[dict[str, Any]] = []
+    for section, section_report in zip(_list(proposal_bundle.get("sections")), _list(proposal_bundle.get("section_reports")), strict=False):
+        if not isinstance(section, dict) or not isinstance(section_report, dict):
+            continue
+        if not section_report.get("accepted_candidate"):
+            rejected_sections.append(_section_polish_rejection(section, section_report, "candidate_not_accepted"))
+            continue
+        original = str(section.get("markdown") or "").strip()
+        replacement = normalize_memo_ready_polish_text(repair_markdown_structure(str(section_report.get("replacement_markdown") or "")))
+        if not replacement.strip() or replacement.strip() == original:
+            rejected_sections.append(_section_polish_rejection(section, section_report, "empty_or_unchanged_replacement"))
+            continue
+        if current.count(original) != 1:
+            rejected_sections.append(_section_polish_rejection(section, section_report, "section_target_not_unique"))
+            continue
+        candidate = current.replace(original, replacement.strip(), 1)
+        rejection = _json_polish_semantic_rejection(
+            original_memo=memo,
+            candidate=candidate,
+            packet=packet,
+            before_retention=before,
+            before_decision_usefulness=before_decision_usefulness,
+        )
+        if rejection:
+            rejected_sections.append(_section_polish_rejection(section, section_report, rejection))
+            continue
+        current = candidate
+        accepted_sections.append(_section_polish_acceptance(section, section_report))
+    after = build_memo_ready_packet_retention_report(current, packet)
+    after_decision_usefulness = build_decision_usefulness_retention_report(current, packet)
+    structure_issues = markdown_structure_issues(current, original=memo)
+    diagnostics = build_memo_polish_diagnostics(memo, current, packet)
+    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    decision_usefulness_not_worse = _decision_usefulness_not_worse(before_decision_usefulness, after_decision_usefulness)
+    accepted = (
+        bool(accepted_sections)
+        and _retention_not_worse(before, after)
+        and decision_usefulness_not_worse
+        and not structure_issues
+        and not unsupported_additions
+    )
+    status = "accepted" if accepted else "no_safe_section_polish_kept_original"
+    if unsupported_additions:
+        status = "rejected_unsupported_additions_kept_original"
+    report.update(
+        {
+            "status": status,
+            "accepted": accepted,
+            "before_missing_mandatory_count": before.get("missing_mandatory_count", 0),
+            "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
+            "structure_issues": structure_issues,
+            "polish_diagnostics": diagnostics,
+            "polish_comparison": _final_polish_comparison(
+                before_memo=memo,
+                after_memo=current,
+                before_retention=before,
+                after_retention=after,
+                before_decision_usefulness=before_decision_usefulness,
+                after_decision_usefulness=after_decision_usefulness,
+                diagnostics=diagnostics,
+            ),
+            "section_proposal_report": proposal_bundle.get("report", {}),
+            "accepted_section_count": len(accepted_sections),
+            "rejected_section_count": len(rejected_sections),
+            "accepted_sections": accepted_sections,
+            "rejected_sections": rejected_sections,
+            "decision_usefulness_not_worse": decision_usefulness_not_worse,
+            "issues": [] if accepted else _json_polish_issues({"status": "parsed"}, rejected_sections, unsupported_additions, structure_issues=structure_issues),
+        }
+    )
+    return {
+        "memo": current if accepted else memo,
+        "prompt": str(proposal_bundle.get("prompt") or ""),
+        "raw": str(proposal_bundle.get("raw") or ""),
+        "report": report,
+    }
+
+
+def run_memo_ready_hybrid_section_final_polish_experiment(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    before = build_memo_ready_packet_retention_report(memo, packet)
+    before_decision_usefulness = build_decision_usefulness_retention_report(memo, packet)
+    proposal_bundle = collect_parallel_hybrid_section_memo_polish_proposals(
+        memo,
+        packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        run_model=run_model_backend,
+    )
+    report = {
+        "schema_id": "memo_ready_hybrid_section_final_polish_experiment_report_v1",
+        "status": "skipped_prompt_backend" if backend.strip() == "prompt" else "not_run",
+        "accepted": False,
+        "issues": [],
+    }
+    if backend.strip() == "prompt":
+        return {"memo": memo, "prompt": proposal_bundle.get("prompt", ""), "raw": "", "report": report}
+    current = memo
+    accepted_sections: list[dict[str, Any]] = []
+    rejected_sections: list[dict[str, Any]] = []
+    for section, section_report in zip(_list(proposal_bundle.get("sections")), _list(proposal_bundle.get("section_reports")), strict=False):
+        if not isinstance(section, dict) or not isinstance(section_report, dict):
+            continue
+        accepted = False
+        for candidate_report in _list(section_report.get("candidate_reports")):
+            if not isinstance(candidate_report, dict) or not candidate_report.get("accepted_candidate"):
+                continue
+            result = _try_apply_section_polish_candidate(
+                current=current,
+                original_memo=memo,
+                section=section,
+                section_report=candidate_report,
+                packet=packet,
+                before_retention=before,
+                before_decision_usefulness=before_decision_usefulness,
+            )
+            if result.get("accepted"):
+                current = str(result.get("memo") or current)
+                accepted_sections.append(_section_polish_acceptance(section, candidate_report))
+                accepted = True
+                break
+            rejected_sections.append(_section_polish_rejection(section, candidate_report, str(result.get("issue") or "candidate_rejected")))
+        if not accepted and not _list(section_report.get("candidate_reports")):
+            rejected_sections.append(_section_polish_rejection(section, section_report, "no_candidates"))
+    after = build_memo_ready_packet_retention_report(current, packet)
+    after_decision_usefulness = build_decision_usefulness_retention_report(current, packet)
+    structure_issues = markdown_structure_issues(current, original=memo)
+    diagnostics = build_memo_polish_diagnostics(memo, current, packet)
+    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    decision_usefulness_not_worse = _decision_usefulness_not_worse(before_decision_usefulness, after_decision_usefulness)
+    accepted = (
+        bool(accepted_sections)
+        and _retention_not_worse(before, after)
+        and decision_usefulness_not_worse
+        and not structure_issues
+        and not unsupported_additions
+    )
+    status = "accepted" if accepted else "no_safe_hybrid_section_polish_kept_original"
+    if unsupported_additions:
+        status = "rejected_unsupported_additions_kept_original"
+    report.update(
+        {
+            "status": status,
+            "accepted": accepted,
+            "before_missing_mandatory_count": before.get("missing_mandatory_count", 0),
+            "after_missing_mandatory_count": after.get("missing_mandatory_count", 0),
+            "structure_issues": structure_issues,
+            "polish_diagnostics": diagnostics,
+            "polish_comparison": _final_polish_comparison(
+                before_memo=memo,
+                after_memo=current,
+                before_retention=before,
+                after_retention=after,
+                before_decision_usefulness=before_decision_usefulness,
+                after_decision_usefulness=after_decision_usefulness,
+                diagnostics=diagnostics,
+            ),
+            "section_proposal_report": proposal_bundle.get("report", {}),
+            "accepted_section_count": len(accepted_sections),
+            "rejected_candidate_count": len(rejected_sections),
+            "accepted_sections": accepted_sections,
+            "rejected_candidates": rejected_sections,
+            "decision_usefulness_not_worse": decision_usefulness_not_worse,
+            "issues": [] if accepted else _json_polish_issues({"status": "parsed"}, rejected_sections, unsupported_additions, structure_issues=structure_issues),
+        }
+    )
+    return {
+        "memo": current if accepted else memo,
+        "prompt": str(proposal_bundle.get("prompt") or ""),
+        "raw": str(proposal_bundle.get("raw") or ""),
+        "report": report,
+    }
+
+
+def _try_apply_section_polish_candidate(
+    *,
+    current: str,
+    original_memo: str,
+    section: dict[str, Any],
+    section_report: dict[str, Any],
+    packet: dict[str, Any],
+    before_retention: dict[str, Any],
+    before_decision_usefulness: dict[str, Any],
+) -> dict[str, Any]:
+    original = str(section.get("markdown") or "").strip()
+    replacement = normalize_memo_ready_polish_text(repair_markdown_structure(str(section_report.get("replacement_markdown") or "")))
+    if not replacement.strip() or replacement.strip() == original:
+        return {"accepted": False, "issue": "empty_or_unchanged_replacement", "memo": current}
+    if current.count(original) != 1:
+        return {"accepted": False, "issue": "section_target_not_unique", "memo": current}
+    candidate = current.replace(original, replacement.strip(), 1)
+    rejection = _json_polish_semantic_rejection(
+        original_memo=original_memo,
+        candidate=candidate,
+        packet=packet,
+        before_retention=before_retention,
+        before_decision_usefulness=before_decision_usefulness,
+    )
+    if rejection:
+        return {"accepted": False, "issue": rejection, "memo": current}
+    return {"accepted": True, "issue": "", "memo": candidate}
+
+
+def _section_polish_acceptance(section: dict[str, Any], section_report: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "section_id": section.get("section_id"),
+        "heading": section.get("heading"),
+        "reason": _section_polish_reason(section_report),
+        "replacement_preview": _preview(section_report.get("replacement_markdown")),
+    }
+
+
+def _section_polish_rejection(section: dict[str, Any], section_report: dict[str, Any], issue: str) -> dict[str, Any]:
+    return {
+        "section_id": section.get("section_id"),
+        "heading": section.get("heading"),
+        "issue": issue,
+        "candidate_issues": _list(section_report.get("issues")),
+        "reason": _section_polish_reason(section_report),
+        "replacement_preview": _preview(section_report.get("replacement_markdown")),
+    }
+
+
+def _section_polish_reason(section_report: dict[str, Any]) -> str:
+    reason = str(section_report.get("reason") or "").strip()
+    if reason:
+        return reason
+    raw = str(section_report.get("raw") or "")
+    payload = _parse_json(raw)
+    if isinstance(payload, dict):
+        return str(payload.get("reason") or "").strip()
+    return ""
+
+
+def _json_polish_semantic_rejection(
+    *,
+    original_memo: str,
+    candidate: str,
+    packet: dict[str, Any],
+    before_retention: dict[str, Any],
+    before_decision_usefulness: dict[str, Any],
+) -> str:
+    after_retention = build_memo_ready_packet_retention_report(candidate, packet)
+    after_decision_usefulness = build_decision_usefulness_retention_report(candidate, packet)
+    structure_issues = markdown_structure_issues(candidate, original=original_memo)
+    diagnostics = build_memo_polish_diagnostics(original_memo, candidate, packet)
+    unsupported_additions = high_confidence_unsupported_additions(diagnostics)
+    if not _retention_not_worse(before_retention, after_retention):
+        return "retention_regression"
+    if not _decision_usefulness_not_worse(before_decision_usefulness, after_decision_usefulness):
+        return "decision_usefulness_regression"
+    if structure_issues:
+        return "markdown_structure_regression"
+    if unsupported_additions:
+        return "unsupported_addition"
+    return ""
+
+
+def _json_polish_edit_acceptance(index: int, edit: Any) -> dict[str, Any]:
+    row = _dict(edit)
+    return {
+        "index": index,
+        "polish_lens_id": str(row.get("polish_lens_id") or "").strip(),
+        "polish_edit_index": row.get("polish_edit_index"),
+        "reason": str(row.get("reason") or "").strip(),
+        "intended_improvement": str(row.get("intended_improvement") or "").strip(),
+        "target_preview": _preview(row.get("target_text")),
+        "replacement_preview": _preview(row.get("replacement_text")),
+    }
+
+
+def _json_polish_edit_rejection(index: int, edit: Any, issue: str) -> dict[str, Any]:
+    row = _dict(edit)
+    return {
+        "index": index,
+        "polish_lens_id": str(row.get("polish_lens_id") or "").strip(),
+        "polish_edit_index": row.get("polish_edit_index"),
+        "issue": issue,
+        "reason": str(row.get("reason") or "").strip(),
+        "intended_improvement": str(row.get("intended_improvement") or "").strip(),
+        "target_preview": _preview(row.get("target_text")),
+        "replacement_preview": _preview(row.get("replacement_text")),
+    }
+
+
+def _json_polish_issues(
+    parse_report: dict[str, Any],
+    rejected_edits: list[dict[str, Any]],
+    unsupported_additions: list[dict[str, Any]],
+    *,
+    structure_issues: list[str],
+) -> list[str]:
+    if unsupported_additions or structure_issues:
+        return [_final_polish_issue(unsupported_additions, structure_issues=structure_issues)]
+    if parse_report.get("status") != "parsed":
+        return _string_list(parse_report.get("issues")) or ["final polish returned unparseable JSON edits"]
+    if rejected_edits:
+        return [f"no safe JSON edits accepted; first rejection: {rejected_edits[0].get('issue')}"]
+    return ["final polish returned no JSON edits"]
+
+
+def _preview(value: Any, *, limit: int = 180) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:") + "..."
 
 
 def run_memo_ready_final_polish_drift_repair(
@@ -730,39 +1120,7 @@ def _final_polish_comparison(
 
 
 def build_memo_ready_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
-    source_trail = _list(packet.get("source_trail"))
-    guardrails = build_memo_ready_final_polish_guardrails(packet)
-    guardrails = project_source_text_to_ids_for_model(guardrails, source_trail)
-    prose_diagnostics = prose_quality_diagnostics(memo)
-    memo_for_model = replace_source_aliases_with_ids(memo, source_trail)
-    return (
-        "You are doing a final prose polish on a source-grounded decision memo.\n"
-        "Improve flow, sentence rhythm, paragraph order, and transitions without changing the analysis.\n"
-        "This is an editing pass over the memo, not a new synthesis pass.\n"
-        "The guardrails below are validation constraints, not memo content or an outline.\n"
-        "The prose diagnostics identify likely style problems in the current memo; fix them only when doing so preserves meaning.\n\n"
-        "Rules:\n"
-        "- Return the full revised memo in Markdown.\n"
-        "- Use the memo as the source of prose; use guardrails only to avoid dropping protected content.\n"
-        "- Preserve the decision question, confidence, bottom-line stance, uncertainty, subgroup caveats, counterweights, source IDs, and required quantities.\n"
-        "- Do not add new facts, sources, numbers, populations, recommendations, or causal interpretations.\n"
-        "- Do not add new comparisons, substitutes, alternatives, or practical examples unless those concepts already appear in the memo text.\n"
-        "- If a sentence is awkward but evidence-bearing, rewrite it locally rather than replacing it with broader advice.\n"
-        "- Rewrite at paragraph level when the prose is stiff; preserving meaning does not mean preserving wording.\n"
-        "- Do not return a near-identical memo unless the prose is already publication-ready.\n"
-        "- Make the opening answer direct, then make the supporting reasoning flow across paragraphs.\n"
-        "- Preserve calibrated confidence: prefer bounded, low-concern, compatible with, not associated with, or does not clearly show over absolute safety, safe limit, proven harmless, or high-confidence unless the evidence explicitly warrants that wording.\n"
-        "- Remove checklist rhythm, repeated sentence openings, and source-ID-as-subject patterns when they make the memo stiff.\n"
-        "- Prefer analyst prose over formulaic labels: for example, use 'The strongest support is...' or 'The main caveat is...' rather than 'The primary evidence stems from...' or 'A significant counterweight is...'.\n"
-        "- Shape paragraphs around reader questions: bottom line, why, limits, and practical implication.\n"
-        "- Keep citations attached to the claims they support, but avoid citation clutter by placing one source marker at the end of a sentence or clause when several nearby facts come from the same source.\n"
-        "- Prefer concrete verbs over stock phrases such as rooted in, stems from, or this conclusion.\n"
-        "- Fix obvious citation spacing mistakes without changing source IDs.\n"
-        "- Make the memo read like decision-ready analysis.\n\n"
-        f"Polish guardrails:\n{json.dumps(guardrails, indent=2, ensure_ascii=False)}\n\n"
-        f"Current prose diagnostics:\n{json.dumps(prose_diagnostics, indent=2, ensure_ascii=False)}\n\n"
-        f"Memo:\n{memo_for_model.strip()}\n"
-    )
+    return build_memo_ready_json_edit_polish_prompt(memo, packet)
 
 
 def normalize_memo_ready_polish_text(memo: str) -> str:

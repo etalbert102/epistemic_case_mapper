@@ -9,7 +9,6 @@ from typing import Any, Callable
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
     argument_plan_transition,
-    content_based_counterweight_weighting,
     is_scaffolded_decision_logic_text,
     naturalize_decision_logic_payload,
     naturalize_decision_logic_text,
@@ -176,7 +175,7 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
     return {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": context.get("decision_question", ""),
-        "direct_answer": _direct_answer(context, groups),
+        "direct_answer": _merged_direct_answer(payloads),
         "confidence": _merged_confidence(payloads),
         "overall_rationale": _overall_rationale(groups, payloads),
         "evidence_groups": groups,
@@ -396,13 +395,17 @@ def _merged_dispositions(context: dict[str, Any], groups: list[dict[str, Any]], 
     return rows
 
 
-def _direct_answer(context: dict[str, Any], groups: list[dict[str, Any]]) -> str:
-    support = _first_group(groups, "load_bearing_primary_support")
-    counter = _first_group(groups, "load_bearing_counterweight")
-    question = str(context.get("decision_question") or "")
-    if support and counter:
-        return _short_text(f"The evidence supports a bounded answer to '{question}': {support} The main limiting consideration is {counter}", 420)
-    return _short_text(support or counter or f"Use the grouped evidence to answer: {question}", 420)
+def _merged_direct_answer(payloads: list[dict[str, Any]]) -> str:
+    for payload in payloads:
+        text = naturalize_decision_logic_text(str(payload.get("direct_answer") or ""))
+        if text and not is_scaffolded_decision_logic_text(text):
+            return _short_text(text, 700)
+    for payload in payloads:
+        logic = naturalize_decision_logic_payload(_dict(payload.get("decision_logic")))
+        text = naturalize_decision_logic_text(str(logic.get("bounded_bottom_line") or ""))
+        if text and not is_scaffolded_decision_logic_text(text):
+            return _short_text(text, 700)
+    return ""
 
 
 def _first_group(groups: list[dict[str, Any]], role: str) -> str:
@@ -424,7 +427,7 @@ def _overall_rationale(groups: list[dict[str, Any]], payloads: list[dict[str, An
     rationales = [str(payload.get("overall_rationale") or "").strip() for payload in payloads if str(payload.get("overall_rationale") or "").strip()]
     if rationales:
         return _short_text(" ".join(rationales[:4]), 900)
-    return _short_text("The model grouped evidence into decision-relevant propositions for synthesis.", 900)
+    return ""
 
 
 def _merged_texts(context: dict[str, Any], payloads: list[dict[str, Any]], key: str) -> list[str]:
@@ -445,17 +448,10 @@ def _decision_logic(context: dict[str, Any], groups: list[dict[str, Any]], paylo
         "load_bearing_counterweight",
     )
     return {
-        "bounded_bottom_line": _first_payload_logic_text(logic_payloads, "bounded_bottom_line") or _direct_answer(
-            context,
-            groups,
-        ),
+        "bounded_bottom_line": _first_payload_logic_text(logic_payloads, "bounded_bottom_line") or _merged_direct_answer(payloads),
         "support_summary": support,
         "strongest_counterweight": counterweight,
-        "counterweight_weighting": content_based_counterweight_weighting(
-            support=support,
-            counterweight=counterweight,
-            fallback=_first_payload_logic_text(logic_payloads, "counterweight_weighting"),
-        ),
+        "counterweight_weighting": _first_payload_logic_text(logic_payloads, "counterweight_weighting"),
         "reconciled_cruxes": _merged_logic_list(
             logic_payloads,
             "reconciled_cruxes",

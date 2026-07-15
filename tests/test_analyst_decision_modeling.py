@@ -372,7 +372,8 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
         backend_retries=0,
     )
 
-    assert result["analyst_decision_model_report"]["status"] == "accepted"
+    assert result["analyst_decision_model_report"]["status"] == "accepted_with_warnings"
+    assert "missing_practical_implications" in result["analyst_decision_model_report"]["issues"]
     assert result["analyst_decision_model_parse_report"]["valid"] is True
     assert result["analyst_decision_model"]["evidence_groups"][0]["covered_evidence_item_ids"] == [
         "bundle:support",
@@ -549,7 +550,7 @@ def test_parallel_decision_logic_preserves_model_counterweight_judgment() -> Non
     assert result["practical_implications"] == ["Pilot where implementation controls are available."]
 
 
-def test_parallel_decision_logic_fallback_counterweight_is_evidence_derived() -> None:
+def test_parallel_decision_logic_does_not_invent_missing_counterweight_weighting() -> None:
     groups = [
         {
             "proposition": "Outcome evidence supports option A.",
@@ -563,9 +564,10 @@ def test_parallel_decision_logic_fallback_counterweight_is_evidence_derived() ->
 
     result = _decision_logic({"decision_question": "Should option A be adopted?"}, groups, [])
 
-    assert "Use counterweights" not in result["counterweight_weighting"]
-    assert "Outcome evidence supports option A" in result["counterweight_weighting"]
-    assert "Implementation risk narrows adoption" in result["counterweight_weighting"]
+    assert result["counterweight_weighting"] == ""
+    assert result["bounded_bottom_line"] == ""
+    assert result["support_summary"] == "Outcome evidence supports option A."
+    assert result["strongest_counterweight"] == "Implementation risk narrows adoption."
 
 
 def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(monkeypatch) -> None:
@@ -677,14 +679,15 @@ def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> 
     )
 
     assert len(calls) == 2
-    assert result["analyst_decision_model_report"]["status"] == "accepted_after_repair"
+    assert result["analyst_decision_model_report"]["status"] == "accepted_after_repair_with_warnings"
+    assert "missing_practical_implications" in result["analyst_decision_model_report"]["issues"]
     assert result["analyst_decision_model_repair_report"]["accepted"] is True
     assert result["analyst_decision_model"]["evidence_groups"][-1]["covered_evidence_item_ids"] == ["bundle:risk"]
     assert result["analyst_decision_model_repair_report"]["batch_count"] == 1
     assert result["analyst_decision_model_initial_parse_report"]["obligation_omissions"]["ungrouped_counterweight_ids"] == ["bundle:risk"]
 
 
-def test_run_analyst_decision_model_invalid_backend_falls_back(monkeypatch) -> None:
+def test_run_analyst_decision_model_invalid_backend_stays_invalid(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text='{"schema_id": "analyst_decision_model_v1", "evidence_groups": []}', backend="fake")
 
@@ -698,6 +701,7 @@ def test_run_analyst_decision_model_invalid_backend_falls_back(monkeypatch) -> N
         backend_retries=0,
     )
 
-    assert result["analyst_decision_model_report"]["status"] == "model_output_invalid_scaffold"
+    assert result["analyst_decision_model_report"]["status"] == "model_output_invalid"
+    assert result["analyst_decision_model_report"]["accepted"] is False
     assert result["analyst_decision_model"]["schema_id"] == "analyst_decision_model_v1"
-    assert result["analyst_decision_model"]["evidence_groups"]
+    assert result["analyst_decision_model"]["evidence_groups"] == []

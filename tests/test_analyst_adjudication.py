@@ -182,7 +182,7 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     assert result["analyst_adjudication"]["rows"][1]["memo_use"] == "load_bearing_counterweight"
 
 
-def test_analyst_adjudication_invalid_live_backend_falls_back_with_report(monkeypatch) -> None:
+def test_analyst_adjudication_invalid_live_backend_reports_failure_without_fallback(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text='{"rows": [{"evidence_item_id": "bundle:one", "memo_use": "bad"}]}', backend="fake")
 
@@ -190,10 +190,13 @@ def test_analyst_adjudication_invalid_live_backend_falls_back_with_report(monkey
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["analyst_adjudication_report"]["status"] == "accepted_with_chunk_scaffold"
-    assert result["analyst_adjudication_chunk_reports"]["scaffold_chunk_count"] == 1
-    assert result["analyst_adjudication_parse_report"]["status"] == "ready"
-    assert result["analyst_adjudication"]["rows"][0]["evidence_item_id"] == "bundle:one"
+    assert result["analyst_adjudication_report"]["status"] == "model_output_invalid"
+    assert result["analyst_adjudication_report"]["accepted"] is False
+    assert result["analyst_adjudication_chunk_reports"]["scaffold_chunk_count"] == 0
+    assert result["analyst_adjudication_chunk_reports"]["failed_chunk_count"] == 1
+    assert result["analyst_adjudication_parse_report"]["status"] == "warning"
+    assert result["analyst_adjudication_parse_report"]["valid"] is False
+    assert result["analyst_adjudication"]["rows"] == []
 
 
 def test_analyst_adjudication_salvages_valid_rows_from_invalid_chunk(monkeypatch) -> None:
@@ -229,12 +232,13 @@ def test_analyst_adjudication_salvages_valid_rows_from_invalid_chunk(monkeypatch
 
     rows = {row["evidence_item_id"]: row for row in result["analyst_adjudication"]["rows"]}
     chunk_report = result["analyst_adjudication_chunk_reports"]["chunks"][0]
-    assert result["analyst_adjudication_report"]["status"] == "accepted_with_chunk_scaffold"
-    assert chunk_report["status"] == "model_output_invalid_salvaged_with_scaffold"
+    assert result["analyst_adjudication_report"]["status"] == "model_output_invalid"
+    assert result["analyst_adjudication_report"]["accepted"] is False
+    assert chunk_report["status"] == "model_output_invalid_salvaged_model_rows"
     assert chunk_report["salvaged_model_row_count"] == 1
-    assert chunk_report["scaffolded_row_count"] == 1
+    assert chunk_report["missing_unsalvaged_row_count"] == 1
     assert rows["bundle:one"]["rationale"] == "The model identified direct outcome evidence as load-bearing."
-    assert rows["warning:two"]["memo_use"] == "needs_human_or_model_review"
+    assert "warning:two" not in rows
 
 
 def test_single_call_accepts_repairable_model_json(monkeypatch) -> None:

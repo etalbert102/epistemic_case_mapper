@@ -131,8 +131,12 @@ def test_model_role_prep_skips_prompt_backend() -> None:
         decision_question="What should we recommend?",
     )
 
-    assert prepared[0]["decision_edge_role_source"] == "deterministic_fallback"
+    assert prepared[0]["decision_edge_role_source"] == "model_missing"
+    assert prepared[0]["decision_edge_role"] == ""
+    assert prepared[0]["decision_edge_role_deterministic"]
     assert report["status"] == "skipped_prompt_backend"
+    assert report["fallback_claim_count"] == 0
+    assert report["model_missing_claim_count"] == 1
 
 
 def test_final_map_claims_carry_relation_role_metadata_without_overwriting_source_role() -> None:

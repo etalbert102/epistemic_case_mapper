@@ -48,3 +48,11 @@ def test_prose_quality_diagnostics_flags_repeated_starts_and_dense_citations() -
     assert diagnostics["status"] == "warning"
     assert "repeated_sentence_starts" in diagnostics["warnings"]
     assert "citation_dense_paragraphs" in diagnostics["warnings"]
+
+
+def test_prose_quality_diagnostics_flags_unfinished_sentence_marker() -> None:
+    diagnostics = prose_quality_diagnostics("## Memo\n\nThe final implication is LDL...")
+
+    assert diagnostics["status"] == "warning"
+    assert "unfinished_sentence_markers" in diagnostics["warnings"]
+    assert diagnostics["unfinished_sentence_markers"][0]["paragraph_index"] == 2

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     run_memo_ready_final_polish,
+    run_memo_ready_json_final_polish_experiment,
     run_memo_ready_packet_synthesis,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
@@ -14,43 +17,57 @@ from test_decision_briefing_packet import _scaffold
 from test_decision_writer_packet import _decision_usefulness_packet
 
 
-def test_final_polish_rejects_unsupported_addition_when_repair_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_final_polish_skips_json_edit_that_adds_unsupported_side_point(monkeypatch: pytest.MonkeyPatch) -> None:
     packet, memo = _packet_and_memo()
-    drift = memo + "\nOption A is also a better replacement for high-risk legacy systems [s1].\n"
+    payload = {
+        "edits": [
+            {
+                "target_text": "## Sources",
+                "replacement_text": "Option A is also a better replacement for high-risk legacy systems [s1].\n\n## Sources",
+                "reason": "add practical comparison",
+                "intended_improvement": "clarity",
+            }
+        ]
+    }
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=drift, backend="fake")
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
-    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["report"]["status"] == "rejected_unsupported_additions_kept_original"
-    assert result["report"]["drift_repair_report"]["status"] == "rejected_kept_polish_candidate_for_rejection"
+    assert result["report"]["status"] == "no_safe_json_edits_kept_original"
+    assert result["report"]["rejected_edits"][0]["issue"] == "unsupported_addition"
     assert result["memo"] == memo
 
 
-def test_final_polish_accepts_targeted_repair_that_removes_unsupported_addition(
+def test_final_polish_accepts_json_edit_that_removes_existing_unsupported_side_point(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     packet, memo = _packet_and_memo()
-    drift = memo + "\nOption A is also a better replacement for high-risk legacy systems [s1].\n"
-    repaired = memo.replace("Option A", "Option A", 1)
-    calls = {"count": 0}
+    unsupported_sentence = "Option A is also a better replacement for high-risk legacy systems [s1]."
+    memo_with_drift = memo + "\n" + unsupported_sentence + "\n"
+    payload = {
+        "edits": [
+            {
+                "target_text": unsupported_sentence,
+                "replacement_text": "",
+                "reason": "remove unsupported side comparison",
+                "intended_improvement": "unsupported_side_point",
+            }
+        ]
+    }
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        calls["count"] += 1
-        if "Repair a polished decision memo" in prompt:
-            return ModelBackendResult(text=repaired, backend="fake")
-        return ModelBackendResult(text=drift, backend="fake")
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
-    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    result = run_memo_ready_json_final_polish_experiment(memo_with_drift, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert calls["count"] == 2
     assert result["report"]["status"] == "accepted"
-    assert result["report"]["drift_repair_report"]["status"] == "accepted"
+    assert result["report"]["accepted_edit_count"] == 1
     assert result["report"]["polish_comparison"]["schema_id"] == "memo_ready_final_polish_comparison_v1"
     assert result["report"]["polish_comparison"]["after_missing_mandatory_count"] <= result["report"]["polish_comparison"]["before_missing_mandatory_count"]
     assert result["report"]["polish_comparison"]["unsupported_addition_count"] == 0
@@ -74,21 +91,72 @@ def test_final_polish_rejects_decision_usefulness_regression(monkeypatch: pytest
         "## Practical Implication\n"
         "Proceed only while implementation burden remains manageable.\n"
     )
-    regressed = memo.replace(
-        "New implementation failure evidence would shift the read from adoption to delay [s1].",
-        "Implementation evidence remains worth monitoring [s1].",
-    )
+    payload = {
+        "edits": [
+            {
+                "target_text": "New implementation failure evidence would shift the read from adoption to delay [s1].",
+                "replacement_text": "Implementation evidence remains worth monitoring [s1].",
+                "reason": "shorten update trigger",
+                "intended_improvement": "clarity",
+            }
+        ]
+    }
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=regressed, backend="fake")
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
-    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["report"]["status"] == "rejected_kept_original"
-    assert result["report"]["decision_usefulness_not_worse"] is False
+    assert result["report"]["status"] == "no_safe_json_edits_kept_original"
+    assert result["report"]["rejected_edits"][0]["issue"] == "decision_usefulness_regression"
+    assert result["report"]["decision_usefulness_not_worse"] is True
     assert result["memo"] == memo
+
+
+def test_production_final_polish_uses_hybrid_section_completion(monkeypatch: pytest.MonkeyPatch) -> None:
+    packet, memo = _packet_and_memo()
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        if "Section heading: Practical Implication" in prompt and "mode_id: completion_only" in prompt:
+            markdown = "## Practical Implication\n\nProceed only while benefits remain supported by the evidence [s1]."
+        else:
+            heading = _heading_for_prompt(prompt)
+            markdown = _section_markdown_for_heading(memo, heading)
+        return ModelBackendResult(text=json.dumps({"section_markdown": markdown, "reason": "production hybrid"}), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    memo_with_truncation = memo.replace("## Practical Implication", "## Practical Implication").rstrip() + "\n"
+    if "..." not in memo_with_truncation:
+        memo_with_truncation = memo_with_truncation.replace("## Sources", "The recommendation should be applied...\n\n## Sources")
+    result = run_memo_ready_final_polish(memo_with_truncation, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["schema_id"] == "memo_ready_final_polish_report_v1"
+    assert result["report"]["method"] == "hybrid_section_completion"
+    assert result["report"]["section_proposal_report"]["method"] == "parallel_hybrid_section_memo_polish"
+
+
+def _heading_for_prompt(prompt: str) -> str:
+    marker = "Section heading:"
+    for line in prompt.splitlines():
+        if line.startswith(marker):
+            return line.removeprefix(marker).strip()
+    return "Opening"
+
+
+def _section_markdown_for_heading(memo: str, heading: str) -> str:
+    if heading == "Opening":
+        first_heading = memo.find("\n## ")
+        return memo[:first_heading].strip() if first_heading >= 0 else memo.strip()
+    marker = f"## {heading}"
+    if marker not in memo:
+        return f"{marker}\n\n"
+    tail = memo.split(marker, 1)[1]
+    next_heading = tail.find("\n## ")
+    body = tail[:next_heading] if next_heading >= 0 else tail
+    return f"{marker}{body}".strip()
 
 
 def _packet_and_memo() -> tuple[dict, str]:

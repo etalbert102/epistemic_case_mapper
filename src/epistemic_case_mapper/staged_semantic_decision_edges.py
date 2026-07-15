@@ -90,6 +90,7 @@ def prepare_claim_decision_edge_roles(
         "raw": "",
         "accepted_model_role_count": 0,
         "fallback_claim_count": len(claims),
+        "model_missing_claim_count": len(claims),
         "invalid_model_rows": [],
         "model_deterministic_disagreements": [],
     }
@@ -112,7 +113,7 @@ def prepare_claim_decision_edge_roles(
                 report["status"] = "completed"
                 report["invalid_model_rows"] = invalid_rows
         except Exception as exc:  # pragma: no cover - exercised by backend integration tests.
-            report["status"] = "backend_error_fell_back_to_deterministic"
+            report["status"] = "backend_error_no_role_fallback"
             report["backend_error"] = str(exc)
 
     prepared: list[dict[str, Any]] = []
@@ -152,17 +153,17 @@ def prepare_claim_decision_edge_roles(
                 )
             role_source_counts["model"] += 1
         else:
-            prepared_claim["role"] = deterministic_role
-            prepared_claim["decision_edge_role"] = deterministic_role
-            prepared_claim["decision_edge_role_confidence"] = deterministic_confidence
-            prepared_claim["decision_edge_role_reasons"] = deterministic_reasons
-            prepared_claim["decision_edge_role_source"] = "deterministic_fallback"
-            role_source_counts["deterministic_fallback"] += 1
+            prepared_claim["decision_edge_role"] = ""
+            prepared_claim["decision_edge_role_confidence"] = "unclassified"
+            prepared_claim["decision_edge_role_reasons"] = ["model_role_prep_missing"]
+            prepared_claim["decision_edge_role_source"] = "model_missing"
+            role_source_counts["model_missing"] += 1
         prepared.append(prepared_claim)
 
     role_counts = Counter(str(claim.get("decision_edge_role", "")) for claim in prepared)
     report["accepted_model_role_count"] = role_source_counts.get("model", 0)
-    report["fallback_claim_count"] = role_source_counts.get("deterministic_fallback", 0)
+    report["fallback_claim_count"] = 0
+    report["model_missing_claim_count"] = role_source_counts.get("model_missing", 0)
     report["role_source_counts"] = dict(sorted(role_source_counts.items()))
     report["role_counts"] = dict(sorted(role_counts.items()))
     report["model_deterministic_disagreements"] = disagreements
@@ -484,6 +485,8 @@ def _usable_claim(claim: dict[str, Any]) -> bool:
         return False
     if claim.get("appendix_only"):
         return False
+    if str(claim.get("decision_edge_role_source") or "") == "model_missing":
+        return False
     role, confidence, _reasons = _prepared_or_inferred_role(claim)
     if role == ROLE_BACKGROUND and confidence != "high":
         return False
@@ -491,6 +494,8 @@ def _usable_claim(claim: dict[str, Any]) -> bool:
 
 
 def _prepared_or_inferred_role(claim: dict[str, Any]) -> tuple[str, str, list[str]]:
+    if str(claim.get("decision_edge_role_source") or "") == "model_missing":
+        return ROLE_BACKGROUND, "low", ["model_role_prep_missing"]
     role = str(claim.get("decision_edge_role") or "").strip()
     confidence = str(claim.get("decision_edge_role_confidence") or "").strip().lower()
     if role in DECISION_EDGE_ROLES and confidence in {"low", "medium", "high"}:

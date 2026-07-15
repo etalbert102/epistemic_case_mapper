@@ -41,25 +41,25 @@ def run_analyst_packet_refinement(
     try:
         result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
     except RuntimeError as exc:
-        parse_report = build_analyst_packet_refinement_parse_report(scaffold, warning_packet)
+        parse_report = build_analyst_packet_refinement_parse_report({}, warning_packet)
         return {
-            "analyst_packet_refinement": scaffold,
+            "analyst_packet_refinement": _invalid_packet_refinement(synthesis_packet),
             "analyst_packet_refinement_prompt": prompt,
             "analyst_packet_refinement_raw": "",
             "analyst_packet_refinement_parse_report": parse_report,
-            "analyst_packet_refinement_report": _report("backend_error_scaffold", parse_report, issues=[str(exc)]),
+            "analyst_packet_refinement_report": _report("backend_error", parse_report, issues=[str(exc)]),
         }
     raw = result.text
     payload = _extract_json(raw)
     parse_report = build_analyst_packet_refinement_parse_report(payload, warning_packet)
     if not parse_report.get("valid"):
         return {
-            "analyst_packet_refinement": scaffold,
+            "analyst_packet_refinement": payload if isinstance(payload, dict) else _invalid_packet_refinement(synthesis_packet),
             "analyst_packet_refinement_prompt": prompt,
             "analyst_packet_refinement_raw": raw,
             "analyst_packet_refinement_parse_report": parse_report,
             "analyst_packet_refinement_report": _report(
-                "model_output_invalid_scaffold",
+                "model_output_invalid",
                 parse_report,
                 issues=["model refinement failed schema or warning accounting checks"],
             ),
@@ -72,6 +72,19 @@ def run_analyst_packet_refinement(
         "analyst_packet_refinement_raw": raw,
         "analyst_packet_refinement_parse_report": parse_report,
         "analyst_packet_refinement_report": _report("accepted", parse_report),
+    }
+
+
+def _invalid_packet_refinement(synthesis_packet: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_id": "analyst_packet_refinement_v1",
+        "decision_question": synthesis_packet.get("decision_question"),
+        "direct_answer": "",
+        "confidence": "not_specified",
+        "evidence_groups": [],
+        "warning_resolutions": [],
+        "decision_logic": {},
+        "argument_plan": [],
     }
 
 

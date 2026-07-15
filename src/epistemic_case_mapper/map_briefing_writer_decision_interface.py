@@ -106,6 +106,15 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
 
 def build_writer_decision_interface_quality_report(interface: dict[str, Any]) -> dict[str, Any]:
     warnings = []
+    answer_frame = _dict(interface.get("answer_frame"))
+    if not str(interface.get("bottom_line") or "").strip():
+        warnings.append("missing_bottom_line")
+    if not str(answer_frame.get("direct_answer") or "").strip():
+        warnings.append("missing_direct_answer")
+    if _looks_truncated_or_scaffolded(answer_frame.get("direct_answer")) or _looks_truncated_or_scaffolded(interface.get("bottom_line")):
+        warnings.append("truncated_or_scaffolded_direct_answer")
+    if not _string_list(interface.get("practical_implications")):
+        warnings.append("missing_model_practical_implications")
     if not _list(interface.get("support_that_drives_answer")):
         warnings.append("missing_support_that_drives_answer")
     if not _list(interface.get("counterweights_and_disposition")):
@@ -167,11 +176,7 @@ def _bottom_line(packet: dict[str, Any], visible_items: list[dict[str, Any]]) ->
         text = _clean_answer_text(value)
         if text:
             return calibrate_text_for_writer(text)
-    support = _first_claim(visible_items, {"strongest_support", "quantitative_anchor"})
-    counter = _first_claim(visible_items, {"strongest_counterweight"})
-    if support and counter:
-        return calibrate_text_for_writer(f"{support} The main counterweight is: {counter}")
-    return support or counter
+    return ""
 
 
 def _answer_frame(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> dict[str, Any]:
@@ -221,22 +226,12 @@ def _counterweight_disposition(weighting: Any) -> str:
     return "requires_adjudication"
 
 
-def _implication_card(implication_type: str, statement: str, item: dict[str, Any], index: int) -> dict[str, Any]:
-    return {
-        "implication_id": f"implication_{index:03d}",
-        "implication_type": implication_type,
-        "statement": _short_text(calibrate_text_for_writer(statement, item), 420),
-        "source_labels": _source_labels(item),
-        "basis_evidence_item_ids": _string_list(item.get("item_id")),
-    }
-
-
 def _practical_implications(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[str]:
     logic = _dict(packet.get("analyst_decision_logic"))
     rows = _string_list(logic.get("practical_implications"))
     if rows:
         return [calibrate_text_for_writer(row) for row in rows[:5]]
-    return [card["statement"] for card in _practical_implication_cards(packet, visible_items)[:5]]
+    return []
 
 
 def _practical_implication_cards(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -253,21 +248,7 @@ def _practical_implication_cards(packet: dict[str, Any], visible_items: list[dic
             }
             for index, statement in enumerate(explicit[:6], start=1)
         ]
-    cards = []
-    bottom = _bottom_line(packet, visible_items)
-    support = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "supports_answer"]))
-    counter = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "challenges_answer"]))
-    scope = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "bounds_scope"]))
-    crux = _first_item(_sort_items([item for item in visible_items if _answer_relation(item) == "identifies_crux"]))
-    if bottom:
-        cards.append(_implication_card("default_application", bottom, support, len(cards) + 1))
-    if counter:
-        cards.append(_implication_card("exception_or_counterweight", f"Treat this as the main exception or caution: {_claim_text(counter)}", counter, len(cards) + 1))
-    if scope:
-        cards.append(_implication_card("scope_boundary", f"Bound application by this scope condition: {_claim_text(scope)}", scope, len(cards) + 1))
-    if crux:
-        cards.append(_implication_card("monitoring_or_crux", f"Track this crux because it could change the answer: {_claim_text(crux)}", crux, len(cards) + 1))
-    return cards[:6]
+    return []
 
 
 def _confidence_basis(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> str:
@@ -751,6 +732,21 @@ def _contains_generic_judgment(value: Any) -> bool:
     if isinstance(value, list):
         return any(_contains_generic_judgment(row) for row in value)
     return False
+
+
+def _looks_truncated_or_scaffolded(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    lowered = text.lower()
+    return (
+        text.endswith("...")
+        or text.endswith("…")
+        or "{'classification'" in text
+        or "use the grouped evidence to answer" in lowered
+        or "state the default" in lowered
+        or _contains_generic_judgment(text)
+    )
 
 
 def _reader_facing_judgment_surface(interface: dict[str, Any]) -> dict[str, Any]:

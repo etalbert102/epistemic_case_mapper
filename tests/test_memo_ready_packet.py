@@ -12,7 +12,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
     normalize_memo_ready_polish_text,
-    run_memo_ready_final_polish,
+    run_memo_ready_json_final_polish_experiment,
     run_memo_ready_presentation_normalization,
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
@@ -121,17 +121,19 @@ def test_quantity_binding_excludes_unbound_quantities_from_mandatory_obligations
     )
 
 
-def test_memo_ready_packet_replaces_malformed_generic_default_read() -> None:
+def test_memo_ready_packet_flags_malformed_generic_default_read_without_replacement() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     built["decision_briefing_packet"]["answer_frame"]["default_answer"] = (
         "{'classification': 'neutral_or_low_concern_under_stated_conditions', "
         "'current_read': 'State the default as neutral or low-concern under the stated conditions.'..."
     )
 
-    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    result = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])
+    packet = result["memo_ready_packet"]
+    report = result["memo_ready_packet_quality_report"]
 
-    assert "{'classification'" not in packet["answer_spine"]["default_read"]
-    assert "Option A" in packet["answer_spine"]["default_read"]
+    assert "{'classification'" in packet["answer_spine"]["default_read"]
+    assert any(issue["issue_type"] == "invalid_or_scaffolded_answer_spine_default_read" for issue in report["issues"])
 
 
 def test_presentation_normalization_adds_question_and_cleans_source_labels() -> None:
@@ -303,10 +305,12 @@ def test_answer_spine_does_not_treat_counterweight_quantity_as_default_support()
         },
     )
 
-    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    result = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])
+    packet = result["memo_ready_packet"]
 
-    assert "Option A reduced flood losses" in packet["answer_spine"]["default_read"]
+    assert "{'classification'" in packet["answer_spine"]["default_read"]
     assert "higher risk of pump failure" not in packet["answer_spine"]["default_read"]
+    assert any(issue["issue_type"] == "invalid_or_scaffolded_answer_spine_default_read" for issue in result["memo_ready_packet_quality_report"]["issues"])
 
 
 def test_quantity_binding_preserves_source_local_effect_interval_tuples() -> None:
@@ -689,9 +693,9 @@ def test_memo_ready_final_polish_rejects_evidence_loss(monkeypatch) -> None:
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
-    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["report"]["status"] == "rejected_kept_original"
+    assert result["report"]["status"] == "json_edit_parse_failed_kept_original"
     assert result["memo"] == memo
 
 
@@ -701,17 +705,18 @@ def test_memo_ready_final_polish_prompt_treats_protected_items_as_constraints() 
 
     prompt = build_memo_ready_final_polish_prompt("## Decision Brief\n\nOption A may help.", packet)
 
-    assert "guardrails below are validation constraints, not memo content or an outline" in prompt
-    assert "Rewrite at paragraph level" in prompt
-    assert "Do not return a near-identical memo" in prompt
-    assert "Remove checklist rhythm" in prompt
-    assert "Shape paragraphs around reader questions" in prompt
-    assert "avoid citation clutter" in prompt
-    assert "This is an editing pass over the memo, not a new synthesis pass." in prompt
-    assert "Do not add new comparisons, substitutes, alternatives, or practical examples" in prompt
+    assert "Return JSON edits, not a rewritten memo" in prompt
+    assert "Each target_text must be copied exactly" in prompt
+    assert "Prefer one or two high-value paragraph-level edits" in prompt
+    assert "paragraph-level edits" in prompt
+    assert "decision-ready analysis written for a thoughtful human judge" in prompt
+    assert "evidence-weighted reasoning" in prompt
+    assert "citation clutter" in prompt
+    assert "Return valid JSON only" in prompt
+    assert "unsupported_side_point" in prompt
     assert "Current prose diagnostics" in prompt
     assert "memo_prose_quality_diagnostics_v1" in prompt
-    assert "Polish guardrails" in prompt
+    assert "Validation guardrails" in prompt
     assert "memo_ready_final_polish_guardrails_v1" in prompt
     assert "source_ids_that_must_remain_traceable" in prompt
     assert "quantities_that_must_remain_visible" in prompt
@@ -724,19 +729,29 @@ def test_memo_ready_final_polish_normalizes_safe_citation_and_phrase_defects(mon
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
     memo = run_memo_ready_packet_synthesis(packet, backend="prompt", backend_timeout=30, backend_retries=0)["memo"]
-    polished = memo.replace(
-        "\n## Sources\n",
-        "\nThe primary support for this conclusion stems from Outcome Study: Option A reduced flood losses by 25% in comparable river cities (Zhong etal. 2019).\n\n## Sources\n",
-    )
+    payload = {
+        "edits": [
+            {
+                "target_text": "## Sources",
+                "replacement_text": (
+                    "The primary support for this conclusion stems from Outcome Study: Option A reduced flood losses "
+                    "by 25% in comparable river cities (Zhong etal. 2019).\n\n## Sources"
+                ),
+                "reason": "smooth source setup",
+                "intended_improvement": "clarity",
+            }
+        ]
+    }
 
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=polished, backend="fake")
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
-    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
     assert result["report"]["status"] == "accepted"
+    assert result["report"]["accepted_edit_count"] == 1
     assert "The main support is" in result["memo"]
     assert "etal." not in result["memo"]
 
