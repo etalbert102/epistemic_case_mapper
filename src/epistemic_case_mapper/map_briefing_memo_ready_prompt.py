@@ -347,8 +347,8 @@ def _bottom_line_from_reader_packet(reader_packet: dict[str, Any]) -> str:
     skeleton = _dict(answer_frame.get("skeleton"))
     classification = _dict(answer_frame.get("classification"))
     for value in (
-        _dict(reader_packet.get("bluf_contract")).get("one_sentence_version"),
         _dict(reader_packet.get("bluf_contract")).get("recommended_read"),
+        _dict(reader_packet.get("bluf_contract")).get("one_sentence_version"),
         balanced.get("best_current_read"),
         skeleton.get("direct_answer"),
         skeleton.get("bottom_line"),

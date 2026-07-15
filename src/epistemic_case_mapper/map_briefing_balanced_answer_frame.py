@@ -69,7 +69,7 @@ def build_bluf_contract(
             "main_exception_or_boundary": _short_text(exception, 360),
             "confidence": confidence,
             "practical_read": _short_text(practical, 360),
-            "one_sentence_version": _short_text(_one_sentence_bluf(recommended, scope, exception, confidence), 700),
+            "one_sentence_version": _short_text(recommended, 420),
             "writing_contract": [
                 "Answer the decision question in the first sentence.",
                 "Add the main scope or exception in the same sentence or the next sentence.",
@@ -78,22 +78,6 @@ def build_bluf_contract(
             ],
         }
     )
-
-
-def _one_sentence_bluf(recommended: str, scope: str, exception: str, confidence: str) -> str:
-    first = _text(recommended)
-    if not first:
-        return ""
-    additions = []
-    if scope:
-        additions.append(f"within this scope: {scope}")
-    if exception:
-        additions.append(f"with this main boundary: {exception}")
-    if confidence:
-        additions.append(f"confidence: {confidence}")
-    if not additions:
-        return first
-    return f"{first} ({'; '.join(additions)})."
 
 
 def _underused_balance_evidence(inventory: dict[str, Any], lanes: dict[str, Any]) -> list[dict[str, Any]]:

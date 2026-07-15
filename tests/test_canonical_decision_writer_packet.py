@@ -93,6 +93,9 @@ def test_canonical_packet_builds_bluf_contract_from_balanced_frame() -> None:
     assert contract["schema_id"] == "bluf_contract_v1"
     assert contract["recommended_read"] == canonical["balanced_answer_frame"]["best_current_read"]
     assert contract["one_sentence_version"]
+    assert contract["one_sentence_version"] == contract["recommended_read"]
+    assert "within this scope" not in contract["one_sentence_version"]
+    assert "..." not in contract["one_sentence_version"]
     assert any("Answer the decision question" in item for item in contract["writing_contract"])
 
 
