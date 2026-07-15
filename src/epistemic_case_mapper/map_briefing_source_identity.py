@@ -47,12 +47,14 @@ def preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]
 
 def compact_source_display(source: dict[str, Any], *, common_prefix: list[str] | None = None) -> str:
     citation = str(source.get("citation_label") or "").strip()
-    if citation:
+    if citation and len(citation) <= 64:
         return citation
     source_id = str(source.get("source_id") or "").strip()
     from_id = _compact_source_id(source_id)
     if from_id:
         return from_id
+    if citation:
+        return _compact_title(citation)
     label = str(source.get("source_label") or "").strip()
     if label and label != source_id:
         label = strip_artifact_source_prefix(label)

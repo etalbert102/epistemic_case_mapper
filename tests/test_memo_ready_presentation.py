@@ -36,9 +36,10 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     retention = build_memo_ready_packet_retention_report(result["memo"], packet)
 
     assert "[BMJ 2020]" in result["memo"]
-    assert "[BMJ 2020](CITATION_TRACE.md#bmj-2020)" in result["memo"]
+    assert "[BMJ 2020](CITATION_TRACE.md#bmj-2020)" not in result["memo"]
     assert "[bmj_2020_egg_consumption_cvd]" not in result["memo"]
     assert "* [BMJ 2020](https://example.test/bmj-2020)" in result["memo"]
+    assert "[BMJ 2020]: CITATION_TRACE.md#bmj-2020" in result["memo"]
     assert "](https://example.test/bmj-2020)" in result["memo"]
     assert retention["missing_mandatory_count"] == 0
 
@@ -87,13 +88,14 @@ def test_presentation_inserts_source_weighting_section_from_canonical_packet() -
     assert "## How to Weight the Evidence" in result["memo"]
     assert result["memo"].index("## How to Weight the Evidence") < result["memo"].index("## Supporting Evidence")
     assert "Use the evidence in layers" in result["memo"]
-    assert "Start with [Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
-    assert "Use [Guidance 2023](CITATION_TRACE.md#guidance-2023) for translation and background" in result["memo"]
+    assert "Start with [Outcome 2025]" in result["memo"]
+    assert "Use [Guidance 2023] for translation and background" in result["memo"]
     assert "Keep decision directness in view" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Context sources" not in result["memo"]
     assert "association not causation" in result["memo"]
-    assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
+    assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" not in result["memo"]
+    assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
     assert "[outcome_2025]" not in result["memo"]
     assert "inserted_source_weighting" in result["report"]["changes"]
 
@@ -172,15 +174,16 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
 
     assert "Read the sources by what each can decide" in result["memo"]
     assert "where confidence should narrow" in result["memo"]
-    assert "Start with [Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
-    assert "Let [RISK 2024](CITATION_TRACE.md#risk-2024) narrow the claim" in result["memo"]
+    assert "Start with [Outcome 2025]" in result["memo"]
+    assert "Let [RISK 2024] narrow the claim" in result["memo"]
     assert result["memo"].count("[^source-weight-caveats]") == 2
     assert "Detailed source caveats are in [^source-weight-caveats]" in result["memo"]
     assert "[^source-weight-caveats]: Source-weighting caveats:" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
     assert "not enough for unconditional adoption" in result["memo"]
-    assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
+    assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" not in result["memo"]
+    assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 
 
 def test_presentation_source_weighting_uses_lightweight_quality_caveats() -> None:
@@ -265,11 +268,34 @@ def test_presentation_prefers_citation_label_over_long_display_label() -> None:
     result = run_memo_ready_presentation_normalization(memo, packet)
     trace = build_citation_trace_markdown(result["memo"], packet)
 
-    assert "[Drouin-Chartier et al. 2020](CITATION_TRACE.md#drouin-chartier-et-al-2020)" in result["memo"]
+    assert "[Drouin-Chartier et al. 2020]" in result["memo"]
     assert "* [Drouin-Chartier et al. 2020](https://example.test/bmj-2020)" in result["memo"]
     assert "[bmj_2020_egg_consumption_cvd]" not in result["memo"]
-    assert long_title not in result["memo"]
+    assert long_title not in result["memo"].split("## Sources", 1)[0]
+    assert long_title in result["memo"]
     assert f"- Source title: {long_title}" in trace
+
+
+def test_presentation_compacts_overlong_citation_label_inline() -> None:
+    packet = {
+        "source_trail": [
+            {
+                "source_id": "dga_2020_2025_pmc_summary",
+                "source_label": "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020",
+                "citation_label": "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020",
+                "display_label": "Dietary Guidelines for Americans, 2020-2025",
+                "source_url": "https://example.test/dga",
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "## Decision Brief\n\nThe scope boundary comes from [dga_2020_2025_pmc_summary]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "The scope boundary comes from [DGA 2020]." in result["memo"]
+    assert "U.S. Department of Agriculture and U.S. Department of Health and Human Services 2020" not in result["memo"].split("## Sources", 1)[0]
+    assert "[DGA 2020]: CITATION_TRACE.md#dga-2020" in result["memo"]
 
 
 def test_presentation_compact_citations_title_case_short_names() -> None:
@@ -281,7 +307,7 @@ def test_presentation_compact_citations_title_case_short_names() -> None:
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "[Li 2020](CITATION_TRACE.md#li-2020)" in result["memo"]
+    assert "[Li 2020]" in result["memo"]
     assert "[LI 2020]" not in result["memo"]
 
 
@@ -321,8 +347,8 @@ def test_presentation_normalizes_malformed_source_id_and_evidence_item_citations
 
     assert "[Li et2020_egg_cholesterol_rct_meta]" not in result["memo"]
     assert "[analyst_item_004]" not in result["memo"]
-    assert "[Li et al. 2020](CITATION_TRACE.md#li-et-al-2020)" in result["memo"]
-    assert "[NNR 2023](CITATION_TRACE.md#nnr-2023)" in result["memo"]
+    assert "[Li et al. 2020]" in result["memo"]
+    assert "[NNR 2023]" in result["memo"]
 
 
 def test_presentation_deduplicates_repeated_inline_citations() -> None:
@@ -343,7 +369,8 @@ def test_presentation_deduplicates_repeated_inline_citations() -> None:
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert result["memo"].count("[Drouin-Chartier et al. 2020](CITATION_TRACE.md#drouin-chartier-et-al-2020)") == 1
+    assert result["memo"].count("[Drouin-Chartier et al. 2020]") == 2
+    assert result["memo"].count("[Drouin-Chartier et al. 2020]:") == 1
 
 
 def test_presentation_deduplicates_repeated_already_linked_citations() -> None:
@@ -365,7 +392,8 @@ def test_presentation_deduplicates_repeated_already_linked_citations() -> None:
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert result["memo"].count("[Drouin-Chartier et al. 2020](CITATION_TRACE.md#drouin-chartier-et-al-2020)") == 1
+    assert result["memo"].count("[Drouin-Chartier et al. 2020]") == 2
+    assert result["memo"].count("[Drouin-Chartier et al. 2020]:") == 1
     assert "deduplicated_inline_citations" in result["report"]["changes"]
 
 
@@ -389,7 +417,8 @@ def test_presentation_unwraps_single_already_linked_citation_wrapper() -> None:
     result = run_memo_ready_presentation_normalization(memo, packet)
 
     assert "[[American Heart Association News 2023]" not in result["memo"]
-    assert "[American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)" in result["memo"]
+    assert "[American Heart Association News 2023]" in result["memo"]
+    assert "[American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)" not in result["memo"]
     assert "deduplicated_inline_citations" in result["report"]["changes"]
 
 
@@ -416,16 +445,8 @@ def test_presentation_compacts_crowded_inline_citations_without_losing_sources()
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert (
-        "[[NNR 2023](CITATION_TRACE.md#nnr-2023); "
-        "[BMJ 2020](CITATION_TRACE.md#bmj-2020); +4 sources][^sources-1]"
-    ) in result["memo"]
-    assert (
-        "[^sources-1]: Additional sources: [AHA 2023](CITATION_TRACE.md#aha-2023); "
-        "[AHA 2019](CITATION_TRACE.md#aha-2019); [JAMA 2019](CITATION_TRACE.md#jama-2019); "
-        "[DGA 2020](CITATION_TRACE.md#dga-2020)."
-    ) in result["memo"]
-    assert result["memo"].index("[^sources-1]:") < result["memo"].index("## Sources")
+    assert "[NNR 2023], [BMJ 2020], [AHA 2023]" in result["memo"]
+    assert "[AHA 2019], [JAMA 2019], [DGA 2020]" in result["memo"]
     assert "[NNR 2023, BMJ 2020, AHA 2023" not in result["memo"]
     assert "* NNR 2023" in result["memo"]
     assert "* BMJ 2020" in result["memo"]
@@ -433,7 +454,7 @@ def test_presentation_compacts_crowded_inline_citations_without_losing_sources()
     assert "* AHA 2019" in result["memo"]
     assert "* JAMA 2019" in result["memo"]
     assert "* DGA 2020" in result["memo"]
-    assert "compacted_crowded_citations" in result["report"]["changes"]
+    assert "compacted_crowded_citations" not in result["report"]["changes"]
 
 
 def test_citation_trace_records_packet_evidence_without_replacing_source_urls() -> None:
@@ -462,9 +483,10 @@ def test_citation_trace_records_packet_evidence_without_replacing_source_urls() 
     result = run_memo_ready_presentation_normalization(memo, packet)
     trace = build_citation_trace_markdown(result["memo"], packet)
 
-    assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
+    assert "[Outcome 2025]" in result["memo"]
     assert "* [Outcome 2025](https://example.test/outcome)" in result["memo"]
     assert "## Outcome 2025" in trace
+    assert "- Short label: Outcome 2025" in trace
     assert "- Source ID: `outcome_2025`" in trace
     assert "- External URL: https://example.test/outcome" in trace
     assert "`item_001` (scope_boundary): The effect is limited to the studied population." in trace
@@ -506,10 +528,10 @@ def test_presentation_links_parenthetical_citations_and_records_memo_contexts() 
     result = run_memo_ready_presentation_normalization(memo, packet)
     trace = build_citation_trace_markdown(result["memo"], packet)
 
-    assert "([BMJ 2020](CITATION_TRACE.md#bmj-2020))" in result["memo"]
-    assert "([BMJ 2020](CITATION_TRACE.md#bmj-2020); [NNR 2023](CITATION_TRACE.md#nnr-2023))" in result["memo"]
+    assert "([BMJ 2020])" in result["memo"]
+    assert "([BMJ 2020]; [NNR 2023])" in result["memo"]
     assert "- Memo citation contexts:" in trace
-    assert "Moderate intake was not associated with higher cardiovascular risk ([BMJ 2020](CITATION_TRACE.md#bmj-2020))." in trace
-    assert "The replacement-food question remains important ([BMJ 2020](CITATION_TRACE.md#bmj-2020); [NNR 2023](CITATION_TRACE.md#nnr-2023))." in trace
+    assert "Moderate intake was not associated with higher cardiovascular risk ([BMJ 2020])." in trace
+    assert "The replacement-food question remains important ([BMJ 2020]; [NNR 2023])." in trace
     assert "authors also framed this" not in trace
     assert "* [BMJ 2020](https://example.test/bmj)" in result["memo"]

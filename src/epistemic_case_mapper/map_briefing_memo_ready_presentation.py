@@ -51,14 +51,6 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("normalized_source_labels")
         normalized = next_memo
-    next_memo, compacted_citation_sources = _compact_crowded_citations(
-        normalized,
-        packet,
-        citation_trace_href=citation_trace_href,
-    )
-    if next_memo != normalized:
-        changes.append("compacted_crowded_citations")
-        normalized = next_memo
     next_memo = _link_inline_citations(normalized, packet, citation_trace_href=citation_trace_href)
     if next_memo != normalized:
         changes.append("linked_inline_citations_to_trace")
@@ -67,9 +59,17 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("deduplicated_inline_citations")
         normalized = next_memo
-    next_memo = _replace_sources_section(normalized, packet, additional_cited_displays=compacted_citation_sources)
+    next_memo = _strip_inline_citation_trace_links(normalized)
+    if next_memo != normalized:
+        changes.append("converted_inline_citations_to_reference_style")
+        normalized = next_memo
+    next_memo = _replace_sources_section(normalized, packet)
     if next_memo != normalized:
         changes.append("deterministic_sources")
+        normalized = next_memo
+    next_memo = _append_citation_reference_definitions(normalized, packet, citation_trace_href=citation_trace_href)
+    if next_memo != normalized:
+        changes.append("added_citation_reference_definitions")
         normalized = next_memo
     normalized = normalized.rstrip() + "\n"
     return {
@@ -103,10 +103,11 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
         "",
     ]
     for entry in entries:
-        display = entry.get("inline_display") or entry.get("source_display") or "Source"
+        display = entry.get("citation_display") or entry.get("inline_display") or entry.get("source_display") or "Source"
         source_id = entry.get("source_id", "")
         source_display = entry.get("source_display", "")
         source_label = entry.get("source_label", "")
+        inline_display = entry.get("inline_display", "")
         url = entry.get("url", "")
         contexts = _trace_memo_contexts(memo, entry)
         items = _trace_evidence_items(packet, entry)
@@ -115,6 +116,7 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
                 f"## {display}",
                 "",
                 f"- Cited in memo: {'yes' if _norm(display) in cited or _norm(source_display) in cited else 'not detected'}",
+                f"- Short label: {inline_display or source_display or source_label or display}",
                 f"- Source title: {source_display or source_label or display}",
             ]
         )
@@ -163,9 +165,9 @@ def _readable_main_use(value: Any) -> str:
     return str(value or "unspecified").replace("_", " ")
 
 
-def _replace_sources_section(memo: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> str:
+def _replace_sources_section(memo: str, packet: dict[str, Any]) -> str:
     body = _strip_sources_section(memo).rstrip()
-    sources = _cited_source_lines(body, packet, additional_cited_displays=additional_cited_displays or [])
+    sources = _cited_source_lines(body, packet)
     if not sources:
         return body + "\n"
     return "\n".join([body, "", "## Sources", "", *sources]).rstrip() + "\n"
@@ -400,92 +402,36 @@ def _strip_sources_section(memo: str) -> str:
     return str(memo or "").rstrip()
 
 
-def _cited_source_lines(body: str, packet: dict[str, Any], *, additional_cited_displays: list[str] | None = None) -> list[str]:
+def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
     entries = _canonical_source_entries(packet)
     cited = []
     lowered = body.lower()
-    additional = {_norm(display) for display in additional_cited_displays or [] if display}
     for entry in entries:
-        displays = [entry["inline_display"], entry["source_display"]]
+        displays = [entry["citation_display"], entry["inline_display"], entry["source_display"]]
         matches = [lowered.find(display.lower()) for display in displays if display and _contains_text(body, display)]
-        if _norm(entry["inline_display"]) in additional or _norm(entry["source_display"]) in additional:
-            matches.append(len(body) + len(cited))
         if matches:
             cited.append((min(index for index in matches if index >= 0), _source_line_for_entry(entry)))
     return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
 
 
-def _compact_crowded_citations(
-    memo: str,
-    packet: dict[str, Any],
-    *,
-    citation_trace_href: str,
-) -> tuple[str, list[str]]:
+def _append_citation_reference_definitions(memo: str, packet: dict[str, Any], *, citation_trace_href: str) -> str:
     entries = _canonical_source_entries(packet)
-    displays = _dedupe([entry["inline_display"] for entry in entries if entry.get("inline_display")])
-    if not displays:
-        return memo, []
-    display_lookup = {_norm(display): display for display in displays}
-    additional_sources: list[str] = []
-    citation_notes: dict[tuple[str, ...], str] = {}
-
-    def replace(match: re.Match[str]) -> str:
-        content = match.group(1)
-        parts = _citation_parts(content)
-        cited = [display_lookup[_norm(part)] for part in parts if _norm(part) in display_lookup]
-        if len(cited) < 4:
-            return match.group(0)
-        kept = cited[:2]
-        omitted = cited[2:]
-        additional_sources.extend(omitted)
-        note_key = tuple(omitted)
-        if note_key not in citation_notes:
-            citation_notes[note_key] = f"sources-{len(citation_notes) + 1}"
-        note_id = citation_notes[note_key]
-        linked_kept = [_citation_trace_link(display, citation_trace_href) for display in kept]
-        return "[" + "; ".join([*linked_kept, f"+{len(omitted)} sources"]) + f"][^{note_id}]"
-
-    compacted = re.sub(r"\[([^\[\]\n]{1,260})\]", replace, memo)
-    compacted = _insert_citation_notes(compacted, citation_notes, citation_trace_href=citation_trace_href)
-    return compacted, _dedupe(additional_sources)
-
-
-def _insert_citation_notes(
-    memo: str,
-    citation_notes: dict[tuple[str, ...], str],
-    *,
-    citation_trace_href: str,
-) -> str:
-    if not citation_notes:
-        return memo
-    note_lines = [
-        f"[^{note_id}]: Additional sources: {'; '.join(_citation_trace_link(source, citation_trace_href) for source in sources)}."
-        for sources, note_id in citation_notes.items()
+    cited = _cited_entry_norms(memo, entries)
+    definitions = [
+        f"[{entry['citation_display']}]: {citation_trace_href}#{_source_anchor(entry['citation_display'])}"
+        for entry in entries
+        if entry.get("citation_display") and _norm(entry["citation_display"]) in cited
     ]
-    lines = str(memo or "").rstrip().splitlines()
-    insert_at = len(lines)
-    for index, line in enumerate(lines):
-        if line.strip().lower() == "## sources":
-            insert_at = index
-            break
-    before = lines[:insert_at]
-    after = lines[insert_at:]
-    while before and not before[-1].strip():
-        before.pop()
-    return "\n".join([*before, "", *note_lines, "", *after]).rstrip()
+    if not definitions:
+        return memo
+    return str(memo or "").rstrip() + "\n\n" + "\n".join(_dedupe(definitions)) + "\n"
 
 
 def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_href: str) -> str:
     entries = _canonical_source_entries(packet)
-    displays = _dedupe(
-        display
-        for entry in entries
-        for display in [entry.get("inline_display", ""), entry.get("source_display", "")]
-        if display
-    )
-    if not displays:
+    display_lookup = _citation_display_lookup(entries)
+    if not display_lookup:
         return memo
-    display_lookup = {_norm(display): display for display in displays}
 
     def replace_parenthetical(match: re.Match[str]) -> str:
         content = match.group(1)
@@ -503,7 +449,7 @@ def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_
         linked, changed = _linked_citation_content(content, display_lookup, citation_trace_href)
         if not changed:
             return match.group(0)
-        return f"[{linked}]"
+        return linked
 
     linked = re.sub(r"\(([^\(\)\n]{1,260})\)", replace_parenthetical, memo)
     return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace_bracketed, linked)
@@ -520,11 +466,9 @@ def _dedupe_linked_citation_clusters(memo: str) -> str:
         if len(links) < 2:
             return match.group(0)
         deduped = _dedupe_by_norm(links)
-        if len(deduped) == len(links):
-            return match.group(0)
         if len(deduped) == 1:
             return deduped[0]
-        return "[" + "; ".join(deduped) + "]"
+        return "; ".join(deduped)
 
     return re.sub(r"\[((?:\[[^\]\n]+\]\([^\)\n]+\)(?:\s*(?:;|,)\s*)?)+)\]", replace, memo)
 
@@ -576,13 +520,34 @@ def _linked_citation_content(
     return separator.join(linked_parts), True
 
 
+def _citation_display_lookup(entries: list[dict[str, str]]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for entry in entries:
+        display = entry.get("citation_display") or entry.get("inline_display") or entry.get("source_display")
+        for value in [
+            entry.get("source_id", ""),
+            entry.get("source_label", ""),
+            entry.get("source_display", ""),
+            entry.get("inline_display", ""),
+            entry.get("citation_display", ""),
+        ]:
+            for variant in source_label_variants(value):
+                if variant and display:
+                    lookup[_norm(variant)] = display
+    return lookup
+
+
 def _citation_trace_link(display: str, citation_trace_href: str) -> str:
     display = str(display or "").strip()
     if not display:
         return display
     if "](" in display:
         return display
-    return f"[{display}]({citation_trace_href}#{_source_anchor(display)})"
+    return f"[{display}]"
+
+
+def _strip_inline_citation_trace_links(memo: str) -> str:
+    return re.sub(r"\[([^\]\n]+)\]\(CITATION_TRACE\.md#[^\)\n]+\)", r"[\1]", str(memo or ""))
 
 
 def _source_anchor(display: str) -> str:
@@ -616,6 +581,7 @@ def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
             {
                 "source_display": source_display,
                 "inline_display": inline_display,
+                "citation_display": inline_display or source_display,
                 "url": urls.get(label, ""),
                 "source_id": source_id,
                 "source_label": source_label,
@@ -650,8 +616,11 @@ def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
 
 def _source_line_for_entry(entry: dict[str, str]) -> str:
     display = entry.get("inline_display", "") or entry.get("source_display", "")
+    title = entry.get("source_display", "") or display
     url = entry.get("url", "")
-    return f"* [{display}]({url})" if display and url else f"* {display}"
+    linked = f"[{display}]({url})" if display and url else display
+    suffix = f" — {title}" if title and title != display else ""
+    return f"* {linked}{suffix}"
 
 
 def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -670,7 +639,7 @@ def _cited_entry_norms(memo: str, entries: list[dict[str, str]]) -> set[str]:
     cited: set[str] = set()
     body = _strip_sources_section(memo)
     for entry in entries:
-        for display in [entry.get("inline_display", ""), entry.get("source_display", "")]:
+        for display in [entry.get("citation_display", ""), entry.get("inline_display", ""), entry.get("source_display", "")]:
             if display and _contains_text(body, display):
                 cited.add(_norm(display))
     return cited
@@ -692,6 +661,7 @@ def _trace_entry_citation_tokens(entry: dict[str, str]) -> list[str]:
         entry.get("source_label", ""),
         entry.get("source_display", ""),
         entry.get("inline_display", ""),
+        entry.get("citation_display", ""),
     ]
     return _dedupe(variant for value in values for variant in source_label_variants(value) if variant)
 
@@ -700,7 +670,7 @@ def _memo_context_segments(memo: str) -> list[str]:
     segments = []
     for line in str(memo or "").splitlines():
         stripped = line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith("[^"):
+        if not stripped or stripped.startswith("#") or stripped.startswith("[^") or re.match(r"^\[[^\]]+\]:\s+", stripped):
             continue
         stripped = re.sub(r"^\s*[-*]\s+", "", stripped)
         segments.extend(_sentence_like_segments(stripped))
@@ -743,6 +713,7 @@ def _trace_item_matches_entry(item: dict[str, Any], entry: dict[str, str]) -> bo
         entry.get("source_label", ""),
         entry.get("source_display", ""),
         entry.get("inline_display", ""),
+        entry.get("citation_display", ""),
     ]:
         candidate_labels.update(_norm(variant) for variant in source_label_variants(value) if variant)
     item_labels = _string_list(item.get("source_labels"))
