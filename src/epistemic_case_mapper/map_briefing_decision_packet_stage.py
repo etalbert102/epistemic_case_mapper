@@ -285,27 +285,29 @@ def _skipped_analyst_packet_refinement_bundle() -> dict[str, Any]:
 def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
     if _promote_decision_writer_packet_as_active(scaffold):
         return
-    analyst_packet = scaffold.get("analyst_memo_ready_packet")
-    if not isinstance(analyst_packet, dict) or not analyst_packet.get("evidence_items"):
-        scaffold["active_memo_ready_packet_report"] = {
-            "schema_id": "active_memo_ready_packet_report_v1",
-            "status": "missing_active_packet",
-            "active_packet": "memo_ready_packet",
-            "reason": "analyst_memo_ready_packet_missing_or_empty",
-        }
-        return
-    analyst_quality = scaffold.get("analyst_packet_quality_report")
-    scaffold["memo_ready_packet"] = analyst_packet
-    if isinstance(analyst_quality, dict):
-        scaffold["memo_ready_packet_quality_report"] = {**analyst_quality, "active_packet": "memo_ready_packet"}
+    scaffold["memo_ready_packet"] = {}
+    scaffold["memo_ready_packet_quality_report"] = {
+        "schema_id": "memo_ready_packet_quality_report_v1",
+        "status": "failed",
+        "active_packet": "none",
+        "reason": "decision_writer_packet_not_ready",
+    }
     scaffold["active_memo_ready_packet_report"] = {
         "schema_id": "active_memo_ready_packet_report_v1",
-        "status": "analyst_active",
-        "active_packet": "memo_ready_packet",
-        "method": str(analyst_packet.get("method") or "analyst_adjudicated_packet_adapter"),
-        "evidence_item_count": _list_count(analyst_packet.get("evidence_items")),
-        "source_trail_count": _list_count(analyst_packet.get("source_trail")),
-        "downgraded_evidence_item_ids": _analyst_downgraded_evidence_ids(scaffold),
+        "status": "failed_decision_writer_packet_not_active",
+        "active_packet": "none",
+        "reason": "decision_writer_packet_not_ready",
+        "decision_writer_packet_status": _decision_writer_packet_readiness_reason(
+            scaffold.get("decision_writer_packet"),
+            scaffold.get("decision_writer_packet_quality_report"),
+        ),
+        "decision_writer_packet_quality_status": _dict_value(scaffold.get("decision_writer_packet_quality_report")).get("status"),
+        "decision_writer_packet_quality_issues": _list_value(_dict_value(scaffold.get("decision_writer_packet_quality_report")).get("issues")),
+        "legacy_analyst_packet_available": bool(
+            isinstance(scaffold.get("analyst_memo_ready_packet"), dict)
+            and scaffold.get("analyst_memo_ready_packet", {}).get("evidence_items")
+        ),
+        "failure_policy": "fail_loudly_without_legacy_packet_fallback",
     }
 
 
@@ -367,9 +369,31 @@ def _promote_decision_writer_packet_as_active(scaffold: dict[str, Any]) -> bool:
 def _decision_writer_packet_ready(writer_packet: Any, quality: Any) -> bool:
     if not isinstance(writer_packet, dict) or not writer_packet.get("evidence_units"):
         return False
-    if isinstance(quality, dict) and quality.get("status") != "ready":
+    if _blocking_decision_writer_quality_issues(quality):
         return False
     return True
+
+
+def _decision_writer_packet_readiness_reason(writer_packet: Any, quality: Any) -> str:
+    if not isinstance(writer_packet, dict):
+        return "missing_decision_writer_packet"
+    if not writer_packet.get("evidence_units"):
+        return "decision_writer_packet_has_no_evidence_units"
+    blocking = _blocking_decision_writer_quality_issues(quality)
+    if blocking:
+        return "decision_writer_packet_has_blocking_quality_issues"
+    return "ready"
+
+
+def _blocking_decision_writer_quality_issues(quality: Any) -> list[str]:
+    issues = set(_list_value(_dict_value(quality).get("issues")))
+    blocking = {
+        "empty_writer_packet",
+        "missing_support_unit",
+        "source_trail_missing_for_units",
+        "critical_evidence_not_accounted",
+    }
+    return sorted(issues & blocking)
 
 
 def _analyst_downgraded_evidence_ids(scaffold: dict[str, Any]) -> list[str]:
@@ -440,3 +464,11 @@ def _card_count(value: Any) -> int:
 
 def _list_count(value: Any) -> int:
     return len(value) if isinstance(value, list) else 0
+
+
+def _dict_value(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list_value(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []

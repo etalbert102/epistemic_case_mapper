@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
@@ -555,7 +557,7 @@ def test_presentation_normalization_replaces_source_ids_from_source_trail() -> N
     assert "[s1]" not in result["memo"]
 
 
-def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet() -> None:
+def test_analyst_packet_promotion_fails_loudly_without_decision_writer_packet() -> None:
     analyst_packet = build_analyst_packet_bundle(
         packet=_packet(),
         ledger=_ledger(),
@@ -575,14 +577,16 @@ def test_analyst_packet_promotion_makes_analyst_packet_the_single_active_packet(
 
     _promote_analyst_packet_as_active(scaffold)
 
-    assert scaffold["memo_ready_packet"]["method"] == "analyst_adjudicated_packet_adapter"
-    assert scaffold["memo_ready_packet"]["canonical_decision_writer_packet"]["schema_id"] == "canonical_decision_writer_packet_v1"
+    assert scaffold["memo_ready_packet"] == {}
     assert "legacy_deterministic_memo_ready_packet" not in scaffold
     assert "legacy_deterministic_memo_ready_packet_quality_report" not in scaffold
-    assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "memo_ready_packet"
-    assert scaffold["active_memo_ready_packet_report"]["status"] == "analyst_active"
-    assert scaffold["active_memo_ready_packet_report"]["active_packet"] == "memo_ready_packet"
-    assert scaffold["active_memo_ready_packet_report"]["downgraded_evidence_item_ids"] == ["bundle:off_question"]
+    assert scaffold["memo_ready_packet_quality_report"]["active_packet"] == "none"
+    assert scaffold["memo_ready_packet_quality_report"]["status"] == "failed"
+    assert scaffold["active_memo_ready_packet_report"]["status"] == "failed_decision_writer_packet_not_active"
+    assert scaffold["active_memo_ready_packet_report"]["active_packet"] == "none"
+    assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_status"] == "missing_decision_writer_packet"
+    assert scaffold["active_memo_ready_packet_report"]["legacy_analyst_packet_available"] is True
+    assert scaffold["active_memo_ready_packet_report"]["failure_policy"] == "fail_loudly_without_legacy_packet_fallback"
 
 
 def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
@@ -634,6 +638,48 @@ def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
     assert scaffold["memo_ready_packet"]["canonical_decision_writer_packet_quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
     assert scaffold["active_memo_ready_packet_report"]["status"] == "decision_writer_active"
     assert scaffold["memo_ready_packet_quality_report"]["active_packet_source"] == "decision_writer_packet"
+
+
+def test_warning_decision_writer_packet_does_not_fall_back_to_analyst_packet() -> None:
+    analyst_packet = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=_ledger(),
+        adjudication=_adjudication(),
+    )["analyst_memo_ready_packet"]
+    scaffold = {
+        "analyst_memo_ready_packet": analyst_packet,
+        "analyst_packet_quality_report": {"schema_id": "analyst_packet_quality_report_v1", "status": "ready"},
+        "decision_writer_packet": {
+            "schema_id": "decision_writer_packet_v1",
+            "decision_question": "Should option A be adopted?",
+            "answer": {"bounded_answer": "Adopt option A only if risk is bounded."},
+            "decision_logic": {"bounded_bottom_line": "Adopt option A only if risk is bounded."},
+            "argument_plan": [],
+            "evidence_units": [
+                {
+                    "unit_id": "decision_unit_001",
+                    "role": "strongest_support",
+                    "claim": "Option A reduces losses.",
+                    "source_labels": ["Outcome Study"],
+                    "lineage": {"covered_evidence_item_ids": ["bundle:support"]},
+                }
+            ],
+            "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}],
+        },
+        "decision_writer_packet_quality_report": {
+            "schema_id": "decision_writer_packet_quality_report_v1",
+            "status": "warning",
+            "issues": ["critical_evidence_not_accounted"],
+        },
+    }
+
+    _promote_analyst_packet_as_active(scaffold)
+
+    assert scaffold["memo_ready_packet"] == {}
+    assert scaffold["active_memo_ready_packet_report"]["status"] == "failed_decision_writer_packet_not_active"
+    assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_status"] == "decision_writer_packet_has_blocking_quality_issues"
+    assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_quality_issues"] == ["critical_evidence_not_accounted"]
+    assert scaffold["active_memo_ready_packet_report"]["legacy_analyst_packet_available"] is True
 
 
 def test_ready_decision_writer_path_skips_legacy_analyst_refinement() -> None:
@@ -774,7 +820,7 @@ def test_decision_writer_budget_keeps_adjudicated_quantified_support_mandatory()
     assert len(mandatory_support) == 4
 
 
-def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -> None:
+def test_final_reader_outputs_fail_without_decision_writer_active_packet(tmp_path: Path) -> None:
     scaffold = _scaffold()
     scaffold["question"] = "Should option A be adopted?"
     scaffold["analyst_memo_ready_packet"] = build_analyst_packet_bundle(
@@ -784,14 +830,11 @@ def test_final_reader_outputs_prefer_analyst_memo_ready_packet(tmp_path: Path) -
     )["analyst_memo_ready_packet"]
     _promote_analyst_packet_as_active(scaffold)
 
-    result = write_final_reader_outputs(
-        rendered="## Decision Brief\n\nSeed memo.",
-        scaffold=scaffold,
-        prioritized_map={"claims": []},
-        artifacts=tmp_path,
-        backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
-    )
-
-    assert result["rewrite_result"]["report"]["memo_ready_packet_path"] is True
-    assert result["rewrite_result"]["report"]["active_memo_ready_packet_method"] == "analyst_adjudicated_packet_adapter"
-    assert "Should option A be adopted?" in result["briefing_path"].read_text()
+    with pytest.raises(ValueError, match="requires scaffold.memo_ready_packet.evidence_items"):
+        write_final_reader_outputs(
+            rendered="## Decision Brief\n\nSeed memo.",
+            scaffold=scaffold,
+            prioritized_map={"claims": []},
+            artifacts=tmp_path,
+            backend_config=ModelBackendConfig(backend="prompt", timeout=30, retries=0),
+        )

@@ -19,6 +19,21 @@ from epistemic_case_mapper.map_briefing_decision_writer_helpers import (
     memo_use_by_evidence_id,
     merged_source_appraisal,
 )
+from epistemic_case_mapper.map_briefing_decision_relevance import (
+    analyst_quantity_relevance_plan,
+    analyst_relevance_plan,
+    combined_relevance_decision,
+    serializable_quantity_relevance_plan,
+    unit_relevance_decisions,
+)
+from epistemic_case_mapper.map_briefing_decision_quantity_plan import (
+    build_quantity_obligation_plan,
+    quantity_fallback_requests,
+    quantity_must_retain,
+    quantity_plan_by_evidence_value,
+    quantity_plan_for_unit,
+    quantity_plan_match,
+)
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
@@ -118,6 +133,8 @@ def decision_writer_packet_to_memo_ready_packet(
         "decision_obligation_plan": decision_obligation_plan,
         "decision_memo_contract": decision_contract,
         "decision_contract_source_judgment_lineage": decision_contract.get("judgment_lineage", {}),
+        "analyst_relevance_plan": semantic_context.get("analyst_relevance_plan", {}),
+        "analyst_quantity_relevance_plan": serializable_quantity_relevance_plan(semantic_context.get("analyst_quantity_relevance_plan")),
         "writer_packet_writeability_report": writeability,
         "writer_packet_fallback_requests": writeability.get("fallback_requests", []),
         "quantity_obligation_plan": semantic_context.get("quantity_obligation_plan", {}),
@@ -185,13 +202,14 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
     effective_role = effective_writer_role(source_role, relation)
     obligation_unit = {**unit, "role": effective_role}
     obligation = _obligation_for_unit(obligation_unit, semantic_context=semantic_context)
-    quantity_plan = _quantity_plan_for_unit(unit, semantic_context=semantic_context)
+    quantity_plan = quantity_plan_for_unit(unit, semantic_context=semantic_context)
     quantities = _memo_ready_quantities(unit, quantity_plan=quantity_plan)
     diagnosticity = decision_unit_diagnosticity(
         obligation_unit,
         adjudication_by_id=_dict(semantic_context.get("adjudication_by_evidence_id")),
         quantity_plan=quantity_plan,
     )
+    relevance = unit_relevance_decisions(unit, semantic_context=semantic_context)
     return {
         "item_id": f"decision_writer_item_{index:03d}",
         "role": effective_role,
@@ -218,6 +236,9 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "include_reason": obligation.get("include_reason", ""),
         "demotion_reason": obligation.get("demotion_reason", ""),
         "judgment_lineage": obligation.get("judgment_lineage", []),
+        "memo_inclusion": obligation.get("memo_inclusion", ""),
+        "memo_inclusion_rationale": obligation.get("memo_inclusion_rationale", ""),
+        "analyst_relevance_decisions": relevance,
         "must_use": obligation.get("obligation_level") == "must_include",
     }
 
@@ -231,8 +252,8 @@ def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dic
         value = str(quantity.get("value") or "").strip()
         if not value:
             continue
-        plan = _quantity_plan_match(quantity, quantity_plan)
-        if plan and not _quantity_must_retain(plan):
+        plan = quantity_plan_match(quantity, quantity_plan)
+        if plan and not quantity_must_retain(plan):
             continue
         if quantity_plan and not plan:
             continue
@@ -258,8 +279,8 @@ def _excluded_quantity_values(unit: dict[str, Any], *, quantity_plan: dict[str, 
         value = str(quantity.get("value") or "").strip()
         if not value:
             continue
-        plan = _quantity_plan_match(quantity, quantity_plan)
-        if quantity_plan and (not plan or not _quantity_must_retain(plan)):
+        plan = quantity_plan_match(quantity, quantity_plan)
+        if quantity_plan and (not plan or not quantity_must_retain(plan)):
             excluded.append(value)
     return _dedupe(excluded)
 
@@ -347,7 +368,7 @@ def build_writer_packet_writeability_report(
     role_counts = Counter(str(item.get("role") or "unknown") for item in evidence_items if isinstance(item, dict))
     fallback_requests = [
         *_list(decision_obligation_plan.get("fallback_requests")),
-        *_quantity_fallback_requests(semantic_context.get("quantity_obligation_plan", {})),
+        *quantity_fallback_requests(semantic_context.get("quantity_obligation_plan", {})),
     ]
     issues = [
         *(["too_many_mandatory_obligations"] if len(required) > 12 else []),
@@ -393,14 +414,21 @@ def _semantic_context(
     analyst_quantity_binding_report: dict[str, Any] | None,
     global_decision_model: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    quantity_plan = _quantity_obligation_plan(analyst_quantity_binding_report or {})
+    analyst_model = analyst_decision_model if isinstance(analyst_decision_model, dict) else {}
+    analyst_quantity_relevance = analyst_quantity_relevance_plan(analyst_model)
+    quantity_plan = build_quantity_obligation_plan(
+        analyst_quantity_binding_report or {},
+        analyst_quantity_relevance=analyst_quantity_relevance,
+    )
     return {
         "analyst_adjudication": analyst_adjudication if isinstance(analyst_adjudication, dict) else {},
-        "analyst_decision_model": analyst_decision_model if isinstance(analyst_decision_model, dict) else {},
+        "analyst_decision_model": analyst_model,
         "global_decision_model": global_decision_model if isinstance(global_decision_model, dict) else {},
         "analyst_quantity_binding_report": analyst_quantity_binding_report if isinstance(analyst_quantity_binding_report, dict) else {},
         "quantity_obligation_plan": quantity_plan,
-        "quantity_plan_by_evidence_value": _quantity_plan_by_evidence_value(quantity_plan),
+        "quantity_plan_by_evidence_value": quantity_plan_by_evidence_value(quantity_plan),
+        "analyst_relevance_plan": analyst_relevance_plan(analyst_model),
+        "analyst_quantity_relevance_plan": analyst_quantity_relevance,
         "memo_use_by_evidence_id": memo_use_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
         "answer_relation_by_evidence_id": answer_relation_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
         "adjudication_by_evidence_id": _adjudication_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
@@ -412,11 +440,29 @@ def _obligation_for_unit(unit: dict[str, Any], *, semantic_context: dict[str, An
     evidence_ids = _string_list(_dict(unit.get("lineage")).get("covered_evidence_item_ids"))
     memo_uses = _dedupe([_memo_use_for_evidence_id(evidence_id, semantic_context=semantic_context) for evidence_id in evidence_ids])
     memo_uses = [value for value in memo_uses if value]
+    relevance_decision = combined_relevance_decision(evidence_ids, semantic_context=semantic_context)
     level = _base_obligation_level(role)
     function = _memo_function(role)
     lineage = ["global_decision_model"]
     include_reason = str(unit.get("decision_relevance") or "").strip()
     demotion_reason = ""
+    memo_inclusion = str(relevance_decision.get("memo_inclusion") or "").strip()
+    memo_inclusion_rationale = str(relevance_decision.get("rationale") or "").strip()
+    if memo_inclusion:
+        lineage.append("analyst_decision_model_relevance")
+        if memo_inclusion == "memo_spine":
+            level = "must_include" if role != "context_only" else "should_include"
+            include_reason = memo_inclusion_rationale or include_reason
+        elif memo_inclusion == "supporting_context":
+            level = "should_include"
+            function = function if function != "background" else "interpretive_context"
+            include_reason = memo_inclusion_rationale or include_reason
+        elif memo_inclusion == "trace_only":
+            level = "optional_context"
+            demotion_reason = memo_inclusion_rationale or "Analyst decision model marked this evidence as trace-only."
+        elif memo_inclusion == "exclude":
+            level = "optional_context"
+            demotion_reason = memo_inclusion_rationale or "Analyst decision model marked this evidence as outside the memo answer."
     if role == "context_only":
         if any(value in {"decision_crux", "load_bearing_primary_support", "load_bearing_counterweight", "quantitative_anchor"} for value in memo_uses):
             level = "should_include"
@@ -438,6 +484,8 @@ def _obligation_for_unit(unit: dict[str, Any], *, semantic_context: dict[str, An
         "include_reason": include_reason or f"Global decision model selected this unit as {role}.",
         "demotion_reason": demotion_reason,
         "judgment_lineage": _dedupe(lineage),
+        "memo_inclusion": memo_inclusion,
+        "memo_inclusion_rationale": memo_inclusion_rationale,
     }
 
 
@@ -475,99 +523,6 @@ def _memo_use_for_evidence_id(evidence_id: str, *, semantic_context: dict[str, A
     return str(_dict(semantic_context.get("memo_use_by_evidence_id")).get(str(evidence_id or "").strip()) or "").strip()
 
 
-def _quantity_obligation_plan(report: dict[str, Any]) -> dict[str, Any]:
-    rows = []
-    for row in _list(report.get("candidate_bindings")):
-        if not isinstance(row, dict):
-            continue
-        memo_use = str(row.get("memo_use") or "").strip()
-        role = _quantity_role(row)
-        must_retain = bool(row.get("must_retain")) if "must_retain" in row else memo_use == "yes" and role == "decision_anchor"
-        rows.append(
-            {
-                "quantity_id": str(row.get("candidate_id") or "").strip(),
-                "candidate_id": str(row.get("candidate_id") or "").strip(),
-                "quantity_role": role,
-                "must_retain": must_retain,
-                "retention_phrase": str(row.get("interpretation") or row.get("value") or "").strip(),
-                "why_quantity_matters": str(row.get("rationale") or "").strip(),
-                "demotion_reason": "" if must_retain else str(row.get("rationale") or "Not selected as a memo-facing quantity.").strip(),
-                "source_label": _first(_string_list(row.get("source_labels"))),
-                "source_labels": _string_list(row.get("source_labels")),
-                "source_evidence_item_id": str(row.get("source_evidence_item_id") or "").strip(),
-                "value": str(row.get("value") or "").strip(),
-                "memo_use": memo_use,
-                "binding_source": str(row.get("binding_source") or "").strip(),
-            }
-        )
-    return {
-        "schema_id": "quantity_obligation_plan_v1",
-        "method": "reuse_existing_analyst_quantity_binding",
-        "quantity_count": len(rows),
-        "must_retain_count": sum(1 for row in rows if row.get("must_retain")),
-        "rows": rows,
-        "source_report_status": report.get("status", "missing") if isinstance(report, dict) else "missing",
-    }
-
-
-def _quantity_role(row: dict[str, Any]) -> str:
-    existing = str(row.get("quantity_role") or "").strip()
-    if existing in {"decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"}:
-        return existing
-    memo_role = str(row.get("memo_role") or "").strip()
-    warnings = set(_string_list(row.get("deterministic_warnings")))
-    value = str(row.get("value") or "").lower()
-    if str(row.get("memo_use") or "") == "no":
-        return "audit_only"
-    if "p_value_not_effect_measure" in warnings or "heterogeneity_statistic_not_effect_measure" in warnings or "p" in value and re_contains_stat_test(value):
-        return "statistical_detail"
-    if memo_role == "quantitative_anchor":
-        return "decision_anchor"
-    if str(row.get("memo_use") or "") == "yes":
-        return "supporting_detail"
-    return "audit_only" if str(row.get("memo_use") or "") == "no" else "study_descriptor"
-
-
-def re_contains_stat_test(value: str) -> bool:
-    return "p=" in value or "p <" in value or "p>" in value or "p <" in value
-
-
-def _quantity_plan_by_evidence_value(plan: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
-    rows: dict[tuple[str, str], dict[str, Any]] = {}
-    for row in _list(plan.get("rows")):
-        if not isinstance(row, dict):
-            continue
-        evidence_id = str(row.get("source_evidence_item_id") or "").strip()
-        value = str(row.get("value") or "").strip()
-        if evidence_id and value:
-            rows[(evidence_id, value)] = row
-    return rows
-
-
-def _quantity_plan_for_unit(unit: dict[str, Any], *, semantic_context: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    by_key = _dict(semantic_context.get("quantity_plan_by_evidence_value"))
-    rows: dict[str, dict[str, Any]] = {}
-    for quantity in _list(unit.get("quantities")):
-        if not isinstance(quantity, dict):
-            continue
-        evidence_id = str(quantity.get("source_evidence_item_id") or "").strip()
-        value = str(quantity.get("value") or "").strip()
-        plan = by_key.get((evidence_id, value))
-        if isinstance(plan, dict):
-            rows[f"{evidence_id}::{value}"] = plan
-    return rows
-
-
-def _quantity_plan_match(quantity: dict[str, Any], quantity_plan: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    evidence_id = str(quantity.get("source_evidence_item_id") or "").strip()
-    value = str(quantity.get("value") or "").strip()
-    return _dict(quantity_plan.get(f"{evidence_id}::{value}"))
-
-
-def _quantity_must_retain(plan: dict[str, Any]) -> bool:
-    return bool(plan.get("must_retain"))
-
-
 def _obligation_fallback_requests(obligations: list[dict[str, Any]], conflicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     requests = [
         {
@@ -588,29 +543,6 @@ def _obligation_fallback_requests(obligations: list[dict[str, Any]], conflicts: 
                 }
             )
     return requests
-
-
-def _quantity_fallback_requests(quantity_plan: dict[str, Any]) -> list[dict[str, Any]]:
-    rows = [row for row in _list(quantity_plan.get("rows")) if isinstance(row, dict)]
-    must = [row for row in rows if row.get("must_retain")]
-    if rows and not must:
-        return [
-            {
-                "request_type": "quantity_obligation_review",
-                "reason": "quantity_binding_selected_no_memo_facing_quantities",
-                "candidate_count": len(rows),
-            }
-        ]
-    if len(must) > 24:
-        return [
-            {
-                "request_type": "quantity_obligation_compression",
-                "reason": "too_many_memo_facing_quantities",
-                "must_retain_count": len(must),
-            }
-        ]
-    return []
-
 
 def _expected_length_band(required_count: int, quantity_count: int) -> str:
     if required_count > 12 or quantity_count > 24:
@@ -869,10 +801,6 @@ def _source_rows(ledger_row: dict[str, Any]) -> list[dict[str, str]]:
 
 def _source_key(row: dict[str, Any]) -> str:
     return str(row.get("source_id") or row.get("source_label") or "").strip().lower()
-
-
-def _first(values: list[str]) -> str:
-    return values[0] if values else ""
 
 
 def _ledger_by_id(ledger: dict[str, Any]) -> dict[str, dict[str, Any]]:

@@ -55,13 +55,10 @@ def apply_decision_diagnostic_ranking(
             continue
         updated = dict(group)
         score, reasons, best_rank = _group_score(updated, row_by_id)
-        updated["diagnostic_priority_score"] = score
-        updated["diagnostic_priority_reasons"] = reasons
-        updated["best_adjudicated_importance_rank"] = best_rank
-        ranked.append((updated, index))
-    ranked.sort(key=lambda pair: (-int(pair[0].get("diagnostic_priority_score", 0) or 0), _original_rank(pair[0]), pair[1], str(pair[0].get("group_id") or "")))
+        ranked.append((updated, index, score, reasons, best_rank))
+    ranked.sort(key=lambda pair: (-pair[2], _original_rank(pair[0]), pair[1], str(pair[0].get("group_id") or "")))
     reranked = []
-    for new_rank, (group, original_index) in enumerate(ranked, start=1):
+    for new_rank, (group, original_index, score, reasons, best_rank) in enumerate(ranked, start=1):
         old_rank = _original_rank(group)
         updated = dict(group)
         updated["importance_rank"] = new_rank
@@ -73,8 +70,9 @@ def apply_decision_diagnostic_ranking(
                     "from_importance_rank": old_rank,
                     "to_importance_rank": new_rank,
                     "original_order": original_index + 1,
-                    "diagnostic_priority_score": updated.get("diagnostic_priority_score"),
-                    "reasons": updated.get("diagnostic_priority_reasons", []),
+                    "diagnostic_priority_score": score,
+                    "diagnostic_priority_reasons": reasons,
+                    "best_adjudicated_importance_rank": best_rank,
                 }
             )
     return reranked, {
@@ -103,8 +101,19 @@ def apply_obligation_budget(evidence_items: list[dict[str, Any]]) -> None:
     for role, items in by_role.items():
         if role == "context_only":
             continue
-        ordered = sorted(items, key=_obligation_budget_sort_key)
+        forced_ids = {
+            id(item)
+            for item in items
+            if str(item.get("memo_inclusion") or "") == "memo_spine"
+        }
+        eligible = [
+            item
+            for item in items
+            if str(item.get("memo_inclusion") or "") not in {"trace_only", "exclude", "supporting_context"}
+        ]
+        ordered = sorted(eligible, key=_obligation_budget_sort_key)
         required_ids = {id(item) for item in ordered[: budgets.get(role, 2)]}
+        required_ids.update(forced_ids)
         for item in items:
             if id(item) in required_ids:
                 item["obligation_level"] = "must_include"

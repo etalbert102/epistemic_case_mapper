@@ -253,6 +253,69 @@ class AnalystEvidenceDisposition(BaseModel):
         }.get(text, text)
 
 
+MemoInclusion = Literal["memo_spine", "supporting_context", "trace_only", "exclude"]
+QuantityInclusion = Literal["must_use", "supporting_context", "trace_only", "exclude"]
+
+
+class AnalystMemoRelevanceDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_item_id: str
+    memo_inclusion: MemoInclusion
+    rationale: str = Field(min_length=1)
+    group_id: str = ""
+    source_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("evidence_item_id", "memo_inclusion", "rationale", "group_id", mode="before")
+    @classmethod
+    def _strip_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("source_ids", mode="before")
+    @classmethod
+    def _list_field(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
+    @field_validator("memo_inclusion", mode="before")
+    @classmethod
+    def _normalize_memo_inclusion(cls, value: Any) -> str:
+        return _memo_inclusion_alias(str(value or ""))
+
+
+class AnalystQuantityRelevanceDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_item_id: str
+    quantity_value: str
+    memo_inclusion: QuantityInclusion
+    quantity_role: Literal["decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"] = "audit_only"
+    retention_phrase: str = ""
+    rationale: str = Field(min_length=1)
+
+    @field_validator(
+        "evidence_item_id",
+        "quantity_value",
+        "memo_inclusion",
+        "quantity_role",
+        "retention_phrase",
+        "rationale",
+        mode="before",
+    )
+    @classmethod
+    def _strip_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("memo_inclusion", mode="before")
+    @classmethod
+    def _normalize_quantity_inclusion(cls, value: Any) -> str:
+        return _quantity_inclusion_alias(str(value or ""))
+
+
 class AnalystDecisionModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -265,6 +328,8 @@ class AnalystDecisionModel(BaseModel):
     evidence_dispositions: list[AnalystEvidenceDisposition] = Field(default_factory=list)
     quantitative_anchors: list[str] = Field(default_factory=list)
     what_would_change_the_answer: list[str] = Field(default_factory=list)
+    memo_relevance_decisions: list[AnalystMemoRelevanceDecision] = Field(default_factory=list)
+    quantity_relevance_decisions: list[AnalystQuantityRelevanceDecision] = Field(default_factory=list)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
 
@@ -643,6 +708,16 @@ def _normalize_decision_model_payload(payload: Any) -> Any:
             if not isinstance(row, dict):
                 continue
             _normalize_decision_disposition_aliases(row, group_ids)
+    relevance = normalized.get("memo_relevance_decisions")
+    if isinstance(relevance, list):
+        for row in relevance:
+            if isinstance(row, dict) and isinstance(row.get("memo_inclusion"), str):
+                row["memo_inclusion"] = _memo_inclusion_alias(row["memo_inclusion"])
+    quantities = normalized.get("quantity_relevance_decisions")
+    if isinstance(quantities, list):
+        for row in quantities:
+            if isinstance(row, dict) and isinstance(row.get("memo_inclusion"), str):
+                row["memo_inclusion"] = _quantity_inclusion_alias(row["memo_inclusion"])
     return normalized
 
 
@@ -682,23 +757,65 @@ def _allowed_decision_memo_uses() -> tuple[str, ...]:
 
 
 def _memo_use_alias(value: str) -> str:
-    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    normalized = value.strip().strip("'\"").lower().replace("-", "_").replace(" ", "_")
     return {
         "covered_by": "covered_by_group",
         "covered": "covered_by_group",
         "primary_support": "load_bearing_primary_support",
         "support": "load_bearing_primary_support",
+        "memo_spine": "load_bearing_primary_support",
         "counterweight": "load_bearing_counterweight",
         "scope": "scope_or_applicability",
         "applicability": "scope_or_applicability",
         "crux": "decision_crux",
         "context": "mechanism_or_context",
+        "supporting_context": "mechanism_or_context",
+        "trace_only": "background_only",
         "background": "background_only",
+        "exclude": "not_decision_relevant",
+    }.get(normalized, normalized)
+
+
+def _memo_inclusion_alias(value: str) -> str:
+    normalized = value.strip().strip("'\"").lower().replace("-", "_").replace(" ", "_")
+    return {
+        "must_use": "memo_spine",
+        "must_include": "memo_spine",
+        "foreground": "memo_spine",
+        "include": "memo_spine",
+        "supporting": "supporting_context",
+        "should_include": "supporting_context",
+        "context": "supporting_context",
+        "background": "trace_only",
+        "appendix": "trace_only",
+        "omit": "trace_only",
+        "not_relevant": "exclude",
+        "not_decision_relevant": "exclude",
+        "irrelevant": "exclude",
+    }.get(normalized, normalized)
+
+
+def _quantity_inclusion_alias(value: str) -> str:
+    normalized = value.strip().strip("'\"").lower().replace("-", "_").replace(" ", "_")
+    return {
+        "yes": "must_use",
+        "must_include": "must_use",
+        "memo_spine": "must_use",
+        "include": "must_use",
+        "should_include": "supporting_context",
+        "context": "supporting_context",
+        "context_only": "supporting_context",
+        "background": "trace_only",
+        "appendix": "trace_only",
+        "omit": "trace_only",
+        "no": "exclude",
+        "not_relevant": "exclude",
+        "not_decision_relevant": "exclude",
     }.get(normalized, normalized)
 
 
 def _answer_relation_alias(value: str) -> str:
-    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    normalized = value.strip().strip("'\"").lower().replace("-", "_").replace(" ", "_")
     return {
         "": "uncertain_relation",
         "support": "supports_answer",

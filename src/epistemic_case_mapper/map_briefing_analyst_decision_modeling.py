@@ -282,6 +282,8 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "When answer_status is selected or provisional and current_best_answer is present, classify relative to that answer while preserving the affected live option in target_answer_option.",
             "When answer_status is multi_option or unresolved, organize evidence around the live answer options, conditions, and cruxes instead of forcing a single final-answer polarity.",
             "Use evidence IDs to form higher-level evidence groups; do not merely classify rows one by one.",
+            "For every evidence row that could affect the memo, also fill memo_relevance_decisions with a transparent memo_inclusion choice.",
+            "Use memo_spine only for evidence the memo would be materially worse without; use supporting_context for useful but non-core evidence; use trace_only for evidence that should remain available for audit but should not burden the memo prose; use exclude for off-question evidence.",
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
             "You may merge skeleton groups or move an item to a better group when the reasoning calls for it, but every skeleton evidence_item_id should either be covered by an evidence_group or explicitly dispositioned.",
             "Rank groups by how much they should affect the answer.",
@@ -298,6 +300,9 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Before compressing evidence, check retention_obligations and obligation_group_skeleton. Quantitative anchors, counterweights, cruxes, and scope boundaries listed there should normally appear in evidence_groups; if one is backgrounded or excluded, make that decision explicit in evidence_dispositions with a rationale.",
             "Keep support and counterweight evidence analytically separate unless the proposition explicitly explains how the tension is resolved. Do not bury contrary evidence inside a support group.",
             "Preserve actionable quantities as quantities, not just as generic prose.",
+            "For quantity_relevance_decisions, judge each quantity's memo relevance separately from its parent claim: a claim can be memo_spine while some of its quantities are trace_only.",
+            "Mark a quantity must_use only when it calibrates the answer, threshold, tradeoff, scope boundary, or update trigger; mark statistical details, dates, eligibility windows, and background nutrient amounts trace_only unless they are decision-load-bearing for this question.",
+            "Give every memo-facing quantity a reader-safe retention_phrase that says what the number measures.",
             "Use covered_evidence_item_ids inside evidence_groups for foreground accounting.",
             "Keep evidence_dispositions short: include only rows not covered by any evidence group or rows whose exclusion/backgrounding/review status needs to be explicit.",
             "Use ordinary analyst language for direct_answer, proposition, rationale, answer_impact, and decision_logic.",
@@ -454,7 +459,6 @@ def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tupl
     groups, report = apply_decision_diagnostic_ranking(_list(model.get("evidence_groups")), _list(context.get("evidence_rows")))
     updated = dict(model)
     updated["evidence_groups"] = groups
-    updated["ranking_guard"] = report
     updated["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
     return updated, report
 

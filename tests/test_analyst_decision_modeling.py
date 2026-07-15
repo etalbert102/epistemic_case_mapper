@@ -464,8 +464,13 @@ def test_decision_model_ranking_guard_promotes_quantified_decision_anchor(monkey
     groups = result["analyst_decision_model"]["evidence_groups"]
     assert groups[0]["group_id"] == "outcome_group"
     assert groups[0]["importance_rank"] == 1
-    assert groups[0]["diagnostic_priority_score"] > groups[1]["diagnostic_priority_score"]
-    assert result["analyst_decision_model_ranking_guard"]["changed_group_count"] >= 1
+    ranking_guard = result["analyst_decision_model_ranking_guard"]
+    assert ranking_guard["changed_group_count"] >= 1
+    score_by_group = {
+        change["group_id"]: change["diagnostic_priority_score"]
+        for change in ranking_guard["changes"]
+    }
+    assert score_by_group["outcome_group"] > score_by_group["context_group"]
 
 
 def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> None:

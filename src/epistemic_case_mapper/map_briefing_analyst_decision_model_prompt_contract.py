@@ -44,6 +44,25 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
                 "rationale": "why it is backgrounded, excluded, or needs review; omit rows already covered by evidence_groups unless there is a special reason",
             }
         ],
+        "memo_relevance_decisions": [
+            {
+                "evidence_item_id": "evidence ID from context",
+                "memo_inclusion": "memo_spine | supporting_context | trace_only | exclude",
+                "group_id": "evidence_group that owns this decision, if applicable",
+                "source_ids": ["source IDs supporting the evidence item"],
+                "rationale": "transparent reason this evidence should appear in memo prose, remain trace-only, or be excluded",
+            }
+        ],
+        "quantity_relevance_decisions": [
+            {
+                "evidence_item_id": "evidence ID from context",
+                "quantity_value": "copy the quantity exactly from the evidence row",
+                "memo_inclusion": "must_use | supporting_context | trace_only | exclude",
+                "quantity_role": "decision_anchor | supporting_detail | study_descriptor | statistical_detail | audit_only",
+                "retention_phrase": "reader-facing wording to use if this quantity is must_use or supporting_context, otherwise empty",
+                "rationale": "why this quantity should or should not be reader-facing for the decision question",
+            }
+        ],
         "quantitative_anchors": ["quantities that should survive final synthesis"],
         "what_would_change_the_answer": ["cruxes or missing evidence that would change the answer"],
         "decision_logic": {

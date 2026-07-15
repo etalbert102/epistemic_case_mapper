@@ -13,6 +13,9 @@ from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
     naturalize_decision_logic_payload,
     naturalize_decision_logic_text,
 )
+from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract import (
+    decision_model_required_output_schema,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -109,9 +112,14 @@ def build_decision_model_task_prompt(task: dict[str, Any]) -> str:
                 "Rank groups by decision diagnosticity, not generic relevance. Outcome/effect, quantity, crux, counterweight, and scope-boundary evidence should outrank background or contextual guidance when they more directly change the answer.",
                 "If a row is merely contextual, do not make it the top support unless it is the actual reason the decision answer changes.",
                 "Every supplied evidence_item_id must appear in either evidence_groups.covered_evidence_item_ids or evidence_dispositions.",
+                "For every supplied evidence_item_id, fill memo_relevance_decisions with memo_spine, supporting_context, trace_only, or exclude.",
+                "For every supplied quantity_value, fill quantity_relevance_decisions. Mark must_use only when the quantity calibrates the answer, threshold, tradeoff, scope boundary, or update trigger.",
+                "Give reader-facing quantities a short retention_phrase that says what the number measures.",
                 "Use only supplied evidence IDs. Do not invent sources, quantities, or IDs.",
                 "Use ordinary analyst language. This is an intermediate model for later synthesis, not a memo.",
         ],
+        "allowed_memo_inclusion": ["memo_spine", "supporting_context", "trace_only", "exclude"],
+        "allowed_quantity_inclusion": ["must_use", "supporting_context", "trace_only", "exclude"],
         "allowed_memo_role": [
             "load_bearing_primary_support",
             "load_bearing_counterweight",
@@ -122,32 +130,7 @@ def build_decision_model_task_prompt(task: dict[str, Any]) -> str:
             "background_only",
             "needs_human_or_model_review",
         ],
-        "required_output_schema": {
-            "schema_id": "analyst_decision_model_v1",
-            "decision_question": task.get("decision_question"),
-            "direct_answer": "local answer contribution",
-            "confidence": "low | medium | high | not_specified",
-            "overall_rationale": "local rationale",
-            "evidence_groups": [
-                {
-                    "group_id": "",
-                    "proposition": "",
-                    "memo_role": "",
-                    "answer_relation": "supports_answer | challenges_answer | bounds_scope | identifies_crux | contextualizes_answer | not_decision_relevant | uncertain_relation",
-                    "target_answer_option": "",
-                    "effect_on_final_answer": "supports current_best_answer | weakens current_best_answer | bounds current_best_answer | supports target answer | weakens target answer | bounds target answer | rebuts alternative | distinguishes live options | explains tension | background",
-                    "tension_type": "none | clinical_outcome_vs_biomarker | subgroup_scope | dose_scope | study_conflict | mechanism | other",
-                    "importance_rank": 1,
-                    "covered_evidence_item_ids": [],
-                    "rationale": "",
-                }
-            ],
-            "evidence_dispositions": [{"evidence_item_id": "", "disposition": "foreground | background | not_decision_relevant | covered_by_group | needs_review", "group_id": "", "rationale": ""}],
-            "quantitative_anchors": [],
-            "what_would_change_the_answer": [],
-            "decision_logic": {},
-            "argument_plan": [],
-        },
+        "required_output_schema": decision_model_required_output_schema(task.get("decision_question")),
         "context": task,
     }
     return json.dumps(packet, indent=2, ensure_ascii=False)
@@ -173,6 +156,7 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
     groups = [_schema_safe_group(group) for group in groups]
     covered = {evidence_id for group in groups for evidence_id in _string_list(group.get("covered_evidence_item_ids"))}
     dispositions = _merged_dispositions(context, groups, dispositions_by_id, covered)
+    memo_relevance_decisions = _merged_memo_relevance_decisions(context, payloads, groups, dispositions)
     return {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": context.get("decision_question", ""),
@@ -181,6 +165,8 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
         "overall_rationale": _overall_rationale(groups, payloads),
         "evidence_groups": groups,
         "evidence_dispositions": dispositions,
+        "memo_relevance_decisions": memo_relevance_decisions,
+        "quantity_relevance_decisions": _merged_quantity_relevance_decisions(context, payloads, memo_relevance_decisions),
         "quantitative_anchors": _merged_texts(context, payloads, "quantitative_anchors"),
         "what_would_change_the_answer": _merged_texts(context, payloads, "what_would_change_the_answer"),
         "decision_logic": _decision_logic(context, groups, payloads),
@@ -416,6 +402,145 @@ def _merged_dispositions(context: dict[str, Any], groups: list[dict[str, Any]], 
             }
         )
     return rows
+
+
+def _merged_memo_relevance_decisions(
+    context: dict[str, Any],
+    payloads: list[dict[str, Any]],
+    groups: list[dict[str, Any]],
+    dispositions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    known = {str(row.get("evidence_item_id") or ""): row for row in _rows(context)}
+    decisions: dict[str, dict[str, Any]] = {}
+    group_by_id = {
+        evidence_id: group
+        for group in groups
+        for evidence_id in _string_list(group.get("covered_evidence_item_ids"))
+    }
+    for payload in payloads:
+        for row in _list(payload.get("memo_relevance_decisions")):
+            if not isinstance(row, dict):
+                continue
+            evidence_id = str(row.get("evidence_item_id") or "").strip()
+            if evidence_id not in known:
+                continue
+            decisions[evidence_id] = {
+                "evidence_item_id": evidence_id,
+                "memo_inclusion": _memo_inclusion_value(row.get("memo_inclusion")),
+                "group_id": str(row.get("group_id") or group_by_id.get(evidence_id, {}).get("group_id") or "").strip(),
+                "source_ids": _string_list(row.get("source_ids")) or _string_list(known[evidence_id].get("source_ids")),
+                "rationale": _short_text(str(row.get("rationale") or "Grouped analyst model relevance decision."), 360),
+            }
+    disposition_by_id = {str(row.get("evidence_item_id") or ""): row for row in dispositions if isinstance(row, dict)}
+    for evidence_id, row in known.items():
+        if evidence_id in decisions:
+            continue
+        group = group_by_id.get(evidence_id, {})
+        disposition = disposition_by_id.get(evidence_id, {})
+        decisions[evidence_id] = {
+            "evidence_item_id": evidence_id,
+            "memo_inclusion": _memo_inclusion_from_group_or_disposition(group, disposition),
+            "group_id": str(group.get("group_id") or disposition.get("group_id") or "").strip(),
+            "source_ids": _string_list(row.get("source_ids")),
+            "rationale": _short_text(_memo_inclusion_rationale(group, disposition), 360),
+        }
+    return list(decisions.values())
+
+
+def _merged_quantity_relevance_decisions(
+    context: dict[str, Any],
+    payloads: list[dict[str, Any]],
+    memo_relevance_decisions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows = {str(row.get("evidence_item_id") or ""): row for row in _rows(context)}
+    valid_quantities = {
+        evidence_id: set(_string_list(row.get("quantity_values")))
+        for evidence_id, row in rows.items()
+    }
+    decisions: dict[tuple[str, str], dict[str, Any]] = {}
+    for payload in payloads:
+        for row in _list(payload.get("quantity_relevance_decisions")):
+            if not isinstance(row, dict):
+                continue
+            evidence_id = str(row.get("evidence_item_id") or "").strip()
+            quantity = str(row.get("quantity_value") or "").strip()
+            if evidence_id not in rows or quantity not in valid_quantities.get(evidence_id, set()):
+                continue
+            inclusion = _quantity_inclusion_value(row.get("memo_inclusion"))
+            decisions[(evidence_id, quantity)] = {
+                "evidence_item_id": evidence_id,
+                "quantity_value": quantity,
+                "memo_inclusion": inclusion,
+                "quantity_role": _quantity_role_value(row.get("quantity_role"), inclusion),
+                "retention_phrase": _short_text(str(row.get("retention_phrase") or (quantity if inclusion in {"must_use", "supporting_context"} else "")), 220),
+                "rationale": _short_text(str(row.get("rationale") or "Grouped analyst model quantity relevance decision."), 360),
+            }
+    memo_by_id = {str(row.get("evidence_item_id") or ""): row for row in memo_relevance_decisions}
+    for evidence_id, row in rows.items():
+        for quantity in _string_list(row.get("quantity_values")):
+            key = (evidence_id, quantity)
+            if key in decisions:
+                continue
+            memo_inclusion = str(memo_by_id.get(evidence_id, {}).get("memo_inclusion") or "trace_only")
+            quantity_inclusion = "supporting_context" if memo_inclusion == "memo_spine" and _row_is_quantity_forward(row) else "trace_only"
+            decisions[key] = {
+                "evidence_item_id": evidence_id,
+                "quantity_value": quantity,
+                "memo_inclusion": quantity_inclusion,
+                "quantity_role": "supporting_detail" if quantity_inclusion == "supporting_context" else "audit_only",
+                "retention_phrase": quantity if quantity_inclusion == "supporting_context" else "",
+                "rationale": "Quantity retained by conservative fallback from the analyst evidence relevance decision.",
+            }
+    return list(decisions.values())
+
+
+def _memo_inclusion_value(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return text if text in {"memo_spine", "supporting_context", "trace_only", "exclude"} else "trace_only"
+
+
+def _quantity_inclusion_value(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return text if text in {"must_use", "supporting_context", "trace_only", "exclude"} else "trace_only"
+
+
+def _quantity_role_value(value: Any, inclusion: str) -> str:
+    text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    allowed = {"decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"}
+    if text in allowed:
+        return text
+    if inclusion == "must_use":
+        return "decision_anchor"
+    if inclusion == "supporting_context":
+        return "supporting_detail"
+    return "audit_only"
+
+
+def _memo_inclusion_from_group_or_disposition(group: dict[str, Any], disposition: dict[str, Any]) -> str:
+    role = str(group.get("memo_role") or "").strip()
+    if role in {"load_bearing_primary_support", "load_bearing_counterweight", "quantitative_anchor", "decision_crux"}:
+        return "memo_spine"
+    if role in {"scope_or_applicability", "mechanism_or_context", "needs_human_or_model_review"}:
+        return "supporting_context"
+    disposition_value = str(disposition.get("disposition") or "").strip()
+    if disposition_value == "not_decision_relevant":
+        return "exclude"
+    return "trace_only"
+
+
+def _memo_inclusion_rationale(group: dict[str, Any], disposition: dict[str, Any]) -> str:
+    if group:
+        return str(group.get("rationale") or "Derived from the grouped analyst model evidence role.")
+    return str(disposition.get("rationale") or "Not foregrounded by the grouped analyst model.")
+
+
+def _row_is_quantity_forward(row: dict[str, Any]) -> bool:
+    return str(row.get("current_role") or row.get("adjudicated_memo_use") or "").strip() in {
+        "quantitative_anchor",
+        "load_bearing_primary_support",
+        "load_bearing_counterweight",
+        "decision_crux",
+    }
 
 
 def _merged_direct_answer(payloads: list[dict[str, Any]]) -> str:
