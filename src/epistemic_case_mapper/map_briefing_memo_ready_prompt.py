@@ -8,6 +8,11 @@ from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_ligh
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
+from epistemic_case_mapper.map_briefing_source_bound_evidence import (
+    build_source_bound_evidence_atoms,
+    quantity_binding_rows,
+    source_bound_quantity_tuples,
+)
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -89,8 +94,9 @@ def build_memo_ready_section_synthesis_prompt(
         "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
+        "- Use source_bound_evidence_atoms as the primary factual units: keep each claim, quantity tuple, and allowed citation together.\n"
         "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
-        "- Treat protected_quantity_sets as all-or-nothing anchors: if a row appears, include every listed quantity value with its source.\n"
+        "- Treat protected_quantity_sets as all-or-nothing anchors: if a row appears, include every listed source_bound_quantity_atom with its allowed source citation.\n"
         "- Section role discipline never overrides retention: include every protected quantity and source_id listed in section_retention_requirements.\n"
         "- If one claim has several protected quantities, keep the full set together rather than sampling representative values.\n"
         "- Translate source weighting into prose instead of generic labels.\n"
@@ -226,6 +232,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
                     "protected_quantity_sets": _protected_quantity_sets(raw),
+                    "source_bound_evidence_atoms": _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw)),
                     "evidence_context": raw.get("evidence_context"),
                     "source_weighting": raw.get("source_weighting"),
                 }
@@ -431,17 +438,15 @@ def _section_source_ids(raw_section: dict[str, Any]) -> list[str]:
 
 def _protected_quantity_sets(raw_section: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
-    for row in [*_list(raw_section.get("evidence_context")), *_list(raw_section.get("retention_requirements"))]:
+    context_rows = _list(raw_section.get("quantity_binding_context")) or [
+        *_list(raw_section.get("evidence_context")),
+        *_list(raw_section.get("retention_requirements")),
+    ]
+    for row in context_rows:
         if not isinstance(row, dict):
             continue
-        quantities = []
-        for quantity in _list(row.get("quantities")):
-            value = quantity.get("value") if isinstance(quantity, dict) else quantity
-            value_text = str(value or "").strip()
-            if value_text:
-                quantities.append(value_text)
-        quantities = _dedupe(quantities)
-        if len(quantities) < 2:
+        quantity_atoms = source_bound_quantity_tuples(row)
+        if len(quantity_atoms) < 2:
             continue
         rows.append(
             _drop_empty(
@@ -449,11 +454,33 @@ def _protected_quantity_sets(raw_section: dict[str, Any]) -> list[dict[str, Any]
                     "item_id": row.get("item_id") or row.get("requirement_id"),
                     "claim": row.get("claim") or row.get("statement"),
                     "source_ids": row.get("source_ids"),
-                    "quantity_values": quantities,
+                    "source_bound_quantity_atoms": quantity_atoms,
                 }
             )
         )
     return _dedupe_rows(rows, "item_id")[:8]
+
+
+def _source_bound_atom_rows(raw_section: dict[str, Any]) -> list[dict[str, Any]]:
+    binding_rows = [row for row in _list(raw_section.get("quantity_binding_context")) if isinstance(row, dict)]
+    evidence_rows = [row for row in _list(raw_section.get("evidence_context")) if isinstance(row, dict)]
+    requirement_rows = [row for row in _list(raw_section.get("retention_requirements")) if isinstance(row, dict)]
+    if binding_rows:
+        return [*binding_rows, *_without_quantities(evidence_rows), *_without_quantities(requirement_rows)]
+    return [*evidence_rows, *requirement_rows]
+
+
+def _model_safe_source_bound_evidence_atoms(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    atoms = []
+    for atom in build_source_bound_evidence_atoms(rows, limit=14):
+        cleaned = {key: value for key, value in atom.items() if key != "excluded_quantity_tuples"}
+        if cleaned.get("claim") or cleaned.get("quantity_tuples"):
+            atoms.append(cleaned)
+    return atoms
+
+
+def _without_quantities(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{key: value for key, value in row.items() if key != "quantities"} for row in rows]
 
 
 def _filter_language_contracts(value: Any, source_ids: list[str]) -> list[dict[str, Any]]:
@@ -554,11 +581,13 @@ def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[
     guidance = _dict(canonical.get("lightweight_writer_guidance")) or _dict(memo_ready_packet.get("lightweight_writer_guidance"))
     usefulness = _dict(canonical.get("decision_usefulness_packet")) or _dict(memo_ready_packet.get("decision_usefulness_packet"))
     quality = _dict(canonical.get("decision_usefulness_quality_report")) or _dict(memo_ready_packet.get("decision_usefulness_quality_report"))
+    quantity_binding = _dict(canonical.get("analyst_quantity_binding_report")) or _dict(memo_ready_packet.get("analyst_quantity_binding_report"))
     additions = _drop_empty(
         {
             "lightweight_writer_guidance": guidance,
             "decision_usefulness_packet": usefulness,
             "decision_usefulness_quality_report": quality,
+            "analyst_quantity_binding_report": quantity_binding,
         }
     )
     if not additions:
@@ -666,6 +695,7 @@ def _section_writing_packets(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 *[source_id for row in section_requirements for source_id in _string_list(row.get("source_ids"))],
             ]
         )
+        binding_rows = quantity_binding_rows(packet, source_ids=source_ids) if source_ids else []
         packets.append(
             _drop_empty(
                 {
@@ -675,6 +705,7 @@ def _section_writing_packets(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     "required_points": section.get("must_include_points"),
                     "retention_requirements": section_requirements,
                     "evidence_context": evidence_rows,
+                    "quantity_binding_context": binding_rows[:12],
                     "source_weighting": [
                         row
                         for row in source_judgments
@@ -780,6 +811,7 @@ def _compact_row(row: dict[str, Any]) -> dict[str, Any]:
             "claim": row.get("claim") or row.get("statement"),
             "source_ids": row.get("source_ids") or ([row.get("source_id")] if row.get("source_id") else None),
             "quantities": row.get("quantities"),
+            "source_excerpt": row.get("source_excerpt"),
             "decision_relevance": row.get("decision_relevance"),
             "caveat": row.get("caveat"),
             "importance_rank": row.get("importance_rank"),

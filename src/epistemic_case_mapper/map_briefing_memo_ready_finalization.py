@@ -39,6 +39,7 @@ from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligat
 from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown, run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
+from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_binding_report
 from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -145,6 +146,8 @@ def _run_whole_memo_ready_packet_synthesis(
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
             "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
             "warning_resolution_report": retention.get("warning_resolution_report", {}),
+            "source_binding_report": retention.get("source_binding_report", {}),
+            "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
@@ -209,6 +212,8 @@ def _run_parallel_memo_ready_section_synthesis(
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
             "unresolved_warning_count": retention.get("unresolved_warning_count", 0),
             "warning_resolution_report": retention.get("warning_resolution_report", {}),
+            "source_binding_report": retention.get("source_binding_report", {}),
+            "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
@@ -265,6 +270,7 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         _dict(packet.get("memo_warning_packet")),
         source_aliases=source_aliases,
     )
+    source_binding = build_source_binding_report(memo, packet, source_aliases=source_aliases)
     warning_issues = [] if uses_obligations else [
         {
             "issue_type": "unresolved_memo_warning",
@@ -299,6 +305,8 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in [*item_issues, *balance_issues, *canonical_issues]),
         "unresolved_warning_count": len(warning_issues),
         "warning_resolution_report": warning_resolution,
+        "source_binding_report": source_binding,
+        "source_binding_warning_count": source_binding.get("warning_count", 0),
         "item_statuses": statuses,
         "analytical_balance_statuses": balance_statuses,
         "required_analytical_balance_count": len(balance_statuses),

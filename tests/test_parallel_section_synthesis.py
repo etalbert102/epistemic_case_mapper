@@ -50,6 +50,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("Treat section_focus.reader_question as the reader need" in prompt for prompt in calls)
     assert all("Use section_focus.paragraph_shape to decide paragraph order" in prompt for prompt in calls)
     assert all("scan for any exact phrase in section_focus.stock_phrases_to_replace" in prompt for prompt in calls)
+    assert all("Use source_bound_evidence_atoms as the primary factual units" in prompt for prompt in calls)
     assert all("protected_quantity_sets" in prompt for prompt in calls)
     assert all("do not repeat it as the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
@@ -88,6 +89,8 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert practical["section_focus"]["prose_lead"] == "Open with the usable stance inside scope, then name the condition that changes application."
     assert practical["section_focus"]["paragraph_shape"]
     assert "The decision-maker should" in practical["section_focus"]["stock_phrases_to_replace"]
+    assert practical["source_bound_evidence_atoms"]
+    assert all("excluded_quantity_tuples" not in atom for atom in practical["source_bound_evidence_atoms"])
     assert practical["evidence_context"]
     assert practical["source_weighting"]
     assert "balanced_answer_frame" not in practical["top_context"]
