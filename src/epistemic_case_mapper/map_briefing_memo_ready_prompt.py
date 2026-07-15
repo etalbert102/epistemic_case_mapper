@@ -82,6 +82,7 @@ def build_memo_ready_section_synthesis_prompt(
         "- Use bluf_contract for the opening bottom line and as a local reference for answer-first wording when this section restates the read.\n"
         "- Treat balanced_answer_frame as the controlling top-level read: reconcile support, counterweight, scope, and underused balance evidence instead of letting one evidence lane dominate.\n"
         "- Use must_not_overstate to calibrate causal and confidence language.\n"
+        "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
         "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
@@ -131,6 +132,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Use bluf_contract for the opening bottom line: answer first, then scope, confidence, and the main exception or boundary.\n"
         "- Treat balanced_answer_frame as the controlling answer frame. The bottom line and every section should preserve its best_current_read, main_support, main_counterweight, scope, practical_read, must_not_overstate, and underused_balance_evidence.\n"
         "- Use balanced_answer_frame.must_not_overstate to calibrate causal language and confidence. Do not turn observational or guidance evidence into stronger proof than the packet supports.\n"
+        "- Use evidence_language_contracts to choose verbs: observational evidence should stay associational, guidance should stay contextual, and indirect endpoints should stay tied to the measured endpoint.\n"
         "- Explain the evidence hierarchy in prose: which evidence carries the answer, which evidence mainly bounds it, and which evidence contextualizes practical advice.\n"
         "- Convert tradeoff labels into natural prose about what a decision-maker is choosing to privilege.\n"
         "- Make Practical Implication concrete: state what the reader should do, not just what the evidence says.\n"
@@ -173,6 +175,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         ),
         "balanced_answer_frame": packet.get("balanced_answer_frame"),
         "bluf_contract": packet.get("bluf_contract"),
+        "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
         "decision_usefulness": compact_decision_usefulness_for_prompt(_dict(packet.get("decision_usefulness_packet"))),
@@ -200,6 +203,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
             "answer_frame": reader_packet.get("answer_frame"),
             "balanced_answer_frame": reader_packet.get("balanced_answer_frame"),
             "bluf_contract": reader_packet.get("bluf_contract"),
+            "evidence_language_contracts": reader_packet.get("evidence_language_contracts"),
             "decision_usefulness": reader_packet.get("decision_usefulness"),
             "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
             "citation_registry": reader_packet.get("citation_registry"),
@@ -394,6 +398,25 @@ def _compact_source_judgment(row: dict[str, Any]) -> dict[str, Any]:
             "omission_reason": row.get("omission_reason"),
         }
     )
+
+
+def _compact_language_contracts(rows: list[Any]) -> list[dict[str, Any]]:
+    return [
+        _drop_empty(
+            {
+                "contract_id": row.get("contract_id"),
+                "item_id": row.get("item_id"),
+                "source_ids": row.get("source_ids"),
+                "evidence_design": row.get("evidence_design"),
+                "allowed_language": row.get("allowed_language"),
+                "avoid_language": row.get("avoid_language"),
+                "must_qualify_with": row.get("must_qualify_with"),
+                "wording_rule": row.get("wording_rule"),
+            }
+        )
+        for row in rows
+        if isinstance(row, dict)
+    ][:24]
 
 
 def _compact_spine_step(row: dict[str, Any]) -> dict[str, Any]:

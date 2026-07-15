@@ -35,6 +35,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["evidence_weighted_argument_spine"]["schema_id"] == "evidence_weighted_argument_spine_v1"
     assert canonical["source_weight_judgments"]
     assert canonical["source_weight_judgment_report"]["schema_id"] == "source_weight_judgment_report_v1"
+    assert canonical["evidence_language_contracts"]
     assert canonical["priority_evidence"]
     assert canonical["organized_evidence_inventory"]["item_count"] == len(packet["evidence_items"])
     assert canonical["counterweight_dispositions"]
@@ -45,6 +46,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["quality_report"]["answer_shape"] == canonical["decision_answer_classification"]["answer_shape"]
     assert canonical["quality_report"]["source_weighted_lane_count"] >= 1
     assert canonical["quality_report"]["source_weight_judgment_count"] == len(canonical["source_weight_judgments"])
+    assert canonical["quality_report"]["evidence_language_contract_count"] == len(canonical["evidence_language_contracts"])
     assert canonical["quality_report"]["argument_spine_step_count"] == len(canonical["evidence_weighted_argument_spine"]["steps"])
     assert all(
         row.get("source_id") or row.get("source_ids")
@@ -189,6 +191,11 @@ def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() 
         "association_not_causation" in row.get("not_enough_for", [])
         for row in canonical["source_weight_notes"]
     )
+    language_contract = next(row for row in canonical["evidence_language_contracts"] if row.get("source_ids") == ["s1"])
+    assert language_contract["evidence_design"] == "observational"
+    assert "is associated with" in language_contract["allowed_language"]
+    assert "causes" in language_contract["avoid_language"]
+    assert "observational evidence" in language_contract["must_qualify_with"]
 
 
 def test_canonical_retention_routes_missing_items_to_targeted_repair() -> None:
