@@ -331,6 +331,8 @@ def test_packet_critique_and_refinement_skips_on_prompt_backend() -> None:
 
     assert result["packet_critique_report"]["status"] == "skipped"
     assert result["packet_critique_adjudication_report"]["status"] == "skipped_prompt_backend"
+    assert result["packet_critique_value_report"]["critique_status"] == "skipped"
+    assert result["packet_critique_value_report"]["packet_field_change_count"] == 0
     assert result["decision_briefing_packet_refinement_report"]["status"] == "skipped"
     assert result["decision_briefing_packet"] == built["decision_briefing_packet"]
 
@@ -398,6 +400,9 @@ def test_packet_refinement_applies_only_known_id_updates(monkeypatch) -> None:
     assert result["packet_critique_report"]["status"] == "parsed"
     assert result["packet_critique_adjudication_report"]["accepted_count"] == 1
     assert result["packet_critique_adjudication_report"]["rejected_count"] == 1
+    assert result["packet_critique_value_report"]["critique_recommendation_count"] == 2
+    assert result["packet_critique_value_report"]["accepted_recommendation_count"] == 1
+    assert result["packet_critique_value_report"]["packet_field_change_count"] == 1
     assert result["decision_briefing_packet_refinement_report"]["applied_update_count"] == 1
     assert result["decision_briefing_packet_refinement_report"]["rejected_update_count"] == 1
     updated = {
@@ -688,6 +693,7 @@ def test_packet_critique_warning_only_outputs_become_writer_guidance(monkeypatch
     assert guidance["accepted_packet_edit_count"] == 0
     assert guidance["model_instruction_count"] >= 2
     assert guidance["required_obligation_count"] >= 1
+    assert result["packet_critique_value_report"]["writer_guidance_change_count"] >= 1
     assert any(row["guidance_type"] == "answer_frame" for row in guidance["guidance"])
     assert not any(row["guidance_type"] == "answer_frame" for row in guidance["writer_obligations"])
     assert any(row["guidance_type"] == "evidence_type_distinction" for row in guidance["writer_obligations"])

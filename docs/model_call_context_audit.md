@@ -23,6 +23,14 @@ Highest priority follow-ups:
 4. Remove duplicated relation prompt text and keep candidate-routing metadata clearly labeled as routing context, not evidence.
 5. Audit packet critique value: it is useful only if its output changes writer-facing guidance or packet construction.
 
+Implemented guardrails:
+
+- `model_context_audit.json` now inventories upstream prompt artifacts from the run directory and records stage, scope, decision-question presence, source-ID policy, and pollution flags.
+- Relation batch recovery is now reported as `batch_retry_as_singletons` rather than semantic fallback.
+- Repair prompt tests now assert that broad validator/debug records stay out of memo repair prompts.
+- Packet critique now emits `packet_critique_value_report_v1`, including recommendation counts, packet field changes, writer-guidance changes, and a retention-delta proxy.
+- Prompt-context auditing now flags analyst-polarity labels when the prompt lacks answer-frame context or an explicit no-polarity policy.
+
 ## Production Model Calls
 
 | Stage | Files | Current model context | Verdict | Notes / action |
@@ -86,4 +94,3 @@ Recommended change: telemetry should record `critique_recommendation_count`, `ac
 The strongest analyst calls now include `stable_final_answer_frame`, which is good. Any call that asks support/counterweight/relevance questions should include the same answer-frame state or should explicitly avoid polarity labels.
 
 Recommended change: add a prompt-contract check that stages using support/counterweight/answer-relation language include `decision_question` and either `stable_final_answer_frame` or an explicit "no final-answer polarity" policy.
-

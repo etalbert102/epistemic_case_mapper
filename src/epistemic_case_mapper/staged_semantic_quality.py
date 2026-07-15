@@ -46,7 +46,8 @@ def _classify_singleton_relations(
     rejected: list[dict[str, Any]] = [
         {
             "batch_id": batch_id,
-            "reason": "batch_failed_used_singleton_fallback",
+            "reason": "batch_failed_retrying_as_singletons",
+            "retry_policy": "batch_retry_as_singletons",
             "error": batch_error,
             "pair_ids": [packet["pair_id"] for packet in batch],
         }
@@ -60,7 +61,8 @@ def _classify_singleton_relations(
                 item_id=f"{batch_id}:{packet['pair_id']}",
                 timeout_seconds=backend_timeout,
                 pair_count=1,
-                fallback_from_batch=batch_id,
+                retry_from_batch=batch_id,
+                retry_policy="batch_retry_as_singletons",
             )
         try:
             result = run_model_backend(
@@ -72,10 +74,10 @@ def _classify_singleton_relations(
             )
             raw = result.text
             if progress:
-                progress.finish_backend_call(status="completed", singleton_fallback=True)
+                progress.finish_backend_call(status="completed", singleton_batch_retry=True)
         except (RuntimeError, ValueError) as exc:
             if progress:
-                progress.finish_backend_call(status="backend_error", error=str(exc), singleton_fallback=True)
+                progress.finish_backend_call(status="backend_error", error=str(exc), singleton_batch_retry=True)
             rejected.append({"pair_id": packet["pair_id"], "batch_id": batch_id, "reason": "backend_error", "error": str(exc)})
             continue
         write_markdown(artifact_dir / "relation_pairs" / f"{packet['pair_id']}_raw.txt", raw)

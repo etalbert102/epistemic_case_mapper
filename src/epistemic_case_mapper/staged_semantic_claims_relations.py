@@ -671,7 +671,7 @@ def _extract_relations(
         batch_id = batch_result.batch_id
         if batch_result.backend_error:
             if len(batch) > 1:
-                relation_index = _append_singleton_fallback(
+                relation_index = _append_singleton_batch_retry(
                     accepted, payloads, rejected, relation_index,
                     manifest, region, case_manifest, batch, claim_ids, permitted_types, seen,
                     backend, backend_timeout, backend_retries, artifact_dir, batch_id, batch_result.backend_error, decision_question, progress,
@@ -684,7 +684,7 @@ def _extract_relations(
         payload = batch_result.payload
         if not isinstance(payload, dict):
             if len(batch) > 1:
-                relation_index = _append_singleton_fallback(
+                relation_index = _append_singleton_batch_retry(
                     accepted, payloads, rejected, relation_index,
                     manifest, region, case_manifest, batch, claim_ids, permitted_types, seen,
                     backend, backend_timeout, backend_retries, artifact_dir, batch_id, "invalid_json", decision_question, progress,
@@ -738,7 +738,7 @@ def _extract_relations(
     return accepted, payloads, rejected, relation_claims
 
 
-def _append_singleton_fallback(
+def _append_singleton_batch_retry(
     accepted: list[dict[str, Any]],
     payloads: list[dict[str, Any]],
     rejected: list[dict[str, Any]],

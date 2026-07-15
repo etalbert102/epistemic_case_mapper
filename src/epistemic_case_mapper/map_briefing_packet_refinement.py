@@ -372,6 +372,14 @@ def run_packet_critique_and_refinement(
     _sync_packet_coverage_with_sufficiency(refined["packet"], post_sufficiency)
     writer_guidance = build_writer_guidance_packet(critique_adjudication=critique["adjudication_report"], sufficiency_report=post_sufficiency)
     attach_writer_guidance(refined["packet"], writer_guidance)
+    critique_value = _packet_critique_value_report(
+        critique_report=critique["report"],
+        critique_adjudication=critique["adjudication_report"],
+        refinement_report=refined["report"],
+        writer_guidance=writer_guidance,
+        pre_sufficiency=pre_sufficiency,
+        post_sufficiency=post_sufficiency,
+    )
     packet_progress(progress, "packet_sufficiency_recompute", "completed", {"status": post_sufficiency.get("status", "unknown")})
     return {
         "decision_briefing_packet": refined["packet"],
@@ -381,6 +389,7 @@ def run_packet_critique_and_refinement(
         "packet_critique_raw": critique["raw"],
         "packet_critique_report": critique["report"],
         "packet_critique_adjudication_report": critique["adjudication_report"],
+        "packet_critique_value_report": critique_value,
         "writer_guidance_packet": writer_guidance,
         "decision_briefing_packet_refinement_prompt": refined["prompt"],
         "decision_briefing_packet_refinement_raw": refined["raw"],
@@ -388,6 +397,46 @@ def run_packet_critique_and_refinement(
     }
 
 
+def _packet_critique_value_report(
+    *,
+    critique_report: dict[str, Any],
+    critique_adjudication: dict[str, Any],
+    refinement_report: dict[str, Any],
+    writer_guidance: dict[str, Any],
+    pre_sufficiency: dict[str, Any],
+    post_sufficiency: dict[str, Any],
+) -> dict[str, Any]:
+    packet_field_change_count = _int(refinement_report.get("applied_update_count"))
+    writer_guidance_change_count = _int(writer_guidance.get("warning_or_guidance_count"))
+    pre_missing = _int(pre_sufficiency.get("missing_count")) + _int(pre_sufficiency.get("missing_quantity_count"))
+    post_missing = _int(post_sufficiency.get("missing_count")) + _int(post_sufficiency.get("missing_quantity_count"))
+    retention_delta = pre_missing - post_missing
+    useful = packet_field_change_count > 0 or writer_guidance_change_count > 0 or retention_delta > 0
+    return {
+        "schema_id": "packet_critique_value_report_v1",
+        "status": "useful" if useful else "no_observed_downstream_effect",
+        "critique_status": critique_report.get("status"),
+        "critique_method": critique_report.get("method"),
+        "critique_recommendation_count": _int(critique_adjudication.get("accepted_count"))
+        + _int(critique_adjudication.get("warning_only_count"))
+        + _int(critique_adjudication.get("rejected_count")),
+        "accepted_recommendation_count": _int(critique_adjudication.get("accepted_count")),
+        "warning_only_recommendation_count": _int(critique_adjudication.get("warning_only_count")),
+        "rejected_recommendation_count": _int(critique_adjudication.get("rejected_count")),
+        "packet_field_change_count": packet_field_change_count,
+        "writer_guidance_change_count": writer_guidance_change_count,
+        "required_writer_obligation_count": _int(writer_guidance.get("required_obligation_count")),
+        "final_memo_retention_delta_proxy": retention_delta,
+        "pre_sufficiency_status": pre_sufficiency.get("status"),
+        "post_sufficiency_status": post_sufficiency.get("status"),
+    }
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def run_packet_critique(

@@ -269,6 +269,7 @@ def _attach_model_context_audit(
         reader_rewrite_prompt=str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
         active_prompts=_active_model_prompts(scaffold, final_outputs),
         active_prompt_paths=_active_prompt_paths(final_outputs),
+        prompt_artifact_root=artifacts,
     )
     final_outputs["summary_paths"]["model_context_audit"] = audit_path
 

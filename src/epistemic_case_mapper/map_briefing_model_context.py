@@ -17,6 +17,7 @@ def write_model_context_audit(
     reader_rewrite_prompt: str,
     active_prompts: dict[str, str] | None = None,
     active_prompt_paths: dict[str, Path | None] | None = None,
+    prompt_artifact_root: Path | None = None,
 ) -> Path:
     write_json(
         path,
@@ -27,6 +28,7 @@ def write_model_context_audit(
             reader_rewrite_prompt=reader_rewrite_prompt,
             active_prompts=active_prompts,
             active_prompt_paths=active_prompt_paths,
+            prompt_artifact_root=prompt_artifact_root,
         ),
     )
     return path
@@ -40,6 +42,7 @@ def build_model_context_audit(
     reader_rewrite_prompt: str,
     active_prompts: dict[str, str] | None = None,
     active_prompt_paths: dict[str, Path | None] | None = None,
+    prompt_artifact_root: Path | None = None,
 ) -> dict[str, Any]:
     prompt_backend = backend.strip() == "prompt"
     section_records = _section_context_records(section_packets_path)
@@ -48,6 +51,7 @@ def build_model_context_audit(
         active_prompt_paths=active_prompt_paths or {},
         prompt_backend=prompt_backend,
     )
+    upstream_inventory = build_model_call_context_inventory(prompt_artifact_root, prompt_backend=prompt_backend)
     return {
         "schema_id": "model_context_audit_v1",
         "backend": backend,
@@ -75,6 +79,15 @@ def build_model_context_audit(
                 "oversized_prompt_count": sum(1 for row in active_records if "oversized_model_context" in row.get("pollution_flags", [])),
                 "prompts": active_records,
             },
+            {
+                "stage": "upstream_model_call_inventory",
+                "status": "record_only_prompt_backend" if prompt_backend else "audited",
+                "sent_to_model": not prompt_backend,
+                "prompt_count": len(upstream_inventory),
+                "polluted_prompt_count": sum(1 for row in upstream_inventory if row.get("pollution_flags")),
+                "oversized_prompt_count": sum(1 for row in upstream_inventory if "oversized_model_context" in row.get("pollution_flags", [])),
+                "prompts": upstream_inventory,
+            },
             _prompt_record(
                 "reader_memo_edit_suggestions",
                 reader_rewrite_prompt,
@@ -92,8 +105,80 @@ def build_model_context_audit(
             "debug_records": "Full packets, prompts, raw outputs, and validation reports remain artifact-facing records.",
             "negative_context": "Model-facing prohibition rules should avoid including facts the model should not mention.",
             "active_prompt_audit": "Prompt records flag stage-inappropriate debug fields in report-only mode; stable evidence IDs are allowed when the model must return structured references.",
+            "upstream_prompt_inventory": "Upstream prompt artifacts should be inventoried by path so extraction, relation, source appraisal, and source weighting calls are visible in run artifacts.",
         },
     }
+
+
+def build_model_call_context_inventory(root: Path | None, *, prompt_backend: bool = False) -> list[dict[str, Any]]:
+    if root is None or not root.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*_prompt.txt")):
+        stage = _prompt_artifact_stage(path)
+        if not stage:
+            continue
+        prompt = _read_prompt_path(path)
+        if not prompt.strip():
+            continue
+        records.append(_upstream_prompt_record(stage, prompt, path=path, sent_to_model=not prompt_backend))
+    direct_prompts = {
+        "map_quality_repair": root / "map_quality_repair_prompt.txt",
+    }
+    for stage, path in direct_prompts.items():
+        if not path.exists():
+            continue
+        prompt = _read_prompt_path(path)
+        if prompt.strip():
+            records.append(_upstream_prompt_record(stage, prompt, path=path, sent_to_model=not prompt_backend))
+    return records
+
+
+def _prompt_artifact_stage(path: Path) -> str:
+    parts = set(path.parts)
+    name = path.name
+    if "claim_sources" in parts and name.endswith("_repair_prompt.txt"):
+        return "source_claim_schema_repair"
+    if "claim_sources" in parts and name.endswith("_prompt.txt"):
+        return "source_claim_extraction"
+    if "claim_consolidation_clusters" in parts:
+        return "claim_consolidation"
+    if "relation_pairs" in parts:
+        return "relation_pair_classification"
+    if "relation_batches" in parts:
+        return "relation_batch_classification"
+    if "map_repair_relations" in parts:
+        return "relation_repair_pair"
+    return ""
+
+
+def _upstream_prompt_record(stage: str, prompt: str, *, path: Path, sent_to_model: bool) -> dict[str, Any]:
+    return {
+        **_active_prompt_record(stage, prompt, sent_to_model=sent_to_model, path=path),
+        "context_scope": _context_scope(stage),
+        "decision_question_present": "decision question" in prompt.lower(),
+        "source_id_policy": _source_id_policy(stage),
+    }
+
+
+def _context_scope(stage: str) -> str:
+    if stage in {"source_claim_extraction", "source_claim_schema_repair", "source_appraisal", "source_weighting"}:
+        return "source_local"
+    if stage in {"relation_pair_classification", "relation_repair_pair"}:
+        return "pair_local"
+    if stage == "relation_batch_classification":
+        return "small_batch_local"
+    if stage == "claim_consolidation":
+        return "cluster_local"
+    return "global_or_repair"
+
+
+def _source_id_policy(stage: str) -> str:
+    if stage.startswith("source_"):
+        return "single_source_id_required"
+    if stage.startswith("relation_"):
+        return "claim_ids_and_source_ids_must_be_preserved"
+    return "preserve_supplied_ids"
 
 
 def _active_prompt_records(
@@ -160,7 +245,30 @@ def _active_prompt_pollution_flags(stage: str, prompt: str) -> list[str]:
         flags.append("legacy_compatibility_payload_visible")
     if "raw output" in text or '"raw"' in text or "raw_" in text:
         flags.append("raw_or_debug_language_visible")
+    if _polarity_context_missing(text):
+        flags.append("answer_frame_context_missing_for_polarity_labels")
     return list(dict.fromkeys(flags))
+
+
+def _polarity_context_missing(text: str) -> bool:
+    polarity_terms = (
+        "load_bearing_primary_support",
+        "load_bearing_counterweight",
+        "supports_answer",
+        "challenges_answer",
+        "answer_relation",
+    )
+    if not any(term in text for term in polarity_terms):
+        return False
+    answer_frame_terms = (
+        "stable_final_answer_frame",
+        "balanced_answer_frame",
+        "classification_target_policy",
+        "current_best_answer",
+        "no final-answer polarity",
+        "do not infer support",
+    )
+    return not any(term in text for term in answer_frame_terms)
 
 
 def _field_hits(prompt: str) -> dict[str, int]:
