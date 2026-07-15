@@ -16,9 +16,15 @@ def render_source_weighting_caveat_note(caveat_rows: list[dict[str, Any]]) -> st
         return ""
     unique_limits = _dedupe(limit for row in limits_by_source for limit in row["limits"])
     if len(unique_limits) == 1:
-        return f"Apply this limit throughout: {unique_limits[0]} Source-by-source details are expanded in the citation trace."
-    clauses = [f"{row['sources']} — {row['limits'][0]}" for row in limits_by_source[:3]]
-    return "Read the limits separately: " + "; ".join(clauses) + ". The citation trace keeps the full source-by-source detail."
+        return "\n".join(
+            [
+                "Use limits:",
+                f"- Across cited sources: {unique_limits[0]}.",
+                "- The citation trace keeps source-by-source detail.",
+            ]
+        )
+    clauses = [f"- {row['sources']}: {row['limits'][0]}." for row in limits_by_source[:3]]
+    return "\n".join(["Use limits:", *clauses, "- The citation trace keeps source-by-source detail."])
 
 
 def _source_limit_phrases(row: dict[str, Any]) -> list[str]:

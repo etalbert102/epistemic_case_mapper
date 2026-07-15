@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     norm as _norm,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_style_smoothing import smooth_stock_memo_phrasing
 from epistemic_case_mapper.map_briefing_source_identity import (
     compact_source_display,
     common_source_prefix,
@@ -44,6 +45,10 @@ def run_memo_ready_presentation_normalization(
     next_memo = _remove_duplicate_decision_heading(normalized)
     if next_memo != normalized:
         changes.append("removed_duplicate_decision_heading")
+        normalized = next_memo
+    next_memo = smooth_stock_memo_phrasing(normalized)
+    if next_memo != normalized:
+        changes.append("smoothed_stock_phrasing")
         normalized = next_memo
     next_memo = _ensure_source_weighting_section(normalized, packet)
     if next_memo != normalized:

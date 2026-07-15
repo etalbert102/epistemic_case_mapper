@@ -80,8 +80,10 @@ def build_memo_ready_section_synthesis_prompt(
         "- Make each paragraph do a distinct reasoning job and avoid repeating earlier-section sentences.\n\n"
         "Writing priorities:\n"
         "- Use section_focus and section_role_contract as the controlling job for this section.\n"
+        "- Use section_focus.prose_lead as the opening move; make the first sentence about the section's evidence or decision function.\n"
         "- Treat section_focus.reader_question as the reader need this section must answer.\n"
         "- Use section_focus.paragraph_shape to decide paragraph order when it is supplied.\n"
+        "- Before returning, scan for any exact phrase in section_focus.stock_phrases_to_replace and replace it with the specific evidence pattern, boundary, or action from the packet.\n"
         "- Use top_context.current_read_reference only to stay consistent with the memo answer; do not repeat it as the section opener unless section_focus explicitly asks for it.\n"
         "- Use top_context.must_not_overstate to calibrate causal and confidence language.\n"
         "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
@@ -308,6 +310,7 @@ def _section_focus(section_id: str) -> dict[str, Any]:
     focuses = {
         "answer_evidence": {
             "reader_question": "Why should I believe this answer rather than a flatter summary of the sources?",
+            "prose_lead": "Open with the strongest evidence pattern or quantity that carries the read.",
             "lead": "Start with the evidence reason this answer is the best current read, not with a restated BLUF.",
             "use_current_read_as": "reference_for_what_the_evidence_must_explain",
             "new_value": "evidence hierarchy, magnitude, and confidence calibration",
@@ -316,9 +319,15 @@ def _section_focus(section_id: str) -> dict[str, Any]:
                 "important quantitative or design details",
                 "confidence calibration from the strongest caveat",
             ],
+            "stock_phrases_to_replace": [
+                "The current assessment is driven by",
+                "This nuanced view",
+                "The evidence suggests",
+            ],
         },
         "counterweights": {
             "reader_question": "What could make this answer too strong, too broad, or wrong for some uses?",
+            "prose_lead": "Open with the strongest reason the answer may not generalize or may need narrower wording.",
             "lead": "Start with the most important boundary or uncertainty, not with the full bottom line.",
             "use_current_read_as": "the answer being bounded or stress-tested",
             "new_value": "what narrows, weakens, changes, or scopes the answer",
@@ -327,9 +336,15 @@ def _section_focus(section_id: str) -> dict[str, Any]:
                 "subgroup, endpoint, causal, or scope boundaries",
                 "what new evidence would change the read",
             ],
+            "stock_phrases_to_replace": [
+                "The primary boundary on this assessment",
+                "The current read is further bounded",
+                "It is essential to",
+            ],
         },
         "practical_implication": {
             "reader_question": "Given the answer and its limits, what should the decision-maker do next?",
+            "prose_lead": "Open with the usable stance inside scope, then name the condition that changes application.",
             "lead": "Start with what the reader should do with the answer inside scope.",
             "use_current_read_as": "background_only",
             "new_value": "concrete application, monitoring point, or action boundary",
@@ -337,6 +352,11 @@ def _section_focus(section_id: str) -> dict[str, Any]:
                 "usable stance inside scope",
                 "conditions or monitoring points",
                 "how to avoid over-applying the answer",
+            ],
+            "stock_phrases_to_replace": [
+                "To avoid over-applying this answer",
+                "The decision-maker should",
+                "Practical Application",
             ],
         },
     }

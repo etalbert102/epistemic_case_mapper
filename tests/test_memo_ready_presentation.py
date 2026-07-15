@@ -143,6 +143,28 @@ def test_presentation_repairs_truncated_decision_memo_title() -> None:
     assert "normalized_decision_title" in result["report"]["changes"]
 
 
+def test_presentation_smooths_stock_phrasing_without_changing_citations() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\n"
+        "**Bottom Line:** Adopt option A when the setting matches.\n\n"
+        "This nuanced view is balanced by implementation limits [outcome_2025]. "
+        "To avoid over-applying this answer, use the setting boundary."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "This nuanced view" not in result["memo"]
+    assert "To avoid over-applying this answer" not in result["memo"]
+    assert "This reading is balanced by implementation limits [Outcome 2025]." in result["memo"]
+    assert "In applying this answer, use the setting boundary." in result["memo"]
+    assert "smoothed_stock_phrasing" in result["report"]["changes"]
+
+
 def test_presentation_source_weighting_section_uses_source_weight_judgments() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",
@@ -178,7 +200,8 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "put the most weight on [Outcome 2025] for the core answer" in result["memo"]
     assert "use [RISK 2024] as the main check on how far the answer travels" in result["memo"]
     assert "[^source-weight-caveats]" not in result["memo"]
-    assert "Apply this limit throughout" in result["memo"]
+    assert "Use limits:" in result["memo"]
+    assert "- Across cited sources: as implementation-risk evidence" in result["memo"]
     assert "implementation-risk evidence" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
@@ -216,9 +239,9 @@ def test_presentation_source_weighting_splits_different_caveat_families() -> Non
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "Read the limits separately" in result["memo"]
-    assert "[Cohort 2025] — as associational evidence" in result["memo"]
-    assert "[Guidance 2024] — as guidance or interpretation" in result["memo"]
+    assert "Use limits:" in result["memo"]
+    assert "- [Cohort 2025]: as associational evidence" in result["memo"]
+    assert "- [Guidance 2024]: as guidance or interpretation" in result["memo"]
     assert "The main caveat is" not in result["memo"]
 
 
