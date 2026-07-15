@@ -20,7 +20,14 @@ def source_use_note_for_entry(entry: dict[str, str], packet: dict[str, Any]) -> 
         use = _readable_main_use(judgment.get("main_use"))
         if use and use != "unspecified":
             parts.append(f"use: {use}")
-        limits = _dedupe(_readable_warning(item) for item in _string_list(judgment.get("what_not_to_use_it_for")) if item)
+        limits = _dedupe(
+            _readable_warning(item)
+            for item in (
+                _string_list(judgment.get("reader_facing_limit"))
+                or _string_list(judgment.get("what_not_to_use_it_for"))
+            )
+            if item
+        )
         if limits:
             parts.append("limit: " + "; ".join(limits[:2]))
     language = _language_contracts_by_source(packet).get(source_id)

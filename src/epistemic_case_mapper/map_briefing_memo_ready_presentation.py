@@ -131,7 +131,7 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
             summary = str(judgment.get("why_weight_this_way") or "").strip()
             if summary:
                 lines.append(f"- Weight rationale: {summary}")
-            limits = _string_list(judgment.get("what_not_to_use_it_for"))
+            limits = _string_list(judgment.get("reader_facing_limit")) or _string_list(judgment.get("what_not_to_use_it_for"))
             if limits:
                 lines.append(f"- Use limits: {', '.join(_readable_warning(item) for item in limits[:4])}")
         if contexts:
@@ -261,7 +261,14 @@ def _judgment_group_sentence(template: str, rows: list[dict[str, Any]], *, guida
     if not sources:
         return "", None
     source_ids = _dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids")))
-    limits = _dedupe(limit for row in rows for limit in _string_list(row.get("what_not_to_use_it_for")))[:3]
+    limits = _dedupe(
+        limit
+        for row in rows
+        for limit in (
+            _string_list(row.get("reader_facing_limit"))
+            or _string_list(row.get("what_not_to_use_it_for"))
+        )
+    )[:3]
     readable_limits = _readable_limits(limits, source_ids=source_ids, guidance=guidance)
     sentence = template.format(sources=sources)
     caveat_row = {"sources": sources, "limits": readable_limits} if readable_limits else None

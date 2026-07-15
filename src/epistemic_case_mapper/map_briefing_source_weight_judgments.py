@@ -75,7 +75,8 @@ def _source_weight_judgments(interface: dict[str, Any], source_trail: list[Any])
                     "why_weight_this_way": _reader_weight_summary(rows, appraisal, main_use),
                     "internal_weight_rationale": _internal_weight_rationale(rows, appraisal, main_use),
                     "omission_reason": _omission_reason(rows),
-                    "what_not_to_use_it_for": _not_enough_for(rows, appraisal),
+                    "reader_facing_limit": _reader_facing_limit(source_id, rows, appraisal, main_use),
+                    "what_not_to_use_it_for": _not_enough_for(source_id, rows, appraisal, main_use),
                     "evidence_item_ids": _dedupe(str(row.get("item_id") or "").strip() for row in rows if row.get("item_id"))[:12],
                 }
             )
@@ -194,11 +195,74 @@ def _clean_sentence(value: str) -> str:
     return text.rstrip(".").strip()
 
 
-def _not_enough_for(rows: list[dict[str, Any]], appraisal: dict[str, Any]) -> list[str]:
+def _not_enough_for(source_id: str, rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> list[str]:
     warnings = _string_list(appraisal.get("source_use_warnings") or appraisal.get("interpretation_caveats"))
     for row in rows:
         warnings.extend(_string_list(row.get("source_use_warnings") or _dict(row.get("source_appraisal")).get("source_use_warnings")))
-    return _dedupe(warnings)[:6]
+    return _reader_relevant_limits(_dedupe(warnings), source_id=source_id, rows=rows, appraisal=appraisal, main_use=main_use)[:3]
+
+
+def _reader_facing_limit(source_id: str, rows: list[dict[str, Any]], appraisal: dict[str, Any], main_use: str) -> str:
+    limits = _not_enough_for(source_id, rows, appraisal, main_use)
+    if not limits:
+        return ""
+    return _limit_to_sentence(limits[0])
+
+
+def _reader_relevant_limits(
+    warnings: list[str],
+    *,
+    source_id: str,
+    rows: list[dict[str, Any]],
+    appraisal: dict[str, Any],
+    main_use: str,
+) -> list[str]:
+    warning_set = set(warnings)
+    source_type = _source_type(appraisal).lower()
+    text = " ".join(
+        [
+            str(source_id or ""),
+            source_type,
+            *[
+                str(value or "")
+                for row in rows
+                for value in [
+                    row.get("claim"),
+                    row.get("reader_claim"),
+                    row.get("decision_relevance"),
+                    " ".join(_string_list(row.get("source_labels") or row.get("source_label"))),
+                ]
+            ],
+        ]
+    ).lower()
+    guidance_like = "guidance" in source_type or "guideline" in source_type or "recommendation" in source_type or "guidance" in text
+    guidance_like = guidance_like or any(term in text for term in ("news", "dga", "dietary_guidelines", "dietary guidelines"))
+    intervention_like = any(term in text for term in ("rct", "trial", "intervention", "randomized", "randomised"))
+    empirical_like = any(token in source_type for token in ("trial", "cohort", "study", "meta", "review", "observational")) or bool(rows)
+    prioritized: list[str] = []
+    if guidance_like and "guidance_not_independent_empirical_evidence" in warning_set:
+        prioritized.append("guidance_not_independent_empirical_evidence")
+    if (
+        empirical_like
+        and not intervention_like
+        and "association_not_causation" in warning_set
+        and main_use in {"drives_answer", "bounds_answer", "calibrates_magnitude"}
+    ):
+        prioritized.append("association_not_causation")
+    if "quality_limit" in warning_set and not prioritized:
+        prioritized.append("quality_limit")
+    for warning in warnings:
+        if warning not in prioritized and warning not in {"quality_limit", "association_not_causation", "guidance_not_independent_empirical_evidence"}:
+            prioritized.append(warning)
+    return _dedupe(prioritized)
+
+
+def _limit_to_sentence(limit: str) -> str:
+    return {
+        "association_not_causation": "Use as associational evidence, not standalone causal proof.",
+        "guidance_not_independent_empirical_evidence": "Use as guidance or interpretation, not independent empirical evidence.",
+        "quality_limit": "Use with explicit attention to source quality and directness limits.",
+    }.get(limit, str(limit or "").replace("_", " ").strip())
 
 
 def _source_type(appraisal: dict[str, Any]) -> str:

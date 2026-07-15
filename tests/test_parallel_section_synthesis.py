@@ -48,6 +48,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("Use section_focus and section_role_contract as the controlling job" in prompt for prompt in calls)
     assert all("Treat section_focus.reader_question as the reader need" in prompt for prompt in calls)
     assert all("Use section_focus.paragraph_shape to decide paragraph order" in prompt for prompt in calls)
+    assert all("protected_quantity_sets" in prompt for prompt in calls)
     assert all("do not repeat it as the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
     assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
@@ -88,6 +89,17 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert "balanced_answer_frame" not in practical["top_context"]
     assert "bluf_contract" not in practical["top_context"]
     assert "current_read_reference" in practical["top_context"]
+
+
+def test_section_synthesis_preserves_belief_question_use_read_heading() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="What should an investigator believe about option A?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    plan = build_memo_ready_section_synthesis_plan(packet)
+    headings = [row["heading"] for row in plan["sections"]]
+
+    assert "How to Use This Read" in headings
+    assert "Why This Is the Best current answer" not in headings
 
 
 def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatch: pytest.MonkeyPatch) -> None:

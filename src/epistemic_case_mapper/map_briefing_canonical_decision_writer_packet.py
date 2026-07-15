@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_reader_evidence_roles import reader_evidence_role, source_weight_lane
 from epistemic_case_mapper.map_briefing_source_identity import (
     project_sources_to_ids_for_model,
     source_id_registry_for_model,
@@ -59,6 +60,7 @@ def build_canonical_decision_writer_packet(
     )
     argument_spine = build_evidence_weighted_argument_spine(
         skeleton=skeleton,
+        decision_question=packet.get("decision_question"),
         source_weighted_frame=weighted_frame,
         counterweights=counterweights,
         scope_boundaries=scope_boundaries,
@@ -229,7 +231,7 @@ def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
     ]
     lanes: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
-        lane = _source_weight_lane(row)
+        lane = source_weight_lane(row)
         lanes.setdefault(lane, []).append(_source_weighted_evidence_row(row, lane=lane))
 
     capped_lanes = {
@@ -258,10 +260,12 @@ def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
 
 def _source_weighted_evidence_row(row: dict[str, Any], *, lane: str) -> dict[str, Any]:
     calibrated = _calibrated_claim_row(row)
+    reader_role = reader_evidence_role(row)
     return _drop_empty(
         {
             "item_id": row.get("item_id"),
             "source_weight_role": lane,
+            "reader_evidence_role": reader_role,
             "upstream_role": row.get("role"),
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
@@ -275,29 +279,6 @@ def _source_weighted_evidence_row(row: dict[str, Any], *, lane: str) -> dict[str
             "importance_rank": row.get("importance_rank"),
         }
     )
-
-
-def _source_weight_lane(row: dict[str, Any]) -> str:
-    role = str(row.get("role") or "").strip()
-    relation = str(row.get("answer_relation") or "").strip()
-    function = str(row.get("memo_function") or "").strip()
-    obligation = str(row.get("obligation_level") or "").strip()
-    warnings = set(_string_list(row.get("source_use_warnings") or _dict(row.get("source_appraisal")).get("source_use_warnings")))
-    if role in {"off_question", "excluded"} or relation in {"off_question", "not_relevant"} or obligation in {"off_question", "not_relevant"}:
-        return "excluded_from_answer"
-    if role == "context_only" or function == "context_only" or "guidance_not_independent_empirical_evidence" in warnings:
-        return "context_only"
-    if role == "scope_boundary" or relation == "bounds_scope" or function == "scope_boundary":
-        return "scope_limiters"
-    if role == "strongest_counterweight" or relation == "challenges_answer" or function == "counterweight":
-        return "counterweights_or_tensions"
-    if role == "decision_crux" or relation == "identifies_crux" or function == "crux":
-        return "decision_cruxes"
-    if role == "quantitative_anchor" or function in {"quantity_anchor", "mechanism", "explanation"}:
-        return "quantitative_or_interpretive_calibrators"
-    if role == "strongest_support" or relation == "supports_answer" or function == "answer_anchor":
-        return "primary_answer_drivers"
-    return "context_only"
 
 
 def _source_weight_lane_cap(lane: str) -> int:
@@ -418,10 +399,12 @@ def _organized_evidence_inventory(packet: dict[str, Any], interface: dict[str, A
 
 def _inventory_row(row: dict[str, Any]) -> dict[str, Any]:
     calibrated = _calibrated_claim_row(row)
+    reader_role = reader_evidence_role(row)
     return _drop_empty(
         {
             "item_id": row.get("item_id"),
             "role": row.get("role"),
+            "reader_evidence_role": reader_role,
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
             "obligation_level": row.get("obligation_level"),
@@ -511,6 +494,17 @@ def _source_appraisal_note(row: dict[str, Any]) -> str:
 
 
 def _inventory_lane(row: dict[str, Any]) -> str:
+    reader_role = reader_evidence_role(row)
+    if reader_role == "main_answer_evidence":
+        return "answer_support"
+    if reader_role == "effect_size_or_mechanism":
+        return "interpretive_context"
+    if reader_role == "true_counterweight":
+        return "limiting_evidence"
+    if reader_role == "scope_boundary":
+        return "scope_and_applicability"
+    if reader_role == "decision_crux":
+        return "decision_cruxes"
     role = str(row.get("role") or "").strip()
     relation = str(row.get("answer_relation") or "").strip()
     function = str(row.get("memo_function") or "").strip()
@@ -546,6 +540,7 @@ def _evidence_row(row: dict[str, Any]) -> dict[str, Any]:
         {
             "item_id": row.get("item_id"),
             "role": row.get("role"),
+            "reader_evidence_role": reader_evidence_role(row),
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
             "claim": _short_text(calibrated.get("claim"), 520),
@@ -568,6 +563,8 @@ def _counterweight_dispositions(interface: dict[str, Any]) -> list[dict[str, Any
     ]
     for row in counterweights:
         if not isinstance(row, dict):
+            continue
+        if reader_evidence_role(row) == "effect_size_or_mechanism":
             continue
         disposition = _normalized_counterweight_disposition(row)
         rows.append(

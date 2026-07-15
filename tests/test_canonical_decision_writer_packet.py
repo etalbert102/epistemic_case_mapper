@@ -67,6 +67,7 @@ def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
     assert lanes["primary_answer_drivers"][0]["source_ids"]
     assert lanes["counterweights_or_tensions"][0]["source_ids"]
     assert lanes["scope_limiters"][0]["source_ids"]
+    assert all(row.get("reader_evidence_role") for rows in lanes.values() for row in rows)
     assert "source_labels" not in str(frame)
     assert any("main answer" in move for move in frame["required_weighting_moves"])
 
@@ -141,6 +142,7 @@ def test_canonical_packet_builds_evidence_weighted_argument_spine() -> None:
     assert "primary_driver" in jobs
     assert "counterweight_or_boundary" in jobs
     assert spine["section_plan"]
+    assert any(step.get("reader_evidence_role") for step in spine["steps"])
     assert all(step.get("primary_section") for step in spine["steps"] if step["memo_job"] != "")
     assert any(row["section"].startswith("Why This Is the Best") for row in spine["section_plan"])
     assert spine["quality_report"]["step_count"] == len(spine["steps"])
@@ -194,6 +196,7 @@ def test_quality_synthesis_packet_preserves_source_appraisal_for_writer_notes() 
         "association_not_causation" in row.get("not_enough_for", [])
         for row in canonical["source_weight_notes"]
     )
+    assert any(row.get("reader_facing_limit") for row in canonical["source_weight_judgments"])
     language_contract = next(row for row in canonical["evidence_language_contracts"] if row.get("source_ids") == ["s1"])
     assert language_contract["evidence_design"] == "observational"
     assert "is associated with" in language_contract["allowed_language"]

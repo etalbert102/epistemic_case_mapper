@@ -88,6 +88,7 @@ def build_memo_ready_section_synthesis_prompt(
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
         "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
+        "- Treat protected_quantity_sets as all-or-nothing anchors: if a row appears, include every listed quantity value with its source.\n"
         "- Section role discipline never overrides retention: include every protected quantity and source_id listed in section_retention_requirements.\n"
         "- If one claim has several protected quantities, keep the full set together rather than sampling representative values.\n"
         "- Translate source weighting into prose instead of generic labels.\n"
@@ -222,6 +223,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
+                    "protected_quantity_sets": _protected_quantity_sets(raw),
                     "evidence_context": raw.get("evidence_context"),
                     "source_weighting": raw.get("source_weighting"),
                 }
@@ -231,7 +233,12 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
 
 
 def _canonical_section_heading(heading: str) -> str:
+    raw = str(heading or "").strip()
     section_id = _section_id_from_heading(heading)
+    if section_id == "practical_implication" and "use this read" in raw.lower():
+        return "How to Use This Read"
+    if section_id == "counterweights" and "bound the read" in raw.lower():
+        return "What Could Change or Bound the Read"
     return {
         "answer_evidence": "Why This Is the Best Current Read",
         "counterweights": "What Could Change or Bound the Answer",
@@ -402,6 +409,33 @@ def _section_source_ids(raw_section: dict[str, Any]) -> list[str]:
     )
 
 
+def _protected_quantity_sets(raw_section: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for row in [*_list(raw_section.get("evidence_context")), *_list(raw_section.get("retention_requirements"))]:
+        if not isinstance(row, dict):
+            continue
+        quantities = []
+        for quantity in _list(row.get("quantities")):
+            value = quantity.get("value") if isinstance(quantity, dict) else quantity
+            value_text = str(value or "").strip()
+            if value_text:
+                quantities.append(value_text)
+        quantities = _dedupe(quantities)
+        if len(quantities) < 2:
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "item_id": row.get("item_id") or row.get("requirement_id"),
+                    "claim": row.get("claim") or row.get("statement"),
+                    "source_ids": row.get("source_ids"),
+                    "quantity_values": quantities,
+                }
+            )
+        )
+    return _dedupe_rows(rows, "item_id")[:8]
+
+
 def _filter_language_contracts(value: Any, source_ids: list[str]) -> list[dict[str, Any]]:
     rows = [row for row in _list(value) if isinstance(row, dict)]
     if not source_ids:
@@ -518,6 +552,7 @@ def _compact_source_judgment(row: dict[str, Any]) -> dict[str, Any]:
             "source_ids": row.get("source_ids"),
             "main_use": row.get("main_use"),
             "weight_summary": row.get("why_weight_this_way"),
+            "reader_facing_limit": row.get("reader_facing_limit"),
             "limits": row.get("what_not_to_use_it_for"),
             "evidence_item_ids": row.get("evidence_item_ids"),
             "omission_reason": row.get("omission_reason"),
@@ -720,6 +755,7 @@ def _compact_row(row: dict[str, Any]) -> dict[str, Any]:
             "item_id": row.get("item_id"),
             "role": row.get("role"),
             "answer_relation": row.get("answer_relation"),
+            "reader_evidence_role": row.get("reader_evidence_role"),
             "memo_function": row.get("memo_function"),
             "claim": row.get("claim") or row.get("statement"),
             "source_ids": row.get("source_ids") or ([row.get("source_id")] if row.get("source_id") else None),

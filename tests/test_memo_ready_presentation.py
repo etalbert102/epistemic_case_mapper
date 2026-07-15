@@ -161,6 +161,7 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
                     "source_ids": ["risk_2024"],
                     "main_use": "bounds_answer",
                     "why_weight_this_way": "Use primarily to bound the answer because it identifies implementation risk.",
+                    "reader_facing_limit": "Use as implementation-risk evidence, not as proof against all adoption.",
                     "what_not_to_use_it_for": ["not_enough_for_unconditional_adoption"],
                 },
             ],
@@ -178,10 +179,11 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "use [RISK 2024] as the main check on how far the answer travels" in result["memo"]
     assert "[^source-weight-caveats]" not in result["memo"]
     assert "source-by-source limits are expanded in the citation trace" in result["memo"]
+    assert "implementation-risk evidence" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
-    assert "not enough for unconditional adoption" in result["memo"]
-    assert "* [RISK 2024](https://example.test/risk) — Risk Review 2024 — use: bounds answer; limit: not enough for unconditional adoption" in result["memo"]
+    assert "not enough for unconditional adoption" not in result["memo"]
+    assert "* [RISK 2024](https://example.test/risk) — Risk Review 2024 — use: bounds answer; limit: Use as implementation-risk evidence, not as proof against all adoption." in result["memo"]
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" not in result["memo"]
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 

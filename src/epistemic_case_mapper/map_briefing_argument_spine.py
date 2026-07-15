@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 def build_evidence_weighted_argument_spine(
     *,
     skeleton: dict[str, Any],
+    decision_question: Any = "",
     source_weighted_frame: dict[str, Any],
     counterweights: list[dict[str, Any]],
     scope_boundaries: list[dict[str, Any]],
@@ -31,8 +32,9 @@ def build_evidence_weighted_argument_spine(
         _practical_step(skeleton),
     ]
     steps = [step for step in steps if step]
-    steps = [_with_section_owner(step) for step in steps]
-    section_plan = _section_plan(steps, mandatory_retention_checklist or [])
+    section_titles = _section_titles(decision_question)
+    steps = [_with_section_owner(step, section_titles=section_titles) for step in steps]
+    section_plan = _section_plan(steps, mandatory_retention_checklist or [], section_titles=section_titles)
     report = build_argument_spine_quality_report(steps, source_weight_judgments)
     return {
         "schema_id": "evidence_weighted_argument_spine_v1",
@@ -91,16 +93,16 @@ def _answer_step(skeleton: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def _with_section_owner(step: dict[str, Any]) -> dict[str, Any]:
+def _with_section_owner(step: dict[str, Any], *, section_titles: dict[str, str]) -> dict[str, Any]:
     job = str(step.get("memo_job") or "").strip()
     owner = {
-        "answer": "Bottom Line",
-        "primary_driver": "Why This Is the Best Current Read",
-        "calibrator": "Why This Is the Best Current Read",
-        "counterweight_or_boundary": "What Could Change or Bound the Answer",
-        "crux": "What Could Change or Bound the Answer",
-        "scope_boundary": "What Could Change or Bound the Answer",
-        "practical_implication": "Practical Implication",
+        "answer": section_titles["bottom_line"],
+        "primary_driver": section_titles["answer_evidence"],
+        "calibrator": section_titles["answer_evidence"],
+        "counterweight_or_boundary": section_titles["counterweights"],
+        "crux": section_titles["counterweights"],
+        "scope_boundary": section_titles["counterweights"],
+        "practical_implication": section_titles["practical_implication"],
     }.get(job, "")
     if not owner:
         return step
@@ -109,17 +111,22 @@ def _with_section_owner(step: dict[str, Any]) -> dict[str, Any]:
     return owned
 
 
-def _section_plan(steps: list[dict[str, Any]], mandatory_retention_checklist: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _section_plan(
+    steps: list[dict[str, Any]],
+    mandatory_retention_checklist: list[dict[str, Any]],
+    *,
+    section_titles: dict[str, str],
+) -> list[dict[str, Any]]:
     sections = [
-        ("Bottom Line", "State the answer, scope, and confidence without previewing every evidence detail."),
-        ("Why This Is the Best Current Read", "Weigh the main answer drivers and calibrators into the affirmative case for the answer."),
-        ("What Could Change or Bound the Answer", "Handle counterweights, cruxes, and scope boundaries as limits on the answer."),
-        ("Practical Implication", "Translate the answer into action guidance without reopening the whole evidence argument."),
+        (section_titles["bottom_line"], "State the answer, scope, and confidence without previewing every evidence detail."),
+        (section_titles["answer_evidence"], "Weigh the main answer drivers and calibrators into the affirmative case for the answer."),
+        (section_titles["counterweights"], "Handle counterweights, cruxes, and scope boundaries as limits on the answer."),
+        (section_titles["practical_implication"], _practical_section_job(section_titles["practical_implication"])),
     ]
     rows = []
     for section, writing_job in sections:
         owned_steps = [step for step in steps if step.get("primary_section") == section]
-        obligations = [row for row in mandatory_retention_checklist if _obligation_section(row) == section]
+        obligations = [row for row in mandatory_retention_checklist if _obligation_section(row, section_titles=section_titles) == section]
         rows.append(
             _drop_empty(
                 {
@@ -147,20 +154,44 @@ def _section_plan(steps: list[dict[str, Any]], mandatory_retention_checklist: li
     return rows
 
 
-def _obligation_section(row: dict[str, Any]) -> str:
+def _obligation_section(row: dict[str, Any], *, section_titles: dict[str, str]) -> str:
     role = str(row.get("role") or row.get("obligation_type") or "").lower()
     text = str(row.get("statement") or row.get("claim") or row.get("prose_instruction") or "").lower()
     if any(token in role for token in ("counter", "boundary", "scope", "crux", "limit", "risk")):
-        return "What Could Change or Bound the Answer"
+        return section_titles["counterweights"]
     if any(token in text for token in ("subgroup", "scope", "bound", "risk factor", "exception", "threshold", "high-risk")):
-        return "What Could Change or Bound the Answer"
+        return section_titles["counterweights"]
     if any(token in role for token in ("practical", "application", "implementation")):
-        return "Practical Implication"
+        return section_titles["practical_implication"]
     if any(token in text for token in ("practical", "application", "implementation", "advice", "recommend", "replacement", "action", "translate")):
-        return "Practical Implication"
+        return section_titles["practical_implication"]
     if "bottom" in role or "answer" in role:
-        return "Bottom Line"
-    return "Why This Is the Best Current Read"
+        return section_titles["bottom_line"]
+    return section_titles["answer_evidence"]
+
+
+def _section_titles(question: Any) -> dict[str, str]:
+    text = str(question or "").lower()
+    belief_question = any(term in text for term in ("what should", "believe", "current read", "interpret", "assess", "conclude"))
+    if belief_question:
+        return {
+            "bottom_line": "Current Read",
+            "answer_evidence": "Why This Is the Best Current Read",
+            "counterweights": "What Could Change or Bound the Read",
+            "practical_implication": "How to Use This Read",
+        }
+    return {
+        "bottom_line": "Bottom Line",
+        "answer_evidence": "Why This Is the Best Current Read",
+        "counterweights": "What Could Change or Bound the Answer",
+        "practical_implication": "Practical Implication",
+    }
+
+
+def _practical_section_job(title: str) -> str:
+    if "use this read" in str(title or "").lower():
+        return "Explain how to apply the read, what scope limits matter, and what would justify updating it."
+    return "Translate the answer into action guidance without reopening the whole evidence argument."
 
 
 def _lane_steps(memo_job: str, rows: list[dict[str, Any]], instruction: str) -> list[dict[str, Any]]:
@@ -176,6 +207,7 @@ def _lane_steps(memo_job: str, rows: list[dict[str, Any]], instruction: str) -> 
                     "evidence_item_ids": _string_list(row.get("item_id")),
                     "quantities": _list(row.get("quantities"))[:6],
                     "source_weight_role": row.get("source_weight_role"),
+                    "reader_evidence_role": row.get("reader_evidence_role"),
                     "why_this_step_matters": _short_text(row.get("why_this_weight") or row.get("decision_relevance") or instruction, 520),
                 }
             )
