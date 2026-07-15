@@ -86,9 +86,12 @@ def test_presentation_inserts_source_weighting_section_from_canonical_packet() -
 
     assert "## How to Weight the Evidence" in result["memo"]
     assert result["memo"].index("## How to Weight the Evidence") < result["memo"].index("## Supporting Evidence")
-    assert "Main answer drivers" in result["memo"]
-    assert "Context sources" in result["memo"]
-    assert "Source credibility is bounded by decision directness" in result["memo"]
+    assert "Use the evidence in layers" in result["memo"]
+    assert "Start with [Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
+    assert "Use [Guidance 2023](CITATION_TRACE.md#guidance-2023) for translation and background" in result["memo"]
+    assert "Keep decision directness in view" in result["memo"]
+    assert "Main answer drivers" not in result["memo"]
+    assert "Context sources" not in result["memo"]
     assert "association not causation" in result["memo"]
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
     assert "[outcome_2025]" not in result["memo"]
@@ -148,10 +151,12 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "The bottom line should be driven mainly by" in result["memo"]
-    assert "Use" in result["memo"]
-    assert "Main answer drivers" in result["memo"]
-    assert "Counterweights" in result["memo"]
+    assert "Read the sources by what each can decide" in result["memo"]
+    assert "where confidence should narrow" in result["memo"]
+    assert "Start with [Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
+    assert "Let [RISK 2024](CITATION_TRACE.md#risk-2024) narrow the claim" in result["memo"]
+    assert "Main answer drivers" not in result["memo"]
+    assert "Counterweights" not in result["memo"]
     assert "not enough for unconditional adoption" in result["memo"]
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" in result["memo"]
 

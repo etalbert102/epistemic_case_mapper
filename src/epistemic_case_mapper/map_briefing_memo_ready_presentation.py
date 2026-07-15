@@ -198,20 +198,33 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
     scope = _lane_sources(lanes, "scope_limiters", limit=2)
     context = _lane_sources(lanes, "context_only", limit=2)
     lines = ["## How to Weight the Evidence", ""]
-    thesis = _weighting_thesis(primary, calibrators, counterweights, scope, context)
-    if thesis:
-        lines.extend([thesis, ""])
-    bullets = _dedupe(
+    paragraphs = _dedupe(
         [
-            _weighting_bullet("Main answer drivers", primary, "carry the bottom-line answer"),
-            _weighting_bullet("Calibrators", calibrators, "calibrate magnitude, mechanism, or plausibility"),
-            _weighting_bullet("Counterweights", counterweights, "bound or weaken the answer rather than automatically overturning it"),
-            _weighting_bullet("Scope limiters", scope, "define where the answer stops applying"),
-            _weighting_bullet("Context sources", context, "help translate advice but should not be treated as independent causal evidence"),
+            _weighting_thesis(primary, calibrators, counterweights, scope, context),
+            _lane_weighting_sentence(
+                primary,
+                "Start with {sources}; those are the closest sources to the bottom-line answer.",
+            ),
+            _lane_weighting_sentence(
+                calibrators,
+                "Use {sources} to size the effect, mechanism, or plausibility rather than to replace direct answer evidence.",
+            ),
+            _lane_weighting_sentence(
+                counterweights,
+                "Let {sources} narrow confidence or scope where they point against the main read.",
+            ),
+            _lane_weighting_sentence(
+                scope,
+                "Use {sources} to mark where the answer applies and where it should stop.",
+            ),
+            _lane_weighting_sentence(
+                context,
+                "Use {sources} for translation and background, not as independent causal evidence.",
+            ),
         ]
     )
-    if bullets:
-        lines.extend(bullets)
+    if paragraphs:
+        lines.append("\n\n".join(paragraphs))
     credibility = _source_credibility_sentence(notes)
     if credibility:
         lines.extend(["", credibility])
@@ -236,50 +249,58 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
         "",
         _source_weighting_summary(groups),
     ]
-    bullets = []
-    for use, label in [
-        ("drives_answer", "Main answer drivers"),
-        ("calibrates_magnitude", "Calibrators"),
-        ("bounds_answer", "Counterweights"),
-        ("defines_scope", "Scope limiters"),
-        ("identifies_crux", "Decision cruxes"),
-        ("contextualizes", "Context sources"),
+    paragraphs = []
+    for use, template in [
+        ("drives_answer", "Start with {sources}; these are the closest sources to the bottom-line answer."),
+        ("calibrates_magnitude", "Use {sources} to calibrate magnitude, mechanism, or plausibility rather than to replace direct answer evidence."),
+        ("bounds_answer", "Let {sources} narrow the claim where they identify countervailing evidence or uncertainty."),
+        ("defines_scope", "Use {sources} to mark where the answer applies and where it should stop."),
+        ("identifies_crux", "Treat {sources} as crux evidence because they identify what could change the answer."),
+        ("contextualizes", "Use {sources} for translation and background rather than as independent proof."),
     ]:
-        bullet = _judgment_group_bullet(label, groups.get(use, [])[:4], guidance=guidance)
-        if bullet:
-            bullets.append(bullet)
-    if bullets:
-        lines.extend(["", *bullets])
+        sentence = _judgment_group_sentence(template, groups.get(use, [])[:4], guidance=guidance)
+        if sentence:
+            paragraphs.append(sentence)
+    if paragraphs:
+        lines.extend(["", "\n\n".join(paragraphs)])
     return "\n".join(lines).strip()
 
 
 def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
-    drivers = _source_group_citations(groups.get("drives_answer", [])[:3])
-    bounds = _source_group_citations(groups.get("bounds_answer", [])[:3])
-    calibrators = _source_group_citations(groups.get("calibrates_magnitude", [])[:2])
-    parts = []
-    if drivers:
-        parts.append(f"The bottom line should be driven mainly by {drivers}.")
-    if calibrators:
-        parts.append(f"Use {calibrators} to calibrate magnitude or mechanism rather than to replace direct answer evidence.")
-    if bounds:
-        parts.append(f"Use {bounds} to bound the answer and explain where confidence should narrow.")
-    return " ".join(parts) or "Read sources by decision role: answer drivers carry the bottom line, while calibrators, counterweights, cruxes, and scope sources bound the answer."
+    if any(groups.values()):
+        return (
+            "Read the sources by what each can decide, not by source count: direct evidence carries the answer, "
+            "while other sources size effects, expose limits, identify cruxes, or show where confidence should narrow."
+        )
+    return "Weigh the sources by what they can actually decide: some carry the answer, while others mainly size effects, expose counterweights, identify cruxes, or set boundaries."
 
 
-def _judgment_group_bullet(label: str, rows: list[dict[str, Any]], *, guidance: dict[str, Any] | None = None) -> str:
+def _judgment_group_sentence(template: str, rows: list[dict[str, Any]], *, guidance: dict[str, Any] | None = None) -> str:
     sources = _source_group_citations(rows)
     if not sources:
         return ""
     source_ids = _dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids")))
     limits = _dedupe(limit for row in rows for limit in _string_list(row.get("what_not_to_use_it_for")))[:3]
     readable_limits = _readable_limits(limits, source_ids=source_ids, guidance=guidance)
-    limit_text = f" Main limits: {', '.join(readable_limits)}." if readable_limits else ""
-    return f"- **{label}:** {sources}.{limit_text}"
+    sentence = template.format(sources=sources)
+    if readable_limits:
+        sentence += _limit_sentence(readable_limits, plural=len(source_ids) != 1)
+    return sentence
 
 
 def _source_group_citations(rows: list[dict[str, Any]]) -> str:
     return _cite_list(_dedupe(source_id for row in rows for source_id in _string_list(row.get("source_ids"))))
+
+
+def _limit_sentence(readable_limits: list[str], *, plural: bool) -> str:
+    limits = [limit for limit in readable_limits if limit]
+    if not limits:
+        return ""
+    if len(limits) == 1:
+        subject = "them" if plural else "it"
+        return f" Read {subject} with this caveat: {limits[0]}."
+    subject = "them" if plural else "it"
+    return f" Read {subject} with these caveats: {'; '.join(limits)}."
 
 
 def _weighting_thesis(
@@ -293,16 +314,16 @@ def _weighting_thesis(
         return ""
     if primary:
         return (
-            f"The main read should be driven first by the sources assigned as primary answer drivers ({_cite_list(primary)}). "
-            "Other evidence should be used to calibrate confidence, explain mechanisms, identify counterweights, or set scope boundaries."
+            "Use the evidence in layers: start with the sources closest to the bottom-line answer, then bring in other sources "
+            "to calibrate confidence, explain mechanisms, identify counterweights, or set scope boundaries."
         )
     return "No single source class carries the whole answer; weigh the evidence by decision role rather than by source count."
 
 
-def _weighting_bullet(label: str, sources: list[str], rationale: str) -> str:
+def _lane_weighting_sentence(sources: list[str], template: str) -> str:
     if not sources:
         return ""
-    return f"- **{label}:** ({_cite_list(sources)}) {rationale}."
+    return template.format(sources=_cite_list(sources))
 
 
 def _source_credibility_sentence(notes: list[Any]) -> str:
@@ -311,10 +332,10 @@ def _source_credibility_sentence(notes: list[Any]) -> str:
     directness = _dedupe(str(row.get("decision_directness") or "").strip() for row in rows if row.get("decision_directness"))
     parts = []
     if directness:
-        parts.append(f"Source credibility is bounded by decision directness ({', '.join(directness[:3])})")
+        parts.append(f"Keep decision directness in view ({', '.join(directness[:3])})")
     readable = [_readable_warning(warning) for warning in warnings[:4]]
     if readable:
-        parts.append("Known limits: " + "; ".join(readable))
+        parts.append("the known limits are " + "; ".join(readable))
     return ". ".join(parts) + "." if parts else ""
 
 
