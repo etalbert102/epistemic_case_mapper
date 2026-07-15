@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
 )
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -40,12 +41,12 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
 
     assert len(calls) == 3
     assert all("section_role_contract" in prompt for prompt in calls)
-    assert all("balanced_answer_frame" in prompt for prompt in calls)
-    assert all("bluf_contract" in prompt for prompt in calls)
     assert all("evidence_language_contracts" in prompt for prompt in calls)
-    assert all("Use bluf_contract for the opening bottom line" in prompt for prompt in calls)
+    assert all("section_focus" in prompt for prompt in calls)
+    assert all("current_read_reference" in prompt for prompt in calls)
     assert all("Use evidence_language_contracts" in prompt for prompt in calls)
-    assert all("Treat balanced_answer_frame as the controlling top-level read" in prompt for prompt in calls)
+    assert all("Use section_focus and section_role_contract as the controlling job" in prompt for prompt in calls)
+    assert all("do not repeat it as the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
     assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
     assert any("translate_the_read_into_action" in prompt for prompt in calls)
@@ -56,6 +57,33 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert "## What Could Change or Bound the Answer" in result["memo"]
     assert "## Practical Implication" in result["memo"]
     assert "25%" in result["memo"]
+
+
+def test_section_packets_are_section_local_and_practical_gets_evidence() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    inventory = packet["canonical_decision_writer_packet"]["organized_evidence_inventory"]["lanes"]
+    inventory.setdefault("interpretive_context", []).append(
+        {
+            "item_id": "practical_context",
+            "role": "mechanism_or_explanation",
+            "answer_relation": "contextualizes_answer",
+            "claim": "Monitoring feasibility determines how the answer should be applied.",
+            "source_ids": ["s1"],
+            "decision_relevance": "Translates the answer into a concrete operating boundary.",
+        }
+    )
+
+    plan = build_memo_ready_section_synthesis_plan(packet)
+    sections = {row["section_id"]: row["packet"] for row in plan["sections"]}
+    practical = sections["practical_implication"]
+
+    assert practical["section_focus"]["use_current_read_as"] == "background_only"
+    assert practical["evidence_context"]
+    assert practical["source_weighting"]
+    assert "balanced_answer_frame" not in practical["top_context"]
+    assert "bluf_contract" not in practical["top_context"]
+    assert "current_read_reference" in practical["top_context"]
 
 
 def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -79,9 +79,9 @@ def build_memo_ready_section_synthesis_prompt(
         "- Write natural expert analyst prose, not a checklist, unless bullets are the clearest form for concrete boundaries.\n"
         "- Make each paragraph do a distinct reasoning job and avoid repeating earlier-section sentences.\n\n"
         "Writing priorities:\n"
-        "- Use bluf_contract for the opening bottom line and as a local reference for answer-first wording when this section restates the read.\n"
-        "- Treat balanced_answer_frame as the controlling top-level read: reconcile support, counterweight, scope, and underused balance evidence instead of letting one evidence lane dominate.\n"
-        "- Use must_not_overstate to calibrate causal and confidence language.\n"
+        "- Use section_focus and section_role_contract as the controlling job for this section.\n"
+        "- Use top_context.current_read_reference only to stay consistent with the memo answer; do not repeat it as the section opener unless section_focus explicitly asks for it.\n"
+        "- Use top_context.must_not_overstate to calibrate causal and confidence language.\n"
         "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
@@ -197,18 +197,6 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
 
 
 def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
-    top_context = _drop_empty(
-        {
-            "decision_question": reader_packet.get("decision_question"),
-            "answer_frame": reader_packet.get("answer_frame"),
-            "balanced_answer_frame": reader_packet.get("balanced_answer_frame"),
-            "bluf_contract": reader_packet.get("bluf_contract"),
-            "evidence_language_contracts": reader_packet.get("evidence_language_contracts"),
-            "decision_usefulness": reader_packet.get("decision_usefulness"),
-            "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
-            "citation_registry": reader_packet.get("citation_registry"),
-        }
-    )
     packets = []
     for raw in _list(reader_packet.get("section_writing_packets")):
         if not isinstance(raw, dict):
@@ -227,7 +215,8 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "source_section": source_section,
                     "section_job": raw.get("writing_job"),
                     "section_role_contract": _section_role_contract(heading),
-                    "top_context": top_context,
+                    "section_focus": _section_focus(section_id),
+                    "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
@@ -304,6 +293,122 @@ def _section_role_contract(heading: str) -> dict[str, Any]:
         },
     }
     return contracts.get(section_id, contracts["answer_evidence"])
+
+
+def _section_focus(section_id: str) -> dict[str, Any]:
+    focuses = {
+        "answer_evidence": {
+            "lead": "Start with the evidence reason this answer is the best current read, not with a restated BLUF.",
+            "use_current_read_as": "reference_for_what_the_evidence_must_explain",
+            "new_value": "evidence hierarchy, magnitude, and confidence calibration",
+        },
+        "counterweights": {
+            "lead": "Start with the most important boundary or uncertainty, not with the full bottom line.",
+            "use_current_read_as": "the answer being bounded or stress-tested",
+            "new_value": "what narrows, weakens, changes, or scopes the answer",
+        },
+        "practical_implication": {
+            "lead": "Start with what the reader should do with the answer inside scope.",
+            "use_current_read_as": "background_only",
+            "new_value": "concrete application, monitoring point, or action boundary",
+        },
+    }
+    return focuses.get(section_id, focuses["answer_evidence"])
+
+
+def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, Any], *, section_id: str) -> dict[str, Any]:
+    balanced = _dict(reader_packet.get("balanced_answer_frame"))
+    bluf = _dict(reader_packet.get("bluf_contract"))
+    source_ids = _section_source_ids(raw_section)
+    base = {
+        "decision_question": reader_packet.get("decision_question"),
+        "current_read_reference": bluf.get("recommended_read") or balanced.get("best_current_read"),
+        "confidence": balanced.get("confidence"),
+        "must_not_overstate": balanced.get("must_not_overstate"),
+        "evidence_language_contracts": _filter_language_contracts(reader_packet.get("evidence_language_contracts"), source_ids),
+        "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
+        "citation_registry": reader_packet.get("citation_registry"),
+    }
+    if section_id == "answer_evidence":
+        base.update(
+            {
+                "main_support": balanced.get("main_support"),
+                "main_counterweight_reference": balanced.get("main_counterweight"),
+                "answer_frame": reader_packet.get("answer_frame"),
+            }
+        )
+    elif section_id == "counterweights":
+        base.update(
+            {
+                "main_counterweight": balanced.get("main_counterweight"),
+                "scope": balanced.get("scope"),
+                "decision_usefulness": _counterweight_decision_usefulness(reader_packet.get("decision_usefulness")),
+            }
+        )
+    elif section_id == "practical_implication":
+        base.update(
+            {
+                "practical_read": balanced.get("practical_read") or bluf.get("practical_read"),
+                "scope": bluf.get("who_it_applies_to") or balanced.get("scope"),
+                "main_boundary": bluf.get("main_exception_or_boundary") or balanced.get("main_counterweight"),
+                "decision_usefulness": _practical_decision_usefulness(reader_packet.get("decision_usefulness")),
+            }
+        )
+    return _drop_empty(base)
+
+
+def _section_source_ids(raw_section: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            *[
+                source_id
+                for row in _list(raw_section.get("evidence_context"))
+                if isinstance(row, dict)
+                for source_id in _string_list(row.get("source_ids"))
+            ],
+            *[
+                source_id
+                for row in _list(raw_section.get("retention_requirements"))
+                if isinstance(row, dict)
+                for source_id in _string_list(row.get("source_ids"))
+            ],
+            *[
+                source_id
+                for row in _list(raw_section.get("source_weighting"))
+                if isinstance(row, dict)
+                for source_id in _string_list(row.get("source_ids"))
+            ],
+        ]
+    )
+
+
+def _filter_language_contracts(value: Any, source_ids: list[str]) -> list[dict[str, Any]]:
+    rows = [row for row in _list(value) if isinstance(row, dict)]
+    if not source_ids:
+        return rows[:8]
+    source_set = set(source_ids)
+    return [row for row in rows if source_set.intersection(_string_list(row.get("source_ids")))]
+
+
+def _counterweight_decision_usefulness(value: Any) -> dict[str, Any]:
+    row = _dict(value)
+    return _drop_empty(
+        {
+            "cruxes_and_thresholds": row.get("cruxes_and_thresholds"),
+            "monitoring_triggers": row.get("monitoring_triggers"),
+        }
+    )
+
+
+def _practical_decision_usefulness(value: Any) -> dict[str, Any]:
+    row = _dict(value)
+    return _drop_empty(
+        {
+            "recommended_stance": row.get("recommended_stance"),
+            "tradeoffs": row.get("tradeoffs"),
+            "monitoring_triggers": row.get("monitoring_triggers"),
+        }
+    )
 
 
 def _section_id_from_heading(heading: str) -> str:
@@ -477,6 +582,8 @@ def _section_writing_packets(packet: dict[str, Any]) -> list[dict[str, Any]]:
             ]
         )
         evidence_rows = [evidence_by_id[evidence_id] for evidence_id in evidence_ids if evidence_id in evidence_by_id]
+        if not evidence_rows and _section_id_from_heading(section_name) == "practical_implication":
+            evidence_rows = _practical_evidence_rows(packet)
         source_ids = _dedupe(
             [
                 *[source_id for step in owned_steps for source_id in _string_list(step.get("source_ids"))],
@@ -519,6 +626,32 @@ def _evidence_by_id(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
         if item_id and item_id not in by_id:
             by_id[item_id] = row
     return by_id
+
+
+def _practical_evidence_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    inventory = _dict(packet.get("organized_evidence_inventory"))
+    lanes = _dict(inventory.get("lanes"))
+    candidates = []
+    for lane in ("interpretive_context", "scope_and_applicability"):
+        for row in _list(lanes.get(lane)):
+            if isinstance(row, dict) and _practical_row_eligible(row, lane=lane):
+                candidates.append(_compact_row(row))
+    return _dedupe_rows(candidates, "item_id")[:6]
+
+
+def _practical_row_eligible(row: dict[str, Any], *, lane: str) -> bool:
+    relation = str(row.get("answer_relation") or "").strip()
+    role = str(row.get("role") or "").strip()
+    obligation = str(row.get("obligation_level") or "").strip()
+    if relation in {"off_question", "not_relevant", "not_decision_relevant", "uncertain_relation"}:
+        return False
+    if obligation in {"optional_context", "off_question", "not_relevant"}:
+        return False
+    if lane == "interpretive_context":
+        return relation in {"contextualizes_answer", "supports_answer", "bounds_scope"} or role in {"mechanism_or_explanation", "context_only"}
+    if lane == "scope_and_applicability":
+        return relation in {"contextualizes_answer", "bounds_scope"} and role == "scope_boundary"
+    return False
 
 
 def _section_retention_requirements(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -588,3 +721,15 @@ def _list(value: Any) -> list[Any]:
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if value not in ("", None, [], {})}
+
+
+def _dedupe_rows(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+    seen = set()
+    deduped = []
+    for row in rows:
+        marker = str(row.get(key) or "")
+        if not marker or marker in seen:
+            continue
+        seen.add(marker)
+        deduped.append(row)
+    return deduped
