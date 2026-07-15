@@ -25,6 +25,9 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["decision_brief_skeleton"]["main_reason"]
     assert canonical["decision_answer_classification"]["answer_shape"]
     assert canonical["analyst_reasoning_frame"]
+    assert canonical["balanced_answer_frame"]["schema_id"] == "balanced_answer_frame_v1"
+    assert canonical["balanced_answer_frame"]["best_current_read"]
+    assert "must_not_overstate" in canonical["balanced_answer_frame"]
     assert canonical["source_weighted_answer_frame"]["lanes"]
     assert canonical["evidence_weighted_argument_spine"]["schema_id"] == "evidence_weighted_argument_spine_v1"
     assert canonical["source_weight_judgments"]
@@ -61,6 +64,19 @@ def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
     assert lanes["scope_limiters"][0]["source_ids"]
     assert "source_labels" not in str(frame)
     assert any("main answer" in move for move in frame["required_weighting_moves"])
+
+
+def test_canonical_packet_builds_balanced_answer_frame_from_existing_judgments() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    frame = packet["canonical_decision_writer_packet"]["balanced_answer_frame"]
+
+    assert frame["schema_id"] == "balanced_answer_frame_v1"
+    assert frame["best_current_read"]
+    assert frame["main_support"]
+    assert frame["main_counterweight"] or frame["scope"]
+    assert "underused_balance_evidence" in frame
+    assert "overstat" in frame["synthesis_instruction"]
 
 
 def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> None:

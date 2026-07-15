@@ -40,6 +40,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
 
     assert len(calls) == 3
     assert all("section_role_contract" in prompt for prompt in calls)
+    assert all("balanced_answer_frame" in prompt for prompt in calls)
+    assert all("Treat balanced_answer_frame as the controlling top-level read" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
     assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
     assert any("translate_the_read_into_action" in prompt for prompt in calls)
