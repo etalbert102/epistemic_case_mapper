@@ -1636,11 +1636,14 @@ def _source_alias_lookup(packet: dict[str, Any]) -> dict[str, list[str]]:
         values = [
             source_label,
             source_id,
+            str(source.get("source_slug") or "").strip(),
+            str(source.get("original_source_id") or "").strip(),
             compact_source_display(source),
             replacements.get(source_label, ""),
             replacements.get(source_id, ""),
             str(source.get("display_label") or "").strip(),
             str(source.get("citation_label") or "").strip(),
+            *_string_list(source.get("source_aliases")),
         ]
         alias_values = _exact_dedupe(value for value in values if value)
         for key in (source_label, source_id, *alias_values):

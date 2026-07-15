@@ -211,6 +211,48 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 
 
+def test_presentation_model_source_weighting_keeps_limits_source_local() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "cohort_2025", "source_label": "Cohort Study 2025"},
+            {"source_id": "guidance_2024", "source_label": "Guidance Note 2024"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["cohort_2025"],
+                    "main_use": "drives_answer",
+                    "memo_weight_sentence": "Use this cohort for the outcome association closest to the decision.",
+                    "reader_facing_limit": "Use as association evidence, not standalone causal proof.",
+                    "method": "model_adjudicated_per_source",
+                    "evidence_item_ids": ["item_001"],
+                },
+                {
+                    "source_ids": ["guidance_2024"],
+                    "main_use": "defines_scope",
+                    "memo_weight_sentence": "Use this guidance to define implementation scope.",
+                    "reader_facing_limit": "Use as guidance, not independent empirical proof.",
+                    "method": "model_adjudicated_per_source",
+                    "evidence_item_ids": ["item_002"],
+                },
+            ],
+            "source_weighted_answer_frame": {"lanes": {}},
+            "source_weight_notes": [],
+        },
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Adopt option A in matched settings.\n\n## Support\n\nOutcome evidence supports adoption [cohort_2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "- [Cohort 2025]: Use this cohort for the outcome association closest to the decision." in result["memo"]
+    assert "Use limit: use as association evidence, not standalone causal proof." in result["memo"]
+    assert "- [Guidance 2024]: Use this guidance to define implementation scope." in result["memo"]
+    assert "Use limit: use as guidance, not independent empirical proof." in result["memo"]
+    cohort_block = result["memo"].split("- [Guidance 2024]:", maxsplit=1)[0]
+    assert "guidance, not independent empirical proof" not in cohort_block
+
+
 def test_presentation_source_weighting_splits_different_caveat_families() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

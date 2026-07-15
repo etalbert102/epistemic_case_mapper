@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_source_bound_evidence import (
     quantity_binding_rows,
     source_bound_quantity_tuples,
 )
+from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -43,6 +44,7 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
     reader_packet = _reader_synthesis_packet(canonical)
     section_packets = _section_synthesis_packets(reader_packet)
     known_source_ids = _known_source_ids(memo_ready_packet, canonical, reader_packet)
+    known_source_aliases = source_id_alias_map(_list(memo_ready_packet.get("source_trail")))
     return {
         "schema_id": "memo_ready_section_synthesis_plan_v1",
         "status": "ready" if section_packets else "unavailable",
@@ -51,6 +53,7 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
         "title": _short_decision_title(reader_packet.get("decision_question")),
         "bottom_line": _bottom_line_from_reader_packet(reader_packet),
         "known_source_ids": known_source_ids,
+        "known_source_aliases": known_source_aliases,
         "sections": [
             {
                 "section_id": packet["section_id"],

@@ -28,6 +28,7 @@ def run_parallel_memo_ready_section_generation(
 ) -> dict[str, Any]:
     sections = [section for section in _list(section_plan.get("sections")) if isinstance(section, dict)]
     known_source_ids = set(_string_list(section_plan.get("known_source_ids")))
+    known_source_aliases = _source_alias_map(section_plan.get("known_source_aliases"))
     report = {
         "schema_id": "memo_ready_section_generation_report_v1",
         "status": "not_run",
@@ -45,6 +46,7 @@ def run_parallel_memo_ready_section_generation(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             known_source_ids=known_source_ids,
+            known_source_aliases=known_source_aliases,
             run_model=run_model,
         )
 
@@ -86,6 +88,7 @@ def _run_section(
     backend_timeout: int | None,
     backend_retries: int,
     known_source_ids: set[str],
+    known_source_aliases: dict[str, str],
     run_model: ModelRunner,
 ) -> dict[str, Any]:
     heading = str(section.get("heading") or "").strip()
@@ -114,6 +117,7 @@ def _run_section(
     raw = result.text
     markdown = _extract_section_markdown(raw, heading)
     markdown = _normalize_statistical_brackets(markdown)
+    markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
     markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
     unknown = _unknown_section_source_ids(markdown, known_source_ids)
     structure_issues = markdown_structure_issues(markdown)
@@ -187,6 +191,45 @@ def _unknown_section_source_ids(markdown: str, known_source_ids: set[str]) -> li
             if source_id and source_id not in known_source_ids:
                 unknown.append(source_id)
     return _dedupe(unknown)
+
+
+def _normalize_known_source_alias_citations(markdown: str, aliases: dict[str, str]) -> str:
+    if not aliases:
+        return markdown
+
+    def replace_cluster(match: re.Match[str]) -> str:
+        tokens = [token.strip() for token in re.split(r"([,;])", match.group(1))]
+        changed = False
+        repaired = []
+        for token in tokens:
+            if token in {",", ";"}:
+                repaired.append(token)
+                continue
+            replacement = _source_alias_lookup(token, aliases)
+            changed = changed or replacement != token
+            repaired.append(replacement)
+        return "[" + "".join(repaired) + "]" if changed else match.group(0)
+
+    return re.sub(r"\[([^\[\]]{1,180})\]", replace_cluster, str(markdown or ""))
+
+
+def _source_alias_lookup(value: str, aliases: dict[str, str]) -> str:
+    text = str(value or "").strip()
+    if text in aliases:
+        return aliases[text]
+    normalized = _normalize_source_alias(text)
+    for alias, source_id in aliases.items():
+        if _normalize_source_alias(alias) == normalized:
+            return source_id
+    return text
+
+
+def _source_alias_map(value: Any) -> dict[str, str]:
+    return {str(key).strip(): str(item).strip() for key, item in (value.items() if isinstance(value, dict) else []) if str(key).strip() and str(item).strip()}
+
+
+def _normalize_source_alias(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
 
 
 def _normalize_statistical_brackets(markdown: str) -> str:

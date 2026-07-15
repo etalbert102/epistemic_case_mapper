@@ -131,9 +131,12 @@ def source_id_alias_map(source_trail: list[Any]) -> dict[str, str]:
             continue
         values = [
             source_id,
+            str(source.get("source_slug") or "").strip(),
+            str(source.get("original_source_id") or "").strip(),
             str(source.get("source_label") or "").strip(),
             str(source.get("display_label") or "").strip(),
             str(source.get("citation_label") or "").strip(),
+            *_string_list(source.get("source_aliases")),
         ]
         for value in values:
             for variant in source_label_variants(value):
@@ -186,6 +189,12 @@ def source_id_registry_for_model(source_trail: list[Any]) -> list[dict[str, Any]
             continue
         seen.add(source_id)
         row = {"source_id": source_id}
+        source_slug = str(source.get("source_slug") or source.get("original_source_id") or "").strip()
+        if source_slug and source_slug != source_id:
+            row["source_slug"] = source_slug
+        citation = str(source.get("citation_label") or source.get("display_label") or source.get("source_label") or "").strip()
+        if citation:
+            row["source_label"] = citation
         used_for = _string_list(source.get("used_for"))
         if used_for:
             row["used_for"] = used_for

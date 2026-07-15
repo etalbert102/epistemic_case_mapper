@@ -6,6 +6,7 @@ from typing import Any
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_lightweight_guidance import evidence_quality_caveat_text
 from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations
+from epistemic_case_mapper.map_briefing_model_source_weighting_presentation import render_model_source_weighting_section
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -24,7 +25,6 @@ from epistemic_case_mapper.map_briefing_source_use_notes import source_use_note_
 from epistemic_case_mapper.map_briefing_source_weighting_caveats import render_source_weighting_caveat_note
 
 DEFAULT_CITATION_TRACE_HREF = "CITATION_TRACE.md"
-
 
 def run_memo_ready_presentation_normalization(
     memo: str,
@@ -94,8 +94,6 @@ def run_memo_ready_presentation_normalization(
             "issues": [],
         },
     }
-
-
 def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
     """Render the local citation trace target used by inline memo citations."""
     entries = _canonical_source_entries(packet)
@@ -154,8 +152,6 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
             lines.append("- Packet evidence: no directly matched evidence item")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
-
-
 def _source_weight_judgments_by_source(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     canonical = _dict(packet.get("canonical_decision_writer_packet"))
     judgments = _list(canonical.get("source_weight_judgments"))
@@ -225,6 +221,13 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
     ]
     if not rows:
         return ""
+    per_source_section = render_model_source_weighting_section(
+        rows,
+        summary=_source_weighting_summary({"model_adjudicated": rows}),
+        guidance=guidance,
+    )
+    if per_source_section:
+        return per_source_section
     groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         groups.setdefault(str(row.get("main_use") or "contextualizes"), []).append(row)
@@ -830,9 +833,12 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
             continue
         aliases = [
             str(source.get("source_id") or "").strip(),
+            str(source.get("source_slug") or "").strip(),
+            str(source.get("original_source_id") or "").strip(),
             source_label,
             str(source.get("display_label") or "").strip(),
             str(source.get("citation_label") or "").strip(),
+            *_string_list(source.get("source_aliases")),
         ]
         for alias in aliases:
             for variant in source_label_variants(alias):

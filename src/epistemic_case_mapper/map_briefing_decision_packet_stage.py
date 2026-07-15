@@ -155,6 +155,11 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
         attach_lightweight_guidance_to_packet,
         run_lightweight_writer_guidance,
     )
+    from epistemic_case_mapper.map_briefing_model_source_weighting import (
+        attach_model_source_weighting_to_packet,
+        run_model_source_weight_judgments,
+    )
+    from epistemic_case_mapper.map_briefing_source_id_projection import project_memo_ready_packet_source_ids
 
     _progress(progress, "analyst_packet_bundle", "started")
     scaffold.update(build_analyst_packet_bundle(packet=packet, ledger=ledger, adjudication=scaffold.get("analyst_adjudication", {}), decision_model=scaffold.get("analyst_decision_model", {}), memo_warning_packet=scaffold.get("memo_warning_packet", {})))
@@ -203,6 +208,12 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     )
     _promote_analyst_packet_as_active(scaffold)
     memo_ready = scaffold.get("memo_ready_packet")
+    if isinstance(memo_ready, dict):
+        _progress(progress, "source_id_projection", "started")
+        scaffold["memo_ready_packet"] = project_memo_ready_packet_source_ids(memo_ready)
+        scaffold["source_identity_projection"] = scaffold["memo_ready_packet"].get("source_identity_projection", {})
+        _progress(progress, "source_id_projection", "completed", _report_status(scaffold, "source_identity_projection"))
+    memo_ready = scaffold.get("memo_ready_packet")
     canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
     scaffold["decision_usefulness_inventory_report"] = build_decision_usefulness_inventory_report(
         canonical_packet=canonical if isinstance(canonical, dict) else {},
@@ -221,6 +232,21 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     memo_ready = scaffold.get("memo_ready_packet")
     canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
     _progress(progress, "decision_usefulness", "completed", _report_status(scaffold, "decision_usefulness_report"))
+
+    _progress(progress, "model_source_weighting", "started")
+    source_weighting_bundle = run_model_source_weight_judgments(
+        memo_ready if isinstance(memo_ready, dict) else {},
+        backend=backend_config.backend,
+        backend_timeout=backend_config.timeout,
+        backend_retries=backend_config.retries,
+    )
+    scaffold.update(source_weighting_bundle)
+    if isinstance(memo_ready, dict):
+        scaffold["memo_ready_packet"] = attach_model_source_weighting_to_packet(memo_ready, source_weighting_bundle)
+    memo_ready = scaffold.get("memo_ready_packet")
+    canonical = memo_ready.get("canonical_decision_writer_packet", {}) if isinstance(memo_ready, dict) else {}
+    _progress(progress, "model_source_weighting", "completed", _report_status(scaffold, "model_source_weighting_report"))
+
     _progress(progress, "lightweight_writer_guidance", "started")
     guidance_bundle = run_lightweight_writer_guidance(
         canonical_packet=canonical if isinstance(canonical, dict) else {},
