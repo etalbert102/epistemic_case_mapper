@@ -176,12 +176,12 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "where confidence should narrow" in result["memo"]
     assert "Start with [Outcome 2025]" in result["memo"]
     assert "Let [RISK 2024] narrow the claim" in result["memo"]
-    assert result["memo"].count("[^source-weight-caveats]") == 2
-    assert "Detailed source caveats are in [^source-weight-caveats]" in result["memo"]
-    assert "[^source-weight-caveats]: Source-weighting caveats:" in result["memo"]
+    assert "[^source-weight-caveats]" not in result["memo"]
+    assert "Source-specific use limits are kept with the source entries and expanded in the citation trace" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
     assert "not enough for unconditional adoption" in result["memo"]
+    assert "* [RISK 2024](https://example.test/risk) — Risk Review 2024 — use: bounds answer; limit: not enough for unconditional adoption" in result["memo"]
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" not in result["memo"]
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 

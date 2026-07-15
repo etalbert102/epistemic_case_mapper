@@ -269,7 +269,7 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
         lines.extend(["", "\n\n".join(paragraphs)])
     caveat_note = _source_weighting_caveat_note(caveat_rows)
     if caveat_note:
-        lines.extend(["", "Detailed source caveats are in [^source-weight-caveats].", "", caveat_note])
+        lines.extend(["", caveat_note])
     return "\n".join(lines).strip()
 
 
@@ -307,7 +307,7 @@ def _source_weighting_caveat_note(caveat_rows: list[dict[str, Any]]) -> str:
     ]
     if not parts:
         return ""
-    return "[^source-weight-caveats]: Source-weighting caveats: " + "; ".join(parts) + "."
+    return "Source-specific use limits are kept with the source entries and expanded in the citation trace: " + "; ".join(parts) + "."
 
 
 def _weighting_thesis(
@@ -410,7 +410,7 @@ def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:
         displays = [entry["citation_display"], entry["inline_display"], entry["source_display"]]
         matches = [lowered.find(display.lower()) for display in displays if display and _contains_text(body, display)]
         if matches:
-            cited.append((min(index for index in matches if index >= 0), _source_line_for_entry(entry)))
+            cited.append((min(index for index in matches if index >= 0), _source_line_for_entry(entry, packet)))
     return _dedupe(line for _, line in sorted(cited, key=lambda row: row[0]))
 
 
@@ -614,13 +614,47 @@ def _source_url_lookup(packet: dict[str, Any]) -> dict[str, str]:
     return urls
 
 
-def _source_line_for_entry(entry: dict[str, str]) -> str:
+def _source_line_for_entry(entry: dict[str, str], packet: dict[str, Any]) -> str:
     display = entry.get("inline_display", "") or entry.get("source_display", "")
     title = entry.get("source_display", "") or display
     url = entry.get("url", "")
     linked = f"[{display}]({url})" if display and url else display
     suffix = f" — {title}" if title and title != display else ""
-    return f"* {linked}{suffix}"
+    note = _source_use_note_for_entry(entry, packet)
+    note_suffix = f" — {note}" if note else ""
+    return f"* {linked}{suffix}{note_suffix}"
+
+
+def _source_use_note_for_entry(entry: dict[str, str], packet: dict[str, Any]) -> str:
+    source_id = str(entry.get("source_id") or "").strip()
+    if not source_id:
+        return ""
+    parts = []
+    judgment = _source_weight_judgments_by_source(packet).get(source_id)
+    if judgment:
+        use = _readable_main_use(judgment.get("main_use"))
+        if use and use != "unspecified":
+            parts.append(f"use: {use}")
+        limits = _dedupe(_readable_warning(item) for item in _string_list(judgment.get("what_not_to_use_it_for")) if item)
+        if limits:
+            parts.append("limit: " + "; ".join(limits[:2]))
+    language = _language_contracts_by_source(packet).get(source_id)
+    if language and not any(part.startswith("limit:") for part in parts):
+        avoid = _string_list(language.get("avoid_language"))
+        if avoid:
+            parts.append("wording limit: avoid " + ", ".join(avoid[:2]))
+    return "; ".join(parts)
+
+
+def _language_contracts_by_source(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    by_source: dict[str, dict[str, Any]] = {}
+    for row in _list(canonical.get("evidence_language_contracts")):
+        if not isinstance(row, dict):
+            continue
+        for source_id in _string_list(row.get("source_ids")):
+            by_source.setdefault(source_id, row)
+    return by_source
 
 
 def _dedupe_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
