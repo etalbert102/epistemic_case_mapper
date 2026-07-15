@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from epistemic_case_mapper import map_briefing_analyst_decision_logic as decision_logic
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
+from epistemic_case_mapper.map_briefing_analyst_contribution_fields import OBLIGATION_CONTRIBUTION_FIELD_LIMITS, SKELETON_CONTRIBUTION_FIELD_LIMITS, contribution_fields
 from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import run_parallel_analyst_decision_model, should_use_parallel_analyst_decision_model
 from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract import decision_model_required_output_schema
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
@@ -314,6 +315,7 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Use evidence IDs to form higher-level evidence groups; do not merely classify rows one by one.",
             "The context.evidence_rows list is the full-reasoning lane selected by analyst evidence routing.",
             "The context.routed_away_evidence_summary list is an audit lane; do not build full groups from it unless its own rationale shows that routing is unsafe.",
+            "Use row-level decision_contribution, use_in_reasoning, key_qualifier, quantity_takeaway, source_weight_note, misuse_warning, and if_omitted as interpretation constraints; preserve them in group rationale, answer_impact, conflict_note, applicability_limits, or do_not_overstate as appropriate.",
             "For every evidence row that could affect the memo, also fill memo_relevance_decisions with a transparent memo_inclusion choice.",
             "Use memo_spine only for evidence the memo would be materially worse without; use supporting_context for useful but non-core evidence; use trace_only for evidence that should remain available for audit but should not burden the memo prose; use exclude for off-question evidence.",
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
@@ -530,12 +532,13 @@ def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str,
         "target_answer_option": adjudicated.get("target_answer_option"),
         "effect_on_final_answer": adjudicated.get("effect_on_final_answer"),
         "tension_type": adjudicated.get("tension_type"),
+        **contribution_fields(adjudicated),
         "source_labels": row.get("source_labels", []),
         "source_ids": row.get("source_ids", []),
         "source_quality": _source_quality_summary(row),
         "claim": _short_text(str(row.get("claim") or ""), 620),
         "quantity_values": row.get("quantity_values", []),
-        "why_it_matters": _short_text(str(row.get("why_it_matters") or adjudicated.get("rationale") or ""), 280),
+        "why_it_matters": _short_text(str(row.get("why_it_matters") or adjudicated.get("decision_contribution") or adjudicated.get("rationale") or ""), 280),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 220),
         "relation_ids": row.get("relation_ids", []),
         "existing_warning_codes": row.get("existing_warning_codes", []),
@@ -677,6 +680,7 @@ def _obligation_skeleton_row(row: dict[str, Any], obligation_types: list[str]) -
             "obligation_types": obligation_types,
             "claim": _short_text(str(row.get("claim") or ""), 220),
             "quantity_values": row.get("quantity_values", []),
+            **contribution_fields(row, limits=SKELETON_CONTRIBUTION_FIELD_LIMITS),
             "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 160),
         }
     )
@@ -688,6 +692,7 @@ def _obligation_row(row: dict[str, Any]) -> dict[str, Any]:
             "evidence_item_id": row.get("evidence_item_id"),
             "claim_id": row.get("claim_id"),
             "adjudicated_memo_use": row.get("adjudicated_memo_use"),
+            **contribution_fields(row, limits=OBLIGATION_CONTRIBUTION_FIELD_LIMITS),
             "current_role": row.get("current_role"),
             "quantity_values": row.get("quantity_values", []),
             "claim": _short_text(str(row.get("claim") or ""), 260),
@@ -779,7 +784,6 @@ def _repair_json(text: str) -> str:
     text = re.sub(r",\s*([}\]])", r"\1", text)
     text = re.sub(r":\s*null\b", ": []", text)
     return text
-
 
 def _report(
     status: str,

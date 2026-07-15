@@ -108,6 +108,13 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "multi_option or unresolved" in prompt
     assert "rebuts an alternative answer but supports the selected/provisional current_best_answer" in prompt
     assert "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer" in prompt
+    assert "decision_contribution" in prompt
+    assert "use_in_reasoning" in prompt
+    assert "key_qualifier" in prompt
+    assert "quantity_takeaway" in prompt
+    assert "source_weight_note" in prompt
+    assert "misuse_warning" in prompt
+    assert "if_omitted" in prompt
     assert "Raw excerpt should stay out" not in prompt
     assert "large_internal_notes" not in prompt
     assert "source_quality" in prompt
@@ -151,6 +158,13 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
                 "memo_use": "load_bearing_primary_support",
                 "importance_rank": 1,
                 "rationale": "Direct outcome evidence.",
+                "decision_contribution": "This is the main observed benefit of option A.",
+                "use_in_reasoning": "answer anchor",
+                "key_qualifier": "Only applies if cost exposure is bounded.",
+                "quantity_takeaway": "",
+                "source_weight_note": "Direct study evidence should move the answer substantially.",
+                "misuse_warning": "Do not treat this as evidence that downstream risk disappears.",
+                "if_omitted": "The decision model would lose the main support for adoption.",
             },
             {
                 "evidence_item_id": "warning:two",
@@ -180,6 +194,7 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     assert len(calls) == 2
     assert result["analyst_adjudication_parse_report"]["valid"] is True
     assert result["analyst_adjudication"]["rows"][1]["memo_use"] == "load_bearing_counterweight"
+    assert result["analyst_adjudication"]["rows"][0]["decision_contribution"] == "This is the main observed benefit of option A."
 
 
 def test_analyst_adjudication_invalid_live_backend_reports_failure_without_fallback(monkeypatch) -> None:

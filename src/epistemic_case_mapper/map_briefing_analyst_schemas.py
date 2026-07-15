@@ -46,6 +46,13 @@ class EvidenceAdjudicationRow(BaseModel):
     effect_on_final_answer: str = ""
     tension_type: str = ""
     downgrade_reason: str = ""
+    decision_contribution: str = ""
+    use_in_reasoning: str = ""
+    key_qualifier: str = ""
+    quantity_takeaway: str = ""
+    source_weight_note: str = ""
+    misuse_warning: str = ""
+    if_omitted: str = ""
 
     @field_validator("covered_by", "source_ids", "quantity_values", mode="before")
     @classmethod
@@ -62,7 +69,20 @@ class EvidenceAdjudicationRow(BaseModel):
     def _strip_required_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
-    @field_validator("downgrade_reason", "target_answer_option", "effect_on_final_answer", "tension_type", mode="before")
+    @field_validator(
+        "downgrade_reason",
+        "target_answer_option",
+        "effect_on_final_answer",
+        "tension_type",
+        "decision_contribution",
+        "use_in_reasoning",
+        "key_qualifier",
+        "quantity_takeaway",
+        "source_weight_note",
+        "misuse_warning",
+        "if_omitted",
+        mode="before",
+    )
     @classmethod
     def _strip_optional_text(cls, value: Any) -> str:
         return str(value or "").strip()
@@ -684,6 +704,17 @@ def _normalize_adjudication_payload(payload: Any) -> Any:
             row["answer_relation"] = _answer_relation_alias(row["answer_relation"])
         if row.get("downgrade_reason") is None:
             row["downgrade_reason"] = ""
+        for key in (
+            "decision_contribution",
+            "use_in_reasoning",
+            "key_qualifier",
+            "quantity_takeaway",
+            "source_weight_note",
+            "misuse_warning",
+            "if_omitted",
+        ):
+            if row.get(key) is None:
+                row[key] = ""
     return normalized
 
 

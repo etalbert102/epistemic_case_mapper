@@ -363,6 +363,14 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "When answer_status is multi_option or unresolved, do not force evidence into support or counterweight for a nonexistent final answer; classify relative to the live answer option, condition, or crux the row bears on.",
             "Do not call evidence a counterweight merely because it argues against a feared, rejected, or alternative answer. Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in the selected/provisional current_best_answer or the named target_answer_option.",
             "When a row rebuts an alternative answer but supports the selected/provisional current_best_answer, use supports_answer or contextualizes_answer and explain that in effect_on_final_answer.",
+            "Create a compact decision contribution card for each row so later stages can use the evidence without reinterpreting it from scratch.",
+            "Write decision_contribution as the exact analytic contribution this row makes to answering the decision question.",
+            "Write use_in_reasoning as a short natural-language role such as answer anchor, counterweight, scope limiter, quantity calibrator, mechanism/context, or trace only.",
+            "Write key_qualifier as the caveat that must travel with this evidence if used.",
+            "Write quantity_takeaway only for numbers that are decision-facing; say what each number measures rather than listing numbers without interpretation.",
+            "Write source_weight_note as how strongly this source should move the answer and why, using source_quality when available.",
+            "Write misuse_warning as the inference a downstream model or reader must not draw from this row.",
+            "Write if_omitted as the analytical damage if this row is left out of the global decision model or final memo.",
             "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
             "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims do not support its proposed decision use.",
             "Do not drop rows. Return one row for every evidence_item_id.",
@@ -406,6 +414,13 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
                     "target_answer_option": "the answer option or stance this row most directly bears on",
                     "effect_on_final_answer": "supports current_best_answer | weakens current_best_answer | bounds current_best_answer | supports target answer | weakens target answer | bounds target answer | rebuts alternative | distinguishes live options | explains tension | background",
                     "tension_type": "none | clinical_outcome_vs_biomarker | subgroup_scope | dose_scope | study_conflict | mechanism | other",
+                    "decision_contribution": "one sentence: what this row changes, supports, weakens, bounds, or clarifies for the decision question",
+                    "use_in_reasoning": "answer anchor | counterweight | scope limiter | quantity calibrator | mechanism/context | trace only | other concise natural-language role",
+                    "key_qualifier": "caveat that must travel with this evidence if used",
+                    "quantity_takeaway": "reader-safe interpretation of decision-facing quantities, or empty string",
+                    "source_weight_note": "how strongly this source should move the answer and why",
+                    "misuse_warning": "what downstream synthesis must not infer from this row",
+                    "if_omitted": "what analytical loss occurs if this row is omitted",
                     "covered_by": ["optional evidence_item_id or group_id"],
                     "source_ids": ["optional source IDs copied from ledger"],
                     "quantity_values": ["optional quantities copied from ledger"],
@@ -438,6 +453,13 @@ def deterministic_adjudication_scaffold(ledger: dict[str, Any]) -> dict[str, Any
                 "target_answer_option": "",
                 "effect_on_final_answer": _effect_for_relation(_answer_relation_for_row(row)),
                 "tension_type": "",
+                "decision_contribution": _decision_contribution_for_row(row),
+                "use_in_reasoning": _use_in_reasoning_for_row(row),
+                "key_qualifier": "",
+                "quantity_takeaway": _quantity_takeaway_for_row(row),
+                "source_weight_note": "",
+                "misuse_warning": "",
+                "if_omitted": _if_omitted_for_row(row),
                 "covered_by": [],
                 "source_ids": _string_list(row.get("source_ids")),
                 "quantity_values": _string_list(row.get("quantity_values")),
@@ -586,6 +608,44 @@ def _effect_for_relation(relation: str) -> str:
         "contextualizes_answer": "background",
         "not_decision_relevant": "background",
     }.get(str(relation or ""), "")
+
+
+def _decision_contribution_for_row(row: dict[str, Any]) -> str:
+    claim = _short_text(str(row.get("claim") or row.get("why_it_matters") or ""), 220)
+    if claim:
+        return f"Scaffold contribution: {claim}"
+    return "Scaffold contribution from the ledger row."
+
+
+def _use_in_reasoning_for_row(row: dict[str, Any]) -> str:
+    return {
+        "load_bearing_primary_support": "answer anchor",
+        "quantitative_anchor": "quantity calibrator",
+        "load_bearing_counterweight": "counterweight",
+        "scope_or_applicability": "scope limiter",
+        "decision_crux": "decision crux",
+        "mechanism_or_context": "mechanism/context",
+        "background_only": "trace only",
+        "covered_by_group": "trace only",
+        "not_decision_relevant": "trace only",
+        "needs_human_or_model_review": "review flag",
+    }.get(_memo_use_for_row(row), "trace only")
+
+
+def _quantity_takeaway_for_row(row: dict[str, Any]) -> str:
+    quantities = _string_list(row.get("quantity_values"))
+    if not quantities:
+        return ""
+    return "Decision-facing quantities: " + ", ".join(quantities[:6])
+
+
+def _if_omitted_for_row(row: dict[str, Any]) -> str:
+    memo_use = _memo_use_for_row(row)
+    if memo_use in {"load_bearing_primary_support", "load_bearing_counterweight", "quantitative_anchor", "scope_or_applicability", "decision_crux"}:
+        return "The decision model may lose a load-bearing support, counterweight, quantity, crux, or scope boundary."
+    if memo_use == "needs_human_or_model_review":
+        return "The decision model may miss a warning that needs explicit review."
+    return "The audit trail may lose context, but the main answer should not change."
 
 
 def _scaffold_rationale(row: dict[str, Any]) -> str:

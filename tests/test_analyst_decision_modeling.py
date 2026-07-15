@@ -80,6 +80,13 @@ def _adjudication() -> dict:
                 "memo_use": "load_bearing_primary_support",
                 "importance_rank": 1,
                 "rationale": "Main support.",
+                "decision_contribution": "Shows the main outcome benefit that favors option A.",
+                "use_in_reasoning": "answer anchor",
+                "key_qualifier": "Benefit matters only if cost exposure is bounded.",
+                "quantity_takeaway": "25% reduction measures the main outcome change.",
+                "source_weight_note": "Direct trial evidence should receive substantial weight.",
+                "misuse_warning": "Do not infer that downstream budget risk is solved.",
+                "if_omitted": "The model would lose the main affirmative reason for adoption.",
             },
             {
                 "evidence_item_id": "bundle:support_duplicate",
@@ -87,6 +94,11 @@ def _adjudication() -> dict:
                 "importance_rank": 2,
                 "rationale": "Covered by the main support.",
                 "covered_by": ["bundle:support"],
+                "decision_contribution": "Restates the same outcome benefit as the main support.",
+                "use_in_reasoning": "trace only",
+                "key_qualifier": "Covered by bundle:support.",
+                "misuse_warning": "Do not double count this as independent evidence.",
+                "if_omitted": "The audit trail loses a duplicate, but the answer should not change.",
             },
             {
                 "evidence_item_id": "bundle:risk",
@@ -126,6 +138,10 @@ def _large_adjudication(count: int = 14) -> dict:
                 "memo_use": "load_bearing_counterweight" if index % 5 == 0 else "load_bearing_primary_support",
                 "importance_rank": index,
                 "rationale": f"Item {index} is relevant.",
+                "decision_contribution": f"Evidence item {index} contributes to the option A decision.",
+                "use_in_reasoning": "counterweight" if index % 5 == 0 else "answer anchor",
+                "misuse_warning": f"Do not overread evidence item {index}.",
+                "if_omitted": f"The decision model loses evidence item {index}.",
             }
             for index in range(1, count + 1)
         ],
@@ -196,8 +212,11 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["routed_away_row_count"] == 1
     assert context["model_hints"]["top_central_evidence_item_ids"]
     assert context["evidence_rows"][0]["adjudicated_memo_use"] == "load_bearing_primary_support"
+    assert context["evidence_rows"][0]["decision_contribution"] == "Shows the main outcome benefit that favors option A."
+    assert context["evidence_rows"][0]["misuse_warning"] == "Do not infer that downstream budget risk is solved."
     assert {row["evidence_item_id"] for row in context["evidence_rows"]} == {"bundle:support", "bundle:risk"}
     assert context["routed_away_evidence_summary"][0]["evidence_item_id"] == "bundle:support_duplicate"
+    assert context["routed_away_evidence_summary"][0]["misuse_warning"] == "Do not double count this as independent evidence."
     assert "source_excerpt" not in context["evidence_rows"][0]
     assert "relation_context" not in context["evidence_rows"][0]
     assert context["evidence_rows"][0]["source_quality"]["decision_directness"] == "direct"
@@ -296,6 +315,8 @@ def test_decision_model_prompt_asks_for_global_groups() -> None:
     assert "Start from obligation_group_skeleton" in prompt
     assert "Do not bury contrary evidence inside a support group" in prompt
     assert "Rank by decision diagnosticity" in prompt
+    assert "decision_contribution" in prompt
+    assert "misuse_warning" in prompt
     assert "source_ids" in prompt
     assert "source_labels" not in prompt
     assert "Outcome Study" not in prompt
@@ -312,6 +333,8 @@ def test_parallel_decision_model_tasks_chunk_large_context() -> None:
     assert "source_excerpt" not in json.dumps(tasks)
     assert "relation_context" not in json.dumps(tasks)
     assert "source_ids" in json.dumps(tasks)
+    assert "decision_contribution" in json.dumps(tasks)
+    assert "misuse_warning" in json.dumps(tasks)
     assert "source_labels" not in json.dumps(tasks)
     assert "Source 1" not in json.dumps(tasks)
 
