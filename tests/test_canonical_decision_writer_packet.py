@@ -27,6 +27,9 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["analyst_reasoning_frame"]
     assert canonical["balanced_answer_frame"]["schema_id"] == "balanced_answer_frame_v1"
     assert canonical["balanced_answer_frame"]["best_current_read"]
+    assert canonical["bluf_contract"]["schema_id"] == "bluf_contract_v1"
+    assert canonical["bluf_contract"]["recommended_read"]
+    assert canonical["bluf_contract"]["one_sentence_version"]
     assert "must_not_overstate" in canonical["balanced_answer_frame"]
     assert canonical["source_weighted_answer_frame"]["lanes"]
     assert canonical["evidence_weighted_argument_spine"]["schema_id"] == "evidence_weighted_argument_spine_v1"
@@ -77,6 +80,18 @@ def test_canonical_packet_builds_balanced_answer_frame_from_existing_judgments()
     assert frame["main_counterweight"] or frame["scope"]
     assert "underused_balance_evidence" in frame
     assert "overstat" in frame["synthesis_instruction"]
+
+
+def test_canonical_packet_builds_bluf_contract_from_balanced_frame() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    canonical = packet["canonical_decision_writer_packet"]
+    contract = canonical["bluf_contract"]
+
+    assert contract["schema_id"] == "bluf_contract_v1"
+    assert contract["recommended_read"] == canonical["balanced_answer_frame"]["best_current_read"]
+    assert contract["one_sentence_version"]
+    assert any("Answer the decision question" in item for item in contract["writing_contract"])
 
 
 def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> None:

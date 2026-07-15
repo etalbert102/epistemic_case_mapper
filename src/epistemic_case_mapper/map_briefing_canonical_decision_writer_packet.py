@@ -4,7 +4,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_argument_spine import build_evidence_weighted_argument_spine
-from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_balanced_answer_frame
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_balanced_answer_frame, build_bluf_contract
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -47,6 +47,14 @@ def build_canonical_decision_writer_packet(
     priority = _priority_evidence(interface)
     inventory = _organized_evidence_inventory(packet, interface)
     mandatory_checklist = _mandatory_retention_checklist(packet, interface)
+    balanced_frame = build_balanced_answer_frame(
+        skeleton=skeleton,
+        analyst_reasoning_frame=analyst_frame,
+        source_weighted_answer_frame=weighted_frame,
+        organized_evidence_inventory=inventory,
+        counterweight_dispositions=counterweights,
+        scope_boundaries=scope_boundaries,
+    )
     argument_spine = build_evidence_weighted_argument_spine(
         skeleton=skeleton,
         source_weighted_frame=weighted_frame,
@@ -61,14 +69,8 @@ def build_canonical_decision_writer_packet(
         "decision_brief_skeleton": skeleton,
         "decision_answer_classification": _decision_answer_classification(packet),
         "analyst_reasoning_frame": analyst_frame,
-        "balanced_answer_frame": build_balanced_answer_frame(
-            skeleton=skeleton,
-            analyst_reasoning_frame=analyst_frame,
-            source_weighted_answer_frame=weighted_frame,
-            organized_evidence_inventory=inventory,
-            counterweight_dispositions=counterweights,
-            scope_boundaries=scope_boundaries,
-        ),
+        "balanced_answer_frame": balanced_frame,
+        "bluf_contract": build_bluf_contract(skeleton=skeleton, balanced_answer_frame=balanced_frame),
         "source_weighted_answer_frame": weighted_frame,
         "evidence_weighted_argument_spine": argument_spine,
         "priority_evidence": priority,

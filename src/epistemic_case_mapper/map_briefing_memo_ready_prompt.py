@@ -79,6 +79,7 @@ def build_memo_ready_section_synthesis_prompt(
         "- Write natural expert analyst prose, not a checklist, unless bullets are the clearest form for concrete boundaries.\n"
         "- Make each paragraph do a distinct reasoning job and avoid repeating earlier-section sentences.\n\n"
         "Writing priorities:\n"
+        "- Use bluf_contract for the opening bottom line and as a local reference for answer-first wording when this section restates the read.\n"
         "- Treat balanced_answer_frame as the controlling top-level read: reconcile support, counterweight, scope, and underused balance evidence instead of letting one evidence lane dominate.\n"
         "- Use must_not_overstate to calibrate causal and confidence language.\n"
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
@@ -127,6 +128,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- If decision_usefulness says the answer shape is a single stance, threshold, or classification, explain the relevant choice without inventing fake alternatives.\n"
         "- Use decision_usefulness tradeoffs and cruxes as prose scaffolding; do not dump the option-criteria matrix unless the decision question genuinely needs a matrix.\n"
         "- Lead with the key distinction that resolves the decision when the packet supplies one; make it feel like analyst judgment, not a list of findings.\n"
+        "- Use bluf_contract for the opening bottom line: answer first, then scope, confidence, and the main exception or boundary.\n"
         "- Treat balanced_answer_frame as the controlling answer frame. The bottom line and every section should preserve its best_current_read, main_support, main_counterweight, scope, practical_read, must_not_overstate, and underused_balance_evidence.\n"
         "- Use balanced_answer_frame.must_not_overstate to calibrate causal language and confidence. Do not turn observational or guidance evidence into stronger proof than the packet supports.\n"
         "- Explain the evidence hierarchy in prose: which evidence carries the answer, which evidence mainly bounds it, and which evidence contextualizes practical advice.\n"
@@ -170,6 +172,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
             }
         ),
         "balanced_answer_frame": packet.get("balanced_answer_frame"),
+        "bluf_contract": packet.get("bluf_contract"),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
         "decision_usefulness": compact_decision_usefulness_for_prompt(_dict(packet.get("decision_usefulness_packet"))),
@@ -196,6 +199,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
             "decision_question": reader_packet.get("decision_question"),
             "answer_frame": reader_packet.get("answer_frame"),
             "balanced_answer_frame": reader_packet.get("balanced_answer_frame"),
+            "bluf_contract": reader_packet.get("bluf_contract"),
             "decision_usefulness": reader_packet.get("decision_usefulness"),
             "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
             "citation_registry": reader_packet.get("citation_registry"),
@@ -339,6 +343,8 @@ def _bottom_line_from_reader_packet(reader_packet: dict[str, Any]) -> str:
     skeleton = _dict(answer_frame.get("skeleton"))
     classification = _dict(answer_frame.get("classification"))
     for value in (
+        _dict(reader_packet.get("bluf_contract")).get("one_sentence_version"),
+        _dict(reader_packet.get("bluf_contract")).get("recommended_read"),
         balanced.get("best_current_read"),
         skeleton.get("direct_answer"),
         skeleton.get("bottom_line"),

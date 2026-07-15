@@ -49,6 +49,53 @@ def build_balanced_answer_frame(
     )
 
 
+def build_bluf_contract(
+    *,
+    skeleton: dict[str, Any],
+    balanced_answer_frame: dict[str, Any],
+) -> dict[str, Any]:
+    """Build an answer-first contract for the memo opening."""
+
+    recommended = _text(balanced_answer_frame.get("best_current_read")) or _text(skeleton.get("direct_answer"))
+    scope = _text(balanced_answer_frame.get("scope")) or _text(skeleton.get("scope"))
+    exception = _text(balanced_answer_frame.get("main_counterweight")) or _text(skeleton.get("strongest_counterweight"))
+    practical = _text(balanced_answer_frame.get("practical_read")) or _text(skeleton.get("practical_implication"))
+    confidence = _text(balanced_answer_frame.get("confidence")) or _text(skeleton.get("confidence"))
+    return _drop_empty(
+        {
+            "schema_id": "bluf_contract_v1",
+            "recommended_read": _short_text(recommended, 520),
+            "who_it_applies_to": _short_text(scope, 360),
+            "main_exception_or_boundary": _short_text(exception, 360),
+            "confidence": confidence,
+            "practical_read": _short_text(practical, 360),
+            "one_sentence_version": _short_text(_one_sentence_bluf(recommended, scope, exception, confidence), 700),
+            "writing_contract": [
+                "Answer the decision question in the first sentence.",
+                "Add the main scope or exception in the same sentence or the next sentence.",
+                "Name confidence without turning uncertainty into a research-status lead.",
+                "Do not lead with a single study, method caveat, or generic evidence inventory.",
+            ],
+        }
+    )
+
+
+def _one_sentence_bluf(recommended: str, scope: str, exception: str, confidence: str) -> str:
+    first = _text(recommended)
+    if not first:
+        return ""
+    additions = []
+    if scope:
+        additions.append(f"within this scope: {scope}")
+    if exception:
+        additions.append(f"with this main boundary: {exception}")
+    if confidence:
+        additions.append(f"confidence: {confidence}")
+    if not additions:
+        return first
+    return f"{first} ({'; '.join(additions)})."
+
+
 def _underused_balance_evidence(inventory: dict[str, Any], lanes: dict[str, Any]) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     selected.extend(_balance_rows(_list(lanes.get("quantitative_or_interpretive_calibrators")), reason="calibrates_or_contextualizes"))
