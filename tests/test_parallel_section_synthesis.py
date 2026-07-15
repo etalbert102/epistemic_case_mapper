@@ -12,6 +12,11 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import (
+    _repair_near_miss_source_ids,
+    _unknown_section_source_ids,
+)
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import _quantity_collision_warnings
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -46,11 +51,14 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("current_read_reference" in prompt for prompt in calls)
     assert all("Use evidence_language_contracts" in prompt for prompt in calls)
     assert all("Use section_focus and section_role_contract as the controlling job" in prompt for prompt in calls)
+    assert all("Use parentheses, not square brackets, for confidence intervals" in prompt for prompt in calls)
     assert all("Use section_focus.prose_lead as the opening move" in prompt for prompt in calls)
     assert all("Treat section_focus.reader_question as the reader need" in prompt for prompt in calls)
     assert all("Use section_focus.paragraph_shape to decide paragraph order" in prompt for prompt in calls)
     assert all("scan for any exact phrase in section_focus.stock_phrases_to_replace" in prompt for prompt in calls)
     assert all("Use source_bound_evidence_atoms as the primary factual units" in prompt for prompt in calls)
+    assert all("has applicability_scope" in prompt for prompt in calls)
+    assert all("Use quantity_collision_warnings" in prompt for prompt in calls)
     assert all("protected_quantity_sets" in prompt for prompt in calls)
     assert all("do not repeat it as the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
@@ -98,6 +106,41 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert "current_read_reference" in practical["top_context"]
 
 
+def test_quantity_collision_warnings_keep_same_surface_scopes_separate() -> None:
+    warnings = _quantity_collision_warnings(
+        [
+            {
+                "claim": "Effect is larger in one subgroup.",
+                "source_ids": ["s1"],
+                "quantity_tuples": [
+                    {
+                        "value": "1.25 (HR)",
+                        "interpretation": "risk in lower baseline group",
+                        "source_ids": ["s1"],
+                        "applicability_scope": "participants with lower baseline values",
+                    }
+                ],
+            },
+            {
+                "claim": "Effect is larger in another subgroup.",
+                "source_ids": ["s2"],
+                "quantity_tuples": [
+                    {
+                        "value": "1.25 (0.99 to 1.59)",
+                        "interpretation": "relative risk in diagnosed participants",
+                        "source_ids": ["s2"],
+                        "applicability_scope": "people with diagnosis",
+                    }
+                ],
+            },
+        ]
+    )
+
+    assert warnings
+    assert warnings[0]["quantity_surface"] == "1.25"
+    assert "Keep these entries separate" in warnings[0]["instruction"]
+
+
 def test_section_synthesis_preserves_belief_question_use_read_heading() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="What should an investigator believe about option A?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
@@ -125,6 +168,38 @@ def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatc
     assert result["report"]["status"] == "section_synthesis_failed"
     assert result["report"]["accepted"] is False
     assert all(row["unknown_source_ids"] == ["not_a_source"] for row in result["report"]["section_reports"])
+
+
+def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monkeypatch: pytest.MonkeyPatch) -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        heading = _heading_from_section_prompt(prompt)
+        return ModelBackendResult(
+            text=f"## {heading}\n\nOutcome evidence reports a subgroup estimate [95% CI, 1.12-1.39] [s1].\n",
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["status"] in {"accepted", "accepted_with_retention_warnings"}
+    assert "[95% CI, 1.12-1.39]" not in result["memo"]
+    assert "(95% CI, 1.12-1.39)" in result["memo"]
+    assert "[s1]" in result["memo"]
+
+
+def test_section_synthesis_repairs_long_near_miss_source_id_but_not_unknowns() -> None:
+    known = {"aha_2019_dietary_cholesterol_pubmed"}
+    markdown = "The advisory supports the read [aha_2019_itary_cholesterol_pubmed]. Unknown remains [not_a_source]."
+
+    repaired = _repair_near_miss_source_ids(markdown, known)
+
+    assert "[aha_2019_dietary_cholesterol_pubmed]" in repaired
+    assert "[aha_2019_itary_cholesterol_pubmed]" not in repaired
+    assert _unknown_section_source_ids(repaired, known) == ["not_a_source"]
 
 
 def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accepted(

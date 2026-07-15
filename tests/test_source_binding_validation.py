@@ -34,6 +34,30 @@ def test_source_bound_atoms_exclude_quantities_not_found_in_local_excerpt() -> N
     assert atoms[0]["excluded_quantity_tuples"][0]["warning_type"] == "quantity_not_found_in_source_excerpt"
 
 
+def test_source_bound_atoms_preserve_applicability_scope_for_subgroup_quantities() -> None:
+    rows = [
+        {
+            "item_id": "subgroup_effect",
+            "claim": "The effect was stronger in participants with baseline risk.",
+            "source_ids": ["s1"],
+            "source_excerpt": "Among participants with baseline risk, the adjusted HR was 1.25.",
+            "quantities": [
+                {
+                    "value": "1.25",
+                    "interpretation": "Adjusted HR in participants with baseline risk",
+                    "source_ids": ["s1"],
+                    "source_excerpt": "Among participants with baseline risk, the adjusted HR was 1.25.",
+                }
+            ],
+        }
+    ]
+
+    atoms = build_source_bound_evidence_atoms(rows)
+
+    assert atoms[0]["applicability_scope"] == "Among participants with baseline risk"
+    assert atoms[0]["quantity_tuples"][0]["applicability_scope"] == "in participants with baseline risk"
+
+
 def test_retention_report_flags_quantity_without_bound_source_nearby() -> None:
     packet = {
         "source_trail": [
@@ -92,3 +116,73 @@ def test_retention_report_accepts_quantity_with_bound_source_nearby() -> None:
     report = build_memo_ready_packet_retention_report(memo, packet)
 
     assert report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 0
+
+
+def test_source_binding_validation_does_not_conflate_same_quantity_across_scopes() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_bmi", "source_label": "BMI Study"},
+            {"source_id": "s_diabetes", "source_label": "Diabetes Study"},
+        ],
+        "analyst_quantity_binding_report": {
+            "approved_bindings": [
+                {
+                    "candidate_id": "bmi_125",
+                    "value": "1.25 (HR)",
+                    "interpretation": "Risk increase in participants with lower BMI",
+                    "memo_use": "yes",
+                    "source_claim": "The association was stronger in participants with lower BMI.",
+                    "source_excerpt": "In participants with lower BMI, the adjusted HR was 1.25.",
+                    "source_ids": ["s_bmi"],
+                },
+                {
+                    "candidate_id": "diabetes_125",
+                    "value": "1.25",
+                    "interpretation": "Relative risk in people with type 2 diabetes",
+                    "memo_use": "yes",
+                    "source_claim": "Risk was elevated in people with type 2 diabetes.",
+                    "source_excerpt": "In people with type 2 diabetes, the relative risk was 1.25.",
+                    "source_ids": ["s_diabetes"],
+                },
+            ]
+        },
+    }
+    memo = "In people with type 2 diabetes, the relative risk was 1.25 [s_diabetes]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 0
+
+
+def test_source_binding_validation_ignores_bare_numbers_inside_intervals() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_lipid", "source_label": "Lipid Trial"},
+            {"source_id": "s_substitution", "source_label": "Substitution Study"},
+        ],
+        "analyst_quantity_binding_report": {
+            "approved_bindings": [
+                {
+                    "candidate_id": "hdl_127",
+                    "value": "1.27",
+                    "interpretation": "HDL-c level",
+                    "memo_use": "yes",
+                    "source_claim": "Egg consumption did not significantly increase HDL-c levels.",
+                    "source_excerpt": "The pooled HDL-c estimate was 1.27.",
+                    "source_ids": ["s_lipid"],
+                }
+            ]
+        },
+    }
+
+    interval_memo = (
+        "Replacing one egg per day with processed red meat was associated with a hazard "
+        "ratio of 1.15 (1.05 to 1.27) [s_substitution]."
+    )
+    standalone_memo = "The HDL-c estimate was 1.27 [s_substitution]."
+
+    interval_report = build_memo_ready_packet_retention_report(interval_memo, packet)
+    standalone_report = build_memo_ready_packet_retention_report(standalone_memo, packet)
+
+    assert interval_report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 0
+    assert standalone_report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 1

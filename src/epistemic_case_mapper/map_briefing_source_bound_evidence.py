@@ -100,6 +100,7 @@ def quantity_binding_rows(packet: dict[str, Any], *, source_ids: list[str] | Non
                         "claim": binding.get("source_claim") or binding.get("group_proposition"),
                         "source_ids": binding_sources,
                         "source_excerpt": binding.get("source_excerpt"),
+                        "applicability_scope": _applicability_scope(binding),
                         "decision_relevance": binding.get("required_for_memo_reason") or binding.get("rationale"),
                         "quantities": [
                             _drop_empty(
@@ -109,6 +110,7 @@ def quantity_binding_rows(packet: dict[str, Any], *, source_ids: list[str] | Non
                                     "retention_phrase": binding.get("retention_phrase"),
                                     "source_ids": binding_sources,
                                     "source_excerpt": binding.get("source_excerpt"),
+                                    "applicability_scope": _applicability_scope(binding),
                                 }
                             )
                         ],
@@ -141,6 +143,7 @@ def _source_bound_atom(row: dict[str, Any]) -> dict[str, Any]:
             "source_ids": source_ids,
             "allowed_citations": source_ids,
             "source_excerpt": _source_excerpt(row),
+            "applicability_scope": _applicability_scope(row),
             "decision_relevance": row.get("decision_relevance"),
             "quantity_tuples": quantities,
             "excluded_quantity_tuples": excluded,
@@ -168,6 +171,7 @@ def _source_bound_quantity_tuples(row: dict[str, Any]) -> tuple[list[dict[str, A
                 "source_ids": source_ids,
                 "allowed_citations": source_ids,
                 "source_excerpt": source_excerpt,
+                "applicability_scope": _applicability_scope(quantity) or _applicability_scope(row),
             }
         )
         if _excerpt_has_numeric_surface(source_excerpt) and not contains_quantity(source_excerpt, value):
@@ -200,11 +204,14 @@ def _quantity_sentence_source_warnings(
                 continue
             if not _quantity_surface_specific_enough(value):
                 continue
+            scope = str(tuple_row.get("applicability_scope") or atom.get("applicability_scope") or "").strip()
             allowed_source_ids = _string_list(tuple_row.get("source_ids")) or _string_list(atom.get("source_ids"))
             if not allowed_source_ids:
                 continue
             for sentence in sentences:
                 if not _quantity_surface_in_sentence(sentence, value):
+                    continue
+                if scope and not _sentence_matches_applicability_scope(sentence, scope):
                     continue
                 if _sentence_has_source(sentence, allowed_source_ids, source_aliases):
                     continue
@@ -213,6 +220,7 @@ def _quantity_sentence_source_warnings(
                         "warning_type": "quantity_without_bound_source_nearby",
                         "quantity": value,
                         "expected_source_ids": allowed_source_ids,
+                        "applicability_scope": scope,
                         "atom_id": atom.get("atom_id"),
                         "claim": atom.get("claim"),
                         "sentence": sentence[:300],
@@ -258,12 +266,133 @@ def _sentence_has_source(sentence: str, source_ids: list[str], source_aliases: d
     return any(_contains_text(sentence, alias) for alias in aliases)
 
 
+def _sentence_matches_applicability_scope(sentence: str, scope: str) -> bool:
+    terms = _scope_terms(scope)
+    if not terms:
+        return True
+    normalized = _norm(sentence)
+    matched = sum(1 for term in terms if _norm(term) in normalized)
+    return matched >= min(2, len(terms))
+
+
+def _scope_terms(scope: str) -> list[str]:
+    stopwords = {
+        "among",
+        "between",
+        "each",
+        "from",
+        "increase",
+        "intake",
+        "only",
+        "participants",
+        "patients",
+        "people",
+        "population",
+        "risk",
+        "subgroup",
+        "with",
+    }
+    return _dedupe(
+        term
+        for term in re.findall(r"[a-z0-9]+", str(scope or "").lower())
+        if len(term) >= 3 and term not in stopwords
+    )[:8]
+
+
+def _applicability_scope(row: dict[str, Any]) -> str:
+    explicit = _row_applicability_scope(row)
+    if explicit:
+        return explicit
+    return _scope_hint_from_texts(
+        [
+            str(row.get("interpretation") or row.get("claim_quantity_interpretation") or ""),
+            str(row.get("source_claim") or ""),
+            str(row.get("group_proposition") or ""),
+            str(row.get("source_excerpt") or ""),
+        ]
+    )
+
+
+def _row_applicability_scope(row: dict[str, Any]) -> str:
+    for key in (
+        "applicability_scope",
+        "population_scope",
+        "subgroup_scope",
+        "scope",
+        "population",
+        "subgroup",
+        "setting",
+        "applicability",
+    ):
+        text = str(row.get(key) or "").strip()
+        if text:
+            return _short_scope_text(text)
+    return ""
+
+
+def _scope_hint_from_texts(values: list[str]) -> str:
+    for value in values:
+        text = " ".join(str(value or "").split())
+        if not text:
+            continue
+        match = re.search(
+            r"\b(?:among|in|for|to)\s+([^.;:,]{0,110}?(?:participants|patients|people|individuals|adults|children|women|men|cohort|population|subgroup|respondents|subjects|sites|settings|regions|countries|households|schools|firms|users)[^.;:,]*)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            return _short_scope_text(match.group(0))
+        match = re.search(
+            r"\b(?:participants|patients|people|individuals|adults|children|women|men|cohort|population|subgroup|respondents|subjects|sites|settings|regions|countries|households|schools|firms|users)\s+(?:with|without|who|where|aged|under|over|from|in)\s+[^.;:]{1,90}",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            return _short_scope_text(match.group(0))
+    return ""
+
+
+def _short_scope_text(text: str) -> str:
+    cleaned = " ".join(str(text or "").split()).strip(" ,;:.")
+    return cleaned[:140].rstrip(" ,;:.") if len(cleaned) > 140 else cleaned
+
+
 def _quantity_surface_in_sentence(sentence: str, value: str) -> bool:
     value_text = str(value or "").strip()
+    if _bare_numeric_surface(value_text):
+        return _bare_numeric_surface_in_sentence(sentence, value_text)
     if "%" in value_text:
         number = re.escape(value_text.replace("%", "").strip())
         return bool(re.search(rf"(?<![\d.]){number}(?:\s*%|\s+percent\b)", str(sentence or ""), flags=re.IGNORECASE))
     return contains_quantity(sentence, value_text)
+
+
+def _bare_numeric_surface(value: str) -> bool:
+    return bool(re.fullmatch(r"\d+(?:\.\d+)?", str(value or "").strip()))
+
+
+def _bare_numeric_surface_in_sentence(sentence: str, value: str) -> bool:
+    text = str(sentence or "")
+    interval_spans = _interval_spans(text)
+    pattern = rf"(?<![\d.]){re.escape(value)}(?![\d.])"
+    for match in re.finditer(pattern, text):
+        if any(start <= match.start() and match.end() <= end for start, end in interval_spans):
+            continue
+        return True
+    return False
+
+
+def _interval_spans(text: str) -> list[tuple[int, int]]:
+    endpoint = r"[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?"
+    interval = rf"{endpoint}\s*(?:to|through|[-–—])\s*{endpoint}"
+    spans: list[tuple[int, int]] = []
+    for match in re.finditer(interval, str(text or ""), flags=re.IGNORECASE):
+        start, end = match.span()
+        prefix_start = max(0, start - 28)
+        prefix = str(text or "")[prefix_start:start].lower()
+        if re.search(r"\b(?:ci|confidence interval|credible interval|range|interval)\b|[(,]\s*$", prefix):
+            spans.append((start, end))
+    return spans
 
 
 def _quantity_surface_specific_enough(value: str) -> bool:

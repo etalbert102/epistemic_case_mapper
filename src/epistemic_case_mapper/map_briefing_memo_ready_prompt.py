@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_decision_usefulness import compact_decision_usefulness_for_prompt
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import norm as _norm
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
 from epistemic_case_mapper.map_briefing_source_bound_evidence import (
     build_source_bound_evidence_atoms,
@@ -78,6 +80,7 @@ def build_memo_ready_section_synthesis_prompt(
         "Output rules:\n"
         f"- Return Markdown for this section only, starting with exactly: ## {heading}\n"
         "- Use bracketed citations only for source_id values listed in known_source_ids.\n"
+        "- Use parentheses, not square brackets, for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Never cite analyst_item IDs, claim IDs, evidence item IDs, source labels, article titles, or author-year names inside brackets.\n"
         "- Every bracketed citation must be one or more known source_ids separated by comma-space.\n"
         "- Keep packet IDs, validation machinery, and audit language out of the prose.\n"
@@ -95,6 +98,8 @@ def build_memo_ready_section_synthesis_prompt(
         "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
         "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
         "- Use source_bound_evidence_atoms as the primary factual units: keep each claim, quantity tuple, and allowed citation together.\n"
+        "- When a source_bound_evidence_atom or quantity tuple has applicability_scope, keep that population, subgroup, setting, or endpoint in the same sentence or clause as the quantity and citation.\n"
+        "- Use quantity_collision_warnings to avoid recombining same-looking quantities across different populations, endpoints, or source_ids.\n"
         "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
         "- Treat protected_quantity_sets as all-or-nothing anchors: if a row appears, include every listed source_bound_quantity_atom with its allowed source citation.\n"
         "- Section role discipline never overrides retention: include every protected quantity and source_id listed in section_retention_requirements.\n"
@@ -217,6 +222,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
         heading = _canonical_section_heading(source_section)
         if section_id == "bottom_line" or not heading:
             continue
+        source_bound_atoms = _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw))
         packets.append(
             _drop_empty(
                 {
@@ -232,7 +238,8 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
                     "protected_quantity_sets": _protected_quantity_sets(raw),
-                    "source_bound_evidence_atoms": _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw)),
+                    "source_bound_evidence_atoms": source_bound_atoms,
+                    "quantity_collision_warnings": _quantity_collision_warnings(source_bound_atoms),
                     "evidence_context": raw.get("evidence_context"),
                     "source_weighting": raw.get("source_weighting"),
                 }
@@ -477,6 +484,48 @@ def _model_safe_source_bound_evidence_atoms(rows: list[dict[str, Any]]) -> list[
         if cleaned.get("claim") or cleaned.get("quantity_tuples"):
             atoms.append(cleaned)
     return atoms
+
+
+def _quantity_collision_warnings(atoms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_surface: dict[str, list[dict[str, Any]]] = {}
+    for atom in atoms:
+        for quantity in _list(atom.get("quantity_tuples")):
+            if not isinstance(quantity, dict):
+                continue
+            surface = _quantity_surface_key(quantity.get("value"))
+            if not surface:
+                continue
+            by_surface.setdefault(surface, []).append(
+                _drop_empty(
+                    {
+                        "quantity_surface": surface,
+                        "claim": atom.get("claim"),
+                        "source_ids": quantity.get("source_ids") or atom.get("source_ids"),
+                        "applicability_scope": quantity.get("applicability_scope") or atom.get("applicability_scope"),
+                        "interpretation": quantity.get("interpretation"),
+                    }
+                )
+            )
+    warnings = []
+    for surface, rows in by_surface.items():
+        scopes = {_norm(str(row.get("applicability_scope") or "")) for row in rows}
+        sources = {tuple(_string_list(row.get("source_ids"))) for row in rows}
+        interpretations = {_norm(str(row.get("interpretation") or "")) for row in rows}
+        if len(rows) > 1 and (len(scopes) > 1 or len(sources) > 1 or len(interpretations) > 1):
+            warnings.append(
+                {
+                    "quantity_surface": surface,
+                    "instruction": "Keep these entries separate; do not move a quantity into another entry's population, endpoint, or citation.",
+                    "entries": rows[:5],
+                }
+            )
+    return warnings[:8]
+
+
+def _quantity_surface_key(value: Any) -> str:
+    text = str(value or "")
+    match = re.search(r"\d+(?:\.\d+)?", text)
+    return match.group(0) if match else ""
 
 
 def _without_quantities(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

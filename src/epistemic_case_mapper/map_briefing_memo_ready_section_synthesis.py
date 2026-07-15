@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import json
 import re
 from typing import Any, Callable
@@ -112,6 +113,8 @@ def _run_section(
         return section_report
     raw = result.text
     markdown = _extract_section_markdown(raw, heading)
+    markdown = _normalize_statistical_brackets(markdown)
+    markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
     unknown = _unknown_section_source_ids(markdown, known_source_ids)
     structure_issues = markdown_structure_issues(markdown)
     heading_ok = markdown.lstrip().startswith(f"## {heading}\n") or markdown.strip() == f"## {heading}"
@@ -184,6 +187,64 @@ def _unknown_section_source_ids(markdown: str, known_source_ids: set[str]) -> li
             if source_id and source_id not in known_source_ids:
                 unknown.append(source_id)
     return _dedupe(unknown)
+
+
+def _normalize_statistical_brackets(markdown: str) -> str:
+    return re.sub(
+        r"\[([^\[\]]{1,100})\]",
+        lambda match: f"({match.group(1)})" if _statistical_bracket_content(match.group(1)) else match.group(0),
+        str(markdown or ""),
+    )
+
+
+def _statistical_bracket_content(content: str) -> bool:
+    text = str(content or "").strip()
+    if not re.search(r"\d", text):
+        return False
+    if re.search(r"\b(?:ci|confidence interval)\b", text, flags=re.IGNORECASE):
+        return True
+    if re.search(r"\d+(?:\.\d+)?\s*(?:to|[-–—])\s*\d+(?:\.\d+)?", text, flags=re.IGNORECASE):
+        return not re.search(r"[A-Za-z_]", re.sub(r"\bto\b", "", text, flags=re.IGNORECASE))
+    return False
+
+
+def _repair_near_miss_source_ids(markdown: str, known_source_ids: set[str]) -> str:
+    if not known_source_ids:
+        return markdown
+
+    def repair_cluster(match: re.Match[str]) -> str:
+        content = match.group(1)
+        tokens = [token.strip() for token in re.split(r"([,;])", content)]
+        changed = False
+        repaired = []
+        for token in tokens:
+            if token in {",", ";"}:
+                repaired.append(token)
+                continue
+            candidate = _nearest_known_source_id(token, known_source_ids)
+            if candidate and candidate != token:
+                changed = True
+                repaired.append(candidate)
+            else:
+                repaired.append(token)
+        return "[" + "".join(repaired) + "]" if changed else match.group(0)
+
+    return re.sub(r"\[([^\[\]]{1,160})\]", repair_cluster, str(markdown or ""))
+
+
+def _nearest_known_source_id(source_id: str, known_source_ids: set[str]) -> str:
+    source_id = str(source_id or "").strip()
+    if source_id in known_source_ids or len(source_id) < 12:
+        return source_id
+    scored = [
+        (difflib.SequenceMatcher(None, source_id, known).ratio(), known)
+        for known in known_source_ids
+        if len(known) >= 12
+    ]
+    if not scored:
+        return source_id
+    score, known = max(scored)
+    return known if score >= 0.9 else source_id
 
 
 def _combined_section_prompts(section_plan: dict[str, Any], *, whole_prompt: str) -> str:
