@@ -20,7 +20,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 
-DEFAULT_CHUNK_SIZE = 6
+DEFAULT_CHUNK_SIZE = 2
 
 
 def run_analyst_adjudication(

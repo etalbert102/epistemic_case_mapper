@@ -197,6 +197,61 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     assert result["analyst_adjudication"]["rows"][0]["decision_contribution"] == "This is the main observed benefit of option A."
 
 
+def test_analyst_adjudication_default_chunk_size_is_two(monkeypatch) -> None:
+    ledger = _ledger()
+    ledger["rows"] = [
+        *ledger["rows"],
+        {
+            "evidence_item_id": "scope:three",
+            "input_kind": "memo_warning",
+            "current_role": "scope_limit",
+            "current_priority": 8,
+            "source_ids": ["s3"],
+            "source_labels": ["Scope Review"],
+            "claim": "Option A only applies to bounded deployments.",
+        },
+    ]
+
+    def fake_backend(prompt, *args, **kwargs) -> ModelBackendResult:
+        evidence_ids = [
+            evidence_id
+            for evidence_id in ["bundle:one", "warning:two", "scope:three"]
+            if evidence_id in prompt
+        ]
+        rows = [
+            {
+                "evidence_item_id": evidence_id,
+                "memo_use": "scope_or_applicability",
+                "answer_relation": "bounds_scope",
+                "importance_rank": index + 1,
+                "rationale": "Fixture row for default chunk-size behavior.",
+                "source_ids": [],
+                "quantity_values": [],
+            }
+            for index, evidence_id in enumerate(evidence_ids)
+        ]
+        return ModelBackendResult(
+            text=json.dumps(
+                {
+                    "schema_id": "analyst_adjudication_v1",
+                    "decision_question": ledger["decision_question"],
+                    "rows": rows,
+                    "overall_rationale": "Fixture adjudication.",
+                }
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.delenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", raising=False)
+
+    result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["analyst_adjudication_report"]["status"] == "accepted"
+    assert result["analyst_adjudication_chunk_reports"]["chunk_count"] == 2
+    assert [chunk["row_count"] for chunk in result["analyst_adjudication_chunk_reports"]["chunks"]] == [2, 1]
+
+
 def test_analyst_adjudication_invalid_live_backend_reports_failure_without_fallback(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text='{"rows": [{"evidence_item_id": "bundle:one", "memo_use": "bad"}]}', backend="fake")
