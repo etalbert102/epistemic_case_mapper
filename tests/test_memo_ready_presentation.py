@@ -178,7 +178,7 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "put the most weight on [Outcome 2025] for the core answer" in result["memo"]
     assert "use [RISK 2024] as the main check on how far the answer travels" in result["memo"]
     assert "[^source-weight-caveats]" not in result["memo"]
-    assert "source-by-source limits are expanded in the citation trace" in result["memo"]
+    assert "Apply this limit throughout" in result["memo"]
     assert "implementation-risk evidence" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
@@ -186,6 +186,40 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "* [RISK 2024](https://example.test/risk) — Risk Review 2024 — use: bounds answer; limit: Use as implementation-risk evidence, not as proof against all adoption." in result["memo"]
     assert "[Outcome 2025](CITATION_TRACE.md#outcome-2025)" not in result["memo"]
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
+
+
+def test_presentation_source_weighting_splits_different_caveat_families() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "cohort_2025", "source_label": "Cohort Study 2025"},
+            {"source_id": "guidance_2024", "source_label": "Guidance Note 2024"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["cohort_2025"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Use as the main outcome source.",
+                    "reader_facing_limit": "Use as associational evidence, not standalone causal proof.",
+                },
+                {
+                    "source_ids": ["guidance_2024"],
+                    "main_use": "defines_scope",
+                    "why_weight_this_way": "Use to define the applicable setting.",
+                    "reader_facing_limit": "Use as guidance or interpretation, not independent empirical evidence.",
+                },
+            ],
+        },
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Adopt option A if risk is bounded."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "Read the limits separately" in result["memo"]
+    assert "[Cohort 2025] — as associational evidence" in result["memo"]
+    assert "[Guidance 2024] — as guidance or interpretation" in result["memo"]
+    assert "The main caveat is" not in result["memo"]
 
 
 def test_presentation_source_weighting_uses_lightweight_quality_caveats() -> None:

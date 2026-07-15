@@ -20,6 +20,7 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     source_label_variants,
 )
 from epistemic_case_mapper.map_briefing_source_use_notes import source_use_note_for_entry
+from epistemic_case_mapper.map_briefing_source_weighting_caveats import render_source_weighting_caveat_note
 
 DEFAULT_CITATION_TRACE_HREF = "CITATION_TRACE.md"
 
@@ -280,15 +281,7 @@ def _source_group_citations(rows: list[dict[str, Any]]) -> str:
 
 
 def _source_weighting_caveat_note(caveat_rows: list[dict[str, Any]]) -> str:
-    limits = _dedupe(
-        str(limit).strip()
-        for row in caveat_rows
-        for limit in _list(row.get("limits"))
-        if str(limit).strip()
-    )
-    if not limits:
-        return ""
-    return f"The main caveat is {_join_readable_list(limits[:3])}; source-by-source limits are expanded in the citation trace."
+    return render_source_weighting_caveat_note(caveat_rows)
 
 
 def _lane_source_weighting_paragraph(
