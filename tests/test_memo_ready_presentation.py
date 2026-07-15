@@ -88,8 +88,8 @@ def test_presentation_inserts_source_weighting_section_from_canonical_packet() -
     assert "## How to Weight the Evidence" in result["memo"]
     assert result["memo"].index("## How to Weight the Evidence") < result["memo"].index("## Supporting Evidence")
     assert "Use the evidence in layers" in result["memo"]
-    assert "Start with [Outcome 2025]" in result["memo"]
-    assert "Use [Guidance 2023] for translation and background" in result["memo"]
+    assert "put the most weight on [Outcome 2025] for the core answer" in result["memo"]
+    assert "use [Guidance 2023] for translation and background" in result["memo"]
     assert "Keep decision directness in view" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Context sources" not in result["memo"]
@@ -172,12 +172,12 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
 
     result = run_memo_ready_presentation_normalization(memo, packet)
 
-    assert "Read the sources by what each can decide" in result["memo"]
+    assert "Do not read the source count as a vote" in result["memo"]
     assert "where confidence should narrow" in result["memo"]
-    assert "Start with [Outcome 2025]" in result["memo"]
-    assert "Let [RISK 2024] narrow the claim" in result["memo"]
+    assert "put the most weight on [Outcome 2025] for the core answer" in result["memo"]
+    assert "use [RISK 2024] as the main check on how far the answer travels" in result["memo"]
     assert "[^source-weight-caveats]" not in result["memo"]
-    assert "Source-specific use limits are kept with the source entries and expanded in the citation trace" in result["memo"]
+    assert "source-by-source limits are expanded in the citation trace" in result["memo"]
     assert "Main answer drivers" not in result["memo"]
     assert "Counterweights" not in result["memo"]
     assert "not enough for unconditional adoption" in result["memo"]

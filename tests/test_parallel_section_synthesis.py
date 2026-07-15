@@ -46,6 +46,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("current_read_reference" in prompt for prompt in calls)
     assert all("Use evidence_language_contracts" in prompt for prompt in calls)
     assert all("Use section_focus and section_role_contract as the controlling job" in prompt for prompt in calls)
+    assert all("Treat section_focus.reader_question as the reader need" in prompt for prompt in calls)
+    assert all("Use section_focus.paragraph_shape to decide paragraph order" in prompt for prompt in calls)
     assert all("do not repeat it as the section opener" in prompt for prompt in calls)
     assert all("Follow section_role_contract as the controlling job" in prompt for prompt in calls)
     assert all("Section role discipline never overrides retention" in prompt for prompt in calls)
@@ -79,6 +81,8 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     practical = sections["practical_implication"]
 
     assert practical["section_focus"]["use_current_read_as"] == "background_only"
+    assert practical["section_focus"]["reader_question"] == "Given the answer and its limits, what should the decision-maker do next?"
+    assert practical["section_focus"]["paragraph_shape"]
     assert practical["evidence_context"]
     assert practical["source_weighting"]
     assert "balanced_answer_frame" not in practical["top_context"]

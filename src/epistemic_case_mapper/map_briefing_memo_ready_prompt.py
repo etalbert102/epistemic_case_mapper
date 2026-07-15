@@ -80,6 +80,8 @@ def build_memo_ready_section_synthesis_prompt(
         "- Make each paragraph do a distinct reasoning job and avoid repeating earlier-section sentences.\n\n"
         "Writing priorities:\n"
         "- Use section_focus and section_role_contract as the controlling job for this section.\n"
+        "- Treat section_focus.reader_question as the reader need this section must answer.\n"
+        "- Use section_focus.paragraph_shape to decide paragraph order when it is supplied.\n"
         "- Use top_context.current_read_reference only to stay consistent with the memo answer; do not repeat it as the section opener unless section_focus explicitly asks for it.\n"
         "- Use top_context.must_not_overstate to calibrate causal and confidence language.\n"
         "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
@@ -298,19 +300,37 @@ def _section_role_contract(heading: str) -> dict[str, Any]:
 def _section_focus(section_id: str) -> dict[str, Any]:
     focuses = {
         "answer_evidence": {
+            "reader_question": "Why should I believe this answer rather than a flatter summary of the sources?",
             "lead": "Start with the evidence reason this answer is the best current read, not with a restated BLUF.",
             "use_current_read_as": "reference_for_what_the_evidence_must_explain",
             "new_value": "evidence hierarchy, magnitude, and confidence calibration",
+            "paragraph_shape": [
+                "main evidence pattern and why it carries the read",
+                "important quantitative or design details",
+                "confidence calibration from the strongest caveat",
+            ],
         },
         "counterweights": {
+            "reader_question": "What could make this answer too strong, too broad, or wrong for some uses?",
             "lead": "Start with the most important boundary or uncertainty, not with the full bottom line.",
             "use_current_read_as": "the answer being bounded or stress-tested",
             "new_value": "what narrows, weakens, changes, or scopes the answer",
+            "paragraph_shape": [
+                "most decision-relevant limitation",
+                "subgroup, endpoint, causal, or scope boundaries",
+                "what new evidence would change the read",
+            ],
         },
         "practical_implication": {
+            "reader_question": "Given the answer and its limits, what should the decision-maker do next?",
             "lead": "Start with what the reader should do with the answer inside scope.",
             "use_current_read_as": "background_only",
             "new_value": "concrete application, monitoring point, or action boundary",
+            "paragraph_shape": [
+                "usable stance inside scope",
+                "conditions or monitoring points",
+                "how to avoid over-applying the answer",
+            ],
         },
     }
     return focuses.get(section_id, focuses["answer_evidence"])

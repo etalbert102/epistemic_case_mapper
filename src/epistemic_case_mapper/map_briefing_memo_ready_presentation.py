@@ -200,33 +200,9 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
     scope = _lane_sources(lanes, "scope_limiters", limit=2)
     context = _lane_sources(lanes, "context_only", limit=2)
     lines = ["## How to Weight the Evidence", ""]
-    paragraphs = _dedupe(
-        [
-            _weighting_thesis(primary, calibrators, counterweights, scope, context),
-            _lane_weighting_sentence(
-                primary,
-                "Start with {sources}; those are the closest sources to the bottom-line answer.",
-            ),
-            _lane_weighting_sentence(
-                calibrators,
-                "Use {sources} to size the effect, mechanism, or plausibility rather than to replace direct answer evidence.",
-            ),
-            _lane_weighting_sentence(
-                counterweights,
-                "Let {sources} narrow confidence or scope where they point against the main read.",
-            ),
-            _lane_weighting_sentence(
-                scope,
-                "Use {sources} to mark where the answer applies and where it should stop.",
-            ),
-            _lane_weighting_sentence(
-                context,
-                "Use {sources} for translation and background, not as independent causal evidence.",
-            ),
-        ]
-    )
-    if paragraphs:
-        lines.append("\n\n".join(paragraphs))
+    role_paragraph = _lane_source_weighting_paragraph(primary, calibrators, counterweights, scope, context)
+    if role_paragraph:
+        lines.append(role_paragraph)
     credibility = _source_credibility_sentence(notes)
     if credibility:
         lines.extend(["", credibility])
@@ -246,28 +222,24 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
     groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         groups.setdefault(str(row.get("main_use") or "contextualizes"), []).append(row)
-    lines = [
-        "## How to Weight the Evidence",
-        "",
-        _source_weighting_summary(groups),
-    ]
-    paragraphs = []
+    lines = ["## How to Weight the Evidence", "", _source_weighting_summary(groups)]
+    role_sentences = []
     caveat_rows: list[dict[str, Any]] = []
     for use, template in [
-        ("drives_answer", "Start with {sources}; these are the closest sources to the bottom-line answer."),
-        ("calibrates_magnitude", "Use {sources} to calibrate magnitude, mechanism, or plausibility rather than to replace direct answer evidence."),
-        ("bounds_answer", "Let {sources} narrow the claim where they identify countervailing evidence or uncertainty."),
-        ("defines_scope", "Use {sources} to mark where the answer applies and where it should stop."),
-        ("identifies_crux", "Treat {sources} as crux evidence because they identify what could change the answer."),
-        ("contextualizes", "Use {sources} for translation and background rather than as independent proof."),
+        ("drives_answer", "put the most weight on {sources} for the core answer"),
+        ("calibrates_magnitude", "use {sources} to size effects, mechanisms, or plausibility"),
+        ("bounds_answer", "use {sources} as the main check on how far the answer travels"),
+        ("defines_scope", "let {sources} define the population, setting, or decision scope"),
+        ("identifies_crux", "treat {sources} as crux evidence for what could change the answer"),
+        ("contextualizes", "use {sources} for translation or background rather than as independent proof"),
     ]:
         sentence, caveat_row = _judgment_group_sentence(template, groups.get(use, [])[:4], guidance=guidance)
         if sentence:
-            paragraphs.append(sentence)
+            role_sentences.append(sentence)
         if caveat_row:
             caveat_rows.append(caveat_row)
-    if paragraphs:
-        lines.extend(["", "\n\n".join(paragraphs)])
+    if role_sentences:
+        lines.extend(["", "In practical terms, " + _join_clauses(role_sentences) + "."])
     caveat_note = _source_weighting_caveat_note(caveat_rows)
     if caveat_note:
         lines.extend(["", caveat_note])
@@ -277,8 +249,9 @@ def _source_weighting_from_judgments(judgments: list[Any], *, guidance: dict[str
 def _source_weighting_summary(groups: dict[str, list[dict[str, Any]]]) -> str:
     if any(groups.values()):
         return (
-            "Read the sources by what each can decide, not by source count: direct evidence carries the answer, "
-            "while other sources size effects, expose limits, identify cruxes, or show where confidence should narrow."
+            "Do not read the source count as a vote. The useful question is what each source can decide: "
+            "some sources carry the answer, while others mainly size effects, expose limits, identify cruxes, "
+            "or show where confidence should narrow."
         )
     return "Weigh the sources by what they can actually decide: some carry the answer, while others mainly size effects, expose counterweights, identify cruxes, or set boundaries."
 
@@ -300,15 +273,36 @@ def _source_group_citations(rows: list[dict[str, Any]]) -> str:
 
 
 def _source_weighting_caveat_note(caveat_rows: list[dict[str, Any]]) -> str:
-    parts = [
-        f"{row['sources']}: {limits}"
+    limits = _dedupe(
+        str(limit).strip()
         for row in caveat_rows
-        if row.get("sources")
-        if (limits := "; ".join(_dedupe(str(limit).strip() for limit in _list(row.get("limits")) if str(limit).strip())))
-    ]
-    if not parts:
+        for limit in _list(row.get("limits"))
+        if str(limit).strip()
+    )
+    if not limits:
         return ""
-    return "Source-specific use limits are kept with the source entries and expanded in the citation trace: " + "; ".join(parts) + "."
+    return f"The main caveat is {_join_readable_list(limits[:3])}; source-by-source limits are expanded in the citation trace."
+
+
+def _lane_source_weighting_paragraph(
+    primary: list[str],
+    calibrators: list[str],
+    counterweights: list[str],
+    scope: list[str],
+    context: list[str],
+) -> str:
+    clauses = _dedupe(
+        [
+            _lane_weighting_clause(primary, "put the most weight on {sources} for the core answer"),
+            _lane_weighting_clause(calibrators, "use {sources} to size the effect, mechanism, or plausibility"),
+            _lane_weighting_clause(counterweights, "let {sources} narrow confidence or scope"),
+            _lane_weighting_clause(scope, "use {sources} to mark where the answer applies and where it should stop"),
+            _lane_weighting_clause(context, "use {sources} for translation and background"),
+        ]
+    )
+    if clauses:
+        return "Use the evidence in layers: " + _join_clauses(clauses) + "."
+    return _weighting_thesis(primary, calibrators, counterweights, scope, context)
 
 
 def _weighting_thesis(
@@ -328,10 +322,28 @@ def _weighting_thesis(
     return "No single source class carries the whole answer; weigh the evidence by decision role rather than by source count."
 
 
-def _lane_weighting_sentence(sources: list[str], template: str) -> str:
+def _lane_weighting_clause(sources: list[str], template: str) -> str:
     if not sources:
         return ""
     return template.format(sources=_cite_list(sources))
+
+
+def _join_clauses(clauses: list[str]) -> str:
+    cleaned = [str(clause or "").strip().rstrip(".") for clause in clauses if str(clause or "").strip()]
+    if len(cleaned) <= 1:
+        return "".join(cleaned)
+    if len(cleaned) == 2:
+        return " and ".join(cleaned)
+    return "; ".join(cleaned[:-1]) + "; and " + cleaned[-1]
+
+
+def _join_readable_list(items: list[str]) -> str:
+    cleaned = [str(item or "").strip().rstrip(".") for item in items if str(item or "").strip()]
+    if len(cleaned) <= 1:
+        return "".join(cleaned)
+    if len(cleaned) == 2:
+        return f"{cleaned[0]} and {cleaned[1]}"
+    return ", ".join(cleaned[:-1]) + ", and " + cleaned[-1]
 
 
 def _source_credibility_sentence(notes: list[Any]) -> str:
@@ -344,7 +356,8 @@ def _source_credibility_sentence(notes: list[Any]) -> str:
     readable = [_readable_warning(warning) for warning in warnings[:4]]
     if readable:
         parts.append("the known limits are " + "; ".join(readable))
-    return ". ".join(parts) + "." if parts else ""
+    sentence = ". ".join(parts)
+    return sentence[:1].upper() + sentence[1:] + "." if sentence else ""
 
 
 def _lane_sources(lanes: dict[str, Any], lane: str, *, limit: int) -> list[str]:
