@@ -102,6 +102,14 @@ def _group_from_decision_model_row(
             "covered_evidence_item_ids": evidence_ids,
             "source_ids": _dedupe([source_id for evidence_id in evidence_ids for source_id in _string_list(ledger_by_id[evidence_id].get("source_ids"))]),
             "source_labels": _dedupe([source for evidence_id in evidence_ids for source in _string_list(ledger_by_id[evidence_id].get("source_labels"))]),
+            "source_bottom_lines": _merged_source_bottom_lines(evidence_ids, ledger_by_id),
+            "source_bottom_line_signals": _dedupe(
+                [
+                    signal
+                    for evidence_id in evidence_ids
+                    for signal in _string_list(ledger_by_id[evidence_id].get("source_bottom_line_signals"))
+                ]
+            ),
             "source_appraisal": _merged_source_appraisal(evidence_ids, ledger_by_id),
             "source_use_warnings": _dedupe(
                 [
@@ -343,6 +351,33 @@ def _merged_source_appraisal(evidence_ids: list[str], ledger_by_id: dict[str, di
         "decision_directness": _least_direct([str(row.get("decision_directness") or "") for row in appraisals]),
         "interpretation_caveats": _dedupe([value for row in appraisals for value in _string_list(row.get("interpretation_caveats"))])[:8],
     }
+
+
+def _merged_source_bottom_lines(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
+    seen: set[tuple[str, str]] = set()
+    rows = []
+    for evidence_id in evidence_ids:
+        for row in _list(ledger_by_id[evidence_id].get("source_bottom_lines")):
+            if not isinstance(row, dict):
+                continue
+            source_id = str(row.get("source_id") or "")
+            bottom_line = str(row.get("source_bottom_line") or "")
+            key = (source_id, bottom_line)
+            if not bottom_line or key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    key: value
+                    for key, value in {
+                        "source_id": source_id,
+                        "source_bottom_line": _short_text(bottom_line, 360),
+                        "polarity_signal": str(row.get("polarity_signal") or ""),
+                    }.items()
+                    if value
+                }
+            )
+    return rows[:8]
 
 
 def _merged_allowed_wording(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:

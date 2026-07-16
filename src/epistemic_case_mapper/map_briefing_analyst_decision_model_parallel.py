@@ -118,21 +118,23 @@ def build_decision_model_task_prompt(task: dict[str, Any]) -> str:
         "decision_question": task.get("decision_question"),
         "stable_final_answer_frame": _dict(task.get("stable_final_answer_frame")),
         "instructions": [
-                "Use stable_final_answer_frame.classification_target_policy when deciding whether evidence supports, weakens, bounds, distinguishes, or contextualizes an answer.",
-                "When answer_status is selected or provisional and current_best_answer is present, classify relative to that answer while preserving the affected live option in target_answer_option.",
-                "When answer_status is multi_option or unresolved, organize evidence around the live answer options, conditions, and cruxes instead of forcing a single final-answer polarity.",
-                "Group rows when they support the same decision-relevant proposition.",
-                "Keep support, counterweight, scope, crux, mechanism/context, and quantity roles analytically distinct.",
-                "Use load_bearing_primary_support, mechanism_or_context, or decision_crux for evidence that rebuts a rejected or feared alternative while supporting a selected/provisional current_best_answer.",
-                "Use scope_or_applicability for subgroup, dose, population, or applicability boundaries unless the row directly weakens the selected/provisional current_best_answer or named target answer inside its stated scope.",
-                "Rank groups by decision diagnosticity, not generic relevance. Outcome/effect, quantity, crux, counterweight, and scope-boundary evidence should outrank background or contextual guidance when they more directly change the answer.",
-                "Make a contextual row top support only when it is the actual reason the decision answer changes.",
-                "Every supplied evidence_item_id must appear in either evidence_groups.covered_evidence_item_ids or evidence_dispositions.",
-                "For every supplied evidence_item_id, fill memo_relevance_decisions with memo_spine, supporting_context, trace_only, or exclude.",
-                "For every supplied quantity_value, fill quantity_relevance_decisions. Mark must_use only when the quantity calibrates the answer, threshold, tradeoff, scope boundary, or update trigger.",
-                "Give reader-facing quantities a short retention_phrase that says what the number measures.",
-                "Use only supplied evidence IDs, sources, quantities, and IDs.",
-                "Use ordinary analyst language. This is an intermediate model for later synthesis, not a memo.",
+            "Use stable_final_answer_frame.classification_target_policy when deciding whether evidence supports, weakens, bounds, distinguishes, or contextualizes an answer.",
+            "When answer_status is selected or provisional and current_best_answer is present, classify relative to that answer while preserving the affected live option in target_answer_option.",
+            "When answer_status is multi_option or unresolved, organize evidence around the live answer options, conditions, and cruxes instead of forcing a single final-answer polarity.",
+            "Group rows when they support the same decision-relevant proposition.",
+            "Keep support, counterweight, scope, crux, mechanism/context, and quantity roles analytically distinct.",
+            "Use load_bearing_primary_support, mechanism_or_context, or decision_crux for evidence that rebuts a rejected or feared alternative while supporting a selected/provisional current_best_answer.",
+            "Use scope_or_applicability for subgroup, dose, population, or applicability boundaries unless the row directly weakens the selected/provisional current_best_answer or named target answer inside its stated scope.",
+            "Rank groups by decision diagnosticity, not generic relevance. Outcome/effect, quantity, crux, counterweight, and scope-boundary evidence should outrank background or contextual guidance when they more directly change the answer.",
+            "Make a contextual row top support only when it is the actual reason the decision answer changes.",
+            "Use source_bottom_lines and source_bottom_line_signals as source-level polarity context when assigning group roles and answer_relation.",
+            "When source_bottom_lines conflict with a relation label or compressed claim, preserve that conflict in the group role, rationale, answer_impact, conflict_note, or evidence_dispositions.",
+            "Every supplied evidence_item_id must appear in either evidence_groups.covered_evidence_item_ids or evidence_dispositions.",
+            "For every supplied evidence_item_id, fill memo_relevance_decisions with memo_spine, supporting_context, trace_only, or exclude.",
+            "For every supplied quantity_value, fill quantity_relevance_decisions. Mark must_use only when the quantity calibrates the answer, threshold, tradeoff, scope boundary, or update trigger.",
+            "Give reader-facing quantities a short retention_phrase that says what the number measures.",
+            "Use only supplied evidence IDs, sources, quantities, and IDs.",
+            "Use ordinary analyst language. This is an intermediate model for later synthesis, not a memo.",
         ],
         "allowed_memo_inclusion": ["memo_spine", "supporting_context", "trace_only", "exclude"],
         "allowed_quantity_inclusion": ["must_use", "supporting_context", "trace_only", "exclude"],
@@ -479,6 +481,8 @@ def _compact_task_row(row: dict[str, Any]) -> dict[str, Any]:
         "source_ids": _string_list(row.get("source_ids"))[:4],
         "source_quality": row.get("source_quality") if isinstance(row.get("source_quality"), dict) else {},
         "claim": _short_text(str(row.get("claim") or ""), 320),
+        "source_bottom_lines": _source_bottom_lines_for_task(row.get("source_bottom_lines")),
+        "source_bottom_line_signals": _string_list(row.get("source_bottom_line_signals"))[:4],
         "quantity_values": _string_list(row.get("quantity_values"))[:6],
         "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 160),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 120),
@@ -500,6 +504,25 @@ def _relation_contract_for_task(value: Any) -> dict[str, Any]:
     }
 
 
+def _source_bottom_lines_for_task(value: Any) -> list[dict[str, str]]:
+    rows = []
+    for row in _list(value):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                key: field
+                for key, field in {
+                    "source_id": str(row.get("source_id") or ""),
+                    "source_bottom_line": _short_text(str(row.get("source_bottom_line") or ""), 260),
+                    "polarity_signal": str(row.get("polarity_signal") or ""),
+                }.items()
+                if field
+            }
+        )
+    return rows[:4]
+
+
 def _candidate_pair_for_task(value: Any) -> dict[str, Any]:
     pair = value if isinstance(value, dict) else {}
     return {
@@ -516,12 +539,32 @@ def _endpoint_claims_for_task(value: Any) -> list[dict[str, Any]]:
             continue
         rows.append(
             {
-                key: _short_text(str(endpoint.get(key) or ""), 180) if key == "claim" else endpoint.get(key)
-                for key in ("endpoint", "claim_id", "decision_edge_role", "decision_function", "question_relevance", "claim")
+                key: _endpoint_task_value(key, endpoint.get(key))
+                for key in (
+                    "endpoint",
+                    "claim_id",
+                    "source_ids",
+                    "decision_edge_role",
+                    "decision_function",
+                    "question_relevance",
+                    "claim",
+                    "source_bottom_lines",
+                    "source_bottom_line_signals",
+                )
                 if endpoint.get(key) not in (None, "", [], {})
             }
         )
     return rows
+
+
+def _endpoint_task_value(key: str, value: Any) -> Any:
+    if key == "claim":
+        return _short_text(str(value or ""), 180)
+    if key == "source_bottom_lines":
+        return _source_bottom_lines_for_task(value)
+    if key in {"source_ids", "source_bottom_line_signals"}:
+        return _string_list(value)[:4]
+    return value
 
 
 def _known_ids(context: dict[str, Any], ids: list[str]) -> list[str]:

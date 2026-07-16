@@ -310,6 +310,7 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "The context.evidence_rows list is the full-reasoning lane selected by analyst evidence routing.",
             "The context.routed_away_evidence_summary list is an audit lane; build groups from it only when its own rationale shows that routing is unsafe.",
             "Use row-level decision_contribution, use_in_reasoning, key_qualifier, quantity_takeaway, source_weight_note, misuse_warning, and if_omitted as interpretation constraints; preserve them in group rationale, answer_impact, conflict_note, applicability_limits, or do_not_overstate as appropriate.",
+            "Use source_bottom_lines and source_bottom_line_signals as source-level polarity context; when they conflict with a relation label or compressed claim, preserve that conflict in the group role, rationale, answer_impact, conflict_note, or evidence_dispositions.",
             "For every evidence row that could affect the memo, also fill memo_relevance_decisions with a transparent memo_inclusion choice.",
             "Use memo_spine for evidence the memo would be materially worse without; use supporting_context for useful but non-core evidence; use trace_only for evidence that should remain available for audit while staying out of memo prose; use exclude for off-question evidence.",
             "Start from obligation_group_skeleton before inventing other groups. Each skeleton group lists evidence that needs an explicit home in the argument.",
@@ -537,6 +538,8 @@ def _context_row(row: dict[str, Any], adjudication: dict[str, Any]) -> dict[str,
         "source_ids": row.get("source_ids", []),
         "source_quality": _source_quality_summary(row),
         "claim": _short_text(str(row.get("claim") or ""), 620),
+        "source_bottom_lines": _source_bottom_lines_for_context(row.get("source_bottom_lines")),
+        "source_bottom_line_signals": _string_list(row.get("source_bottom_line_signals"))[:4],
         "quantity_values": row.get("quantity_values", []),
         "why_it_matters": _short_text(str(row.get("why_it_matters") or adjudicated.get("decision_contribution") or adjudicated.get("rationale") or ""), 280),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 220),
@@ -569,6 +572,25 @@ def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _source_bottom_lines_for_context(value: Any) -> list[dict[str, str]]:
+    rows = []
+    for row in _list(value):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                key: field
+                for key, field in {
+                    "source_id": str(row.get("source_id") or ""),
+                    "source_bottom_line": _short_text(str(row.get("source_bottom_line") or ""), 300),
+                    "polarity_signal": str(row.get("polarity_signal") or ""),
+                }.items()
+                if field
+            }
+        )
+    return rows[:4]
+
+
 def _relation_contract_for_context(value: Any) -> dict[str, Any]:
     contract = _dict(value)
     return {
@@ -594,12 +616,32 @@ def _endpoint_claims_for_context(value: Any) -> list[dict[str, Any]]:
             continue
         rows.append(
             {
-                key: _short_text(str(row.get(key) or ""), 280) if key == "claim" else row.get(key)
-                for key in ("endpoint", "claim_id", "decision_edge_role", "decision_function", "question_relevance", "claim")
+                key: _endpoint_context_value(key, row.get(key))
+                for key in (
+                    "endpoint",
+                    "claim_id",
+                    "source_ids",
+                    "decision_edge_role",
+                    "decision_function",
+                    "question_relevance",
+                    "claim",
+                    "source_bottom_lines",
+                    "source_bottom_line_signals",
+                )
                 if row.get(key) not in (None, "", [], {})
             }
         )
     return rows[:4]
+
+
+def _endpoint_context_value(key: str, value: Any) -> Any:
+    if key == "claim":
+        return _short_text(str(value or ""), 280)
+    if key == "source_bottom_lines":
+        return _source_bottom_lines_for_context(value)
+    if key in {"source_ids", "source_bottom_line_signals"}:
+        return _string_list(value)[:4]
+    return value
 
 
 def _retention_obligation_context(ledger: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:

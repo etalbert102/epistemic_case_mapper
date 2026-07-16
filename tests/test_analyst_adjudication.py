@@ -31,6 +31,14 @@ def _ledger() -> dict:
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
                 "claim": "Option A reduced losses.",
+                "source_bottom_lines": [
+                    {
+                        "source_id": "s1",
+                        "source_bottom_line": "Option A reduced downstream losses in the main outcome study.",
+                        "polarity_signal": "benefit_signal",
+                    }
+                ],
+                "source_bottom_line_signals": ["benefit_signal"],
                 "source_excerpt": "Raw excerpt should stay out of adjudication prompt.",
                 "source_appraisal": {
                     "decision_directness": "direct",
@@ -78,7 +86,19 @@ def _relation_ledger() -> dict:
                     "pair_intent": {"intent": "mechanism_to_outcome", "allowed_relation_types": ["supports", "none"]},
                 },
                 "endpoint_claims": [
-                    {"endpoint": "source", "claim_id": "c001", "decision_edge_role": "mechanism_or_biomarker"},
+                    {
+                        "endpoint": "source",
+                        "claim_id": "c001",
+                        "decision_edge_role": "mechanism_or_biomarker",
+                        "source_bottom_lines": [
+                            {
+                                "source_id": "s1",
+                                "source_bottom_line": "Mechanism evidence increased the risk marker.",
+                                "polarity_signal": "increased_harm_or_risk_signal",
+                            }
+                        ],
+                        "source_bottom_line_signals": ["increased_harm_or_risk_signal"],
+                    },
                     {"endpoint": "target", "claim_id": "c002", "decision_edge_role": "outcome_finding"},
                 ],
                 "relation_context": [
@@ -119,6 +139,9 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "large_internal_notes" not in prompt
     assert "source_quality" in prompt
     assert "quality_limit" in prompt
+    assert "source_bottom_lines" in prompt
+    assert "Option A reduced downstream losses" in prompt
+    assert "benefit_signal" in prompt
     assert "source_ids" in prompt
     assert "source_labels" not in prompt
     assert "Outcome Study" not in prompt
@@ -134,6 +157,8 @@ def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> No
     assert "source_anchor_a" in prompt
     assert "failure_condition" in prompt
     assert "endpoint_claims" in prompt
+    assert "Mechanism evidence increased the risk marker" in prompt
+    assert "increased_harm_or_risk_signal" in prompt
     assert "Broad neighboring relation context" not in prompt
 
 

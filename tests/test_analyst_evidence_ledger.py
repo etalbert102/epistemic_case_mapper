@@ -218,6 +218,56 @@ def test_analyst_map_evidence_ledger_adjudicates_retained_claim_map_with_relatio
     assert ledger["rows"][2]["endpoint_claims"][0]["decision_edge_role"] == "scope_or_subgroup_boundary"
 
 
+def test_analyst_map_evidence_ledger_preserves_source_bottom_line_polarity_context() -> None:
+    candidate_map = {
+        "claims": [
+            {
+                "claim_id": "c001",
+                "claim": "The association was independent of overall diet quality.",
+                "source_id": "s1",
+                "source_quote": "association was independent of overall diet quality",
+                "decision_function": "answer_bearing",
+                "decision_importance_level": "high",
+                "question_relevance": "direct",
+                "whole_doc_source_card": {
+                    "source_bottom_line": "Higher exposure was associated with increased risk of cardiovascular disease and mortality."
+                },
+            },
+            {
+                "claim_id": "c002",
+                "claim": "Other sources reported no clear association with cardiovascular outcomes.",
+                "source_id": "s2",
+                "decision_function": "answer_bearing",
+                "decision_importance_level": "high",
+                "question_relevance": "direct",
+                "whole_doc_source_card": {"source_bottom_line": "No clear association was reported for moderate exposure."},
+            },
+        ],
+        "relations": [
+            {
+                "relation_id": "r001",
+                "source_claim": "c001",
+                "target_claim": "c002",
+                "relation_type": "supports",
+                "rationale": "The independence claim was proposed as support for the no-association claim.",
+                "relation_confidence": "medium",
+            }
+        ],
+    }
+
+    ledger = build_analyst_map_evidence_ledger(candidate_map, {"source_display_names": {"s1": "Risk Study", "s2": "Null Study"}}, question="Is exposure neutral?")
+    rows = {row["evidence_item_id"]: row for row in ledger["rows"]}
+
+    assert rows["claim:c001"]["source_bottom_lines"][0]["source_bottom_line"].startswith("Higher exposure")
+    assert rows["claim:c001"]["source_bottom_line_signals"] == ["increased_harm_or_risk_signal"]
+    assert rows["claim:c001"]["relation_context"][0]["other_source_bottom_line_signals"] == ["no_clear_association_signal"]
+    assert rows["relation:r001"]["source_bottom_line_signals"] == [
+        "increased_harm_or_risk_signal",
+        "no_clear_association_signal",
+    ]
+    assert rows["relation:r001"]["endpoint_claims"][0]["source_bottom_line_signals"] == ["increased_harm_or_risk_signal"]
+
+
 def test_analyst_map_evidence_ledger_downroutes_population_mismatch_answer_claims() -> None:
     candidate_map = {
         "claims": [

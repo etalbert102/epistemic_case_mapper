@@ -35,6 +35,14 @@ def _ledger() -> dict:
                 "source_ids": ["s1"],
                 "source_labels": ["Outcome Study"],
                 "quantity_values": ["25% reduction"],
+                "source_bottom_lines": [
+                    {
+                        "source_id": "s1",
+                        "source_bottom_line": "Option A reduced losses in the source bottom line.",
+                        "polarity_signal": "benefit_signal",
+                    }
+                ],
+                "source_bottom_line_signals": ["benefit_signal"],
                 "source_excerpt": "Raw support excerpt should not be model-facing.",
                 "relation_context": [
                     {
@@ -176,7 +184,19 @@ def _relation_ledger() -> dict:
                     "pair_intent": {"intent": "mechanism_to_outcome", "allowed_relation_types": ["supports", "none"]},
                 },
                 "endpoint_claims": [
-                    {"endpoint": "source", "claim_id": "c001", "decision_edge_role": "mechanism_or_biomarker"},
+                    {
+                        "endpoint": "source",
+                        "claim_id": "c001",
+                        "decision_edge_role": "mechanism_or_biomarker",
+                        "source_bottom_lines": [
+                            {
+                                "source_id": "s1",
+                                "source_bottom_line": "Mechanism source bottom line increased risk.",
+                                "polarity_signal": "increased_harm_or_risk_signal",
+                            }
+                        ],
+                        "source_bottom_line_signals": ["increased_harm_or_risk_signal"],
+                    },
                     {"endpoint": "target", "claim_id": "c002", "decision_edge_role": "outcome_finding"},
                 ],
                 "claim": "supports: mechanism evidence may explain the outcome finding.",
@@ -219,6 +239,8 @@ def test_decision_context_includes_ml_hints_and_adjudication_labels() -> None:
     assert context["routed_away_evidence_summary"][0]["misuse_warning"] == "Do not double count this as independent evidence."
     assert "source_excerpt" not in context["evidence_rows"][0]
     assert "relation_context" not in context["evidence_rows"][0]
+    assert context["evidence_rows"][0]["source_bottom_lines"][0]["source_bottom_line"].startswith("Option A reduced")
+    assert context["evidence_rows"][0]["source_bottom_line_signals"] == ["benefit_signal"]
     assert context["evidence_rows"][0]["source_quality"]["decision_directness"] == "direct"
     assert context["evidence_rows"][0]["source_quality"]["warnings"] == ["quality_limit"]
     assert "Bulky appraisal" not in json.dumps(context)

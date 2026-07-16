@@ -153,6 +153,8 @@ class AnalystEvidenceGroup(BaseModel):
     covered_evidence_item_ids: list[str] = Field(min_length=1)
     source_ids: list[str] = Field(default_factory=list)
     source_labels: list[str] = Field(default_factory=list)
+    source_bottom_lines: list[dict[str, Any]] = Field(default_factory=list)
+    source_bottom_line_signals: list[str] = Field(default_factory=list)
     quantity_values: list[str] = Field(default_factory=list)
     applicability_limits: list[str] = Field(default_factory=list)
     answer_relation: AnswerRelation = "uncertain_relation"

@@ -148,9 +148,10 @@ def build_analyst_packet_quality_report(
         *(["no_primary_reasoning_chain"] if not _list(synthesis_packet.get("primary_reasoning_chain")) else []),
         *(["no_counterweight_or_scope"] if not _list(synthesis_packet.get("main_counterweights")) and not _list(synthesis_packet.get("scope_and_applicability")) else []),
     ]
+    source_faithfulness_warnings = _source_faithfulness_warnings(ledger, adjudication)
     return {
         "schema_id": "analyst_packet_quality_report_v1",
-        "status": "ready" if not issues else "warning",
+        "status": "ready" if not issues and not source_faithfulness_warnings else "warning",
         "ledger_row_count": len(ledger_ids),
         "adjudicated_row_count": len(adjudicated_ids),
         "packet_accounted_row_count": len(accounted_ids),
@@ -160,8 +161,10 @@ def build_analyst_packet_quality_report(
         "quantity_binding": quantity_binding_quality_summary(quantity_binding or {}),
         "missing_from_adjudication": missing_from_adjudication,
         "missing_from_packet_accounting": missing_from_packet_accounting,
+        "source_faithfulness_warning_count": len(source_faithfulness_warnings),
+        "source_faithfulness_warnings": source_faithfulness_warnings,
         "group_accounting": group_accounting or {},
-        "issues": issues,
+        "issues": [*issues, *(["source_faithfulness_warnings_present"] if source_faithfulness_warnings else [])],
     }
 
 
@@ -549,6 +552,59 @@ def _weak_group_proposition(text: str) -> bool:
     return False
 
 
+def _source_faithfulness_warnings(ledger: dict[str, Any], adjudication: dict[str, Any]) -> list[dict[str, Any]]:
+    ledger_by_id = {
+        str(row.get("evidence_item_id") or ""): row
+        for row in _list(ledger.get("rows"))
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+    }
+    warnings = []
+    for row in _list(adjudication.get("rows")):
+        if not isinstance(row, dict):
+            continue
+        evidence_id = str(row.get("evidence_item_id") or "")
+        ledger_row = ledger_by_id.get(evidence_id, {})
+        reason = _source_faithfulness_warning_reason(ledger_row, row)
+        if not reason:
+            continue
+        warnings.append(
+            {
+                "evidence_item_id": evidence_id,
+                "warning": reason,
+                "memo_use": row.get("memo_use"),
+                "answer_relation": row.get("answer_relation"),
+                "target_answer_option": row.get("target_answer_option"),
+                "source_bottom_line_signals": _string_list(ledger_row.get("source_bottom_line_signals")),
+                "source_bottom_lines": _list(ledger_row.get("source_bottom_lines"))[:3],
+            }
+        )
+    return warnings[:24]
+
+
+def _source_faithfulness_warning_reason(ledger_row: dict[str, Any], adjudication_row: dict[str, Any]) -> str:
+    signals = set(_string_list(ledger_row.get("source_bottom_line_signals")))
+    if not signals:
+        return ""
+    memo_use = str(adjudication_row.get("memo_use") or "")
+    answer_relation = str(adjudication_row.get("answer_relation") or "")
+    target = " ".join(
+        [
+            str(adjudication_row.get("target_answer_option") or ""),
+            str(adjudication_row.get("effect_on_final_answer") or ""),
+            str(adjudication_row.get("rationale") or ""),
+        ]
+    ).lower()
+    support_like = memo_use == "load_bearing_primary_support" or answer_relation == "supports_answer"
+    counter_like = memo_use == "load_bearing_counterweight" or answer_relation == "challenges_answer"
+    neutral_or_benefit_target = any(term in target for term in ("neutral", "benefit", "beneficial", "safe", "not harmful", "not meaningfully harmful"))
+    harmful_target = any(term in target for term in ("harmful", "risk", "unsafe", "worse", "higher harm"))
+    if "increased_harm_or_risk_signal" in signals and support_like and neutral_or_benefit_target:
+        return "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer"
+    if {"no_clear_association_signal", "reduced_harm_or_risk_signal"} & signals and counter_like and harmful_target:
+        return "source_bottom_line_does_not_show_harm_but_row_challenges_as_harmful"
+    return ""
+
+
 def _group_from_row(index: int, adjudication_row: dict[str, Any], ledger_row: dict[str, Any]) -> dict[str, Any]:
     evidence_id = str(adjudication_row.get("evidence_item_id") or "")
     memo_use = str(adjudication_row.get("memo_use") or "needs_human_or_model_review")
@@ -566,6 +622,8 @@ def _group_from_row(index: int, adjudication_row: dict[str, Any], ledger_row: di
         "covered_evidence_item_ids": [evidence_id],
         "source_ids": _dedupe([*_string_list(ledger_row.get("source_ids")), *_string_list(adjudication_row.get("source_ids"))]),
         "source_labels": source_labels,
+        "source_bottom_lines": _list(ledger_row.get("source_bottom_lines"))[:6],
+        "source_bottom_line_signals": _string_list(ledger_row.get("source_bottom_line_signals"))[:6],
         "source_appraisal": ledger_row.get("source_appraisal") if isinstance(ledger_row.get("source_appraisal"), dict) else {},
         "source_use_warnings": _string_list(ledger_row.get("source_use_warnings")),
         "allowed_wording": ledger_row.get("allowed_wording") if isinstance(ledger_row.get("allowed_wording"), dict) else {},

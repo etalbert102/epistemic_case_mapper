@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -108,6 +109,8 @@ def _claim_row(
     residual_values = _residual_quantity_values(claim, claim_bound_values=claim_bound_values, quantity_lookup=quantity_lookup.get(claim_id, []))
     residual_candidates = _residual_quantity_candidates(claim, residual_values)
     quantity_values = _dedupe([*claim_bound_values, *residual_candidates])
+    source_bottom_lines = _source_bottom_lines_for_claim(claim)
+    source_bottom_line_signals = _source_bottom_line_signals(source_bottom_lines)
     return _drop_empty(
         {
             "evidence_item_id": f"claim:{claim_id}",
@@ -121,6 +124,8 @@ def _claim_row(
             "allowed_wording": source_appraisal.get("allowed_wording"),
             "claim": _short_text(str(claim.get("claim") or ""), 520),
             "source_excerpt": _short_text(str(claim.get("source_quote") or claim.get("excerpt") or ""), 520),
+            "source_bottom_lines": source_bottom_lines,
+            "source_bottom_line_signals": source_bottom_line_signals,
             "current_role": _claim_current_role(claim),
             "current_priority": _priority_from_claim(claim),
             "quality": _dict(claim.get("source_alignment")).get("status") or claim.get("entailed_by_excerpt"),
@@ -184,7 +189,7 @@ def _residual_quantity_candidates(claim: dict[str, Any], residual_values: list[s
 def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     context: dict[str, list[dict[str, Any]]] = {}
     claim_lookup = {
-        str(claim.get("claim_id") or ""): str(claim.get("claim") or "")
+        str(claim.get("claim_id") or ""): claim
         for claim in _list(candidate_map.get("claims"))
         if isinstance(claim, dict)
     }
@@ -204,10 +209,22 @@ def _claim_relation_context(candidate_map: dict[str, Any]) -> dict[str, list[dic
             "rationale": _short_text(str(relation.get("rationale") or ""), 220),
         }
         if left:
-            context.setdefault(left, []).append({**row, "other_claim_id": right, "other_claim": _short_text(claim_lookup.get(right, ""), 180)})
+            context.setdefault(left, []).append({**row, **_other_claim_context(right, claim_lookup.get(right, {}))})
         if right:
-            context.setdefault(right, []).append({**row, "other_claim_id": left, "other_claim": _short_text(claim_lookup.get(left, ""), 180)})
+            context.setdefault(right, []).append({**row, **_other_claim_context(left, claim_lookup.get(left, {}))})
     return context
+
+
+def _other_claim_context(claim_id: str, claim: dict[str, Any]) -> dict[str, Any]:
+    source_bottom_lines = _source_bottom_lines_for_claim(claim)
+    return _drop_empty(
+        {
+            "other_claim_id": claim_id,
+            "other_claim": _short_text(str(claim.get("claim") or ""), 180),
+            "other_source_bottom_lines": source_bottom_lines,
+            "other_source_bottom_line_signals": _source_bottom_line_signals(source_bottom_lines),
+        }
+    )
 
 
 def _decision_edge_rows(
@@ -242,6 +259,9 @@ def _decision_edge_rows(
         source_appraisal = appraisal_for_sources(source_appraisal_report, [*source_ids, *labels])
         contract = relation.get("relation_contract") if isinstance(relation.get("relation_contract"), dict) else {}
         candidate_pair = _candidate_pair_summary(relation)
+        source_bottom_lines = _dedupe_source_bottom_lines(
+            [*_source_bottom_lines_for_claim(source_claim), *_source_bottom_lines_for_claim(target_claim)]
+        )
         rows.append(
             _drop_empty(
                 {
@@ -257,6 +277,8 @@ def _decision_edge_rows(
                     "allowed_wording": source_appraisal.get("allowed_wording"),
                     "claim": _short_text(_decision_edge_statement(relation, source_claim, target_claim), 620),
                     "source_excerpt": _short_text(_decision_edge_excerpt(source_claim, target_claim), 620),
+                    "source_bottom_lines": source_bottom_lines,
+                    "source_bottom_line_signals": _source_bottom_line_signals(source_bottom_lines),
                     "current_role": _relation_current_role(str(relation.get("relation_type") or "")),
                     "relation_semantic_role": str(relation.get("relation_type") or ""),
                     "relation_contract": _relation_contract_summary(relation),
@@ -319,15 +341,19 @@ def _endpoint_claims_for_relation(
     ]
 
 
-def _endpoint_claim_summary(endpoint: str, claim_id: str, claim: dict[str, Any]) -> dict[str, str]:
+def _endpoint_claim_summary(endpoint: str, claim_id: str, claim: dict[str, Any]) -> dict[str, Any]:
+    source_bottom_lines = _source_bottom_lines_for_claim(claim)
     return _drop_empty(
         {
             "endpoint": endpoint,
             "claim_id": claim_id,
+            "source_ids": _dedupe([str(claim.get("source_id") or ""), *_string_list(claim.get("supporting_sources"))]),
             "decision_edge_role": str(claim.get("decision_edge_role") or claim.get("map_relation_role") or ""),
             "decision_function": str(claim.get("decision_function") or ""),
             "question_relevance": str(claim.get("question_relevance") or ""),
             "claim": _short_text(str(claim.get("claim") or ""), 220),
+            "source_bottom_lines": source_bottom_lines,
+            "source_bottom_line_signals": _source_bottom_line_signals(source_bottom_lines),
         }
     )
 
@@ -346,6 +372,92 @@ def _decision_edge_excerpt(source_claim: dict[str, Any], target_claim: dict[str,
     left = str(source_claim.get("source_quote") or source_claim.get("excerpt") or "").strip()
     right = str(target_claim.get("source_quote") or target_claim.get("excerpt") or "").strip()
     return " | ".join(part for part in (_short_text(left, 280), _short_text(right, 280)) if part)
+
+
+def _source_bottom_lines_for_claim(claim: dict[str, Any]) -> list[dict[str, str]]:
+    source_id = str(claim.get("source_id") or "").strip()
+    source_card = _dict(claim.get("whole_doc_source_card"))
+    bottom_line = str(claim.get("source_bottom_line") or source_card.get("source_bottom_line") or "").strip()
+    if not bottom_line:
+        return []
+    return [
+        _drop_empty(
+            {
+                "source_id": source_id,
+                "source_bottom_line": _short_text(bottom_line, 420),
+                "polarity_signal": _source_bottom_line_signal(bottom_line),
+            }
+        )
+    ]
+
+
+def _bundle_source_bottom_lines(bundle: dict[str, Any]) -> list[dict[str, str]]:
+    bottom_lines = []
+    for row in _list(bundle.get("source_bottom_lines")):
+        if isinstance(row, dict):
+            line = str(row.get("source_bottom_line") or row.get("bottom_line") or row.get("claim") or "").strip()
+            if line:
+                bottom_lines.append(
+                    _drop_empty(
+                        {
+                            "source_id": str(row.get("source_id") or ""),
+                            "source_bottom_line": _short_text(line, 420),
+                            "polarity_signal": _source_bottom_line_signal(line),
+                        }
+                    )
+                )
+        elif str(row).strip():
+            line = str(row).strip()
+            bottom_lines.append({"source_bottom_line": _short_text(line, 420), "polarity_signal": _source_bottom_line_signal(line)})
+    line = str(bundle.get("source_bottom_line") or "").strip()
+    if line:
+        source_ids = _string_list(bundle.get("source_ids"))
+        bottom_lines.append(
+            _drop_empty(
+                {
+                    "source_id": source_ids[0] if source_ids else "",
+                    "source_bottom_line": _short_text(line, 420),
+                    "polarity_signal": _source_bottom_line_signal(line),
+                }
+            )
+        )
+    return _dedupe_source_bottom_lines(bottom_lines)
+
+
+def _dedupe_source_bottom_lines(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    seen: set[tuple[str, str]] = set()
+    deduped = []
+    for row in rows:
+        source_id = str(row.get("source_id") or "")
+        bottom_line = str(row.get("source_bottom_line") or "")
+        key = (source_id, bottom_line)
+        if not bottom_line or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped[:6]
+
+
+def _source_bottom_line_signals(rows: list[dict[str, str]]) -> list[str]:
+    return _dedupe([str(row.get("polarity_signal") or "") for row in rows if row.get("polarity_signal")])
+
+
+def _source_bottom_line_signal(text: str) -> str:
+    lowered = str(text or "").lower()
+    harm_terms = r"(risk|harm|mortality|death|adverse|failure|loss|complication|cardiovascular|cvd|disease)"
+    if "no significant association" in lowered or "not associated" in lowered or "no clear association" in lowered:
+        return "no_clear_association_signal"
+    if "associated with" in lowered and any(term in lowered for term in ("higher", "increased", "greater", "elevated", "worse")):
+        return "increased_harm_or_risk_signal"
+    if re.search(rf"\b(higher|increased|greater|elevated|worse|raises|worsens)\b.{0,80}\b{harm_terms}\b", lowered):
+        return "increased_harm_or_risk_signal"
+    if re.search(rf"\b(lower|reduced|decreased|less|improved|fewer)\b.{0,80}\b{harm_terms}\b", lowered):
+        return "reduced_harm_or_risk_signal"
+    if any(term in lowered for term in ("beneficial", "benefit", "improved outcome", "supports adoption", "supports the intervention")):
+        return "benefit_signal"
+    if any(term in lowered for term in ("mixed", "heterogeneous", "depends", "conditional", "uncertain")):
+        return "mixed_or_conditional_signal"
+    return ""
 
 
 def _relation_current_role(relation_type: str) -> str:
@@ -497,6 +609,7 @@ def _bundle_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(bundle, dict):
             continue
         bundle_id = str(bundle.get("bundle_id") or f"bundle_{index + 1:03d}")
+        source_bottom_lines = _bundle_source_bottom_lines(bundle)
         rows.append(
             _drop_empty(
                 {
@@ -513,6 +626,8 @@ def _bundle_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     "quantity_values": _string_list(bundle.get("quantity_values")),
                     "claim": _short_text(str(bundle.get("claim") or ""), 520),
                     "source_excerpt": _short_text(str(bundle.get("source_excerpt") or ""), 520),
+                    "source_bottom_lines": source_bottom_lines,
+                    "source_bottom_line_signals": _source_bottom_line_signals(source_bottom_lines),
                     "current_role": str(bundle.get("decision_role") or ""),
                     "current_priority": _priority_from_bundle(bundle),
                     "current_weight": bundle.get("weight"),

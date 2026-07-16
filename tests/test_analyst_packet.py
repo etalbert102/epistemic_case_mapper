@@ -135,6 +135,56 @@ def test_analyst_packet_accounts_for_rows_and_groups_quantity_anchors() -> None:
     assert "s4" not in source_ids
 
 
+def test_analyst_packet_warns_when_source_bottom_line_conflicts_with_answer_role() -> None:
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should exposure be treated as neutral?",
+        "rows": [
+            {
+                "evidence_item_id": "claim:risk",
+                "input_kind": "retained_map_claim",
+                "source_ids": ["s1"],
+                "source_labels": ["Risk Study"],
+                "claim": "The association was independent of overall diet quality.",
+                "source_bottom_lines": [
+                    {
+                        "source_id": "s1",
+                        "source_bottom_line": "Higher exposure was associated with increased cardiovascular risk.",
+                        "polarity_signal": "increased_harm_or_risk_signal",
+                    }
+                ],
+                "source_bottom_line_signals": ["increased_harm_or_risk_signal"],
+            }
+        ],
+    }
+    adjudication = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should exposure be treated as neutral?",
+        "rows": [
+            {
+                "evidence_item_id": "claim:risk",
+                "memo_use": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "target_answer_option": "neutral_or_not_meaningfully_harmful",
+                "effect_on_final_answer": "supports current_best_answer",
+                "importance_rank": 1,
+                "rationale": "Treats the row as support for a neutral answer.",
+            }
+        ],
+    }
+
+    result = build_analyst_packet_bundle(packet=_packet(), ledger=ledger, adjudication=adjudication)
+    quality = result["analyst_packet_quality_report"]
+
+    assert quality["status"] == "warning"
+    assert quality["source_faithfulness_warning_count"] == 1
+    assert quality["source_faithfulness_warnings"][0]["warning"] == (
+        "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer"
+    )
+    assert "source_faithfulness_warnings_present" in quality["issues"]
+    assert result["analyst_synthesis_packet"]["primary_reasoning_chain"][0]["source_bottom_lines"][0]["source_id"] == "s1"
+
+
 def test_analyst_packet_prefers_global_decision_model_groups() -> None:
     decision_model = {
         "schema_id": "analyst_decision_model_v1",
