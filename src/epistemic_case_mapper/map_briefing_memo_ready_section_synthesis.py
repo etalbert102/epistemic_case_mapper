@@ -12,6 +12,14 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_section_num_predict
+from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+    build_evidence_expression_contracts,
+    build_evidence_reconciliation_report,
+    build_evidence_tagged_section_prompt,
+    contracts_for_section,
+    evidence_ids_in_text,
+    render_evidence_tagged_memo,
+)
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
 
 
@@ -21,24 +29,28 @@ ModelRunner = Callable[..., ModelBackendResult]
 def run_parallel_memo_ready_section_generation(
     section_plan: dict[str, Any],
     *,
+    memo_ready_packet: dict[str, Any] | None = None,
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
     whole_prompt: str,
     run_model: ModelRunner = run_model_backend,
 ) -> dict[str, Any]:
-    sections = [section for section in _list(section_plan.get("sections")) if isinstance(section, dict)]
+    evidence_contracts = build_evidence_expression_contracts(memo_ready_packet or {})
+    sections = _prepare_sections(section_plan, memo_ready_packet or {}, evidence_contracts)
     known_source_ids = set(_string_list(section_plan.get("known_source_ids")))
     known_source_aliases = _source_alias_map(section_plan.get("known_source_aliases"))
+    known_evidence_ids = {str(row.get("evidence_id") or "") for row in evidence_contracts}
     num_predict = memo_ready_section_num_predict()
     report = {
         "schema_id": "memo_ready_section_generation_report_v1",
         "status": "not_run",
         "accepted": False,
-        "synthesis_mode": "parallel_section_synthesis",
+        "synthesis_mode": "unified_section_synthesis",
         "parallelism": min(model_parallelism(backend), len(sections)) if sections else 0,
         "num_predict": num_predict,
         "section_count": len(sections),
+        "evidence_expression_contract_count": len(evidence_contracts),
         "issues": [],
     }
 
@@ -51,12 +63,13 @@ def run_parallel_memo_ready_section_generation(
             num_predict=num_predict,
             known_source_ids=known_source_ids,
             known_source_aliases=known_source_aliases,
+            known_evidence_ids=known_evidence_ids,
             run_model=run_model,
         )
 
     section_reports = run_parallel(sections, run_section, max_workers=model_parallelism(backend))
     failed = [row for row in section_reports if not row.get("accepted")]
-    combined_prompt = _combined_section_prompts(section_plan, whole_prompt=whole_prompt)
+    combined_prompt = _combined_section_prompts(sections, whole_prompt=whole_prompt)
     combined_raw = "\n\n".join(
         f"<!-- {row.get('heading')} raw -->\n{row.get('raw', '')}" for row in section_reports
     )
@@ -77,11 +90,33 @@ def run_parallel_memo_ready_section_generation(
             "section_reports": [_public_section_report(row) for row in section_reports],
         }
     )
+    tagged_memo = _assemble_section_synthesis_memo(section_plan, section_reports)
+    rendered = render_evidence_tagged_memo(tagged_memo, evidence_contracts) if evidence_contracts else {"memo": tagged_memo, "trace": []}
+    reconciliation = (
+        build_evidence_reconciliation_report(tagged_memo, rendered["memo"], evidence_contracts)
+        if evidence_contracts
+        else {"schema_id": "evidence_reconciliation_report_v1", "status": "not_available"}
+    )
+    if reconciliation.get("status") == "warning":
+        report["status"] = "accepted_with_evidence_tag_warnings"
+        report["issues"] = ["evidence_reconciliation_warnings"]
+    report.update(
+        {
+            "evidence_reconciliation_report": reconciliation,
+            "evidence_trace_count": len(_list(rendered.get("trace"))),
+        }
+    )
     return {
-        "memo": _assemble_section_synthesis_memo(section_plan, section_reports),
+        "memo": rendered["memo"],
         "prompt": combined_prompt,
-        "raw": combined_raw,
+        "raw": tagged_memo if evidence_contracts else combined_raw,
         "report": report,
+        "tagged_memo": tagged_memo,
+        "section_raw": combined_raw,
+        "evidence_expression_contracts": evidence_contracts,
+        "evidence_trace": rendered.get("trace", []),
+        "evidence_reconciliation_report": reconciliation,
+        "evidence_tag_section_reports": section_reports,
     }
 
 
@@ -94,16 +129,22 @@ def _run_section(
     num_predict: int,
     known_source_ids: set[str],
     known_source_aliases: dict[str, str],
+    known_evidence_ids: set[str],
     run_model: ModelRunner,
 ) -> dict[str, Any]:
     heading = str(section.get("heading") or "").strip()
     prompt = str(section.get("prompt") or "")
+    citation_mode = str(section.get("citation_mode") or "source_ids")
+    contracts = _list(section.get("contracts"))
     section_report = {
         "section_id": section.get("section_id"),
         "heading": heading,
+        "citation_mode": citation_mode,
         "accepted": False,
         "issues": [],
         "unknown_source_ids": [],
+        "unknown_evidence_ids": [],
+        "used_evidence_ids": [],
         "raw": "",
         "prompt": prompt,
         "markdown": "",
@@ -123,14 +164,22 @@ def _run_section(
     raw = result.text
     markdown = _extract_section_markdown(raw, heading)
     markdown = _normalize_statistical_brackets(markdown)
-    markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
-    markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
-    unknown = _unknown_section_source_ids(markdown, known_source_ids)
+    unknown = []
+    unknown_evidence = []
+    used_evidence = []
+    if citation_mode == "evidence_tags":
+        used_evidence = evidence_ids_in_text(markdown, contracts)
+        unknown_evidence = sorted(set(used_evidence) - known_evidence_ids)
+    else:
+        markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
+        markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
+        unknown = _unknown_section_source_ids(markdown, known_source_ids)
     structure_issues = markdown_structure_issues(markdown)
     heading_ok = markdown.lstrip().startswith(f"## {heading}\n") or markdown.strip() == f"## {heading}"
     issues = [
         *(["missing_exact_heading"] if not heading_ok else []),
         *([f"unknown_source_ids:{', '.join(unknown)}"] if unknown else []),
+        *([f"unknown_evidence_ids:{', '.join(unknown_evidence)}"] if unknown_evidence else []),
         *structure_issues,
     ]
     section_report.update(
@@ -138,6 +187,8 @@ def _run_section(
             "accepted": not issues,
             "issues": issues,
             "unknown_source_ids": unknown,
+            "unknown_evidence_ids": unknown_evidence,
+            "used_evidence_ids": sorted(set(used_evidence) & known_evidence_ids),
             "raw": raw,
             "markdown": markdown,
             "char_count": len(markdown),
@@ -146,6 +197,40 @@ def _run_section(
         }
     )
     return section_report
+
+
+def _prepare_sections(
+    section_plan: dict[str, Any],
+    memo_ready_packet: dict[str, Any],
+    evidence_contracts: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    known_source_ids = _string_list(section_plan.get("known_source_ids"))
+    sections = []
+    for section in _list(section_plan.get("sections")):
+        if not isinstance(section, dict):
+            continue
+        packet = section.get("packet") if isinstance(section.get("packet"), dict) else {}
+        heading = str(section.get("heading") or packet.get("heading") or "").strip()
+        section_id = str(section.get("section_id") or packet.get("section_id") or "").strip()
+        prepared = dict(section)
+        if memo_ready_packet and evidence_contracts and section_id != "source_weighting":
+            local_contracts = contracts_for_section(packet, heading, evidence_contracts)
+            if local_contracts:
+                prepared["contracts"] = local_contracts
+                prepared["citation_mode"] = "evidence_tags"
+                prepared["prompt"] = build_evidence_tagged_section_prompt(
+                    packet,
+                    known_source_ids=known_source_ids,
+                    contracts=local_contracts,
+                )
+            else:
+                prepared["contracts"] = []
+                prepared["citation_mode"] = "source_ids"
+        else:
+            prepared["contracts"] = []
+            prepared["citation_mode"] = "source_ids"
+        sections.append(prepared)
+    return sections
 
 
 def _extract_section_markdown(raw: str, heading: str) -> str:
@@ -297,9 +382,9 @@ def _nearest_known_source_id(source_id: str, known_source_ids: set[str]) -> str:
     return known if score >= 0.9 else source_id
 
 
-def _combined_section_prompts(section_plan: dict[str, Any], *, whole_prompt: str) -> str:
+def _combined_section_prompts(sections: list[dict[str, Any]], *, whole_prompt: str) -> str:
     section_manifest = []
-    for section in _list(section_plan.get("sections")):
+    for section in sections:
         if not isinstance(section, dict):
             continue
         prompt = str(section.get("prompt") or "")
@@ -310,13 +395,15 @@ def _combined_section_prompts(section_plan: dict[str, Any], *, whole_prompt: str
                 "heading": section.get("heading"),
                 "prompt_chars": len(prompt),
                 "packet_chars": len(json.dumps(packet, ensure_ascii=False)) if packet else 0,
-                "model_call": "parallel_section_synthesis",
+                "model_call": "unified_section_synthesis",
+                "citation_mode": section.get("citation_mode") or "source_ids",
+                "contract_count": len(_list(section.get("contracts"))),
             }
         )
     lines = [
         "Parallel section synthesis prompts.",
         "",
-        "Whole-memo fallback prompt retained for artifact comparison:",
+        "Whole-memo reference prompt retained for artifact comparison:",
         whole_prompt.strip(),
         "",
         "Parallel section prompt manifest:",
@@ -345,9 +432,12 @@ def _public_section_report(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "section_id": row.get("section_id"),
         "heading": row.get("heading"),
+        "citation_mode": row.get("citation_mode"),
         "accepted": bool(row.get("accepted")),
         "issues": _list(row.get("issues")),
         "unknown_source_ids": _list(row.get("unknown_source_ids")),
+        "unknown_evidence_ids": _list(row.get("unknown_evidence_ids")),
+        "used_evidence_id_count": len(_list(row.get("used_evidence_ids"))),
         "char_count": row.get("char_count", 0),
         "attempts": row.get("attempts", 0),
         "num_predict": row.get("num_predict", 0),

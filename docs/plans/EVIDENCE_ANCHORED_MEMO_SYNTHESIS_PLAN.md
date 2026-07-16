@@ -492,27 +492,22 @@ The rest should remain conditional and report-only until it proves value. Implem
 
 ## Implementation Ledger
 
-Status: implemented as the promoted live-backend synthesis path.
-
-Flag:
-
-- Default behavior: enabled for production-style live backends, currently `ollama:` and `command:`.
-- Explicit opt-out: `ECM_EVIDENCE_ANCHORED_SYNTHESIS=0` or `off`.
-- Explicit opt-in for non-production/test backends: `ECM_EVIDENCE_ANCHORED_SYNTHESIS=1`.
+Status: implemented as the single production section-synthesis path.
 
 Implemented:
 
 - Derived evidence expression contracts from existing memo-ready packet fields.
-- Evidence-ID annotated section synthesis using the existing section-plan machinery.
+- Evidence-ID annotated section synthesis using the existing section-plan machinery, with the source-weighting section still using source IDs directly.
 - Deterministic evidence-tag rendering to source citations.
 - Evidence trace artifacts:
   - `evidence_expression_contracts.json`
   - `evidence_trace.json`
   - `evidence_reconciliation_report.json`
-  - `evidence_anchored_section_reports.json`
+  - `evidence_tag_section_reports.json`
 - Bidirectional reconciliation report for missing required IDs, unknown IDs, quantity warnings, and untagged high-risk sentences.
 - Evidence-ID alias normalization for common zero-padding slips, such as `decision_writer_item_11` resolving to `decision_writer_item_011`.
 - Final reader output artifact wiring so production runs preserve the contracts, trace, reconciliation report, and section reports.
+- Removed the separate experiment module, experiment runner script, and env-flag routing branch so live and test backends use the same section synthesis implementation.
 
 Held conditional:
 
@@ -524,15 +519,18 @@ Reason: the red-team review concluded these should remain conditional/report-onl
 
 Verification:
 
-- `PYTHONPATH=src python3 -m pytest tests/test_evidence_anchored_synthesis_experiment.py -q`
-  - `6 passed`
-- `PYTHONPATH=src python3 -m pytest -q`
-  - `754 passed`
-- Eggs saved-packet probe:
-  - output: `artifacts/semantic/eggs_rebuild_from_map_20260716_source_hierarchy_production/evidence_anchored_integrated_probe_20260716_rerendered/`
+- `PYTHONPATH=src python3 -m pytest tests/test_section_evidence_anchoring.py tests/test_parallel_section_synthesis.py tests/test_source_weighting_contract.py tests/test_memo_ready_packet_contract.py -q`
+  - `31 passed`
+- `PYTHONPATH=src:scripts python3 -m pytest tests -q`
+  - `762 passed, 1 failed`
+  - The remaining failure is the pre-existing static maintainability gate for long analyst files, not this synthesis integration.
+- Eggs saved-packet probe after unifying the path:
+  - output: `artifacts/semantic/eggs_unified_section_synthesis_20260716/`
+  - synthesis mode: `unified_section_synthesis`
+  - source-weighting fidelity: `ready`
   - reconciliation: `ready`
-  - missing required evidence IDs: `[]`
-  - unknown evidence IDs: `[]`
+  - missing required evidence IDs: `0`
+  - raw evidence tags in memo: `false`
   - raw evidence tags in memo: `0`
   - missing mandatory items: `0`
   - missing quantities: `0`

@@ -33,14 +33,19 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
         assert kwargs["json_mode"] is False
         assert kwargs["num_predict"] == 4096
         heading = _heading_from_section_prompt(prompt)
+        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        if ids:
+            tag = f"{{E:{ids[0]}}}"
+        else:
+            tag = ""
         if heading == "Why This Is the Best Current Read":
-            body = "Outcome Study reports that Option A reduced flood losses by 25% in comparable river cities [s1]."
+            body = f"Outcome Study reports that Option A reduced flood losses by 25% in comparable river cities {tag}."
         elif heading == "How to Weight the Evidence":
             body = "Weight Outcome Study most for the main read, while using Counter Study and Boundary Report to bound the answer [s1, s2, s3]."
         elif heading == "What Could Change or Bound the Answer":
-            body = "Counter Study and Boundary Report bound the read because maintenance cuts and a narrower setting could erase the benefit [s2, s3]."
+            body = f"Counter Study and Boundary Report bound the read because maintenance cuts and a narrower setting could erase the benefit {tag}."
         else:
-            body = "Use Option A where the comparable-city conditions hold and maintenance protection is credible [s1, s2, s3]."
+            body = f"Use Option A where the comparable-city conditions hold and maintenance protection is credible {tag}."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
@@ -52,7 +57,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("### Section job" in prompt for prompt in calls)
     assert all("### Suggested paragraph flow" in prompt for prompt in calls)
     assert all("Current read:" in prompt for prompt in calls)
-    assert all("Use parentheses, not square brackets, for confidence intervals" in prompt for prompt in calls)
+    assert all("Use parentheses" in prompt for prompt in calls)
     assert all("Reader question:" in prompt for prompt in calls)
     assert all("### Calibration limits" in prompt for prompt in calls)
     assert all("### Source language and use limits" in prompt for prompt in calls)
@@ -60,7 +65,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert any("### Source weighting notes" in prompt for prompt in calls)
     assert any("Translate the answer into action guidance" in prompt for prompt in calls)
     assert all("section_packet:" not in prompt for prompt in calls)
-    assert result["report"]["synthesis_mode"] == "parallel_section_synthesis"
+    assert any("### Evidence expression contracts" in prompt for prompt in calls)
+    assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
     assert result["report"]["section_count"] == 4
     assert result["report"]["num_predict"] == 4096
     assert all(row["accepted"] for row in result["report"]["section_reports"])
@@ -181,7 +187,9 @@ def test_section_synthesis_num_predict_can_be_overridden(
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         seen.append(kwargs["num_predict"])
         heading = _heading_from_section_prompt(prompt)
-        return ModelBackendResult(text=f"## {heading}\n\nOutcome evidence supports the section [s1].\n", backend="fake")
+        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
+        return ModelBackendResult(text=f"## {heading}\n\nOutcome evidence supports the section {tag_or_citation}.\n", backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
@@ -243,6 +251,9 @@ def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatc
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         heading = _heading_from_section_prompt(prompt)
+        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        if ids:
+            return ModelBackendResult(text=f"## {heading}\n\nA claim with anchored evidence {{E:{ids[0]}}}.\n", backend="fake")
         return ModelBackendResult(text=f"## {heading}\n\nA claim with a made-up source [not_a_source].\n", backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
@@ -252,7 +263,9 @@ def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatc
     assert result["memo"] == ""
     assert result["report"]["status"] == "section_synthesis_failed"
     assert result["report"]["accepted"] is False
-    assert all(row["unknown_source_ids"] == ["not_a_source"] for row in result["report"]["section_reports"])
+    failed = [row for row in result["report"]["section_reports"] if row["unknown_source_ids"]]
+    assert len(failed) == 1
+    assert failed[0]["unknown_source_ids"] == ["not_a_source"]
 
 
 def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -261,8 +274,10 @@ def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monke
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         heading = _heading_from_section_prompt(prompt)
+        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
         return ModelBackendResult(
-            text=f"## {heading}\n\nOutcome evidence reports a subgroup estimate [95% CI, 1.12-1.39] [s1].\n",
+            text=f"## {heading}\n\nOutcome evidence reports a subgroup estimate [95% CI, 1.12-1.39] {tag_or_citation}.\n",
             backend="fake",
         )
 
@@ -270,7 +285,7 @@ def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monke
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["report"]["status"] in {"accepted", "accepted_with_retention_warnings"}
+    assert result["report"]["status"] in {"accepted", "accepted_with_retention_warnings", "accepted_with_evidence_tag_warnings"}
     assert "[95% CI, 1.12-1.39]" not in result["memo"]
     assert "(95% CI, 1.12-1.39)" in result["memo"]
     assert "[s1]" in result["memo"]
@@ -298,10 +313,12 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         heading = _heading_from_section_prompt(prompt)
+        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
         return ModelBackendResult(
             text=(
                 f"## {heading}\n\n"
-                "Outcome Review reports that Option A improves the main outcome by 20% improvement [s1]."
+                f"Outcome Review reports that Option A improves the main outcome by 20% improvement {tag_or_citation}."
             ),
             backend="fake",
         )
@@ -311,7 +328,7 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
     assert result["report"]["contract_mode"] == "strict_writer_packet"
-    assert result["report"]["synthesis_mode"] == "parallel_section_synthesis"
+    assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
     assert result["report"]["status"] == "accepted_with_retention_warnings"
     assert result["report"]["accepted"] is False
     assert result["report"]["missing_mandatory_count"] >= 1
@@ -321,4 +338,6 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
 
 def _heading_from_section_prompt(prompt: str) -> str:
     match = re.search(r"exactly(?: with)?: ## (.+)", prompt)
+    if not match:
+        match = re.search(r"Output starts exactly with: ## (.+)", prompt)
     return match.group(1).strip() if match else "Why This Is the Best Current Read"

@@ -5,10 +5,6 @@ import json
 import re
 from typing import Any
 
-from epistemic_case_mapper.evidence_anchored_synthesis_experiment import (
-    evidence_anchored_synthesis_enabled,
-    run_evidence_anchored_memo_ready_synthesis,
-)
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
 from epistemic_case_mapper.map_briefing_calibrated_language import normalize_calibrated_language
 from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
@@ -69,14 +65,6 @@ def run_memo_ready_packet_synthesis(
     }
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
-    if evidence_anchored_synthesis_enabled(backend) and _list(memo_ready_packet.get("evidence_items")):
-        return run_evidence_anchored_memo_ready_synthesis(
-            memo_ready_packet,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-            run_model=run_model_backend,
-        )
     section_plan = build_memo_ready_section_synthesis_plan(memo_ready_packet)
     if section_plan.get("status") == "ready" and _list(section_plan.get("sections")):
         return _run_parallel_memo_ready_section_synthesis(
@@ -183,6 +171,7 @@ def _run_parallel_memo_ready_section_synthesis(
 ) -> dict[str, Any]:
     generated = run_parallel_memo_ready_section_generation(
         section_plan,
+        memo_ready_packet=memo_ready_packet,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
@@ -220,9 +209,15 @@ def _run_parallel_memo_ready_section_synthesis(
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
+    section_issues = _list(section_report.get("issues"))
+    final_issues = [] if accepted else ["synthesis has packet-retention warnings"]
+    final_issues.extend(issue for issue in section_issues if issue not in final_issues)
+    status = "accepted" if accepted else "accepted_with_retention_warnings"
+    if accepted and section_report.get("status") not in {"accepted", None, ""}:
+        status = str(section_report.get("status"))
     report.update(
         {
-            "status": "accepted" if accepted else "accepted_with_retention_warnings",
+            "status": status,
             "accepted": accepted if strict_contract else True,
             "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "retention_status": retention.get("status"),
@@ -231,12 +226,25 @@ def _run_parallel_memo_ready_section_synthesis(
             "warning_resolution_report": retention.get("warning_resolution_report", {}),
             "source_binding_report": retention.get("source_binding_report", {}),
             "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
+            "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
-            "issues": [] if accepted else ["synthesis has packet-retention warnings"],
+            "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),
+            "evidence_expression_contract_count": len(_list(generated.get("evidence_expression_contracts"))),
+            "evidence_trace_count": len(_list(generated.get("evidence_trace"))),
+            "issues": final_issues,
         }
     )
-    return {"memo": candidate, "prompt": generated.get("prompt", ""), "raw": generated.get("raw", ""), "report": report}
+    return {
+        "memo": candidate,
+        "prompt": generated.get("prompt", ""),
+        "raw": generated.get("raw", ""),
+        "report": report,
+        "evidence_expression_contracts": generated.get("evidence_expression_contracts", []),
+        "evidence_trace": generated.get("evidence_trace", []),
+        "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),
+        "evidence_tag_section_reports": generated.get("evidence_tag_section_reports", []),
+    }
 
 
 def render_memo_ready_packet_draft(packet: dict[str, Any]) -> str:

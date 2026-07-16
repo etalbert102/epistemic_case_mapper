@@ -4,15 +4,13 @@ import re
 
 import pytest
 
-from epistemic_case_mapper.evidence_anchored_synthesis_experiment import (
-    build_evidence_expression_contracts,
-    evidence_anchored_synthesis_enabled,
-    render_evidence_tagged_memo,
-    run_evidence_anchored_synthesis_experiment,
-)
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+    build_evidence_expression_contracts,
+    render_evidence_tagged_memo,
+)
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -112,68 +110,41 @@ def test_render_evidence_tags_normalizes_zero_padded_evidence_ids() -> None:
     assert rendered["trace"][0]["evidence_id"] == "decision_writer_item_011"
 
 
-def test_evidence_anchored_experiment_runs_with_fake_model() -> None:
+def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest.MonkeyPatch) -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    prompts: list[str] = []
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        prompts.append(prompt)
         heading = _heading_from_prompt(prompt)
         ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
-        tag = f" {{E:{ids[0]}}}" if ids else ""
-        return ModelBackendResult(text=f"## {heading}\n\nThe section expresses its evidence naturally{tag}.\n", backend="fake")
-
-    result = run_evidence_anchored_synthesis_experiment(
-        packet,
-        backend="fake",
-        backend_timeout=30,
-        backend_retries=0,
-        run_model=fake_backend,
-    )
-
-    assert result["report"]["section_count"] >= 1
-    assert result["evidence_trace"]
-    assert "{E:" in result["tagged_memo"]
-    assert "{E:" not in result["memo"]
-    assert result["reconciliation_report"]["known_evidence_id_count"] >= 1
-    assert result["report"]["missing_mandatory_count"] >= 0
-
-
-def test_memo_ready_synthesis_can_use_evidence_anchored_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
-    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
-
-    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        heading = _heading_from_prompt(prompt)
-        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
-        tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids[:2])
-        return ModelBackendResult(text=f"## {heading}\n\nThe section makes its decision-relevant point with anchored evidence {tags}.\n", backend="fake")
+        if ids:
+            tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids[:2])
+            body = f"The section makes its decision-relevant point with anchored evidence {tags}."
+        else:
+            body = "Weight Outcome Study most while using Counter Study and Boundary Report to bound the answer [s1, s2, s3]."
+        return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
     import epistemic_case_mapper.map_briefing_memo_ready_finalization as finalization
 
-    monkeypatch.setenv("ECM_EVIDENCE_ANCHORED_SYNTHESIS", "1")
     monkeypatch.setattr(finalization, "run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert result["report"]["synthesis_mode"] == "evidence_anchored_section_synthesis"
+    assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
     assert result["report"]["used_default_path"] is False
     assert result["evidence_expression_contracts"]
     assert result["evidence_trace"]
+    assert result["evidence_tag_section_reports"]
+    assert any("### Evidence expression contracts" in prompt for prompt in prompts)
+    assert any("### Source weighting notes" in prompt for prompt in prompts)
     assert "{E:" not in result["memo"]
     assert result["report"]["evidence_reconciliation_report"]["used_evidence_id_count"] >= 1
 
 
-def test_evidence_anchored_synthesis_is_promoted_for_live_backends(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ECM_EVIDENCE_ANCHORED_SYNTHESIS", raising=False)
-
-    assert evidence_anchored_synthesis_enabled("ollama:gemma4:12b-mlx") is True
-    assert evidence_anchored_synthesis_enabled("command:local-model") is True
-    assert evidence_anchored_synthesis_enabled("fake") is False
-
-    monkeypatch.setenv("ECM_EVIDENCE_ANCHORED_SYNTHESIS", "off")
-    assert evidence_anchored_synthesis_enabled("ollama:gemma4:12b-mlx") is False
-
-
 def _heading_from_prompt(prompt: str) -> str:
-    match = re.search(r"exactly with: ## (.+)", prompt)
+    match = re.search(r"exactly(?: with)?: ## (.+)", prompt)
+    if not match:
+        match = re.search(r"Output starts exactly with: ## (.+)", prompt)
     return match.group(1).strip() if match else "Why This Is the Best Current Read"
