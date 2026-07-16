@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe, dict_value as _dict, list_value as _list, short_text as _short_text, string_list as _string_list
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_registry_for_model
+from epistemic_case_mapper.map_briefing_source_claim_context import writer_source_local_context as _writer_source_local_context
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
@@ -19,7 +20,6 @@ GENERIC_JUDGMENT_PATTERNS = (
     "answer the decision question",
     "if they do not overturn",
 )
-
 def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
     """Compile a memo-ready packet into the only context the writer model should see."""
 
@@ -564,6 +564,12 @@ def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
         "decision_relevance": _short_text(calibrate_text_for_writer(str(item.get("decision_relevance") or ""), item), 360),
         "caveat": _short_text(calibrate_text_for_writer(str(item.get("caveat") or ""), item), 260),
         "source_appraisal_note": _source_appraisal_note(item),
+        "source_local_context": {
+            key: calibrate_text_for_writer(value, item)
+            for key, value in _writer_source_local_context(item).items()
+        },
+        "natural_bottom_line": _short_text(calibrate_text_for_writer(str(item.get("natural_bottom_line") or ""), item), 360),
+        "must_preserve_terms": _string_list(item.get("must_preserve_terms"))[:10],
         "lineage": _dict(item.get("lineage")),
         "obligation_level": item.get("obligation_level"),
         "memo_function": item.get("memo_function"),

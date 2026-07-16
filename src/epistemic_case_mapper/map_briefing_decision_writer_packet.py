@@ -39,6 +39,7 @@ from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
 )
+from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
@@ -232,6 +233,13 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "source_appraisal": _dict(unit.get("source_appraisal")),
         "source_use_warnings": _string_list(unit.get("source_use_warnings")),
         "allowed_wording": _dict(unit.get("allowed_wording")),
+        "population": str(unit.get("population") or "").strip(),
+        "exposure_or_intervention": str(unit.get("exposure_or_intervention") or "").strip(),
+        "outcome_or_endpoint": str(unit.get("outcome_or_endpoint") or "").strip(),
+        "evidence_type": str(unit.get("evidence_type") or "").strip(),
+        "natural_bottom_line": str(unit.get("natural_bottom_line") or "").strip(),
+        "must_preserve_terms": _string_list(unit.get("must_preserve_terms")),
+        "claim_context": _dict(unit.get("claim_context")),
         "importance_rank": unit.get("importance_rank"),
         "decision_diagnosticity": diagnosticity,
         "source_memo_role": str(unit.get("source_memo_role") or "").strip(),
@@ -663,6 +671,7 @@ def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_
     evidence_ids = _string_list(group.get("covered_evidence_item_ids"))
     source_labels = _source_labels(evidence_ids, ledger_by_id)
     source_appraisal = merged_source_appraisal(evidence_ids, ledger_by_id)
+    source_context = _source_context_fields({}, [ledger_by_id.get(evidence_id, {}) for evidence_id in evidence_ids])
     return {
         "unit_id": f"decision_unit_{index:03d}",
         "section": SECTION_BY_ROLE.get(role, "context"),
@@ -678,6 +687,7 @@ def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_
         "source_appraisal": source_appraisal,
         "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
         "allowed_wording": _dict(source_appraisal.get("allowed_wording")),
+        **source_context,
         "quantities": _quantities(evidence_ids, ledger_by_id),
         "source_excerpts": _source_excerpts(evidence_ids, ledger_by_id),
         "lineage": {

@@ -27,6 +27,8 @@ from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slo
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
+from epistemic_case_mapper.map_briefing_source_claim_context import merged_cluster_source_context as _merged_cluster_source_context
+from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
 
 
 MEMO_READY_ROLES = {
@@ -435,6 +437,7 @@ def _cluster_from_bundle(cluster_id: str, bundle: dict[str, Any]) -> dict[str, A
         "quality": bundle.get("quality"),
         "source_excerpt": str(bundle.get("source_excerpt") or "").strip(),
         "directionality": str(bundle.get("directionality") or "").strip(),
+        **_source_context_fields(bundle, []),
         "source_appraisal": bundle.get("source_appraisal") if isinstance(bundle.get("source_appraisal"), dict) else {},
         "source_use_warnings": _string_list(bundle.get("source_use_warnings")),
         "allowed_wording": bundle.get("allowed_wording") if isinstance(bundle.get("allowed_wording"), dict) else {},
@@ -459,7 +462,7 @@ def _safe_cluster_match(bundle: dict[str, Any], clusters: list[dict[str, Any]]) 
 
 
 def _merge_bundle_into_cluster(cluster: dict[str, Any], bundle: dict[str, Any]) -> None:
-    for key in ("bundle_ids", "claim_ids", "relation_ids", "source_ids", "source_labels", "quantity_ids", "quantity_values", "limits"):
+    for key in ("bundle_ids", "claim_ids", "relation_ids", "source_ids", "source_labels", "quantity_ids", "quantity_values", "limits", "must_preserve_terms"):
         cluster[key] = _dedupe([*_string_list(cluster.get(key)), *_string_list(bundle.get(key))])
     if len(str(bundle.get("claim") or "")) > len(str(cluster.get("representative_claim") or "")):
         cluster["representative_claim"] = str(bundle.get("claim") or "").strip()
@@ -472,6 +475,7 @@ def _merge_bundle_into_cluster(cluster: dict[str, Any], bundle: dict[str, Any]) 
     )
     if not _dict(cluster.get("allowed_wording")) and isinstance(bundle.get("allowed_wording"), dict):
         cluster["allowed_wording"] = bundle.get("allowed_wording")
+    cluster.update(_merged_cluster_source_context(cluster, bundle))
 
 
 def _kept_separate_near_duplicates(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -596,6 +600,7 @@ def _memo_ready_item(
             "sensitivity_note": diagnosticity.get("sensitivity_note", ""),
         },
         "evidence_profile": evidence_profile,
+        **_source_context_fields(cluster, []),
         "argument": {
             "grounds": claim,
             "warrant": _warrant(role, claim),

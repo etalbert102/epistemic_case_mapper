@@ -17,8 +17,8 @@ from epistemic_case_mapper.staged_semantic_claim_quantities import (
 )
 from epistemic_case_mapper.staged_semantic_evidence_units import build_source_evidence_units
 
-WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v5_decision_ranked_json"
-WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v5_decision_ranked_json"
+WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json"
+WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v11_result_cluster_claims_json"
 SOURCE_EXTRACTED_ROLE = "source_claim"
 DEFAULT_WHOLE_DOC_NUM_PREDICT = 8192
 DEFAULT_WHOLE_DOC_NUM_PREDICT_MAX = 16384
@@ -253,6 +253,29 @@ def _int_env(key: str, default: int) -> int:
 
 
 def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
+    claim_context_schema = {
+        "type": "object",
+        "properties": {
+            "population": {"type": "string"},
+            "exposure_or_option": {"type": "string"},
+            "outcome_or_endpoint": {"type": "string"},
+            "evidence_design": {"type": "string"},
+            "stated_dose_or_threshold": {"type": "string"},
+            "stated_scope": {"type": "array", "items": {"type": "string"}},
+            "stated_limitations": {"type": "array", "items": {"type": "string"}},
+            "applicability_limits": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": [
+            "population",
+            "exposure_or_option",
+            "outcome_or_endpoint",
+            "evidence_design",
+            "stated_dose_or_threshold",
+            "stated_scope",
+            "stated_limitations",
+            "applicability_limits",
+        ],
+    }
     return {
         "type": "object",
         "properties": {
@@ -269,6 +292,9 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                             "scope_flags": {"type": "array", "items": {"type": "string"}},
                             "decision_importance": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
                             "why_it_matters": {"type": "string"},
+                            "natural_bottom_line": {"type": "string"},
+                            "must_preserve_terms": {"type": "array", "items": {"type": "string"}},
+                            "claim_context": claim_context_schema,
                         "supporting_quotes": {
                             "type": "array",
                             "items": {
@@ -292,6 +318,9 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                         "scope_flags",
                         "decision_importance",
                         "why_it_matters",
+                        "natural_bottom_line",
+                        "must_preserve_terms",
+                        "claim_context",
                         "supporting_quotes",
                         "quantities",
                         "scope_conditions",
@@ -325,11 +354,21 @@ def _source_card_prompt(
                 "- Read the whole document before choosing claims.",
                 f"- Return 3 to {max_claims} canonical claims for this source, not one claim per paragraph or table row.",
                 "- A canonical claim should be something a decision analyst would want in the main evidence map.",
+                "- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.",
+                "- Prefer one canonical claim per distinct result cluster until the claim budget is reached.",
+                "- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.",
+                "- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.",
+                "- Keep related statistics together only when they answer the same population-endpoint-dose proposition.",
+                "- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.",
                 "- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.",
                 "- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.",
                 "- Preserve key quantities inside the relevant canonical claim rather than as separate claims.",
                 "- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.",
                 "- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.",
+                "- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.",
+                "- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.",
+                "- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.",
+                "- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.",
                 "- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.",
                 "- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
                 "- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.",
@@ -356,6 +395,8 @@ def _repair_prompt(*, source_id: str, decision_question: str, raw_extraction: st
                 "- Use only decision_importance values: critical, high, medium, low.",
                 "- Convert each supporting quote string into an object with quote and line_hint.",
                 "- If a line hint is present outside the quote object, copy it into each relevant quote object.",
+                "- Preserve or add descriptive claim_context fields when they are explicit in the raw extraction.",
+                "- Preserve natural_bottom_line and must_preserve_terms when available; use empty strings or an empty list if unavailable.",
                 "- Use source_bottom_line to summarize this source in one sentence.",
                 "- Output JSON only.",
             ],
@@ -366,10 +407,78 @@ def _repair_prompt(*, source_id: str, decision_question: str, raw_extraction: st
 
 
 def _parse_model_json(text: str) -> Any:
-    try:
-        return json.loads(canonical_json_output(text))
-    except json.JSONDecodeError:
-        return None
+    for candidate in _source_card_json_candidates(text):
+        for repaired in _source_card_json_repairs(candidate):
+            try:
+                payload = json.loads(canonical_json_output(repaired))
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict) and ("canonical_claims" in payload or "claims" in payload):
+                return payload
+    return None
+
+
+def _source_card_json_candidates(text: str) -> list[str]:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return []
+    candidates = [match.group(1).strip() for match in re.finditer(r"```(?:json)?\s*(.*?)```", cleaned, flags=re.DOTALL | re.IGNORECASE)]
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end > start:
+        candidates.append(cleaned[start : end + 1])
+    candidates.append(cleaned)
+    return [candidate for index, candidate in enumerate(candidates) if candidate and candidate not in candidates[:index]]
+
+
+def _source_card_json_repairs(text: str) -> list[str]:
+    repaired = _repair_string_array_key_value_items(text)
+    return [text] if repaired == text else [text, repaired]
+
+
+def _repair_string_array_key_value_items(text: str) -> str:
+    stack: list[str] = []
+    repaired_lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stack and stack[-1] == "[":
+            match = re.fullmatch(r'"([^"]+)"\s*:\s*"([^"]+)"(\s*,?)', stripped)
+            if match:
+                indent = line[: len(line) - len(line.lstrip())]
+                line = f'{indent}"{match.group(1)}: {match.group(2)}"{match.group(3)}'
+        repaired_lines.append(line)
+        stack = _json_container_stack_after_line(line, stack)
+    return "\n".join(repaired_lines)
+
+
+def _json_container_stack_after_line(line: str, stack: list[str]) -> list[str]:
+    updated = list(stack)
+    in_string = False
+    escaped = False
+    for char in line:
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char in "[{":
+            updated.append(char)
+        elif char == "]":
+            _pop_json_container(updated, "[")
+        elif char == "}":
+            _pop_json_container(updated, "{")
+    return updated
+
+
+def _pop_json_container(stack: list[str], expected: str) -> None:
+    if stack and stack[-1] == expected:
+        stack.pop()
 
 
 def _standard_source_card(
@@ -451,6 +560,10 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
         "scope_flags": _normalize_scope_flags(item.get("scope_flags")),
         "decision_importance": importance,
         "why_it_matters": _compact(str(item.get("why_it_matters") or item.get("relevance_rationale") or "")),
+        "natural_bottom_line": _compact(str(item.get("natural_bottom_line") or "")),
+        "source_limit": _compact(str(item.get("source_limit") or "")),
+        "must_preserve_terms": _string_list(item.get("must_preserve_terms")),
+        "claim_context": _normalize_claim_context(item.get("claim_context")),
         "supporting_quotes": exact_quotes[:3],
         "quantities": claim_quantity_values(quantity_rows),
         "claim_quantities": quantity_rows,
@@ -493,6 +606,9 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 ),
                 "whole_doc_source_card": {
                     "source_bottom_line": source_card.get("source_bottom_line", ""),
+                    "natural_bottom_line": claim.get("natural_bottom_line", ""),
+                    "must_preserve_terms": claim.get("must_preserve_terms", []),
+                    "claim_context": claim.get("claim_context", {}),
                     "quantities": quantity_values,
                     "claim_quantities": claim_quantities,
                     "scope_conditions": claim.get("scope_conditions", []),
@@ -505,6 +621,53 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
         "source_card_exact_quote_count": exact_quote_count,
         "source_card_short_quote_count": short_quote_count,
         "source_card_acronym_expansion_count": len(acronym_expansions),
+        **_rich_claim_context_report(source_card["canonical_claims"]),
+    }
+
+
+def _normalize_claim_context(value: Any) -> dict[str, Any]:
+    raw = value if isinstance(value, dict) else {}
+    return {
+        "population": _compact(str(raw.get("population") or "")),
+        "exposure_or_option": _compact(str(raw.get("exposure_or_option") or raw.get("intervention_or_exposure") or "")),
+        "outcome_or_endpoint": _compact(str(raw.get("outcome_or_endpoint") or raw.get("endpoint") or "")),
+        "evidence_design": _compact(str(raw.get("evidence_design") or raw.get("study_design") or "")),
+        "stated_dose_or_threshold": _compact(str(raw.get("stated_dose_or_threshold") or raw.get("dose_or_threshold") or "")),
+        "stated_scope": _string_list(raw.get("stated_scope")),
+        "stated_limitations": _string_list(raw.get("stated_limitations")),
+        "applicability_limits": _string_list(raw.get("applicability_limits")),
+    }
+
+
+def _rich_claim_context_report(claims: list[dict[str, Any]]) -> dict[str, Any]:
+    fields = [
+        "population",
+        "exposure_or_option",
+        "outcome_or_endpoint",
+        "evidence_design",
+        "stated_dose_or_threshold",
+    ]
+    filled = {field: 0 for field in fields}
+    natural_bottom_line_count = 0
+    must_preserve_terms_count = 0
+    stated_limitations_count = 0
+    for claim in claims:
+        context = claim.get("claim_context") if isinstance(claim.get("claim_context"), dict) else {}
+        for field in fields:
+            if str(context.get(field) or "").strip():
+                filled[field] += 1
+        if str(claim.get("natural_bottom_line") or "").strip():
+            natural_bottom_line_count += 1
+        if _string_list(context.get("stated_limitations")):
+            stated_limitations_count += 1
+        if _string_list(claim.get("must_preserve_terms")):
+            must_preserve_terms_count += 1
+    return {
+        "rich_claim_context_schema_id": "rich_claim_context_report_v1",
+        "rich_claim_context_field_counts": filled,
+        "rich_claim_natural_bottom_line_count": natural_bottom_line_count,
+        "rich_claim_stated_limitations_count": stated_limitations_count,
+        "rich_claim_must_preserve_terms_count": must_preserve_terms_count,
     }
 
 

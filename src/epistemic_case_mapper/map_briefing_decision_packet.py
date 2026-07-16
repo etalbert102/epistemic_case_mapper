@@ -26,7 +26,7 @@ from epistemic_case_mapper.map_briefing_source_bottom_lines import source_bottom
 from epistemic_case_mapper.map_briefing_source_appraisal import attach_source_appraisal_to_rows
 from epistemic_case_mapper.map_briefing_top_quantity_candidates import build_top_quantity_anchor_candidates
 from epistemic_case_mapper.map_briefing_vertical_slice_report import build_decision_model_vertical_slice_report
-
+from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
 
 ROLE_ORDER = (
     "strongest_support",
@@ -37,7 +37,6 @@ ROLE_ORDER = (
     "mechanism",
     "context",
 )
-
 CRITICAL_IMPORTANCE = {"critical", "high"}
 
 
@@ -194,6 +193,7 @@ def _candidate_pool(scaffold: dict[str, Any], *, question: str = "") -> list[dic
                     "source_appraisal": card.get("source_appraisal"),
                     "source_use_warnings": _string_list(card.get("source_use_warnings")),
                     "allowed_wording": card.get("allowed_wording"),
+                    **_source_context_fields(card, source_cards),
                     "why_it_matters": _short_text(str(card.get("inclusion_reason", "")), 240),
                     "limits": _candidate_limits(card),
                     "directionality": _directionality_for_role(role),
@@ -410,6 +410,7 @@ def _bundle_from_candidate(index: int, row: dict[str, Any]) -> dict[str, Any]:
             "source_appraisal": row.get("source_appraisal"),
             "source_use_warnings": _string_list(row.get("source_use_warnings")),
             "allowed_wording": row.get("allowed_wording"),
+            **_source_context_fields(row, []),
             "evidence_track": row.get("evidence_track"),
             "source_summary_decision_role": row.get("source_summary_decision_role"),
             "source_summary_directionality": row.get("source_summary_directionality"),

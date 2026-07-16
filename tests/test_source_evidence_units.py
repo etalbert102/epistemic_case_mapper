@@ -41,6 +41,15 @@ def test_source_evidence_units_preserve_exact_quote_and_quantity_tuple() -> None
                     "12 months",
                 ],
                 "scope_conditions": ["adult participants"],
+                "natural_bottom_line": "The program lowered hospital admissions in adults.",
+                "must_preserve_terms": ["20 percent", "12 months"],
+                "claim_context": {
+                    "population": "adult participants",
+                    "exposure_or_option": "program receipt",
+                    "outcome_or_endpoint": "hospital admissions",
+                    "evidence_design": "source-described outcome evidence",
+                    "stated_limitations": "single source-local population",
+                },
             }
         ],
     }
@@ -58,11 +67,18 @@ def test_source_evidence_units_preserve_exact_quote_and_quantity_tuple() -> None
     assert units[0]["quantities"][0]["quantity_role"] == "effect_estimate"
     assert units[0]["quantities"][0]["measures"] == "hospital admission reduction"
     assert units[0]["quantities"][1]["quantity_type"] == "duration"
+    assert units[0]["population"] == "adult participants"
+    assert units[0]["exposure_or_intervention"] == "program receipt"
+    assert units[0]["endpoint"] == "hospital admissions"
+    assert units[0]["evidence_type"] == "source-described outcome evidence"
+    assert units[0]["natural_bottom_line"] == "The program lowered hospital admissions in adults."
+    assert units[0]["must_preserve_terms"] == ["20 percent", "12 months"]
+    assert units[0]["claim_context"]["stated_limitations"] == "single source-local population"
     assert tuples[0]["unit_id"] == "demo_source_eu001"
     assert tuples[0]["value"] == "20 percent"
     assert tuples[0]["quantity_role"] == "effect_estimate"
     assert tuples[0]["measures"] == "hospital admission reduction"
-    assert tuples[0]["endpoint"] == "hospital admissions over 12 months"
+    assert tuples[0]["endpoint"] == "hospital admissions"
     assert report["unit_count"] == 1
     assert report["quantity_tuple_count"] == 2
 

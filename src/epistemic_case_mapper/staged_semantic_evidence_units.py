@@ -27,6 +27,9 @@ def source_evidence_unit_json_schema() -> dict[str, Any]:
             "method": {"type": "string"},
             "caveat": {"type": "string"},
             "time_horizon": {"type": "string"},
+            "natural_bottom_line": {"type": "string"},
+            "must_preserve_terms": {"type": "array", "items": {"type": "string"}},
+            "claim_context": {"type": "object"},
             "source_quote": {"type": "string"},
             "source_span": {"type": "string"},
             "quote_lineage": {"type": "array", "items": {"type": "object"}},
@@ -116,6 +119,9 @@ def _unit_from_claim(index: int, claim: dict[str, Any], *, source_id: str, sourc
         "method": typed["method"],
         "caveat": typed["caveat"],
         "time_horizon": typed["time_horizon"],
+        "natural_bottom_line": _compact(str(claim.get("natural_bottom_line") or "")),
+        "must_preserve_terms": _string_list(claim.get("must_preserve_terms")),
+        "claim_context": _claim_context(claim),
         "source_quote": source_quote,
         "source_span": str(quotes[0].get("line_hint") or ""),
         "quote_lineage": quotes,
@@ -149,18 +155,34 @@ def _quote_lineage(claim: dict[str, Any], *, source_text: str) -> list[dict[str,
 def _typed_fields(proposition: str, quantities: list[dict[str, Any]], claim: dict[str, Any]) -> dict[str, str]:
     text = proposition.lower()
     quantity_values = [str(row.get("value") or "") for row in quantities]
+    context = _claim_context(claim)
     return {
-        "evidence_type": _evidence_type(text),
-        "population": _scope_condition_at(0, claim),
-        "exposure_or_intervention": _scope_condition_at(1, claim),
+        "evidence_type": str(context.get("evidence_design") or _evidence_type(text)),
+        "population": str(context.get("population") or _scope_condition_at(0, claim)),
+        "exposure_or_intervention": str(context.get("exposure_or_option") or _scope_condition_at(1, claim)),
         "comparator": _comparator(text),
-        "endpoint": _endpoint(text),
-        "estimate": _first_quantity_of_type(quantities, {"percentage", "ratio", "rate", "dose", "unknown"}),
+        "endpoint": str(context.get("outcome_or_endpoint") or _endpoint(text)),
+        "estimate": str(context.get("stated_dose_or_threshold") or _first_quantity_of_type(quantities, {"percentage", "ratio", "rate", "dose", "unknown"})),
         "uncertainty_interval": _uncertainty_interval(quantity_values),
-        "method": _method(text),
-        "caveat": _caveat(text),
+        "method": str(context.get("evidence_design") or _method(text)),
+        "caveat": _compact("; ".join(_string_list(context.get("stated_limitations")) + _string_list(context.get("applicability_limits"))) or _caveat(text)),
         "time_horizon": _first_quantity_of_type(quantities, {"duration", "date"}),
     }
+
+
+def _claim_context(claim: dict[str, Any]) -> dict[str, str]:
+    context = claim.get("claim_context") if isinstance(claim.get("claim_context"), dict) else {}
+    fields = (
+        "population",
+        "exposure_or_option",
+        "outcome_or_endpoint",
+        "evidence_design",
+        "stated_dose_or_threshold",
+        "stated_scope",
+        "stated_limitations",
+        "applicability_limits",
+    )
+    return {field: _compact(str(context.get(field) or "")) for field in fields if str(context.get(field) or "").strip()}
 
 
 def _quantity_tuples_for_unit(unit: dict[str, Any]) -> list[dict[str, str]]:

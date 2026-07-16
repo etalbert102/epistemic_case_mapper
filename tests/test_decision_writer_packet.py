@@ -41,6 +41,15 @@ def _ledger() -> dict:
                 "quantity_values": ["20% improvement"],
                 "source_excerpt": "The main outcome improved by 20%.",
                 "why_it_matters": "The improvement is the main support.",
+                "natural_bottom_line": "Option A improved the main outcome in the studied setting.",
+                "must_preserve_terms": ["20% improvement", "studied setting"],
+                "claim_context": {
+                    "population": "studied setting",
+                    "exposure_or_option": "option A",
+                    "outcome_or_endpoint": "main outcome",
+                    "evidence_design": "outcome review",
+                    "stated_limitations": "setting-specific evidence",
+                },
             },
             {
                 "evidence_item_id": "item:limit",
@@ -286,6 +295,10 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["practical_implication_cards"] == []
     assert "missing_model_practical_implications" in quality["warnings"]
     assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
+    assert interface["decision_evidence_table"][0]["natural_bottom_line"] == "Option A improved the main outcome in the studied setting."
+    assert interface["decision_evidence_table"][0]["must_preserve_terms"] == ["20% improvement", "studied setting"]
+    assert interface["decision_evidence_table"][0]["source_local_context"]["population"] == "studied setting"
+    assert interface["decision_evidence_table"][0]["source_local_context"]["outcome_or_endpoint"] == "main outcome"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
     assert interface["reasoning_hierarchy"]["schema_id"] == "decision_reasoning_hierarchy_v1"
     assert interface["adaptive_memo_outline"]["schema_id"] == "adaptive_memo_outline_v1"

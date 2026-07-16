@@ -50,6 +50,18 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
                                 "scope_flags": ["none"],
                                 "decision_importance": "high",
                                 "why_it_matters": "It directly bears on the decision question.",
+                                "natural_bottom_line": "The program appears to reduce the target risk.",
+                                "must_preserve_terms": ["20 percent", "target risk"],
+                                "claim_context": {
+                                    "population": "eligible program participants",
+                                    "exposure_or_option": "the program",
+                                    "outcome_or_endpoint": "target risk",
+                                    "evidence_design": "source-reported result",
+                                    "stated_dose_or_threshold": "",
+                                    "stated_scope": ["eligible program participants"],
+                                    "stated_limitations": ["duration not stated in the excerpt"],
+                                    "applicability_limits": ["reported source scope"],
+                                },
                             "supporting_quotes": [
                                 {
                                     "quote": "The program reduced target risk by 20 percent.",
@@ -101,6 +113,19 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert payload["claims"][0]["role"] == "source_claim"
     assert payload["claims"][0]["question_relevance"] == "direct"
     assert payload["claims"][0]["whole_doc_source_card"]["quantities"] == ["20 percent"]
+    assert payload["claims"][0]["whole_doc_source_card"]["natural_bottom_line"] == "The program appears to reduce the target risk."
+    assert "source_limit" not in payload["claims"][0]["whole_doc_source_card"]
+    assert payload["claims"][0]["whole_doc_source_card"]["must_preserve_terms"] == ["20 percent", "target risk"]
+    assert payload["claims"][0]["whole_doc_source_card"]["claim_context"] == {
+        "population": "eligible program participants",
+        "exposure_or_option": "the program",
+        "outcome_or_endpoint": "target risk",
+        "evidence_design": "source-reported result",
+        "stated_dose_or_threshold": "",
+        "stated_scope": ["eligible program participants"],
+        "stated_limitations": ["duration not stated in the excerpt"],
+        "applicability_limits": ["reported source scope"],
+    }
     assert payload["claims"][0]["claim_quantities"][0]["quantity_role"] == "effect_estimate"
     assert payload["claims"][0]["claim_quantities"][0]["measures"] == "target risk reduction"
     assert payload["claims"][0]["quantity_values"] == ["20 percent"]
@@ -108,8 +133,15 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
     assert report["repair_used"] is False
     assert report["source_card_exact_quote_count"] == 1
+    assert report["rich_claim_context_field_counts"]["population"] == 1
+    assert report["rich_claim_context_field_counts"]["outcome_or_endpoint"] == 1
+    assert report["rich_claim_natural_bottom_line_count"] == 1
+    assert report["rich_claim_stated_limitations_count"] == 1
+    assert report["rich_claim_must_preserve_terms_count"] == 1
     assert len(calls) == 1
     assert calls[0]["response_schema"] is not None
+    claim_schema = calls[0]["response_schema"]["properties"]["canonical_claims"]["items"]
+    assert "claim_context" in claim_schema["required"]
 
 
 def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypatch) -> None:
@@ -128,6 +160,73 @@ def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypa
 
     monkeypatch.setenv("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT", "9000")
     assert whole_doc_num_predict("x" * 60_000, 14) == 9000
+
+
+def test_whole_doc_source_card_accepts_fenced_json_with_string_array_key_value_item(monkeypatch, tmp_path: Path) -> None:
+    class Result:
+        text = """```json
+{
+  "source_id": "demo_source",
+  "source_bottom_line": "The source reports a decision-relevant result.",
+  "canonical_claims": [
+    {
+      "claim": "Alpha lowered target risk by 20 percent.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "population: adults",
+        "outcome_or_endpoint": "target risk"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "It reports the result most relevant to the decision.",
+      "natural_bottom_line": "Alpha lowered target risk.",
+      "must_preserve_terms": ["20 percent", "target risk"],
+      "claim_context": {
+        "population": "adults",
+        "exposure_or_option": "Alpha",
+        "outcome_or_endpoint": "target risk",
+        "evidence_design": "source-reported result",
+        "stated_dose_or_threshold": "",
+        "stated_scope": ["adults"],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {"quote": "Alpha lowered target risk by 20 percent.", "line_hint": "lines 1-1"}
+      ],
+      "quantities": [],
+      "scope_conditions": []
+    }
+  ],
+  "excluded_as_not_decision_relevant": []
+}
+```"""
+
+    def fake_backend(*args, **kwargs):
+        return Result()
+
+    monkeypatch.setattr(whole_doc_adapter, "run_model_backend", fake_backend)
+    payload, cache_hit, error = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        source_id="demo_source",
+        source_title="Demo Source",
+        source_text="Alpha lowered target risk by 20 percent.",
+        decision_question="Should Alpha be used?",
+        backend="ollama:fake-model",
+        backend_timeout=5,
+        backend_retries=0,
+        max_claims=6,
+        canonical_path=tmp_path / "canonical.json",
+        raw_path=tmp_path / "raw.txt",
+        repair_raw_path=tmp_path / "repair_raw.txt",
+        report_path=tmp_path / "report.json",
+        reuse_claim_cache=False,
+    )
+
+    assert error == ""
+    assert cache_hit is False
+    assert payload is not None
+    assert payload["claims"][0]["whole_doc_source_card"]["scope_conditions"] == []
+    assert payload["claims"][0]["whole_doc_source_card"]["natural_bottom_line"] == "Alpha lowered target risk."
+    assert json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))["status"] == "ok"
 
 
 def test_whole_doc_backend_error_writes_source_report(monkeypatch, tmp_path: Path) -> None:

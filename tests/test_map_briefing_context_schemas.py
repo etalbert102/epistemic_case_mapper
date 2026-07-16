@@ -96,6 +96,17 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
                 "role": "conclusion_support",
                 "decision_relevance_score": 8,
                 "evidence_family": "cohort_study",
+                "whole_doc_source_card": {
+                    "natural_bottom_line": "Moderate use improved the outcome in the measured population.",
+                    "must_preserve_terms": ["moderate use", "decision-relevant outcome"],
+                    "claim_context": {
+                        "population": "measured population",
+                        "exposure_or_option": "moderate use",
+                        "outcome_or_endpoint": "decision-relevant outcome",
+                        "evidence_design": "cohort study",
+                        "stated_limitations": "source-local limitation",
+                    },
+                },
             },
             {
                 "claim_id": "c2",
@@ -122,6 +133,11 @@ def test_source_sufficiency_and_quality_reports_from_claim_anchors() -> None:
     assert source_cards["schema_id"] == "source_evidence_cards_v1"
     assert source_cards["source_card_count"] == 2
     assert source_cards["anchored_card_count"] == 2
+    assert source_cards["cards"][0]["natural_bottom_line"] == "Moderate use improved the outcome in the measured population."
+    assert source_cards["cards"][0]["must_preserve_terms"] == ["moderate use", "decision-relevant outcome"]
+    assert source_cards["cards"][0]["population"] == "measured population"
+    assert source_cards["cards"][0]["outcome_or_endpoint"] == "decision-relevant outcome"
+    assert source_cards["cards"][0]["claim_context"]["stated_limitations"] == "source-local limitation"
     assert sufficiency["schema_id"] == "source_sufficiency_report_v1"
     assert sufficiency["status"] == "sufficient_for_bounded_answer"
     assert "counterweight_evidence" in sufficiency["missing_source_categories"]

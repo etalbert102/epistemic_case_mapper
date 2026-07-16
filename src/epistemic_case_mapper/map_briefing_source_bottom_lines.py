@@ -15,6 +15,8 @@ def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: di
             continue
         source_card = claim.get("whole_doc_source_card") if isinstance(claim.get("whole_doc_source_card"), dict) else {}
         bottom_line = str(claim.get("source_bottom_line") or source_card.get("source_bottom_line") or "").strip()
+        natural_bottom_line = str(source_card.get("natural_bottom_line") or "").strip()
+        claim_context = source_card.get("claim_context") if isinstance(source_card.get("claim_context"), dict) else {}
         source_id = str(claim.get("source_id") or "").strip()
         if not bottom_line or not source_id:
             continue
@@ -33,6 +35,9 @@ def build_source_bottom_line_cards(prioritized_map: dict[str, Any], scaffold: di
                 "decision_function": str(claim.get("decision_function") or source_card.get("source_card_role") or ""),
                 "decision_polarity": str(claim.get("decision_polarity") or source_card.get("decision_polarity") or ""),
                 "source_card_role": str(source_card.get("source_card_role") or ""),
+                "natural_bottom_line": natural_bottom_line,
+                "must_preserve_terms": _string_list(source_card.get("must_preserve_terms")),
+                "claim_context": claim_context,
             }
         )
     return {
@@ -75,6 +80,9 @@ def source_bottom_line_candidates(
                     "evidence_track": "source_bottom_line",
                     "raw_roles": ["source_bottom_line", *_source_bottom_line_role_hints(card)],
                     "decision_polarity": str(card.get("decision_polarity") or ""),
+                    "natural_bottom_line": str(card.get("natural_bottom_line") or ""),
+                    "must_preserve_terms": _string_list(card.get("must_preserve_terms")),
+                    "claim_context": card.get("claim_context") if isinstance(card.get("claim_context"), dict) else {},
                     "decision_relevance_score": score,
                     "quality": "source_summary",
                     "inclusion_recommendation": "main_text",

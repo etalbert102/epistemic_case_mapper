@@ -15,6 +15,8 @@ from epistemic_case_mapper.map_briefing_context_schemas import (
     SourceEvidenceCardReport,
     SourceSufficiencyReport,
 )
+from epistemic_case_mapper.map_briefing_source_claim_context import claim_context as _claim_context
+from epistemic_case_mapper.map_briefing_source_claim_context import whole_doc_source_card as _whole_doc_source_card
 
 
 def build_source_evidence_cards(
@@ -30,6 +32,8 @@ def build_source_evidence_cards(
         source_id = str(claim.get("source_id", "")).strip()
         excerpt = _excerpt_for_claim(claim, text)
         anchor_confidence = _anchor_confidence(claim, excerpt)
+        whole_doc_card = _whole_doc_source_card(claim)
+        claim_context = _claim_context(whole_doc_card.get("claim_context"))
         source_card = {
             "source_card_id": f"sc{index:04d}",
             "source_id": source_id,
@@ -42,12 +46,22 @@ def build_source_evidence_cards(
             "decision_relevance_score": _claim_relevance_score(claim),
             "endpoint_match": str(claim.get("endpoint_fit") or claim.get("endpoint_match") or "unknown"),
             "population_match": str(claim.get("population_fit") or claim.get("population_match") or "unknown"),
-            "exposure_or_intervention": "",
+            "population": str(claim_context.get("population") or ""),
+            "exposure_or_intervention": str(claim_context.get("exposure_or_option") or ""),
             "comparator": "",
-            "outcome_or_endpoint": str(claim.get("endpoint_type") or ""),
-            "evidence_type": str(claim.get("evidence_family") or claim.get("claim_type") or _joined_evidence_slots(claim) or "unspecified"),
+            "outcome_or_endpoint": str(claim_context.get("outcome_or_endpoint") or claim.get("endpoint_type") or ""),
+            "evidence_type": str(claim_context.get("evidence_design") or claim.get("evidence_family") or claim.get("claim_type") or _joined_evidence_slots(claim) or "unspecified"),
             "quantity_values": _string_list(claim.get("quantity_values") or claim.get("quantities")),
-            "limitations": _limitations_for_claim(claim),
+            "limitations": _dedupe(
+                [
+                    *_limitations_for_claim(claim),
+                    *_string_list(claim_context.get("stated_limitations")),
+                    *_string_list(claim_context.get("applicability_limits")),
+                ]
+            )[:8],
+            "natural_bottom_line": str(whole_doc_card.get("natural_bottom_line") or ""),
+            "must_preserve_terms": _string_list(whole_doc_card.get("must_preserve_terms")),
+            "claim_context": claim_context,
             "supports_challenges_or_scopes": _role_for_claim(claim),
             "fragment_risk": _has_noise(claim, "fragment"),
             "boilerplate_risk": _has_noise(claim, "boilerplate"),

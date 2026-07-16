@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_residual_quantities import (
     quantity_signature,
 )
 from epistemic_case_mapper.map_briefing_source_appraisal import appraisal_for_sources
+from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
 from epistemic_case_mapper.staged_semantic_claim_quantities import claim_quantity_values, normalize_claim_quantity_rows
 
 
@@ -111,6 +112,7 @@ def _claim_row(
     quantity_values = _dedupe([*claim_bound_values, *residual_candidates])
     source_bottom_lines = _source_bottom_lines_for_claim(claim)
     source_bottom_line_signals = _source_bottom_line_signals(source_bottom_lines)
+    source_context = _source_context_fields(_dict(claim.get("whole_doc_source_card")), [])
     return _drop_empty(
         {
             "evidence_item_id": f"claim:{claim_id}",
@@ -126,6 +128,7 @@ def _claim_row(
             "source_excerpt": _short_text(str(claim.get("source_quote") or claim.get("excerpt") or ""), 520),
             "source_bottom_lines": source_bottom_lines,
             "source_bottom_line_signals": source_bottom_line_signals,
+            **source_context,
             "current_role": _claim_current_role(claim),
             "current_priority": _priority_from_claim(claim),
             "quality": _dict(claim.get("source_alignment")).get("status") or claim.get("entailed_by_excerpt"),
