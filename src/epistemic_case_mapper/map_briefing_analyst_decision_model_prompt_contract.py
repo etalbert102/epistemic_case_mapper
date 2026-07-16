@@ -63,6 +63,59 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
                 "rationale": "why this quantity is reader-facing or audit-only for the decision question",
             }
         ],
+        "source_hierarchy": {
+            "schema_id": "source_weight_hierarchy_v1",
+            "hierarchy_thesis": "one concise paragraph explaining the comparative source hierarchy for the decision",
+            "lanes": {
+                "primary_answer_drivers": [
+                    {
+                        "source_ids": ["source_id"],
+                        "evidence_item_ids": ["evidence ID from context"],
+                        "role": "what this lane does for the decision",
+                        "rationale": "why this source belongs in this role",
+                    }
+                ],
+                "quantitative_calibrators": [
+                    {
+                        "source_ids": ["source_id"],
+                        "evidence_item_ids": ["evidence ID from context"],
+                        "role": "what this lane does for the decision",
+                        "rationale": "why this source belongs in this role",
+                    }
+                ],
+                "counterweight_sources": [
+                    {
+                        "source_ids": ["source_id"],
+                        "evidence_item_ids": ["evidence ID from context"],
+                        "role": "what this lane does for the decision",
+                        "rationale": "why this source belongs in this role",
+                    }
+                ],
+                "scope_boundary_sources": [
+                    {
+                        "source_ids": ["source_id"],
+                        "evidence_item_ids": ["evidence ID from context"],
+                        "role": "what this lane does for the decision",
+                        "rationale": "why this source belongs in this role",
+                    }
+                ],
+                "contextual_sources": [
+                    {
+                        "source_ids": ["source_id"],
+                        "evidence_item_ids": ["evidence ID from context"],
+                        "role": "what this lane does for the decision",
+                        "rationale": "why this source belongs in this role",
+                    }
+                ],
+            },
+            "source_accounting": [
+                {
+                    "source_id": "source_id",
+                    "primary_lane": "one lane key above",
+                    "rationale": "why this is the source's primary role",
+                }
+            ],
+        },
         "quantitative_anchors": ["quantities that should survive final synthesis"],
         "what_would_change_the_answer": ["cruxes or missing evidence that would change the answer"],
         "decision_logic": {

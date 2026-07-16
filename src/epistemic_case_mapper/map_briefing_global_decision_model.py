@@ -87,6 +87,8 @@ def build_global_decision_model(
         "uncertainty_drivers": _uncertainty_drivers(groups, analyst_decision_model),
         "argument_plan": _list(analyst_decision_model.get("argument_plan")),
         "decision_logic": _dict(analyst_decision_model.get("decision_logic")),
+        "source_hierarchy": _dict(analyst_decision_model.get("source_hierarchy")),
+        "source_hierarchy_report": _dict(analyst_decision_model.get("source_hierarchy_report")),
         "evidence_accounting": evidence_accounting,
         "routing_accounting": routing_accounting,
         "failure_accounting": failure_accounting,

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from typing import Any, Iterable
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dict_value as _dict,
     list_value as _list,
     short_text as _short_text,
     string_list as _string_list,
+)
+from epistemic_case_mapper.map_briefing_source_hierarchy import (
+    compact_source_hierarchy_for_prompt,
+    normalize_source_hierarchy,
+    source_hierarchy_schema,
 )
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
@@ -53,7 +58,10 @@ def run_lightweight_writer_guidance(
         return _bundle(guidance, prompt=prompt, raw="", report=report)
     try:
         parsed = json.loads(canonical_json_output(raw))
-        guidance = normalize_lightweight_writer_guidance(parsed)
+        guidance = normalize_lightweight_writer_guidance(
+            parsed,
+            allowed_source_ids=_known_source_ids(canonical_packet=canonical_packet, scaffold=scaffold),
+        )
         status = "parsed"
         issues: list[str] = []
     except Exception as exc:
@@ -85,6 +93,7 @@ def build_lightweight_writer_guidance_prompt(*, canonical_packet: dict[str, Any]
         "Create guidance for the later memo writer by naming what must be made clear for a human decision-maker.\n"
         "Focus on source weighting, evidence-quality caveats, quantity wording, scope boundaries, and overstatement risks.\n"
         "Prefer specific caveats over generic phrases. If a quantity could be confused with another endpoint, give safe wording.\n"
+        "Also create a compact comparative source hierarchy. Use only source_ids from the compact packet evidence. Classify by marginal decision role, not by whether a source generally supports the answer. Put a source in primary_answer_drivers when the answer would materially change without it; put sources that mainly translate, bound, compare, size, or contextualize the answer in the other lanes. Every source can have one primary accounting lane and may appear in secondary lanes when that clarifies its role.\n"
         "Return concise JSON only. Keep reader-facing prose limited to source weighting, evidence caveats, quantity wording, scope, and overstatement risks.\n\n"
         "Required JSON shape:\n"
         f"{json.dumps(_guidance_schema(), indent=2, ensure_ascii=False)}\n\n"
@@ -101,6 +110,7 @@ def build_lightweight_guidance_input(*, canonical_packet: dict[str, Any], scaffo
         "decision_question": canonical.get("decision_question"),
         "decision_brief_skeleton": _dict(canonical.get("decision_brief_skeleton")),
         "source_weight_judgments": _trim(_list(canonical.get("source_weight_judgments")), 8),
+        "source_inventory": _compact_source_inventory(canonical),
         "priority_evidence": _trim(_list(canonical.get("priority_evidence")), 12),
         "counterweight_dispositions": _trim(_list(canonical.get("counterweight_dispositions")), 8),
         "scope_boundaries": _trim(_list(canonical.get("scope_boundaries")), 8),
@@ -125,16 +135,26 @@ def build_lightweight_guidance_input(*, canonical_packet: dict[str, Any], scaffo
     }
 
 
-def normalize_lightweight_writer_guidance(payload: Any) -> dict[str, Any]:
+def normalize_lightweight_writer_guidance(
+    payload: Any,
+    *,
+    allowed_source_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     data = payload if isinstance(payload, dict) else {}
     if isinstance(data.get("lightweight_writer_guidance"), dict):
         data = data["lightweight_writer_guidance"]
+    hierarchy, hierarchy_report = normalize_source_hierarchy(
+        data.get("source_hierarchy"),
+        allowed_source_ids=allowed_source_ids,
+    )
     guidance = {
         "schema_id": "lightweight_writer_guidance_v1",
         "overall_judgment": _short_text(data.get("overall_judgment"), 360),
         "reader_guidance": [_guidance_row(row) for row in _list(data.get("reader_guidance")) if isinstance(row, dict)],
         "evidence_quality_caveats": [_quality_caveat(row) for row in _list(data.get("evidence_quality_caveats")) if isinstance(row, dict)],
         "quantity_wording_risks": [_quantity_risk(row) for row in _list(data.get("quantity_wording_risks")) if isinstance(row, dict)],
+        "source_hierarchy": hierarchy,
+        "source_hierarchy_report": hierarchy_report,
         "do_not_overstate": [_short_text(row, 260) for row in _string_list(data.get("do_not_overstate"))],
         "suggested_reader_flow": [_short_text(row, 260) for row in _string_list(data.get("suggested_reader_flow"))],
     }
@@ -151,6 +171,7 @@ def compact_lightweight_guidance_for_prompt(guidance: dict[str, Any] | None) -> 
         "reader_guidance": _trim(_list(row.get("reader_guidance")), 6),
         "evidence_quality_caveats": _trim(_list(row.get("evidence_quality_caveats")), 6),
         "quantity_wording_risks": _trim(_list(row.get("quantity_wording_risks")), 6),
+        "source_hierarchy": compact_source_hierarchy_for_prompt(_dict(row.get("source_hierarchy"))),
         "do_not_overstate": _string_list(row.get("do_not_overstate"))[:6],
         "suggested_reader_flow": _string_list(row.get("suggested_reader_flow"))[:4],
     }
@@ -203,6 +224,8 @@ def _report(guidance: dict[str, Any], *, status: str, prompt: str, raw: str, iss
         "evidence_quality_caveat_count": summary.get("evidence_quality_caveat_count", 0),
         "quantity_wording_risk_count": summary.get("quantity_wording_risk_count", 0),
         "do_not_overstate_count": summary.get("do_not_overstate_count", 0),
+        "source_hierarchy_status": _dict(guidance.get("source_hierarchy_report")).get("status", ""),
+        "source_hierarchy_warnings": _dict(guidance.get("source_hierarchy_report")).get("warnings", []),
         "issues": issues,
     }
 
@@ -214,6 +237,8 @@ def _empty_guidance(reason: str) -> dict[str, Any]:
         "reader_guidance": [],
         "evidence_quality_caveats": [],
         "quantity_wording_risks": [],
+        "source_hierarchy": {"schema_id": "source_weight_hierarchy_v1", "hierarchy_thesis": "", "lanes": {}, "source_accounting": []},
+        "source_hierarchy_report": {"schema_id": "source_weight_hierarchy_report_v1", "status": "empty", "warnings": [], "reason": reason},
         "do_not_overstate": [],
         "suggested_reader_flow": [],
         "summary": {"status": "empty", "reason": reason},
@@ -249,6 +274,7 @@ def _guidance_schema() -> dict[str, Any]:
                 "quantities": ["quantity"],
             }
         ],
+        "source_hierarchy": source_hierarchy_schema(),
         "do_not_overstate": ["bounded warning"],
         "suggested_reader_flow": ["short prose flow instruction"],
     }
@@ -283,13 +309,53 @@ def _quantity_risk(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _guidance_summary(guidance: dict[str, Any]) -> dict[str, Any]:
+    hierarchy_report = _dict(guidance.get("source_hierarchy_report"))
     return {
         "status": "ready",
         "reader_guidance_count": len(_list(guidance.get("reader_guidance"))),
         "evidence_quality_caveat_count": len(_list(guidance.get("evidence_quality_caveats"))),
         "quantity_wording_risk_count": len(_list(guidance.get("quantity_wording_risks"))),
         "do_not_overstate_count": len(_string_list(guidance.get("do_not_overstate"))),
+        "source_hierarchy_status": hierarchy_report.get("status", ""),
+        "source_hierarchy_warnings": hierarchy_report.get("warnings", []),
     }
+
+
+def _known_source_ids(*, canonical_packet: dict[str, Any], scaffold: dict[str, Any]) -> list[str]:
+    canonical = canonical_packet if isinstance(canonical_packet, dict) else {}
+    ids = []
+    for row in _list(canonical.get("source_weight_judgments")):
+        if isinstance(row, dict):
+            ids.extend(_string_list(row.get("source_ids")))
+    for field in ["priority_evidence", "counterweight_dispositions", "scope_boundaries", "decision_cruxes"]:
+        for row in _list(canonical.get(field)):
+            if isinstance(row, dict):
+                ids.extend(_string_list(row.get("source_ids")))
+    memo_ready = _dict(scaffold.get("memo_ready_packet"))
+    for source in _list(memo_ready.get("source_trail")):
+        if isinstance(source, dict):
+            source_id = str(source.get("source_id") or "").strip()
+            if source_id:
+                ids.append(source_id)
+    return _dedupe(ids)
+
+
+def _compact_source_inventory(canonical: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(canonical.get("source_weight_judgments")):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "source_ids": _string_list(row.get("source_ids")),
+                "current_main_use": row.get("main_use"),
+                "weight_summary": row.get("why_weight_this_way"),
+                "reader_facing_limit": row.get("reader_facing_limit"),
+                "what_not_to_use_it_for": row.get("what_not_to_use_it_for"),
+                "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+            }
+        )
+    return rows[:12]
 
 
 def _compact_quantity_binding(report: dict[str, Any]) -> dict[str, Any]:

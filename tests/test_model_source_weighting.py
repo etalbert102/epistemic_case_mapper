@@ -42,6 +42,8 @@ def test_model_source_weighting_builds_source_local_prompts_and_attaches(monkeyp
 
     assert len(calls) == 2
     assert "s2_item" not in calls[0]
+    assert "analyst_source_hierarchy" in calls[0]
+    assert "recommended_main_use" in calls[0]
     assert bundle["model_source_weighting_report"]["status"] == "ready"
     assert updated["canonical_decision_writer_packet"]["source_weight_judgments"][0]["method"] == "model_adjudicated_per_source"
     assert updated["canonical_decision_writer_packet"]["quality_report"]["source_weight_judgment_count"] == 2
@@ -128,6 +130,19 @@ def _packet() -> dict:
                 {"source_ids": ["s2"], "main_use": "defines_scope", "why_weight_this_way": "Fallback scope.", "evidence_item_ids": ["s2_item"]},
             ],
             "source_weight_judgment_report": {"status": "ready"},
+            "source_hierarchy": {
+                "schema_id": "source_weight_hierarchy_v1",
+                "hierarchy_thesis": "Outcome evidence drives; guidance bounds.",
+                "lanes": {
+                    "primary_answer_drivers": [{"source_ids": ["s1"], "rationale": "Outcome source."}],
+                    "scope_boundary_sources": [{"source_ids": ["s2"], "rationale": "Guidance source."}],
+                },
+                "source_accounting": [
+                    {"source_id": "s1", "primary_lane": "primary_answer_drivers", "rationale": "Outcome source."},
+                    {"source_id": "s2", "primary_lane": "scope_boundary_sources", "rationale": "Guidance source."},
+                ],
+            },
+            "source_hierarchy_report": {"status": "ready"},
             "source_weighted_answer_frame": {"lanes": {"primary_answer_drivers": [{"source_ids": ["s1"]}]}},
             "source_weight_notes": [{"source_ids": ["s1"], "decision_directness": "direct"}],
             "priority_evidence": [{"source_ids": ["s1"]}],

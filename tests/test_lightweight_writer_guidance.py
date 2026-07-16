@@ -38,6 +38,8 @@ def test_lightweight_writer_guidance_prompt_uses_compact_post_analyst_context() 
     assert "Should dietary advice treat one egg per day as acceptable?" in prompt
     assert "observational evidence" in prompt
     assert "quantity wording" in prompt
+    assert "source_weight_hierarchy_v1" in prompt
+    assert "source_inventory" in prompt
     assert "Create guidance for the later memo writer" in prompt
 
 
@@ -55,19 +57,39 @@ def test_lightweight_writer_guidance_normalizes_and_compacts_model_output() -> N
                     "recommended_wording": "Keep intake and biomarker endpoints in separate clauses.",
                 }
             ],
+            "source_hierarchy": {
+                "hierarchy_thesis": "Use outcomes first, then mechanism evidence.",
+                "lanes": {
+                    "primary_answer_drivers": [
+                        {"source_ids": ["s1", "bad_source"], "rationale": "It directly measures the target outcome."}
+                    ],
+                    "quantitative_calibrators": [
+                        {"source_ids": ["s2"], "rationale": "It sizes the endpoint."}
+                    ],
+                },
+                "source_accounting": [
+                    {"source_id": "s1", "primary_lane": "primary_answer_drivers", "rationale": "Direct outcome."},
+                    {"source_id": "bad_source", "primary_lane": "primary_answer_drivers"},
+                ],
+            },
             "do_not_overstate": ["Do not claim eggs reduce cardiovascular risk."],
             "suggested_reader_flow": ["answer first"],
-        }
+        },
+        allowed_source_ids=["s1", "s2"],
     )
 
     compact = compact_lightweight_guidance_for_prompt(guidance)
 
     assert guidance["schema_id"] == "lightweight_writer_guidance_v1"
     assert guidance["summary"]["evidence_quality_caveat_count"] == 1
+    assert guidance["source_hierarchy_report"]["status"] == "warning"
+    assert guidance["source_hierarchy_report"]["invalid_source_ids_removed"] == ["bad_source"]
+    assert guidance["source_hierarchy"]["lanes"]["primary_answer_drivers"][0]["source_ids"] == ["s1"]
     assert evidence_quality_caveat_text(guidance, ["s1"]) == [
         "This is observational evidence, so avoid causal wording."
     ]
     assert compact["quantity_wording_risks"][0]["safe_wording"] == "Keep intake and biomarker endpoints in separate clauses."
+    assert compact["source_hierarchy"]["lanes"]["primary_answer_drivers"][0]["source_ids"] == ["s1"]
 
 
 def test_attach_lightweight_guidance_updates_top_level_and_canonical_packet() -> None:

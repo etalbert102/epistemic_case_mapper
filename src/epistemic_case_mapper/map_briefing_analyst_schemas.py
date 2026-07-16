@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from epistemic_case_mapper.map_briefing_analyst_decision_group_schema import normalize_decision_group_aliases
+
 
 MemoUse = Literal[
     "load_bearing_primary_support",
@@ -350,6 +352,8 @@ class AnalystDecisionModel(BaseModel):
     what_would_change_the_answer: list[str] = Field(default_factory=list)
     memo_relevance_decisions: list[AnalystMemoRelevanceDecision] = Field(default_factory=list)
     quantity_relevance_decisions: list[AnalystQuantityRelevanceDecision] = Field(default_factory=list)
+    source_hierarchy: dict[str, Any] = Field(default_factory=dict)
+    source_hierarchy_report: dict[str, Any] = Field(default_factory=dict)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
 
@@ -727,7 +731,7 @@ def _normalize_decision_model_payload(payload: Any) -> Any:
         for group in groups:
             if not isinstance(group, dict):
                 continue
-            _normalize_decision_group_aliases(group)
+            normalize_decision_group_aliases(group)
     group_ids = {
         str(group.get("group_id") or "").strip()
         for group in (groups if isinstance(groups, list) else [])
@@ -750,17 +754,6 @@ def _normalize_decision_model_payload(payload: Any) -> Any:
             if isinstance(row, dict) and isinstance(row.get("memo_inclusion"), str):
                 row["memo_inclusion"] = _quantity_inclusion_alias(row["memo_inclusion"])
     return normalized
-
-
-def _normalize_decision_group_aliases(group: dict[str, Any]) -> None:
-    if not group.get("memo_role"):
-        for alias in ("memo_relevance", "role", "evidence_role"):
-            if group.get(alias):
-                group["memo_role"] = group.get(alias)
-                break
-    for alias in ("memo_relevance", "role", "evidence_role"):
-        if alias in group:
-            group.pop(alias, None)
 
 
 def _normalize_decision_disposition_aliases(row: dict[str, Any], group_ids: set[str]) -> None:

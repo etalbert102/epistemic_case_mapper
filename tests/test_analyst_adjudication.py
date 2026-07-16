@@ -311,6 +311,66 @@ def test_analyst_adjudication_salvages_valid_rows_from_invalid_chunk(monkeypatch
     assert "warning:two" not in rows
 
 
+def test_analyst_adjudication_repairs_missing_salvaged_rows_with_focused_call(monkeypatch) -> None:
+    calls = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if '"warning:two"' in prompt and '"bundle:one"' not in prompt:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "schema_id": "analyst_adjudication_v1",
+                        "decision_question": "Should option A be adopted?",
+                        "rows": [
+                            {
+                                "evidence_item_id": "warning:two",
+                                "memo_use": "load_bearing_counterweight",
+                                "answer_relation": "challenges_answer",
+                                "importance_rank": 2,
+                                "rationale": "Focused retry recovered the omitted warning row.",
+                                "source_ids": ["s2"],
+                                "quantity_values": [],
+                            }
+                        ],
+                        "overall_rationale": "Focused repair.",
+                    }
+                ),
+                backend="fake",
+            )
+        return ModelBackendResult(
+            text=json.dumps(
+                {
+                    "schema_id": "analyst_adjudication_v1",
+                    "decision_question": "Should option A be adopted?",
+                    "rows": [
+                        {
+                            "evidence_item_id": "bundle:one",
+                            "memo_use": "load_bearing_primary_support",
+                            "answer_relation": "supports_answer",
+                            "importance_rank": 1,
+                            "rationale": "The model returned only the support row.",
+                            "source_ids": ["s1"],
+                            "quantity_values": [],
+                        }
+                    ],
+                    "overall_rationale": "Incomplete first pass.",
+                }
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+
+    result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
+
+    rows = {row["evidence_item_id"]: row for row in result["analyst_adjudication"]["rows"]}
+    assert result["analyst_adjudication_report"]["status"] == "accepted_after_missing_row_repair"
+    assert result["analyst_adjudication_parse_report"]["valid"] is True
+    assert result["analyst_adjudication_chunk_reports"]["missing_row_repair_chunk_count"] == 1
+    assert rows["warning:two"]["rationale"] == "Focused retry recovered the omitted warning row."
+
+
 def test_single_call_accepts_repairable_model_json(monkeypatch) -> None:
     raw = """```json
 {

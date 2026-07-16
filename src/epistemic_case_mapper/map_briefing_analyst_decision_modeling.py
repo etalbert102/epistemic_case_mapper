@@ -18,6 +18,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
     compact_decision_model_repair_report,
     run_analyst_decision_model_repair,
 )
+from epistemic_case_mapper.map_briefing_analyst_parallel_repair import invalid_parallel_decision_model_result
 from epistemic_case_mapper.map_briefing_analyst_evidence_routing import (
     COMPACT_CONTEXT,
     FULL_DECISION_MODEL,
@@ -40,6 +41,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_hierarchy import attach_normalized_source_hierarchy
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_stage_retry import model_retry_report, model_stage_attempts
@@ -127,6 +129,7 @@ def run_analyst_decision_model(
         }
     parsed = AnalystDecisionModel.model_validate(apply_routed_away_accounting(payload, context)).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    parsed = attach_normalized_source_hierarchy(parsed, context)
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -179,9 +182,20 @@ def _run_parallel_decision_model_candidate(
     payload = apply_routed_away_accounting(parallel["payload"], context)
     parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
     if not parse_report.get("valid"):
-        return _invalid_parallel_decision_model_result(context, parallel, parse_report)
+        return invalid_parallel_decision_model_result(
+            context=context,
+            parallel=parallel,
+            payload=payload if isinstance(payload, dict) else _invalid_decision_model(context),
+            parse_report=parse_report,
+            ledger=ledger,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            num_predict=analyst_decision_model_num_predict(context),
+        )
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    parsed = attach_normalized_source_hierarchy(parsed, context)
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -211,26 +225,6 @@ def _run_parallel_decision_model_candidate(
         "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
         "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
         "analyst_decision_model_ranking_guard": ranking_guard,
-    }
-
-
-def _invalid_parallel_decision_model_result(
-    context: dict[str, Any],
-    parallel: dict[str, Any],
-    parse_report: dict[str, Any],
-) -> dict[str, Any]:
-    return {
-        "analyst_decision_context": context,
-        "analyst_decision_model": parallel["payload"] if isinstance(parallel.get("payload"), dict) else _invalid_decision_model(context),
-        "analyst_decision_model_prompt": parallel["prompt"],
-        "analyst_decision_model_raw": parallel["raw"],
-        "analyst_decision_model_parse_report": parse_report,
-        "analyst_decision_model_parallel_report": parallel["report"],
-        "analyst_decision_model_report": _report(
-            "parallel_model_output_invalid",
-            parse_report,
-            issues=["parallel analyst decision model failed schema or evidence ID checks"],
-        ),
     }
 
 
@@ -341,6 +335,9 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "Routed-away rows may be dispositioned as background, trace-only, or excluded according to their routing rationale; keep those decisions explicit rather than re-reasoning over every routed-away row.",
             "Keep evidence_dispositions short: include only rows not covered by any evidence group or rows whose exclusion/backgrounding/review status needs to be explicit.",
             "Use ordinary analyst language for direct_answer, proposition, rationale, answer_impact, and decision_logic.",
+            "Fill source_hierarchy as the global comparative source hierarchy for the decision. Classify sources by marginal decision role, not by whether they generally support the answer.",
+            "Put a source in source_hierarchy.primary_answer_drivers only when the answer or confidence would materially change without it; put sources that mainly size effects, test limits, bound scope, translate guidance, or contextualize advice in the other lanes.",
+            "Every source used in memo-facing evidence should appear in source_hierarchy.source_accounting with one primary lane.",
             "Return strict JSON only.",
         ],
         "allowed_memo_role": [
@@ -495,6 +492,7 @@ def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tupl
     updated = dict(model)
     updated["evidence_groups"] = groups
     updated["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(updated.get("decision_logic")))
+    updated = attach_normalized_source_hierarchy(updated, context)
     return updated, report
 
 
@@ -509,6 +507,8 @@ def _invalid_decision_model(context: dict[str, Any]) -> dict[str, Any]:
         "evidence_dispositions": [],
         "quantitative_anchors": [],
         "what_would_change_the_answer": [],
+        "source_hierarchy": {},
+        "source_hierarchy_report": {"schema_id": "source_weight_hierarchy_report_v1", "status": "empty", "warnings": []},
         "decision_logic": {},
         "argument_plan": [],
     }

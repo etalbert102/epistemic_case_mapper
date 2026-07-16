@@ -210,6 +210,7 @@ def build_model_source_weight_inputs(memo_ready_packet: dict[str, Any]) -> list[
                 "source_id": source_id,
                 "source": _compact_source(source),
                 "existing_source_weight_judgment": fallback_by_source.get(source_id, {}),
+                "analyst_source_hierarchy": _source_hierarchy_context(canonical, source_id),
                 "answer_spine": _dict(packet.get("answer_spine")),
                 "decision_logic": _dict(packet.get("analyst_decision_logic")),
                 "evidence_item_ids": [str(row.get("item_id") or "").strip() for row in items if row.get("item_id")],
@@ -225,6 +226,7 @@ def build_model_source_weight_prompt(context: dict[str, Any]) -> str:
         "You are judging how one source should be weighted in a source-grounded decision memo.\n"
         "Use the decision question and the source-local evidence below. Return exactly one JSON object matching the schema.\n"
         "Use source_id exactly as provided. Use only evidence_item_ids from the provided source evidence items.\n"
+        "When analyst_source_hierarchy is present, treat it as the global source-role decision; set main_use to match that lane unless the source-local evidence clearly contradicts it.\n"
         "Write memo_weight_sentence as one natural reader-facing sentence that explains this source's role and main limitation if it has one.\n\n"
         "Allowed main_use values: drives_answer, calibrates_magnitude, bounds_answer, defines_scope, identifies_crux, contextualizes.\n"
         "Allowed source_type values: observational_primary, trial_or_intervention, evidence_synthesis, guidance_or_advisory, contextual_summary, mixed_or_unclear.\n\n"
@@ -325,6 +327,46 @@ def _fallback_judgments_by_source(canonical: dict[str, Any]) -> dict[str, dict[s
         for source_id in _string_list(row.get("source_ids")):
             by_source[source_id] = row
     return by_source
+
+
+def _source_hierarchy_context(canonical: dict[str, Any], source_id: str) -> dict[str, Any]:
+    hierarchy = _dict(canonical.get("source_hierarchy"))
+    lanes = _dict(hierarchy.get("lanes"))
+    matches = []
+    primary_lane = ""
+    for row in _list(hierarchy.get("source_accounting")):
+        if isinstance(row, dict) and source_id == str(row.get("source_id") or "").strip():
+            primary_lane = str(row.get("primary_lane") or "").strip()
+            break
+    for lane, rows in lanes.items():
+        for row in _list(rows):
+            if isinstance(row, dict) and source_id in _string_list(row.get("source_ids")):
+                matches.append(
+                    {
+                        "lane": lane,
+                        "role": row.get("role"),
+                        "rationale": row.get("rationale"),
+                        "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    }
+                )
+    return _drop_empty(
+        {
+            "primary_lane": primary_lane,
+            "recommended_main_use": _lane_to_main_use(primary_lane),
+            "hierarchy_thesis": hierarchy.get("hierarchy_thesis"),
+            "lane_memberships": matches,
+        }
+    )
+
+
+def _lane_to_main_use(lane: str) -> str:
+    return {
+        "primary_answer_drivers": "drives_answer",
+        "quantitative_calibrators": "calibrates_magnitude",
+        "counterweight_sources": "bounds_answer",
+        "scope_boundary_sources": "defines_scope",
+        "contextual_sources": "contextualizes",
+    }.get(str(lane or ""), "")
 
 
 def _fallback_judgment(source_id: str, fallback: dict[str, Any] | None, *, reason: str) -> dict[str, Any]:

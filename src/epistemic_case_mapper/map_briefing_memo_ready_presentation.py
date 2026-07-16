@@ -20,6 +20,7 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     preferred_source_display,
     source_label_variants,
 )
+from epistemic_case_mapper.map_briefing_source_hierarchy import render_source_hierarchy_section
 from epistemic_case_mapper.map_briefing_source_use_notes import source_use_note_for_entry
 from epistemic_case_mapper.map_briefing_source_weighting_caveats import render_source_weighting_caveat_note
 
@@ -187,6 +188,13 @@ def _ensure_source_weighting_section(memo: str, packet: dict[str, Any]) -> str:
 def _source_weighting_section(packet: dict[str, Any]) -> str:
     canonical = _dict(packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(packet)
     guidance = _dict(packet.get("lightweight_writer_guidance")) or _dict(canonical.get("lightweight_writer_guidance"))
+    hierarchy_section = render_source_hierarchy_section(
+        _dict(canonical.get("source_hierarchy"))
+        or _dict(packet.get("analyst_source_hierarchy"))
+        or _dict(guidance.get("source_hierarchy"))
+    )
+    if hierarchy_section:
+        return hierarchy_section
     judgment_section = _source_weighting_from_judgments(_list(canonical.get("source_weight_judgments")), guidance=guidance)
     if judgment_section:
         return judgment_section
@@ -854,7 +862,6 @@ def _source_alias_replacements(packet: dict[str, Any]) -> dict[str, str]:
     replacements.update(_evidence_item_alias_replacements(packet, source_lookup, common_prefix=common_prefix))
     return replacements
 
-
 def _evidence_item_alias_replacements(packet: dict[str, Any], source_lookup: dict[str, dict[str, Any]], *, common_prefix: list[str]) -> dict[str, str]:
     replacements: dict[str, str] = {}
     for item in _list(packet.get("evidence_items")):
@@ -874,7 +881,6 @@ def _evidence_item_alias_replacements(packet: dict[str, Any], source_lookup: dic
             replacements[item_id] = "; ".join(_dedupe(displays))
     return replacements
 
-
 def _packet_source_labels(packet: dict[str, Any]) -> list[str]:
     labels = []
     for source in _list(packet.get("source_trail")):
@@ -890,7 +896,5 @@ def _packet_source_labels(packet: dict[str, Any]) -> list[str]:
         )
     return _dedupe(label for label in labels if label)
 
-
 def _contains_text(text: str, needle: str) -> bool:
-    needle = str(needle).strip()
-    return not needle or needle.lower() in text.lower()
+    return not str(needle).strip() or str(needle).strip().lower() in text.lower()

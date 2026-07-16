@@ -577,6 +577,9 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
                 "group_id": f"group_{len(calls):03d}",
                 "proposition": f"Grouped {len(rows)} local evidence rows.",
                 "memo_role": rows[0].get("adjudicated_memo_use") or "load_bearing_primary_support",
+                "answer_relation_type": "supports_answer",
+                "target_answer_precedence": "adopt_option_a",
+                "diagnostic_priority_score": 99,
                 "importance_rank": len(calls),
                 "covered_evidence_item_ids": [row["evidence_item_id"] for row in rows],
                 "rationale": "Local grouped rationale.",
@@ -611,11 +614,61 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
         backend_retries=0,
     )
 
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
     assert result["analyst_decision_model_parallel_report"]["task_count"] == 4
+    assert result["analyst_decision_model_parallel_report"]["source_hierarchy_task_report"]["status"] == "parsed"
+    assert "source_hierarchy" in result["analyst_decision_model"]
     assert result["analyst_decision_model_parse_report"]["valid"] is True
     assert result["analyst_decision_model_parse_report"]["covered_evidence_item_count"] == 14
+    assert all("answer_relation_type" not in group for group in result["analyst_decision_model"]["evidence_groups"])
+    assert result["analyst_decision_model"]["evidence_groups"][0]["answer_relation"] == "supports_answer"
+
+
+def test_decision_model_parse_normalizes_common_model_alias_fields() -> None:
+    payload = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should option A be adopted?",
+        "direct_answer": "Adopt option A if the outcome signal holds.",
+        "confidence": "medium",
+        "overall_rationale": "The support row is load-bearing.",
+        "evidence_groups": [
+            {
+                "group_id": "support_group",
+                "proposition": "Outcome evidence supports option A.",
+                "memo_role": "load_bearing_primary_support",
+                "answer_relation_type": "supports_answer",
+                "target_answer_precedence": "adopt_option_a",
+                "diagnostic_priority_score": 42,
+                "importance_rank": 1,
+                "covered_evidence_item_ids": ["bundle:support", "bundle:support_duplicate"],
+                "rationale": "Both support rows belong together.",
+            },
+            {
+                "group_id": "risk_group",
+                "proposition": "Operating-budget risk bounds option A.",
+                "memo_role": "load_bearing_counterweight",
+                "target_answer_con_option": "adopt_option_a",
+                "importance_rank": 2,
+                "covered_evidence_item_ids": ["bundle:risk"],
+                "rationale": "Risk bounds the answer.",
+            },
+        ],
+        "evidence_dispositions": [
+            {"evidence_item_id": "bundle:support", "disposition": "foreground", "group_id": "support_group"},
+            {"evidence_item_id": "bundle:support_duplicate", "disposition": "foreground", "group_id": "support_group"},
+            {"evidence_item_id": "bundle:risk", "disposition": "foreground", "group_id": "risk_group"},
+        ],
+        "decision_logic": {
+            "bounded_bottom_line": "Adopt option A if operating-budget risk is bounded.",
+            "practical_implications": ["Use the risk row as the main implementation boundary."],
+        },
+    }
+
+    report = build_analyst_decision_model_parse_report(payload, _ledger())
+
+    assert report["valid"] is True
+    assert "invalid_schema" not in report["issues"]
 
 
 def test_parallel_decision_logic_preserves_model_counterweight_judgment() -> None:

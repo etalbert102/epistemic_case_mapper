@@ -245,6 +245,67 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 
 
+def test_presentation_source_weighting_prefers_lightweight_source_hierarchy() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "outcome_2025", "source_label": "Outcome Study 2025", "source_url": "https://example.test/outcome"},
+            {"source_id": "mechanism_2024", "source_label": "Mechanism Trial 2024", "source_url": "https://example.test/mechanism"},
+            {"source_id": "guidance_2023", "source_label": "Guidance Note 2023", "source_url": "https://example.test/guidance"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["outcome_2025"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Flat fallback wording should not be used.",
+                }
+            ],
+            "source_hierarchy": {
+                "schema_id": "source_weight_hierarchy_v1",
+                "hierarchy_thesis": "Use the analyst hierarchy: outcome evidence drives, while guidance bounds scope.",
+                "lanes": {
+                    "primary_answer_drivers": [
+                        {"source_ids": ["outcome_2025"], "rationale": "It is the analyst-selected driver"}
+                    ],
+                    "scope_boundary_sources": [
+                        {"source_ids": ["guidance_2023"], "rationale": "It is the analyst-selected boundary"}
+                    ],
+                },
+                "source_accounting": [],
+            },
+            "lightweight_writer_guidance": {
+                "schema_id": "lightweight_writer_guidance_v1",
+                "source_hierarchy": {
+                    "schema_id": "source_weight_hierarchy_v1",
+                    "hierarchy_thesis": "Start with outcome evidence, then use the trial and guidance to size and bound the read.",
+                    "lanes": {
+                        "primary_answer_drivers": [
+                            {"source_ids": ["outcome_2025"], "rationale": "It is closest to the target outcome"}
+                        ],
+                        "quantitative_calibrators": [
+                            {"source_ids": ["mechanism_2024"], "rationale": "It sizes the biomarker channel"}
+                        ],
+                        "scope_boundary_sources": [
+                            {"source_ids": ["guidance_2023"], "rationale": "It defines the applicable setting"}
+                        ],
+                    },
+                    "source_accounting": [],
+                },
+            },
+        },
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Adopt option A if risk is bounded."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "Use the analyst hierarchy" in result["memo"]
+    assert "Start with outcome evidence" not in result["memo"]
+    assert "- **Start with:** [Outcome 2025]" in result["memo"]
+    assert "- **Use to bound scope:** [Guidance 2023]" in result["memo"]
+    assert "Flat fallback wording should not be used" not in result["memo"]
+
+
 def test_presentation_model_source_weighting_keeps_limits_source_local() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

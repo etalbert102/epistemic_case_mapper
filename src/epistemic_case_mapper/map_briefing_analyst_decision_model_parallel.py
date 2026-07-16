@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
 from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract import (
     decision_model_required_output_schema,
 )
+from epistemic_case_mapper.map_briefing_analyst_decision_group_schema import schema_safe_decision_group
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -23,6 +24,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_source_hierarchy import normalize_source_hierarchy, source_hierarchy_schema
 from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 
@@ -60,6 +62,17 @@ def run_parallel_analyst_decision_model(
     )
     payloads = [row.get("payload") for row in task_results if isinstance(row.get("payload"), dict) and row.get("status") == "parsed"]
     merged = merge_decision_model_payloads(context, payloads)
+    hierarchy_result = _run_global_source_hierarchy_task(
+        context,
+        merged,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=num_predict,
+        run_backend=run_backend,
+    )
+    merged["source_hierarchy"] = hierarchy_result["source_hierarchy"]
+    merged["source_hierarchy_report"] = hierarchy_result["source_hierarchy_report"]
     return {
         "payload": merged,
         "prompt": _join([str(row.get("prompt") or "") for row in task_results], "analyst decision model task prompt"),
@@ -70,9 +83,12 @@ def run_parallel_analyst_decision_model(
             "task_count": len(tasks),
             "parsed_count": len(payloads),
             "failed_count": sum(1 for row in task_results if row.get("status") != "parsed"),
+            "source_hierarchy_status": hierarchy_result["source_hierarchy_report"].get("status"),
+            "source_hierarchy_warnings": hierarchy_result["source_hierarchy_report"].get("warnings", []),
             "parallelism": model_parallelism(backend),
             "wall_seconds": round(time.monotonic() - started, 3),
             "task_reports": [_public_task_report(row) for row in task_results],
+            "source_hierarchy_task_report": hierarchy_result["task_report"],
         },
     }
 
@@ -153,7 +169,7 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
                 dispositions_by_id[str(row.get("evidence_item_id"))] = dict(row)
     groups = _dedupe_groups(groups)
     groups, _ranking_guard = apply_decision_diagnostic_ranking(groups, _rows(context))
-    groups = [_schema_safe_group(group) for group in groups]
+    groups = [schema_safe_decision_group(group) for group in groups]
     covered = {evidence_id for group in groups for evidence_id in _string_list(group.get("covered_evidence_item_ids"))}
     dispositions = _merged_dispositions(context, groups, dispositions_by_id, covered)
     memo_relevance_decisions = _merged_memo_relevance_decisions(context, payloads, groups, dispositions)
@@ -167,10 +183,163 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
         "evidence_dispositions": dispositions,
         "memo_relevance_decisions": memo_relevance_decisions,
         "quantity_relevance_decisions": _merged_quantity_relevance_decisions(context, payloads, memo_relevance_decisions),
+        "source_hierarchy": {},
+        "source_hierarchy_report": {"schema_id": "source_weight_hierarchy_report_v1", "status": "empty", "warnings": []},
         "quantitative_anchors": _merged_texts(context, payloads, "quantitative_anchors"),
         "what_would_change_the_answer": _merged_texts(context, payloads, "what_would_change_the_answer"),
         "decision_logic": _decision_logic(context, groups, payloads),
         "argument_plan": _argument_plan(groups, payloads),
+    }
+
+
+def _run_global_source_hierarchy_task(
+    context: dict[str, Any],
+    merged_model: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    num_predict: int,
+    run_backend: Callable[..., Any],
+) -> dict[str, Any]:
+    prompt = build_global_source_hierarchy_prompt(context, merged_model)
+    started = time.monotonic()
+    try:
+        result = run_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=max(2048, min(num_predict, 4096)),
+            json_mode=True,
+        )
+        raw = str(getattr(result, "text", result))
+        payload = _extract_json(raw)
+        status = "parsed" if isinstance(payload, dict) else "parse_failed"
+    except RuntimeError as exc:
+        raw = ""
+        payload = {}
+        status = "backend_error"
+        error = str(exc)
+    else:
+        error = ""
+    hierarchy, report = normalize_source_hierarchy(
+        payload if isinstance(payload, dict) else {},
+        allowed_source_ids=_context_source_ids(context),
+    )
+    if status != "parsed":
+        report = dict(report)
+        report["status"] = "warning"
+        report["warnings"] = _dedupe([*_string_list(report.get("warnings")), f"source_hierarchy_{status}"])
+    return {
+        "source_hierarchy": hierarchy,
+        "source_hierarchy_report": report,
+        "prompt": prompt,
+        "raw": raw,
+        "task_report": {
+            "schema_id": "analyst_source_hierarchy_task_report_v1",
+            "status": status,
+            "duration_seconds": round(time.monotonic() - started, 3),
+            "prompt_chars": len(prompt),
+            "raw_chars": len(raw),
+            "error": error,
+        },
+    }
+
+
+def build_global_source_hierarchy_prompt(context: dict[str, Any], merged_model: dict[str, Any]) -> str:
+    packet = {
+        "task": "Create the global comparative source hierarchy for this analyst decision model. Return strict JSON only.",
+        "decision_question": context.get("decision_question", ""),
+        "stable_final_answer_frame": _dict(context.get("stable_final_answer_frame")),
+        "instructions": [
+            "Classify sources by marginal decision role, not by whether they generally support the answer.",
+            "A primary_answer_driver is a source whose removal would materially change the answer or confidence.",
+            "Put sources that mainly size effects, expose counterweights, bound scope, translate guidance, or contextualize advice in the corresponding non-primary lanes.",
+            "Use source appraisal signals such as evidence proximity, document type, source warnings, and source_weight_note.",
+            "Use only source_ids and evidence_item_ids from the context.",
+            "Every source should appear once in source_accounting with its primary lane.",
+        ],
+        "required_output_schema": source_hierarchy_schema(),
+        "source_inventory": _source_inventory_for_hierarchy(context),
+        "merged_evidence_groups": [_compact_group_for_hierarchy(group) for group in _list(merged_model.get("evidence_groups"))[:16] if isinstance(group, dict)],
+        "decision_logic": _dict(merged_model.get("decision_logic")),
+        "context": {"evidence_rows": [_compact_task_row(row) for row in _rows(context)]},
+    }
+    return json.dumps(packet, indent=2, ensure_ascii=False)
+
+
+def _context_source_ids(context: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        source_id
+        for row in _rows(context)
+        for source_id in _string_list(row.get("source_ids"))
+    )
+
+
+def _source_inventory_for_hierarchy(context: dict[str, Any]) -> list[dict[str, Any]]:
+    by_source: dict[str, dict[str, Any]] = {}
+    for row in _rows(context):
+        for source_id in _string_list(row.get("source_ids")):
+            entry = by_source.setdefault(
+                source_id,
+                {
+                    "source_id": source_id,
+                    "evidence_item_ids": [],
+                    "source_quality": {},
+                    "roles": [],
+                    "answer_relations": [],
+                    "source_weight_notes": [],
+                    "claims": [],
+                    "quantities": [],
+                },
+            )
+            evidence_id = str(row.get("evidence_item_id") or "").strip()
+            if evidence_id:
+                entry["evidence_item_ids"].append(evidence_id)
+            if isinstance(row.get("source_quality"), dict) and not entry["source_quality"]:
+                entry["source_quality"] = row.get("source_quality")
+            entry["roles"].extend(
+                _string_list(
+                    [
+                        row.get("adjudicated_memo_use"),
+                        row.get("current_role"),
+                        row.get("use_in_reasoning"),
+                    ]
+                )
+            )
+            entry["answer_relations"].extend(_string_list([row.get("adjudicated_answer_relation"), row.get("effect_on_final_answer")]))
+            if row.get("source_weight_note"):
+                entry["source_weight_notes"].append(str(row.get("source_weight_note")))
+            if row.get("claim"):
+                entry["claims"].append(_short_text(str(row.get("claim")), 220))
+            entry["quantities"].extend(_string_list(row.get("quantity_values")))
+    return [
+        {
+            "source_id": source_id,
+            "evidence_item_ids": _dedupe(_string_list(entry.get("evidence_item_ids")))[:12],
+            "source_quality": entry.get("source_quality") if isinstance(entry.get("source_quality"), dict) else {},
+            "roles": _dedupe(_string_list(entry.get("roles")))[:8],
+            "answer_relations": _dedupe(_string_list(entry.get("answer_relations")))[:8],
+            "source_weight_notes": _dedupe(_string_list(entry.get("source_weight_notes")))[:4],
+            "claims": _dedupe(_string_list(entry.get("claims")))[:6],
+            "quantities": _dedupe(_string_list(entry.get("quantities")))[:8],
+        }
+        for source_id, entry in sorted(by_source.items())
+    ]
+
+
+def _compact_group_for_hierarchy(group: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "group_id": group.get("group_id"),
+        "proposition": _short_text(str(group.get("proposition") or ""), 260),
+        "memo_role": group.get("memo_role"),
+        "answer_relation": group.get("answer_relation"),
+        "importance_rank": group.get("importance_rank"),
+        "covered_evidence_item_ids": _string_list(group.get("covered_evidence_item_ids"))[:12],
+        "rationale": _short_text(str(group.get("rationale") or ""), 260),
+        "evidence_strength": _short_text(str(group.get("evidence_strength") or ""), 180),
+        "answer_impact": _short_text(str(group.get("answer_impact") or ""), 180),
     }
 
 
@@ -377,14 +546,6 @@ def _dedupe_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen_ids.add(str(group.get("group_id") or ""))
         deduped.append(group)
     return deduped
-
-
-def _schema_safe_group(group: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: value
-        for key, value in group.items()
-        if key not in {"diagnostic_priority_score", "diagnostic_priority_reasons", "best_adjudicated_importance_rank"}
-    }
 
 
 def _merged_dispositions(context: dict[str, Any], groups: list[dict[str, Any]], model_dispositions: dict[str, dict[str, Any]], covered: set[str]) -> list[dict[str, Any]]:

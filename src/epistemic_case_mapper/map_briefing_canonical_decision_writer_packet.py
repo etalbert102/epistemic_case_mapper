@@ -6,6 +6,7 @@ from epistemic_case_mapper.map_briefing_analytical_balance_contract import build
 from epistemic_case_mapper.map_briefing_argument_spine import build_evidence_weighted_argument_spine
 from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_balanced_answer_frame, build_bluf_contract
 from epistemic_case_mapper.map_briefing_canonical_reconciliation import reconcile_packet_evidence_items, reconcile_writer_interface
+from epistemic_case_mapper.map_briefing_canonical_quality_report import build_canonical_decision_writer_packet_quality_report
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_evidence_language_contracts import build_evidence_language_contracts
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
@@ -101,6 +102,8 @@ def build_canonical_decision_writer_packet(
         "decision_cruxes": _decision_cruxes(interface),
         "source_weight_judgments": source_weight_bundle["source_weight_judgments"],
         "source_weight_judgment_report": source_weight_bundle["source_weight_judgment_report"],
+        "source_hierarchy": _dict(packet.get("analyst_source_hierarchy")),
+        "source_hierarchy_report": _dict(packet.get("analyst_source_hierarchy_report")),
         "source_weight_notes": _source_weight_notes(interface),
         "evidence_language_contracts": language_contracts,
         "mandatory_retention_checklist": mandatory_checklist,
@@ -109,88 +112,6 @@ def build_canonical_decision_writer_packet(
     canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))
     canonical["quality_report"] = build_canonical_decision_writer_packet_quality_report(canonical)
     return canonical
-
-
-def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict[str, Any]) -> dict[str, Any]:
-    packet = canonical_packet if isinstance(canonical_packet, dict) else {}
-    skeleton = _dict(packet.get("decision_brief_skeleton"))
-    classification = _dict(packet.get("decision_answer_classification"))
-    priority = _list(packet.get("priority_evidence"))
-    counterweights = _list(packet.get("counterweight_dispositions"))
-    weighted_frame = _dict(packet.get("source_weighted_answer_frame"))
-    weighted_lanes = _dict(weighted_frame.get("lanes"))
-    source_notes = _list(packet.get("source_weight_notes"))
-    language_contracts = _list(packet.get("evidence_language_contracts"))
-    source_judgments = _list(packet.get("source_weight_judgments"))
-    source_judgment_report = _dict(packet.get("source_weight_judgment_report"))
-    argument_spine = _dict(packet.get("evidence_weighted_argument_spine"))
-    argument_spine_report = _dict(argument_spine.get("quality_report"))
-    informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
-    checklist = _list(packet.get("mandatory_retention_checklist"))
-    inventory = _dict(packet.get("organized_evidence_inventory"))
-    inventory_items = _inventory_items(inventory)
-    warnings = []
-    for key in ("direct_answer", "scope", "confidence", "main_reason", "strongest_counterweight", "counterweight_disposition"):
-        if not str(skeleton.get(key) or "").strip():
-            warnings.append(f"missing_skeleton_{key}")
-    if _looks_generic(skeleton.get("direct_answer")):
-        warnings.append("generic_direct_answer")
-    if _looks_truncated_or_scaffolded(skeleton.get("direct_answer")):
-        warnings.append("truncated_or_scaffolded_direct_answer")
-    if _looks_truncated_or_scaffolded(skeleton.get("practical_implication")):
-        warnings.append("truncated_or_scaffolded_practical_implication")
-    if not str(classification.get("answer_shape") or "").strip():
-        warnings.append("missing_decision_answer_classification")
-    if not priority:
-        warnings.append("missing_priority_evidence")
-    if not weighted_lanes:
-        warnings.append("missing_source_weighted_answer_frame")
-    if not counterweights:
-        warnings.append("missing_counterweight_dispositions")
-    if not source_notes:
-        warnings.append("missing_source_weight_notes")
-    elif informative_source_notes == 0:
-        warnings.append("source_weight_notes_uninformative")
-    if not source_judgments:
-        warnings.append("missing_source_weight_judgments")
-    if source_judgment_report.get("status") == "warning":
-        warnings.append("source_weight_judgments_warning")
-    if not checklist:
-        warnings.append("missing_mandatory_retention_checklist")
-    if not _list(argument_spine.get("steps")):
-        warnings.append("missing_evidence_weighted_argument_spine")
-    if argument_spine_report.get("status") == "warning":
-        warnings.append("argument_spine_warning")
-    if not inventory_items:
-        warnings.append("missing_organized_evidence_inventory")
-    if not language_contracts:
-        warnings.append("missing_evidence_language_contracts")
-    if any(not _source_ids(row) for row in [*priority, *counterweights, *source_notes, *inventory_items] if isinstance(row, dict)) or any(
-        _checklist_row_requires_source(row) and not _source_ids(row)
-        for row in checklist
-        if isinstance(row, dict)
-    ):
-        warnings.append("source_id_missing_from_canonical_rows")
-    return {
-        "schema_id": "canonical_decision_writer_packet_quality_report_v1",
-        "status": "ready" if not warnings else "warning",
-        "warnings": _dedupe(warnings),
-        "answer_shape": classification.get("answer_shape"),
-        "question_option_count": len(_list(classification.get("question_options"))),
-        "priority_evidence_count": len(priority),
-        "source_weighted_lane_count": len(weighted_lanes),
-        "source_weighted_item_count": sum(len(_list(rows)) for rows in weighted_lanes.values()),
-        "organized_evidence_count": len(inventory_items),
-        "counterweight_disposition_count": len(counterweights),
-        "source_weight_note_count": len(source_notes),
-        "source_weight_judgment_count": len(source_judgments),
-        "source_weight_judgment_status": source_judgment_report.get("status"),
-        "evidence_language_contract_count": len(language_contracts),
-        "argument_spine_step_count": len(_list(argument_spine.get("steps"))),
-        "argument_spine_status": argument_spine_report.get("status"),
-        "informative_source_weight_note_count": informative_source_notes,
-        "mandatory_retention_count": len(checklist),
-    }
 
 
 def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:

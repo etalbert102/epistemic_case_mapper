@@ -89,7 +89,7 @@ def _run_live_adjudication(
         for row in chunk_results
         if isinstance(row.get("chunk_report"), dict)
     ]
-    failed_chunk_count = sum(1 for row in chunk_results if row.get("chunk_failed"))
+    initial_failed_chunk_count = sum(1 for row in chunk_results if row.get("chunk_failed"))
     merged = {
         "schema_id": "analyst_adjudication_v1",
         "decision_question": ledger.get("decision_question", ""),
@@ -97,8 +97,44 @@ def _run_live_adjudication(
         "overall_rationale": _merged_rationale(chunk_reports),
     }
     parse_report = build_analyst_adjudication_parse_report(merged, ledger)
-    status = "accepted" if parse_report.get("valid") and failed_chunk_count == 0 else (
-        "accepted_with_chunk_warnings" if parse_report.get("valid") else "model_output_invalid"
+    recovery_results: list[dict[str, Any]] = []
+    if not parse_report.get("valid") and merged_rows and parse_report.get("missing_evidence_item_ids"):
+        missing_ids = _string_list(parse_report.get("missing_evidence_item_ids"))
+        recovery_results = _run_missing_adjudication_chunks(
+            ledger,
+            missing_ids=missing_ids,
+            start_index=len(chunks) + 1,
+            all_ids=all_ids,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+        prompts.extend(str(row.get("prompt") or "") for row in recovery_results)
+        raws.extend(str(row.get("raw_block") or "") for row in recovery_results)
+        merged_rows.extend(
+            merged_row
+            for row in recovery_results
+            for merged_row in _list(row.get("rows"))
+            if isinstance(merged_row, dict)
+        )
+        chunk_reports.extend(
+            row.get("chunk_report")
+            for row in recovery_results
+            if isinstance(row.get("chunk_report"), dict)
+        )
+        merged["rows"] = _order_rows_by_ledger(_dedupe_adjudication_rows(merged_rows), all_ids)
+        merged["overall_rationale"] = _merged_rationale(chunk_reports)
+        parse_report = build_analyst_adjudication_parse_report(merged, ledger)
+    failed_chunk_count = sum(1 for row in [*chunk_results, *recovery_results] if row.get("chunk_failed"))
+    recovered_missing_rows = bool(recovery_results) and parse_report.get("valid")
+    status = (
+        "accepted_after_missing_row_repair"
+        if recovered_missing_rows
+        else "accepted"
+        if parse_report.get("valid") and failed_chunk_count == 0
+        else "accepted_with_chunk_warnings"
+        if parse_report.get("valid")
+        else "model_output_invalid"
     )
     return {
         "analyst_adjudication": merged,
@@ -107,9 +143,11 @@ def _run_live_adjudication(
         "analyst_adjudication_parse_report": parse_report,
         "analyst_adjudication_chunk_reports": {
             "schema_id": "analyst_adjudication_chunk_reports_v1",
-            "chunk_count": len(chunks),
+            "chunk_count": len(chunks) + len(recovery_results),
             "scaffold_chunk_count": 0,
             "failed_chunk_count": failed_chunk_count,
+            "initial_failed_chunk_count": initial_failed_chunk_count,
+            "missing_row_repair_chunk_count": len(recovery_results),
             "parallelism": model_parallelism(backend),
             "chunks": chunk_reports,
         },
@@ -119,6 +157,41 @@ def _run_live_adjudication(
             issues=["one_or_more_chunks_failed_without_fallback"] if failed_chunk_count else [],
         ),
     }
+
+
+def _run_missing_adjudication_chunks(
+    ledger: dict[str, Any],
+    *,
+    missing_ids: list[str],
+    start_index: int,
+    all_ids: list[str],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> list[dict[str, Any]]:
+    rows_by_id = {
+        str(row.get("evidence_item_id") or ""): row
+        for row in _list(ledger.get("rows"))
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+    }
+    missing_rows = [rows_by_id[evidence_id] for evidence_id in missing_ids if evidence_id in rows_by_id]
+    chunks = _chunks(missing_rows, _chunk_size())
+    if not chunks:
+        return []
+    total = start_index + len(chunks) - 1
+    return run_parallel(
+        list(enumerate(chunks, start=start_index)),
+        lambda item: _run_adjudication_chunk(
+            item,
+            ledger=ledger,
+            total=total,
+            all_ids=all_ids,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        ),
+        max_workers=model_parallelism(backend),
+    )
 
 
 def _run_adjudication_chunk(
