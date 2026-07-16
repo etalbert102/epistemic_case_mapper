@@ -262,6 +262,7 @@ def _decision_edge_rows(
         source_bottom_lines = _dedupe_source_bottom_lines(
             [*_source_bottom_lines_for_claim(source_claim), *_source_bottom_lines_for_claim(target_claim)]
         )
+        endpoint_claims = _endpoint_claims_for_relation(source_claim_id, source_claim, target_claim_id, target_claim)
         rows.append(
             _drop_empty(
                 {
@@ -283,7 +284,11 @@ def _decision_edge_rows(
                     "relation_semantic_role": str(relation.get("relation_type") or ""),
                     "relation_contract": _relation_contract_summary(relation),
                     "candidate_pair": candidate_pair,
-                    "endpoint_claims": _endpoint_claims_for_relation(source_claim_id, source_claim, target_claim_id, target_claim),
+                    "endpoint_claims": endpoint_claims,
+                    "relation_endpoint_answer_matrix": _relation_endpoint_answer_matrix(
+                        relation,
+                        endpoint_claims,
+                    ),
                     "current_priority": _relation_priority(relation),
                     "current_weight": str(relation.get("relation_confidence") or "medium"),
                     "quality": str(relation.get("relation_provenance") or "model_classified"),
@@ -356,6 +361,50 @@ def _endpoint_claim_summary(endpoint: str, claim_id: str, claim: dict[str, Any])
             "source_bottom_line_signals": _source_bottom_line_signals(source_bottom_lines),
         }
     )
+
+
+def _relation_endpoint_answer_matrix(relation: dict[str, Any], endpoint_claims: list[dict[str, Any]]) -> dict[str, Any]:
+    signals = _dedupe(
+        [
+            signal
+            for endpoint in endpoint_claims
+            for signal in _string_list(endpoint.get("source_bottom_line_signals"))
+        ]
+    )
+    return _drop_empty(
+        {
+            "schema_id": "relation_endpoint_answer_matrix_v1",
+            "relation_id": str(relation.get("relation_id") or ""),
+            "relation_semantic_role": str(relation.get("relation_type") or ""),
+            "endpoint_count": len(endpoint_claims),
+            "endpoint_signal_summary": _endpoint_signal_summary(signals),
+            "endpoints": [
+                _drop_empty(
+                    {
+                        "endpoint": str(endpoint.get("endpoint") or ""),
+                        "claim_id": str(endpoint.get("claim_id") or ""),
+                        "source_ids": _string_list(endpoint.get("source_ids")),
+                        "decision_edge_role": str(endpoint.get("decision_edge_role") or ""),
+                        "source_bottom_line_signals": _string_list(endpoint.get("source_bottom_line_signals")),
+                        "source_bottom_lines": _list(endpoint.get("source_bottom_lines"))[:2],
+                    }
+                )
+                for endpoint in endpoint_claims
+                if isinstance(endpoint, dict)
+            ],
+        }
+    )
+
+
+def _endpoint_signal_summary(signals: list[str]) -> str:
+    signal_set = set(signals)
+    if "increased_harm_or_risk_signal" in signal_set and (
+        {"no_clear_association_signal", "reduced_harm_or_risk_signal", "benefit_signal"} & signal_set
+    ):
+        return "mixed_endpoint_polarity"
+    if len(signal_set) > 1:
+        return "multiple_endpoint_signals"
+    return signals[0] if signals else ""
 
 
 def _decision_edge_statement(relation: dict[str, Any], source_claim: dict[str, Any], target_claim: dict[str, Any]) -> str:

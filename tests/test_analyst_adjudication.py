@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from epistemic_case_mapper.map_briefing_analyst_adjudication import (
     build_analyst_adjudication_prompt,
     run_analyst_adjudication_single_call_for_test,
     run_analyst_adjudication,
 )
+from epistemic_case_mapper.map_briefing_decision_packet_stage import _assert_analyst_adjudication_complete
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -149,10 +152,20 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
 
 
 def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> None:
-    prompt = build_analyst_adjudication_prompt(_relation_ledger())
+    ledger = _relation_ledger()
+    ledger["rows"][0]["relation_endpoint_answer_matrix"] = {
+        "schema_id": "relation_endpoint_answer_matrix_v1",
+        "relation_semantic_role": "supports",
+        "endpoint_signal_summary": "mixed_endpoint_polarity",
+        "endpoints": ledger["rows"][0]["endpoint_claims"],
+    }
+    prompt = build_analyst_adjudication_prompt(ledger)
 
     assert "relation labels as provisional model proposals" in prompt
+    assert "classify endpoint source bottom lines first" in prompt
     assert "relation_semantic_role" in prompt
+    assert "relation_endpoint_answer_matrix" in prompt
+    assert "mixed_endpoint_polarity" in prompt
     assert "mechanism_to_outcome" in prompt
     assert "source_anchor_a" in prompt
     assert "failure_condition" in prompt
@@ -160,6 +173,57 @@ def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> No
     assert "Mechanism evidence increased the risk marker" in prompt
     assert "increased_harm_or_risk_signal" in prompt
     assert "Broad neighboring relation context" not in prompt
+
+
+def test_analyst_adjudication_repairs_source_faithfulness_conflicted_relation(monkeypatch) -> None:
+    ledger = _relation_ledger()
+    ledger["stable_final_answer_frame"] = {
+        "schema_id": "stable_final_answer_frame_v1",
+        "answer_status": "provisional",
+        "current_best_answer": "Treat option A as neutral.",
+    }
+    ledger["rows"][0]["source_bottom_lines"] = [
+        {
+            "source_id": "s1",
+            "source_bottom_line": "Higher exposure was associated with increased downstream risk.",
+            "polarity_signal": "increased_harm_or_risk_signal",
+        }
+    ]
+    ledger["rows"][0]["source_bottom_line_signals"] = ["increased_harm_or_risk_signal"]
+    payload = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": ledger["decision_question"],
+        "rows": [
+            {
+                "evidence_item_id": "relation:r001",
+                "memo_use": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "target_answer_option": "neutral_or_not_meaningfully_harmful",
+                "effect_on_final_answer": "supports current_best_answer",
+                "importance_rank": 1,
+                "rationale": "Treats the relation as support for neutral exposure.",
+            }
+        ],
+        "overall_rationale": "fixture",
+    }
+
+    def fake_backend(prompt, *args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=json.dumps(payload), backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", "1")
+
+    result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
+
+    row = result["analyst_adjudication"]["rows"][0]
+    assert row["memo_use"] == "load_bearing_counterweight"
+    assert row["answer_relation"] == "challenges_answer"
+    assert row["effect_on_final_answer"] == "weakens current_best_answer"
+    repair = result["analyst_source_faithfulness_repair_report"]
+    assert repair["status"] == "repaired"
+    assert repair["warning_count_before"] == 1
+    assert repair["warning_count_after"] == 0
+    assert repair["repaired_evidence_item_ids"] == ["relation:r001"]
 
 
 def test_analyst_adjudication_prompt_backend_scaffolds_all_rows() -> None:
@@ -394,6 +458,95 @@ def test_analyst_adjudication_repairs_missing_salvaged_rows_with_focused_call(mo
     assert result["analyst_adjudication_parse_report"]["valid"] is True
     assert result["analyst_adjudication_chunk_reports"]["missing_row_repair_chunk_count"] == 1
     assert rows["warning:two"]["rationale"] == "Focused retry recovered the omitted warning row."
+
+
+def test_analyst_adjudication_retries_missing_row_repair_rounds(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "2")
+    calls = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if len(calls) <= 2:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "schema_id": "analyst_adjudication_v1",
+                        "decision_question": "Should option A be adopted?",
+                        "rows": [
+                            {
+                                "evidence_item_id": "bundle:one",
+                                "memo_use": "load_bearing_primary_support",
+                                "answer_relation": "supports_answer",
+                                "importance_rank": 1,
+                                "rationale": "The first chunk retained only the support row.",
+                                "source_ids": ["s1"],
+                                "quantity_values": [],
+                            }
+                        ],
+                        "overall_rationale": "Incomplete first pass.",
+                    }
+                ),
+                backend="fake",
+            )
+        if len(calls) <= 4:
+            return ModelBackendResult(
+                text=json.dumps(
+                    {
+                        "schema_id": "analyst_adjudication_v1",
+                        "decision_question": "Should option A be adopted?",
+                        "rows": [],
+                        "overall_rationale": "The first focused repair still omitted the missing row.",
+                    }
+                ),
+                backend="fake",
+            )
+        return ModelBackendResult(
+            text=json.dumps(
+                {
+                    "schema_id": "analyst_adjudication_v1",
+                    "decision_question": "Should option A be adopted?",
+                    "rows": [
+                        {
+                            "evidence_item_id": "warning:two",
+                            "memo_use": "load_bearing_counterweight",
+                            "answer_relation": "challenges_answer",
+                            "importance_rank": 2,
+                            "rationale": "The second focused repair recovered the omitted warning row.",
+                            "source_ids": ["s2"],
+                            "quantity_values": [],
+                        }
+                    ],
+                    "overall_rationale": "Focused repair.",
+                }
+            ),
+            backend="fake",
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+
+    result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
+
+    rows = {row["evidence_item_id"]: row for row in result["analyst_adjudication"]["rows"]}
+    assert result["analyst_adjudication_report"]["status"] == "accepted_after_missing_row_repair"
+    assert result["analyst_adjudication_parse_report"]["valid"] is True
+    assert result["analyst_adjudication_chunk_reports"]["missing_row_repair_round_count"] == 2
+    assert rows["warning:two"]["rationale"] == "The second focused repair recovered the omitted warning row."
+
+
+def test_analyst_adjudication_stage_gate_fails_before_decision_model_on_missing_rows() -> None:
+    with pytest.raises(RuntimeError, match="warning:two"):
+        _assert_analyst_adjudication_complete(
+            {
+                "analyst_adjudication_report": {"status": "model_output_invalid"},
+                "analyst_adjudication_parse_report": {
+                    "schema_id": "analyst_adjudication_parse_report_v1",
+                    "status": "warning",
+                    "valid": False,
+                    "missing_evidence_item_ids": ["warning:two"],
+                    "issues": ["missing_ledger_rows"],
+                },
+            }
+        )
 
 
 def test_single_call_accepts_repairable_model_json(monkeypatch) -> None:

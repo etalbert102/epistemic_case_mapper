@@ -182,7 +182,80 @@ def test_analyst_packet_warns_when_source_bottom_line_conflicts_with_answer_role
         "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer"
     )
     assert "source_faithfulness_warnings_present" in quality["issues"]
-    assert result["analyst_synthesis_packet"]["primary_reasoning_chain"][0]["source_bottom_lines"][0]["source_id"] == "s1"
+    assert not result["analyst_synthesis_packet"]["primary_reasoning_chain"]
+    assert result["analyst_synthesis_packet"]["main_counterweights"][0]["source_bottom_lines"][0]["source_id"] == "s1"
+    quarantine = quality["group_accounting"]["source_faithfulness_quarantine"]
+    assert quarantine["quarantined_group_count"] == 1
+    assert quarantine["quarantined_groups"][0]["to_memo_role"] == "load_bearing_counterweight"
+
+
+def test_analyst_packet_aligns_decision_model_group_with_source_faithfulness_repair() -> None:
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should exposure be treated as neutral?",
+        "rows": [
+            {
+                "evidence_item_id": "relation:risk",
+                "input_kind": "candidate_decision_edge",
+                "source_ids": ["s1"],
+                "claim": "A relation was proposed as support for a neutral answer.",
+                "source_bottom_lines": [
+                    {
+                        "source_id": "s1",
+                        "source_bottom_line": "Higher exposure was associated with increased risk.",
+                        "polarity_signal": "increased_harm_or_risk_signal",
+                    }
+                ],
+                "source_bottom_line_signals": ["increased_harm_or_risk_signal"],
+            }
+        ],
+    }
+    adjudication = {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": "Should exposure be treated as neutral?",
+        "rows": [
+            {
+                "evidence_item_id": "relation:risk",
+                "memo_use": "load_bearing_counterweight",
+                "answer_relation": "challenges_answer",
+                "target_answer_option": "neutral_or_not_meaningfully_harmful",
+                "effect_on_final_answer": "weakens current_best_answer",
+                "importance_rank": 1,
+                "rationale": "Repaired away from primary support.",
+                "source_weight_note": "Source-faithfulness repair routed this row away from primary support.",
+                "misuse_warning": "Do not use this row as primary support for the answer until the source-bottom-line conflict is explicitly resolved.",
+            }
+        ],
+    }
+    decision_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "decision_question": "Should exposure be treated as neutral?",
+        "direct_answer": "Treat exposure as neutral with caveats.",
+        "confidence": "medium",
+        "overall_rationale": "Fixture.",
+        "evidence_groups": [
+            {
+                "group_id": "bad_support_shape",
+                "proposition": "This relation supports a neutral answer.",
+                "memo_role": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "covered_evidence_item_ids": ["relation:risk"],
+                "importance_rank": 1,
+                "rationale": "Support-shaped model output.",
+            }
+        ],
+        "evidence_dispositions": [],
+    }
+
+    result = build_analyst_packet_bundle(packet=_packet(), ledger=ledger, adjudication=adjudication, decision_model=decision_model)
+    packet = result["analyst_synthesis_packet"]
+
+    assert not packet["primary_reasoning_chain"]
+    assert packet["main_counterweights"][0]["group_id"] == "bad_support_shape"
+    assert packet["main_counterweights"][0]["answer_relation"] == "challenges_answer"
+    assert "source-level bottom lines conflict" in packet["main_counterweights"][0]["proposition"]
+    alignment = result["analyst_packet_quality_report"]["group_accounting"]["adjudication_role_alignment"]
+    assert alignment["aligned_group_count"] == 1
 
 
 def test_analyst_packet_prefers_global_decision_model_groups() -> None:

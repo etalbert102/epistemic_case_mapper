@@ -101,7 +101,31 @@ def _run_analyst_adjudication(scaffold: dict[str, Any], ledger: dict[str, Any], 
             backend_retries=backend_config.retries,
         )
     )
+    try:
+        _assert_analyst_adjudication_complete(scaffold)
+    except RuntimeError as exc:
+        _progress(progress, "analyst_adjudication", "failed", _report_status(scaffold, "analyst_adjudication_report") | {"error": str(exc)})
+        raise
     _progress(progress, "analyst_adjudication", "completed", _report_status(scaffold, "analyst_adjudication_report") | {"chunk_count": _chunk_count(scaffold)})
+
+
+def _assert_analyst_adjudication_complete(scaffold: dict[str, Any]) -> None:
+    parse_report = scaffold.get("analyst_adjudication_parse_report")
+    report = scaffold.get("analyst_adjudication_report")
+    if not isinstance(parse_report, dict):
+        raise RuntimeError("analyst_adjudication_failed: missing analyst_adjudication_parse_report")
+    if parse_report.get("valid") is True:
+        return
+    missing_ids = _list_value(parse_report.get("missing_evidence_item_ids"))
+    issues = _list_value(parse_report.get("issues"))
+    status = report.get("status", "unknown") if isinstance(report, dict) else "unknown"
+    detail = {
+        "status": status,
+        "parse_status": parse_report.get("status", "unknown"),
+        "missing_evidence_item_ids": missing_ids,
+        "issues": issues,
+    }
+    raise RuntimeError(f"analyst_adjudication_failed_before_decision_model: {detail}")
 
 
 def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:

@@ -19,6 +19,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
+from epistemic_case_mapper.map_briefing_source_faithfulness import repair_adjudication_source_faithfulness
 
 DEFAULT_CHUNK_SIZE = 2
 
@@ -33,7 +34,10 @@ def run_analyst_adjudication(
     prompt = build_analyst_adjudication_prompt(ledger)
     scaffold = deterministic_adjudication_scaffold(ledger)
     if backend.strip() == "prompt":
+        scaffold, repair_report = repair_adjudication_source_faithfulness(ledger, scaffold)
         parse_report = build_analyst_adjudication_parse_report(scaffold, ledger)
+        report = _report("prompt_backend_scaffold", parse_report)
+        report["source_faithfulness_repair"] = repair_report
         return {
             "analyst_adjudication": scaffold,
             "analyst_adjudication_prompt": prompt,
@@ -43,7 +47,8 @@ def run_analyst_adjudication(
                 [_chunk_report(1, 1, "prompt_backend_scaffold", parse_report)],
                 scaffold_chunk_count=1,
             ),
-            "analyst_adjudication_report": _report("prompt_backend_scaffold", parse_report),
+            "analyst_source_faithfulness_repair_report": repair_report,
+            "analyst_adjudication_report": report,
         }
     return _run_live_adjudication(
         ledger,
@@ -98,34 +103,45 @@ def _run_live_adjudication(
     }
     parse_report = build_analyst_adjudication_parse_report(merged, ledger)
     recovery_results: list[dict[str, Any]] = []
-    if not parse_report.get("valid") and merged_rows and parse_report.get("missing_evidence_item_ids"):
+    recovery_rounds = 0
+    max_recovery_rounds = model_stage_attempts()
+    while (
+        recovery_rounds < max_recovery_rounds
+        and not parse_report.get("valid")
+        and merged_rows
+        and parse_report.get("missing_evidence_item_ids")
+    ):
         missing_ids = _string_list(parse_report.get("missing_evidence_item_ids"))
-        recovery_results = _run_missing_adjudication_chunks(
+        round_results = _run_missing_adjudication_chunks(
             ledger,
             missing_ids=missing_ids,
-            start_index=len(chunks) + 1,
+            start_index=len(chunks) + len(recovery_results) + 1,
             all_ids=all_ids,
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
         )
-        prompts.extend(str(row.get("prompt") or "") for row in recovery_results)
-        raws.extend(str(row.get("raw_block") or "") for row in recovery_results)
+        recovery_rounds += 1
+        recovery_results.extend(round_results)
+        prompts.extend(str(row.get("prompt") or "") for row in round_results)
+        raws.extend(str(row.get("raw_block") or "") for row in round_results)
         merged_rows.extend(
             merged_row
-            for row in recovery_results
+            for row in round_results
             for merged_row in _list(row.get("rows"))
             if isinstance(merged_row, dict)
         )
         chunk_reports.extend(
             row.get("chunk_report")
-            for row in recovery_results
+            for row in round_results
             if isinstance(row.get("chunk_report"), dict)
         )
         merged["rows"] = _order_rows_by_ledger(_dedupe_adjudication_rows(merged_rows), all_ids)
         merged["overall_rationale"] = _merged_rationale(chunk_reports)
         parse_report = build_analyst_adjudication_parse_report(merged, ledger)
     failed_chunk_count = sum(1 for row in [*chunk_results, *recovery_results] if row.get("chunk_failed"))
+    merged, repair_report = repair_adjudication_source_faithfulness(ledger, merged)
+    parse_report = build_analyst_adjudication_parse_report(merged, ledger)
     recovered_missing_rows = bool(recovery_results) and parse_report.get("valid")
     status = (
         "accepted_after_missing_row_repair"
@@ -136,6 +152,12 @@ def _run_live_adjudication(
         if parse_report.get("valid")
         else "model_output_invalid"
     )
+    report = _report(
+        status,
+        parse_report,
+        issues=["one_or_more_chunks_failed_without_fallback"] if failed_chunk_count else [],
+    )
+    report["source_faithfulness_repair"] = repair_report
     return {
         "analyst_adjudication": merged,
         "analyst_adjudication_prompt": "\n\n".join(prompts),
@@ -148,14 +170,12 @@ def _run_live_adjudication(
             "failed_chunk_count": failed_chunk_count,
             "initial_failed_chunk_count": initial_failed_chunk_count,
             "missing_row_repair_chunk_count": len(recovery_results),
+            "missing_row_repair_round_count": recovery_rounds,
             "parallelism": model_parallelism(backend),
             "chunks": chunk_reports,
         },
-        "analyst_adjudication_report": _report(
-            status,
-            parse_report,
-            issues=["one_or_more_chunks_failed_without_fallback"] if failed_chunk_count else [],
-        ),
+        "analyst_source_faithfulness_repair_report": repair_report,
+        "analyst_adjudication_report": report,
     }
 
 
@@ -411,6 +431,10 @@ def run_analyst_adjudication_single_call_for_test(
             ),
         }
     parsed = AnalystAdjudication.model_validate(payload).model_dump()
+    parsed, repair_report = repair_adjudication_source_faithfulness(ledger, parsed)
+    parse_report = build_analyst_adjudication_parse_report(parsed, ledger)
+    report = _report("accepted", parse_report)
+    report["source_faithfulness_repair"] = repair_report
     return {
         "analyst_adjudication": parsed,
         "analyst_adjudication_prompt": prompt,
@@ -420,7 +444,8 @@ def run_analyst_adjudication_single_call_for_test(
             [_chunk_report(1, 1, "accepted", parse_report)],
             scaffold_chunk_count=0,
         ),
-        "analyst_adjudication_report": _report("accepted", parse_report),
+        "analyst_source_faithfulness_repair_report": repair_report,
+        "analyst_adjudication_report": report,
     }
 
 
@@ -447,6 +472,7 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "Use source_bottom_lines and source_bottom_line_signals as source-level polarity context when assigning memo_use, answer_relation, source_weight_note, and misuse_warning.",
             "When a row's claim wording and source_bottom_lines point in different directions, preserve the tension in key_qualifier or misuse_warning and choose the row's memo role from the source-level bottom line.",
             "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
+            "For candidate_decision_edge rows, classify endpoint source bottom lines first, then classify the relation as a reasoning move; do not use a relation as answer support unless the endpoint/source bottom lines support that use or the conflict is explicitly resolved.",
             "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims undercut its proposed decision use.",
             "Return one row for every evidence_item_id.",
             "Use covered_by only when another evidence item or future group explicitly covers the item.",
@@ -585,6 +611,9 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
                 "relation_contract": _relation_contract_for_prompt(row.get("relation_contract", {})),
                 "candidate_pair": _candidate_pair_for_prompt(row.get("candidate_pair", {})),
                 "endpoint_claims": _endpoint_claims_for_prompt(row.get("endpoint_claims", [])),
+                "relation_endpoint_answer_matrix": _relation_endpoint_answer_matrix_for_prompt(
+                    row.get("relation_endpoint_answer_matrix", {})
+                ),
             }
         )
     return {key: value for key, value in prompt.items() if value not in (None, "", [], {})}
@@ -665,6 +694,19 @@ def _endpoint_claims_for_prompt(value: Any) -> list[dict[str, Any]]:
             }
         )
     return rows[:4]
+
+
+def _relation_endpoint_answer_matrix_for_prompt(value: Any) -> dict[str, Any]:
+    matrix = _dict(value)
+    return {
+        key: field
+        for key, field in {
+            "relation_semantic_role": str(matrix.get("relation_semantic_role") or ""),
+            "endpoint_signal_summary": str(matrix.get("endpoint_signal_summary") or ""),
+            "endpoints": _endpoint_claims_for_prompt(matrix.get("endpoints")),
+        }.items()
+        if field not in (None, "", [], {})
+    }
 
 
 def _endpoint_prompt_value(key: str, value: Any) -> Any:

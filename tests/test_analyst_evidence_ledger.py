@@ -266,6 +266,11 @@ def test_analyst_map_evidence_ledger_preserves_source_bottom_line_polarity_conte
         "no_clear_association_signal",
     ]
     assert rows["relation:r001"]["endpoint_claims"][0]["source_bottom_line_signals"] == ["increased_harm_or_risk_signal"]
+    matrix = rows["relation:r001"]["relation_endpoint_answer_matrix"]
+    assert matrix["schema_id"] == "relation_endpoint_answer_matrix_v1"
+    assert matrix["endpoint_signal_summary"] == "mixed_endpoint_polarity"
+    assert matrix["endpoints"][0]["claim_id"] == "c001"
+    assert matrix["endpoints"][1]["claim_id"] == "c002"
 
 
 def test_analyst_map_evidence_ledger_downroutes_population_mismatch_answer_claims() -> None:

@@ -140,6 +140,7 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         ArtifactSpec("analyst_adjudication", "analyst_adjudication.json", "json", _scaffold_value("analyst_adjudication"), review_label="Analyst adjudication"),
         ArtifactSpec("analyst_adjudication_parse_report", "analyst_adjudication_parse_report.json", "json", _scaffold_value("analyst_adjudication_parse_report"), review_label="Analyst adjudication parse report"),
         ArtifactSpec("analyst_adjudication_chunk_reports", "analyst_adjudication_chunk_reports.json", "json", _scaffold_value("analyst_adjudication_chunk_reports"), review_label="Analyst adjudication chunk reports"),
+        ArtifactSpec("analyst_source_faithfulness_repair_report", "analyst_source_faithfulness_repair_report.json", "json", _scaffold_value("analyst_source_faithfulness_repair_report"), review_label="Analyst source-faithfulness repair report"),
         ArtifactSpec("analyst_adjudication_report", "analyst_adjudication_report.json", "json", _scaffold_value("analyst_adjudication_report"), review_label="Analyst adjudication report"),
         ArtifactSpec("analyst_evidence_routing", "analyst_evidence_routing.json", "json", _scaffold_value("analyst_evidence_routing"), review_label="Analyst evidence routing"),
         ArtifactSpec("analyst_evidence_routing_report", "analyst_evidence_routing_report.json", "json", _scaffold_value("analyst_evidence_routing_report"), review_label="Analyst evidence routing report"),

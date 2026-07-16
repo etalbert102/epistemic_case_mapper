@@ -43,6 +43,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
 )
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_reader_packet_contract import build_memo_ready_decision_synthesis_contract
+from epistemic_case_mapper.map_briefing_source_faithfulness import (
+    source_faithfulness_warning_reason as _shared_source_faithfulness_warning_reason,
+    source_faithfulness_warnings as _shared_source_faithfulness_warnings,
+)
 from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
@@ -72,6 +76,17 @@ def build_analyst_packet_bundle(
     groups, group_accounting = build_groups_from_decision_model(decision_model, ledger_by_id)
     if not groups:
         groups, group_accounting = _build_groups(adjudication_rows, ledger_by_id)
+    groups, adjudication_alignment = _align_groups_with_adjudication_roles(groups, adjudication_rows)
+    if adjudication_alignment:
+        group_accounting = dict(group_accounting)
+        group_accounting["adjudication_role_alignment"] = adjudication_alignment
+    groups, source_faithfulness_quarantine = _quarantine_source_faithfulness_conflicts(
+        groups,
+        _source_faithfulness_warnings(ledger, adjudication),
+    )
+    if source_faithfulness_quarantine:
+        group_accounting = dict(group_accounting)
+        group_accounting["source_faithfulness_quarantine"] = source_faithfulness_quarantine
     answer_frame = _build_answer_frame(packet, ledger, adjudication_rows, groups, refinement=refinement, decision_model=decision_model)
     synthesis_packet = _build_synthesis_packet(
         packet=packet,
@@ -209,6 +224,162 @@ def _build_groups(adjudication_rows: list[dict[str, Any]], ledger_by_id: dict[st
         ),
         "foreground_group_count": sum(1 for group in groups if group.get("memo_role") in FOREGROUND_MEMO_USES),
     }
+
+
+def _quarantine_source_faithfulness_conflicts(
+    groups: list[dict[str, Any]],
+    warnings: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    warnings_by_id = {
+        str(warning.get("evidence_item_id") or ""): warning
+        for warning in warnings
+        if isinstance(warning, dict) and str(warning.get("evidence_item_id") or "").strip()
+    }
+    if not warnings_by_id:
+        return groups, {}
+    revised = []
+    quarantined = []
+    for group in groups:
+        if not isinstance(group, dict):
+            revised.append(group)
+            continue
+        evidence_ids = _string_list(group.get("covered_evidence_item_ids"))
+        group_warnings = [warnings_by_id[evidence_id] for evidence_id in evidence_ids if evidence_id in warnings_by_id]
+        if not group_warnings or str(group.get("memo_role") or "") != "load_bearing_primary_support":
+            revised.append(group)
+            continue
+        replacement_role = _quarantine_replacement_role(group_warnings)
+        updated = dict(group)
+        updated["memo_role"] = replacement_role
+        updated["answer_relation"] = _quarantine_replacement_answer_relation(group_warnings, str(group.get("answer_relation") or ""))
+        updated["effect_on_final_answer"] = _quarantine_replacement_effect(group_warnings, str(group.get("effect_on_final_answer") or ""))
+        updated["conflict_note"] = _short_text(
+            "Source-faithfulness warning: this evidence cannot serve as primary support until the source-bottom-line conflict is resolved.",
+            320,
+        )
+        updated["rationale"] = _short_text(
+            " ".join(
+                part
+                for part in (
+                    str(group.get("rationale") or ""),
+                    "Routed away from primary support because source bottom-line polarity conflicts with the assigned answer role.",
+                )
+                if part
+            ),
+            420,
+        )
+        revised.append(updated)
+        quarantined.append(
+            {
+                "group_id": str(group.get("group_id") or ""),
+                "from_memo_role": "load_bearing_primary_support",
+                "to_memo_role": replacement_role,
+                "evidence_item_ids": [warning.get("evidence_item_id") for warning in group_warnings],
+                "warning_reasons": _dedupe([str(warning.get("warning") or "") for warning in group_warnings if warning.get("warning")]),
+            }
+        )
+    return revised, {
+        "schema_id": "source_faithfulness_quarantine_v1",
+        "quarantined_group_count": len(quarantined),
+        "quarantined_groups": quarantined,
+    } if quarantined else {}
+
+
+def _quarantine_replacement_role(warnings: list[dict[str, Any]]) -> str:
+    reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
+        return "load_bearing_counterweight"
+    return "needs_human_or_model_review"
+
+
+def _quarantine_replacement_answer_relation(warnings: list[dict[str, Any]], current: str) -> str:
+    reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
+        return "challenges_answer"
+    return current if current and current != "supports_answer" else "uncertain_relation"
+
+
+def _quarantine_replacement_effect(warnings: list[dict[str, Any]], current: str) -> str:
+    reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
+        return "weakens current_best_answer"
+    return current if current and not current.startswith("supports ") else "explains tension"
+
+
+def _align_groups_with_adjudication_roles(
+    groups: list[dict[str, Any]],
+    adjudication_rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    adjudication_by_id = {
+        str(row.get("evidence_item_id") or ""): row
+        for row in adjudication_rows
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+    }
+    revised = []
+    aligned = []
+    for group in groups:
+        if not isinstance(group, dict):
+            revised.append(group)
+            continue
+        evidence_ids = _string_list(group.get("covered_evidence_item_ids"))
+        repaired_rows = [
+            adjudication_by_id[evidence_id]
+            for evidence_id in evidence_ids
+            if _is_source_faithfulness_repaired_row(adjudication_by_id.get(evidence_id, {}))
+        ]
+        if not repaired_rows:
+            revised.append(group)
+            continue
+        updated = dict(group)
+        updated["memo_role"] = "load_bearing_counterweight"
+        updated["answer_relation"] = "challenges_answer"
+        updated["effect_on_final_answer"] = "weakens current_best_answer"
+        updated["proposition"] = _short_text(
+            "This evidence should bound or challenge the current answer because source-level bottom lines conflict with using it as primary support.",
+            620,
+        )
+        updated["conflict_note"] = _short_text(
+            "Aligned with source-faithfulness-repaired adjudication rows: "
+            + "; ".join(str(row.get("evidence_item_id") or "") for row in repaired_rows),
+            320,
+        )
+        updated["rationale"] = _short_text(
+            " ".join(
+                part
+                for part in (
+                    str(group.get("rationale") or ""),
+                    "The group role follows repaired adjudication labels rather than support-shaped relation wording.",
+                )
+                if part
+            ),
+            420,
+        )
+        revised.append(updated)
+        aligned.append(
+            {
+                "group_id": str(group.get("group_id") or ""),
+                "evidence_item_ids": [str(row.get("evidence_item_id") or "") for row in repaired_rows],
+                "to_memo_role": "load_bearing_counterweight",
+                "reason": "source_faithfulness_repaired_adjudication",
+            }
+        )
+    return revised, {
+        "schema_id": "adjudication_role_alignment_v1",
+        "aligned_group_count": len(aligned),
+        "aligned_groups": aligned,
+    } if aligned else {}
+
+
+def _is_source_faithfulness_repaired_row(row: dict[str, Any]) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if str(row.get("memo_use") or "") != "load_bearing_counterweight":
+        return False
+    if str(row.get("answer_relation") or "") != "challenges_answer":
+        return False
+    return "Source-faithfulness repair" in str(row.get("source_weight_note") or "") or "source-bottom-line conflict" in str(
+        row.get("misuse_warning") or ""
+    )
 
 
 def _build_answer_frame(
@@ -553,56 +724,11 @@ def _weak_group_proposition(text: str) -> bool:
 
 
 def _source_faithfulness_warnings(ledger: dict[str, Any], adjudication: dict[str, Any]) -> list[dict[str, Any]]:
-    ledger_by_id = {
-        str(row.get("evidence_item_id") or ""): row
-        for row in _list(ledger.get("rows"))
-        if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
-    }
-    warnings = []
-    for row in _list(adjudication.get("rows")):
-        if not isinstance(row, dict):
-            continue
-        evidence_id = str(row.get("evidence_item_id") or "")
-        ledger_row = ledger_by_id.get(evidence_id, {})
-        reason = _source_faithfulness_warning_reason(ledger_row, row)
-        if not reason:
-            continue
-        warnings.append(
-            {
-                "evidence_item_id": evidence_id,
-                "warning": reason,
-                "memo_use": row.get("memo_use"),
-                "answer_relation": row.get("answer_relation"),
-                "target_answer_option": row.get("target_answer_option"),
-                "source_bottom_line_signals": _string_list(ledger_row.get("source_bottom_line_signals")),
-                "source_bottom_lines": _list(ledger_row.get("source_bottom_lines"))[:3],
-            }
-        )
-    return warnings[:24]
+    return _shared_source_faithfulness_warnings(ledger, adjudication)
 
 
 def _source_faithfulness_warning_reason(ledger_row: dict[str, Any], adjudication_row: dict[str, Any]) -> str:
-    signals = set(_string_list(ledger_row.get("source_bottom_line_signals")))
-    if not signals:
-        return ""
-    memo_use = str(adjudication_row.get("memo_use") or "")
-    answer_relation = str(adjudication_row.get("answer_relation") or "")
-    target = " ".join(
-        [
-            str(adjudication_row.get("target_answer_option") or ""),
-            str(adjudication_row.get("effect_on_final_answer") or ""),
-            str(adjudication_row.get("rationale") or ""),
-        ]
-    ).lower()
-    support_like = memo_use == "load_bearing_primary_support" or answer_relation == "supports_answer"
-    counter_like = memo_use == "load_bearing_counterweight" or answer_relation == "challenges_answer"
-    neutral_or_benefit_target = any(term in target for term in ("neutral", "benefit", "beneficial", "safe", "not harmful", "not meaningfully harmful"))
-    harmful_target = any(term in target for term in ("harmful", "risk", "unsafe", "worse", "higher harm"))
-    if "increased_harm_or_risk_signal" in signals and support_like and neutral_or_benefit_target:
-        return "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer"
-    if {"no_clear_association_signal", "reduced_harm_or_risk_signal"} & signals and counter_like and harmful_target:
-        return "source_bottom_line_does_not_show_harm_but_row_challenges_as_harmful"
-    return ""
+    return _shared_source_faithfulness_warning_reason(ledger_row, adjudication_row)
 
 
 def _group_from_row(index: int, adjudication_row: dict[str, Any], ledger_row: dict[str, Any]) -> dict[str, Any]:
