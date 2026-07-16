@@ -191,7 +191,6 @@ def _source_weighting_section(packet: dict[str, Any]) -> str:
     hierarchy_section = render_source_hierarchy_section(
         _dict(canonical.get("source_hierarchy"))
         or _dict(packet.get("analyst_source_hierarchy"))
-        or _dict(guidance.get("source_hierarchy"))
     )
     if hierarchy_section:
         return hierarchy_section

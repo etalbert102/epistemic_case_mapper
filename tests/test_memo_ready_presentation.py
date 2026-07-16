@@ -245,7 +245,7 @@ def test_presentation_source_weighting_section_uses_source_weight_judgments() ->
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
 
 
-def test_presentation_source_weighting_prefers_lightweight_source_hierarchy() -> None:
+def test_presentation_source_weighting_uses_analyst_hierarchy_and_ignores_stale_guidance_hierarchy() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",
         "source_trail": [
