@@ -291,22 +291,30 @@ def _nearest_known_source_id(source_id: str, known_source_ids: set[str]) -> str:
 
 
 def _combined_section_prompts(section_plan: dict[str, Any], *, whole_prompt: str) -> str:
+    section_manifest = []
+    for section in _list(section_plan.get("sections")):
+        if not isinstance(section, dict):
+            continue
+        prompt = str(section.get("prompt") or "")
+        packet = section.get("packet") if isinstance(section.get("packet"), dict) else {}
+        section_manifest.append(
+            {
+                "section_id": section.get("section_id"),
+                "heading": section.get("heading"),
+                "prompt_chars": len(prompt),
+                "packet_chars": len(json.dumps(packet, ensure_ascii=False)) if packet else 0,
+                "model_call": "parallel_section_synthesis",
+            }
+        )
     lines = [
         "Parallel section synthesis prompts.",
         "",
         "Whole-memo fallback prompt retained for artifact comparison:",
         whole_prompt.strip(),
+        "",
+        "Parallel section prompt manifest:",
+        json.dumps(section_manifest, indent=2, ensure_ascii=False),
     ]
-    for section in _list(section_plan.get("sections")):
-        if not isinstance(section, dict):
-            continue
-        lines.extend(
-            [
-                "",
-                f"--- SECTION PROMPT: {section.get('heading')} ---",
-                str(section.get("prompt") or "").strip(),
-            ]
-        )
     return "\n".join(lines).strip() + "\n"
 
 

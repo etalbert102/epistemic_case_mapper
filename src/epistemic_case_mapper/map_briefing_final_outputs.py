@@ -310,12 +310,13 @@ def _memo_ready_rewrite_result(synthesis_result: dict[str, Any]) -> dict[str, An
             "memo_ready_packet_path": True,
             "pass_count": 1,
             "section_context_acceptance_status": "ready",
+            "prompt_artifact_policy": "pass_through_no_separate_reader_rewrite_prompt",
         }
     )
     return {
         "memo": synthesis_result.get("memo", ""),
-        "prompt": synthesis_result.get("prompt", ""),
-        "raw": synthesis_result.get("raw", ""),
+        "prompt": "",
+        "raw": "",
         "report": report,
     }
 

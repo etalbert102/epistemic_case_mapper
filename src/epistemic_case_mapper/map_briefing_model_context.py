@@ -196,10 +196,13 @@ def _active_prompt_records(
 
 
 def _active_prompt_record(stage: str, prompt: str, *, sent_to_model: bool, path: Path | None = None) -> dict[str, Any]:
+    aggregate = _aggregate_prompt_artifact(prompt)
+    effective_sent_to_model = sent_to_model and not aggregate
     flags = _active_prompt_pollution_flags(stage, prompt)
-    return {
+    record = {
         "stage": stage,
-        "sent_to_model": sent_to_model,
+        "sent_to_model": effective_sent_to_model,
+        "aggregate_prompt_artifact": aggregate,
         "prompt_chars": len(prompt),
         "prompt_words": len(prompt.split()),
         "approx_tokens": max(1, len(prompt) // 4),
@@ -207,6 +210,9 @@ def _active_prompt_record(stage: str, prompt: str, *, sent_to_model: bool, path:
         "pollution_flags": flags,
         "field_hits": _field_hits(prompt),
     }
+    if aggregate:
+        record["aggregate_prompt_stats"] = _aggregate_prompt_stats(prompt)
+    return record
 
 
 def _read_prompt_path(path: Path) -> str:
@@ -219,9 +225,10 @@ def _read_prompt_path(path: Path) -> str:
 def _active_prompt_pollution_flags(stage: str, prompt: str) -> list[str]:
     text = prompt.lower()
     flags: list[str] = []
-    if len(prompt) > 120_000:
+    aggregate = _aggregate_prompt_artifact(prompt)
+    if len(prompt) > 120_000 and not aggregate:
         flags.append("oversized_model_context")
-    if len(prompt) > 80_000 and any(name in stage for name in ("quantity", "repair", "polish", "synthesis")):
+    if len(prompt) > 80_000 and not aggregate and any(name in stage for name in ("quantity", "repair", "polish", "synthesis")):
         flags.append("stage_context_likely_too_broad")
     if "excluded_evidence_log" in text or "lineage_report" in text:
         flags.append("writer_debug_record_visible")
@@ -236,6 +243,42 @@ def _active_prompt_pollution_flags(stage: str, prompt: str) -> list[str]:
     if _polarity_context_missing(text):
         flags.append("answer_frame_context_missing_for_polarity_labels")
     return list(dict.fromkeys(flags))
+
+
+def _aggregate_prompt_artifact(prompt: str) -> bool:
+    text = str(prompt or "")
+    return text.startswith("Parallel section synthesis prompts.") or "<!-- section polish:" in text or "<!-- analyst adjudication chunk " in text
+
+
+def _aggregate_prompt_stats(prompt: str) -> dict[str, Any]:
+    text = str(prompt or "")
+    parts: list[str] = []
+    if "<!-- section polish:" in text:
+        parts = re.split(r"(?=<!-- section polish:)", text)
+    elif "<!-- analyst adjudication chunk " in text:
+        parts = re.split(r"(?=<!-- analyst adjudication chunk )", text)
+    elif text.startswith("Parallel section synthesis prompts."):
+        match = re.search(r"Parallel section prompt manifest:\n(?P<manifest>\[.*\])\s*\Z", text, flags=re.DOTALL)
+        if match:
+            try:
+                manifest = json.loads(match.group("manifest"))
+            except json.JSONDecodeError:
+                manifest = []
+            prompt_chars = [int(row.get("prompt_chars") or 0) for row in manifest if isinstance(row, dict)]
+            return _prompt_char_stats(prompt_chars)
+    return _prompt_char_stats([len(part) for part in parts if part.strip()])
+
+
+def _prompt_char_stats(prompt_chars: list[int]) -> dict[str, Any]:
+    values = [value for value in prompt_chars if value > 0]
+    if not values:
+        return {"model_call_count": 0}
+    return {
+        "model_call_count": len(values),
+        "min_prompt_chars": min(values),
+        "max_prompt_chars": max(values),
+        "average_prompt_chars": round(sum(values) / len(values), 1),
+    }
 
 
 def _polarity_context_missing(text: str) -> bool:
