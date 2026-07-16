@@ -45,9 +45,21 @@ def run_parallel_analyst_decision_model(
     backend_retries: int,
     num_predict: int,
     run_backend: Callable[..., Any],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     started = time.monotonic()
     tasks = build_decision_model_tasks(context)
+    _emit_progress(
+        progress,
+        "analyst_decision_model_tasks",
+        "started",
+        {
+            "task_count": len(tasks),
+            "row_count": len(_rows(context)),
+            "task_size": _task_size(None),
+            "parallelism": model_parallelism(backend),
+        },
+    )
     task_results = run_parallel(
         tasks,
         lambda task: _run_task(
@@ -57,8 +69,20 @@ def run_parallel_analyst_decision_model(
             backend_retries=backend_retries,
             num_predict=num_predict,
             run_backend=run_backend,
+            progress=progress,
         ),
         max_workers=model_parallelism(backend),
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_tasks",
+        "completed",
+        {
+            "task_count": len(tasks),
+            "parsed_count": sum(1 for row in task_results if row.get("status") == "parsed"),
+            "failed_count": sum(1 for row in task_results if row.get("status") != "parsed"),
+            "wall_seconds": round(time.monotonic() - started, 3),
+        },
     )
     payloads = [row.get("payload") for row in task_results if isinstance(row.get("payload"), dict) and row.get("status") == "parsed"]
     merged = merge_decision_model_payloads(context, payloads)
@@ -70,6 +94,7 @@ def run_parallel_analyst_decision_model(
         backend_retries=backend_retries,
         num_predict=num_predict,
         run_backend=run_backend,
+        progress=progress,
     )
     merged["source_hierarchy"] = hierarchy_result["source_hierarchy"]
     merged["source_hierarchy_report"] = hierarchy_result["source_hierarchy_report"]
@@ -203,9 +228,16 @@ def _run_global_source_hierarchy_task(
     backend_retries: int,
     num_predict: int,
     run_backend: Callable[..., Any],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     prompt = build_global_source_hierarchy_prompt(context, merged_model)
     started = time.monotonic()
+    _emit_progress(
+        progress,
+        "analyst_source_hierarchy_task",
+        "started",
+        {"prompt_chars": len(prompt), "source_count": len(_context_source_ids(context))},
+    )
     try:
         result = run_backend(
             prompt,
@@ -225,6 +257,18 @@ def _run_global_source_hierarchy_task(
         error = str(exc)
     else:
         error = ""
+    _emit_progress(
+        progress,
+        "analyst_source_hierarchy_task",
+        "completed" if status == "parsed" else "failed",
+        {
+            "task_status": status,
+            "prompt_chars": len(prompt),
+            "raw_chars": len(raw),
+            "wall_seconds": round(time.monotonic() - started, 3),
+            **({"error": _short_text(error, 240)} if error else {}),
+        },
+    )
     hierarchy, report = normalize_source_hierarchy(
         payload if isinstance(payload, dict) else {},
         allowed_source_ids=_context_source_ids(context),
@@ -353,6 +397,7 @@ def _run_task(
     backend_retries: int,
     num_predict: int,
     run_backend: Callable[..., Any],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     prompt = build_decision_model_task_prompt(task)
     started = time.monotonic()
@@ -360,19 +405,49 @@ def _run_task(
     raw = ""
     attempts = model_stage_attempts()
     for attempt in range(1, attempts + 1):
+        _emit_progress(
+            progress,
+            "analyst_decision_model_task",
+            "started" if attempt == 1 else "retry_started",
+            _task_progress_details(task, prompt, attempt=attempt),
+        )
         try:
             result = run_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries, num_predict=max(2048, min(num_predict, _task_num_predict())))
         except RuntimeError as exc:
             retry_reports.append({"attempt": attempt, "status": "backend_error", "error": str(exc)})
             if attempt < attempts:
+                _emit_progress(
+                    progress,
+                    "analyst_decision_model_task",
+                    "retry_needed",
+                    _task_progress_details(task, prompt, attempt=attempt, status="backend_error", wall_seconds=round(time.monotonic() - started, 3), error=str(exc)),
+                )
                 continue
+            _emit_progress(
+                progress,
+                "analyst_decision_model_task",
+                "failed",
+                _task_progress_details(task, prompt, attempt=attempt, status="backend_error", wall_seconds=round(time.monotonic() - started, 3), error=str(exc)),
+            )
             return _task_result(task, "backend_error", prompt, "", started, issues=[str(exc)], retry_reports=retry_reports)
         raw = str(getattr(result, "text", result))
         payload = _extract_json(raw)
         status = "parsed" if isinstance(payload, dict) and payload.get("schema_id") == "analyst_decision_model_v1" else "parse_failed"
         retry_reports.append({"attempt": attempt, "status": status})
         if status == "parsed":
+            _emit_progress(
+                progress,
+                "analyst_decision_model_task",
+                "completed",
+                _task_progress_details(task, prompt, attempt=attempt, status=status, raw_chars=len(raw), wall_seconds=round(time.monotonic() - started, 3)),
+            )
             return _task_result(task, status, prompt, raw, started, payload=payload, retry_reports=retry_reports)
+        _emit_progress(
+            progress,
+            "analyst_decision_model_task",
+            "retry_needed" if attempt < attempts else "failed",
+            _task_progress_details(task, prompt, attempt=attempt, status=status, raw_chars=len(raw), wall_seconds=round(time.monotonic() - started, 3)),
+        )
     return _task_result(task, "parse_failed", prompt, raw, started, retry_reports=retry_reports)
 
 
@@ -400,6 +475,53 @@ def _task_result(
         "attempt_count": len(retry_reports or []),
         "retry_reports": retry_reports or [],
     }
+
+
+def _task_progress_details(
+    task: dict[str, Any],
+    prompt: str,
+    *,
+    attempt: int,
+    status: str = "",
+    raw_chars: int = 0,
+    wall_seconds: float | None = None,
+    error: str = "",
+) -> dict[str, Any]:
+    details: dict[str, Any] = {
+        "substage": "analyst_decision_model_task",
+        "task_id": task.get("task_id"),
+        "row_count": len(_list(task.get("evidence_rows"))),
+        "evidence_item_ids": [
+            str(row.get("evidence_item_id") or "")
+            for row in _list(task.get("evidence_rows"))
+            if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+        ],
+        "attempt": attempt,
+        "prompt_chars": len(prompt),
+    }
+    if status:
+        details["task_status"] = status
+    if raw_chars:
+        details["raw_chars"] = raw_chars
+    if wall_seconds is not None:
+        details["wall_seconds"] = wall_seconds
+    if error:
+        details["error"] = _short_text(error, 240)
+    return details
+
+
+def _emit_progress(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    substage: str,
+    status: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    if progress is None:
+        return
+    try:
+        progress("decision_packet_substage", status, {"substage": substage, **(details or {})})
+    except Exception:
+        return
 
 
 def _rows(context: dict[str, Any]) -> list[dict[str, Any]]:

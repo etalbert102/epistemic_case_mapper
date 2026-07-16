@@ -4,7 +4,7 @@ import json
 import os
 import re
 from collections import Counter
-from typing import Any
+from typing import Any, Callable
 
 from pydantic import ValidationError
 
@@ -57,6 +57,7 @@ def run_analyst_decision_model(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
     context = build_analyst_decision_context(ledger=ledger, adjudication=adjudication, evidence_routing=evidence_routing)
     prompt = build_analyst_decision_model_prompt(context)
@@ -78,6 +79,7 @@ def run_analyst_decision_model(
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
+            progress=progress,
         )
     retry_reports: list[dict[str, Any]] = []
     raw = ""
@@ -85,6 +87,17 @@ def run_analyst_decision_model(
     parse_report: dict[str, Any] = {}
     attempts = model_stage_attempts()
     for attempt in range(1, attempts + 1):
+        _emit_progress(
+            progress,
+            "analyst_decision_model_call",
+            "started" if attempt == 1 else "retry_started",
+            {
+                "attempt": attempt,
+                "row_count": len(_list(context.get("evidence_rows"))),
+                "prompt_chars": len(prompt),
+                "num_predict": analyst_decision_model_num_predict(context),
+            },
+        )
         try:
             result = run_model_backend(
                 prompt,
@@ -97,7 +110,19 @@ def run_analyst_decision_model(
             parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
             retry_reports.append(model_retry_report(attempt, "backend_error", parse_report, str(exc)))
             if attempt < attempts:
+                _emit_progress(
+                    progress,
+                    "analyst_decision_model_call",
+                    "retry_needed",
+                    {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
+                )
                 continue
+            _emit_progress(
+                progress,
+                "analyst_decision_model_call",
+                "failed",
+                {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
+            )
             return {
                 "analyst_decision_context": context,
                 "analyst_decision_model": _invalid_decision_model(context),
@@ -112,7 +137,31 @@ def run_analyst_decision_model(
         parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
         retry_reports.append(model_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
         if parse_report.get("valid"):
+            _emit_progress(
+                progress,
+                "analyst_decision_model_call",
+                "completed",
+                {
+                    "attempt": attempt,
+                    "call_status": "accepted",
+                    "raw_chars": len(raw),
+                    "group_count": len(_list(payload.get("evidence_groups") if isinstance(payload, dict) else [])),
+                    "disposition_count": len(_list(payload.get("evidence_dispositions") if isinstance(payload, dict) else [])),
+                },
+            )
             break
+        _emit_progress(
+            progress,
+            "analyst_decision_model_call",
+            "retry_needed" if attempt < attempts else "failed",
+            {
+                "attempt": attempt,
+                "call_status": "invalid",
+                "raw_chars": len(raw),
+                "issue_count": len(_list(parse_report.get("issues"))),
+                "missing_evidence_item_count": len(_list(parse_report.get("missing_evidence_item_ids"))),
+            },
+        )
     if not parse_report.get("valid"):
         return {
             "analyst_decision_context": context,
@@ -130,6 +179,7 @@ def run_analyst_decision_model(
     parsed = AnalystDecisionModel.model_validate(apply_routed_away_accounting(payload, context)).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     parsed = attach_normalized_source_hierarchy(parsed, context)
+    _emit_progress(progress, "analyst_decision_model_repair", "started", {"initial_status": parse_report.get("status")})
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -139,6 +189,16 @@ def run_analyst_decision_model(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         num_predict=analyst_decision_model_num_predict(context),
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_repair",
+        "completed",
+        {
+            "accepted": bool(repair.get("accepted")),
+            "status": repair.get("status") or repair.get("report", {}).get("status"),
+            "issue_count": len(_list(repair.get("issues"))),
+        },
     )
     final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
     final_model, ranking_guard = _apply_ranking_guard(final_model, context)
@@ -170,7 +230,14 @@ def _run_parallel_decision_model_candidate(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
 ) -> dict[str, Any]:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_parallel",
+        "started",
+        {"row_count": len(_list(context.get("evidence_rows"))), "parallelism": int(os.environ.get("ECM_MODEL_PARALLELISM", "0") or 0) or None},
+    )
     parallel = run_parallel_analyst_decision_model(
         context=context,
         backend=backend,
@@ -178,6 +245,18 @@ def _run_parallel_decision_model_candidate(
         backend_retries=backend_retries,
         num_predict=analyst_decision_model_num_predict(context),
         run_backend=run_model_backend,
+        progress=progress,
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_parallel",
+        "completed",
+        {
+            "task_count": parallel.get("report", {}).get("task_count"),
+            "parsed_count": parallel.get("report", {}).get("parsed_count"),
+            "failed_count": parallel.get("report", {}).get("failed_count"),
+            "wall_seconds": parallel.get("report", {}).get("wall_seconds"),
+        },
     )
     payload = apply_routed_away_accounting(parallel["payload"], context)
     parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
@@ -196,6 +275,7 @@ def _run_parallel_decision_model_candidate(
     parsed = AnalystDecisionModel.model_validate(payload).model_dump()
     parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
     parsed = attach_normalized_source_hierarchy(parsed, context)
+    _emit_progress(progress, "analyst_decision_model_repair", "started", {"initial_status": parse_report.get("status"), "parallel": True})
     repair = run_analyst_decision_model_repair(
         initial_model=parsed,
         initial_parse_report=parse_report,
@@ -205,6 +285,17 @@ def _run_parallel_decision_model_candidate(
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         num_predict=analyst_decision_model_num_predict(context),
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_repair",
+        "completed",
+        {
+            "parallel": True,
+            "accepted": bool(repair.get("accepted")),
+            "status": repair.get("status") or repair.get("report", {}).get("status"),
+            "issue_count": len(_list(repair.get("issues"))),
+        },
     )
     final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
     final_model, ranking_guard = _apply_ranking_guard(final_model, context)
@@ -232,6 +323,20 @@ def _parallel_status(parse_report: dict[str, Any], repair: dict[str, Any]) -> st
     if repair.get("accepted"):
         return "accepted_parallel_after_repair" if parse_report.get("status") == "ready" else "accepted_parallel_after_repair_with_warnings"
     return "accepted_parallel" if parse_report.get("status") == "ready" else "accepted_parallel_with_warnings"
+
+
+def _emit_progress(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    substage: str,
+    status: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    if progress is None:
+        return
+    try:
+        progress("decision_packet_substage", status, {"substage": substage, **(details or {})})
+    except Exception:
+        return
 
 
 def analyst_decision_model_num_predict(context: dict[str, Any] | None = None) -> int:

@@ -589,6 +589,7 @@ def test_decision_model_ranking_guard_promotes_quantified_decision_anchor(monkey
 
 def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> None:
     calls = []
+    progress_events = []
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         calls.append(prompt)
@@ -628,12 +629,16 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
+    def progress(stage: str, status: str, details: dict | None = None) -> None:
+        progress_events.append((stage, status, details or {}))
+
     result = run_analyst_decision_model(
         ledger=_large_ledger(14),
         adjudication=_large_adjudication(14),
         backend="fake",
         backend_timeout=30,
         backend_retries=0,
+        progress=progress,
     )
 
     assert len(calls) == 5
@@ -645,6 +650,10 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
     assert result["analyst_decision_model_parse_report"]["covered_evidence_item_count"] == 14
     assert all("answer_relation_type" not in group for group in result["analyst_decision_model"]["evidence_groups"])
     assert result["analyst_decision_model"]["evidence_groups"][0]["answer_relation"] == "supports_answer"
+    task_events = [event for event in progress_events if event[2].get("substage") == "analyst_decision_model_task"]
+    assert [event[1] for event in task_events].count("started") == 4
+    assert [event[1] for event in task_events].count("completed") == 4
+    assert any(event[2].get("substage") == "analyst_source_hierarchy_task" and event[1] == "completed" for event in progress_events)
 
 
 def test_decision_model_parse_normalizes_common_model_alias_fields() -> None:

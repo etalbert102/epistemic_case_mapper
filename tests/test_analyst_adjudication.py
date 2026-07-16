@@ -275,7 +275,12 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", "1")
     monkeypatch.setenv("ECM_MODEL_PARALLELISM", "2")
 
-    result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
+    progress_events = []
+
+    def progress(stage: str, status: str, details: dict | None = None) -> None:
+        progress_events.append((stage, status, details or {}))
+
+    result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0, progress=progress)
 
     assert result["analyst_adjudication_report"]["status"] == "accepted"
     assert result["analyst_adjudication_chunk_reports"]["chunk_count"] == 2
@@ -284,6 +289,10 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     assert result["analyst_adjudication_parse_report"]["valid"] is True
     assert result["analyst_adjudication"]["rows"][1]["memo_use"] == "load_bearing_counterweight"
     assert result["analyst_adjudication"]["rows"][0]["decision_contribution"] == "This is the main observed benefit of option A."
+    chunk_events = [event for event in progress_events if event[2].get("substage") == "analyst_adjudication_chunk"]
+    assert [event[1] for event in chunk_events].count("started") == 2
+    assert [event[1] for event in chunk_events].count("completed") == 2
+    assert {event[2]["chunk_index"] for event in chunk_events if event[1] == "completed"} == {1, 2}
 
 
 def test_analyst_adjudication_default_chunk_size_is_two(monkeypatch) -> None:

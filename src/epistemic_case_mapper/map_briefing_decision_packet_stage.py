@@ -99,6 +99,7 @@ def _run_analyst_adjudication(scaffold: dict[str, Any], ledger: dict[str, Any], 
             backend=backend_config.backend,
             backend_timeout=backend_config.timeout,
             backend_retries=backend_config.retries,
+            progress=progress,
         )
     )
     try:
@@ -153,6 +154,7 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
             backend=backend_config.backend,
             backend_timeout=backend_config.timeout,
             backend_retries=backend_config.retries,
+            progress=progress,
         )
     )
     _progress(progress, "analyst_decision_model", "completed", _analyst_decision_model_details(scaffold))
