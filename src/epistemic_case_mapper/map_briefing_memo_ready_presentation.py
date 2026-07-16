@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
+from epistemic_case_mapper.map_briefing_citation_dedupe import dedupe_linked_citation_clusters, dedupe_reference_citation_runs
 from epistemic_case_mapper.map_briefing_lightweight_guidance import evidence_quality_caveat_text
 from epistemic_case_mapper.map_briefing_model_source_weighting_presentation import render_model_source_weighting_section
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -62,13 +63,21 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("linked_inline_citations_to_trace")
         normalized = next_memo
-    next_memo = _dedupe_linked_citation_clusters(normalized)
+    next_memo = dedupe_linked_citation_clusters(normalized)
     if next_memo != normalized:
         changes.append("deduplicated_inline_citations")
         normalized = next_memo
     next_memo = _strip_inline_citation_trace_links(normalized)
     if next_memo != normalized:
         changes.append("converted_inline_citations_to_reference_style")
+        normalized = next_memo
+    citation_displays = [
+        entry.get("citation_display") or entry.get("inline_display") or entry.get("source_display")
+        for entry in _canonical_source_entries(packet)
+    ]
+    next_memo = dedupe_reference_citation_runs(normalized, citation_displays)
+    if next_memo != normalized:
+        changes.append("deduplicated_reference_citations")
         normalized = next_memo
     next_memo = _replace_sources_section(normalized, packet)
     if next_memo != normalized:
@@ -481,36 +490,6 @@ def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_
 
     linked = re.sub(r"\(([^\(\)\n]{1,260})\)", replace_parenthetical, memo)
     return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace_bracketed, linked)
-
-
-def _dedupe_linked_citation_clusters(memo: str) -> str:
-    link_pattern = re.compile(r"\[[^\]\n]+\]\([^\)\n]+\)")
-
-    def replace(match: re.Match[str]) -> str:
-        content = match.group(1)
-        links = link_pattern.findall(content)
-        if len(links) == 1 and content.strip() == links[0]:
-            return links[0]
-        if len(links) < 2:
-            return match.group(0)
-        deduped = _dedupe_by_norm(links)
-        if len(deduped) == 1:
-            return deduped[0]
-        return "; ".join(deduped)
-
-    return re.sub(r"\[((?:\[[^\]\n]+\]\([^\)\n]+\)(?:\s*(?:;|,)\s*)?)+)\]", replace, memo)
-
-
-def _dedupe_by_norm(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    deduped = []
-    for value in values:
-        marker = _norm(value)
-        if not marker or marker in seen:
-            continue
-        seen.add(marker)
-        deduped.append(value)
-    return deduped
 
 
 def _skip_parenthetical_citation_link(content: str) -> bool:

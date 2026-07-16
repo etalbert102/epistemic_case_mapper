@@ -33,6 +33,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
     top = _dict(packet.get("top_context"))
     focus = _dict(packet.get("section_focus"))
     role = _dict(packet.get("section_role_contract"))
+    guidance_application = _dict(packet.get("reader_guidance_application"))
     lines = [
         f"Known source IDs: {', '.join(known_source_ids)}",
         "",
@@ -46,6 +47,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         "",
         "### Section job",
         *_bullet_list(role.get("do")),
+        *_section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application)),
         *_section("### Avoid", _bullet_list(role.get("avoid"))),
         *_section("### Calibration limits", _bullet_list(top.get("must_not_overstate"))),
         *_section("### Required evidence points", _source_bound_atom_lines(packet.get("source_bound_evidence_atoms"))),
@@ -59,7 +61,10 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         *_section("### Additional evidence context", _evidence_context_lines(packet.get("evidence_context"))),
         *_section("### Source weighting notes", _source_weighting_lines(packet.get("source_weighting"))),
         *_section("### Decision cruxes, thresholds, and update triggers", _decision_usefulness_lines(top.get("decision_usefulness"))),
-        *_section("### Writing guidance, caveats, and quantity risks", _lightweight_guidance_lines(top.get("lightweight_writer_guidance"))),
+        *_section(
+            "### Writing guidance, caveats, and quantity risks",
+            _lightweight_guidance_lines(top.get("lightweight_writer_guidance")) if not guidance_application else [],
+        ),
         *_section("### Source language and use limits", _language_contract_lines(top.get("evidence_language_contracts"))),
         *_section("### Suggested paragraph flow", _numbered_list(focus.get("paragraph_shape"))),
     ]
@@ -287,6 +292,40 @@ def _lightweight_guidance_lines(value: Any) -> list[str]:
     rows.extend(_guidance_rows(guidance.get("evidence_quality_caveats"), "Caveat"))
     rows.extend(_quantity_risk_rows(guidance.get("quantity_wording_risks")))
     rows.extend(_bullet_list(guidance.get("do_not_overstate"), prefix="Do not overstate: "))
+    return rows
+
+
+def _reader_guidance_application_lines(value: Any) -> list[str]:
+    application = _dict(value)
+    rows = []
+    if strategy := _text(application.get("section_strategy")):
+        rows.append(_bullet(f"Strategy: {strategy}"))
+    if foreground := _text(application.get("foreground")):
+        rows.append(_bullet(f"Foreground: {foreground}"))
+    if caveat := _text(application.get("caveat_handling")):
+        rows.append(_bullet(f"Caveat handling: {caveat}"))
+    if repeat := _text(application.get("repeat_control")):
+        rows.append(_bullet(f"Repeat control: {repeat}"))
+    rows.extend(_applied_guidance_rows(application.get("matched_reader_guidance"), "Use"))
+    rows.extend(_applied_guidance_rows(application.get("matched_quantity_wording_risks"), "Quantity wording"))
+    return rows
+
+
+def _applied_guidance_rows(value: Any, label: str) -> list[str]:
+    rows = []
+    for item in _dict_rows(value)[:4]:
+        line = "; ".join(
+            part
+            for part in (
+                f"{label}: {_text(item.get('instruction'))}",
+                f"Why: {_text(item.get('why_it_matters'))}" if _text(item.get("why_it_matters")) else "",
+                f"Safe wording: {_text(item.get('safe_wording'))}" if _text(item.get("safe_wording")) else "",
+                _citations(item),
+            )
+            if part and not part.endswith(": ")
+        )
+        if line:
+            rows.append(_bullet(line))
     return rows
 
 

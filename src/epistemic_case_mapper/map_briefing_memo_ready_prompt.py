@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_source_bound_evidence import (
     quantity_binding_rows,
     source_bound_quantity_tuples,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_guidance_application import build_section_reader_guidance_application
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
 from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_contract, build_source_weighting_flow_audit, build_source_weighting_section_packet
@@ -182,8 +183,6 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         },
         "citation_registry": packet.get("citation_registry"),
     }
-
-
 def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
     packets = []
     source_weighting = build_source_weighting_section_packet(reader_packet)
@@ -209,6 +208,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_role_contract": _section_role_contract(heading),
                     "section_focus": _section_focus(section_id),
                     "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
+                    "reader_guidance_application": _guidance_application(reader_packet, raw, section_id),
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
@@ -221,8 +221,6 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
             )
         )
     return packets
-
-
 def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], source_weighting: dict[str, Any]) -> dict[str, Any]:
     return _drop_empty(
         {
@@ -232,11 +230,14 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
             "section_role_contract": _section_role_contract("How to Weight the Evidence"),
             "section_focus": _section_focus("source_weighting"),
             "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
+            "reader_guidance_application": _guidance_application(reader_packet, source_weighting, "source_weighting"),
             "required_points": source_weighting.get("required_points"), "source_weighting_contract": reader_packet.get("source_weighting_contract"),
             "source_role_groups": source_weighting.get("source_role_groups"), "lane_cards": source_weighting.get("lane_cards"),
             "validation_contract": source_weighting.get("validation_contract"),
         }
     )
+def _guidance_application(reader_packet: dict[str, Any], raw_section: dict[str, Any], section_id: str) -> dict[str, Any]:
+    return build_section_reader_guidance_application(reader_packet, raw_section, section_id=section_id, source_ids=_section_source_ids(raw_section))
 
 
 def _canonical_section_heading(heading: str) -> str:
@@ -252,8 +253,6 @@ def _canonical_section_heading(heading: str) -> str:
         "source_weighting": "How to Weight the Evidence",
         "practical_implication": "Practical Implication",
     }.get(section_id, "")
-
-
 def _section_role_contract(heading: str) -> dict[str, Any]:
     section_id = _section_id_from_heading(heading)
     contracts = {
@@ -309,8 +308,6 @@ def _section_role_contract(heading: str) -> dict[str, Any]:
         },
     }
     return contracts.get(section_id, contracts["answer_evidence"])
-
-
 def _section_focus(section_id: str) -> dict[str, Any]:
     focuses = {
         "answer_evidence": {
@@ -374,8 +371,6 @@ def _section_focus(section_id: str) -> dict[str, Any]:
         },
     }
     return focuses.get(section_id, focuses["answer_evidence"])
-
-
 def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, Any], *, section_id: str) -> dict[str, Any]:
     balanced = _dict(reader_packet.get("balanced_answer_frame"))
     bluf = _dict(reader_packet.get("bluf_contract"))

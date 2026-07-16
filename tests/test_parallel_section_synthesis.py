@@ -176,6 +176,50 @@ def test_section_prompt_renders_sparse_top_context_markdown_notes() -> None:
     assert "[s_bmj]" in prompt
 
 
+def test_section_prompt_prioritizes_applied_reader_guidance() -> None:
+    prompt = build_memo_ready_section_synthesis_prompt(
+        {
+            "heading": "Why This Is the Best Current Read",
+            "section_job": "Explain the affirmative case.",
+            "section_role_contract": {"do": ["explain what carries the read"]},
+            "section_focus": {"reader_question": "Why this read?", "paragraph_shape": ["driver", "calibration"]},
+            "reader_guidance_application": {
+                "section_strategy": "Use the guidance to make the affirmative case concrete.",
+                "foreground": "Start with the quantity that resolves the choice.",
+                "caveat_handling": "State the observational caveat once after the main evidence.",
+                "repeat_control": "Do not repeat the source-weighting caveat after every claim.",
+                "matched_reader_guidance": [
+                    {
+                        "instruction": "Frame the claim as association, not proof.",
+                        "why_it_matters": "Prevents overstatement.",
+                        "source_ids": ["s1"],
+                    }
+                ],
+            },
+            "top_context": {
+                "decision_question": "Should option A be adopted?",
+                "current_read_reference": "Adopt option A in scope.",
+                "confidence": "medium",
+                "lightweight_writer_guidance": {
+                    "reader_guidance": [
+                        {
+                            "instruction": "This generic row should be suppressed when applied guidance exists.",
+                            "source_ids": ["s1"],
+                        }
+                    ]
+                },
+            },
+        },
+        known_source_ids=["s1"],
+    )
+
+    assert "### Reader guidance applied to this section" in prompt
+    assert "Start with the quantity that resolves the choice." in prompt
+    assert "Frame the claim as association, not proof." in prompt
+    assert "### Writing guidance, caveats, and quantity risks" not in prompt
+    assert "This generic row should be suppressed" not in prompt
+
+
 def test_section_synthesis_num_predict_can_be_overridden(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

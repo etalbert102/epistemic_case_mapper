@@ -377,7 +377,7 @@ def _source_status(section: str, row: dict[str, Any]) -> dict[str, Any]:
 
 def _role_terms(role: str) -> list[str]:
     return {
-        "drives_answer": ["carry", "drives", "primary", "load-bearing", "main support"],
+        "drives_answer": ["carry", "carries", "drives", "driven", "primary", "load-bearing", "main support"],
         "bounds_answer": ["bound", "limit", "counterweight", "narrows", "does not overturn"],
         "calibrates_magnitude": ["calibrat", "magnitude", "threshold", "dose", "quantity"],
         "sets_scope": ["scope", "applies", "population", "boundary"],

@@ -117,6 +117,8 @@ def build_evidence_tagged_section_prompt(
         f"- Output starts exactly with: ## {heading}\n"
         "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
         "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
+        "- Treat contracts marked required as a coverage checklist: every required contract appears at least once with its evidence tag.\n"
+        "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"

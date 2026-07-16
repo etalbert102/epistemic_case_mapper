@@ -640,6 +640,40 @@ def test_presentation_unwraps_single_already_linked_citation_wrapper() -> None:
     assert "deduplicated_inline_citations" in result["report"]["changes"]
 
 
+def test_presentation_deduplicates_adjacent_reference_citations() -> None:
+    packet = {
+        "source_trail": [
+            {
+                "source_id": "outcome_2025",
+                "source_label": "Outcome 2025",
+                "citation_label": "Outcome 2025",
+            },
+            {
+                "source_id": "boundary_2025",
+                "source_label": "Boundary 2025",
+                "citation_label": "Boundary 2025",
+            },
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "## Decision Brief\n\n"
+        "The practical threshold is one unit [Outcome 2025] [Outcome 2025]. "
+        "The boundary remains live [Outcome 2025], [Boundary 2025] [Outcome 2025]. "
+        "The next sentence keeps spacing [Outcome 2025] [Outcome 2025] and continues."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    body = result["memo"].split("\n## Sources")[0]
+    assert "[Outcome 2025] [Outcome 2025]" not in body
+    assert "[Outcome 2025], [Boundary 2025], [Outcome 2025]" not in body
+    assert "The practical threshold is one unit [Outcome 2025]." in body
+    assert "The boundary remains live [Outcome 2025], [Boundary 2025]." in body
+    assert "[Outcome 2025] and continues" in body
+    assert "deduplicated_reference_citations" in result["report"]["changes"]
+
+
 def test_presentation_compacts_crowded_inline_citations_without_losing_sources() -> None:
     packet = {
         "decision_question": "Should eggs be treated as neutral?",
