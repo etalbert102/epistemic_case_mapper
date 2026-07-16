@@ -253,16 +253,13 @@ def _quarantine_source_faithfulness_conflicts(
         updated["memo_role"] = replacement_role
         updated["answer_relation"] = _quarantine_replacement_answer_relation(group_warnings, str(group.get("answer_relation") or ""))
         updated["effect_on_final_answer"] = _quarantine_replacement_effect(group_warnings, str(group.get("effect_on_final_answer") or ""))
-        updated["conflict_note"] = _short_text(
-            "Source-faithfulness warning: this evidence cannot serve as primary support until the source-bottom-line conflict is resolved.",
-            320,
-        )
+        updated["conflict_note"] = _source_faithfulness_conflict_note(group_warnings)
         updated["rationale"] = _short_text(
             " ".join(
                 part
                 for part in (
                     str(group.get("rationale") or ""),
-                    "Routed away from primary support because source bottom-line polarity conflicts with the assigned answer role.",
+                    _source_faithfulness_quarantine_reason(group_warnings),
                 )
                 if part
             ),
@@ -287,6 +284,8 @@ def _quarantine_source_faithfulness_conflicts(
 
 def _quarantine_replacement_role(warnings: list[dict[str, Any]]) -> str:
     reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "comparator_substitution_claim_used_as_direct_answer_support" in reasons:
+        return "mechanism_or_context"
     if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
         return "load_bearing_counterweight"
     return "needs_human_or_model_review"
@@ -294,6 +293,8 @@ def _quarantine_replacement_role(warnings: list[dict[str, Any]]) -> str:
 
 def _quarantine_replacement_answer_relation(warnings: list[dict[str, Any]], current: str) -> str:
     reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "comparator_substitution_claim_used_as_direct_answer_support" in reasons:
+        return "contextualizes_answer"
     if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
         return "challenges_answer"
     return current if current and current != "supports_answer" else "uncertain_relation"
@@ -301,9 +302,31 @@ def _quarantine_replacement_answer_relation(warnings: list[dict[str, Any]], curr
 
 def _quarantine_replacement_effect(warnings: list[dict[str, Any]], current: str) -> str:
     reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "comparator_substitution_claim_used_as_direct_answer_support" in reasons:
+        return "contextualizes current_best_answer"
     if "source_bottom_line_increased_risk_but_row_supports_neutral_or_beneficial_answer" in reasons:
         return "weakens current_best_answer"
     return current if current and not current.startswith("supports ") else "explains tension"
+
+
+def _source_faithfulness_conflict_note(warnings: list[dict[str, Any]]) -> str:
+    reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "comparator_substitution_claim_used_as_direct_answer_support" in reasons:
+        return _short_text(
+            "Source-faithfulness warning: comparator or substitution evidence should preserve comparator direction instead of serving as direct target-option support.",
+            320,
+        )
+    return _short_text(
+        "Source-faithfulness warning: this evidence cannot serve as primary support until the source-bottom-line conflict is resolved.",
+        320,
+    )
+
+
+def _source_faithfulness_quarantine_reason(warnings: list[dict[str, Any]]) -> str:
+    reasons = {str(warning.get("warning") or "") for warning in warnings}
+    if "comparator_substitution_claim_used_as_direct_answer_support" in reasons:
+        return "Routed away from primary support because comparator/substitution evidence was being rewritten as direct target-option evidence."
+    return "Routed away from primary support because source bottom-line polarity conflicts with the assigned answer role."
 
 
 def _align_groups_with_adjudication_roles(
@@ -331,13 +354,11 @@ def _align_groups_with_adjudication_roles(
             revised.append(group)
             continue
         updated = dict(group)
-        updated["memo_role"] = "load_bearing_counterweight"
-        updated["answer_relation"] = "challenges_answer"
-        updated["effect_on_final_answer"] = "weakens current_best_answer"
-        updated["proposition"] = _short_text(
-            "This evidence should bound or challenge the current answer because source-level bottom lines conflict with using it as primary support.",
-            620,
-        )
+        repaired_row = repaired_rows[0]
+        updated["memo_role"] = str(repaired_row.get("memo_use") or "needs_human_or_model_review")
+        updated["answer_relation"] = str(repaired_row.get("answer_relation") or "uncertain_relation")
+        updated["effect_on_final_answer"] = str(repaired_row.get("effect_on_final_answer") or "explains tension")
+        updated["proposition"] = _repaired_group_proposition(repaired_row)
         updated["conflict_note"] = _short_text(
             "Aligned with source-faithfulness-repaired adjudication rows: "
             + "; ".join(str(row.get("evidence_item_id") or "") for row in repaired_rows),
@@ -359,7 +380,7 @@ def _align_groups_with_adjudication_roles(
             {
                 "group_id": str(group.get("group_id") or ""),
                 "evidence_item_ids": [str(row.get("evidence_item_id") or "") for row in repaired_rows],
-                "to_memo_role": "load_bearing_counterweight",
+                "to_memo_role": updated["memo_role"],
                 "reason": "source_faithfulness_repaired_adjudication",
             }
         )
@@ -373,13 +394,25 @@ def _align_groups_with_adjudication_roles(
 def _is_source_faithfulness_repaired_row(row: dict[str, Any]) -> bool:
     if not isinstance(row, dict):
         return False
-    if str(row.get("memo_use") or "") != "load_bearing_counterweight":
-        return False
-    if str(row.get("answer_relation") or "") != "challenges_answer":
-        return False
     return "Source-faithfulness repair" in str(row.get("source_weight_note") or "") or "source-bottom-line conflict" in str(
         row.get("misuse_warning") or ""
-    )
+    ) or "direct effect of the target option" in str(row.get("misuse_warning") or "")
+
+
+def _repaired_group_proposition(row: dict[str, Any]) -> str:
+    warning = str(row.get("misuse_warning") or "")
+    if "direct effect of the target option" in warning:
+        return _short_text(
+            str(row.get("decision_contribution") or row.get("key_qualifier") or "")
+            or "Comparator/substitution evidence should be used as context while preserving comparator direction.",
+            620,
+        )
+    if "source-bottom-line conflict" in warning:
+        return _short_text(
+            "This evidence should bound or challenge the current answer because source-level bottom lines conflict with using it as primary support.",
+            620,
+        )
+    return _short_text("This evidence should be used according to repaired source-faithfulness labels.", 620)
 
 
 def _build_answer_frame(
