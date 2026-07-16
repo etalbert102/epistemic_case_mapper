@@ -44,6 +44,40 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     assert retention["missing_mandatory_count"] == 0
 
 
+def test_presentation_sources_use_active_source_trail_only() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "active_2025", "source_label": "Active Study 2025", "source_url": "https://example.test/active"}
+        ],
+        "evidence_items": [
+            {
+                "item_id": "item_001",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Active evidence supports option A.",
+                "source_labels": ["Active Study 2025", "Upstream Only 2024"],
+            }
+        ],
+        "memo_obligations": {
+            "obligations": [
+                {
+                    "required": True,
+                    "statement": "Use only active evidence.",
+                    "source_labels": ["Upstream Only 2024"],
+                }
+            ]
+        },
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Option A is supported [active_2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "* [Active 2025](https://example.test/active) — Active Study 2025" in result["memo"]
+    assert "Upstream Only 2024" not in result["memo"].split("## Sources", 1)[-1]
+
+
 def test_presentation_inserts_source_weighting_section_from_canonical_packet() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

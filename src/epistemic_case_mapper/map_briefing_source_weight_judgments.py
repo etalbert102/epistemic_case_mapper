@@ -33,6 +33,9 @@ def build_source_weight_judgment_report(judgments: list[dict[str, Any]], source_
         warnings.append("source_ids_without_weight_judgment")
     if generic:
         warnings.append("generic_source_weight_rationale")
+    main_use_counts = Counter(str(row.get("main_use") or "unspecified") for row in judgments)
+    if _flattened_main_use(main_use_counts):
+        warnings.append("flattened_source_weight_hierarchy")
     return {
         "schema_id": "source_weight_judgment_report_v1",
         "status": "ready" if not warnings else "warning",
@@ -41,9 +44,17 @@ def build_source_weight_judgment_report(judgments: list[dict[str, Any]], source_
         "judged_source_count": len(judged_ids),
         "missing_source_ids": missing[:20],
         "generic_judgment_ids": [str(value) for value in generic if value][:20],
-        "main_use_counts": dict(Counter(str(row.get("main_use") or "unspecified") for row in judgments)),
+        "main_use_counts": dict(main_use_counts),
         "warnings": warnings,
     }
+
+
+def _flattened_main_use(main_use_counts: Counter[str]) -> bool:
+    total = sum(main_use_counts.values())
+    if total < 4:
+        return False
+    dominant = max(main_use_counts.values(), default=0)
+    return dominant >= 4 and dominant / total >= 0.75
 
 
 def _source_weight_judgments(interface: dict[str, Any], source_trail: list[Any]) -> list[dict[str, Any]]:

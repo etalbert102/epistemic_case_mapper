@@ -5,6 +5,7 @@ from typing import Any
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import build_analytical_balance_contract
 from epistemic_case_mapper.map_briefing_argument_spine import build_evidence_weighted_argument_spine
 from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_balanced_answer_frame, build_bluf_contract
+from epistemic_case_mapper.map_briefing_canonical_reconciliation import reconcile_packet_evidence_items, reconcile_writer_interface
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_evidence_language_contracts import build_evidence_language_contracts
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
@@ -24,7 +25,6 @@ from epistemic_case_mapper.map_briefing_source_identity import (
 from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_bundle
 from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
-
 
 def build_canonical_decision_writer_packet(
     memo_ready_packet: dict[str, Any],
@@ -46,6 +46,23 @@ def build_canonical_decision_writer_packet(
     counterweights = _counterweight_dispositions(interface)
     scope_boundaries = _scope_boundaries(interface)
     analyst_frame = _analyst_reasoning_frame(packet, interface)
+    inventory = _organized_evidence_inventory(packet, interface)
+    initial_balanced_frame = build_balanced_answer_frame(
+        skeleton=skeleton,
+        analyst_reasoning_frame=analyst_frame,
+        source_weighted_answer_frame=weighted_frame,
+        organized_evidence_inventory=inventory,
+        counterweight_dispositions=counterweights,
+        scope_boundaries=scope_boundaries,
+    )
+    interface = reconcile_writer_interface(interface, packet, initial_balanced_frame)
+    packet = reconcile_packet_evidence_items(packet, interface)
+    skeleton = _decision_brief_skeleton(interface)
+    analyst_frame = _analyst_reasoning_frame(packet, interface)
+    source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
+    weighted_frame = _source_weighted_answer_frame(interface)
+    counterweights = _counterweight_dispositions(interface)
+    scope_boundaries = _scope_boundaries(interface)
     priority = _priority_evidence(interface)
     inventory = _organized_evidence_inventory(packet, interface)
     mandatory_checklist = _mandatory_retention_checklist(packet, interface)
@@ -694,7 +711,14 @@ def _mandatory_retention_checklist(packet: dict[str, Any], interface: dict[str, 
     obligations = required_memo_obligations(packet)
     if obligations:
         evidence_by_id = _interface_evidence_by_id(interface)
-        return [_mandatory_obligation_row(row, evidence_by_id=evidence_by_id) for row in obligations[:24] if isinstance(row, dict)]
+        rows = []
+        for row in obligations[:24]:
+            if not isinstance(row, dict):
+                continue
+            checklist_row = _mandatory_obligation_row(row, evidence_by_id=evidence_by_id)
+            if checklist_row:
+                rows.append(checklist_row)
+        return rows
     return [
         _mandatory_evidence_row(row)
         for row in _list(interface.get("decision_evidence_table"))
@@ -706,6 +730,8 @@ def _mandatory_obligation_row(row: dict[str, Any], *, evidence_by_id: dict[str, 
     evidence_by_id = evidence_by_id or {}
     evidence_ids = _string_list(row.get("evidence_item_ids"))
     evidence = next((evidence_by_id[evidence_id] for evidence_id in evidence_ids if evidence_id in evidence_by_id), {})
+    if evidence and evidence.get("overstatement_conflict"):
+        return {}
     statement = str(row.get("statement") or "")
     calibrated = calibrate_claim_for_writer(statement, evidence) if evidence else {"claim": statement}
     return _drop_empty(
@@ -718,7 +744,7 @@ def _mandatory_obligation_row(row: dict[str, Any], *, evidence_by_id: dict[str, 
             "claim_calibration_notes": _string_list(calibrated.get("calibration_notes")),
             "prose_instruction": _short_text(row.get("prose_instruction"), 360),
             "source_labels": _string_list(row.get("source_labels")),
-            "quantities": _brief_quantities(row),
+            "quantities": _brief_quantities(evidence or row),
             "evidence_item_ids": evidence_ids,
         }
     )

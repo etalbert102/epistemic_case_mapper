@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import (
+    build_canonical_decision_writer_packet,
     build_canonical_decision_writer_packet_quality_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
@@ -10,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_source_appraisal import build_source_appraisal_report
+from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_report
 
 from test_decision_briefing_packet import _scaffold
 
@@ -112,6 +114,96 @@ def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> N
     assert "to drives answer" not in str(judgments)
     assert "Scaffold assignment" not in str(judgments)
     assert "source_labels" not in str(judgments)
+
+
+def test_source_weight_report_flags_flattened_hierarchy() -> None:
+    source_trail = [{"source_id": f"s{index}"} for index in range(5)]
+    judgments = [
+        {
+            "judgment_id": f"j{index}",
+            "source_ids": [f"s{index}"],
+            "main_use": "drives_answer",
+            "why_weight_this_way": "This source links directly to the decision endpoint and population.",
+        }
+        for index in range(5)
+    ]
+
+    report = build_source_weight_judgment_report(judgments, source_trail)
+
+    assert report["status"] == "warning"
+    assert "flattened_source_weight_hierarchy" in report["warnings"]
+
+
+def test_canonical_packet_uses_analyst_quantity_binding_as_truth() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    item = packet["evidence_items"][0]
+    item["quantities"] = [
+        {
+            "value": "25%",
+            "interpretation": "stale amount consumed daily",
+            "quantity_id": "quantity_binding_candidate_001",
+            "source_evidence_item_id": "c1",
+        }
+    ]
+    packet["analyst_quantity_binding_report"] = {
+        "schema_id": "analyst_quantity_binding_report_v1",
+        "status": "ready",
+        "approved_bindings": [
+            {
+                "candidate_id": "quantity_binding_candidate_001",
+                "source_evidence_item_id": "c1",
+                "value": "25%",
+                "interpretation": "Percent reduction in flood losses in comparable cities.",
+                "retention_phrase": "25% reduction in flood losses",
+                "quantity_role": "decision_anchor",
+                "memo_use": "yes",
+                "source_ids": ["s1"],
+            }
+        ],
+    }
+
+    canonical = build_canonical_decision_writer_packet(packet)
+    quantities = [
+        quantity
+        for row in canonical["priority_evidence"]
+        if row.get("item_id") == item["item_id"]
+        for quantity in row.get("quantities", [])
+    ]
+
+    assert quantities
+    assert quantities[0]["interpretation"] == "25% reduction in flood losses"
+    assert "stale amount consumed daily" not in str(canonical)
+
+
+def test_canonical_packet_demotes_support_that_conflicts_with_overstatement_limits() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    item = packet["evidence_items"][0]
+    item["reader_claim"] = "Option A is protective and beneficial for the city."
+    item["claim"] = item["reader_claim"]
+    item["role"] = "strongest_support"
+    item["answer_relation"] = "supports_answer"
+    item["memo_function"] = "answer_anchor"
+    item["must_use"] = True
+    item["obligation_level"] = "must_include"
+    packet.setdefault("analyst_decision_logic", {})["do_not_overstate"] = [
+        "Do not claim Option A is protective or beneficial; evidence only supports reduced flood losses in comparable cities."
+    ]
+
+    canonical = build_canonical_decision_writer_packet(packet)
+    inventory_items = [
+        row
+        for rows in canonical["organized_evidence_inventory"]["lanes"].values()
+        for row in rows
+        if row.get("item_id") == item["item_id"]
+    ]
+
+    assert inventory_items
+    assert inventory_items[0]["role"] == "context_only"
+    assert inventory_items[0]["answer_relation"] == "contextualizes_answer"
+    assert "Demoted from load-bearing support" in " ".join(inventory_items[0]["claim_calibration_notes"])
+    assert all(item["item_id"] not in row.get("evidence_item_ids", []) for row in canonical["mandatory_retention_checklist"])
 
 
 def test_canonical_packet_gives_unassigned_sources_contextual_judgments() -> None:

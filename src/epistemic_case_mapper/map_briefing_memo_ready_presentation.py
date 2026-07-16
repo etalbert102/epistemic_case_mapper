@@ -5,7 +5,6 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_lightweight_guidance import evidence_quality_caveat_text
-from epistemic_case_mapper.map_briefing_memo_obligations import all_memo_obligations
 from epistemic_case_mapper.map_briefing_model_source_weighting_presentation import render_model_source_weighting_section
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -604,7 +603,7 @@ def _canonical_source_entries(packet: dict[str, Any]) -> list[dict[str, str]]:
                 "source_display": source_display,
                 "inline_display": inline_display,
                 "citation_display": inline_display or source_display,
-                "url": urls.get(label, ""),
+                "url": str(source.get("source_url") or "").strip() or urls.get(label, ""),
                 "source_id": source_id,
                 "source_label": source_label,
             }
@@ -877,19 +876,18 @@ def _evidence_item_alias_replacements(packet: dict[str, Any], source_lookup: dic
 
 
 def _packet_source_labels(packet: dict[str, Any]) -> list[str]:
-    labels = [
-        str(source.get("source_label") or "").strip()
-        for source in _list(packet.get("source_trail"))
-        if isinstance(source, dict) and str(source.get("source_label") or "").strip()
-    ]
-    for item in _list(packet.get("evidence_items")):
-        if not isinstance(item, dict):
+    labels = []
+    for source in _list(packet.get("source_trail")):
+        if not isinstance(source, dict):
             continue
-        labels.extend(_string_list(item.get("source_labels")))
-        labels.append(str(item.get("source_label") or "").strip())
-    for obligation in all_memo_obligations(packet):
-        labels.extend(_string_list(obligation.get("source_labels")))
-        labels.append(str(obligation.get("source_label") or "").strip())
+        labels.extend(
+            [
+                str(source.get("source_id") or "").strip(),
+                str(source.get("source_label") or "").strip(),
+                str(source.get("display_label") or "").strip(),
+                str(source.get("citation_label") or "").strip(),
+            ]
+        )
     return _dedupe(label for label in labels if label)
 
 
