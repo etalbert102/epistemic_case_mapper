@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     list_value as _list,
     norm as _norm,
+    short_text as _short_text,
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_quantity_retention import contains_quantity
@@ -128,6 +129,41 @@ def excluded_source_bound_quantity_tuples(row: dict[str, Any]) -> list[dict[str,
     return _source_bound_quantity_tuples(row)[1]
 
 
+def source_bound_quantity_phrases(row: dict[str, Any], *, limit: int = 8) -> list[str]:
+    """Render quantity tuples as reader-safe phrases before model synthesis.
+
+    The renderer keeps point estimates and uncertainty intervals together so a
+    later writer sees "HR 0.93 (95% CI 0.82 to 1.05)" instead of two loose
+    numeric anchors that can be grammatically rebound.
+    """
+    quantities = [quantity for quantity in _list(row.get("quantities")) if isinstance(quantity, dict)]
+    if not quantities:
+        return []
+    phrases: list[str] = []
+    consumed: set[int] = set()
+    for index, quantity in enumerate(quantities):
+        if index in consumed:
+            continue
+        if _quantity_is_uncertainty_interval(quantity):
+            continue
+        interval_index = _matching_interval_index(index, quantity, quantities, consumed)
+        phrase = _render_quantity_phrase(quantity, quantities[interval_index] if interval_index is not None else None)
+        if not phrase:
+            continue
+        phrases.append(phrase)
+        consumed.add(index)
+        if interval_index is not None:
+            consumed.add(interval_index)
+    for index, quantity in enumerate(quantities):
+        if index in consumed:
+            continue
+        phrase = _render_quantity_phrase(quantity, None)
+        if phrase:
+            phrases.append(phrase)
+            consumed.add(index)
+    return _dedupe_quantity_phrases(phrases)[:limit]
+
+
 def _source_bound_atom(row: dict[str, Any]) -> dict[str, Any]:
     source_ids = _row_source_ids(row)
     claim = str(row.get("claim") or row.get("statement") or row.get("reader_claim") or "").strip()
@@ -185,6 +221,195 @@ def _source_bound_quantity_tuples(row: dict[str, Any]) -> tuple[list[dict[str, A
         else:
             tuples.append(tuple_row)
     return _dedupe_quantity_tuples(tuples), _dedupe_quantity_tuples(excluded)
+
+
+def _matching_interval_index(
+    estimate_index: int,
+    estimate: dict[str, Any],
+    quantities: list[dict[str, Any]],
+    consumed: set[int],
+) -> int | None:
+    estimate_source = str(estimate.get("source_evidence_item_id") or "").strip()
+    estimate_sources = set(_string_list(estimate.get("source_ids")) or _string_list(estimate.get("source_labels")))
+    best: tuple[int, int] | None = None
+    for index, candidate in enumerate(quantities):
+        if index == estimate_index or index in consumed:
+            continue
+        if not _quantity_is_uncertainty_interval(candidate):
+            continue
+        candidate_source = str(candidate.get("source_evidence_item_id") or "").strip()
+        candidate_sources = set(_string_list(candidate.get("source_ids")) or _string_list(candidate.get("source_labels")))
+        if estimate_source and candidate_source and estimate_source != candidate_source:
+            continue
+        if estimate_sources and candidate_sources and not estimate_sources.intersection(candidate_sources):
+            continue
+        distance = abs(index - estimate_index)
+        if best is None or distance < best[0]:
+            best = (distance, index)
+    return best[1] if best else None
+
+
+def _render_quantity_phrase(quantity: dict[str, Any], interval: dict[str, Any] | None) -> str:
+    value = str(quantity.get("value") or "").strip()
+    if not value:
+        return ""
+    if _quantity_is_uncertainty_interval(quantity) and interval is None:
+        return _short_text(_interval_text(quantity), 260)
+    label = _quantity_label(quantity)
+    value_text = _quantity_value_with_label(value, label)
+    interval_text = _interval_text(interval) if isinstance(interval, dict) else ""
+    measure = _quantity_measure_phrase(quantity)
+    phrase = value_text
+    if interval_text:
+        phrase = f"{phrase} ({interval_text})"
+    if measure:
+        phrase = f"{phrase} for {measure}"
+    return _short_text(phrase, 260)
+
+
+def _quantity_value_with_label(value: str, label: str) -> str:
+    value = " ".join(str(value or "").split()).strip()
+    if not label:
+        return value
+    value = _strip_embedded_quantity_label(value, label)
+    if _norm(label) in _norm(value):
+        return value
+    if label == "MD":
+        return f"MD = {value}" if re.fullmatch(r"[-+]?\d+(?:\.\d+)?", value) else f"MD {value}"
+    return f"{label} {value}"
+
+
+def _strip_embedded_quantity_label(value: str, label: str) -> str:
+    label_patterns = {
+        "HR": r"(?:HR|hazard ratio)",
+        "RR": r"(?:RR|relative risk)",
+        "OR": r"(?:OR|odds ratio)",
+        "MD": r"(?:MD|mean difference)",
+    }
+    pattern = label_patterns.get(label)
+    if not pattern:
+        return value
+    stripped = re.sub(rf"^\s*{pattern}\s*(?:=|of)?\s*", "", value, flags=re.IGNORECASE).strip()
+    return stripped or value
+
+
+def _interval_text(interval: dict[str, Any]) -> str:
+    value = str(interval.get("value") or "").strip()
+    if not value:
+        return ""
+    text = " ".join(value.split())
+    lowered = text.lower()
+    if "confidence interval" in lowered or re.search(r"\bci\b", lowered):
+        return text
+    interpretation = " ".join(
+        str(interval.get(key) or "")
+        for key in ("interpretation", "retention_phrase", "measures", "claim_quantity_interpretation")
+    ).lower()
+    if "95" in interpretation or "confidence" in interpretation or "ci" in interpretation:
+        return f"95% CI {text}"
+    return f"interval {text}"
+
+
+def _quantity_measure_phrase(quantity: dict[str, Any]) -> str:
+    interpretation = str(
+        quantity.get("retention_phrase")
+        or quantity.get("interpretation")
+        or quantity.get("claim_quantity_interpretation")
+        or ""
+    ).strip()
+    text = re.sub(
+        r"^\s*(?:hazard ratio|relative risk|odds ratio|mean difference|increase|decrease|confidence interval)\s+(?:for|of|in)\s+",
+        "",
+        interpretation,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"^\s*(?:HR|RR|OR|MD)\s+(?:for|of|in)\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip(" .;:")
+    if not text or _norm(text) == _norm(str(quantity.get("value") or "")):
+        return ""
+    if not re.search(r"[A-Za-z]", text):
+        return ""
+    if _quantity_is_uncertainty_interval(quantity):
+        return ""
+    return _short_text(text, 180)
+
+
+def _dedupe_quantity_phrases(phrases: list[str]) -> list[str]:
+    richer_keys: set[str] = set()
+    unique = _dedupe(phrases)
+    for phrase in unique:
+        key = _estimate_surface_key(phrase)
+        if key and not _bare_quantity_phrase(phrase):
+            richer_keys.add(key)
+    result: list[str] = []
+    for phrase in unique:
+        key = _estimate_surface_key(phrase)
+        if key and _bare_quantity_phrase(phrase) and key in richer_keys:
+            continue
+        result.append(phrase)
+    return result
+
+
+def _estimate_surface_key(text: str) -> str:
+    if re.match(r"\s*(?:95%\s*)?(?:CI|confidence interval|credible interval|uncertainty interval)\b", text, re.IGNORECASE):
+        return ""
+    numbers = re.findall(r"\d+(?:\.\d+)?", text)
+    if numbers:
+        return numbers[0]
+    return ""
+
+
+def _bare_quantity_phrase(phrase: str) -> bool:
+    return not (
+        re.search(r"\b(?:CI|confidence interval|interval)\b", phrase, flags=re.IGNORECASE)
+        or " for " in phrase.lower()
+    )
+
+
+def _quantity_label(quantity: dict[str, Any]) -> str:
+    text = " ".join(
+        str(quantity.get(key) or "")
+        for key in (
+            "value",
+            "interpretation",
+            "retention_phrase",
+            "measures",
+            "claim_quantity_interpretation",
+            "quantity_role",
+            "claim_quantity_role",
+        )
+    ).lower()
+    if "hazard ratio" in text or re.search(r"\bhr\b", text):
+        return "HR"
+    if "relative risk" in text or re.search(r"\brr\b", text):
+        return "RR"
+    if "odds ratio" in text or re.search(r"\bor\b", text):
+        return "OR"
+    if "mean difference" in text or re.search(r"\bmd\b", text):
+        return "MD"
+    return ""
+
+
+def _quantity_is_uncertainty_interval(quantity: dict[str, Any]) -> bool:
+    value = str(quantity.get("value") or "")
+    text = " ".join(
+        str(quantity.get(key) or "")
+        for key in (
+            "interpretation",
+            "retention_phrase",
+            "measures",
+            "quantity_role",
+            "claim_quantity_role",
+            "claim_quantity_type",
+        )
+    )
+    if re.search(r"\b(?:ci|confidence interval|credible interval|uncertainty interval)\b", text, flags=re.IGNORECASE):
+        return True
+    if re.search(r"\b\d+(?:\.\d+)?\s*(?:to|through|[-–—])\s*\d+(?:\.\d+)?\b", value) and re.search(
+        r"\b(?:ci|confidence|interval)\b", text, flags=re.IGNORECASE
+    ):
+        return True
+    return False
 
 
 def _quantity_sentence_source_warnings(

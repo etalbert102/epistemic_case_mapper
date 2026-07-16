@@ -47,6 +47,10 @@ from epistemic_case_mapper.map_briefing_source_faithfulness import (
     source_faithfulness_warning_reason as _shared_source_faithfulness_warning_reason,
     source_faithfulness_warnings as _shared_source_faithfulness_warnings,
 )
+from epistemic_case_mapper.map_briefing_source_bound_evidence import (
+    source_bound_quantity_phrases,
+    source_bound_quantity_tuples,
+)
 from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
@@ -666,7 +670,15 @@ def _memo_ready_item_from_group(
         for binding in (quantity_bindings or [])
         if isinstance(binding, dict) and str(binding.get("value") or "").strip()
     ]
-    claim = _reader_claim_with_key_quantities(proposition, [row["value"] for row in quantities])
+    quantity_phrase_row = {
+        "claim": proposition,
+        "source_ids": _string_list(group.get("source_ids")),
+        "source_labels": source_labels,
+        "quantities": quantities,
+    }
+    quantity_phrases = source_bound_quantity_phrases(quantity_phrase_row)
+    quantity_tuples = source_bound_quantity_tuples(quantity_phrase_row)
+    claim = _reader_claim_with_key_quantities(proposition, quantity_phrases)
     return {
         "item_id": f"analyst_item_{index:03d}",
         "role": reader_role,
@@ -680,6 +692,8 @@ def _memo_ready_item_from_group(
         "source_labels": source_labels,
         "source_ids": _string_list(group.get("source_ids")),
         "quantities": quantities,
+        "source_bound_quantity_phrases": quantity_phrases,
+        "source_bound_quantity_tuples": quantity_tuples,
         "lineage": {"analyst_group_id": group.get("group_id"), "evidence_item_ids": group.get("covered_evidence_item_ids", [])},
         "quantity_binding_lineage": [
             {
@@ -706,8 +720,15 @@ def _memo_ready_quantity_from_binding(binding: dict[str, Any]) -> dict[str, str]
         {
             "value": str(binding.get("value") or "").strip(),
             "interpretation": str(binding.get("interpretation") or "").strip(),
+            "retention_phrase": str(binding.get("retention_phrase") or "").strip(),
+            "quantity_role": str(binding.get("quantity_role") or "").strip(),
+            "claim_quantity_role": str(binding.get("claim_quantity_role") or "").strip(),
+            "claim_quantity_type": str(binding.get("claim_quantity_type") or "").strip(),
+            "measures": str(binding.get("measures") or "").strip(),
             "source_evidence_item_id": str(binding.get("source_evidence_item_id") or "").strip(),
+            "source_ids": _string_list(binding.get("source_ids")),
             "source_labels": _string_list(binding.get("source_labels")),
+            "source_excerpt": str(binding.get("source_excerpt") or "").strip(),
             "binding_confidence": str(binding.get("binding_confidence") or "").strip(),
         }
     )
@@ -741,7 +762,7 @@ def _reader_claim_with_key_quantities(claim: str, quantities: list[str]) -> str:
     missing = [quantity for quantity in quantities if quantity not in already_present]
     if not missing:
         return claim
-    return _short_text(f"{claim} Key quantitative anchors: {'; '.join(missing)}.", 700)
+    return _short_text(f"{claim} Quantitative detail: {'; '.join(missing)}.", 900)
 
 
 def _weak_group_proposition(text: str) -> bool:

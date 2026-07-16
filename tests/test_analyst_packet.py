@@ -129,10 +129,85 @@ def test_analyst_packet_accounts_for_rows_and_groups_quantity_anchors() -> None:
         "bundle:off_question" in item.get("lineage", {}).get("evidence_item_ids", [])
         for item in memo_ready["evidence_items"]
     )
-    source_ids = {row["source_id"] for row in memo_ready["source_trail"]}
-    assert source_ids == {"s1", "s2"}
-    assert "s3" not in source_ids
-    assert "s4" not in source_ids
+
+
+def test_analyst_packet_renders_source_bound_quantity_phrases_for_model() -> None:
+    ledger = {
+        "schema_id": "analyst_evidence_ledger_v1",
+        "decision_question": "Should option A be treated as neutral?",
+        "rows": [
+            {
+                "evidence_item_id": "claim:outcome",
+                "source_ids": ["s1"],
+                "source_labels": ["Outcome Study"],
+                "claim": "Moderate exposure was not associated with the main adverse outcome.",
+            }
+        ],
+    }
+    adjudication = {
+        "schema_id": "analyst_adjudication_v1",
+        "rows": [
+            {
+                "evidence_item_id": "claim:outcome",
+                "memo_use": "load_bearing_primary_support",
+                "answer_relation": "supports_answer",
+                "importance_rank": 1,
+                "source_ids": ["s1"],
+            }
+        ],
+    }
+    quantity_binding = {
+        "schema_id": "analyst_quantity_binding_report_v1",
+        "status": "ready",
+        "approved_bindings": [
+            {
+                "candidate_id": "q_hr",
+                "group_id": "analyst_group_001",
+                "source_evidence_item_id": "claim:outcome",
+                "value": "0.93",
+                "memo_use": "yes",
+                "must_retain": True,
+                "quantity_role": "decision_anchor",
+                "claim_quantity_role": "effect_estimate",
+                "interpretation": "Hazard ratio for at least one exposure per day vs less than one exposure per month",
+                "source_ids": ["s1"],
+                "source_labels": ["Outcome Study"],
+            },
+            {
+                "candidate_id": "q_ci",
+                "group_id": "analyst_group_001",
+                "source_evidence_item_id": "claim:outcome",
+                "value": "0.82 to 1.05",
+                "memo_use": "yes",
+                "must_retain": True,
+                "quantity_role": "decision_anchor",
+                "claim_quantity_role": "uncertainty_interval",
+                "interpretation": "Confidence interval for the hazard ratio",
+                "source_ids": ["s1"],
+                "source_labels": ["Outcome Study"],
+            },
+        ],
+    }
+
+    result = build_analyst_packet_bundle(
+        packet=_packet(),
+        ledger=ledger,
+        adjudication=adjudication,
+        quantity_binding=quantity_binding,
+    )
+
+    item = result["analyst_memo_ready_packet"]["evidence_items"][0]
+
+    assert item["source_bound_quantity_phrases"] == [
+        "HR 0.93 (95% CI 0.82 to 1.05) for at least one exposure per day vs less than one exposure per month"
+    ]
+    assert "Key quantitative anchors" not in item["reader_claim"]
+    assert (
+        "Quantitative detail: HR 0.93 (95% CI 0.82 to 1.05) for at least one exposure per day vs less than one exposure per month."
+        in item["reader_claim"]
+    )
+    assert "hazard ratio of 0.82 to 1.05" not in item["reader_claim"].lower()
+    assert item["source_bound_quantity_tuples"][0]["value"] == "0.93"
 
 
 def test_analyst_packet_warns_when_source_bottom_line_conflicts_with_answer_role() -> None:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import build_memo_ready_packet_retention_report
-from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_bound_evidence_atoms
+from epistemic_case_mapper.map_briefing_source_bound_evidence import (
+    build_source_bound_evidence_atoms,
+    source_bound_quantity_phrases,
+)
 
 
 def test_source_bound_atoms_exclude_quantities_not_found_in_local_excerpt() -> None:
@@ -186,3 +189,49 @@ def test_source_binding_validation_ignores_bare_numbers_inside_intervals() -> No
 
     assert interval_report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 0
     assert standalone_report["source_binding_report"]["quantity_source_adjacency_warning_count"] == 1
+
+
+def test_source_bound_quantity_phrases_pair_estimates_with_confidence_intervals() -> None:
+    row = {
+        "claim": "Moderate exposure was not associated with adverse outcomes.",
+        "source_ids": ["s1"],
+        "quantities": [
+            {
+                "value": "0.93",
+                "interpretation": "Hazard ratio for at least one exposure per day vs less than one exposure per month",
+                "source_evidence_item_id": "claim:outcome",
+                "source_ids": ["s1"],
+            },
+            {
+                "value": "0.82 to 1.05",
+                "interpretation": "Confidence interval for the hazard ratio",
+                "source_evidence_item_id": "claim:outcome",
+                "source_ids": ["s1"],
+            },
+        ],
+    }
+
+    phrases = source_bound_quantity_phrases(row)
+
+    assert phrases == [
+        "HR 0.93 (95% CI 0.82 to 1.05) for at least one exposure per day vs less than one exposure per month"
+    ]
+
+
+def test_source_bound_quantity_phrases_do_not_render_interval_as_estimate() -> None:
+    row = {
+        "claim": "The lipid marker increased.",
+        "source_ids": ["s1"],
+        "quantities": [
+            {
+                "value": "0.05 to 0.22",
+                "interpretation": "Confidence interval for the mean difference",
+                "source_evidence_item_id": "claim:lipid",
+                "source_ids": ["s1"],
+            }
+        ],
+    }
+
+    phrases = source_bound_quantity_phrases(row)
+
+    assert phrases == ["95% CI 0.05 to 0.22"]

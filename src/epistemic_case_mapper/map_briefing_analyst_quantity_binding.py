@@ -599,6 +599,7 @@ def _candidate_row(
         "claim_quantity_type": str((quantity_row or {}).get("quantity_type") or ""),
         "claim_quantity_retention_hint": str((quantity_row or {}).get("retention_hint") or ""),
         "claim_quantity_interpretation": str((quantity_row or {}).get("local_interpretation") or ""),
+        "measures": str((quantity_row or {}).get("measures") or ""),
         "source_evidence_item_id": source_evidence_item_id,
         "source_claim": str(ledger_row.get("claim") or ""),
         "source_excerpt": str(ledger_row.get("source_excerpt") or ""),
