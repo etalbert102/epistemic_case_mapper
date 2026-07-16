@@ -6,6 +6,7 @@ import pytest
 
 from epistemic_case_mapper.evidence_anchored_synthesis_experiment import (
     build_evidence_expression_contracts,
+    evidence_anchored_synthesis_enabled,
     render_evidence_tagged_memo,
     run_evidence_anchored_synthesis_experiment,
 )
@@ -160,6 +161,17 @@ def test_memo_ready_synthesis_can_use_evidence_anchored_path(monkeypatch: pytest
     assert result["evidence_trace"]
     assert "{E:" not in result["memo"]
     assert result["report"]["evidence_reconciliation_report"]["used_evidence_id_count"] >= 1
+
+
+def test_evidence_anchored_synthesis_is_promoted_for_live_backends(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ECM_EVIDENCE_ANCHORED_SYNTHESIS", raising=False)
+
+    assert evidence_anchored_synthesis_enabled("ollama:gemma4:12b-mlx") is True
+    assert evidence_anchored_synthesis_enabled("command:local-model") is True
+    assert evidence_anchored_synthesis_enabled("fake") is False
+
+    monkeypatch.setenv("ECM_EVIDENCE_ANCHORED_SYNTHESIS", "off")
+    assert evidence_anchored_synthesis_enabled("ollama:gemma4:12b-mlx") is False
 
 
 def _heading_from_prompt(prompt: str) -> str:

@@ -68,7 +68,7 @@ def run_memo_ready_packet_synthesis(
     }
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
-    if evidence_anchored_synthesis_enabled() and _list(memo_ready_packet.get("evidence_items")):
+    if evidence_anchored_synthesis_enabled(backend) and _list(memo_ready_packet.get("evidence_items")):
         return run_evidence_anchored_memo_ready_synthesis(
             memo_ready_packet,
             backend=backend,

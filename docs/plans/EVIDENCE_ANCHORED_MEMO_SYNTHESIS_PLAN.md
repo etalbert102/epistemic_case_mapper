@@ -492,11 +492,13 @@ The rest should remain conditional and report-only until it proves value. Implem
 
 ## Implementation Ledger
 
-Status: implemented as a flagged production-capable path.
+Status: implemented as the promoted live-backend synthesis path.
 
 Flag:
 
-- `ECM_EVIDENCE_ANCHORED_SYNTHESIS=1`
+- Default behavior: enabled for production-style live backends, currently `ollama:` and `command:`.
+- Explicit opt-out: `ECM_EVIDENCE_ANCHORED_SYNTHESIS=0` or `off`.
+- Explicit opt-in for non-production/test backends: `ECM_EVIDENCE_ANCHORED_SYNTHESIS=1`.
 
 Implemented:
 

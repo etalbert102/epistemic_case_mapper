@@ -30,8 +30,16 @@ BRACE_TAG_RE = re.compile(r"\{([^{}\n]{1,240})\}")
 EVIDENCE_ANCHORED_SYNTHESIS_ENV = "ECM_EVIDENCE_ANCHORED_SYNTHESIS"
 
 
-def evidence_anchored_synthesis_enabled() -> bool:
-    return os.environ.get(EVIDENCE_ANCHORED_SYNTHESIS_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+def evidence_anchored_synthesis_enabled(backend: str | None = None) -> bool:
+    configured = os.environ.get(EVIDENCE_ANCHORED_SYNTHESIS_ENV)
+    if configured is not None:
+        value = configured.strip().lower()
+        if value in {"0", "false", "no", "off"}:
+            return False
+        if value in {"1", "true", "yes", "on"}:
+            return True
+    spec = str(backend or "").strip()
+    return spec.startswith("ollama:") or spec.startswith("command:")
 
 
 def run_evidence_anchored_memo_ready_synthesis(
