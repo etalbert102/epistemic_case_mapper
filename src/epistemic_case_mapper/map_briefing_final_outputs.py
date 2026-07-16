@@ -50,7 +50,7 @@ def write_final_reader_outputs(
         )
         raise ValueError(
             "write_final_reader_outputs requires scaffold.memo_ready_packet.evidence_items; "
-            "legacy final-output paths have been removed"
+            "the final reader output path requires a memo-ready packet"
         )
     record_memo_progress(artifacts, "memo_output_path", "memo_ready", backend=backend_config.backend)
     output_path_result = _run_memo_ready_final_output_path(

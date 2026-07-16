@@ -537,7 +537,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- Preserve the decision question, source IDs, quantities, and answer stance already present.\n"
         "- Repair missing obligations and balance cards by improving the reasoning around the affected point.\n"
         "- Repair missing canonical items by restoring the affected answer skeleton, counterweight, scope, source, quantity, or evidence claim.\n"
-        "- Use only the missing obligations, missing balance cards, or legacy missing items in the repair packet.\n"
+        "- Use only the missing obligations, missing balance cards, or missing canonical items in the repair packet.\n"
         "- For strict writer-packet repairs, every missing obligation in the repair packet is a required decision-writing obligation; include it, merge it with related prose, or explain the scope/uncertainty it creates.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
         "- For each quantity you add, explain what it means for the decision.\n"

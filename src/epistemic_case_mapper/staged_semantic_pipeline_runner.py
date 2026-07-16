@@ -871,7 +871,7 @@ def _coverage_backfill_claims(
     }
     return [], report
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.staged_semantic_claims_relations import (
     _extract_relations,
     _run_quality_repair,

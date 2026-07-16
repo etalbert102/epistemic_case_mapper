@@ -31,7 +31,6 @@ def test_model_context_audit_separates_record_only_and_model_context(tmp_path) -
 
     audit = build_model_context_audit(
         backend="prompt",
-        legacy_prompt="legacy prompt",
         section_packets_path=packet_path,
         reader_rewrite_prompt="",
     )
@@ -39,7 +38,7 @@ def test_model_context_audit_separates_record_only_and_model_context(tmp_path) -
     stages = {stage["stage"]: stage for stage in audit["stages"]}
     section = stages["section_rewrite"]["sections"][0]
 
-    assert stages["whole_briefing_legacy_prompt"]["status"] == "record_only_legacy_prompt"
+    assert "whole_briefing_legacy_prompt" not in stages
     assert "global_memo_plan" not in stages
     assert section["model_to_debug_char_ratio"] < 1
     assert "negative_anchor_terms_visible" not in section["pollution_flags"]
@@ -62,7 +61,6 @@ def test_model_context_audit_flags_visible_negative_anchor_terms(tmp_path) -> No
 
     audit = build_model_context_audit(
         backend="fake",
-        legacy_prompt="",
         section_packets_path=packet_path,
         reader_rewrite_prompt=json.dumps({"edits": []}),
     )
@@ -91,7 +89,6 @@ def test_model_context_audit_flags_broad_reader_rewrite_contract() -> None:
 
     audit = build_model_context_audit(
         backend="fake",
-        legacy_prompt="",
         section_packets_path=None,
         reader_rewrite_prompt=prompt,
     )
@@ -122,7 +119,6 @@ def test_model_context_audit_accepts_compact_reader_rewrite_prompt() -> None:
 
     audit = build_model_context_audit(
         backend="fake",
-        legacy_prompt="",
         section_packets_path=None,
         reader_rewrite_prompt=prompt,
     )
@@ -136,7 +132,6 @@ def test_model_context_audit_accepts_compact_reader_rewrite_prompt() -> None:
 def test_model_context_audit_flags_active_prompt_pollution() -> None:
     audit = build_model_context_audit(
         backend="ollama:test",
-        legacy_prompt="",
         section_packets_path=None,
         reader_rewrite_prompt="",
         active_prompts={
@@ -172,7 +167,6 @@ def test_model_context_audit_inventories_upstream_prompt_artifacts(tmp_path) -> 
 
     audit = build_model_context_audit(
         backend="ollama:test",
-        legacy_prompt="",
         section_packets_path=None,
         reader_rewrite_prompt="",
         prompt_artifact_root=tmp_path,

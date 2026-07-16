@@ -240,7 +240,6 @@ def _normalize_claim_proposal(
     entailed = str(proposal.get("entailed_by_excerpt", "uncertain")).strip().lower()
     if entailed not in VALID_ENTAILMENT:
         entailed = "uncertain"
-    legacy_model_role = str(proposal.get("role", "")).strip()
     role = SOURCE_EXTRACTED_ROLE
     question_relevance = _normalized_question_relevance(proposal.get("question_relevance"))
     if question_relevance == "irrelevant":
@@ -271,7 +270,6 @@ def _normalize_claim_proposal(
             "source_alignment": quote_alignment_metadata(alignment),
             "entailed_by_excerpt": entailed,
             "role": role,
-            "legacy_extraction_role": legacy_model_role,
             "question_relevance": question_relevance,
             "question_fit": question_fit_from_relevance(question_relevance, scope_flags),
             "relevance_rationale": _compact_metadata_text(proposal.get("relevance_rationale")),
@@ -349,7 +347,6 @@ def _fallback_claim_for_chunk(chunk: SourceChunk) -> dict[str, Any] | None:
             "density": 1.0,
         },
         "extraction_method": "deterministic_fallback_span",
-        "legacy_extraction_role": _fallback_role(span.text),
     }
 
 def _best_fallback_span(chunk: SourceChunk) -> SourceSpan | None:
@@ -890,7 +887,7 @@ def _normalize_text(value: str) -> str:
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,

@@ -742,7 +742,7 @@ def _payload_list_items(payloads: list[dict[str, Any]], key: str) -> list[str]:
                 items.extend(str(item) for item in nested)
     return items
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.staged_semantic_sources import (
     _content_terms,
     _normalize_relation_proposal,

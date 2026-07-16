@@ -60,7 +60,7 @@ def _comparison_status(*, packet_first: bool, missing: dict[str, int], call_delt
 def _comparison_notes(*, packet_first: bool, baseline_mode: str, missing: dict[str, int], call_delta: int) -> list[str]:
     notes = []
     if baseline_mode == "estimated_section_rewrite_baseline":
-        notes.append("Comparison did not run the legacy section rewrite path live; baseline model calls are estimated from section views.")
+        notes.append("Comparison did not run section rewrite calls live; baseline model calls are estimated from section views.")
     if packet_first and call_delta > 0:
         notes.append("Packet-first route uses fewer section-local model calls by replacing section rewrites with one whole-memo pass.")
     if missing["critical_item_misses"] > 0:

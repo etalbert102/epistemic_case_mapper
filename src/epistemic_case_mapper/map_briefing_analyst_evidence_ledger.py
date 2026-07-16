@@ -434,7 +434,7 @@ def _claim_current_role(claim: dict[str, Any]) -> str:
     decision_function = str(claim.get("decision_function") or "").strip()
     if decision_function and decision_function != "unclassified_evidence":
         return decision_function
-    for key in ("legacy_extraction_role", "role", "relation_triage_bucket", "default_use", "decision_function"):
+    for key in ("role", "relation_triage_bucket", "default_use", "decision_function"):
         value = str(claim.get(key) or "").strip()
         if value:
             return value

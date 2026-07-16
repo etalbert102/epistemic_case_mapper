@@ -837,7 +837,7 @@ def _lint_neutral_default_benefit_framing(text: str) -> str:
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import (
     _claim_concepts,
     _claim_noise_profile,

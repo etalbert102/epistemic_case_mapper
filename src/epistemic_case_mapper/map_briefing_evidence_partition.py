@@ -793,7 +793,7 @@ def _backfill_compact_payload_sections(payload: dict[str, Any], scaffold: dict[s
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import (
     _option_criteria_for_rows,
     _option_terms,

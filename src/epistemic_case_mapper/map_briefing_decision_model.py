@@ -804,7 +804,7 @@ def _row_matches_option_criterion(row: dict[str, Any], criterion: str) -> bool:
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_claim_eligibility import (
     claim_eligibility_profile as _claim_eligibility_profile,
     claim_noise_profile as _claim_noise_profile,

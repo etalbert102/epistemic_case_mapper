@@ -891,7 +891,7 @@ def _synthesis_evidence_sentences(synthesis: dict[str, Any], *, roles: tuple[str
                 sentences.append(current)
     return sentences
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_claim_eligibility import _looks_like_boilerplate_disclosure, _looks_like_publisher_or_license_boilerplate
 from epistemic_case_mapper.map_briefing_evidence_partition import _option_criterion_label
 from epistemic_case_mapper.map_briefing_evidence_tables import _clean_appendix_section, _clean_reader_briefing_line, _concept_label, _contains_truncated_fragment, _deterministic_appendix_from_scaffold, _duplicate_sentence_count, _executive_markdown, _extract_confidence, _first_complete_sentences, _generic_cluster_proposition, _join_polished_sentences, _markdown_section, _markdown_section_with_heading, _markdown_table_cell, _markdown_table_count, _polish_reader_sentence_block, _reader_source_name, _source_suffix, _trim_executive_sections

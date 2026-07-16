@@ -58,7 +58,6 @@ def claim_label_audit(claim: dict[str, Any]) -> dict[str, Any]:
             "decision_importance_level": model_importance,
             "decision_function": decision_function,
             "default_use": model_default_use,
-            "legacy_extraction_role": _clean_label(claim.get("legacy_extraction_role")),
         },
         "deterministic_relevance_reason": deterministic_reason,
     }

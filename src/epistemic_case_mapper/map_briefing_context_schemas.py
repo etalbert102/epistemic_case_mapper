@@ -183,7 +183,7 @@ class PipelineMigrationLedger(BaseModel):
     old_context_fields_still_model_visible: list[str] = Field(default_factory=list)
     new_context_fields_model_visible: list[str] = Field(default_factory=list)
     debug_only_artifacts: list[str] = Field(default_factory=list)
-    compatibility_shims: list[str] = Field(default_factory=list)
+    transition_notes: list[str] = Field(default_factory=list)
     status: Literal["clean", "warning"] = "clean"
 
 

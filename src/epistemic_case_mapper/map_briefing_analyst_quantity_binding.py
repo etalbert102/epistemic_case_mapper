@@ -507,24 +507,13 @@ def _quantity_candidates(synthesis_packet: dict[str, Any], ledger_by_id: dict[st
         seen_values: set[tuple[str, str]] = set()
         for evidence_id in _string_list(group.get("covered_evidence_item_ids")):
             ledger_row = ledger_by_id.get(evidence_id, {})
-            if _uses_legacy_unsplit_quantities(ledger_row):
-                for quantity in _string_list(ledger_row.get("quantity_values")):
-                    key = (evidence_id, quantity)
-                    if key in seen_values:
-                        continue
-                    seen_values.add(key)
-                    rows.append(
-                        _candidate_row(
-                            group,
-                            quantity,
-                            source_evidence_item_id=evidence_id,
-                            ledger_row=ledger_row,
-                            candidate_origin="legacy_unsplit_quantity",
-                            model_adjudication_required=False,
-                        )
-                    )
-                continue
-            for quantity in _claim_bound_quantity_rows(ledger_row):
+            quantity_rows = _claim_bound_quantity_rows(ledger_row)
+            candidate_origin = (
+                "claim_map_bound"
+                if _list(ledger_row.get("claim_quantities")) or _string_list(ledger_row.get("claim_bound_quantity_values"))
+                else "source_quantity"
+            )
+            for quantity in quantity_rows:
                 quantity_value = _quantity_value(quantity)
                 key = (evidence_id, quantity_value)
                 if key in seen_values:
@@ -534,13 +523,13 @@ def _quantity_candidates(synthesis_packet: dict[str, Any], ledger_by_id: dict[st
                     _candidate_row(
                         group,
                         quantity_value,
-                        source_evidence_item_id=evidence_id,
-                        ledger_row=ledger_row,
-                        quantity_row=quantity if isinstance(quantity, dict) else None,
-                        candidate_origin="claim_map_bound",
-                        model_adjudication_required=False,
+                            source_evidence_item_id=evidence_id,
+                            ledger_row=ledger_row,
+                            quantity_row=quantity if isinstance(quantity, dict) else None,
+                            candidate_origin=candidate_origin,
+                            model_adjudication_required=False,
+                        )
                     )
-                )
             for quantity in _string_list(ledger_row.get("residual_quantity_candidate_values")):
                 key = (evidence_id, quantity)
                 if key in seen_values:
@@ -793,19 +782,12 @@ def _claim_bound_quantity_rows(ledger_row: dict[str, Any]) -> list[Any]:
     rows = [row for row in _list(ledger_row.get("claim_quantities")) if isinstance(row, dict)]
     if rows:
         return rows
-    return _string_list(ledger_row.get("claim_bound_quantity_values"))
-
-
-def _uses_legacy_unsplit_quantities(ledger_row: dict[str, Any]) -> bool:
-    if not _string_list(ledger_row.get("quantity_values")):
-        return False
-    split_keys = (
-        "claim_quantities",
-        "claim_bound_quantity_values",
-        "residual_quantity_values",
-        "residual_quantity_candidate_values",
-    )
-    return not any(ledger_row.get(key) for key in split_keys)
+    bound_values = _string_list(ledger_row.get("claim_bound_quantity_values"))
+    if bound_values:
+        return bound_values
+    if any(ledger_row.get(key) for key in ("residual_quantity_values", "residual_quantity_candidate_values")):
+        return []
+    return _string_list(ledger_row.get("quantity_values"))
 
 
 def _quantity_value(row: Any) -> str:

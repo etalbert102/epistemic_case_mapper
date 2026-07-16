@@ -712,7 +712,7 @@ def _row_allowed_for_memo_slot(row: dict[str, Any], spec: dict[str, Any]) -> boo
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_evidence_tables import (
     _concept_label,
     _markdown_section_with_heading,

@@ -210,7 +210,7 @@ def test_normalize_claim_preserves_relevance_metadata_and_rejects_irrelevant() -
     assert reason == ""
     assert accepted is not None
     assert accepted["role"] == "source_claim"
-    assert accepted["legacy_extraction_role"] == "conclusion_support"
+    assert "legacy_extraction_role" not in accepted
     assert accepted["question_relevance"] == "direct"
     assert accepted["question_fit"]["status"] == "match"
     assert accepted["scope_flags"] == ["none"]

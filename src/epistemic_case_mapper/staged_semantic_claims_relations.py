@@ -868,7 +868,7 @@ def _write_relation_candidate_pool_report(
     )
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     CONSOLIDATION_OVERLAP_THRESHOLD,
     CONSOLIDATION_SIMILARITY_THRESHOLD,

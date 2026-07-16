@@ -857,7 +857,7 @@ def _ordered_concepts(rows: list[dict[str, Any]]) -> list[str]:
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import (
     _claim_concepts,
     _claim_evidence_weight_score,

@@ -303,8 +303,6 @@ def build_decision_usefulness_inventory_report(
     canonical = _dict(canonical_packet)
     scaffold = _dict(scaffold)
     utility_status = {
-        "option_comparison": "legacy_diagnostic_only",
-        "crux_contract": "legacy_diagnostic_only",
         "decision_crux_reconstruction_report": "diagnostic_only",
         "decision_slots": "diagnostic_or_packet_input",
         "decision_obligation_plan": "diagnostic_or_packet_input",
@@ -313,12 +311,9 @@ def build_decision_usefulness_inventory_report(
         "lightweight_writer_guidance": "separate_wording_guidance",
     }
     utilities = []
-    exposed_legacy_keys = []
     for key, status in utility_status.items():
         present_in_scaffold = key in scaffold
         present_in_canonical = key in canonical
-        if status.startswith("legacy") and present_in_canonical:
-            exposed_legacy_keys.append(key)
         utilities.append(
             {
                 "key": key,
@@ -344,12 +339,11 @@ def build_decision_usefulness_inventory_report(
     ]
     return {
         "schema_id": "decision_usefulness_inventory_report_v1",
-        "status": "warning" if exposed_legacy_keys else "ready",
+        "status": "ready",
         "active_handoff": "canonical_decision_writer_packet_v1",
         "active_fields_used": active_fields,
         "utilities": utilities,
-        "legacy_keys_exposed_to_canonical_packet": exposed_legacy_keys,
-        "final_prompt_policy": "only compact decision_usefulness_packet is exposed; legacy option/crux surfaces are not passed through directly",
+        "final_prompt_policy": "only compact decision_usefulness_packet is exposed to the final decision-usefulness layer",
     }
 
 

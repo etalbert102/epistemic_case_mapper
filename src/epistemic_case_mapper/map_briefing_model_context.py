@@ -12,7 +12,6 @@ def write_model_context_audit(
     path: Path,
     *,
     backend: str,
-    legacy_prompt: str,
     section_packets_path: Path | None,
     reader_rewrite_prompt: str,
     active_prompts: dict[str, str] | None = None,
@@ -23,7 +22,6 @@ def write_model_context_audit(
         path,
         build_model_context_audit(
             backend=backend,
-            legacy_prompt=legacy_prompt,
             section_packets_path=section_packets_path,
             reader_rewrite_prompt=reader_rewrite_prompt,
             active_prompts=active_prompts,
@@ -37,7 +35,6 @@ def write_model_context_audit(
 def build_model_context_audit(
     *,
     backend: str,
-    legacy_prompt: str,
     section_packets_path: Path | None,
     reader_rewrite_prompt: str,
     active_prompts: dict[str, str] | None = None,
@@ -56,13 +53,6 @@ def build_model_context_audit(
         "schema_id": "model_context_audit_v1",
         "backend": backend,
         "stages": [
-            _prompt_record(
-                "whole_briefing_legacy_prompt",
-                legacy_prompt,
-                status="record_only_legacy_prompt",
-                sent_to_model=False,
-                note="Retained as a compatibility/debug artifact; section-first synthesis is the active path.",
-            ),
             {
                 "stage": "section_rewrite",
                 "status": "record_only_prompt_backend" if prompt_backend else "active_model_calls",
@@ -241,8 +231,6 @@ def _active_prompt_pollution_flags(stage: str, prompt: str) -> list[str]:
         flags.append("skipped_backend_report_visible")
     if "deterministic_memo_use" in text or "deterministic_warnings" in text:
         flags.append("deterministic_judgment_label_visible")
-    if '"legacy_' in text or "legacy mandatory" in text:
-        flags.append("legacy_compatibility_payload_visible")
     if "raw output" in text or '"raw"' in text or "raw_" in text:
         flags.append("raw_or_debug_language_visible")
     if _polarity_context_missing(text):
@@ -281,7 +269,6 @@ def _field_hits(prompt: str) -> dict[str, int]:
         "packet_sufficiency_report",
         "packet_critique_adjudication_report",
         "skipped_prompt_backend",
-        "legacy_mandatory_items",
         "raw",
         "source_excerpt",
         "local_quantity_context",

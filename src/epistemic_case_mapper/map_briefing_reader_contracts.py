@@ -377,7 +377,7 @@ def _profile_crux_template(text: str, scaffold: dict[str, Any] | None) -> dict[s
             return template
     return {}
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import (
     _decision_slots_for_claim,
     _evidence_slot_why_it_matters,

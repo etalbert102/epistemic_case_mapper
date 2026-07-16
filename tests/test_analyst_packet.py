@@ -585,8 +585,8 @@ def test_analyst_packet_promotion_fails_loudly_without_decision_writer_packet() 
     assert scaffold["active_memo_ready_packet_report"]["status"] == "failed_decision_writer_packet_not_active"
     assert scaffold["active_memo_ready_packet_report"]["active_packet"] == "none"
     assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_status"] == "missing_decision_writer_packet"
-    assert scaffold["active_memo_ready_packet_report"]["legacy_analyst_packet_available"] is True
-    assert scaffold["active_memo_ready_packet_report"]["failure_policy"] == "fail_loudly_without_legacy_packet_fallback"
+    assert "legacy_analyst_packet_available" not in scaffold["active_memo_ready_packet_report"]
+    assert scaffold["active_memo_ready_packet_report"]["failure_policy"] == "fail_loudly_without_packet_fallback"
 
 
 def test_ready_decision_writer_packet_becomes_active_synthesis_packet() -> None:
@@ -679,7 +679,7 @@ def test_warning_decision_writer_packet_does_not_fall_back_to_analyst_packet() -
     assert scaffold["active_memo_ready_packet_report"]["status"] == "failed_decision_writer_packet_not_active"
     assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_status"] == "decision_writer_packet_has_blocking_quality_issues"
     assert scaffold["active_memo_ready_packet_report"]["decision_writer_packet_quality_issues"] == ["critical_evidence_not_accounted"]
-    assert scaffold["active_memo_ready_packet_report"]["legacy_analyst_packet_available"] is True
+    assert "legacy_analyst_packet_available" not in scaffold["active_memo_ready_packet_report"]
 
 
 def test_ready_decision_writer_path_skips_legacy_analyst_refinement() -> None:

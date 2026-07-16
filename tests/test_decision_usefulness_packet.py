@@ -203,7 +203,7 @@ def test_attach_decision_usefulness_to_packet_updates_canonical_handoff() -> Non
     assert updated["canonical_decision_writer_packet"]["decision_usefulness_report"]["status"] == "parsed"
 
 
-def test_decision_usefulness_inventory_report_keeps_legacy_utilities_diagnostic() -> None:
+def test_decision_usefulness_inventory_report_tracks_active_inputs() -> None:
     canonical = _canonical_packet()
 
     report = build_decision_usefulness_inventory_report(
@@ -214,7 +214,8 @@ def test_decision_usefulness_inventory_report_keeps_legacy_utilities_diagnostic(
     utilities = {row["key"]: row for row in report["utilities"]}
     assert report["schema_id"] == "decision_usefulness_inventory_report_v1"
     assert report["active_handoff"] == "canonical_decision_writer_packet_v1"
-    assert utilities["option_comparison"]["use_in_decision_usefulness_layer"].startswith("keep internal")
+    assert "option_comparison" not in utilities
+    assert "legacy_keys_exposed_to_canonical_packet" not in report
     assert utilities["decision_writer_packet"]["use_in_decision_usefulness_layer"].startswith("reuse indirectly")
 
 

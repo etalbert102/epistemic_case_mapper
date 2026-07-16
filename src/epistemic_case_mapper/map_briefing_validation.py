@@ -557,7 +557,7 @@ def _rel(repo_root: Path, path: Path) -> str:
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import _slot_label
 from epistemic_case_mapper.map_briefing_map_utils import _claims, _relations
 from epistemic_case_mapper.map_briefing_pipeline import CONFIDENCE_ORDER

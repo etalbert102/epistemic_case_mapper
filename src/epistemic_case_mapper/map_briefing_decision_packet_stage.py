@@ -315,11 +315,7 @@ def _promote_analyst_packet_as_active(scaffold: dict[str, Any]) -> None:
         ),
         "decision_writer_packet_quality_status": _dict_value(scaffold.get("decision_writer_packet_quality_report")).get("status"),
         "decision_writer_packet_quality_issues": _list_value(_dict_value(scaffold.get("decision_writer_packet_quality_report")).get("issues")),
-        "legacy_analyst_packet_available": bool(
-            isinstance(scaffold.get("analyst_memo_ready_packet"), dict)
-            and scaffold.get("analyst_memo_ready_packet", {}).get("evidence_items")
-        ),
-        "failure_policy": "fail_loudly_without_legacy_packet_fallback",
+        "failure_policy": "fail_loudly_without_packet_fallback",
     }
 
 

@@ -150,7 +150,7 @@ def run_map_briefing(
         backend_config=backend_config,
     )
     progress("final_reader_outputs", "returned")
-    _attach_model_context_audit(artifacts=artifacts, backend=backend, prompt=prompt, scaffold=scaffold, final_outputs=final_outputs)
+    _attach_model_context_audit(artifacts=artifacts, backend=backend, scaffold=scaffold, final_outputs=final_outputs)
     briefing_path = final_outputs["briefing_path"]
     evidence_appendix_path = final_outputs["evidence_appendix_path"]
     telemetry_paths = write_gap_telemetry_outputs(
@@ -257,14 +257,12 @@ def _attach_model_context_audit(
     *,
     artifacts: Path,
     backend: str,
-    prompt: str,
     scaffold: dict[str, Any],
     final_outputs: dict[str, Any],
 ) -> None:
     audit_path = write_model_context_audit(
         artifacts / "model_context_audit.json",
         backend=backend,
-        legacy_prompt=prompt,
         section_packets_path=final_outputs["summary_paths"].get("section_synthesis_packets"),
         reader_rewrite_prompt=str(final_outputs.get("rewrite_result", {}).get("prompt", "")),
         active_prompts=_active_model_prompts(scaffold, final_outputs),
@@ -664,7 +662,7 @@ def append_map_coverage_snapshot(rendered: str, scaffold: dict[str, Any]) -> str
 
 
 
-# Explicit cross-module dependencies for compatibility facade removal.
+# Public facade dependency imports.
 from epistemic_case_mapper.map_briefing_decision_model import (
     build_briefing_plan,
     build_decision_model,
