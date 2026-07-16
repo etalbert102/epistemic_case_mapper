@@ -16,6 +16,8 @@ from epistemic_case_mapper.map_briefing_source_bound_evidence import (
     source_bound_quantity_tuples,
 )
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
+from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_source_weighting_section import build_source_weighting_raw_section
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -72,46 +74,7 @@ def build_memo_ready_section_synthesis_prompt(
     *,
     known_source_ids: list[str],
 ) -> str:
-    heading = str(section_packet.get("heading") or "").strip()
-    return (
-        "You are writing one section of a source-grounded decision memo from a section-local packet.\n"
-        "Use the packet as the sole semantic handoff for this section.\n\n"
-        "Section role discipline:\n"
-        "- Follow section_role_contract as the controlling job for this section.\n"
-        "- If evidence appears in another section, mention it only to perform this section's distinct job.\n"
-        "- Use this section's contract to decide when proof of the bottom line belongs here.\n\n"
-        "Output rules:\n"
-        f"- Return Markdown for this section only, starting with exactly: ## {heading}\n"
-        "- Use bracketed citations only for source_id values listed in known_source_ids.\n"
-        "- Use parentheses, not square brackets, for confidence intervals, uncertainty ranges, and numeric ranges.\n"
-        "- Put only known source_ids inside bracketed citations.\n"
-        "- Every bracketed citation must be one or more known source_ids separated by comma-space.\n"
-        "- Keep packet IDs, validation machinery, and audit language out of the prose.\n"
-        "- Write natural expert analyst prose, not a checklist, unless bullets are the clearest form for concrete boundaries.\n"
-        "- Make each paragraph do a distinct reasoning job with fresh sentence-level value.\n\n"
-        "Writing priorities:\n"
-        "- Use section_focus and section_role_contract as the controlling job for this section.\n"
-        "- Use section_focus.prose_lead as the opening move; make the first sentence about the section's evidence or decision function.\n"
-        "- Treat section_focus.reader_question as the reader need this section must answer.\n"
-        "- Use section_focus.paragraph_shape to decide paragraph order when it is supplied.\n"
-        "- Before returning, scan for any exact phrase in section_focus.stock_phrases_to_replace and replace it with the specific evidence pattern, boundary, or action from the packet.\n"
-        "- Use top_context.current_read_reference as consistency context; use section_focus for the section opener.\n"
-        "- Use top_context.must_not_overstate to calibrate causal and confidence language.\n"
-        "- Use evidence_language_contracts to keep source-specific verbs and confidence no stronger than the source design permits.\n"
-        "- Lead with the distinction or tradeoff that resolves this section when the packet supplies one.\n"
-        "- Explain which evidence carries the answer, which evidence bounds it, and which evidence mainly contextualizes application.\n"
-        "- Use source_bound_evidence_atoms as the primary factual units: keep each claim, quantity tuple, and allowed citation together.\n"
-        "- When a source_bound_evidence_atom or quantity tuple has applicability_scope, keep that population, subgroup, setting, or endpoint in the same sentence or clause as the quantity and citation.\n"
-        "- Use quantity_collision_warnings to keep same-looking quantities separated by population, endpoint, and source_id.\n"
-        "- Preserve required quantities near the claims they support and explain what they mean for the decision.\n"
-        "- Treat protected_quantity_sets as all-or-nothing anchors: if a row appears, include every listed source_bound_quantity_atom with its allowed source citation.\n"
-        "- Section role discipline preserves retention: include every protected quantity and source_id listed in section_retention_requirements.\n"
-        "- If one claim has several protected quantities, keep the full set together rather than sampling representative values.\n"
-        "- Translate source weighting into prose instead of generic labels.\n"
-        "- For practical sections, state the concrete implication for the decision-maker within the packet's scope.\n\n"
-        f"known_source_ids:\n{json.dumps(known_source_ids, indent=2, ensure_ascii=False)}\n\n"
-        f"section_packet:\n{json.dumps(section_packet, indent=2, ensure_ascii=False)}\n"
-    )
+    return build_memo_ready_section_markdown_prompt(section_packet, known_source_ids=known_source_ids)
 
 
 def build_writer_packet_synthesis_prompt(
@@ -217,6 +180,29 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
 
 def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
     packets = []
+    source_weighting = build_source_weighting_raw_section(reader_packet)
+    if source_weighting:
+        source_bound_atoms = _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(source_weighting))
+        packets.append(
+            _drop_empty(
+                {
+                    "schema_id": "memo_ready_section_writer_packet_v1",
+                    "section_id": "source_weighting",
+                    "heading": "How to Weight the Evidence",
+                    "source_section": "How to Weight the Evidence",
+                    "section_job": source_weighting.get("writing_job"),
+                    "section_role_contract": _section_role_contract("How to Weight the Evidence"),
+                    "section_focus": _section_focus("source_weighting"),
+                    "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
+                    "required_points": source_weighting.get("required_points"),
+                    "protected_quantity_sets": _protected_quantity_sets(source_weighting),
+                    "source_bound_evidence_atoms": source_bound_atoms,
+                    "quantity_collision_warnings": _quantity_collision_warnings(source_bound_atoms),
+                    "evidence_context": source_weighting.get("evidence_context"),
+                    "source_weighting": source_weighting.get("source_weighting"),
+                }
+            )
+        )
     for raw in _list(reader_packet.get("section_writing_packets")):
         if not isinstance(raw, dict):
             continue
@@ -359,6 +345,14 @@ def _section_focus(section_id: str) -> dict[str, Any]:
                 "It is essential to",
             ],
         },
+        "source_weighting": {
+            "reader_question": "Which sources should carry the answer, and which ones should mostly calibrate or bound it?",
+            "prose_lead": "Open with the source hierarchy that matters for trusting the answer.",
+            "lead": "Start with how to weight the source base, not with a restatement of the bottom line.",
+            "use_current_read_as": "reference_for_source_weighting",
+            "new_value": "source hierarchy, credibility calibration, and use limits",
+            "paragraph_shape": ["sources that carry the answer", "sources that calibrate, bound, or contextualize it", "source-specific caveats that change how confidently to read the evidence"],
+        },
         "practical_implication": {
             "reader_question": "Given the answer and its limits, what should the decision-maker do next?",
             "prose_lead": "Open with the usable stance inside scope, then name the condition that changes application.",
@@ -407,6 +401,14 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
                 "main_counterweight": balanced.get("main_counterweight"),
                 "scope": balanced.get("scope"),
                 "decision_usefulness": _counterweight_decision_usefulness(reader_packet.get("decision_usefulness")),
+            }
+        )
+    elif section_id == "source_weighting":
+        base.update(
+            {
+                "main_support": balanced.get("main_support"),
+                "main_counterweight": balanced.get("main_counterweight"),
+                "scope": balanced.get("scope"),
             }
         )
     elif section_id == "practical_implication":

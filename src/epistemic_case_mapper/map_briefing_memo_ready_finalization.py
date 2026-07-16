@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
 )
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_repair_num_predict, memo_ready_whole_memo_num_predict
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
@@ -98,6 +99,7 @@ def _run_whole_memo_ready_packet_synthesis(
             backend,
             timeout_seconds=backend_timeout,
             max_retries=backend_retries,
+            num_predict=memo_ready_whole_memo_num_predict(),
             json_mode=False,
         )
     except RuntimeError as exc:
@@ -381,7 +383,14 @@ def run_decision_usefulness_memo_repair(
         report.update({"status": "skipped_prompt_backend", "issues": ["decision-usefulness repair backend returned prompt only"]})
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries, json_mode=False)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=memo_ready_repair_num_predict(),
+            json_mode=False,
+        )
     except RuntimeError as exc:
         report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
@@ -463,7 +472,13 @@ def run_memo_ready_packet_repair(
         report.update({"status": "skipped_prompt_backend", "issues": ["memo-ready repair backend returned prompt only"]})
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=memo_ready_repair_num_predict(),
+        )
     except RuntimeError as exc:
         report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
         return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
@@ -1046,7 +1061,13 @@ def run_memo_ready_final_polish_drift_repair(
         polish_diagnostics=polish_diagnostics,
     )
     try:
-        result = run_model_backend(prompt, backend, timeout_seconds=backend_timeout, max_retries=backend_retries)
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=memo_ready_repair_num_predict(),
+        )
     except RuntimeError as exc:
         report.update({"status": "backend_error_kept_polish_candidate_for_rejection", "issues": [str(exc)]})
         return {"memo": polished_memo, "prompt": prompt, "raw": "", "report": report}

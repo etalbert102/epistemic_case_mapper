@@ -87,6 +87,30 @@ def test_live_synthesis_requests_plain_text_backend(monkeypatch: pytest.MonkeyPa
     assert captured["json_mode"] is False
 
 
+def test_whole_memo_synthesis_uses_larger_output_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "answer_spine": {"default_read": "Option A is plausible but bounded."},
+        "evidence_items": [],
+        "source_trail": [],
+    }
+
+    def fake_backend(*args, **kwargs):
+        captured.update(kwargs)
+        from epistemic_case_mapper.model_backends import ModelBackendResult
+
+        return ModelBackendResult(text="# Decision Memo\n\nOption A is plausible but bounded.", backend="fake")
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["used_default_path"] is False
+    assert captured["json_mode"] is False
+    assert captured["num_predict"] == 8192
+
+
 def test_retention_requires_decision_quantities_but_not_artifact_dates() -> None:
     packet = {
         "decision_question": "Should adults treat eggs as harmful?",

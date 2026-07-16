@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     list_value as _list,
     string_list as _string_list,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_section_num_predict
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
 
 
@@ -29,12 +30,14 @@ def run_parallel_memo_ready_section_generation(
     sections = [section for section in _list(section_plan.get("sections")) if isinstance(section, dict)]
     known_source_ids = set(_string_list(section_plan.get("known_source_ids")))
     known_source_aliases = _source_alias_map(section_plan.get("known_source_aliases"))
+    num_predict = memo_ready_section_num_predict()
     report = {
         "schema_id": "memo_ready_section_generation_report_v1",
         "status": "not_run",
         "accepted": False,
         "synthesis_mode": "parallel_section_synthesis",
         "parallelism": min(model_parallelism(backend), len(sections)) if sections else 0,
+        "num_predict": num_predict,
         "section_count": len(sections),
         "issues": [],
     }
@@ -45,6 +48,7 @@ def run_parallel_memo_ready_section_generation(
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
+            num_predict=num_predict,
             known_source_ids=known_source_ids,
             known_source_aliases=known_source_aliases,
             run_model=run_model,
@@ -87,6 +91,7 @@ def _run_section(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    num_predict: int,
     known_source_ids: set[str],
     known_source_aliases: dict[str, str],
     run_model: ModelRunner,
@@ -109,6 +114,7 @@ def _run_section(
             backend,
             timeout_seconds=backend_timeout,
             max_retries=backend_retries,
+            num_predict=num_predict,
             json_mode=False,
         )
     except RuntimeError as exc:
@@ -136,6 +142,7 @@ def _run_section(
             "markdown": markdown,
             "char_count": len(markdown),
             "attempts": result.attempts,
+            "num_predict": num_predict,
         }
     )
     return section_report
@@ -343,4 +350,5 @@ def _public_section_report(row: dict[str, Any]) -> dict[str, Any]:
         "unknown_source_ids": _list(row.get("unknown_source_ids")),
         "char_count": row.get("char_count", 0),
         "attempts": row.get("attempts", 0),
+        "num_predict": row.get("num_predict", 0),
     }
