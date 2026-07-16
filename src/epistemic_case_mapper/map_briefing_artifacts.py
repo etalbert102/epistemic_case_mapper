@@ -178,6 +178,8 @@ def _scaffold_artifact_specs() -> tuple[ArtifactSpec, ...]:
         *_decision_contract_artifact_specs(),
         ArtifactSpec("active_memo_ready_packet_report", "active_memo_ready_packet_report.json", "json", _scaffold_value("active_memo_ready_packet_report"), review_label="Active memo-ready packet report"),
         ArtifactSpec("memo_ready_packet", "memo_ready_packet.json", "json", _scaffold_value("memo_ready_packet"), review_label="Memo-ready packet"),
+        ArtifactSpec("source_weighting_contract", "source_weighting_contract.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("source_weighting_contract", {}), review_label="Source weighting contract"),
+        ArtifactSpec("source_weighting_flow_audit", "source_weighting_flow_audit.json", "json", lambda ctx: _scaffold_dict(ctx.scaffold, "memo_ready_packet").get("source_weighting_flow_audit", {}), review_label="Source weighting flow audit"),
         ArtifactSpec("writer_decision_interface", "writer_decision_interface.json", "json", lambda ctx: _writer_decision_interface(ctx.scaffold), review_label="Writer decision interface"),
         ArtifactSpec("writer_decision_interface_quality_report", "writer_decision_interface_quality_report.json", "json", lambda ctx: _writer_decision_interface_quality_report(ctx.scaffold), review_label="Writer decision interface quality"),
         ArtifactSpec("memo_ready_selection_report", "memo_ready_selection_report.json", "json", _scaffold_value("memo_ready_selection_report"), review_label="Memo-ready selection"),

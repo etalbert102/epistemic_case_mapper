@@ -50,6 +50,9 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         *_section("### Calibration limits", _bullet_list(top.get("must_not_overstate"))),
         *_section("### Required evidence points", _source_bound_atom_lines(packet.get("source_bound_evidence_atoms"))),
         *_section("### Required obligations", _retention_requirement_lines(packet.get("section_retention_requirements"))),
+        *_section("### Source role contract", _source_role_group_lines(packet.get("source_role_groups"))),
+        *_section("### Source hierarchy lane notes", _lane_card_lines(packet.get("lane_cards"))),
+        *_section("### Source weighting validation target", _source_weighting_validation_lines(packet.get("validation_contract"))),
         *_section("### Protected quantity sets", _protected_quantity_set_lines(packet.get("protected_quantity_sets"))),
         *_section("### Quantity collision warnings", _quantity_collision_lines(packet.get("quantity_collision_warnings"))),
         *_section("### Section argument steps", _argument_step_lines(packet.get("section_argument_steps"))),
@@ -72,6 +75,7 @@ def _top_context_lines(top: dict[str, Any]) -> list[str]:
         ("scope", "Scope"),
         ("practical_read", "Practical read"),
         ("main_boundary", "Main boundary"),
+        ("source_hierarchy_thesis", "Source hierarchy thesis"),
     ):
         if value := _text(top.get(key)):
             rows.append(f"{label}: {value}")
@@ -203,6 +207,54 @@ def _source_weighting_lines(value: Any) -> list[str]:
         )
         if line:
             rows.append(_bullet(line))
+    return rows
+
+
+def _source_role_group_lines(value: Any) -> list[str]:
+    rows = []
+    for group in _dict_rows(value)[:8]:
+        role = _text(group.get("role"))
+        if job := _text(group.get("writing_job")):
+            rows.append(_bullet(f"{role}: {job}"))
+        for source in _dict_rows(group.get("sources"))[:8]:
+            parts = [
+                _citations(source),
+                _text(source.get("memo_weight_sentence") or source.get("role_rationale")),
+            ]
+            if caveats := _string_list(source.get("source_appraisal_caveats")):
+                parts.append("Use limit: " + "; ".join(caveats[:2]))
+            if cannot := _string_list(source.get("cannot_support")):
+                parts.append("Cannot support: " + "; ".join(cannot[:2]))
+            if line := "; ".join(part for part in parts if part):
+                rows.append(_bullet(line))
+    return rows
+
+
+def _lane_card_lines(value: Any) -> list[str]:
+    rows = []
+    for card in _dict_rows(value)[:10]:
+        line = "; ".join(
+            part
+            for part in (
+                _text(card.get("role")),
+                _text(card.get("role_description")),
+                _text(card.get("rationale")),
+                _citations(card),
+            )
+            if part
+        )
+        if line:
+            rows.append(_bullet(line))
+    return rows
+
+
+def _source_weighting_validation_lines(value: Any) -> list[str]:
+    target = _dict(value)
+    rows = []
+    if roles := _string_list(target.get("roles_to_cover")):
+        rows.append(_bullet("Cover these source roles: " + ", ".join(roles)))
+    if source_ids := _string_list(target.get("source_ids_to_account_for")):
+        rows.append(_bullet("Account for these source IDs: " + ", ".join(f"[{source_id}]" for source_id in source_ids)))
     return rows
 
 

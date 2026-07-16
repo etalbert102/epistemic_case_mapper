@@ -24,6 +24,10 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     source_id_registry_for_model,
 )
 from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_bundle
+from epistemic_case_mapper.map_briefing_source_weighting_contract import (
+    build_source_weighting_contract,
+    build_source_weighting_flow_audit,
+)
 from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
 from epistemic_case_mapper.map_briefing_writer_decision_interface import build_writer_decision_interface
 
@@ -110,6 +114,8 @@ def build_canonical_decision_writer_packet(
         "citation_registry": _citation_registry(source_trail),
     }
     canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))
+    canonical["source_weighting_contract"] = build_source_weighting_contract(canonical)
+    canonical["source_weighting_flow_audit"] = build_source_weighting_flow_audit(canonical)
     canonical["quality_report"] = build_canonical_decision_writer_packet_quality_report(canonical)
     return canonical
 

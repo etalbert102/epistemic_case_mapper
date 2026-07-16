@@ -353,6 +353,8 @@ def build_memo_ready_packet(
     canonical = build_canonical_decision_writer_packet(memo_ready_packet)
     memo_ready_packet["canonical_decision_writer_packet"] = canonical
     memo_ready_packet["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
+    memo_ready_packet["source_weighting_contract"] = _dict(canonical.get("source_weighting_contract"))
+    memo_ready_packet["source_weighting_flow_audit"] = _dict(canonical.get("source_weighting_flow_audit"))
     return memo_ready_packet
 
 

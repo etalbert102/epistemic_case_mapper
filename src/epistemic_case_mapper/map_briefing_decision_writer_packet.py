@@ -163,6 +163,8 @@ def decision_writer_packet_to_memo_ready_packet(
     from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
     memo_ready["canonical_decision_writer_packet"] = canonical = build_canonical_decision_writer_packet(memo_ready, writer_interface=writer_interface)
     memo_ready["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
+    memo_ready["source_weighting_contract"] = _dict(canonical.get("source_weighting_contract"))
+    memo_ready["source_weighting_flow_audit"] = _dict(canonical.get("source_weighting_flow_audit"))
     return memo_ready
 
 

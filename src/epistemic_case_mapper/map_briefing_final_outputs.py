@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_memo_progress import (
     memo_progress_path,
     record_memo_progress,
 )
+from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_fidelity_report
 
 
 @dataclass(frozen=True)
@@ -266,6 +267,7 @@ def _run_memo_ready_final_output_path(
     rewrite_result["memo"] = presentation["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_status"] = presentation.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_changes"] = presentation.get("report", {}).get("changes", [])
+    _attach_final_source_weighting_fidelity(rewrite_result, memo_ready_packet)
     return {
         "section_rewrite_result": section_rewrite_result,
         "rewrite_result": rewrite_result,
@@ -277,6 +279,13 @@ def _run_memo_ready_final_output_path(
         "memo_ready_repair_result": repair,
         "memo_ready_final_polish_result": final_polish,
     }
+
+
+def _attach_final_source_weighting_fidelity(rewrite_result: dict[str, Any], memo_ready_packet: dict[str, Any]) -> None:
+    rewrite_result.setdefault("report", {})["final_source_weighting_fidelity_report"] = build_source_weighting_fidelity_report(
+        str(rewrite_result.get("memo") or ""),
+        memo_ready_packet,
+    )
 
 
 def _not_needed_result(memo: str, status: str) -> dict[str, Any]:

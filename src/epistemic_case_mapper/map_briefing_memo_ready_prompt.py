@@ -17,7 +17,7 @@ from epistemic_case_mapper.map_briefing_source_bound_evidence import (
 )
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
-from epistemic_case_mapper.map_briefing_memo_ready_source_weighting_section import build_source_weighting_raw_section
+from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_contract, build_source_weighting_flow_audit, build_source_weighting_section_packet
 
 
 def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) -> str:
@@ -45,6 +45,8 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
     canonical = _with_top_level_guidance(canonical, memo_ready_packet)
     reader_packet = _reader_synthesis_packet(canonical)
     section_packets = _section_synthesis_packets(reader_packet)
+    source_weighting_section_packet = next((packet for packet in section_packets if packet.get("section_id") == "source_weighting"), {})
+    source_weighting_flow_audit = build_source_weighting_flow_audit(canonical, {**reader_packet, "source_weighting_section_packet": source_weighting_section_packet})
     known_source_ids = _known_source_ids(memo_ready_packet, canonical, reader_packet)
     known_source_aliases = source_id_alias_map(_list(memo_ready_packet.get("source_trail")))
     return {
@@ -56,6 +58,7 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
         "bottom_line": _bottom_line_from_reader_packet(reader_packet),
         "known_source_ids": known_source_ids,
         "known_source_aliases": known_source_aliases,
+        "source_weighting_flow_audit": source_weighting_flow_audit,
         "sections": [
             {
                 "section_id": packet["section_id"],
@@ -145,6 +148,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
 def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]:
     packet = canonical_packet if isinstance(canonical_packet, dict) else {}
     spine = _dict(packet.get("evidence_weighted_argument_spine"))
+    source_weighting_contract = _dict(packet.get("source_weighting_contract")) or build_source_weighting_contract(packet)
     return {
         "schema_id": "reader_synthesis_packet_v1",
         "canonical_schema_id": packet.get("schema_id"),
@@ -159,6 +163,8 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "bluf_contract": packet.get("bluf_contract"),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
+        "source_weighting_contract": source_weighting_contract,
+        "source_weighting_flow_audit": build_source_weighting_flow_audit(packet, {"source_weighting_contract": source_weighting_contract}),
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
         "decision_usefulness": compact_decision_usefulness_for_prompt(_dict(packet.get("decision_usefulness_packet"))),
         "argument_spine": _drop_empty(
@@ -180,29 +186,9 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
 
 def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, Any]]:
     packets = []
-    source_weighting = build_source_weighting_raw_section(reader_packet)
+    source_weighting = build_source_weighting_section_packet(reader_packet)
     if source_weighting:
-        source_bound_atoms = _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(source_weighting))
-        packets.append(
-            _drop_empty(
-                {
-                    "schema_id": "memo_ready_section_writer_packet_v1",
-                    "section_id": "source_weighting",
-                    "heading": "How to Weight the Evidence",
-                    "source_section": "How to Weight the Evidence",
-                    "section_job": source_weighting.get("writing_job"),
-                    "section_role_contract": _section_role_contract("How to Weight the Evidence"),
-                    "section_focus": _section_focus("source_weighting"),
-                    "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
-                    "required_points": source_weighting.get("required_points"),
-                    "protected_quantity_sets": _protected_quantity_sets(source_weighting),
-                    "source_bound_evidence_atoms": source_bound_atoms,
-                    "quantity_collision_warnings": _quantity_collision_warnings(source_bound_atoms),
-                    "evidence_context": source_weighting.get("evidence_context"),
-                    "source_weighting": source_weighting.get("source_weighting"),
-                }
-            )
-        )
+        packets.append(_source_weighting_section_writer_packet(reader_packet, source_weighting))
     for raw in _list(reader_packet.get("section_writing_packets")):
         if not isinstance(raw, dict):
             continue
@@ -235,6 +221,22 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
             )
         )
     return packets
+
+
+def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], source_weighting: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "schema_id": "memo_ready_section_writer_packet_v1", "section_id": "source_weighting",
+            "heading": "How to Weight the Evidence", "source_section": "How to Weight the Evidence",
+            "section_job": source_weighting.get("writing_job"),
+            "section_role_contract": _section_role_contract("How to Weight the Evidence"),
+            "section_focus": _section_focus("source_weighting"),
+            "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
+            "required_points": source_weighting.get("required_points"), "source_weighting_contract": reader_packet.get("source_weighting_contract"),
+            "source_role_groups": source_weighting.get("source_role_groups"), "lane_cards": source_weighting.get("lane_cards"),
+            "validation_contract": source_weighting.get("validation_contract"),
+        }
+    )
 
 
 def _canonical_section_heading(heading: str) -> str:
@@ -409,6 +411,7 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
                 "main_support": balanced.get("main_support"),
                 "main_counterweight": balanced.get("main_counterweight"),
                 "scope": balanced.get("scope"),
+                "source_hierarchy_thesis": raw_section.get("hierarchy_thesis"),
             }
         )
     elif section_id == "practical_implication":

@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_memo_section_polish import (
     collect_parallel_hybrid_section_memo_polish_proposals,
     collect_parallel_section_memo_polish_proposals,
 )
+from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_fidelity_report
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -162,6 +163,7 @@ def _run_whole_memo_ready_packet_synthesis(
             "warning_resolution_report": retention.get("warning_resolution_report", {}),
             "source_binding_report": retention.get("source_binding_report", {}),
             "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
+            "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
@@ -195,6 +197,7 @@ def _run_parallel_memo_ready_section_synthesis(
         "contract_mode": "strict_writer_packet" if _strict_packet_contract(memo_ready_packet) else "standard_packet",
         "live_enrichment_required": True,
         "used_default_path": False,
+        "source_weighting_flow_audit": section_plan.get("source_weighting_flow_audit", {}),
     }
     if not generated.get("memo"):
         return {"memo": "", "prompt": generated.get("prompt", ""), "raw": generated.get("raw", ""), "report": base_report}
