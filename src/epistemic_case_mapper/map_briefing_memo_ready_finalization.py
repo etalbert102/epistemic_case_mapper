@@ -5,6 +5,10 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.evidence_anchored_synthesis_experiment import (
+    evidence_anchored_synthesis_enabled,
+    run_evidence_anchored_memo_ready_synthesis,
+)
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
 from epistemic_case_mapper.map_briefing_calibrated_language import normalize_calibrated_language
 from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
@@ -64,6 +68,14 @@ def run_memo_ready_packet_synthesis(
     }
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
+    if evidence_anchored_synthesis_enabled() and _list(memo_ready_packet.get("evidence_items")):
+        return run_evidence_anchored_memo_ready_synthesis(
+            memo_ready_packet,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            run_model=run_model_backend,
+        )
     section_plan = build_memo_ready_section_synthesis_plan(memo_ready_packet)
     if section_plan.get("status") == "ready" and _list(section_plan.get("sections")):
         return _run_parallel_memo_ready_section_synthesis(

@@ -530,6 +530,14 @@ def _write_final_reader_artifacts(
         write_markdown(paths.memo_ready_synthesis_prompt, str(memo_ready_synthesis_result.get("prompt", "")))
     if memo_ready_synthesis_result.get("raw"):
         write_markdown(paths.memo_ready_synthesis_raw, str(memo_ready_synthesis_result.get("raw", "")))
+    if memo_ready_synthesis_result.get("evidence_expression_contracts"):
+        write_json(paths.evidence_expression_contracts, memo_ready_synthesis_result.get("evidence_expression_contracts", []))
+    if memo_ready_synthesis_result.get("evidence_trace"):
+        write_json(paths.evidence_trace, memo_ready_synthesis_result.get("evidence_trace", []))
+    if memo_ready_synthesis_result.get("evidence_reconciliation_report"):
+        write_json(paths.evidence_reconciliation_report, memo_ready_synthesis_result.get("evidence_reconciliation_report", {}))
+    if memo_ready_synthesis_result.get("evidence_anchored_section_reports"):
+        write_json(paths.evidence_anchored_section_reports, memo_ready_synthesis_result.get("evidence_anchored_section_reports", []))
     if memo_ready_repair_result.get("prompt"):
         write_markdown(paths.memo_ready_repair_prompt, str(memo_ready_repair_result.get("prompt", "")))
     if memo_ready_repair_result.get("raw"):
@@ -675,6 +683,16 @@ def _memo_ready_summary_paths(
         "memo_ready_synthesis_report": paths.memo_ready_synthesis_report,
         "memo_ready_synthesis_prompt": paths.memo_ready_synthesis_prompt if synthesis_result and synthesis_result.get("prompt") else None,
         "memo_ready_synthesis_raw": paths.memo_ready_synthesis_raw if synthesis_result and synthesis_result.get("raw") else None,
+        "evidence_expression_contracts": paths.evidence_expression_contracts
+        if synthesis_result and synthesis_result.get("evidence_expression_contracts")
+        else None,
+        "evidence_trace": paths.evidence_trace if synthesis_result and synthesis_result.get("evidence_trace") else None,
+        "evidence_reconciliation_report": paths.evidence_reconciliation_report
+        if synthesis_result and synthesis_result.get("evidence_reconciliation_report")
+        else None,
+        "evidence_anchored_section_reports": paths.evidence_anchored_section_reports
+        if synthesis_result and synthesis_result.get("evidence_anchored_section_reports")
+        else None,
         "memo_ready_repair_report": paths.memo_ready_repair_report,
         "memo_ready_repair_prompt": paths.memo_ready_repair_prompt if repair_result and repair_result.get("prompt") else None,
         "memo_ready_repair_raw": paths.memo_ready_repair_raw if repair_result and repair_result.get("raw") else None,

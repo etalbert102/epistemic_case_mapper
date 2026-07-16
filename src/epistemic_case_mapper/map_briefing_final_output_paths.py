@@ -47,6 +47,10 @@ class FinalReaderOutputPaths:
     memo_ready_synthesis_prompt: Path
     memo_ready_synthesis_raw: Path
     memo_ready_synthesis_report: Path
+    evidence_expression_contracts: Path
+    evidence_trace: Path
+    evidence_reconciliation_report: Path
+    evidence_anchored_section_reports: Path
     memo_ready_repair_prompt: Path
     memo_ready_repair_raw: Path
     memo_ready_repair_report: Path
@@ -101,6 +105,10 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         memo_ready_synthesis_prompt=artifacts / "memo_ready_synthesis_prompt.txt",
         memo_ready_synthesis_raw=artifacts / "memo_ready_synthesis_raw.md",
         memo_ready_synthesis_report=artifacts / "memo_ready_synthesis_report.json",
+        evidence_expression_contracts=artifacts / "evidence_expression_contracts.json",
+        evidence_trace=artifacts / "evidence_trace.json",
+        evidence_reconciliation_report=artifacts / "evidence_reconciliation_report.json",
+        evidence_anchored_section_reports=artifacts / "evidence_anchored_section_reports.json",
         memo_ready_repair_prompt=artifacts / "memo_ready_repair_prompt.txt",
         memo_ready_repair_raw=artifacts / "memo_ready_repair_raw.md",
         memo_ready_repair_report=artifacts / "memo_ready_repair_report.json",
