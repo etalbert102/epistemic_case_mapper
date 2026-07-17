@@ -19,6 +19,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_prompt import (
     build_memo_ready_packet_synthesis_prompt,
     build_writer_packet_synthesis_prompt,
 )
+from epistemic_case_mapper.map_briefing_quantity_retention import retention_quantity_rows
 from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
@@ -268,7 +269,11 @@ def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities(
 
     support_item = packet["evidence_items"][0]
     assert [row["value"] for row in support_item["quantities"]] == ["20% improvement"]
+    assert support_item["quantities"][0]["must_retain"] is True
     assert support_item["excluded_quantity_values"] == ["p = 0.04"]
+    obligation = packet["memo_obligations"]["obligations"][0]
+    assert obligation["quantities"][0]["must_retain"] is True
+    assert [row["value"] for row in retention_quantity_rows(obligation)] == ["20% improvement"]
     assert packet["quantity_obligation_plan"]["must_retain_count"] == 1
     assert packet["writer_packet_writeability_report"]["model_call_accounting"]["new_default_model_call_added"] is False
     assert "analyst_quantity_binding_report" in packet["writer_packet_writeability_report"]["model_call_accounting"]["existing_judgment_artifacts_reused"]

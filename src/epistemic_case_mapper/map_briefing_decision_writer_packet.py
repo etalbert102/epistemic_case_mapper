@@ -277,6 +277,9 @@ def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dic
                 "source_labels": _string_list(quantity.get("source_label")) or _string_list(quantity.get("source_labels")),
                 "quantity_role": str((plan or {}).get("quantity_role") or "").strip(),
                 "quantity_id": str((plan or {}).get("quantity_id") or (plan or {}).get("candidate_id") or "").strip(),
+                "must_retain": bool(plan and quantity_must_retain(plan)),
+                "memo_use": str((plan or {}).get("memo_use") or "").strip(),
+                "analyst_quantity_relevance": _dict((plan or {}).get("analyst_quantity_relevance")),
             }
         )
     return rows

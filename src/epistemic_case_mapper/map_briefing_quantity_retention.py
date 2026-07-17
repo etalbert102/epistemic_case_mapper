@@ -49,6 +49,13 @@ def quantity_required_for_retention(quantity: dict[str, Any], row: dict[str, Any
     value = str(quantity.get("value") or "").strip()
     if not value:
         return False
+    if "must_retain" in quantity and quantity.get("must_retain") is not None:
+        return bool(quantity.get("must_retain"))
+    analyst = quantity.get("analyst_quantity_relevance")
+    if isinstance(analyst, dict):
+        inclusion = str(analyst.get("memo_inclusion") or "").strip()
+        if inclusion:
+            return inclusion == "must_use"
     text = " ".join(
         [
             value,

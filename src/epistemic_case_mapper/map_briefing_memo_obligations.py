@@ -169,7 +169,7 @@ def _validation_terms(role: str, claim: str, statement: str) -> list[str]:
     return _dedupe([*_content_terms(claim)[:8], *_content_terms(statement)[:4]])[:10]
 
 
-def _load_bearing_quantities(item: dict[str, Any]) -> list[dict[str, str]]:
+def _load_bearing_quantities(item: dict[str, Any]) -> list[dict[str, Any]]:
     role = str(item.get("role") or "")
     if role == "scope_boundary":
         return []
@@ -179,7 +179,19 @@ def _load_bearing_quantities(item: dict[str, Any]) -> list[dict[str, str]]:
             continue
         value = str(quantity.get("value") or "").strip()
         if value:
-            rows.append({"value": value, "interpretation": str(quantity.get("interpretation") or "").strip()})
+            rows.append(
+                {
+                    "value": value,
+                    "interpretation": str(quantity.get("interpretation") or "").strip(),
+                    "retention_phrase": str(quantity.get("retention_phrase") or "").strip(),
+                    "quantity_role": str(quantity.get("quantity_role") or "").strip(),
+                    "quantity_id": str(quantity.get("quantity_id") or "").strip(),
+                    "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
+                    "memo_use": str(quantity.get("memo_use") or "").strip(),
+                    "must_retain": bool(quantity.get("must_retain")) if "must_retain" in quantity else None,
+                    "analyst_quantity_relevance": quantity.get("analyst_quantity_relevance") if isinstance(quantity.get("analyst_quantity_relevance"), dict) else {},
+                }
+            )
     return rows
 
 
