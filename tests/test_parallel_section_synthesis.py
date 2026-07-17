@@ -68,7 +68,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("### Source language and use limits" in prompt for prompt in calls)
     assert any("### Required evidence points" in prompt for prompt in calls)
     assert any("### Source weighting notes" in prompt for prompt in calls)
-    assert any("Translate the answer into action guidance" in prompt for prompt in calls)
+    assert any("Translate the settled answer and its limits into what guidance should say" in prompt for prompt in calls)
     assert all("section_packet:" not in prompt for prompt in calls)
     assert any("### Evidence expression contracts" in prompt for prompt in calls)
     assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
@@ -255,7 +255,19 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert practical["source_weighting"]
     assert "balanced_answer_frame" not in practical["top_context"]
     assert "bluf_contract" not in practical["top_context"]
-    assert "current_read_reference" in practical["top_context"]
+    assert "current_read_reference" not in practical["top_context"]
+    assert "confidence" not in practical["top_context"]
+    assert "decision_question" in practical["top_context"]
+    assert practical["section_job"] == "Translate the settled answer and its limits into what guidance should say; keep evidence basis short."
+    assert practical["section_role_contract"]["do"][0] == "state the practical recommendation in ordinary decision language"
+
+    source_weighting = sections["source_weighting"]
+    assert source_weighting["section_job"] == "Explain the source hierarchy and source-use limits only; do not reargue the answer or preview practical advice."
+    assert "current_read_reference" not in source_weighting["top_context"]
+    assert "confidence" not in source_weighting["top_context"]
+    assert "main_support" not in source_weighting["top_context"]
+    assert "main_counterweight" not in source_weighting["top_context"]
+    assert source_weighting["section_focus"]["paragraph_shape"][0] == "one sentence source hierarchy thesis"
 
 
 def test_evidence_tag_renderer_uses_role_appropriate_citation_sources() -> None:

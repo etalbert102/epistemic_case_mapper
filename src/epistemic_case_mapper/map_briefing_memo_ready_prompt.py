@@ -208,7 +208,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_id": section_id,
                     "heading": heading,
                     "source_section": source_section,
-                    "section_job": raw.get("writing_job"),
+                    "section_job": _section_job(section_id, raw.get("writing_job")),
                     "section_role_contract": _section_role_contract(heading),
                     "section_focus": _section_focus(section_id),
                     "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), section_id),
@@ -231,7 +231,7 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
         {
             "schema_id": "memo_ready_section_writer_packet_v1", "section_id": "source_weighting",
             "heading": "How to Weight the Evidence", "source_section": "How to Weight the Evidence",
-            "section_job": source_weighting.get("writing_job"),
+            "section_job": _section_job("source_weighting", source_weighting.get("writing_job")),
             "section_role_contract": _section_role_contract("How to Weight the Evidence"),
             "section_focus": _section_focus("source_weighting"),
             "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), "source_weighting"),
@@ -265,55 +265,65 @@ def _section_role_contract(heading: str) -> dict[str, Any]:
         "answer_evidence": {
             "role": "explain_why_this_read_is_best",
             "do": [
-                "integrate the strongest supporting evidence into the reason for the current answer",
-                "interpret key quantities only where they carry the main read",
-                "name the main uncertainty only as it affects confidence in this read",
+                "show the strongest reason the primary answer follows from the evidence",
+                "interpret only quantities that carry the main answer",
+                "use one confidence-calibration sentence only if it explains why the answer is neutral rather than stronger",
             ],
             "avoid": [
                 "turning into a source inventory",
-                "listing every scope boundary or practical action",
-                "repeating the bottom line without adding evidential reasoning",
+                "previewing all subgroup boundaries",
+                "turning caveats into a full counterweight section",
             ],
         },
         "counterweights": {
             "role": "bound_or_change_the_answer",
             "do": [
-                "explain what could weaken, reverse, or narrow the answer",
-                "separate causal limits, subgroup limits, endpoint limits, and update triggers",
-                "say whether each limit overturns the answer or only narrows confidence/scope",
+                "start with the strongest boundary or dose/subgroup concern",
+                "separate scope-narrowing evidence from answer-overturning evidence",
+                "state update triggers in decision terms",
             ],
             "avoid": [
-                "repeating the full affirmative case",
-                "presenting caveats as generic uncertainty",
-                "turning every limitation into an equal-weight objection",
+                "rebuilding the affirmative case",
+                "repeating source hierarchy judgments except where needed to explain a boundary",
+                "framing every caveat as equally important",
             ],
         },
         "source_weighting": {
             "role": "explain_how_to_read_the_sources",
             "do": [
-                "state which sources carry the answer and which mainly calibrate, bound, or contextualize it",
-                "explain source caveats compactly without restating the evidence argument",
+                "translate source roles into reader trust judgments",
+                "distinguish drivers, calibrators, boundary sources, and context sources",
+                "explain what should move the decision and what should only narrow it",
             ],
             "avoid": [
-                "using schema labels as prose",
-                "repeating the same support and counterweight paragraphs from other sections",
+                "restating the BLUF beyond a short reference point",
+                "repeating the dose-response or subgroup discussion in full",
+                "using source-role labels without explaining decision impact",
             ],
         },
         "practical_implication": {
             "role": "translate_the_read_into_action",
             "do": [
-                "state what the reader should do with the answer inside the stated scope",
-                "turn the main boundary into a practical condition or monitoring point",
-                "keep the implication proportional to the evidence strength",
+                "state the practical recommendation in ordinary decision language",
+                "separate default guidance from exception handling",
+                "include only enough evidence basis to make the action defensible",
             ],
             "avoid": [
-                "reopening the whole evidence argument",
-                "adding new evidence not needed for action",
-                "restating the bottom line without a practical consequence",
+                "repeating the best-current-read section",
+                "listing all study statistics again",
+                "opening with abstract decision-maker language",
             ],
         },
     }
     return contracts.get(section_id, contracts["answer_evidence"])
+def _section_job(section_id: str, fallback: Any) -> str:
+    jobs = {
+        "source_weighting": "Explain the source hierarchy and source-use limits only; do not reargue the answer or preview practical advice.",
+        "answer_evidence": "Make the positive case for the current read from the driver evidence; leave caveats and action translation to later sections.",
+        "counterweights": "Stress-test the current read: identify what narrows it, what would change it, and what merely calibrates confidence.",
+        "practical_implication": "Translate the settled answer and its limits into what guidance should say; keep evidence basis short.",
+    }
+    return jobs.get(section_id, str(fallback or "").strip())
 def _section_focus(section_id: str) -> dict[str, Any]:
     focuses = {
         "answer_evidence": {
@@ -321,12 +331,8 @@ def _section_focus(section_id: str) -> dict[str, Any]:
             "prose_lead": "Open with the strongest evidence pattern or quantity that carries the read.",
             "lead": "Start with the evidence reason this answer is the best current read, not with a restated BLUF.",
             "use_current_read_as": "reference_for_what_the_evidence_must_explain",
-            "new_value": "evidence hierarchy, magnitude, and confidence calibration",
-            "paragraph_shape": [
-                "main evidence pattern and why it carries the read",
-                "important quantitative or design details",
-                "confidence calibration from the strongest caveat",
-            ],
+            "new_value": "make the positive case for the current read from the driver evidence; leave caveats and action translation to later sections",
+            "paragraph_shape": ["driver evidence and key quantity", "how guidance and empirical evidence converge on the primary answer", "brief confidence calibration without rearguing limits"],
             "stock_phrases_to_replace": [
                 "The current assessment is driven by",
                 "This nuanced view",
@@ -338,12 +344,8 @@ def _section_focus(section_id: str) -> dict[str, Any]:
             "prose_lead": "Open with the strongest reason the answer may not generalize or may need narrower wording.",
             "lead": "Start with the most important boundary or uncertainty, not with the full bottom line.",
             "use_current_read_as": "the answer being bounded or stress-tested",
-            "new_value": "what narrows, weakens, changes, or scopes the answer",
-            "paragraph_shape": [
-                "most decision-relevant limitation",
-                "subgroup, endpoint, causal, or scope boundaries",
-                "what new evidence would change the read",
-            ],
+            "new_value": "stress-test the current read by identifying what narrows it, what would change it, and what merely calibrates confidence",
+            "paragraph_shape": ["highest-value boundary", "subgroup or endpoint limits", "update trigger or crux threshold"],
             "stock_phrases_to_replace": [
                 "The primary boundary on this assessment",
                 "The current read is further bounded",
@@ -355,20 +357,16 @@ def _section_focus(section_id: str) -> dict[str, Any]:
             "prose_lead": "Open with the source hierarchy that matters for trusting the answer.",
             "lead": "Start with how to weight the source base, not with a restatement of the bottom line.",
             "use_current_read_as": "reference_for_source_weighting",
-            "new_value": "source hierarchy, credibility calibration, and use limits",
-            "paragraph_shape": ["sources that carry the answer", "sources that calibrate, bound, or contextualize it", "source-specific caveats that change how confidently to read the evidence"],
+            "new_value": "explain the source hierarchy and source-use limits only; do not reargue the answer or preview practical advice",
+            "paragraph_shape": ["one sentence source hierarchy thesis", "why driver sources carry the answer", "why boundary/calibrator/context sources change scope rather than the core answer"],
         },
         "practical_implication": {
             "reader_question": "Given the answer and its limits, what should the decision-maker do next?",
             "prose_lead": "Open with the usable stance inside scope, then name the condition that changes application.",
             "lead": "Start with what the reader should do with the answer inside scope.",
             "use_current_read_as": "background_only",
-            "new_value": "concrete application, monitoring point, or action boundary",
-            "paragraph_shape": [
-                "usable stance inside scope",
-                "conditions or monitoring points",
-                "how to avoid over-applying the answer",
-            ],
+            "new_value": "translate the settled answer and its limits into what guidance should say; keep evidence basis short",
+            "paragraph_shape": ["default advice inside scope", "exceptions and monitoring conditions", "how to phrase advice without overclaiming"],
             "stock_phrases_to_replace": [
                 "To avoid over-applying this answer",
                 "The decision-maker should",
@@ -383,7 +381,6 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
     source_ids = _section_source_ids(raw_section)
     base = {
         "decision_question": reader_packet.get("decision_question"),
-        "current_read_reference": bluf.get("recommended_read") or balanced.get("best_current_read"),
         "confidence": balanced.get("confidence"),
         "must_not_overstate": balanced.get("must_not_overstate"),
         "evidence_language_contracts": _filter_language_contracts(reader_packet.get("evidence_language_contracts"), source_ids),
@@ -393,8 +390,8 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
     if section_id == "answer_evidence":
         base.update(
             {
+                "current_read_reference": bluf.get("recommended_read") or balanced.get("best_current_read"),
                 "main_support": balanced.get("main_support"),
-                "main_counterweight_reference": balanced.get("main_counterweight"),
                 "answer_frame": reader_packet.get("answer_frame"),
             }
         )
@@ -407,15 +404,14 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
             }
         )
     elif section_id == "source_weighting":
+        base.pop("confidence", None)
         base.update(
             {
-                "main_support": balanced.get("main_support"),
-                "main_counterweight": balanced.get("main_counterweight"),
-                "scope": balanced.get("scope"),
                 "source_hierarchy_thesis": raw_section.get("hierarchy_thesis"),
             }
         )
     elif section_id == "practical_implication":
+        base.pop("confidence", None)
         base.update(
             {
                 "practical_read": balanced.get("practical_read") or bluf.get("practical_read"),
