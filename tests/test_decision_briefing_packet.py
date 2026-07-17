@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_fi
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
 from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
+from epistemic_case_mapper.map_briefing_decision_packet_stage import _parallel_analyst_source_weighting_ready
 
 
 def _scaffold() -> dict:
@@ -144,6 +145,27 @@ def _scaffold() -> dict:
             "quantitative_anchors": [],
         },
     }
+
+
+def test_parallel_analyst_source_weighting_only_skips_late_model_when_report_ready() -> None:
+    canonical = {
+        "source_weight_judgments": [
+            {
+                "source_ids": ["s1"],
+                "method": "parallel_global_analyst_source_weighting",
+            }
+        ],
+        "source_weight_judgment_report": {
+            "status": "warning",
+            "warnings": ["source_ids_without_weight_judgment"],
+        },
+    }
+
+    assert _parallel_analyst_source_weighting_ready(canonical) is False
+
+    canonical["source_weight_judgment_report"] = {"status": "ready", "warnings": []}
+
+    assert _parallel_analyst_source_weighting_ready(canonical) is True
 
 
 def test_decision_briefing_packet_retains_roles_sources_and_quantities() -> None:

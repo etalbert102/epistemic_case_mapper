@@ -329,7 +329,10 @@ def _parallel_analyst_source_weighting_ready(canonical: Any) -> bool:
     judgments = [row for row in _list_value(canonical.get("source_weight_judgments")) if isinstance(row, dict)]
     if not judgments:
         return False
-    return any(str(row.get("method") or "") == "parallel_global_analyst_source_weighting" for row in judgments)
+    if not any(str(row.get("method") or "") == "parallel_global_analyst_source_weighting" for row in judgments):
+        return False
+    report = _dict_value(canonical.get("source_weight_judgment_report"))
+    return str(report.get("status") or "").strip() == "ready" and not _list_value(report.get("warnings"))
 
 
 def _skipped_model_source_weighting_bundle(canonical: dict[str, Any]) -> dict[str, Any]:
