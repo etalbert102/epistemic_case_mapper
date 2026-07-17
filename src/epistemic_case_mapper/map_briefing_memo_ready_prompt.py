@@ -27,6 +27,11 @@ from epistemic_case_mapper.map_briefing_memo_ready_action_contract import build_
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_section_jobs import with_section_specific_jobs
+from epistemic_case_mapper.map_briefing_priority_quantity_contracts import (
+    build_priority_quantity_contracts,
+    compact_priority_quantity_contracts_for_prompt,
+    contracts_for_evidence_ids,
+)
 from epistemic_case_mapper.map_briefing_reader_judgment_packet import (
     build_reader_judgment_packet,
     compact_reader_judgments_for_section,
@@ -176,6 +181,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
     spine = _dict(packet.get("evidence_weighted_argument_spine"))
     source_weighting_contract = _dict(packet.get("source_weighting_contract")) or build_source_weighting_contract(packet)
     reader_judgment_packet = _dict(packet.get("reader_judgment_packet")) or build_reader_judgment_packet(packet)
+    priority_quantity_contracts = _dict(packet.get("priority_quantity_contracts"))
     return {
         "schema_id": "reader_synthesis_packet_v1",
         "canonical_schema_id": packet.get("schema_id"),
@@ -204,6 +210,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
                 "steps": [_compact_spine_step(row) for row in _list(spine.get("steps")) if isinstance(row, dict)],
             }
         ),
+        "priority_quantity_contracts": priority_quantity_contracts,
         "section_writing_packets": _section_writing_packets(packet),
         "section_retention_requirements": _section_retention_requirements(packet),
         "limiting_evidence": [_compact_row(row) for row in _list(packet.get("counterweight_dispositions")) if isinstance(row, dict)],
@@ -226,10 +233,12 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
         heading = _canonical_section_heading(source_section)
         if section_id == "bottom_line" or not heading:
             continue
+        evidence_ids = _section_evidence_ids(raw)
         source_bound_atoms = with_section_specific_jobs(
             _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw)),
             section_id=section_id,
         )
+        priority_quantity_contracts = _section_priority_quantity_contracts(reader_packet, evidence_ids, section_id)
         packets.append(
             _drop_empty(
                 {
@@ -253,6 +262,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
+                    "priority_quantity_contracts": priority_quantity_contracts,
                     "protected_quantity_sets": _protected_quantity_sets(raw),
                     "source_bound_evidence_atoms": source_bound_atoms,
                     "quantity_collision_warnings": _quantity_collision_warnings(source_bound_atoms),
@@ -496,6 +506,57 @@ def _section_source_ids(raw_section: dict[str, Any]) -> list[str]:
     )
 
 
+def _section_priority_quantity_contracts(reader_packet: dict[str, Any], evidence_ids: list[str], section_id: str) -> list[dict[str, Any]]:
+    exact = contracts_for_evidence_ids(reader_packet.get("priority_quantity_contracts"), evidence_ids)
+    all_rows = _list(_dict(reader_packet.get("priority_quantity_contracts")).get("rows"))
+    section_roles = _priority_quantity_roles_for_section(section_id)
+    role_rows = [
+        row
+        for row in all_rows
+        if isinstance(row, dict) and str(row.get("decision_role") or "") in section_roles
+    ]
+    return compact_priority_quantity_contracts_for_prompt(_dedupe_rows([*exact, *role_rows], "contract_id"), limit=10)
+
+
+def _priority_quantity_roles_for_section(section_id: str) -> set[str]:
+    if section_id == "counterweights":
+        return {"scope_or_subgroup_boundary", "comparator_context", "biomarker_calibration"}
+    if section_id == "practical_implication":
+        return {"dose_boundary", "scope_or_subgroup_boundary", "comparator_context"}
+    if section_id == "answer_evidence":
+        return {"risk_estimate", "dose_boundary"}
+    return set()
+
+
+def _section_evidence_ids(raw_section: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            *[
+                evidence_id
+                for row in _list(raw_section.get("argument_steps"))
+                if isinstance(row, dict)
+                for evidence_id in _string_list(row.get("evidence_item_ids"))
+            ],
+            *[
+                str(row.get("item_id") or "").strip()
+                for row in _list(raw_section.get("evidence_context"))
+                if isinstance(row, dict)
+            ],
+            *[
+                evidence_id
+                for row in _list(raw_section.get("retention_requirements"))
+                if isinstance(row, dict)
+                for evidence_id in _string_list(row.get("evidence_item_ids"))
+            ],
+            *[
+                str(row.get("item_id") or row.get("requirement_id") or "").strip()
+                for row in _list(raw_section.get("retention_requirements"))
+                if isinstance(row, dict)
+            ],
+        ]
+    )
+
+
 def _protected_quantity_sets(raw_section: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     context_rows = _list(raw_section.get("quantity_binding_context")) or [
@@ -684,12 +745,16 @@ def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[
     usefulness = _dict(canonical.get("decision_usefulness_packet")) or _dict(memo_ready_packet.get("decision_usefulness_packet"))
     quality = _dict(canonical.get("decision_usefulness_quality_report")) or _dict(memo_ready_packet.get("decision_usefulness_quality_report"))
     quantity_binding = _dict(canonical.get("analyst_quantity_binding_report")) or _dict(memo_ready_packet.get("analyst_quantity_binding_report"))
+    priority_quantity_contracts = _dict(canonical.get("priority_quantity_contracts")) or _dict(memo_ready_packet.get("priority_quantity_contracts"))
+    if not priority_quantity_contracts:
+        priority_quantity_contracts = build_priority_quantity_contracts(memo_ready_packet)
     additions = _drop_empty(
         {
             "lightweight_writer_guidance": guidance,
             "decision_usefulness_packet": usefulness,
             "decision_usefulness_quality_report": quality,
             "analyst_quantity_binding_report": quantity_binding,
+            "priority_quantity_contracts": priority_quantity_contracts if priority_quantity_contracts.get("rows") else {},
         }
     )
     if not additions:

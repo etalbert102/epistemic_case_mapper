@@ -80,7 +80,7 @@ def build_priority_quantity_contract_coverage_report(memo: str, contracts: dict[
 
 def compact_priority_quantity_contracts_for_prompt(rows: list[dict[str, Any]], *, limit: int = 10) -> list[dict[str, Any]]:
     compact = []
-    for row in rows[:limit]:
+    for row in _prioritized_contract_rows(rows)[:limit]:
         if not isinstance(row, dict):
             continue
         compact.append(
@@ -96,6 +96,36 @@ def compact_priority_quantity_contracts_for_prompt(rows: list[dict[str, Any]], *
             )
         )
     return compact
+
+
+def _prioritized_contract_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped_count: dict[tuple[str, str], int] = {}
+    selected = []
+    for row in sorted([row for row in rows if isinstance(row, dict)], key=_contract_prompt_priority):
+        key = (str(row.get("evidence_id") or ""), str(row.get("decision_role") or ""))
+        grouped_count[key] = grouped_count.get(key, 0) + 1
+        if grouped_count[key] > 3:
+            continue
+        selected.append(row)
+    return selected
+
+
+def _contract_prompt_priority(row: dict[str, Any]) -> tuple[int, int, str]:
+    role = str(row.get("decision_role") or "")
+    role_rank = {
+        "scope_or_subgroup_boundary": 0,
+        "comparator_context": 1,
+        "risk_estimate": 2,
+        "dose_boundary": 3,
+        "biomarker_calibration": 4,
+    }.get(role, 5)
+    text = str(row.get("quantity_text") or "").lower()
+    detail_rank = 0
+    if "confidence interval" in text or "95% ci" in text or " ci:" in text:
+        detail_rank = 1
+    if re.fullmatch(r"(?:mean difference of\s+)?\d+(?:\.\d+)?", text.strip()):
+        detail_rank = 2
+    return (role_rank, detail_rank, str(row.get("contract_id") or row.get("quantity_text") or ""))
 
 
 def _quantity_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
@@ -157,12 +187,14 @@ def _contract_row(item: dict[str, Any], candidate: dict[str, Any]) -> dict[str, 
     evidence_id = str(item.get("item_id") or "").strip()
     quantity_text = str(candidate.get("quantity_text") or "").strip()
     claim = str(item.get("reader_claim") or item.get("natural_bottom_line") or item.get("claim") or "").strip()
+    candidate_role = str(candidate.get("decision_role") or "").strip()
+    decision_role = candidate_role if candidate_role and candidate_role not in {"statistical_detail", "decision_anchor"} else _decision_role_from_text(quantity_text, item)
     return _drop_empty(
         {
             "contract_id": _contract_id(evidence_id, quantity_text),
             "evidence_id": evidence_id,
             "quantity_text": quantity_text,
-            "decision_role": candidate.get("decision_role") or _decision_role_from_text(quantity_text, item),
+            "decision_role": decision_role,
             "rationale": candidate.get("rationale"),
             "source_ids": _dedupe([*_string_list(candidate.get("source_ids")), *_string_list(item.get("source_ids"))]),
             "source_labels": item.get("source_labels") or ([item.get("source_label")] if item.get("source_label") else None),
@@ -250,10 +282,10 @@ def _decision_role_from_text(text: str, item: dict[str, Any]) -> str:
         return "scope_or_subgroup_boundary"
     if any(token in combined for token in ("replace", "substitution", "comparator", "processed", "full fat")):
         return "comparator_context"
+    if any(token in combined for token in ("hazard ratio", "relative risk", "odds ratio", "risk", "incident")):
+        return "risk_estimate"
     if any(token in combined for token in ("ldl", "hdl", "biomarker", "ratio", "mean difference", "md =")):
         return "biomarker_calibration"
-    if any(token in combined for token in ("hazard ratio", "relative risk", "risk", "incident")):
-        return "risk_estimate"
     if any(token in combined for token in ("per day", "/day", "egg")):
         return "dose_boundary"
     return "decision_relevant_quantity"

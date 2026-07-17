@@ -211,6 +211,7 @@ def build_evidence_tagged_section_prompt(
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Use the Decision argument for this section as the governing structure; use evidence contracts as anchors for those moves.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"
+        "- Use Priority quantity contracts to keep decision-relevant quantities with the exact claim, endpoint, subgroup, and comparator they describe.\n"
         "- Reader-facing allowed-use and not-enough-for limits define the claim role while required contracts still keep their own tags and listed quantities.\n"
         "- If a quantity appears in an evidence expression contract, keep that quantity in the same sentence as that exact contract's tag.\n"
         "- When Section-local evidence jobs are present, write around those paragraph jobs and attach tags from each job's allowed evidence IDs for that paragraph.\n"

@@ -26,6 +26,7 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- Use the Expert judgment brief as the first-order analytical framing when present.\n"
         "- Use the Decision argument for this section as the governing structure; use evidence notes to support those argument moves.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
+        "- Use Priority quantity contracts to keep decision-relevant quantities with the claim, endpoint, subgroup, and comparator they belong to.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
         "- For reader-facing judgments, follow the allowed-use and not-enough-for limits when deciding what the judgment can support.\n"
         "- Split evidence with different citation jobs into separate clauses or sentences so each citation supports the exact claim beside it.\n"
@@ -63,6 +64,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         *_section("### Calibration limits", _bullet_list(top.get("must_not_overstate"))),
         *_section("### Required evidence points", _source_bound_atom_lines(packet.get("source_bound_evidence_atoms"))),
         *_section("### Required obligations", _retention_requirement_lines(packet.get("section_retention_requirements"))),
+        *_section("### Priority quantity contracts", _priority_quantity_contract_lines(packet.get("priority_quantity_contracts"))),
         *_section("### Source role contract", _source_role_group_lines(packet.get("source_role_groups"))),
         *([] if expert_mode else _section("### Source hierarchy lane notes", _lane_card_lines(packet.get("lane_cards")))),
         *([] if expert_mode else _section("### Source weighting validation target", _source_weighting_validation_lines(packet.get("validation_contract")))),
@@ -190,6 +192,21 @@ def _retention_requirement_lines(value: Any) -> list[str]:
         if instruction := _text(item.get("prose_instruction")):
             parts.append(f"Writing job: {instruction}")
         if line := " ".join(part for part in parts if part):
+            rows.append(_bullet(line))
+    return rows
+
+
+def _priority_quantity_contract_lines(value: Any) -> list[str]:
+    rows = []
+    for item in _dict_rows(value)[:10]:
+        parts = [
+            f"{_text(item.get('quantity'))} belongs with {_text(item.get('evidence_id'))}",
+            f"Decision role: {_text(item.get('decision_role'))}" if _text(item.get("decision_role")) else "",
+            f"Claim: {_text(item.get('claim'))}" if _text(item.get("claim")) else "",
+            f"Sources: {_citations(item)}" if _citations(item) else "",
+        ]
+        line = " ".join(part for part in parts if part).strip()
+        if line:
             rows.append(_bullet(line))
     return rows
 
