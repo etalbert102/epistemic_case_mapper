@@ -8,6 +8,7 @@ from typing import Any, Callable
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
+    dict_value as _dict,
     list_value as _list,
     string_list as _string_list,
 )
@@ -20,6 +21,7 @@ from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     evidence_ids_in_text,
     render_evidence_tagged_memo,
 )
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
 
 
@@ -134,6 +136,7 @@ def _run_section(
 ) -> dict[str, Any]:
     heading = str(section.get("heading") or "").strip()
     prompt = str(section.get("prompt") or "")
+    active_prompt = prompt
     citation_mode = str(section.get("citation_mode") or "source_ids")
     contracts = _list(section.get("contracts"))
     section_report = {
@@ -149,39 +152,74 @@ def _run_section(
         "prompt": prompt,
         "markdown": "",
     }
-    try:
-        result = run_model(
-            prompt,
-            backend,
-            timeout_seconds=backend_timeout,
-            max_retries=backend_retries,
-            num_predict=num_predict,
-            json_mode=False,
+    attempts = model_stage_attempts()
+    raw = ""
+    markdown = ""
+    unknown: list[str] = []
+    unknown_evidence: list[str] = []
+    used_evidence: list[str] = []
+    issues: list[str] = []
+    reconciliation: dict[str, Any] = {}
+    backend_attempts = 0
+    validation_attempt_reports = []
+    for attempt in range(1, attempts + 1):
+        try:
+            result = run_model(
+                active_prompt,
+                backend,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+                num_predict=num_predict,
+                json_mode=False,
+            )
+        except RuntimeError as exc:
+            section_report["issues"] = ["backend_error", str(exc)]
+            section_report["validation_attempts"] = attempt
+            return section_report
+        backend_attempts += int(result.attempts or 1)
+        raw = result.text
+        markdown = _extract_section_markdown(raw, heading)
+        markdown = _normalize_statistical_brackets(markdown)
+        unknown = []
+        unknown_evidence = []
+        used_evidence = []
+        reconciliation = {}
+        if citation_mode == "evidence_tags":
+            used_evidence = evidence_ids_in_text(markdown, contracts)
+            unknown_evidence = sorted(set(used_evidence) - known_evidence_ids)
+            reconciliation = build_evidence_reconciliation_report(markdown, markdown, contracts)
+        else:
+            markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
+            markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
+            unknown = _unknown_section_source_ids(markdown, known_source_ids)
+        structure_issues = markdown_structure_issues(markdown)
+        heading_ok = markdown.lstrip().startswith(f"## {heading}\n") or markdown.strip() == f"## {heading}"
+        issues = [
+            *(["missing_exact_heading"] if not heading_ok else []),
+            *([f"unknown_source_ids:{', '.join(unknown)}"] if unknown else []),
+            *([f"unknown_evidence_ids:{', '.join(unknown_evidence)}"] if unknown_evidence else []),
+            *_section_reconciliation_issues(reconciliation),
+            *structure_issues,
+        ]
+        validation_attempt_reports.append(
+            {
+                "attempt": attempt,
+                "accepted": not issues,
+                "issue_count": len(issues),
+                "issues": issues[:12],
+                "quantity_warning_count": len(_list(reconciliation.get("quantity_warnings"))),
+            }
         )
-    except RuntimeError as exc:
-        section_report["issues"] = ["backend_error", str(exc)]
-        return section_report
-    raw = result.text
-    markdown = _extract_section_markdown(raw, heading)
-    markdown = _normalize_statistical_brackets(markdown)
-    unknown = []
-    unknown_evidence = []
-    used_evidence = []
-    if citation_mode == "evidence_tags":
-        used_evidence = evidence_ids_in_text(markdown, contracts)
-        unknown_evidence = sorted(set(used_evidence) - known_evidence_ids)
-    else:
-        markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
-        markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
-        unknown = _unknown_section_source_ids(markdown, known_source_ids)
-    structure_issues = markdown_structure_issues(markdown)
-    heading_ok = markdown.lstrip().startswith(f"## {heading}\n") or markdown.strip() == f"## {heading}"
-    issues = [
-        *(["missing_exact_heading"] if not heading_ok else []),
-        *([f"unknown_source_ids:{', '.join(unknown)}"] if unknown else []),
-        *([f"unknown_evidence_ids:{', '.join(unknown_evidence)}"] if unknown_evidence else []),
-        *structure_issues,
-    ]
+        if not issues:
+            break
+        if attempt < attempts:
+            active_prompt = _section_retry_prompt(
+                prompt,
+                heading=heading,
+                issues=issues,
+                reconciliation=reconciliation,
+                contracts=contracts,
+            )
     section_report.update(
         {
             "accepted": not issues,
@@ -192,11 +230,95 @@ def _run_section(
             "raw": raw,
             "markdown": markdown,
             "char_count": len(markdown),
-            "attempts": result.attempts,
+            "attempts": backend_attempts,
+            "validation_attempts": len(validation_attempt_reports),
+            "validation_attempt_reports": validation_attempt_reports,
             "num_predict": num_predict,
+            "evidence_reconciliation_report": reconciliation,
         }
     )
     return section_report
+
+
+def _section_reconciliation_issues(reconciliation: dict[str, Any]) -> list[str]:
+    if not reconciliation:
+        return []
+    issues = []
+    missing_required = _string_list(reconciliation.get("missing_required_evidence_ids"))
+    unknown = _string_list(reconciliation.get("unknown_evidence_ids"))
+    for evidence_id in missing_required:
+        issues.append(f"missing_required_evidence:{evidence_id}")
+    for evidence_id in unknown:
+        issues.append(f"unknown_evidence_id:{evidence_id}")
+    for warning in _list(reconciliation.get("quantity_warnings")):
+        if not isinstance(warning, dict):
+            continue
+        evidence_id = str(warning.get("evidence_id") or "").strip()
+        value = str(warning.get("missing_quantity_near_tag") or "").strip()
+        if evidence_id and value:
+            issues.append(f"missing_required_quantity:{evidence_id}:{value}")
+    return issues
+
+
+def _section_retry_prompt(
+    base_prompt: str,
+    *,
+    heading: str,
+    issues: list[str],
+    reconciliation: dict[str, Any],
+    contracts: list[dict[str, Any]],
+) -> str:
+    repair_packet = {
+        "task": "Revise this section so it satisfies its evidence-expression contract.",
+        "heading": heading,
+        "issues_to_fix": issues[:16],
+        "missing_required_evidence_ids": reconciliation.get("missing_required_evidence_ids", []),
+        "missing_required_contracts": _missing_contracts_for_retry(
+            _string_list(reconciliation.get("missing_required_evidence_ids")),
+            contracts,
+        ),
+        "missing_required_quantities": [
+            {
+                "evidence_id": row.get("evidence_id"),
+                "required_quantity_or_detail": row.get("missing_quantity_near_tag"),
+                "previous_sentence": row.get("span"),
+            }
+            for row in _list(reconciliation.get("quantity_warnings"))
+            if isinstance(row, dict)
+        ],
+        "instructions": [
+            f"Return the complete section starting with ## {heading}.",
+            "Keep the prose natural and decision-ready.",
+            "Include every missing required contract below with its evidence tag.",
+            "For each missing required quantity or detail, include it in the same sentence as that evidence tag.",
+            "Use only evidence tags and source IDs already listed in the original prompt.",
+        ],
+    }
+    return (
+        f"{base_prompt.rstrip()}\n\n"
+        "### Required revision feedback\n"
+        f"{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
+        "Rewrite the complete section now.\n"
+    )
+
+
+def _missing_contracts_for_retry(missing_ids: list[str], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    missing = set(missing_ids)
+    rows = []
+    for contract in contracts:
+        if str(contract.get("evidence_id") or "") not in missing:
+            continue
+        rows.append(
+            {
+                "evidence_id": contract.get("evidence_id"),
+                "claim": contract.get("claim"),
+                "role": contract.get("role"),
+                "required_quantity_atoms": contract.get("required_quantity_atoms", []),
+                "source_ids": contract.get("citation_source_ids") or contract.get("source_ids", []),
+                "must_qualify_with": contract.get("must_qualify_with", []),
+            }
+        )
+    return rows
 
 
 def _prepare_sections(
@@ -438,7 +560,9 @@ def _public_section_report(row: dict[str, Any]) -> dict[str, Any]:
         "unknown_source_ids": _list(row.get("unknown_source_ids")),
         "unknown_evidence_ids": _list(row.get("unknown_evidence_ids")),
         "used_evidence_id_count": len(_list(row.get("used_evidence_ids"))),
+        "quantity_warning_count": len(_list(_dict(row.get("evidence_reconciliation_report")).get("quantity_warnings"))),
         "char_count": row.get("char_count", 0),
         "attempts": row.get("attempts", 0),
+        "validation_attempts": row.get("validation_attempts", 0),
         "num_predict": row.get("num_predict", 0),
     }

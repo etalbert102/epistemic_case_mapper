@@ -21,6 +21,7 @@ BRACE_TAG_RE = re.compile(r"\{([^{}\n]{1,240})\}")
 def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str, Any]]:
     canonical = _dict(packet.get("canonical_decision_writer_packet"))
     obligations_by_item = _obligations_by_item(canonical)
+    quantity_obligations_by_item = _quantity_obligations_by_item(packet)
     source_ids_by_label = _source_ids_by_label(packet)
     source_weights = _source_weight_judgments_by_source(canonical)
     language_by_item = {
@@ -37,7 +38,17 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
             continue
         obligation = obligations_by_item.get(evidence_id, {})
         language = language_by_item.get(evidence_id, {})
-        quantities = _quantity_contracts(_list(item.get("quantities")) or _list(obligation.get("quantities")))
+        base_quantity_rows = [
+            *_list(item.get("quantities")),
+            *_list(obligation.get("quantities")),
+            *_list(quantity_obligations_by_item.get(evidence_id)),
+        ]
+        quantities = _quantity_contracts(
+            [
+                *base_quantity_rows,
+                *_numeric_must_preserve_terms(item, base_quantity_rows),
+            ]
+        )
         role = str(item.get("role") or obligation.get("role") or "")
         sources = _dedupe(
             [
@@ -69,6 +80,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "source_labels": item.get("source_labels")
                     or ([item.get("source_label")] if item.get("source_label") else None),
                     "required_quantity_atoms": quantities,
+                    "must_preserve_terms": _string_list(item.get("must_preserve_terms")),
                     "population_scope": item.get("caveat") or item.get("applicability_scope"),
                     "required_caveat": item.get("caveat"),
                     "decision_relevance": item.get("decision_relevance"),
@@ -230,7 +242,7 @@ def build_evidence_reconciliation_report(
     quantity_warnings = _quantity_warnings(tagged_memo, contracts)
     untagged = _untagged_high_risk_sentences(tagged_memo)
     status = "ready"
-    if missing_required or unknown:
+    if missing_required or unknown or quantity_warnings:
         status = "warning"
     return {
         "schema_id": "evidence_reconciliation_report_v1",
@@ -270,6 +282,98 @@ def _obligations_by_item(canonical: dict[str, Any]) -> dict[str, dict[str, Any]]
         for item_id in _string_list(row.get("evidence_item_ids")):
             by_item.setdefault(item_id, row)
     return by_item
+
+
+def _quantity_obligations_by_item(packet: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    plan = _dict(packet.get("quantity_obligation_plan"))
+    evidence_to_writer_ids = _source_evidence_id_to_writer_ids(packet)
+    by_item: dict[str, list[dict[str, Any]]] = {}
+    for row in _list(plan.get("rows")):
+        if not isinstance(row, dict):
+            continue
+        if not bool(row.get("must_retain")):
+            continue
+        targets = _quantity_row_target_item_ids(row, evidence_to_writer_ids)
+        quantity = _quantity_from_obligation_row(row)
+        if not quantity:
+            continue
+        for item_id in targets:
+            by_item.setdefault(item_id, []).append(quantity)
+    return by_item
+
+
+def _source_evidence_id_to_writer_ids(packet: dict[str, Any]) -> dict[str, list[str]]:
+    mapping: dict[str, list[str]] = {}
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("item_id") or "").strip()
+        if not item_id:
+            continue
+        lineage = _dict(item.get("lineage"))
+        for evidence_id in [
+            *_string_list(item.get("source_evidence_item_id")),
+            *_string_list(lineage.get("covered_evidence_item_ids")),
+            *[
+                str(row.get("evidence_item_id") or "")
+                for row in _list(item.get("analyst_relevance_decisions"))
+                if isinstance(row, dict)
+            ],
+        ]:
+            evidence_id = str(evidence_id or "").strip()
+            if evidence_id:
+                mapping.setdefault(evidence_id, []).append(item_id)
+    return {key: _dedupe(values) for key, values in mapping.items()}
+
+
+def _quantity_row_target_item_ids(row: dict[str, Any], evidence_to_writer_ids: dict[str, list[str]]) -> list[str]:
+    direct = _string_list(row.get("evidence_id")) + _string_list(row.get("item_id"))
+    source_evidence_id = str(row.get("source_evidence_item_id") or "").strip()
+    if source_evidence_id:
+        direct.extend(evidence_to_writer_ids.get(source_evidence_id, []))
+    analyst = _dict(row.get("analyst_quantity_relevance"))
+    analyst_evidence_id = str(analyst.get("evidence_item_id") or "").strip()
+    if analyst_evidence_id:
+        direct.extend(evidence_to_writer_ids.get(analyst_evidence_id, []))
+    return _dedupe(value for value in direct if value)
+
+
+def _quantity_from_obligation_row(row: dict[str, Any]) -> dict[str, Any]:
+    value = str(row.get("value") or _dict(row.get("analyst_quantity_relevance")).get("quantity_value") or "").strip()
+    if not value:
+        return {}
+    return _drop_empty(
+        {
+            "value": value,
+            "interpretation": row.get("retention_phrase") or row.get("why_quantity_matters"),
+            "quantity_role": row.get("quantity_role"),
+            "source_ids": row.get("source_ids"),
+        }
+    )
+
+
+def _numeric_must_preserve_terms(item: dict[str, Any], base_quantity_rows: list[Any]) -> list[dict[str, Any]]:
+    mandatory_surfaces = [
+        str(row.get("value") or _dict(row.get("analyst_quantity_relevance")).get("quantity_value") or "").strip()
+        for row in base_quantity_rows
+        if isinstance(row, dict)
+    ]
+    rows = []
+    for term in _string_list(item.get("must_preserve_terms")):
+        if re.search(r"\d", term) and _term_elaborates_mandatory_quantity(term, mandatory_surfaces):
+            rows.append({"value": term, "interpretation": "must-preserve numeric detail"})
+    return rows
+
+
+def _term_elaborates_mandatory_quantity(term: str, mandatory_surfaces: list[str]) -> bool:
+    term_numbers = set(re.findall(r"\d+(?:\.\d+)?", str(term or "")))
+    if not term_numbers:
+        return False
+    for surface in mandatory_surfaces:
+        surface_numbers = set(re.findall(r"\d+(?:\.\d+)?", str(surface or "")))
+        if surface_numbers and surface_numbers.intersection(term_numbers):
+            return True
+    return False
 
 
 def _source_ids_by_label(packet: dict[str, Any]) -> dict[str, str]:
@@ -447,22 +551,26 @@ def _contract_required(
 
 def _quantity_contracts(rows: list[Any]) -> list[dict[str, Any]]:
     quantities = []
+    seen = set()
     for row in rows:
         if not isinstance(row, dict):
             continue
         value = str(row.get("value") or "").strip()
         if not value:
             continue
-        quantities.append(
-            _drop_empty(
-                {
-                    "value": value,
-                    "interpretation": row.get("interpretation"),
-                    "quantity_role": row.get("quantity_role"),
-                    "source_ids": row.get("source_ids"),
-                }
-            )
+        quantity = _drop_empty(
+            {
+                "value": value,
+                "interpretation": row.get("interpretation"),
+                "quantity_role": row.get("quantity_role"),
+                "source_ids": row.get("source_ids"),
+            }
         )
+        key = (re.sub(r"\s+", " ", value.lower()).strip(), str(quantity.get("interpretation") or "").lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        quantities.append(quantity)
     return quantities
 
 
@@ -471,32 +579,52 @@ def _quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> lis
     for contract in contracts:
         if not contract.get("required"):
             continue
-        span = _span_for_evidence_id(tagged_memo, str(contract.get("evidence_id") or ""))
-        if not span:
+        spans = _spans_for_evidence_id(tagged_memo, str(contract.get("evidence_id") or ""))
+        if not spans:
             continue
         for quantity in _list(contract.get("required_quantity_atoms")):
             if not isinstance(quantity, dict):
                 continue
             value = str(quantity.get("value") or "").strip()
-            if value and not _quantity_surface_present(value, span):
+            if value and not any(_quantity_surface_present(value, span) for span in spans):
                 warnings.append(
                     {
                         "evidence_id": contract.get("evidence_id"),
                         "missing_quantity_near_tag": value,
-                        "span": _short_text(span, 240),
+                        "span": _short_text(spans[0], 240),
                     }
                 )
     return warnings
 
 
 def _span_for_evidence_id(text: str, evidence_id: str) -> str:
+    spans = _spans_for_evidence_id(text, evidence_id)
+    return spans[0] if spans else ""
+
+
+def _spans_for_evidence_id(text: str, evidence_id: str) -> list[str]:
     if not evidence_id:
-        return ""
-    pattern = re.compile(
-        rf"[^.\n]*(?:\{{E:{re.escape(evidence_id)}\}}|\{{[^}}\n]*\b{re.escape(evidence_id)}\b[^}}\n]*\}})[^.\n]*(?:\.|\n|$)"
+        return []
+    tag_pattern = re.compile(
+        rf"(?:\{{E:{re.escape(evidence_id)}\}}|\{{[^}}\n]*\b{re.escape(evidence_id)}\b[^}}\n]*\}})"
     )
-    match = pattern.search(text)
-    return match.group(0).strip() if match else ""
+    matches = list(tag_pattern.finditer(str(text or "")))
+    if not matches:
+        return []
+    paragraphs = [_paragraph_around_index(str(text or ""), tag.start()) for tag in matches]
+    paragraphs = _dedupe(paragraph for paragraph in paragraphs if paragraph)
+    if paragraphs:
+        return paragraphs
+    pattern = re.compile(rf"[^\n]*(?:\{{E:{re.escape(evidence_id)}\}}|\{{[^}}\n]*\b{re.escape(evidence_id)}\b[^}}\n]*\}})[^\n]*(?:\n|$)")
+    return _dedupe(match.group(0).strip() for match in pattern.finditer(text) if match.group(0).strip())
+
+
+def _paragraph_around_index(text: str, index: int) -> str:
+    before = text.rfind("\n\n", 0, max(0, index))
+    after = text.find("\n\n", index)
+    start = 0 if before < 0 else before + 2
+    end = len(text) if after < 0 else after
+    return text[start:end].strip()
 
 
 def _quantity_surface_present(value: str, text: str) -> bool:
@@ -600,6 +728,7 @@ def _compact_contract_for_prompt(row: dict[str, Any]) -> dict[str, Any]:
             "source_ids": row.get("source_ids"),
             "citation_source_ids": row.get("citation_source_ids"),
             "quantities": row.get("required_quantity_atoms"),
+            "must_preserve_terms": row.get("must_preserve_terms"),
             "scope": row.get("population_scope"),
             "caveat": row.get("required_caveat"),
             "must_qualify_with": row.get("must_qualify_with"),

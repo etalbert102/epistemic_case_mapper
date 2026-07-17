@@ -15,6 +15,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_read
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import (
     _repair_near_miss_source_ids,
     _unknown_section_source_ids,
+    run_parallel_memo_ready_section_generation,
 )
 from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
@@ -39,7 +40,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
         heading = _heading_from_section_prompt(prompt)
         ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
         if ids:
-            tag = f"{{E:{ids[0]}}}"
+            tag = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids)
         else:
             tag = ""
         if heading == "Why This Is the Best Current Read":
@@ -47,9 +48,9 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
         elif heading == "How to Weight the Evidence":
             body = "Weight Outcome Study most for the main read, while using Counter Study and Boundary Report to bound the answer [s1, s2, s3]."
         elif heading == "What Could Change or Bound the Answer":
-            body = f"Counter Study and Boundary Report bound the read because maintenance cuts and a narrower setting could erase the benefit {tag}."
+            body = f"Counter Study and Boundary Report bound the 25% benefit because maintenance cuts and a narrower setting could erase it {tag}."
         else:
-            body = f"Use Option A where the comparable-city conditions hold and maintenance protection is credible {tag}."
+            body = f"Use Option A where the 25% loss-reduction evidence applies and maintenance protection is credible {tag}."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
@@ -80,6 +81,148 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert "## What Could Change or Bound the Answer" in result["memo"]
     assert "## Practical Implication" in result["memo"]
     assert "25%" in result["memo"]
+
+
+def test_section_synthesis_retries_when_required_quantity_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "2")
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "must_use": True,
+                "obligation_level": "must_include",
+                "reader_claim": "Option A reduced losses by 25%.",
+                "role": "strongest_support",
+                "quantities": [{"value": "25%", "interpretation": "loss reduction"}],
+                "source_ids": ["s1"],
+            }
+        ],
+        "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {"evidence_item_ids": ["e1"], "statement": "Option A reduced losses.", "source_ids": ["s1"]}
+            ]
+        },
+    }
+    section_plan = {
+        "title": "Decision Memo",
+        "decision_question": "Should option A be adopted?",
+        "bottom_line": "Adopt option A in scope.",
+        "known_source_ids": ["s1"],
+        "known_source_aliases": {},
+        "sections": [
+            {
+                "section_id": "answer_evidence",
+                "heading": "Why This Is the Best Current Read",
+                "packet": {
+                    "section_id": "answer_evidence",
+                    "heading": "Why This Is the Best Current Read",
+                    "section_job": "Explain the evidence.",
+                    "evidence_context": [{"item_id": "e1"}],
+                },
+            }
+        ],
+    }
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if len(calls) == 1:
+            return ModelBackendResult(
+                text="## Why This Is the Best Current Read\n\nThe study supports option A {E:e1}.\n",
+                backend="fake",
+            )
+        assert "missing_required_quantities" in prompt
+        return ModelBackendResult(
+            text="## Why This Is the Best Current Read\n\nThe study reports a 25% loss reduction for option A {E:e1}.\n",
+            backend="fake",
+        )
+
+    result = run_parallel_memo_ready_section_generation(
+        section_plan,
+        memo_ready_packet=packet,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        whole_prompt="whole memo reference",
+        run_model=fake_backend,
+    )
+
+    assert len(calls) == 2
+    assert result["report"]["status"] == "accepted"
+    assert result["report"]["section_reports"][0]["validation_attempts"] == 2
+    assert "25% loss reduction" in result["memo"]
+
+
+def test_section_synthesis_retry_restates_missing_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "2")
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "must_use": True,
+                "obligation_level": "must_include",
+                "reader_claim": "Comparator evidence changes the boundary.",
+                "role": "strongest_counterweight",
+                "quantities": [{"value": "1.15", "interpretation": "hazard ratio"}],
+                "source_ids": ["s1"],
+            }
+        ],
+        "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {"evidence_item_ids": ["e1"], "statement": "Comparator evidence changes the boundary.", "source_ids": ["s1"]}
+            ]
+        },
+    }
+    section_plan = {
+        "title": "Decision Memo",
+        "decision_question": "Should option A be adopted?",
+        "bottom_line": "Adopt option A only in scope.",
+        "known_source_ids": ["s1"],
+        "known_source_aliases": {},
+        "sections": [
+            {
+                "section_id": "counterweights",
+                "heading": "What Could Change or Bound the Answer",
+                "packet": {
+                    "section_id": "counterweights",
+                    "heading": "What Could Change or Bound the Answer",
+                    "section_job": "Explain limiting evidence.",
+                    "evidence_context": [{"item_id": "e1"}],
+                },
+            }
+        ],
+    }
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if len(calls) == 1:
+            return ModelBackendResult(
+                text="## What Could Change or Bound the Answer\n\nThe boundary depends on comparator evidence.\n",
+                backend="fake",
+            )
+        assert "missing_required_contracts" in prompt
+        assert "Comparator evidence changes the boundary" in prompt
+        return ModelBackendResult(
+            text="## What Could Change or Bound the Answer\n\nComparator evidence reports a hazard ratio of 1.15 and changes the boundary {E:e1}.\n",
+            backend="fake",
+        )
+
+    result = run_parallel_memo_ready_section_generation(
+        section_plan,
+        memo_ready_packet=packet,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        whole_prompt="whole memo reference",
+        run_model=fake_backend,
+    )
+
+    assert len(calls) == 2
+    assert result["report"]["status"] == "accepted"
+    assert "1.15" in result["memo"]
 
 
 def test_section_packets_are_section_local_and_practical_gets_evidence() -> None:
@@ -377,9 +520,9 @@ def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monke
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         heading = _heading_from_section_prompt(prompt)
         ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
-        tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
+        tag_or_citation = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids) if ids else "[s1]"
         return ModelBackendResult(
-            text=f"## {heading}\n\nOutcome evidence reports a subgroup estimate [95% CI, 1.12-1.39] {tag_or_citation}.\n",
+            text=f"## {heading}\n\nOutcome evidence reports a 25% improvement with a subgroup estimate [95% CI, 1.12-1.39] {tag_or_citation}.\n",
             backend="fake",
         )
 

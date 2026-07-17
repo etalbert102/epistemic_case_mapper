@@ -9,6 +9,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
+    build_evidence_reconciliation_report,
     render_evidence_tagged_memo,
 )
 from epistemic_case_mapper.model_backends import ModelBackendResult
@@ -58,6 +59,111 @@ def test_evidence_expression_contracts_derive_required_slots() -> None:
     assert contracts[0]["required_quantity_atoms"][0]["value"] == "25%"
     assert contracts[0]["population_scope"] == "Comparable cities only"
     assert contracts[0]["must_not_imply"] == ["proves"]
+
+
+def test_evidence_expression_contracts_include_numeric_must_preserve_terms() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "reader_claim": "Comparator evidence bounds the answer.",
+                "role": "strongest_counterweight",
+                "source_ids": ["s1"],
+                "quantities": [{"value": "1.15", "interpretation": "hazard ratio"}],
+                "must_preserve_terms": [
+                    "hazard ratio 1.15 with 95% confidence interval 1.05 to 1.27",
+                    "secondary estimate 8.14",
+                    "observational evidence",
+                ],
+            }
+        ],
+        "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
+        "canonical_decision_writer_packet": {},
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+
+    quantities = contracts[0]["required_quantity_atoms"]
+    assert any("1.15" in row["value"] and "1.05 to 1.27" in row["value"] for row in quantities)
+    assert not any("8.14" in row["value"] for row in quantities)
+    assert contracts[0]["must_preserve_terms"][0].startswith("hazard ratio 1.15")
+
+
+def test_evidence_reconciliation_warns_when_required_quantity_missing_near_tag() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "required": True,
+            "required_quantity_atoms": [{"value": "25%", "interpretation": "loss reduction"}],
+        }
+    ]
+
+    report = build_evidence_reconciliation_report(
+        "## Why\n\nThe study supports the answer {E:e1}.",
+        "## Why\n\nThe study supports the answer [s1].",
+        contracts,
+    )
+
+    assert report["status"] == "warning"
+    assert report["quantity_warning_count"] == 1
+    assert report["quantity_warnings"][0]["missing_quantity_near_tag"] == "25%"
+
+
+def test_evidence_reconciliation_accepts_quantity_on_one_repeated_tag_expression() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "required": True,
+            "required_quantity_atoms": [{"value": "1.15", "interpretation": "hazard ratio"}],
+        }
+    ]
+
+    report = build_evidence_reconciliation_report(
+        (
+            "## Why\n\n"
+            "Comparator evidence reports a hazard ratio of 1.15 {E:e1}. "
+            "The same evidence also bounds the recommendation {E:e1}."
+        ),
+        "rendered",
+        contracts,
+    )
+
+    assert report["status"] == "ready"
+    assert report["quantity_warning_count"] == 0
+
+
+def test_evidence_expression_contracts_do_not_hard_require_soft_quantity_obligations() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "reader_claim": "The biomarker evidence bounds the answer.",
+                "role": "strongest_counterweight",
+                "source_ids": ["s1"],
+                "lineage": {"covered_evidence_item_ids": ["claim:one"]},
+                "quantities": [{"value": "0.14", "interpretation": "primary ratio"}],
+            }
+        ],
+        "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
+        "quantity_obligation_plan": {
+            "rows": [
+                {
+                    "source_evidence_item_id": "claim:one",
+                    "value": "8.14",
+                    "memo_use": "yes",
+                    "must_retain": False,
+                    "retention_phrase": "secondary concentration endpoint",
+                }
+            ]
+        },
+        "canonical_decision_writer_packet": {},
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+    quantities = contracts[0]["required_quantity_atoms"]
+
+    assert any(row["value"] == "0.14" for row in quantities)
+    assert not any(row["value"] == "8.14" for row in quantities)
 
 
 def test_evidence_expression_contracts_resolve_source_ids_from_labels() -> None:
@@ -120,8 +226,8 @@ def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest
         heading = _heading_from_prompt(prompt)
         ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
         if ids:
-            tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids[:2])
-            body = f"The section makes its decision-relevant point with anchored evidence {tags}."
+            tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids)
+            body = f"The section makes its decision-relevant point with a 25% anchored effect {tags}."
         else:
             body = "Weight Outcome Study most while using Counter Study and Boundary Report to bound the answer [s1, s2, s3]."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
