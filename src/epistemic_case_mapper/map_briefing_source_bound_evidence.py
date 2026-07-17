@@ -31,6 +31,7 @@ def build_source_binding_report(
     source_aliases: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     atoms = collect_packet_source_bound_atoms(packet)
+    aliases = source_aliases or {}
     invalid_tuples = [
         tuple_row
         for atom in atoms
@@ -40,10 +41,11 @@ def build_source_binding_report(
     sentence_warnings = _quantity_sentence_source_warnings(
         memo,
         atoms,
-        source_aliases=source_aliases or {},
+        source_aliases=aliases,
     )
+    citation_care = build_citation_care_report(memo, atoms, source_aliases=aliases)
     ambiguous = _ambiguous_quantity_surfaces(atoms)
-    warnings = [*invalid_tuples, *sentence_warnings, *ambiguous]
+    warnings = [*invalid_tuples, *sentence_warnings, *ambiguous, *_list(citation_care.get("warnings"))]
     return {
         "schema_id": "source_binding_report_v1",
         "status": "ready" if not warnings else "warning",
@@ -51,10 +53,12 @@ def build_source_binding_report(
         "invalid_quantity_tuple_count": len(invalid_tuples),
         "quantity_source_adjacency_warning_count": len(sentence_warnings),
         "ambiguous_quantity_surface_count": len(ambiguous),
+        "citation_care_warning_count": citation_care.get("warning_count", 0),
         "warning_count": len(warnings),
         "invalid_quantity_tuples": invalid_tuples[:24],
         "quantity_source_adjacency_warnings": sentence_warnings[:24],
         "ambiguous_quantity_surfaces": ambiguous[:24],
+        "citation_care_report": citation_care,
     }
 
 
@@ -162,6 +166,69 @@ def source_bound_quantity_phrases(row: dict[str, Any], *, limit: int = 8) -> lis
             phrases.append(phrase)
             consumed.add(index)
     return _dedupe_quantity_phrases(phrases)[:limit]
+
+
+def build_citation_care_report(
+    memo: str,
+    atoms: list[dict[str, Any]],
+    *,
+    source_aliases: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
+    alias_to_source = _citation_alias_to_source(atoms, source_aliases or {})
+    roles_by_source = _citation_roles_by_source(atoms)
+    warnings: list[dict[str, Any]] = []
+    cited_sentence_count = 0
+    for sentence in _memo_sentences(memo):
+        cited_source_ids = _sentence_cited_source_ids(sentence, alias_to_source)
+        if not cited_source_ids:
+            continue
+        cited_sentence_count += 1
+        sentence_roles = _sentence_citation_roles(sentence)
+        source_roles = {source_id: sorted(roles_by_source.get(source_id, set())) for source_id in cited_source_ids}
+        if len(cited_source_ids) > 2 or _mixed_citation_roles(source_roles):
+            warnings.append(
+                {
+                    "warning_type": "overbundled_or_mixed_role_citation",
+                    "source_ids": cited_source_ids,
+                    "source_roles": source_roles,
+                    "sentence_roles": sorted(sentence_roles),
+                    "sentence": sentence[:360],
+                    "guidance": "Consider splitting the sentence so each cited source supports the exact clause beside it.",
+                }
+            )
+        for source_id in cited_source_ids:
+            roles = roles_by_source.get(source_id, set())
+            if not roles:
+                warnings.append(
+                    {
+                        "warning_type": "citation_without_packet_atom",
+                        "source_id": source_id,
+                        "sentence": sentence[:360],
+                        "guidance": "The cited source was not found in source-bound packet evidence.",
+                    }
+                )
+                continue
+            if _role_mismatch(sentence_roles, roles):
+                warnings.append(
+                    {
+                        "warning_type": "citation_role_mismatch",
+                        "source_id": source_id,
+                        "source_roles": sorted(roles),
+                        "sentence_roles": sorted(sentence_roles),
+                        "sentence": sentence[:360],
+                        "guidance": _role_mismatch_guidance(sentence_roles, roles),
+                    }
+                )
+    deduped = _dedupe_warning_rows(warnings)
+    return {
+        "schema_id": "citation_care_report_v1",
+        "status": "ready" if not deduped else "warning",
+        "method": "deterministic_sentence_citation_role_audit",
+        "cited_sentence_count": cited_sentence_count,
+        "known_citation_source_count": len(_citation_roles_by_source(atoms)),
+        "warning_count": len(deduped),
+        "warnings": deduped[:48],
+    }
 
 
 def _source_bound_atom(row: dict[str, Any]) -> dict[str, Any]:
@@ -457,6 +524,94 @@ def _quantity_sentence_source_warnings(
                     }
                 )
     return _dedupe_warning_rows(warnings)
+
+
+def _citation_alias_to_source(atoms: list[dict[str, Any]], source_aliases: dict[str, list[str]]) -> dict[str, str]:
+    source_ids = _dedupe(
+        source_id
+        for atom in atoms
+        for source_id in _string_list(atom.get("source_ids"))
+        if source_id
+    )
+    alias_to_source: dict[str, str] = {}
+    for source_id in source_ids:
+        for alias in _dedupe([source_id, *source_aliases.get(source_id, [])]):
+            alias_to_source[_norm(alias)] = source_id
+    for key, aliases in source_aliases.items():
+        canonical = next((alias for alias in _string_list(aliases) if alias in source_ids), "")
+        if not canonical and key in source_ids:
+            canonical = key
+        if not canonical:
+            continue
+        for alias in _dedupe([key, *aliases]):
+            alias_to_source[_norm(alias)] = canonical
+    return {key: value for key, value in alias_to_source.items() if key and value}
+
+
+def _citation_roles_by_source(atoms: list[dict[str, Any]]) -> dict[str, set[str]]:
+    roles: dict[str, set[str]] = {}
+    for atom in atoms:
+        role = str(atom.get("citation_role") or "direct_support").strip() or "direct_support"
+        for source_id in _string_list(atom.get("source_ids")):
+            roles.setdefault(source_id, set()).add(role)
+    return roles
+
+
+def _sentence_cited_source_ids(sentence: str, alias_to_source: dict[str, str]) -> list[str]:
+    source_ids: list[str] = []
+    for raw in re.findall(r"\[([^\[\]\n]{1,180})\]", str(sentence or "")):
+        if "](" in raw or raw.strip().startswith("^"):
+            continue
+        for token in re.split(r"\s*(?:,|;)\s*", raw):
+            key = _norm(token)
+            if key in alias_to_source:
+                source_ids.append(alias_to_source[key])
+    return _dedupe(source_ids)
+
+
+def _sentence_citation_roles(sentence: str) -> set[str]:
+    text = _norm(_strip_bracket_citations(sentence))
+    roles: set[str] = set()
+    if re.search(r"\b(bound\w*|limit\w*|scope|caveat\w*|except\w*|subgroup|higher risk|high risk|dose response|qualif\w*)\b", text):
+        roles.add("boundary")
+    if re.search(r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*)\b", text):
+        roles.add("counterweight")
+    if re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|eggs? per day|per day|hr|rr|or|md|ci|ratio)\b", text):
+        roles.add("calibration")
+    if re.search(r"\b(context|guidance|recommend\w*|practical|pattern\w*|dietary pattern|framework)\b", text):
+        roles.add("context")
+    if re.search(r"\b(neutral|not associated|safe|supports?|driven by|primary conclusion|best current read|does not increase|no increased|without specific concern)\b", text):
+        roles.add("direct_support")
+    return roles or {"direct_support"}
+
+
+def _strip_bracket_citations(sentence: str) -> str:
+    return re.sub(r"\[[^\[\]\n]{1,180}\]", "", str(sentence or ""))
+
+
+def _mixed_citation_roles(source_roles: dict[str, list[str]]) -> bool:
+    role_sets = {tuple(roles or ["unknown"]) for roles in source_roles.values()}
+    if len(role_sets) <= 1:
+        return False
+    flattened = {role for roles in role_sets for role in roles}
+    return bool(flattened.intersection({"boundary", "counterweight", "calibration", "context"}) and "direct_support" in flattened)
+
+
+def _role_mismatch(sentence_roles: set[str], source_roles: set[str]) -> bool:
+    if not source_roles:
+        return False
+    if "direct_support" in sentence_roles and not sentence_roles.intersection({"boundary", "counterweight", "calibration"}):
+        if source_roles.issubset({"boundary", "counterweight", "calibration"}):
+            return True
+    if "calibration" in sentence_roles and source_roles == {"context"}:
+        return True
+    return False
+
+
+def _role_mismatch_guidance(sentence_roles: set[str], source_roles: set[str]) -> str:
+    if "direct_support" in sentence_roles and source_roles.issubset({"boundary", "counterweight", "calibration"}):
+        return "Use this source on a boundary, counterweight, or calibration clause rather than a broad support claim."
+    return "Check whether this source supports the exact sentence claim in the cited role."
 
 
 def _ambiguous_quantity_surfaces(atoms: list[dict[str, Any]]) -> list[dict[str, Any]]:

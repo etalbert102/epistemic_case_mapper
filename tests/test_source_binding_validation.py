@@ -153,6 +153,59 @@ def test_retention_report_flags_quantity_without_bound_source_nearby() -> None:
     assert binding["quantity_source_adjacency_warnings"][0]["expected_source_ids"] == ["s1"]
 
 
+def test_source_binding_report_flags_role_mismatched_overbundled_citations() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_support", "source_label": "Support Study"},
+            {"source_id": "s_boundary", "source_label": "Boundary Study"},
+        ],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Option A is not associated with increased risk in the general population.",
+                    "source_ids": ["s_support"],
+                    "main_use": "drives_answer",
+                },
+                {
+                    "statement": "The answer is bounded in high-risk subgroups.",
+                    "source_ids": ["s_boundary"],
+                    "main_use": "bounds_answer",
+                },
+            ]
+        },
+    }
+    memo = "Option A is not associated with increased risk in the general population [s_support, s_boundary]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    care = report["source_binding_report"]["citation_care_report"]
+    warning_types = {row["warning_type"] for row in care["warnings"]}
+    assert care["status"] == "warning"
+    assert "overbundled_or_mixed_role_citation" in warning_types
+    assert "citation_role_mismatch" in warning_types
+
+
+def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_boundary", "source_label": "Boundary Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "The answer is bounded in high-risk subgroups.",
+                    "source_ids": ["s_boundary"],
+                    "main_use": "bounds_answer",
+                }
+            ]
+        },
+    }
+    memo = "The answer is bounded in high-risk subgroups [s_boundary]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    care = report["source_binding_report"]["citation_care_report"]
+    assert care["warning_count"] == 0
+
+
 def test_retention_report_accepts_quantity_with_bound_source_nearby() -> None:
     packet = {
         "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}],
