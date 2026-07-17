@@ -101,6 +101,7 @@ def build_canonical_decision_writer_packet(
         "decision_question": packet.get("decision_question"),
         "decision_brief_skeleton": skeleton,
         "decision_answer_classification": _decision_answer_classification(packet),
+        "analyst_decision_spine": _dict(interface.get("analyst_decision_spine")),
         "analyst_reasoning_frame": analyst_frame,
         "balanced_answer_frame": balanced_frame,
         "bluf_contract": build_bluf_contract(skeleton=skeleton, balanced_answer_frame=balanced_frame),

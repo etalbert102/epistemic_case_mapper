@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
+from epistemic_case_mapper.map_briefing_analyst_decision_spine import build_analyst_decision_spine
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract, contract_quality_summary
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
@@ -53,7 +54,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "practical_implications": _practical_implications(packet, visible_items),
         "practical_implication_cards": _practical_implication_cards(packet, visible_items),
         "must_use_evidence": [_writer_evidence_item(item) for item in visible_items],
-        "quantity_anchors": _quantity_anchors(visible_items),
+        "quantity_anchors": _quantity_anchors([*visible_items, *selected_context]),
         "critique_writer_guidance": compact_writer_guidance_for_model(_dict(packet.get("writer_guidance_packet"))),
         "source_trail": _visible_source_trail(packet, visible_items),
         "_source_identity_trail": _list(packet.get("source_trail")),
@@ -61,6 +62,7 @@ def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[s
         "excluded_evidence_log": [_excluded_evidence_log_row(item) for item in filtered_items],
         "lineage_report": _lineage_report(packet, visible_items, filtered_items, obligations),
     }
+    interface["analyst_decision_spine"] = build_analyst_decision_spine(packet, interface)
     interface["adaptive_memo_outline"] = build_adaptive_memo_outline(interface)
     quality = build_writer_decision_interface_quality_report(interface)
     interface["quality_warnings"] = quality["warnings"]
@@ -85,6 +87,7 @@ def build_writer_model_context(writer_interface: dict[str, Any]) -> dict[str, An
         "rescued_context_table": _list(interface.get("rescued_context_table")),
         "source_appraisal_summary": _list(interface.get("source_appraisal_summary")),
         "decision_boundary_source_contract": _dict(interface.get("decision_boundary_source_contract")),
+        "analyst_decision_spine": _dict(interface.get("analyst_decision_spine")),
         "reasoning_hierarchy": hierarchy,
         "adaptive_memo_outline": _dict(interface.get("adaptive_memo_outline")),
         "practical_implications": _string_list(interface.get("practical_implications")),
@@ -122,6 +125,9 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         warnings.append("missing_counterweights")
     if not _list(interface.get("quantity_anchors")):
         warnings.append("missing_quantity_anchors")
+    analyst_spine = _dict(interface.get("analyst_decision_spine"))
+    if not _list(analyst_spine.get("decision_moves")):
+        warnings.append("missing_analyst_decision_spine_moves")
     if _contains_generic_judgment(_reader_facing_judgment_surface(interface)):
         warnings.append("generic_or_scaffolded_judgment_present")
     guidance = _dict(interface.get("critique_writer_guidance"))
@@ -161,6 +167,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         "must_use_evidence_count": len(_list(interface.get("must_use_evidence"))),
         "quantity_anchor_count": len(_list(interface.get("quantity_anchors"))),
         "reasoning_move_count": len(_list(hierarchy.get("reasoning_moves"))),
+        "analyst_decision_spine_move_count": len(_list(analyst_spine.get("decision_moves"))),
         "rescued_context_count": _reasoning_hierarchy_rescue_count(hierarchy),
         "excluded_evidence_count": len(_list(interface.get("excluded_evidence_log"))),
         "source_appraisal_row_count": len(source_appraisal_rows),
@@ -706,6 +713,7 @@ def _lineage_report(
             "memo_obligations",
             "analyst_quantity_binding_report",
             "writer_guidance_packet",
+            "analyst_decision_spine",
         ],
     }
 

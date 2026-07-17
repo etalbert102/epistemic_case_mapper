@@ -12,10 +12,19 @@ def test_global_analyst_tasks_use_task_specific_contexts() -> None:
     tasks = build_global_analyst_tasks(_context())
     by_id = {task["task_id"]: task for task in tasks}
 
-    assert set(by_id) == {"answer_frame", "evidence_roles", "quantity_plan", "source_hierarchy", "argument_blueprint"}
+    assert set(by_id) == {
+        "answer_frame",
+        "evidence_roles",
+        "quantity_plan",
+        "source_hierarchy",
+        "source_weighting_guidance",
+        "argument_blueprint",
+    }
     assert "quantity_bearing_evidence_rows" in by_id["quantity_plan"]["context"]
     assert "evidence_rows" not in by_id["quantity_plan"]["context"]
     assert "source_inventory" in by_id["source_hierarchy"]["context"]
+    assert "source_inventory" in by_id["source_weighting_guidance"]["context"]
+    assert "top_decision_evidence" in by_id["source_weighting_guidance"]["context"]
     assert "decision_diagnostic_evidence_rows" in by_id["answer_frame"]["context"]
     assert len(build_global_analyst_task_prompt(by_id["quantity_plan"])) < len(build_global_analyst_task_prompt(by_id["evidence_roles"]))
 

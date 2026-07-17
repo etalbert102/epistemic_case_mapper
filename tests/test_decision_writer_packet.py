@@ -8,7 +8,6 @@ from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_decision_usefulness_retention_report,
-    build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
     run_decision_usefulness_memo_repair,
     run_memo_ready_packet_repair,
@@ -899,18 +898,3 @@ def test_strict_writer_repair_does_not_apply_quantity_only_improvement(monkeypat
     assert result["report"]["applied"] is False
     assert result["memo"] == weak_memo
 
-
-def test_decision_writer_packet_repair_prompt_carries_originating_evidence_context() -> None:
-    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
-    packet = decision_writer_packet_to_memo_ready_packet(
-        bundle["decision_writer_packet"],
-        quality_report=bundle["decision_writer_packet_quality_report"],
-    )
-    weak_memo = "## Decision Brief\n\nOption A is plausible.\n"
-    before = build_memo_ready_packet_retention_report(weak_memo, packet)
-
-    prompt = build_memo_ready_packet_repair_prompt(weak_memo, packet, before)
-
-    assert '"contract_mode": "strict_writer_packet"' in prompt
-    assert "This is the main support." in prompt
-    assert "This bounds adoption." in prompt

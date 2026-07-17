@@ -23,6 +23,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
     obligations_by_item = _obligations_by_item(canonical)
     quantity_obligations_by_item = _quantity_obligations_by_item(packet)
     source_ids_by_label = _source_ids_by_label(packet)
+    source_match_keys_by_id = _source_match_keys_by_id(packet)
     source_weights = _source_weight_judgments_by_source(canonical)
     language_by_item = {
         str(row.get("item_id") or ""): row
@@ -77,6 +78,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "role": role,
                     "source_ids": sources,
                     "citation_source_ids": citation_sources,
+                    "source_match_keys": _source_match_keys_for_sources(sources, source_match_keys_by_id),
                     "source_labels": item.get("source_labels")
                     or ([item.get("source_label")] if item.get("source_label") else None),
                     "required_quantity_atoms": quantities,
@@ -121,6 +123,8 @@ def contracts_for_section(
     ]
     if selected:
         return selected[:18]
+    if section_id and section_id not in {"answer_evidence", "bottom_line"}:
+        return []
     return [row for row in contracts if row.get("required")][:12]
 
 
@@ -271,7 +275,43 @@ def evidence_ids_in_text(text: str, contracts: list[dict[str, Any]]) -> list[str
     found = []
     for content in BRACE_TAG_RE.findall(text or ""):
         found.extend(_evidence_ids_from_brace_content(content.strip(), contracts_by_id))
+    found.extend(_evidence_ids_from_source_citations(text, contracts))
     return _dedupe(found)
+
+
+def _evidence_ids_from_source_citations(text: str, contracts: list[dict[str, Any]]) -> list[str]:
+    source_to_evidence: dict[str, list[str]] = {}
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        evidence_id = str(contract.get("evidence_id") or "").strip()
+        if not evidence_id:
+            continue
+        for source_key in _contract_source_match_keys(contract):
+            source_to_evidence.setdefault(source_key, []).append(evidence_id)
+    unique_source_to_evidence = {
+        source_id: _dedupe(evidence_ids)
+        for source_id, evidence_ids in source_to_evidence.items()
+        if len(_dedupe(evidence_ids)) == 1
+    }
+    found = []
+    for content in re.findall(r"\[([^\[\]\n]{1,300})\]", str(text or "")):
+        for token in re.split(r"\s*(?:,|;)\s*", content):
+            evidence_ids = unique_source_to_evidence.get(_label_key(token))
+            if evidence_ids:
+                found.extend(evidence_ids)
+    return found
+
+
+def _contract_source_match_keys(contract: dict[str, Any]) -> list[str]:
+    values = [
+        *_string_list(contract.get("citation_source_ids")),
+        *_string_list(contract.get("source_ids")),
+        *_string_list(contract.get("source_match_keys")),
+        *_string_list(contract.get("source_labels")),
+        *_string_list(contract.get("source_label")),
+    ]
+    return _dedupe(key for value in values if (key := _label_key(value)))
 
 
 def _obligations_by_item(canonical: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -400,6 +440,37 @@ def _source_ids_by_label(packet: dict[str, Any]) -> dict[str, str]:
             if key:
                 mapping[key] = source_id
     return mapping
+
+
+def _source_match_keys_by_id(packet: dict[str, Any]) -> dict[str, list[str]]:
+    mapping: dict[str, list[str]] = {}
+    for row in _list(packet.get("source_trail")):
+        if not isinstance(row, dict):
+            continue
+        source_id = str(row.get("source_id") or row.get("citation_key") or "").strip()
+        if not source_id:
+            continue
+        values = [
+            source_id,
+            row.get("citation_key"),
+            row.get("source_label"),
+            row.get("display_label"),
+            row.get("source_slug"),
+            row.get("original_source_id"),
+            *_string_list(row.get("source_aliases")),
+        ]
+        mapping[source_id] = _dedupe(key for value in values if (key := _label_key(value)))
+    return mapping
+
+
+def _source_match_keys_for_sources(source_ids: list[str], source_match_keys_by_id: dict[str, list[str]]) -> list[str]:
+    keys = []
+    for source_id in source_ids:
+        keys.extend(source_match_keys_by_id.get(source_id, []))
+        key = _label_key(source_id)
+        if key:
+            keys.append(key)
+    return _dedupe(keys)
 
 
 def _source_ids_from_labels(item: dict[str, Any], source_ids_by_label: dict[str, str]) -> list[str]:

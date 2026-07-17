@@ -7,6 +7,10 @@ from typing import Any
 from epistemic_case_mapper.map_briefing_decision_usefulness import compact_decision_usefulness_for_prompt
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
+from epistemic_case_mapper.map_briefing_analyst_decision_spine import (
+    compact_analyst_decision_spine_for_prompt,
+    section_spine_for_prompt,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import norm as _norm
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
@@ -33,8 +37,6 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
 
 
 def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
-    """Build section-local synthesis prompts from the canonical writer handoff."""
-
     if not isinstance(memo_ready_packet, dict) or not memo_ready_packet.get("evidence_items"):
         return {
             "schema_id": "memo_ready_section_synthesis_plan_v1",
@@ -124,6 +126,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Make Practical Implication concrete: state the action-relevant implication and the evidence basis.\n"
         "- State what would change the answer when update triggers or crux thresholds are available.\n"
         "- Use source_weighting to explain why sources drive, calibrate, bound, or contextualize the answer.\n"
+        "- Use analyst_decision_spine as the controlling reasoning plan: it says the answer, source hierarchy, support, counterweights, quantities, scope, and practical move in the order the memo should express them.\n"
         "- Use argument_spine as the primary writing plan; follow its section_plan and primary_section fields to decide where each evidence step belongs.\n"
         "- Treat section_writing_packets as the primary section-local context. Each section packet contains the argument steps, evidence rows, source roles, and retention requirements for that section.\n"
         "- Write each section around its owned spine steps. If a later section needs evidence already used earlier, make a short cross-reference and add the new decision function instead of repeating the earlier sentence.\n"
@@ -162,6 +165,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         ),
         "balanced_answer_frame": packet.get("balanced_answer_frame"),
         "bluf_contract": packet.get("bluf_contract"),
+        "analyst_decision_spine": compact_analyst_decision_spine_for_prompt(_dict(packet.get("analyst_decision_spine"))),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "source_weighting_contract": source_weighting_contract,
@@ -207,6 +211,7 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_job": raw.get("writing_job"),
                     "section_role_contract": _section_role_contract(heading),
                     "section_focus": _section_focus(section_id),
+                    "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), section_id),
                     "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
                     "reader_guidance_application": _guidance_application(reader_packet, raw, section_id),
                     "section_argument_steps": raw.get("argument_steps"),
@@ -229,6 +234,7 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
             "section_job": source_weighting.get("writing_job"),
             "section_role_contract": _section_role_contract("How to Weight the Evidence"),
             "section_focus": _section_focus("source_weighting"),
+            "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), "source_weighting"),
             "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
             "reader_guidance_application": _guidance_application(reader_packet, source_weighting, "source_weighting"),
             "required_points": source_weighting.get("required_points"), "source_weighting_contract": reader_packet.get("source_weighting_contract"),
@@ -873,7 +879,6 @@ def _compact_row(row: dict[str, Any]) -> dict[str, Any]:
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
-
 
 def _list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []

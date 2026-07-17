@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import re
 import time
@@ -10,6 +9,10 @@ from epistemic_case_mapper.map_briefing_analyst_decision_group_schema import sch
 from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_prompts import (
     build_global_analyst_task_prompt,
     build_global_analyst_tasks,
+)
+from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_runner import (
+    public_global_task_report,
+    run_global_analyst_task_calls,
 )
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
     argument_plan_transition,
@@ -25,8 +28,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_source_hierarchy import normalize_source_hierarchy
-from epistemic_case_mapper.model_backends import model_parallelism, run_parallel
-from epistemic_case_mapper.model_stage_retry import model_stage_attempts
+from epistemic_case_mapper.model_backends import model_parallelism
 
 
 def should_use_global_task_analyst_decision_model(context: dict[str, Any]) -> bool:
@@ -60,18 +62,14 @@ def run_global_task_analyst_decision_model(
             "parallelism": model_parallelism(backend),
         },
     )
-    task_results = run_parallel(
+    task_results = run_global_analyst_task_calls(
         tasks,
-        lambda task: _run_task(
-            task,
-            backend=backend,
-            backend_timeout=backend_timeout,
-            backend_retries=backend_retries,
-            num_predict=num_predict,
-            run_backend=run_backend,
-            progress=progress,
-        ),
-        max_workers=model_parallelism(backend),
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=num_predict,
+        run_backend=run_backend,
+        progress=progress,
     )
     payload = build_analyst_decision_model_from_global_tasks(context, task_results)
     _emit_progress(
@@ -97,7 +95,7 @@ def run_global_task_analyst_decision_model(
             "failed_count": sum(1 for row in task_results if row.get("status") != "parsed"),
             "parallelism": model_parallelism(backend),
             "wall_seconds": round(time.monotonic() - started, 3),
-            "task_reports": [_public_task_report(row) for row in task_results],
+            "task_reports": [public_global_task_report(row) for row in task_results],
             "context_mode": "task_specific",
         },
     }
@@ -154,59 +152,6 @@ def build_analyst_decision_model_from_global_tasks(
         "decision_logic": _decision_logic(answer_frame, groups, evidence_roles, source_hierarchy),
         "argument_plan": _argument_plan_from_blueprint(blueprint, groups),
     }
-
-
-def _run_task(
-    task: dict[str, Any],
-    *,
-    backend: str,
-    backend_timeout: int | None,
-    backend_retries: int,
-    num_predict: int,
-    run_backend: Callable[..., Any],
-    progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
-) -> dict[str, Any]:
-    prompt = build_global_analyst_task_prompt(task)
-    started = time.monotonic()
-    raw = ""
-    payload: Any = {}
-    error = ""
-    attempts = model_stage_attempts()
-    retry_reports: list[dict[str, Any]] = []
-    for attempt in range(1, attempts + 1):
-        _emit_progress(
-            progress,
-            "analyst_decision_model_global_task",
-            "started" if attempt == 1 else "retry_started",
-            _task_progress_details(task, prompt, attempt=attempt),
-        )
-        try:
-            result = run_backend(
-                prompt,
-                backend,
-                timeout_seconds=backend_timeout,
-                max_retries=backend_retries,
-                num_predict=max(2048, min(num_predict, _task_num_predict(str(task["task_id"])))),
-                json_mode=True,
-            )
-            raw = str(getattr(result, "text", result))
-            payload = _extract_json(raw)
-        except RuntimeError as exc:
-            error = str(exc)
-            retry_reports.append({"attempt": attempt, "status": "backend_error", "error": error})
-            if attempt < attempts:
-                _emit_progress(progress, "analyst_decision_model_global_task", "retry_needed", _task_progress_details(task, prompt, attempt=attempt, status="backend_error", error=error, wall_seconds=round(time.monotonic() - started, 3)))
-                continue
-            break
-        status = "parsed" if isinstance(payload, dict) and payload.get("schema_id") else "parse_failed"
-        retry_reports.append({"attempt": attempt, "status": status})
-        if status == "parsed":
-            _emit_progress(progress, "analyst_decision_model_global_task", "completed", _task_progress_details(task, prompt, attempt=attempt, status=status, raw_chars=len(raw), wall_seconds=round(time.monotonic() - started, 3)))
-            return _task_result(task, status, prompt, raw, started, payload=payload, retry_reports=retry_reports)
-        if attempt < attempts:
-            _emit_progress(progress, "analyst_decision_model_global_task", "retry_needed", _task_progress_details(task, prompt, attempt=attempt, status=status, raw_chars=len(raw), wall_seconds=round(time.monotonic() - started, 3)))
-    _emit_progress(progress, "analyst_decision_model_global_task", "failed", _task_progress_details(task, prompt, attempt=attempts, status="failed", raw_chars=len(raw), error=error, wall_seconds=round(time.monotonic() - started, 3)))
-    return _task_result(task, "failed", prompt, raw, started, payload=payload if isinstance(payload, dict) else {}, issues=[error] if error else [], retry_reports=retry_reports)
 
 
 def _groups_from_global_tasks(
@@ -539,92 +484,6 @@ def _context_source_ids(context: dict[str, Any]) -> list[str]:
     return _dedupe(source_id for row in _rows(context) for source_id in _string_list(row.get("source_ids")))
 
 
-def _extract_json(raw: str) -> Any:
-    text = str(raw or "").strip()
-    if not text:
-        return {}
-    candidates = [text]
-    candidates.extend(re.findall(r"```(?:json)?\s*(.*?)```", text, flags=re.DOTALL | re.IGNORECASE))
-    start = text.find("{")
-    end = text.rfind("}")
-    if start >= 0 and end > start:
-        candidates.append(text[start : end + 1])
-    for candidate in candidates:
-        try:
-            return json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-    return {}
-
-
-def _task_result(
-    task: dict[str, Any],
-    status: str,
-    prompt: str,
-    raw: str,
-    started: float,
-    *,
-    payload: Any = None,
-    issues: list[str] | None = None,
-    retry_reports: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    return {
-        "task_id": task.get("task_id"),
-        "status": status,
-        "prompt": prompt,
-        "raw": raw,
-        "payload": payload if isinstance(payload, dict) else {},
-        "duration_seconds": round(time.monotonic() - started, 3),
-        "prompt_chars": len(prompt),
-        "raw_chars": len(raw),
-        "issues": issues or [],
-        "attempt_count": len(retry_reports or []),
-        "retry_reports": retry_reports or [],
-    }
-
-
-def _public_task_report(row: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "task_id": row.get("task_id"),
-        "status": row.get("status"),
-        "duration_seconds": row.get("duration_seconds"),
-        "prompt_chars": row.get("prompt_chars"),
-        "raw_chars": row.get("raw_chars"),
-        "issues": row.get("issues", []),
-        "attempt_count": row.get("attempt_count", 0),
-        "retry_reports": row.get("retry_reports", []),
-    }
-
-
-def _task_progress_details(
-    task: dict[str, Any],
-    prompt: str,
-    *,
-    attempt: int,
-    status: str = "",
-    raw_chars: int = 0,
-    wall_seconds: float | None = None,
-    error: str = "",
-) -> dict[str, Any]:
-    context = _dict(task.get("context"))
-    details: dict[str, Any] = {
-        "substage": "analyst_decision_model_global_task",
-        "task_id": task.get("task_id"),
-        "row_count": len(_list(context.get("evidence_rows") or context.get("decision_diagnostic_evidence_rows") or context.get("quantity_bearing_evidence_rows"))),
-        "attempt": attempt,
-        "prompt_chars": len(prompt),
-    }
-    if status:
-        details["task_status"] = status
-    if raw_chars:
-        details["raw_chars"] = raw_chars
-    if wall_seconds is not None:
-        details["wall_seconds"] = wall_seconds
-    if error:
-        details["error"] = _short_text(error, 240)
-    return details
-
-
 def _emit_progress(
     progress: Callable[[str, str, dict[str, Any] | None], None] | None,
     substage: str,
@@ -644,17 +503,6 @@ def _threshold() -> int:
         return max(1, int(os.environ.get("ECM_ANALYST_DECISION_MODEL_PARALLEL_THRESHOLD", "12")))
     except ValueError:
         return 12
-
-
-def _task_num_predict(task_id: str) -> int:
-    return {
-        "answer_frame": 4096,
-        "evidence_roles": 8192,
-        "quantity_plan": 6144,
-        "source_hierarchy": 4096,
-        "source_weighting_guidance": 4096,
-        "argument_blueprint": 6144,
-    }.get(task_id, 4096)
 
 
 def _rows(context: dict[str, Any]) -> list[dict[str, Any]]:
