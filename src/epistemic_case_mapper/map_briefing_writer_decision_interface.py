@@ -561,6 +561,7 @@ def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
         "claim_calibration_notes": calibrated.get("calibration_notes"),
         "not_allowed_terms": calibrated.get("not_allowed_terms"),
         "source_labels": _source_labels(item),
+        "source_ids": _string_list(item.get("source_ids")),
         "quantities": _quantity_values(item.get("quantities"), evidence=item),
         "decision_relevance": _short_text(calibrate_text_for_writer(str(item.get("decision_relevance") or ""), item), 360),
         "caveat": _short_text(calibrate_text_for_writer(str(item.get("caveat") or ""), item), 260),
@@ -885,4 +886,3 @@ def _content_terms(text: str) -> set[str]:
 
 def _source_labels(item: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(item.get("source_labels")), str(item.get("source_label") or "").strip()])
-

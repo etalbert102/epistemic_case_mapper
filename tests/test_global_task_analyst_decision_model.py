@@ -45,8 +45,11 @@ def test_global_task_payload_assembles_valid_analyst_decision_model() -> None:
                         "reason": "Budget risk bounds implementation.",
                     }
                 ],
+                "counterweight_weighting": "Budget risk narrows where option A is attractive but does not erase the outcome evidence.",
+                "what_would_change_the_answer": ["A direct implementation study showing unmanageable budget risk."],
                 "scope_boundaries": ["Applies when budget risk is monitored."],
                 "practical_implication": "Adopt with monitoring.",
+                "practical_implications": ["Track budget risk during rollout."],
                 "do_not_overstate": ["Do not ignore budget risk."],
             },
         },
@@ -149,9 +152,21 @@ def test_global_task_payload_assembles_valid_analyst_decision_model() -> None:
 
     assert report["valid"] is True
     assert model["decision_logic"]["bounded_bottom_line"] == "Adopt option A with the stated boundary."
+    assert model["decision_logic"]["counterweight_weighting"] == "Budget risk narrows where option A is attractive but does not erase the outcome evidence."
+    assert "A direct implementation study" in " ".join(model["decision_logic"]["reconciled_cruxes"])
+    assert "Track budget risk" in " ".join(model["decision_logic"]["practical_implications"])
     assert model["source_hierarchy"]["schema_id"] == "source_weight_hierarchy_v1"
     assert {row["evidence_item_id"] for row in model["memo_relevance_decisions"]} == {"item:support", "item:risk"}
     assert model["quantity_relevance_decisions"][0]["retention_phrase"] == "20% improvement"
+
+
+def test_global_answer_frame_prompt_requests_controlling_judgments() -> None:
+    answer_task = {task["task_id"]: task for task in build_global_analyst_tasks(_context())}["answer_frame"]
+    schema = answer_task["schema"]
+
+    assert "counterweight_weighting" in schema
+    assert "what_would_change_the_answer" in schema
+    assert "practical_implications" in schema
 
 
 def _context() -> dict:

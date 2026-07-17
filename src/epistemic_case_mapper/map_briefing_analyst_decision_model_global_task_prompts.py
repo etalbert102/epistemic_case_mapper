@@ -72,8 +72,11 @@ def _task_schema(task_id: str) -> dict[str, Any]:
             "confidence_basis": "why this confidence is warranted",
             "main_answer_drivers": [{"source_ids": ["source_id"], "evidence_item_ids": ["evidence_id"], "reason": "why this drives the answer"}],
             "main_counterweights": [{"source_ids": ["source_id"], "evidence_item_ids": ["evidence_id"], "reason": "how this weakens or bounds the answer"}],
+            "counterweight_weighting": "how the main counterweights change, weaken, bound, or fail to change the best answer",
+            "what_would_change_the_answer": ["cruxes, missing evidence, thresholds, or update triggers that would change the answer"],
             "scope_boundaries": ["where the answer applies or stops applying"],
             "practical_implication": "what a decision maker should do with the answer",
+            "practical_implications": ["action-relevant implications when more than one matters"],
             "do_not_overstate": ["unsupported stronger claims"],
         },
         "evidence_roles": {

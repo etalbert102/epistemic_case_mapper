@@ -30,8 +30,11 @@ def fake_global_task_payload(prompt: str) -> dict:
                 }
             ],
             "main_counterweights": [],
+            "counterweight_weighting": "Counterweights bound scope when they are present.",
+            "what_would_change_the_answer": ["Contrary direct evidence would change the answer."],
             "scope_boundaries": ["Applies to the tested context."],
             "practical_implication": "Use option A with monitoring.",
+            "practical_implications": ["Monitor implementation."],
             "do_not_overstate": ["Do not overstate beyond the tested context."],
         }
     if schema == "global_evidence_roles_v1":

@@ -23,6 +23,10 @@ from epistemic_case_mapper.map_briefing_source_identity import (
     project_sources_to_ids_for_model,
     source_id_registry_for_model,
 )
+from epistemic_case_mapper.map_briefing_source_hierarchy_projection import (
+    source_hierarchy_lane_index,
+    source_hierarchy_match_for_row,
+)
 from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_bundle
 from epistemic_case_mapper.map_briefing_source_weighting_contract import (
     build_source_weighting_contract,
@@ -47,7 +51,7 @@ def build_canonical_decision_writer_packet(
     source_trail = _list(packet.get("source_trail"))
     source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
     skeleton = _decision_brief_skeleton(interface)
-    weighted_frame = _source_weighted_answer_frame(interface)
+    weighted_frame = _source_weighted_answer_frame(packet, interface)
     counterweights = _counterweight_dispositions(interface)
     scope_boundaries = _scope_boundaries(interface)
     analyst_frame = _analyst_reasoning_frame(packet, interface)
@@ -65,7 +69,7 @@ def build_canonical_decision_writer_packet(
     skeleton = _decision_brief_skeleton(interface)
     analyst_frame = _analyst_reasoning_frame(packet, interface)
     source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
-    weighted_frame = _source_weighted_answer_frame(interface)
+    weighted_frame = _source_weighted_answer_frame(packet, interface)
     counterweights = _counterweight_dispositions(interface)
     scope_boundaries = _scope_boundaries(interface)
     priority = _priority_evidence(interface)
@@ -164,7 +168,8 @@ def _priority_evidence(interface: dict[str, Any]) -> list[dict[str, Any]]:
     return _dedupe_rows(rows, "item_id")[:18]
 
 
-def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
+def _source_weighted_answer_frame(packet: dict[str, Any], interface: dict[str, Any]) -> dict[str, Any]:
+    hierarchy_index = source_hierarchy_lane_index(_dict(packet.get("analyst_source_hierarchy")))
     rows = [
         row
         for row in sorted(
@@ -175,8 +180,9 @@ def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
     ]
     lanes: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
-        lane = source_weight_lane(row)
-        lanes.setdefault(lane, []).append(_source_weighted_evidence_row(row, lane=lane))
+        hierarchy_match = source_hierarchy_match_for_row(row, hierarchy_index)
+        lane = str(hierarchy_match.get("canonical_lane") or "") or source_weight_lane(row)
+        lanes.setdefault(lane, []).append(_source_weighted_evidence_row(row, lane=lane, hierarchy_match=hierarchy_match))
 
     capped_lanes = {
         lane: _dedupe_rows(lane_rows, "item_id")[: _source_weight_lane_cap(lane)]
@@ -202,21 +208,29 @@ def _source_weighted_answer_frame(interface: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def _source_weighted_evidence_row(row: dict[str, Any], *, lane: str) -> dict[str, Any]:
+def _source_weighted_evidence_row(
+    row: dict[str, Any],
+    *,
+    lane: str,
+    hierarchy_match: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     calibrated = _calibrated_claim_row(row)
     reader_role = reader_evidence_role(row)
+    hierarchy_match = hierarchy_match if isinstance(hierarchy_match, dict) else {}
     return _drop_empty(
         {
             "item_id": row.get("item_id"),
             "source_weight_role": lane,
+            "source_weight_basis": "analyst_source_hierarchy" if hierarchy_match else "writer_role_projection",
             "reader_evidence_role": reader_role,
             "upstream_role": row.get("role"),
             "answer_relation": row.get("answer_relation"),
             "memo_function": row.get("memo_function"),
             "claim": _short_text(calibrated.get("claim"), 620),
+            "source_ids": _string_list(row.get("source_ids")),
             "source_labels": _string_list(row.get("source_labels")),
             "quantities": _brief_quantities(row),
-            "why_this_weight": _source_weight_reason(row, lane),
+            "why_this_weight": _source_weight_reason(row, lane, hierarchy_match=hierarchy_match),
             "decision_relevance": _calibrated_short(row.get("decision_relevance") or row.get("include_reason"), row, limit=520),
             "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 360),
             "not_enough_for": _string_list(row.get("source_use_warnings") or _dict(row.get("source_appraisal")).get("source_use_warnings"))[:4],
@@ -238,7 +252,13 @@ def _source_weight_lane_cap(lane: str) -> int:
     return caps.get(lane, 6)
 
 
-def _source_weight_reason(row: dict[str, Any], lane: str) -> str:
+def _source_weight_reason(row: dict[str, Any], lane: str, *, hierarchy_match: dict[str, Any] | None = None) -> str:
+    hierarchy_match = hierarchy_match if isinstance(hierarchy_match, dict) else {}
+    if hierarchy_match:
+        parts = [f"Positioned as {lane.replace('_', ' ')} because the analyst source hierarchy assigns this evidence to {str(hierarchy_match.get('hierarchy_lane') or '').replace('_', ' ')}"]
+        if hierarchy_match.get("rationale"):
+            parts.append(str(hierarchy_match.get("rationale")))
+        return _short_text("; ".join(parts) + ".", 420)
     role = str(row.get("role") or "").strip() or "unspecified"
     relation = str(row.get("answer_relation") or "").strip()
     function = str(row.get("memo_function") or "").strip()

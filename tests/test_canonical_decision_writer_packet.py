@@ -74,6 +74,52 @@ def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
     assert any("main answer" in move for move in frame["required_weighting_moves"])
 
 
+def test_canonical_source_weighting_uses_explicit_analyst_hierarchy_over_projected_role() -> None:
+    packet = {
+        "schema_id": "memo_ready_packet_v1",
+        "decision_question": "Should option A be adopted?",
+        "answer_spine": {"default_read": "Adopt option A with caution.", "confidence": "medium"},
+        "source_trail": [{"source_id": "s1", "source_label": "s1"}],
+        "analyst_source_hierarchy": {
+            "schema_id": "source_weight_hierarchy_v1",
+            "hierarchy_thesis": "The source mainly bounds the answer.",
+            "lanes": {
+                "counterweight_sources": [
+                    {
+                        "source_ids": ["s1"],
+                        "evidence_item_ids": ["item:1"],
+                        "role": "Counterweight source.",
+                        "rationale": "This source narrows the answer despite the local support role.",
+                    }
+                ]
+            },
+            "source_accounting": [{"source_id": "s1", "primary_lane": "counterweight_sources"}],
+        },
+        "evidence_items": [
+            {
+                "item_id": "item:1",
+                "role": "strongest_support",
+                "answer_relation": "supports_answer",
+                "reader_claim": "Local row says option A helps.",
+                "source_ids": ["s1"],
+                "source_labels": ["s1"],
+                "lineage": {"evidence_item_ids": ["item:1"]},
+                "must_use": True,
+            }
+        ],
+    }
+
+    canonical = build_canonical_decision_writer_packet(packet)
+    lanes = canonical["source_weighted_answer_frame"]["lanes"]
+    row = lanes["counterweights_or_tensions"][0]
+
+    assert row["source_weight_basis"] == "analyst_source_hierarchy"
+    assert row["source_ids"] == ["s1"]
+    assert "analyst source hierarchy" in row["why_this_weight"]
+    assert "narrows the answer" in row["why_this_weight"]
+    assert "primary_answer_drivers" not in lanes
+
+
 def test_canonical_packet_builds_balanced_answer_frame_from_existing_judgments() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]

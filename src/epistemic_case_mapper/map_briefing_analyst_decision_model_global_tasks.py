@@ -13,6 +13,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_promp
 )
 from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
     argument_plan_transition,
+    content_based_counterweight_weighting,
     naturalize_decision_logic_payload,
 )
 from epistemic_case_mapper.map_briefing_decision_diagnosticity import apply_decision_diagnostic_ranking
@@ -144,7 +145,7 @@ def build_analyst_decision_model_from_global_tasks(
         "source_hierarchy_report": source_report,
         "quantitative_anchors": _quantity_anchors(quantity_relevance),
         "what_would_change_the_answer": _what_would_change(answer_frame, evidence_roles),
-        "decision_logic": _decision_logic(answer_frame, groups),
+        "decision_logic": _decision_logic(answer_frame, groups, evidence_roles, source_hierarchy),
         "argument_plan": _argument_plan_from_blueprint(blueprint, groups),
     }
 
@@ -778,27 +779,50 @@ def _what_would_change(answer_frame: dict[str, Any], evidence_roles: list[dict[s
     return _dedupe(_short_text(value, 320) for value in values if value)[:8]
 
 
-def _decision_logic(answer_frame: dict[str, Any], groups: list[dict[str, Any]]) -> dict[str, Any]:
-    support = _first_group(groups, "load_bearing_primary_support")
-    counterweight = _first_group(groups, "load_bearing_counterweight")
+def _decision_logic(
+    answer_frame: dict[str, Any],
+    groups: list[dict[str, Any]],
+    evidence_roles: list[dict[str, Any]],
+    source_hierarchy: dict[str, Any],
+) -> dict[str, Any]:
+    support = _group_summary(groups, "load_bearing_primary_support", limit=2)
+    counterweight = _group_summary(groups, "load_bearing_counterweight", limit=2)
+    scope = _string_list(answer_frame.get("scope_boundaries"))[:6]
+    counterweight_weighting = _short_text(
+        answer_frame.get("counterweight_weighting")
+        or answer_frame.get("why_counterweights_do_or_do_not_change_answer")
+        or content_based_counterweight_weighting(
+            support=support,
+            counterweight=counterweight,
+            fallback=" ".join([*scope[:2], str(source_hierarchy.get("hierarchy_thesis") or "")]).strip(),
+        ),
+        520,
+    )
     logic = {
         "bounded_bottom_line": _short_text(answer_frame.get("best_answer"), 700),
         "support_summary": support,
         "strongest_counterweight": counterweight,
-        "counterweight_weighting": _short_text(" ".join(_string_list(answer_frame.get("scope_boundaries"))[:3]), 420),
-        "reconciled_cruxes": _what_would_change(answer_frame, []),
-        "scope_boundaries": _string_list(answer_frame.get("scope_boundaries"))[:6],
-        "practical_implications": _string_list(answer_frame.get("practical_implication"))[:6],
+        "counterweight_weighting": counterweight_weighting,
+        "reconciled_cruxes": _what_would_change(answer_frame, evidence_roles),
+        "scope_boundaries": scope,
+        "practical_implications": _dedupe(
+            [
+                *_string_list(answer_frame.get("practical_implication")),
+                *_string_list(answer_frame.get("practical_implications")),
+            ]
+        )[:6],
         "do_not_overstate": _string_list(answer_frame.get("do_not_overstate"))[:8],
     }
     return naturalize_decision_logic_payload(logic)
 
 
-def _first_group(groups: list[dict[str, Any]], role: str) -> str:
-    for group in groups:
-        if group.get("memo_role") == role:
-            return str(group.get("proposition") or "")
-    return ""
+def _group_summary(groups: list[dict[str, Any]], role: str, *, limit: int) -> str:
+    values = [
+        str(group.get("proposition") or "").strip()
+        for group in groups
+        if group.get("memo_role") == role and str(group.get("proposition") or "").strip()
+    ]
+    return _short_text("; ".join(_dedupe(values)[:limit]), 760)
 
 
 def _argument_plan_from_blueprint(blueprint: dict[str, Any], groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
