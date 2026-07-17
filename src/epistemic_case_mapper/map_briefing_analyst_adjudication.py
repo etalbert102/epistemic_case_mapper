@@ -343,7 +343,11 @@ def _run_adjudication_chunk(
     started = time.monotonic()
     index, rows = item
     chunk_ledger = _chunk_ledger(ledger, rows, index=index, total=total)
-    chunk_prompt = build_analyst_adjudication_prompt(chunk_ledger)
+    chunk_prompt = (
+        build_missing_row_adjudication_prompt(chunk_ledger)
+        if phase == "missing_row_repair"
+        else build_analyst_adjudication_prompt(chunk_ledger)
+    )
     prompt_block = f"<!-- analyst adjudication chunk {index}/{total} -->\n{chunk_prompt}"
     expected_ids = [str(row.get("evidence_item_id")) for row in rows if str(row.get("evidence_item_id") or "")]
     attempts = model_stage_attempts()
@@ -890,6 +894,78 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
     return (
         "You are an analyst adjudicating evidence for a decision-support memo.\n"
         "Return a strict JSON object only.\n\n"
+        f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def build_missing_row_adjudication_prompt(ledger: dict[str, Any]) -> str:
+    rows = [_prompt_row(row) for row in _list(ledger.get("rows")) if isinstance(row, dict)]
+    expected_ids = [str(row.get("evidence_item_id") or "") for row in rows if str(row.get("evidence_item_id") or "").strip()]
+    packet = {
+        "task": "Repair missing analyst adjudication rows.",
+        "decision_question": ledger.get("decision_question"),
+        "instructions": [
+            "Return exactly one JSON object.",
+            "Return exactly one row for each expected_evidence_item_id.",
+            "Use each expected_evidence_item_id exactly as provided.",
+            "Use only the allowed enum values.",
+            "Use only source_ids and quantity_values supplied in each evidence row.",
+        ],
+        "expected_evidence_item_ids": expected_ids,
+        "allowed_memo_use": [
+            "load_bearing_primary_support",
+            "load_bearing_counterweight",
+            "quantitative_anchor",
+            "scope_or_applicability",
+            "decision_crux",
+            "mechanism_or_context",
+            "background_only",
+            "covered_by_group",
+            "not_decision_relevant",
+            "needs_human_or_model_review",
+        ],
+        "allowed_answer_relation": [
+            "supports_answer",
+            "challenges_answer",
+            "bounds_scope",
+            "identifies_crux",
+            "contextualizes_answer",
+            "not_decision_relevant",
+            "uncertain_relation",
+        ],
+        "required_output_schema": {
+            "schema_id": "analyst_adjudication_v1",
+            "decision_question": ledger.get("decision_question"),
+            "rows": [
+                {
+                    "evidence_item_id": "must equal an expected_evidence_item_id",
+                    "memo_use": "one allowed_memo_use value",
+                    "answer_relation": "one allowed_answer_relation value",
+                    "importance_rank": "integer 1-100",
+                    "rationale": "short reason grounded in the evidence row",
+                    "target_answer_option": "answer option or stance this row bears on, or empty string",
+                    "effect_on_final_answer": "brief natural-language effect on the answer",
+                    "tension_type": "none | clinical_outcome_vs_biomarker | subgroup_scope | dose_scope | study_conflict | mechanism | other",
+                    "decision_contribution": "what this row contributes to the decision",
+                    "use_in_reasoning": "answer anchor | counterweight | scope limiter | quantity calibrator | mechanism/context | trace only | other concise natural-language role",
+                    "key_qualifier": "caveat that must travel with this evidence if used",
+                    "quantity_takeaway": "reader-safe interpretation of supplied quantities, or empty string",
+                    "source_weight_note": "how strongly this source should move the answer and why",
+                    "misuse_warning": "unsafe inference this row should prevent",
+                    "if_omitted": "analytical loss if this row is omitted",
+                    "covered_by": [],
+                    "source_ids": ["source IDs copied from the evidence row"],
+                    "quantity_values": ["quantities copied from the evidence row"],
+                    "downgrade_reason": "required if memo_use is background_only or not_decision_relevant, else empty string",
+                }
+            ],
+            "overall_rationale": "one sentence",
+        },
+        "evidence_rows_to_repair": rows,
+    }
+    return (
+        "You are repairing missing rows from an analyst adjudication JSON artifact.\n"
+        "Return strict JSON only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
 

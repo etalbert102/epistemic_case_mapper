@@ -6,6 +6,7 @@ import pytest
 
 from epistemic_case_mapper.map_briefing_analyst_adjudication import (
     build_analyst_adjudication_prompt,
+    build_missing_row_adjudication_prompt,
     run_analyst_adjudication_single_call_for_test,
     run_analyst_adjudication,
 )
@@ -173,6 +174,22 @@ def test_analyst_adjudication_prompt_exposes_candidate_relation_metadata() -> No
     assert "Mechanism evidence increased the risk marker" in prompt
     assert "increased_harm_or_risk_signal" in prompt
     assert "Broad neighboring relation context" not in prompt
+
+
+def test_missing_row_repair_prompt_is_focused_on_expected_rows() -> None:
+    ledger = _ledger()
+    ledger["rows"] = [ledger["rows"][1]]
+
+    full_prompt = build_analyst_adjudication_prompt(ledger)
+    repair_prompt = build_missing_row_adjudication_prompt(ledger)
+
+    assert len(repair_prompt) < len(full_prompt)
+    assert "Repair missing analyst adjudication rows" in repair_prompt
+    assert "expected_evidence_item_ids" in repair_prompt
+    assert "warning:two" in repair_prompt
+    assert "Return exactly one row for each expected_evidence_item_id" in repair_prompt
+    assert "stable_final_answer_frame" not in repair_prompt
+    assert "multi_option or unresolved" not in repair_prompt
 
 
 def test_analyst_adjudication_repairs_source_faithfulness_conflicted_relation(monkeypatch) -> None:
