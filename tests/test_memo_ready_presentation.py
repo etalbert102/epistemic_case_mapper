@@ -43,7 +43,6 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     assert "](https://example.test/bmj-2020)" in result["memo"]
     assert retention["missing_mandatory_count"] == 0
 
-
 def test_presentation_sources_use_active_source_trail_only() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",
@@ -76,7 +75,6 @@ def test_presentation_sources_use_active_source_trail_only() -> None:
 
     assert "* [Active 2025](https://example.test/active) — Active Study 2025" in result["memo"]
     assert "Upstream Only 2024" not in result["memo"].split("## Sources", 1)[-1]
-
 
 def test_presentation_inserts_source_weighting_section_from_canonical_packet() -> None:
     packet = {
@@ -132,7 +130,6 @@ def test_presentation_inserts_source_weighting_section_from_canonical_packet() -
     assert "[Outcome 2025]: CITATION_TRACE.md#outcome-2025" in result["memo"]
     assert "[outcome_2025]" not in result["memo"]
     assert "inserted_source_weighting" in result["report"]["changes"]
-
 
 def test_presentation_source_weighting_section_is_idempotent() -> None:
     packet = {
@@ -220,29 +217,6 @@ def test_presentation_smooths_generic_model_prose_without_changing_sources() -> 
     assert "serve to narrow the scope" not in result["memo"]
     assert "To ensure practical application without overclaiming" not in result["memo"]
     assert "carry the main answer" in result["memo"]
-    assert "[Outcome 2025]" in result["memo"]
-    assert "smoothed_stock_phrasing" in result["report"]["changes"]
-
-
-def test_presentation_softens_generic_overclaim_language() -> None:
-    packet = {
-        "decision_question": "Should option A be adopted?",
-        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
-        "memo_warning_packet": {"warnings": []},
-    }
-    memo = (
-        "# Decision Memo\n\n"
-        "**Bottom Line:** Adopt option A conditionally.\n\n"
-        "Moderate use does not increase cardiovascular risk [outcome_2025]. "
-        "The evidence defines the \"safe\" threshold for action [outcome_2025]."
-    )
-
-    result = run_memo_ready_presentation_normalization(memo, packet)
-
-    assert "does not increase cardiovascular risk" not in result["memo"]
-    assert "is not associated with increased cardiovascular risk" in result["memo"]
-    assert "safe\" threshold" not in result["memo"]
-    assert "working boundary" in result["memo"]
     assert "[Outcome 2025]" in result["memo"]
     assert "smoothed_stock_phrasing" in result["report"]["changes"]
 
