@@ -23,6 +23,7 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- When one paragraph uses the same source cluster throughout, cite the cluster once at the end of the paragraph.\n"
         "- When sources support different jobs in the same paragraph, cite each source beside the clause it supports.\n"
         "- Keep packet IDs, schema terms, validation machinery, and audit language out of the prose.\n"
+        "- Use the Expert judgment brief as the first-order analytical framing when present.\n"
         "- Use the Decision argument for this section as the governing structure; use evidence notes to support those argument moves.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
@@ -40,6 +41,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
     focus = _dict(packet.get("section_focus"))
     role = _dict(packet.get("section_role_contract"))
     guidance_application = _dict(packet.get("reader_guidance_application"))
+    expert_mode = bool(_dict(packet.get("expert_judgment_section")))
     lines = [
         f"Known source IDs: {', '.join(known_source_ids)}",
         "",
@@ -51,31 +53,36 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         f"Confidence: {_text(top.get('confidence'))}",
         *_top_context_lines(top),
         "",
+        *_section("### Expert judgment brief", _expert_judgment_section_lines(packet.get("expert_judgment_section"))),
         "### Section job",
         *_bullet_list(role.get("do")),
         *_section("### Decision argument for this section", _decision_argument_section_lines(packet.get("decision_argument_section"))),
-        *_section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application)),
-        *_section("### Decision action contract", _decision_action_contract_lines(top.get("decision_action_contract"))),
+        *([] if expert_mode else _section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application))),
+        *([] if expert_mode else _section("### Decision action contract", _decision_action_contract_lines(top.get("decision_action_contract")))),
         *_section("### Avoid", _bullet_list(role.get("avoid"))),
         *_section("### Calibration limits", _bullet_list(top.get("must_not_overstate"))),
         *_section("### Required evidence points", _source_bound_atom_lines(packet.get("source_bound_evidence_atoms"))),
         *_section("### Required obligations", _retention_requirement_lines(packet.get("section_retention_requirements"))),
         *_section("### Source role contract", _source_role_group_lines(packet.get("source_role_groups"))),
-        *_section("### Source hierarchy lane notes", _lane_card_lines(packet.get("lane_cards"))),
-        *_section("### Source weighting validation target", _source_weighting_validation_lines(packet.get("validation_contract"))),
+        *([] if expert_mode else _section("### Source hierarchy lane notes", _lane_card_lines(packet.get("lane_cards")))),
+        *([] if expert_mode else _section("### Source weighting validation target", _source_weighting_validation_lines(packet.get("validation_contract")))),
         *_section("### Protected quantity sets", _protected_quantity_set_lines(packet.get("protected_quantity_sets"))),
         *_section("### Quantity collision warnings", _quantity_collision_lines(packet.get("quantity_collision_warnings"))),
-        *_section("### Section argument steps", _argument_step_lines(packet.get("section_argument_steps"))),
-        *_section("### Additional evidence context", _evidence_context_lines(packet.get("evidence_context"))),
-        *_section("### Source weighting notes", _source_weighting_lines(packet.get("source_weighting"))),
-        *_section("### Reader-facing judgments to surface", _reader_judgment_lines(top.get("reader_judgments_to_surface"))),
-        *_section("### Decision cruxes, thresholds, and update triggers", _decision_usefulness_lines(top.get("decision_usefulness"))),
-        *_section(
-            "### Writing guidance, caveats, and quantity risks",
-            _lightweight_guidance_lines(top.get("lightweight_writer_guidance")) if not guidance_application else [],
+        *([] if expert_mode else _section("### Section argument steps", _argument_step_lines(packet.get("section_argument_steps")))),
+        *([] if expert_mode else _section("### Additional evidence context", _evidence_context_lines(packet.get("evidence_context")))),
+        *([] if expert_mode else _section("### Source weighting notes", _source_weighting_lines(packet.get("source_weighting")))),
+        *([] if expert_mode else _section("### Reader-facing judgments to surface", _reader_judgment_lines(top.get("reader_judgments_to_surface")))),
+        *([] if expert_mode else _section("### Decision cruxes, thresholds, and update triggers", _decision_usefulness_lines(top.get("decision_usefulness")))),
+        *(
+            []
+            if expert_mode
+            else _section(
+                "### Writing guidance, caveats, and quantity risks",
+                _lightweight_guidance_lines(top.get("lightweight_writer_guidance")) if not guidance_application else [],
+            )
         ),
         *_section("### Source language and use limits", _language_contract_lines(top.get("evidence_language_contracts"))),
-        *_section("### Suggested paragraph flow", _numbered_list(focus.get("paragraph_shape"))),
+        *([] if expert_mode else _section("### Suggested paragraph flow", _numbered_list(focus.get("paragraph_shape")))),
     ]
     return "\n".join(line for line in lines if line is not None).strip()
 
@@ -149,6 +156,25 @@ def _decision_argument_section_lines(value: Any) -> list[str]:
             rows.append(f"  - Disposition: {disposition}")
         if would_change := _text(move.get("would_change_if")):
             rows.append(f"  - Would change if: {would_change}")
+    return rows
+
+
+def _expert_judgment_section_lines(value: Any) -> list[str]:
+    section = _dict(value)
+    if not section:
+        return []
+    rows = []
+    if point := _text(section.get("governing_point")):
+        rows.append(f"Governing point: {point}")
+    if lead := _text(section.get("lead_with")):
+        rows.append(f"Lead with: {lead}")
+    rows.extend(f"Strategy: {item}" for item in _string_list(section.get("paragraph_strategy"))[:5])
+    rows.extend(f"Emphasize: {item}" for item in _string_list(section.get("emphasize"))[:6])
+    rows.extend(f"Subordinate: {item}" for item in _string_list(section.get("subordinate"))[:5])
+    if source_ids := _string_list(section.get("source_ids")):
+        rows.append(f"Sources to use: {', '.join(source_ids[:10])}")
+    if quantities := _string_list(section.get("quantity_values")):
+        rows.append(f"Quantities to preserve: {'; '.join(quantities[:10])}")
     return rows
 
 

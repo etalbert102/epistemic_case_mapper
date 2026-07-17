@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 from typing import Any
 
@@ -12,6 +13,12 @@ from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
     canonical_repair_items,
 )
 from epistemic_case_mapper.map_briefing_decision_argument_contract import build_decision_argument_contract
+from epistemic_case_mapper.map_briefing_expert_judgment_compression import (
+    build_expert_judgment_compression_input,
+    build_expert_judgment_compression_input_report,
+    build_expert_judgment_utilization_report,
+    run_expert_judgment_compression,
+)
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_repair_num_predict, memo_ready_whole_memo_num_predict
@@ -56,8 +63,26 @@ def run_memo_ready_packet_synthesis(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
-    prompt = build_memo_ready_packet_synthesis_prompt(memo_ready_packet)
-    draft = render_memo_ready_packet_draft(memo_ready_packet)
+    compression_run = _prepare_expert_judgment_compression(
+        memo_ready_packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if _expert_judgment_required(memo_ready_packet, backend) and not compression_run.get("report", {}).get("accepted"):
+        report = {
+            "schema_id": "memo_ready_packet_synthesis_report_v1",
+            "status": "expert_judgment_compression_failed",
+            "accepted": False,
+            "live_enrichment_required": True,
+            "used_default_path": False,
+            "expert_judgment_compression_report": compression_run.get("report", {}),
+            "issues": ["expert_judgment_compression_failed"],
+        }
+        return {"memo": "", "prompt": compression_run.get("prompt", ""), "raw": compression_run.get("raw", ""), "report": report}
+    active_packet = _packet_with_expert_judgment_compression(memo_ready_packet, compression_run)
+    prompt = build_memo_ready_packet_synthesis_prompt(active_packet)
+    draft = render_memo_ready_packet_draft(active_packet)
     report = {
         "schema_id": "memo_ready_packet_synthesis_report_v1",
         "status": "deterministic_fallback" if backend.strip() == "prompt" else "not_run",
@@ -68,24 +93,109 @@ def run_memo_ready_packet_synthesis(
     }
     if backend.strip() == "prompt":
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
-    section_plan = build_memo_ready_section_synthesis_plan(memo_ready_packet)
+    section_plan = build_memo_ready_section_synthesis_plan(active_packet)
     if section_plan.get("status") == "ready" and _list(section_plan.get("sections")):
         return _run_parallel_memo_ready_section_synthesis(
-            memo_ready_packet,
+            active_packet,
             section_plan=section_plan,
             backend=backend,
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             whole_prompt=prompt,
+            expert_judgment_compression_run=compression_run,
         )
     return _run_whole_memo_ready_packet_synthesis(
-        memo_ready_packet,
+        active_packet,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
         prompt=prompt,
         report=report,
+        expert_judgment_compression_run=compression_run,
     )
+
+
+def _expert_judgment_required(packet: dict[str, Any], backend: str) -> bool:
+    spec = backend.strip()
+    if spec in {"prompt", "fake"}:
+        return False
+    if os.environ.get("ECM_EXPERT_JUDGMENT_COMPRESSION", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return False
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    return bool(
+        _list(packet.get("evidence_items"))
+        and canonical.get("schema_id") == "canonical_decision_writer_packet_v1"
+    )
+
+
+def _prepare_expert_judgment_compression(
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    if not isinstance(packet, dict) or not _list(packet.get("evidence_items")):
+        return {
+            "compression": {},
+            "input": {},
+            "prompt": "",
+            "raw": "",
+            "report": {
+                "schema_id": "expert_judgment_compression_run_report_v1",
+                "status": "not_available",
+                "accepted": False,
+                "issues": ["memo_ready_packet.evidence_items unavailable"],
+            },
+        }
+    compression_input = build_expert_judgment_compression_input(packet)
+    input_report = build_expert_judgment_compression_input_report(compression_input)
+    if backend.strip() in {"prompt", "fake"} or not _expert_judgment_required(packet, backend):
+        return {
+            "compression": _expert_judgment_compression_from_packet(packet),
+            "input": compression_input,
+            "prompt": "",
+            "raw": "",
+            "report": {
+                "schema_id": "expert_judgment_compression_run_report_v1",
+                "status": "skipped_test_or_noncanonical_backend" if backend.strip() != "prompt" else "skipped_prompt_backend",
+                "accepted": False,
+                "input_report": input_report,
+                "qa_report": {},
+                "issues": [],
+            },
+        }
+    return run_expert_judgment_compression(
+        packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        run_model=run_model_backend,
+    )
+
+
+def _packet_with_expert_judgment_compression(
+    packet: dict[str, Any],
+    compression_run: dict[str, Any],
+) -> dict[str, Any]:
+    compression = _dict(compression_run.get("compression"))
+    if not compression:
+        return packet
+    updated = dict(packet)
+    canonical = dict(_dict(updated.get("canonical_decision_writer_packet")))
+    if canonical:
+        canonical["expert_judgment_compression"] = compression
+        canonical["expert_judgment_compression_input_report"] = _dict(compression_run.get("report")).get("input_report")
+        canonical["expert_judgment_compression_report"] = _dict(compression_run.get("report")).get("qa_report")
+        updated["canonical_decision_writer_packet"] = canonical
+    else:
+        updated["expert_judgment_compression"] = compression
+    return updated
+
+
+def _expert_judgment_compression_from_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    return _dict(canonical.get("expert_judgment_compression")) or _dict(packet.get("expert_judgment_compression"))
 
 
 def _run_whole_memo_ready_packet_synthesis(
@@ -96,6 +206,7 @@ def _run_whole_memo_ready_packet_synthesis(
     backend_retries: int,
     prompt: str,
     report: dict[str, Any],
+    expert_judgment_compression_run: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         result = run_model_backend(
@@ -144,6 +255,10 @@ def _run_whole_memo_ready_packet_synthesis(
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
     analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet)
+    expert_utilization = build_expert_judgment_utilization_report(
+        candidate,
+        _expert_judgment_compression_from_packet(memo_ready_packet),
+    )
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     report.update(
@@ -162,6 +277,8 @@ def _run_whole_memo_ready_packet_synthesis(
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_surface_report": decision_usefulness_surface,
             "analyst_judgment_utilization_report": analyst_utilization,
+            "expert_judgment_compression_report": _dict((expert_judgment_compression_run or {}).get("report")),
+            "expert_judgment_utilization_report": expert_utilization,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
@@ -178,6 +295,7 @@ def _run_parallel_memo_ready_section_synthesis(
     backend_timeout: int | None,
     backend_retries: int,
     whole_prompt: str,
+    expert_judgment_compression_run: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     generated = run_parallel_memo_ready_section_generation(
         section_plan,
@@ -199,6 +317,7 @@ def _run_parallel_memo_ready_section_synthesis(
         "source_weighting_flow_audit": section_plan.get("source_weighting_flow_audit", {}),
     }
     if not generated.get("memo"):
+        base_report["expert_judgment_compression_report"] = _dict((expert_judgment_compression_run or {}).get("report"))
         return {"memo": "", "prompt": generated.get("prompt", ""), "raw": generated.get("raw", ""), "report": base_report}
 
     report = dict(base_report)
@@ -221,6 +340,10 @@ def _run_parallel_memo_ready_section_synthesis(
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
     analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet, section_plan=section_plan)
+    expert_utilization = build_expert_judgment_utilization_report(
+        candidate,
+        _expert_judgment_compression_from_packet(memo_ready_packet),
+    )
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     section_issues = _list(section_report.get("issues"))
@@ -244,6 +367,8 @@ def _run_parallel_memo_ready_section_synthesis(
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_surface_report": decision_usefulness_surface,
             "analyst_judgment_utilization_report": analyst_utilization,
+            "expert_judgment_compression_report": _dict((expert_judgment_compression_run or {}).get("report")),
+            "expert_judgment_utilization_report": expert_utilization,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),

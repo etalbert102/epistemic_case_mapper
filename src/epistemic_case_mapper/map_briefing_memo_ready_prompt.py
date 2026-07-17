@@ -11,6 +11,10 @@ from epistemic_case_mapper.map_briefing_decision_argument_contract import (
     compact_decision_argument_section_for_prompt,
     decision_argument_section,
 )
+from epistemic_case_mapper.map_briefing_expert_judgment_compression import (
+    compact_expert_judgment_for_prompt,
+    expert_judgment_section,
+)
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_analyst_decision_spine import compact_analyst_decision_spine_for_prompt, section_spine_for_prompt
@@ -186,6 +190,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "bluf_contract": packet.get("bluf_contract"),
         "analyst_decision_spine": compact_analyst_decision_spine_for_prompt(_dict(packet.get("analyst_decision_spine"))),
         "decision_argument_contract": compact_decision_argument_contract_for_prompt(_dict(packet.get("decision_argument_contract"))),
+        "expert_judgment_compression": compact_expert_judgment_for_prompt(_dict(packet.get("expert_judgment_compression"))),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "reader_judgment_packet": reader_judgment_packet,
@@ -238,6 +243,10 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "decision_argument_section": compact_decision_argument_section_for_prompt(
                         decision_argument_section(_dict(reader_packet.get("decision_argument_contract")), section_id)
                     ),
+                    "expert_judgment_section": expert_judgment_section(
+                        _dict(reader_packet.get("expert_judgment_compression")),
+                        section_id,
+                    ),
                     "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), section_id),
                     "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
                     "reader_guidance_application": _guidance_application(reader_packet, raw, section_id),
@@ -266,6 +275,10 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
             "section_focus": _section_focus("source_weighting"),
             "decision_argument_section": compact_decision_argument_section_for_prompt(
                 decision_argument_section(_dict(reader_packet.get("decision_argument_contract")), "source_weighting")
+            ),
+            "expert_judgment_section": expert_judgment_section(
+                _dict(reader_packet.get("expert_judgment_compression")),
+                "source_weighting",
             ),
             "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), "source_weighting"),
             "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
