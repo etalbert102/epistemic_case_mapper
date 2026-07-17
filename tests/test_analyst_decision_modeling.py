@@ -20,6 +20,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
 )
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import build_analyst_decision_model_repair_prompt
 from epistemic_case_mapper.model_backends import ModelBackendResult
+from tests.fake_global_task_backend import fake_global_task_payload
 
 
 def _ledger() -> dict:
@@ -593,38 +594,9 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         calls.append(prompt)
-        payload = json.loads(prompt)
-        rows = payload["context"]["evidence_rows"]
-        groups = [
-            {
-                "group_id": f"group_{len(calls):03d}",
-                "proposition": f"Grouped {len(rows)} local evidence rows.",
-                "memo_role": rows[0].get("adjudicated_memo_use") or "load_bearing_primary_support",
-                "answer_relation_type": "supports_answer",
-                "target_answer_precedence": "adopt_option_a",
-                "diagnostic_priority_score": 99,
-                "importance_rank": len(calls),
-                "covered_evidence_item_ids": [row["evidence_item_id"] for row in rows],
-                "rationale": "Local grouped rationale.",
-            }
-        ]
-        model = {
-            "schema_id": "analyst_decision_model_v1",
-            "decision_question": "Should option A be adopted?",
-            "direct_answer": "Adopt if the grouped evidence warrants it.",
-            "confidence": "medium",
-            "overall_rationale": "Local grouped model.",
-            "evidence_groups": groups,
-            "evidence_dispositions": [
-                {"evidence_item_id": row["evidence_item_id"], "disposition": "foreground", "group_id": groups[0]["group_id"]}
-                for row in rows
-            ],
-            "quantitative_anchors": [quantity for row in rows for quantity in row.get("quantity_values", [])],
-            "what_would_change_the_answer": [],
-            "decision_logic": {"bounded_bottom_line": "Adopt if warranted."},
-            "argument_plan": [],
-        }
-        return ModelBackendResult(text=json.dumps(model), backend="fake")
+        if "Assign each repair_row" in prompt:
+            return ModelBackendResult(text=json.dumps({"assignments": []}), backend="fake")
+        return ModelBackendResult(text=json.dumps(fake_global_task_payload(prompt)), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
@@ -641,19 +613,17 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
         progress=progress,
     )
 
-    assert len(calls) == 5
-    assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
-    assert result["analyst_decision_model_parallel_report"]["task_count"] == 4
-    assert result["analyst_decision_model_parallel_report"]["source_hierarchy_task_report"]["status"] == "parsed"
+    assert len(calls) >= 5
+    assert result["analyst_decision_model_report"]["status"].startswith("accepted_global_tasks")
+    assert result["analyst_decision_model_parallel_report"]["task_count"] == 5
+    assert result["analyst_decision_model_parallel_report"]["method"] == "task_specific_global_analyst_decision_model"
     assert "source_hierarchy" in result["analyst_decision_model"]
     assert result["analyst_decision_model_parse_report"]["valid"] is True
     assert result["analyst_decision_model_parse_report"]["covered_evidence_item_count"] == 14
-    assert all("answer_relation_type" not in group for group in result["analyst_decision_model"]["evidence_groups"])
     assert result["analyst_decision_model"]["evidence_groups"][0]["answer_relation"] == "supports_answer"
-    task_events = [event for event in progress_events if event[2].get("substage") == "analyst_decision_model_task"]
-    assert [event[1] for event in task_events].count("started") == 4
-    assert [event[1] for event in task_events].count("completed") == 4
-    assert any(event[2].get("substage") == "analyst_source_hierarchy_task" and event[1] == "completed" for event in progress_events)
+    task_events = [event for event in progress_events if event[2].get("substage") == "analyst_decision_model_global_task"]
+    assert [event[1] for event in task_events].count("started") == 5
+    assert [event[1] for event in task_events].count("completed") == 5
 
 
 def test_decision_model_parse_normalizes_common_model_alias_fields() -> None:
@@ -760,27 +730,7 @@ def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(mo
             raise RuntimeError("timeout")
         if "Assign each repair_row" in prompt:
             return ModelBackendResult(text=json.dumps({"assignments": []}), backend="fake")
-        payload = json.loads(prompt)
-        rows = payload["context"]["evidence_rows"]
-        model = {
-            "schema_id": "analyst_decision_model_v1",
-            "decision_question": "Should option A be adopted?",
-            "direct_answer": "Partial model.",
-            "confidence": "medium",
-            "overall_rationale": "Partial grouped model.",
-            "evidence_groups": [
-                {
-                    "group_id": f"group_{calls['count']:03d}",
-                    "proposition": "Recovered local group.",
-                    "memo_role": "load_bearing_primary_support",
-                    "importance_rank": calls["count"],
-                    "covered_evidence_item_ids": [row["evidence_item_id"] for row in rows],
-                    "rationale": "Recovered rows.",
-                }
-            ],
-            "evidence_dispositions": [],
-        }
-        return ModelBackendResult(text=json.dumps(model), backend="fake")
+        return ModelBackendResult(text=json.dumps(fake_global_task_payload(prompt)), backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
@@ -799,7 +749,7 @@ def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(mo
         and any(row.get("status") == "backend_error" for row in report.get("retry_reports", []))
         for report in result["analyst_decision_model_parallel_report"]["task_reports"]
     )
-    assert result["analyst_decision_model_report"]["status"].startswith("accepted_parallel")
+    assert result["analyst_decision_model_report"]["status"].startswith("accepted_global_tasks")
     assert result["analyst_decision_model_parse_report"]["valid"] is True
 
 

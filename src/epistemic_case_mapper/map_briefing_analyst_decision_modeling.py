@@ -12,6 +12,10 @@ from epistemic_case_mapper import map_briefing_analyst_decision_logic as decisio
 from epistemic_case_mapper.classical_ml import relation_edge_weight, tfidf_near_duplicate_pairs, weighted_pagerank
 from epistemic_case_mapper.map_briefing_analyst_adjudication import deterministic_adjudication_scaffold
 from epistemic_case_mapper.map_briefing_analyst_contribution_fields import OBLIGATION_CONTRIBUTION_FIELD_LIMITS, SKELETON_CONTRIBUTION_FIELD_LIMITS, contribution_fields
+from epistemic_case_mapper.map_briefing_analyst_decision_model_global_tasks import (
+    run_global_task_analyst_decision_model,
+    should_use_global_task_analyst_decision_model,
+)
 from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import run_parallel_analyst_decision_model, should_use_parallel_analyst_decision_model
 from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract import decision_model_required_output_schema
 from epistemic_case_mapper.map_briefing_analyst_decision_repair import (
@@ -72,6 +76,15 @@ def run_analyst_decision_model(
             "analyst_decision_model_parse_report": parse_report,
             "analyst_decision_model_report": _report("prompt_backend_scaffold", parse_report),
         }
+    if should_use_global_task_analyst_decision_model(context):
+        return _run_global_task_decision_model_candidate(
+            context=context,
+            ledger=ledger,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            progress=progress,
+        )
     if should_use_parallel_analyst_decision_model(context):
         return _run_parallel_decision_model_candidate(
             context=context,
@@ -305,6 +318,102 @@ def _emit_decision_model_call_invalid(
     )
 
 
+def _run_global_task_decision_model_candidate(
+    *,
+    context: dict[str, Any],
+    ledger: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_global_tasks",
+        "started",
+        {"row_count": len(_list(context.get("evidence_rows"))), "parallelism": int(os.environ.get("ECM_MODEL_PARALLELISM", "0") or os.environ.get("ECM_OLLAMA_PARALLELISM", "0") or 0) or None},
+    )
+    parallel = run_global_task_analyst_decision_model(
+        context=context,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=analyst_decision_model_num_predict(context),
+        run_backend=run_model_backend,
+        progress=progress,
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_global_tasks",
+        "completed",
+        {
+            "task_count": parallel.get("report", {}).get("task_count"),
+            "parsed_count": parallel.get("report", {}).get("parsed_count"),
+            "failed_count": parallel.get("report", {}).get("failed_count"),
+            "wall_seconds": parallel.get("report", {}).get("wall_seconds"),
+        },
+    )
+    payload = apply_routed_away_accounting(parallel["payload"], context)
+    parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
+    if not parse_report.get("valid"):
+        return invalid_parallel_decision_model_result(
+            context=context,
+            parallel=parallel,
+            payload=payload if isinstance(payload, dict) else _invalid_decision_model(context),
+            parse_report=parse_report,
+            ledger=ledger,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            num_predict=analyst_decision_model_num_predict(context),
+        )
+    parsed = AnalystDecisionModel.model_validate(payload).model_dump()
+    parsed["decision_logic"] = decision_logic.naturalize_decision_logic_payload(_dict(parsed.get("decision_logic")))
+    parsed = attach_normalized_source_hierarchy(parsed, context)
+    _emit_progress(progress, "analyst_decision_model_repair", "started", {"initial_status": parse_report.get("status"), "global_tasks": True})
+    repair = run_analyst_decision_model_repair(
+        initial_model=parsed,
+        initial_parse_report=parse_report,
+        context=context,
+        ledger=ledger,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        num_predict=analyst_decision_model_num_predict(context),
+    )
+    _emit_progress(
+        progress,
+        "analyst_decision_model_repair",
+        "completed",
+        {
+            "global_tasks": True,
+            "accepted": bool(repair.get("accepted")),
+            "status": repair.get("status") or repair.get("report", {}).get("status"),
+            "issue_count": len(_list(repair.get("issues"))),
+        },
+    )
+    final_model = repair.get("analyst_decision_model", parsed) if repair.get("accepted") else parsed
+    final_model, ranking_guard = _apply_ranking_guard(final_model, context)
+    final_parse_report = repair.get("analyst_decision_model_parse_report", parse_report) if repair.get("accepted") else parse_report
+    status = _global_task_status(final_parse_report, repair)
+    return {
+        "analyst_decision_context": context,
+        "analyst_decision_model": final_model,
+        "analyst_decision_model_prompt": parallel["prompt"],
+        "analyst_decision_model_raw": parallel["raw"],
+        "analyst_decision_model_parse_report": final_parse_report,
+        "analyst_decision_model_report": _report(status, final_parse_report, issues=_list(repair.get("issues"))),
+        "analyst_decision_model_parallel_report": parallel["report"],
+        "analyst_decision_model_initial": parsed,
+        "analyst_decision_model_initial_parse_report": parse_report,
+        "analyst_decision_model_repair_prompt": repair.get("analyst_decision_model_repair_prompt", ""),
+        "analyst_decision_model_repair_raw": repair.get("analyst_decision_model_repair_raw", ""),
+        "analyst_decision_model_repair_parse_report": repair.get("analyst_decision_model_repair_parse_report", {}),
+        "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
+        "analyst_decision_model_ranking_guard": ranking_guard,
+    }
+
+
 def _run_parallel_decision_model_candidate(
     *,
     context: dict[str, Any],
@@ -405,6 +514,12 @@ def _parallel_status(parse_report: dict[str, Any], repair: dict[str, Any]) -> st
     if repair.get("accepted"):
         return "accepted_parallel_after_repair" if parse_report.get("status") == "ready" else "accepted_parallel_after_repair_with_warnings"
     return "accepted_parallel" if parse_report.get("status") == "ready" else "accepted_parallel_with_warnings"
+
+
+def _global_task_status(parse_report: dict[str, Any], repair: dict[str, Any]) -> str:
+    if repair.get("accepted"):
+        return "accepted_global_tasks_after_repair" if parse_report.get("status") == "ready" else "accepted_global_tasks_after_repair_with_warnings"
+    return "accepted_global_tasks" if parse_report.get("status") == "ready" else "accepted_global_tasks_with_warnings"
 
 
 def _emit_progress(
