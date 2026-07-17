@@ -5,6 +5,12 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_decision_usefulness import compact_decision_usefulness_for_prompt
+from epistemic_case_mapper.map_briefing_decision_argument_contract import (
+    build_decision_argument_contract,
+    compact_decision_argument_contract_for_prompt,
+    compact_decision_argument_section_for_prompt,
+    decision_argument_section,
+)
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
 from epistemic_case_mapper.map_briefing_analyst_decision_spine import compact_analyst_decision_spine_for_prompt, section_spine_for_prompt
@@ -28,6 +34,7 @@ def build_memo_ready_packet_synthesis_prompt(memo_ready_packet: dict[str, Any]) 
     if isinstance(memo_ready_packet, dict) and memo_ready_packet.get("evidence_items"):
         canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
         canonical = _with_top_level_guidance(canonical, memo_ready_packet)
+        canonical = _with_decision_argument_contract(canonical)
         return build_canonical_decision_writer_packet_synthesis_prompt(canonical)
     return (
         "Memo-ready packet synthesis prompt unavailable.\n"
@@ -45,6 +52,7 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
         }
     canonical = _dict(memo_ready_packet.get("canonical_decision_writer_packet")) or build_canonical_decision_writer_packet(memo_ready_packet)
     canonical = _with_top_level_guidance(canonical, memo_ready_packet)
+    canonical = _with_decision_argument_contract(canonical)
     reader_packet = _reader_synthesis_packet(canonical)
     section_packets = _section_synthesis_packets(reader_packet)
     source_weighting_section_packet = next((packet for packet in section_packets if packet.get("section_id") == "source_weighting"), {})
@@ -72,6 +80,17 @@ def build_memo_ready_section_synthesis_plan(memo_ready_packet: dict[str, Any]) -
         ],
         "issues": [] if section_packets else ["canonical writer packet has no section writing packets"],
     }
+
+
+def _with_decision_argument_contract(canonical: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(canonical, dict):
+        return {}
+    if _dict(canonical.get("decision_argument_contract")).get("schema_id") == "decision_argument_contract_v1":
+        return canonical
+    enriched = dict(canonical)
+    enriched["decision_argument_contract"] = build_decision_argument_contract(enriched)
+    enriched["decision_argument_contract_report"] = _dict(enriched["decision_argument_contract"].get("report"))
+    return enriched
 
 
 def build_memo_ready_section_synthesis_prompt(
@@ -166,6 +185,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "balanced_answer_frame": packet.get("balanced_answer_frame"),
         "bluf_contract": packet.get("bluf_contract"),
         "analyst_decision_spine": compact_analyst_decision_spine_for_prompt(_dict(packet.get("analyst_decision_spine"))),
+        "decision_argument_contract": compact_decision_argument_contract_for_prompt(_dict(packet.get("decision_argument_contract"))),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
         "reader_judgment_packet": reader_judgment_packet,
@@ -215,6 +235,9 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "section_job": _section_job(section_id, raw.get("writing_job")),
                     "section_role_contract": _section_role_contract(heading),
                     "section_focus": _section_focus(section_id),
+                    "decision_argument_section": compact_decision_argument_section_for_prompt(
+                        decision_argument_section(_dict(reader_packet.get("decision_argument_contract")), section_id)
+                    ),
                     "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), section_id),
                     "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
                     "reader_guidance_application": _guidance_application(reader_packet, raw, section_id),
@@ -241,6 +264,9 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
             "section_job": _section_job("source_weighting", source_weighting.get("writing_job")),
             "section_role_contract": _section_role_contract("How to Weight the Evidence"),
             "section_focus": _section_focus("source_weighting"),
+            "decision_argument_section": compact_decision_argument_section_for_prompt(
+                decision_argument_section(_dict(reader_packet.get("decision_argument_contract")), "source_weighting")
+            ),
             "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), "source_weighting"),
             "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
             "reader_guidance_application": _guidance_application(reader_packet, source_weighting, "source_weighting"),

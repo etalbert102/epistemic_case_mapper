@@ -23,6 +23,7 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- When one paragraph uses the same source cluster throughout, cite the cluster once at the end of the paragraph.\n"
         "- When sources support different jobs in the same paragraph, cite each source beside the clause it supports.\n"
         "- Keep packet IDs, schema terms, validation machinery, and audit language out of the prose.\n"
+        "- Use the Decision argument for this section as the governing structure; use evidence notes to support those argument moves.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
         "- For reader-facing judgments, follow the allowed-use and not-enough-for limits when deciding what the judgment can support.\n"
@@ -52,6 +53,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         "",
         "### Section job",
         *_bullet_list(role.get("do")),
+        *_section("### Decision argument for this section", _decision_argument_section_lines(packet.get("decision_argument_section"))),
         *_section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application)),
         *_section("### Decision action contract", _decision_action_contract_lines(top.get("decision_action_contract"))),
         *_section("### Avoid", _bullet_list(role.get("avoid"))),
@@ -114,6 +116,39 @@ def _source_bound_atom_lines(value: Any) -> list[str]:
             rows.append("  - Quantities to preserve: " + "; ".join(quantities))
         if scope := _text(atom.get("applicability_scope")):
             rows.append(f"  - Scope to keep attached: {scope}")
+    return rows
+
+
+def _decision_argument_section_lines(value: Any) -> list[str]:
+    section = _dict(value)
+    if not section:
+        return []
+    rows = []
+    if reader_question := _text(section.get("reader_question")):
+        rows.append(f"Reader question to answer: {reader_question}")
+    if why := _text(section.get("why_this_section_matters")):
+        rows.append(f"Why this section matters: {why}")
+    if job := _text(section.get("section_job")):
+        rows.append(f"Section decision job: {job}")
+    for move in _dict_rows(section.get("owned_moves"))[:8]:
+        point = _text(move.get("point"))
+        if not point:
+            continue
+        parts = [
+            _text(move.get("move_type")).replace("_", " "),
+            point,
+            f"Writing job: {_text(move.get('writing_job'))}" if _text(move.get("writing_job")) else "",
+            _citations(move),
+        ]
+        rows.append(_bullet("; ".join(part for part in parts if part)))
+        if evidence_ids := _string_list(move.get("evidence_item_ids")):
+            rows.append(f"  - Evidence IDs for this move: {', '.join(evidence_ids[:12])}")
+        if quantities := _string_list(move.get("quantities")):
+            rows.append(f"  - Quantities for this move: {'; '.join(quantities[:8])}")
+        if disposition := _text(move.get("disposition")):
+            rows.append(f"  - Disposition: {disposition}")
+        if would_change := _text(move.get("would_change_if")):
+            rows.append(f"  - Would change if: {would_change}")
     return rows
 
 

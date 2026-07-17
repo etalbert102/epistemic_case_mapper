@@ -62,6 +62,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert len(calls) == 4
     assert all("markdown analyst notes" in prompt for prompt in calls)
     assert all("### Section job" in prompt for prompt in calls)
+    assert all("### Decision argument for this section" in prompt for prompt in calls)
+    assert all("Use the Decision argument for this section as the governing structure" in prompt for prompt in calls)
     assert all("### Suggested paragraph flow" in prompt for prompt in calls)
     assert all("Current read:" in prompt for prompt in calls)
     assert all("Use parentheses" in prompt for prompt in calls)
@@ -81,6 +83,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all(row["accepted"] for row in result["report"]["section_reports"])
     assert all(row["num_predict"] == 4096 for row in result["report"]["section_reports"])
     assert result["report"]["reader_judgment_surface_report"]["schema_id"] == "reader_judgment_surface_report_v1"
+    assert result["report"]["decision_usefulness_surface_report"]["schema_id"] == "decision_usefulness_surface_report_v1"
+    assert result["report"]["analyst_judgment_utilization_report"]["schema_id"] == "analyst_judgment_utilization_report_v1"
     assert result["report"]["reader_judgment_surface_report"]["judgment_count"] >= 1
     assert "## How to Weight the Evidence" in result["memo"]
     assert "## Why This Is the Best Current Read" in result["memo"]
@@ -165,6 +169,21 @@ def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
         "section_id": "counterweights",
         "heading": "What Could Change or Bound the Answer",
         "section_job": "Explain limiting evidence.",
+        "decision_argument_section": {
+            "section_id": "counterweights",
+            "section_job": "Explain what bounds the answer.",
+            "reader_question": "What could make the answer too broad?",
+            "why_this_section_matters": "It ties limits to the decision.",
+            "owned_moves": [
+                {
+                    "move_id": "counterweights",
+                    "move_type": "counterweight_disposition",
+                    "point": "Higher dose, subgroup, and comparator evidence bound the answer.",
+                    "writing_job": "Explain the boundary without rebuilding the affirmative case.",
+                    "evidence_item_ids": ["dose_item", "subgroup_item", "comparator_item"],
+                }
+            ],
+        },
         "evidence_context": [
             {"item_id": "dose_item", "claim": "Higher dose evidence changes the endpoint boundary."},
             {"item_id": "subgroup_item", "claim": "A subgroup has a different baseline risk."},
@@ -199,12 +218,11 @@ def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
     jobs = build_section_local_evidence_jobs(section_packet, contracts)
     prompt = build_evidence_tagged_section_prompt(section_packet, known_source_ids=["s1", "s2", "s3"], contracts=contracts)
 
-    assert [job["job_id"] for job in jobs] == [
-        "dose_or_endpoint_boundary",
-        "subgroup_or_population_boundary",
-        "comparator_or_context_boundary",
-    ]
+    assert [job["job_id"] for job in jobs] == ["counterweights"]
+    assert jobs[0]["argument_move_type"] == "counterweight_disposition"
+    assert jobs[0]["allowed_evidence_ids"] == ["dose_item", "subgroup_item", "comparator_item"]
     assert "### Section-local evidence jobs" in prompt
+    assert "### Decision argument for this section" in prompt
     assert '"allowed_evidence_ids"' in prompt
     assert '"required_quantities_by_evidence_id"' in prompt
     assert '"dose_item": [' in prompt

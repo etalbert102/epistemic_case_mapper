@@ -384,6 +384,49 @@ Suggested slices:
 5. Eggs replay and unrelated-case replay.
 6. Cleanup of obsolete sidecar fields if the new path proves stronger.
 
+### Completed Slices
+
+1. Contract builder and canonical attachment
+   - Files changed:
+     - `src/epistemic_case_mapper/map_briefing_decision_argument_contract.py`
+     - `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`
+     - `tests/test_analyst_decision_spine.py`
+   - Verification:
+     - `PYTHONPATH=src python3 -m pytest -q tests/test_canonical_decision_writer_packet.py tests/test_parallel_section_synthesis.py tests/test_analyst_decision_spine.py tests/test_decision_usefulness_synthesis.py`
+   - Result:
+     - `36 passed`.
+   - Notes:
+     - The contract is built after source-ID projection to avoid source projection mutating section IDs.
+
+2. Section packet integration and prompt ordering
+   - Files changed:
+     - `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
+     - `src/epistemic_case_mapper/map_briefing_memo_ready_section_notes.py`
+     - `tests/test_parallel_section_synthesis.py`
+   - Verification:
+     - Same focused test command above.
+   - Result:
+     - Section prompts now render `### Decision argument for this section` before evidence lists and contracts.
+
+3. Evidence-contract argument linkage
+   - Files changed:
+     - `src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py`
+     - `tests/test_parallel_section_synthesis.py`
+   - Verification:
+     - Same focused test command above.
+   - Result:
+     - Evidence expression contracts carry `argument_move_ids`; section-local evidence jobs prefer analyst argument moves before generic fallback grouping.
+
+4. Decision-usefulness and analyst-utilization telemetry
+   - Files changed:
+     - `src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py`
+     - `tests/test_decision_usefulness_synthesis.py`
+     - `tests/test_parallel_section_synthesis.py`
+   - Verification:
+     - Same focused test command above.
+   - Result:
+     - Synthesis reports now include `decision_usefulness_surface_report_v1` and `analyst_judgment_utilization_report_v1`.
+
 ## Completion Audit
 
 The plan is complete only when:

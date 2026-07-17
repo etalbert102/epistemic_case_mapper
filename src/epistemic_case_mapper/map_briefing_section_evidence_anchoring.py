@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_decision_argument_contract import build_decision_argument_contract, argument_move_ids_for_evidence
 from epistemic_case_mapper.map_briefing_markdown_quality import repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -20,6 +21,9 @@ BRACE_TAG_RE = re.compile(r"\{([^{}\n]{1,240})\}")
 
 def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str, Any]]:
     canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    if canonical and not _dict(canonical.get("decision_argument_contract")):
+        canonical = {**canonical, "decision_argument_contract": build_decision_argument_contract(canonical)}
+    argument_move_ids = argument_move_ids_for_evidence(_dict(canonical.get("decision_argument_contract")))
     obligations_by_item = _obligations_by_item(canonical)
     quantity_obligations_by_item = _quantity_obligations_by_item(packet)
     source_ids_by_label = _source_ids_by_label(packet)
@@ -72,6 +76,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                 {
                     "schema_id": "evidence_expression_contract_v1",
                     "evidence_id": evidence_id,
+                    "argument_move_ids": argument_move_ids.get(evidence_id, []),
                     "required": _contract_required(item, obligation, role=role, quantities=quantities),
                     "primary_section": _primary_section_for_role(role),
                     "claim": item.get("reader_claim") or item.get("claim") or obligation.get("statement"),
@@ -148,6 +153,7 @@ def build_evidence_tagged_section_prompt(
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
+        "- Use the Decision argument for this section as the governing structure; use evidence contracts as anchors for those moves.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"
         "- Reader-facing allowed-use and not-enough-for limits define the claim role while required contracts still keep their own tags and listed quantities.\n"
         "- If a quantity appears in an evidence expression contract, keep that quantity in the same sentence as that exact contract's tag.\n"
@@ -165,6 +171,9 @@ def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts:
     section_id = str(_dict(section_packet).get("section_id") or "").strip()
     if section_id != "counterweights":
         return []
+    move_jobs = _section_jobs_from_argument_moves(section_packet, contracts)
+    if move_jobs:
+        return move_jobs
     grouped: dict[str, list[dict[str, Any]]] = {}
     for contract in contracts:
         if not isinstance(contract, dict):
@@ -177,6 +186,49 @@ def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts:
         if not rows:
             continue
         jobs.append(_section_local_job(job_id, rows))
+    return jobs
+
+
+def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    argument_section = _dict(section_packet.get("decision_argument_section"))
+    moves = [row for row in _list(argument_section.get("owned_moves")) if isinstance(row, dict)]
+    if not moves:
+        return []
+    contracts_by_move: dict[str, list[dict[str, Any]]] = {}
+    contracts_by_id = {str(row.get("evidence_id") or ""): row for row in contracts if isinstance(row, dict)}
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        for move_id in _string_list(contract.get("argument_move_ids")):
+            contracts_by_move.setdefault(move_id, []).append(contract)
+    jobs = []
+    for move in moves:
+        move_id = str(move.get("move_id") or "").strip()
+        rows = contracts_by_move.get(move_id, [])
+        if not rows:
+            rows = [
+                contracts_by_id[evidence_id]
+                for evidence_id in _string_list(move.get("evidence_item_ids"))
+                if evidence_id in contracts_by_id
+            ]
+        if not rows:
+            continue
+        jobs.append(
+            _drop_empty(
+                {
+                    "job_id": move_id,
+                    "argument_move_type": move.get("move_type"),
+                    "paragraph_job": move.get("writing_job") or move.get("point"),
+                    "argument_point": move.get("point"),
+                    "allowed_evidence_ids": [str(row.get("evidence_id")) for row in rows if row.get("evidence_id")],
+                    "required_quantities_by_evidence_id": {
+                        str(row.get("evidence_id")): _quantity_values_for_job(row)
+                        for row in rows
+                        if row.get("evidence_id") and _quantity_values_for_job(row)
+                    },
+                }
+            )
+        )
     return jobs
 
 
@@ -970,6 +1022,7 @@ def _compact_contract_for_prompt(row: dict[str, Any]) -> dict[str, Any]:
     return _drop_empty(
         {
             "evidence_id": row.get("evidence_id"),
+            "argument_move_ids": row.get("argument_move_ids"),
             "claim": row.get("claim"),
             "required": row.get("required"),
             "source_ids": row.get("source_ids"),

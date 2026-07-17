@@ -141,6 +141,8 @@ def _run_whole_memo_ready_packet_synthesis(
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
+    decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
+    analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     report.update(
@@ -157,6 +159,8 @@ def _run_whole_memo_ready_packet_synthesis(
             "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
             "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
+            "decision_usefulness_surface_report": decision_usefulness_surface,
+            "analyst_judgment_utilization_report": analyst_utilization,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
@@ -214,6 +218,8 @@ def _run_parallel_memo_ready_section_synthesis(
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
+    decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
+    analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet, section_plan=section_plan)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     section_issues = _list(section_report.get("issues"))
@@ -235,6 +241,8 @@ def _run_parallel_memo_ready_section_synthesis(
             "source_binding_warning_count": retention.get("source_binding_warning_count", 0),
             "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
+            "decision_usefulness_surface_report": decision_usefulness_surface,
+            "analyst_judgment_utilization_report": analyst_utilization,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),
@@ -384,6 +392,102 @@ def build_decision_usefulness_retention_report(memo: str, packet: dict[str, Any]
         "presentation_gap_count": sum(1 for row in presentation_statuses if not row["retained"]),
         "statuses": statuses,
         "presentation_statuses": presentation_statuses,
+        "issues": issues,
+    }
+
+
+def build_decision_usefulness_surface_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+    contract = _decision_argument_contract(packet)
+    if not contract:
+        return {
+            "schema_id": "decision_usefulness_surface_report_v1",
+            "status": "not_available",
+            "move_count": 0,
+            "surfaced_move_count": 0,
+            "missing_move_count": 0,
+            "statuses": [],
+            "issues": ["decision_argument_contract_unavailable"],
+        }
+    moves = [
+        row
+        for row in _list(contract.get("argument_moves"))
+        if isinstance(row, dict) and str(row.get("section_id") or "") != "bottom_line"
+    ]
+    statuses = [_decision_argument_move_surface_status(memo, row) for row in moves]
+    issues = [row for row in statuses if not row.get("surfaced")]
+    selected_answer = _dict(contract.get("selected_answer"))
+    comparison = _dict(contract.get("answer_comparison"))
+    structural_statuses = [
+        _surface_text_status("selected_answer", selected_answer.get("answer"), memo),
+        _surface_text_status("why_selected_beats_alternatives", comparison.get("why_selected_beats_alternatives"), memo),
+        _surface_text_status("why_not_stronger_or_broader", comparison.get("why_not_stronger_or_broader"), memo),
+    ]
+    structural_issues = [row for row in structural_statuses if not row.get("surfaced") and row.get("expected_text")]
+    return {
+        "schema_id": "decision_usefulness_surface_report_v1",
+        "status": "ready" if not issues and not structural_issues else "warning",
+        "move_count": len(statuses),
+        "surfaced_move_count": sum(1 for row in statuses if row.get("surfaced")),
+        "missing_move_count": len(issues),
+        "structural_check_count": len([row for row in structural_statuses if row.get("expected_text")]),
+        "missing_structural_check_count": len(structural_issues),
+        "statuses": statuses,
+        "structural_statuses": structural_statuses,
+        "issues": [*issues, *structural_issues],
+    }
+
+
+def build_analyst_judgment_utilization_report(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    section_plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = _decision_argument_contract(packet)
+    if not contract:
+        return {
+            "schema_id": "analyst_judgment_utilization_report_v1",
+            "status": "warning",
+            "issues": ["decision_argument_contract_unavailable"],
+        }
+    surface = build_decision_usefulness_surface_report(memo, packet)
+    section_plan = section_plan if isinstance(section_plan, dict) else {}
+    sections = [
+        row
+        for row in _list(section_plan.get("sections"))
+        if isinstance(row, dict)
+    ]
+    prompt_section_statuses = []
+    for row in sections:
+        packet_row = _dict(row.get("packet"))
+        section_argument = _dict(packet_row.get("decision_argument_section"))
+        prompt_section_statuses.append(
+            {
+                "section_id": row.get("section_id") or packet_row.get("section_id"),
+                "has_decision_argument_section": bool(_list(section_argument.get("owned_moves"))),
+                "owned_move_count": len(_list(section_argument.get("owned_moves"))),
+            }
+        )
+    missing_prompt_sections = [
+        row for row in prompt_section_statuses if not row.get("has_decision_argument_section")
+    ]
+    contract_report = _dict(contract.get("report"))
+    issues = []
+    if contract_report.get("status") == "warning":
+        issues.extend(_string_list(contract_report.get("warnings")))
+    if missing_prompt_sections:
+        issues.append("section_plan_missing_decision_argument_sections")
+    if surface.get("status") == "warning":
+        issues.append("final_memo_missing_decision_argument_moves")
+    return {
+        "schema_id": "analyst_judgment_utilization_report_v1",
+        "status": "ready" if not issues else "warning",
+        "contract_move_count": len(_list(contract.get("argument_moves"))),
+        "contract_section_count": len(_list(contract.get("section_arguments"))),
+        "prompt_section_statuses": prompt_section_statuses,
+        "prompt_sections_with_argument_count": sum(1 for row in prompt_section_statuses if row.get("has_decision_argument_section")),
+        "surface_report": surface,
+        "contract_report": contract_report,
         "issues": issues,
     }
 
@@ -1231,6 +1335,66 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
         elif label:
             rows.append(f"- {label}")
     return _dedupe(rows)
+
+
+def _decision_argument_contract(packet: dict[str, Any]) -> dict[str, Any]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    return _dict(packet.get("decision_argument_contract")) or _dict(canonical.get("decision_argument_contract"))
+
+
+def _decision_argument_move_surface_status(memo: str, move: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **_surface_text_status(str(move.get("move_id") or ""), move.get("point"), memo),
+        "move_id": move.get("move_id"),
+        "move_type": move.get("move_type"),
+        "section_id": move.get("section_id"),
+        "evidence_item_ids": _string_list(move.get("evidence_item_ids")),
+        "source_ids": _string_list(move.get("source_ids")),
+    }
+
+
+def _surface_text_status(label: str, expected_text: Any, memo: str) -> dict[str, Any]:
+    expected = str(expected_text or "").strip()
+    terms = _surface_terms(expected)
+    matched = [term for term in terms if term in _norm(memo)]
+    required_count = min(3, max(1, len(terms) // 3)) if terms else 0
+    surfaced = bool(expected) and (not terms or len(matched) >= required_count)
+    return {
+        "label": label,
+        "expected_text": expected,
+        "surfaced": surfaced,
+        "matched_terms": matched[:8],
+        "missing_terms": [term for term in terms if term not in matched][:8],
+    }
+
+
+def _surface_terms(value: str) -> list[str]:
+    stop = {
+        "about",
+        "after",
+        "answer",
+        "because",
+        "before",
+        "between",
+        "could",
+        "current",
+        "decision",
+        "evidence",
+        "generally",
+        "rather",
+        "should",
+        "source",
+        "sources",
+        "there",
+        "these",
+        "those",
+        "where",
+        "which",
+        "while",
+        "would",
+    }
+    words = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{4,}", str(value or "").lower())
+    return _dedupe(word for word in words if word not in stop)[:18]
 
 
 def _decision_usefulness_packet(packet: dict[str, Any]) -> dict[str, Any]:

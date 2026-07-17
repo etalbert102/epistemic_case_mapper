@@ -64,6 +64,7 @@ def test_memo_ready_packet_exposes_analyst_decision_spine_to_writer() -> None:
 
     interface_spine = packet["writer_decision_interface"]["analyst_decision_spine"]
     canonical_spine = packet["canonical_decision_writer_packet"]["analyst_decision_spine"]
+    argument_contract = packet["canonical_decision_writer_packet"]["decision_argument_contract"]
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert interface_spine["schema_id"] == "analyst_decision_spine_v1"
@@ -79,7 +80,13 @@ def test_memo_ready_packet_exposes_analyst_decision_spine_to_writer() -> None:
     assert interface_spine["quality_report"]["source_weight_move_count"] == 2
     assert any(move["move_id"] == "source_weighting" for move in interface_spine["decision_moves"])
     assert canonical_spine["source_weight_moves"][0]["point"] == "Outcome Review carries the main answer."
+    assert argument_contract["schema_id"] == "decision_argument_contract_v1"
+    assert argument_contract["report"]["status"] == "ready"
+    assert any(move["move_type"] == "source_weighting" for move in argument_contract["argument_moves"])
+    assert any(move["move_type"] == "counterweight_disposition" for move in argument_contract["argument_moves"])
+    assert any(section["section_id"] == "counterweights" for section in argument_contract["section_arguments"])
     assert "analyst_decision_spine" in prompt
+    assert "decision_argument_contract" in prompt
     assert "controlling reasoning plan" in prompt
 
 

@@ -54,4 +54,6 @@ def test_memo_synthesis_runs_decision_usefulness_repair_when_needed(monkeypatch:
 
     assert calls["count"] == 2
     assert result["report"]["decision_usefulness_repair_report"]["applied"] is True
+    assert result["report"]["decision_usefulness_surface_report"]["schema_id"] == "decision_usefulness_surface_report_v1"
+    assert result["report"]["analyst_judgment_utilization_report"]["schema_id"] == "analyst_judgment_utilization_report_v1"
     assert "New implementation failure evidence" in result["memo"]

@@ -8,6 +8,7 @@ from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_balan
 from epistemic_case_mapper.map_briefing_canonical_reconciliation import reconcile_packet_evidence_items, reconcile_writer_interface
 from epistemic_case_mapper.map_briefing_canonical_quality_report import build_canonical_decision_writer_packet_quality_report
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
+from epistemic_case_mapper.map_briefing_decision_argument_contract import build_decision_argument_contract
 from epistemic_case_mapper.map_briefing_evidence_language_contracts import build_evidence_language_contracts
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -124,6 +125,8 @@ def build_canonical_decision_writer_packet(
     }
     canonical["reader_judgment_packet"] = build_reader_judgment_packet(canonical)
     canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))
+    canonical["decision_argument_contract"] = build_decision_argument_contract(canonical)
+    canonical["decision_argument_contract_report"] = _dict(canonical["decision_argument_contract"].get("report"))
     canonical["source_weighting_contract"] = build_source_weighting_contract(canonical)
     canonical["source_weighting_flow_audit"] = build_source_weighting_flow_audit(canonical)
     canonical["quality_report"] = build_canonical_decision_writer_packet_quality_report(canonical)
