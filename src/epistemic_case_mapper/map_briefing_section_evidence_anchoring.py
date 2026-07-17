@@ -202,6 +202,7 @@ def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts:
         for move_id in _string_list(contract.get("argument_move_ids")):
             contracts_by_move.setdefault(move_id, []).append(contract)
     jobs = []
+    used_evidence_ids: set[str] = set()
     for move in moves:
         move_id = str(move.get("move_id") or "").strip()
         rows = contracts_by_move.get(move_id, [])
@@ -213,6 +214,7 @@ def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts:
             ]
         if not rows:
             continue
+        used_evidence_ids.update(str(row.get("evidence_id") or "") for row in rows if row.get("evidence_id"))
         jobs.append(
             _drop_empty(
                 {
@@ -229,6 +231,22 @@ def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts:
                 }
             )
         )
+    remaining = [
+        row
+        for row in contracts
+        if isinstance(row, dict)
+        and str(row.get("evidence_id") or "") not in used_evidence_ids
+        and row.get("required")
+    ]
+    if remaining:
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for contract in remaining:
+            job_id = _counterweight_job_id(contract)
+            grouped.setdefault(f"required_{job_id}", []).append(contract)
+        for job_id in [f"required_{value}" for value in _counterweight_job_order()]:
+            rows = grouped.get(job_id, [])
+            if rows:
+                jobs.append(_section_local_job(job_id, rows))
     return jobs
 
 

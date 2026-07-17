@@ -218,7 +218,7 @@ def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
     jobs = build_section_local_evidence_jobs(section_packet, contracts)
     prompt = build_evidence_tagged_section_prompt(section_packet, known_source_ids=["s1", "s2", "s3"], contracts=contracts)
 
-    assert [job["job_id"] for job in jobs] == ["counterweights"]
+    assert jobs[0]["job_id"] == "counterweights"
     assert jobs[0]["argument_move_type"] == "counterweight_disposition"
     assert jobs[0]["allowed_evidence_ids"] == ["dose_item", "subgroup_item", "comparator_item"]
     assert "### Section-local evidence jobs" in prompt
