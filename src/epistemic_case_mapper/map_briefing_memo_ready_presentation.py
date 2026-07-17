@@ -149,8 +149,11 @@ def build_citation_trace_markdown(memo: str, packet: dict[str, Any]) -> str:
                 lines.append(f"- Use limits: {', '.join(_readable_warning(item) for item in limits[:4])}")
         if contexts:
             lines.append("- Memo citation contexts:")
+            role_line = _trace_context_role_line(entry, judgment, items)
             for context in contexts:
                 lines.append(f"  - {context}")
+                if role_line:
+                    lines.append(f"    - {role_line}")
         else:
             lines.append("- Memo citation contexts: no direct memo citation context detected")
         if items:
@@ -725,6 +728,9 @@ def _trace_item_matches_entry(item: dict[str, Any], entry: dict[str, str]) -> bo
         entry.get("citation_display", ""),
     ]:
         candidate_labels.update(_norm(variant) for variant in source_label_variants(value) if variant)
+    source_id = str(entry.get("source_id") or "").strip()
+    if source_id and source_id in _string_list(item.get("source_ids")) + _string_list(item.get("source_id")):
+        return True
     item_labels = _string_list(item.get("source_labels"))
     item_labels.append(str(item.get("source_label") or "").strip())
     item_norms = {_norm(variant) for label in item_labels for variant in source_label_variants(label) if variant}
@@ -736,10 +742,39 @@ def _trace_evidence_lines(item: dict[str, Any]) -> list[str]:
     role = str(item.get("role") or "evidence").strip()
     claim = str(item.get("reader_claim") or item.get("claim") or item.get("summary") or "").strip()
     lines = [f"  - `{item_id}` ({role}): {claim}" if claim else f"  - `{item_id}` ({role})"]
+    citation_role = str(item.get("citation_role") or item.get("reader_evidence_role") or item.get("main_use") or "").strip()
+    if citation_role:
+        lines.append(f"    - Citation job: {_readable_main_use(citation_role)}")
+    use_for = str(item.get("use_for") or item.get("memo_weight_sentence") or item.get("why_weight_this_way") or "").strip()
+    if use_for:
+        lines.append(f"    - Use for: {use_for}")
+    limits = _string_list(item.get("do_not_use_for")) or _string_list(item.get("cannot_support")) or _string_list(item.get("reader_facing_limit"))
+    if limits:
+        lines.append(f"    - Use limits: {', '.join(_readable_warning(item) for item in limits[:4])}")
     quantities = _trace_quantity_strings(item)
     if quantities:
         lines.append(f"    - Quantities: {'; '.join(quantities)}")
     return lines
+
+
+def _trace_context_role_line(
+    entry: dict[str, str],
+    judgment: dict[str, Any] | None,
+    items: list[dict[str, Any]],
+) -> str:
+    source_id = str(entry.get("source_id") or "").strip()
+    if isinstance(judgment, dict) and judgment:
+        main_use = str(judgment.get("main_use") or "").strip()
+        if main_use:
+            return f"Source role for this citation: {_readable_main_use(main_use)}"
+    for item in items:
+        for item_source in _string_list(item.get("source_ids")) + _string_list(item.get("source_id")):
+            if source_id and item_source != source_id:
+                continue
+            role = str(item.get("citation_role") or item.get("reader_evidence_role") or item.get("role") or "").strip()
+            if role:
+                return f"Source role for this citation: {_readable_main_use(role)}"
+    return ""
 
 
 def _trace_quantity_strings(item: dict[str, Any]) -> list[str]:

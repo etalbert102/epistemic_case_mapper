@@ -437,6 +437,50 @@ def test_citation_trace_includes_detailed_source_weight_judgments() -> None:
     assert "Use limits: association not causation" in trace
 
 
+def test_citation_trace_includes_sentence_role_and_source_id_matched_evidence() -> None:
+    packet = {
+        "source_trail": [
+            {
+                "source_id": "boundary_2025",
+                "source_label": "Boundary Study 2025",
+                "citation_label": "Boundary Study 2025",
+                "source_url": "https://example.test/boundary",
+            }
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["boundary_2025"],
+                    "main_use": "bounds_answer",
+                    "why_weight_this_way": "Use this source to bound the answer.",
+                }
+            ]
+        },
+        "evidence_items": [
+            {
+                "item_id": "item_boundary",
+                "role": "scope_boundary",
+                "reader_claim": "The answer is bounded in high-risk subgroups.",
+                "source_ids": ["boundary_2025"],
+                "citation_role": "boundary",
+                "use_for": "Use on boundary sentences.",
+                "do_not_use_for": ["Do not cite as broad direct support."],
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "The answer is bounded in high-risk subgroups [boundary_2025]."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+    trace = build_citation_trace_markdown(result["memo"], packet)
+
+    assert "Source role for this citation: bounds answer" in trace
+    assert "`item_boundary` (scope_boundary): The answer is bounded in high-risk subgroups." in trace
+    assert "Citation job: boundary" in trace
+    assert "Use for: Use on boundary sentences." in trace
+    assert "Use limits: Do not cite as broad direct support." in trace
+
+
 def test_presentation_prefers_citation_label_over_long_display_label() -> None:
     long_title = (
         "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, "
