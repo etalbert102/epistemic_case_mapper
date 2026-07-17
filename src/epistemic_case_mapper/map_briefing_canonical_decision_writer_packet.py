@@ -729,7 +729,7 @@ def _most_important_quantity(interface: dict[str, Any]) -> str:
     return ""
 
 
-def _brief_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
+def _brief_quantities(row: dict[str, Any]) -> list[dict[str, Any]]:
     quantities = []
     for quantity in _list(row.get("quantities")):
         if not isinstance(quantity, dict):
@@ -744,6 +744,11 @@ def _brief_quantities(row: dict[str, Any]) -> list[dict[str, str]]:
                     "interpretation": _calibrated_short(quantity.get("interpretation"), row, limit=220),
                     "quantity_role": quantity.get("quantity_role"),
                     "source_labels": _string_list(quantity.get("source_labels")),
+                    "quantity_id": str(quantity.get("quantity_id") or "").strip(),
+                    "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
+                    "memo_use": str(quantity.get("memo_use") or "").strip(),
+                    "must_retain": bool(quantity.get("must_retain")) if "must_retain" in quantity else None,
+                    "analyst_quantity_relevance": quantity.get("analyst_quantity_relevance") if isinstance(quantity.get("analyst_quantity_relevance"), dict) else {},
                 }
             )
         )

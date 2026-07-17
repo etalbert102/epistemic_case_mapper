@@ -274,6 +274,9 @@ def test_decision_writer_packet_reuses_quantity_binding_for_required_quantities(
     obligation = packet["memo_obligations"]["obligations"][0]
     assert obligation["quantities"][0]["must_retain"] is True
     assert [row["value"] for row in retention_quantity_rows(obligation)] == ["20% improvement"]
+    canonical_quantity = packet["canonical_decision_writer_packet"]["mandatory_retention_checklist"][0]["quantities"][0]
+    assert canonical_quantity["must_retain"] is True
+    assert canonical_quantity["memo_use"] == "yes"
     assert packet["quantity_obligation_plan"]["must_retain_count"] == 1
     assert packet["writer_packet_writeability_report"]["model_call_accounting"]["new_default_model_call_added"] is False
     assert "analyst_quantity_binding_report" in packet["writer_packet_writeability_report"]["model_call_accounting"]["existing_judgment_artifacts_reused"]
