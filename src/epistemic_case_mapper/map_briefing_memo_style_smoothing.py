@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 
 def smooth_stock_memo_phrasing(memo: str) -> str:
     replacements = {
@@ -27,8 +29,26 @@ def smooth_stock_memo_phrasing(memo: str) -> str:
         "a neutral stance": "a neutral conclusion",
         "the neutral stance": "the neutral conclusion",
         "This neutral stance": "This neutral conclusion",
+        "the \"safe\" threshold": "the working boundary",
+        "the safe threshold": "the working boundary",
+        "\"safe\" threshold": "working boundary",
+        "safe threshold": "working boundary",
     }
     next_memo = memo
     for stock, replacement in replacements.items():
         next_memo = next_memo.replace(stock, replacement)
+    for pattern, replacement in _OVERCLAIM_REPLACEMENTS:
+        next_memo = re.sub(pattern, replacement, next_memo)
     return next_memo
+
+
+_OVERCLAIM_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    (
+        r"\b[Dd]oes not increase ([^.\n;]{0,120}?\brisk\b)",
+        r"is not associated with increased \1",
+    ),
+    (
+        r"\b[Dd]id not increase ([^.\n;]{0,120}?\brisk\b)",
+        r"was not associated with increased \1",
+    ),
+)
