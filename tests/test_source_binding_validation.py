@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import build_memo_ready_packet_retention_report
+from epistemic_case_mapper.map_briefing_memo_ready_section_notes import render_memo_ready_section_markdown_notes
 from epistemic_case_mapper.map_briefing_source_bound_evidence import (
     build_source_bound_evidence_atoms,
     source_bound_quantity_phrases,
@@ -59,6 +60,64 @@ def test_source_bound_atoms_preserve_applicability_scope_for_subgroup_quantities
 
     assert atoms[0]["applicability_scope"] == "Among participants with baseline risk"
     assert atoms[0]["quantity_tuples"][0]["applicability_scope"] == "in participants with baseline risk"
+
+
+def test_source_bound_atoms_derive_generic_citation_roles_and_use_limits() -> None:
+    rows = [
+        {
+            "item_id": "boundary_source",
+            "claim": "The answer is bounded in high-risk subgroups.",
+            "source_ids": ["s_boundary"],
+            "main_use": "bounds_answer",
+            "memo_weight_sentence": "Use this source to bound the recommendation.",
+            "reader_facing_limit": "Do not use as direct support for broad safety.",
+        },
+        {
+            "item_id": "quantity_source",
+            "claim": "The estimate calibrates the size of the effect.",
+            "source_ids": ["s_quantity"],
+            "reader_evidence_role": "calibrates magnitude",
+        },
+    ]
+
+    atoms = build_source_bound_evidence_atoms(rows)
+
+    assert atoms[0]["citation_role"] == "boundary"
+    assert atoms[0]["use_for"] == "Use this source to bound the recommendation."
+    assert atoms[0]["do_not_use_for"] == ["Do not use as direct support for broad safety."]
+    assert atoms[1]["citation_role"] == "calibration"
+
+
+def test_section_markdown_notes_render_citation_jobs_for_writer() -> None:
+    notes = render_memo_ready_section_markdown_notes(
+        {
+            "heading": "Why This Is the Best Current Read",
+            "section_job": "Explain the support and boundary evidence.",
+            "top_context": {"decision_question": "Should option A be adopted?"},
+            "source_bound_evidence_atoms": [
+                {
+                    "claim": "Option A reduced losses in the main study.",
+                    "source_ids": ["s1"],
+                    "allowed_citations": ["s1"],
+                    "citation_role": "direct_support",
+                    "use_for": "Use for the main support sentence.",
+                },
+                {
+                    "claim": "The effect may not generalize to high-risk sites.",
+                    "source_ids": ["s2"],
+                    "allowed_citations": ["s2"],
+                    "citation_role": "boundary",
+                    "do_not_use_for": ["Do not cite on the broad support sentence."],
+                },
+            ],
+        },
+        known_source_ids=["s1", "s2"],
+    )
+
+    assert "Citation job: direct support" in notes
+    assert "Use for: Use for the main support sentence." in notes
+    assert "Citation job: boundary" in notes
+    assert "Use limit: Do not cite on the broad support sentence." in notes
 
 
 def test_retention_report_flags_quantity_without_bound_source_nearby() -> None:

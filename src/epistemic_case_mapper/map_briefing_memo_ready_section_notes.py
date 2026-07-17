@@ -22,6 +22,8 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- Every bracketed citation must contain one or more known source IDs separated by comma-space.\n"
         "- Keep packet IDs, schema terms, validation machinery, and audit language out of the prose.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
+        "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
+        "- Split evidence with different citation jobs into separate clauses or sentences so each citation supports the exact claim beside it.\n"
         "- Make each paragraph do a distinct reasoning job with fresh sentence-level value.\n\n"
         f"{render_memo_ready_section_markdown_notes(section_packet, known_source_ids=known_source_ids)}\n"
         "Now write the section as natural Markdown prose.\n"
@@ -92,6 +94,12 @@ def _source_bound_atom_lines(value: Any) -> list[str]:
     for atom in _dict_rows(value)[:16]:
         if claim := _text(atom.get("claim")):
             rows.append(_bullet(f"{claim} {_citations(atom)}".strip()))
+        if citation_role := _text(atom.get("citation_role")):
+            rows.append(f"  - Citation job: {citation_role.replace('_', ' ')}")
+        if use_for := _text(atom.get("use_for")):
+            rows.append(f"  - Use for: {use_for}")
+        if avoid := _string_list(atom.get("do_not_use_for")):
+            rows.append(f"  - Use limit: {'; '.join(avoid[:3])}")
         if relevance := _text(atom.get("decision_relevance")):
             rows.append(f"  - Decision use: {relevance}")
         quantities = [_quantity_line(row) for row in _dict_rows(atom.get("quantity_tuples"))]

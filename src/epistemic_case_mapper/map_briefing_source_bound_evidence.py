@@ -171,6 +171,7 @@ def _source_bound_atom(row: dict[str, Any]) -> dict[str, Any]:
     if not claim and not quantities:
         return {}
     item_id = str(row.get("item_id") or row.get("obligation_id") or row.get("requirement_id") or "").strip()
+    citation_role = _citation_role(row, quantity_tuples=quantities)
     return _drop_empty(
         {
             "atom_id": item_id or _atom_id(claim, source_ids),
@@ -178,6 +179,9 @@ def _source_bound_atom(row: dict[str, Any]) -> dict[str, Any]:
             "claim": claim,
             "source_ids": source_ids,
             "allowed_citations": source_ids,
+            "citation_role": citation_role,
+            "use_for": _citation_use_for(row, citation_role),
+            "do_not_use_for": _citation_do_not_use_for(row),
             "source_excerpt": _source_excerpt(row),
             "applicability_scope": _applicability_scope(row),
             "decision_relevance": row.get("decision_relevance"),
@@ -206,6 +210,7 @@ def _source_bound_quantity_tuples(row: dict[str, Any]) -> tuple[list[dict[str, A
                 "retention_phrase": quantity.get("retention_phrase"),
                 "source_ids": source_ids,
                 "allowed_citations": source_ids,
+                "citation_role": "calibration",
                 "source_excerpt": source_excerpt,
                 "applicability_scope": _applicability_scope(quantity) or _applicability_scope(row),
             }
@@ -638,6 +643,90 @@ def _memo_sentences(memo: str) -> list[str]:
 
 def _row_source_ids(row: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(row.get("source_ids")), *_string_list(row.get("source_id"))])
+
+
+def _citation_role(row: dict[str, Any], *, quantity_tuples: list[dict[str, Any]]) -> str:
+    text = _norm(
+        " ".join(
+            str(row.get(key) or "")
+            for key in (
+                "citation_role",
+                "main_use",
+                "reader_evidence_role",
+                "evidence_role",
+                "role",
+                "role_description",
+                "lane",
+                "section_id",
+                "section",
+                "quantity_role",
+                "claim_quantity_role",
+                "decision_relevance",
+                "writing_job",
+                "prose_instruction",
+            )
+        )
+    )
+    if re.search(r"\b(counterweight|counter|tension|oppos|conflict|against|contradict|exception)\b", text):
+        return "counterweight"
+    if re.search(r"\b(bounds?|boundary|limit\w*|scope|limiter|caveat\w*|qualif\w*|exception\w*|subgroup|applicab\w*)\b", text):
+        return "boundary"
+    if re.search(r"\b(calibrat\w*|magnitude|quant\w*|statistical|estimate\w*|endpoint|dose|threshold|ratio|measure\w*)\b", text):
+        return "calibration"
+    if re.search(r"\b(context|background|guidance|advisory|practice|implementation|interpret)\b", text):
+        return "context"
+    if re.search(r"\b(driver|drive|support|primary|answer|best current read|main reason|direct)\b", text):
+        return "direct_support"
+    if quantity_tuples and not str(row.get("claim") or row.get("statement") or row.get("reader_claim") or "").strip():
+        return "calibration"
+    return "direct_support"
+
+
+def _citation_use_for(row: dict[str, Any], citation_role: str) -> str:
+    explicit = str(row.get("use_for") or row.get("memo_weight_sentence") or row.get("why_weight_this_way") or "").strip()
+    if explicit:
+        return _short_text(explicit, 320)
+    for key in (
+        "decision_relevance",
+        "role_rationale",
+        "writing_job",
+        "prose_instruction",
+        "rationale",
+        "claim",
+        "statement",
+        "reader_claim",
+    ):
+        value = str(row.get(key) or "").strip()
+        if value:
+            return _short_text(value, 320)
+    defaults = {
+        "direct_support": "Use as direct support for the sentence-level claim.",
+        "boundary": "Use to bound, scope, or qualify the sentence-level claim.",
+        "counterweight": "Use to state a counterweight, tension, or exception.",
+        "calibration": "Use to calibrate magnitude, threshold, endpoint, or quantity.",
+        "context": "Use for background, guidance, or interpretive context.",
+    }
+    return defaults.get(citation_role, "Use for the sentence-level claim it directly supports.")
+
+
+def _citation_do_not_use_for(row: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    for key in (
+        "do_not_use_for",
+        "cannot_support",
+        "reader_facing_limit",
+        "what_not_to_use_it_for",
+        "source_appraisal_caveats",
+        "must_not_overstate",
+        "avoid_language",
+        "limitations",
+        "limits",
+    ):
+        raw = row.get(key)
+        values.extend(_string_list(raw))
+        if isinstance(raw, str) and raw.strip():
+            values.append(raw.strip())
+    return _dedupe(_short_text(value, 220) for value in values if str(value or "").strip())[:4]
 
 
 def _source_excerpt(row: dict[str, Any]) -> str:
