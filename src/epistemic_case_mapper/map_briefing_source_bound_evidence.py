@@ -185,46 +185,59 @@ def build_citation_care_report(
     warnings: list[dict[str, Any]] = []
     cited_sentence_count = 0
     for sentence in _memo_sentences(memo):
-        cited_source_ids = _sentence_cited_source_ids(sentence, alias_to_source)
+        citation_groups = _sentence_citation_groups(sentence, alias_to_source)
+        cited_source_ids = _dedupe(
+            source_id
+            for group in citation_groups
+            for source_id in _string_list(group.get("source_ids"))
+        )
         if not cited_source_ids:
             continue
         cited_sentence_count += 1
-        sentence_roles = _sentence_citation_roles(sentence)
-        source_roles = {source_id: sorted(roles_by_source.get(source_id, set())) for source_id in cited_source_ids}
-        if len(cited_source_ids) > 2 or _mixed_citation_roles(source_roles):
-            warnings.append(
-                {
-                    "warning_type": "overbundled_or_mixed_role_citation",
-                    "source_ids": cited_source_ids,
-                    "source_roles": source_roles,
-                    "sentence_roles": sorted(sentence_roles),
-                    "sentence": sentence[:360],
-                    "guidance": "Consider splitting the sentence so each cited source supports the exact clause beside it.",
-                }
-            )
-        for source_id in cited_source_ids:
-            roles = roles_by_source.get(source_id, set())
-            if not roles:
-                warnings.append(
-                    {
-                        "warning_type": "citation_without_packet_atom",
-                        "source_id": source_id,
-                        "sentence": sentence[:360],
-                        "guidance": "The cited source was not found in source-bound packet evidence.",
-                    }
-                )
+        for group in citation_groups:
+            group_source_ids = _string_list(group.get("source_ids"))
+            if not group_source_ids:
                 continue
-            if _role_mismatch(sentence_roles, roles):
+            clause = str(group.get("clause") or sentence)
+            sentence_roles = _sentence_citation_roles(clause)
+            source_roles = {source_id: sorted(roles_by_source.get(source_id, set())) for source_id in group_source_ids}
+            if len(group_source_ids) > 2 or _mixed_citation_roles(source_roles):
                 warnings.append(
                     {
-                        "warning_type": "citation_role_mismatch",
-                        "source_id": source_id,
-                        "source_roles": sorted(roles),
+                        "warning_type": "overbundled_or_mixed_role_citation",
+                        "source_ids": group_source_ids,
+                        "source_roles": source_roles,
                         "sentence_roles": sorted(sentence_roles),
                         "sentence": sentence[:360],
-                        "guidance": _role_mismatch_guidance(sentence_roles, roles),
+                        "citation_clause": clause[:260],
+                        "guidance": "Consider splitting the citation so each source supports the exact clause beside it.",
                     }
                 )
+            for source_id in group_source_ids:
+                roles = roles_by_source.get(source_id, set())
+                if not roles:
+                    warnings.append(
+                        {
+                            "warning_type": "citation_without_packet_atom",
+                            "source_id": source_id,
+                            "sentence": sentence[:360],
+                            "citation_clause": clause[:260],
+                            "guidance": "The cited source was not found in source-bound packet evidence.",
+                        }
+                    )
+                    continue
+                if _role_mismatch(sentence_roles, roles):
+                    warnings.append(
+                        {
+                            "warning_type": "citation_role_mismatch",
+                            "source_id": source_id,
+                            "source_roles": sorted(roles),
+                            "sentence_roles": sorted(sentence_roles),
+                            "sentence": sentence[:360],
+                            "citation_clause": clause[:260],
+                            "guidance": _role_mismatch_guidance(sentence_roles, roles),
+                        }
+                    )
     deduped = _dedupe_warning_rows(warnings)
     return {
         "schema_id": "citation_care_report_v1",
@@ -625,6 +638,51 @@ def _sentence_cited_source_ids(sentence: str, alias_to_source: dict[str, str]) -
     return _dedupe(source_ids)
 
 
+def _sentence_citation_groups(sentence: str, alias_to_source: dict[str, str]) -> list[dict[str, Any]]:
+    groups: list[dict[str, Any]] = []
+    for match in re.finditer(r"\[([^\[\]\n]{1,180})\]", str(sentence or "")):
+        raw = match.group(1)
+        if "](" in raw or raw.strip().startswith("^"):
+            continue
+        source_ids = []
+        for token in re.split(r"\s*(?:,|;)\s*", raw):
+            key = _norm(token)
+            if key in alias_to_source:
+                source_ids.append(alias_to_source[key])
+        source_ids = _dedupe(source_ids)
+        if source_ids:
+            groups.append(
+                {
+                    "source_ids": source_ids,
+                    "clause": _citation_local_clause(sentence, match.start(), match.end()),
+                }
+            )
+    return groups
+
+
+def _citation_local_clause(sentence: str, start: int, end: int) -> str:
+    text = str(sentence or "")
+    left = max(_clause_boundary_indexes(text, 0, start), default=-1)
+    right_candidates = _clause_boundary_indexes(text, end, len(text))
+    right = min(right_candidates) if right_candidates else len(text)
+    return " ".join(text[left + 1 : right].split())
+
+
+def _clause_boundary_indexes(text: str, start: int, end: int) -> list[int]:
+    boundaries: list[int] = []
+    for index in range(max(start, 0), min(end, len(text))):
+        char = text[index]
+        if char in ";:":
+            boundaries.append(index)
+        elif char == "." and not _is_decimal_period(text, index):
+            boundaries.append(index)
+    return boundaries
+
+
+def _is_decimal_period(text: str, index: int) -> bool:
+    return index > 0 and index + 1 < len(text) and text[index - 1].isdigit() and text[index + 1].isdigit()
+
+
 def _sentence_citation_roles(sentence: str) -> set[str]:
     text = _norm(_strip_bracket_citations(sentence))
     roles: set[str] = set()
@@ -635,7 +693,7 @@ def _sentence_citation_roles(sentence: str) -> set[str]:
         roles.add("boundary")
     if re.search(r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*|harm|mortality)\b", text) or risk_counter:
         roles.add("counterweight")
-    if re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|eggs? per day|per day|hr|rr|or|md|ci|ratio)\b", text):
+    if re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|per day|hr|rr|or|md|ci|ratio)\b", text):
         roles.add("calibration")
     if re.search(r"\b(context|guidance|recommend\w*|practical|pattern\w*|dietary pattern|framework)\b", text):
         roles.add("context")

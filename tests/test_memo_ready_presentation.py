@@ -679,7 +679,7 @@ def test_presentation_unwraps_single_already_linked_citation_wrapper() -> None:
     result = run_memo_ready_presentation_normalization(memo, packet)
 
     assert "[[American Heart Association News 2023]" not in result["memo"]
-    assert "[American Heart Association News 2023]" in result["memo"]
+    assert "[AHA 2023]" in result["memo"]
     assert "[American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)" not in result["memo"]
     assert "deduplicated_inline_citations" in result["report"]["changes"]
 

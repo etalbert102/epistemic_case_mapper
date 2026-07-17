@@ -47,23 +47,38 @@ def preferred_source_display(source: dict[str, Any], *, common_prefix: list[str]
 
 def compact_source_display(source: dict[str, Any], *, common_prefix: list[str] | None = None) -> str:
     citation = str(source.get("citation_label") or "").strip()
+    source_id_displays = [
+        _compact_source_id(str(source.get(key) or "").strip())
+        for key in ("source_id", "source_slug", "original_source_id")
+        if not (key == "source_id" and re.fullmatch(r"SRC_[A-Z2-7]{8}", str(source.get(key) or "").strip()))
+    ]
+    source_id_display = next((display for display in source_id_displays if display), "")
+    if citation and source_id_display and _prefer_source_id_citation_key(citation, source_id_display):
+        return source_id_display
     if citation and len(citation) <= 64:
         return citation
-    for key in ("source_id", "source_slug", "original_source_id"):
-        source_id = str(source.get(key) or "").strip()
-        if key == "source_id" and re.fullmatch(r"SRC_[A-Z2-7]{8}", source_id):
-            continue
-        from_id = _compact_source_id(source_id)
-        if from_id:
-            return from_id
+    if source_id_display:
+        return source_id_display
     if citation:
         return _compact_title(citation)
     label = str(source.get("source_label") or "").strip()
-    if label and label != source_id:
+    if label:
         label = strip_artifact_source_prefix(label)
         return _compact_title(label) if len(label) > 64 else label
     display = preferred_source_display(source, common_prefix=common_prefix)
     return _compact_title(display) if len(display) > 64 else display
+
+
+def _prefer_source_id_citation_key(citation: str, source_id_display: str) -> bool:
+    if not citation or not source_id_display:
+        return False
+    if re.search(r"\bet\s+al\.?\b", citation, flags=re.IGNORECASE):
+        return False
+    citation_words = re.findall(r"[A-Za-z][A-Za-z-]*", citation)
+    if len(citation_words) < 4:
+        return False
+    lead = source_id_display.split()[0]
+    return lead.isupper() and 2 <= len(lead) <= 5
 
 
 def _compact_source_id(source_id: str) -> str:
