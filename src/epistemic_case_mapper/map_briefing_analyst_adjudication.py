@@ -172,7 +172,38 @@ def _run_live_adjudication(
     failed_chunk_count = sum(1 for row in [*chunk_results, *recovery_results] if row.get("chunk_failed"))
     merged, repair_report = repair_adjudication_source_faithfulness(ledger, merged)
     parse_report = build_analyst_adjudication_parse_report(merged, ledger)
-    recovered_missing_rows = bool(recovery_results) and parse_report.get("valid")
+    report = _live_adjudication_report(
+        parse_report,
+        recovered_missing_rows=bool(recovery_results) and parse_report.get("valid"),
+        failed_chunk_count=failed_chunk_count,
+    )
+    report["source_faithfulness_repair"] = repair_report
+    chunk_bundle = _live_adjudication_chunk_bundle(
+        chunks=chunks,
+        recovery_results=recovery_results,
+        chunk_reports=chunk_reports,
+        failed_chunk_count=failed_chunk_count,
+        initial_failed_chunk_count=initial_failed_chunk_count,
+        recovery_rounds=recovery_rounds,
+        backend=backend,
+    )
+    return _live_adjudication_result(
+        merged=merged,
+        prompts=prompts,
+        raws=raws,
+        parse_report=parse_report,
+        chunk_bundle=chunk_bundle,
+        repair_report=repair_report,
+        report=report,
+    )
+
+
+def _live_adjudication_report(
+    parse_report: dict[str, Any],
+    *,
+    recovered_missing_rows: bool,
+    failed_chunk_count: int,
+) -> dict[str, Any]:
     status = (
         "accepted_after_missing_row_repair"
         if recovered_missing_rows
@@ -182,28 +213,52 @@ def _run_live_adjudication(
         if parse_report.get("valid")
         else "model_output_invalid"
     )
-    report = _report(
+    return _report(
         status,
         parse_report,
         issues=["one_or_more_chunks_failed_without_fallback"] if failed_chunk_count else [],
     )
-    report["source_faithfulness_repair"] = repair_report
+
+
+def _live_adjudication_chunk_bundle(
+    *,
+    chunks: list[list[dict[str, Any]]],
+    recovery_results: list[dict[str, Any]],
+    chunk_reports: list[dict[str, Any]],
+    failed_chunk_count: int,
+    initial_failed_chunk_count: int,
+    recovery_rounds: int,
+    backend: str,
+) -> dict[str, Any]:
+    return {
+        "schema_id": "analyst_adjudication_chunk_reports_v1",
+        "chunk_count": len(chunks) + len(recovery_results),
+        "scaffold_chunk_count": 0,
+        "failed_chunk_count": failed_chunk_count,
+        "initial_failed_chunk_count": initial_failed_chunk_count,
+        "missing_row_repair_chunk_count": len(recovery_results),
+        "missing_row_repair_round_count": recovery_rounds,
+        "parallelism": model_parallelism(backend),
+        "chunks": chunk_reports,
+    }
+
+
+def _live_adjudication_result(
+    *,
+    merged: dict[str, Any],
+    prompts: list[str],
+    raws: list[str],
+    parse_report: dict[str, Any],
+    chunk_bundle: dict[str, Any],
+    repair_report: dict[str, Any],
+    report: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "analyst_adjudication": merged,
         "analyst_adjudication_prompt": "\n\n".join(prompts),
         "analyst_adjudication_raw": "\n\n".join(raws),
         "analyst_adjudication_parse_report": parse_report,
-        "analyst_adjudication_chunk_reports": {
-            "schema_id": "analyst_adjudication_chunk_reports_v1",
-            "chunk_count": len(chunks) + len(recovery_results),
-            "scaffold_chunk_count": 0,
-            "failed_chunk_count": failed_chunk_count,
-            "initial_failed_chunk_count": initial_failed_chunk_count,
-            "missing_row_repair_chunk_count": len(recovery_results),
-            "missing_row_repair_round_count": recovery_rounds,
-            "parallelism": model_parallelism(backend),
-            "chunks": chunk_reports,
-        },
+        "analyst_adjudication_chunk_reports": chunk_bundle,
         "analyst_source_faithfulness_repair_report": repair_report,
         "analyst_adjudication_report": report,
     }
@@ -317,49 +372,33 @@ def _run_adjudication_chunk(
             parse_report = build_analyst_adjudication_parse_report({}, chunk_ledger)
             retry_reports.append(_retry_report(attempt, "backend_error", parse_report, str(exc)))
             if attempt < attempts:
-                _emit_progress(
+                _emit_chunk_retry_needed(
                     progress,
-                    "analyst_adjudication_chunk",
-                    "retry_needed",
-                    _chunk_progress_details(
-                        index,
-                        total,
-                        rows,
-                        phase,
-                        prompt_chars=len(chunk_prompt),
-                        raw_chars=0,
-                        attempt=attempt,
-                        status="backend_error",
-                        wall_seconds=round(time.monotonic() - started, 3),
-                    ),
-                )
-                continue
-            _emit_progress(
-                progress,
-                "analyst_adjudication_chunk",
-                "failed",
-                _chunk_progress_details(
-                    index,
-                    total,
-                    rows,
-                    phase,
+                    index=index,
+                    total=total,
+                    rows=rows,
+                    phase=phase,
                     prompt_chars=len(chunk_prompt),
                     raw_chars=0,
                     attempt=attempt,
                     status="backend_error",
-                    wall_seconds=round(time.monotonic() - started, 3),
-                ),
+                    started=started,
+                )
+                continue
+            return _backend_error_chunk_result(
+                exc,
+                index=index,
+                total=total,
+                rows=rows,
+                phase=phase,
+                prompt_block=prompt_block,
+                prompt_chars=len(chunk_prompt),
+                attempts=attempts,
+                parse_report=parse_report,
+                retry_reports=retry_reports,
+                progress=progress,
+                started=started,
             )
-            return {
-                "prompt": prompt_block,
-                "raw_block": f"<!-- chunk {index} backend error after {attempts} attempt(s): {exc} -->",
-                "rows": [],
-                "chunk_failed": True,
-                "chunk_report": _with_retry_report(
-                    _chunk_report(index, total, "backend_error", parse_report, issues=[str(exc)]),
-                    retry_reports,
-                ),
-            }
         payload = _repair_covered_by_aliases(_extract_json(raw), all_ids)
         parse_report = build_analyst_adjudication_parse_report(
             payload,
@@ -370,49 +409,190 @@ def _run_adjudication_chunk(
         retry_reports.append(_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
         if parse_report.get("valid"):
             parsed = AnalystAdjudication.model_validate(payload).model_dump()
-            _emit_progress(
-                progress,
-                "analyst_adjudication_chunk",
-                "completed",
-                _chunk_progress_details(
-                    index,
-                    total,
-                    rows,
-                    phase,
-                    prompt_chars=len(chunk_prompt),
-                    raw_chars=len(raw),
-                    attempt=attempt,
-                    status="accepted",
-                    wall_seconds=round(time.monotonic() - started, 3),
-                    parsed_row_count=len(parsed.get("rows", [])),
-                ),
+            return _accepted_chunk_result(
+                parsed,
+                raw=raw,
+                index=index,
+                total=total,
+                rows=rows,
+                phase=phase,
+                prompt_block=prompt_block,
+                prompt_chars=len(chunk_prompt),
+                attempt=attempt,
+                parse_report=parse_report,
+                retry_reports=retry_reports,
+                progress=progress,
+                started=started,
             )
-            return {
-                "prompt": prompt_block,
-                "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
-                "rows": parsed.get("rows", []),
-                "used_scaffold": False,
-                "chunk_report": _with_retry_report(_chunk_report(index, total, "accepted", parse_report), retry_reports),
-            }
         if attempt < attempts:
-            _emit_progress(
+            _emit_chunk_retry_needed(
                 progress,
-                "analyst_adjudication_chunk",
-                "retry_needed",
-                _chunk_progress_details(
-                    index,
-                    total,
-                    rows,
-                    phase,
-                    prompt_chars=len(chunk_prompt),
-                    raw_chars=len(raw),
-                    attempt=attempt,
-                    status="invalid",
-                    wall_seconds=round(time.monotonic() - started, 3),
-                    issue_count=len(_list(parse_report.get("issues"))),
-                ),
+                index=index,
+                total=total,
+                rows=rows,
+                phase=phase,
+                prompt_chars=len(chunk_prompt),
+                raw_chars=len(raw),
+                attempt=attempt,
+                status="invalid",
+                started=started,
+                issue_count=len(_list(parse_report.get("issues"))),
             )
             continue
+    return _salvage_or_failed_chunk_result(
+        payload,
+        chunk_ledger=chunk_ledger,
+        expected_ids=expected_ids,
+        all_ids=all_ids,
+        raw=raw,
+        index=index,
+        total=total,
+        rows=rows,
+        phase=phase,
+        prompt_block=prompt_block,
+        prompt_chars=len(chunk_prompt),
+        attempts=attempts,
+        parse_report=parse_report,
+        retry_reports=retry_reports,
+        progress=progress,
+        started=started,
+    )
+
+
+def _emit_chunk_retry_needed(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    *,
+    index: int,
+    total: int,
+    rows: list[dict[str, Any]],
+    phase: str,
+    prompt_chars: int,
+    raw_chars: int,
+    attempt: int,
+    status: str,
+    started: float,
+    issue_count: int | None = None,
+) -> None:
+    details = _chunk_progress_details(
+        index,
+        total,
+        rows,
+        phase,
+        prompt_chars=prompt_chars,
+        raw_chars=raw_chars,
+        attempt=attempt,
+        status=status,
+        wall_seconds=round(time.monotonic() - started, 3),
+    )
+    if issue_count is not None:
+        details["issue_count"] = issue_count
+    _emit_progress(progress, "analyst_adjudication_chunk", "retry_needed", details)
+
+
+def _backend_error_chunk_result(
+    exc: RuntimeError,
+    *,
+    index: int,
+    total: int,
+    rows: list[dict[str, Any]],
+    phase: str,
+    prompt_block: str,
+    prompt_chars: int,
+    attempts: int,
+    parse_report: dict[str, Any],
+    retry_reports: list[dict[str, Any]],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    started: float,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress,
+        "analyst_adjudication_chunk",
+        "failed",
+        _chunk_progress_details(
+            index,
+            total,
+            rows,
+            phase,
+            prompt_chars=prompt_chars,
+            raw_chars=0,
+            attempt=attempts,
+            status="backend_error",
+            wall_seconds=round(time.monotonic() - started, 3),
+        ),
+    )
+    return {
+        "prompt": prompt_block,
+        "raw_block": f"<!-- chunk {index} backend error after {attempts} attempt(s): {exc} -->",
+        "rows": [],
+        "chunk_failed": True,
+        "chunk_report": _with_retry_report(
+            _chunk_report(index, total, "backend_error", parse_report, issues=[str(exc)]),
+            retry_reports,
+        ),
+    }
+
+
+def _accepted_chunk_result(
+    parsed: dict[str, Any],
+    *,
+    raw: str,
+    index: int,
+    total: int,
+    rows: list[dict[str, Any]],
+    phase: str,
+    prompt_block: str,
+    prompt_chars: int,
+    attempt: int,
+    parse_report: dict[str, Any],
+    retry_reports: list[dict[str, Any]],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    started: float,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress,
+        "analyst_adjudication_chunk",
+        "completed",
+        _chunk_progress_details(
+            index,
+            total,
+            rows,
+            phase,
+            prompt_chars=prompt_chars,
+            raw_chars=len(raw),
+            attempt=attempt,
+            status="accepted",
+            wall_seconds=round(time.monotonic() - started, 3),
+            parsed_row_count=len(parsed.get("rows", [])),
+        ),
+    )
+    return {
+        "prompt": prompt_block,
+        "raw_block": f"<!-- analyst adjudication chunk {index}/{total} -->\n{raw}",
+        "rows": parsed.get("rows", []),
+        "used_scaffold": False,
+        "chunk_report": _with_retry_report(_chunk_report(index, total, "accepted", parse_report), retry_reports),
+    }
+
+
+def _salvage_or_failed_chunk_result(
+    payload: Any,
+    *,
+    chunk_ledger: dict[str, Any],
+    expected_ids: list[str],
+    all_ids: list[str],
+    raw: str,
+    index: int,
+    total: int,
+    rows: list[dict[str, Any]],
+    phase: str,
+    prompt_block: str,
+    prompt_chars: int,
+    attempts: int,
+    parse_report: dict[str, Any],
+    retry_reports: list[dict[str, Any]],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    started: float,
+) -> dict[str, Any]:
     salvaged_rows, salvage_report = _salvage_adjudication_chunk_rows(
         payload,
         chunk_ledger=chunk_ledger,
@@ -450,7 +630,7 @@ def _run_adjudication_chunk(
                 total,
                 rows,
                 phase,
-                prompt_chars=len(chunk_prompt),
+                prompt_chars=prompt_chars,
                 raw_chars=len(raw),
                 attempt=attempts,
                 status="salvaged" if chunk_parse_report.get("valid") else "salvaged_with_warnings",
@@ -474,7 +654,7 @@ def _run_adjudication_chunk(
             total,
             rows,
             phase,
-            prompt_chars=len(chunk_prompt),
+            prompt_chars=prompt_chars,
             raw_chars=len(raw),
             attempt=attempts,
             status="model_output_invalid",

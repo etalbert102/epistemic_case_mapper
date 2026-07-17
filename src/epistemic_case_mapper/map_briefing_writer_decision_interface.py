@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe 
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_registry_for_model
 from epistemic_case_mapper.map_briefing_source_claim_context import writer_source_local_context as _writer_source_local_context
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
+from epistemic_case_mapper.map_briefing_writer_value_projection import drop_empty as _drop_empty, quantity_values as _quantity_values
 
 
 GENERIC_JUDGMENT_PATTERNS = (
@@ -885,32 +886,3 @@ def _content_terms(text: str) -> set[str]:
 def _source_labels(item: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(item.get("source_labels")), str(item.get("source_label") or "").strip()])
 
-
-def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in row.items() if value not in ("", None, [], {})}
-
-
-def _quantity_values(value: Any, *, evidence: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    rows = []
-    for row in _list(value):
-        if isinstance(row, dict):
-            quantity = str(row.get("value") or "").strip()
-            interpretation = str(row.get("interpretation") or "").strip()
-            projected = {
-                "value": quantity,
-                "interpretation": calibrate_text_for_writer(interpretation, evidence or {}),
-                "retention_phrase": str(row.get("retention_phrase") or "").strip(),
-                "quantity_role": str(row.get("quantity_role") or "").strip(),
-                "quantity_id": str(row.get("quantity_id") or "").strip(),
-                "source_evidence_item_id": str(row.get("source_evidence_item_id") or "").strip(),
-                "source_labels": _string_list(row.get("source_labels")),
-                "memo_use": str(row.get("memo_use") or "").strip(),
-                "must_retain": bool(row.get("must_retain")) if "must_retain" in row else None,
-                "analyst_quantity_relevance": row.get("analyst_quantity_relevance") if isinstance(row.get("analyst_quantity_relevance"), dict) else {},
-            }
-        else:
-            quantity = str(row or "").strip()
-            projected = {"value": quantity, "interpretation": ""}
-        if quantity:
-            rows.append(_drop_empty(projected))
-    return rows

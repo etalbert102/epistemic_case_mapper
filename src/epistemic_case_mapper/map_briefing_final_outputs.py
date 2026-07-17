@@ -517,7 +517,7 @@ def _write_final_reader_artifacts(
     from epistemic_case_mapper.decision_argument_artifacts import render_decision_traceability_matrix_markdown
     from epistemic_case_mapper.map_briefing_final_editor_artifacts import write_reader_memo_edit_artifacts
     from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
-    from epistemic_case_mapper.map_briefing_memo_ready_presentation import build_citation_trace_markdown
+    from epistemic_case_mapper.map_briefing_citation_trace import build_citation_trace_markdown
 
     if rewrite_result.get("prompt"):
         write_markdown(paths.reader_memo_rewrite_prompt, str(rewrite_result.get("prompt", "")))

@@ -81,87 +81,21 @@ def run_analyst_decision_model(
             backend_retries=backend_retries,
             progress=progress,
         )
-    retry_reports: list[dict[str, Any]] = []
-    raw = ""
-    payload: Any = {}
-    parse_report: dict[str, Any] = {}
-    attempts = model_stage_attempts()
-    for attempt in range(1, attempts + 1):
-        _emit_progress(
-            progress,
-            "analyst_decision_model_call",
-            "started" if attempt == 1 else "retry_started",
-            {
-                "attempt": attempt,
-                "row_count": len(_list(context.get("evidence_rows"))),
-                "prompt_chars": len(prompt),
-                "num_predict": analyst_decision_model_num_predict(context),
-            },
-        )
-        try:
-            result = run_model_backend(
-                prompt,
-                backend,
-                timeout_seconds=backend_timeout,
-                max_retries=backend_retries,
-                num_predict=analyst_decision_model_num_predict(context),
-            )
-        except RuntimeError as exc:
-            parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
-            retry_reports.append(model_retry_report(attempt, "backend_error", parse_report, str(exc)))
-            if attempt < attempts:
-                _emit_progress(
-                    progress,
-                    "analyst_decision_model_call",
-                    "retry_needed",
-                    {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
-                )
-                continue
-            _emit_progress(
-                progress,
-                "analyst_decision_model_call",
-                "failed",
-                {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
-            )
-            return {
-                "analyst_decision_context": context,
-                "analyst_decision_model": _invalid_decision_model(context),
-                "analyst_decision_model_prompt": prompt,
-                "analyst_decision_model_raw": "",
-                "analyst_decision_model_parse_report": parse_report,
-                "analyst_decision_model_report": _report("backend_error", parse_report, issues=[str(exc)], retry_reports=retry_reports),
-            }
-        raw = result.text
-        payload = _extract_json(raw)
-        payload = apply_routed_away_accounting(payload if isinstance(payload, dict) else {}, context)
-        parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
-        retry_reports.append(model_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
-        if parse_report.get("valid"):
-            _emit_progress(
-                progress,
-                "analyst_decision_model_call",
-                "completed",
-                {
-                    "attempt": attempt,
-                    "call_status": "accepted",
-                    "raw_chars": len(raw),
-                    "group_count": len(_list(payload.get("evidence_groups") if isinstance(payload, dict) else [])),
-                    "disposition_count": len(_list(payload.get("evidence_dispositions") if isinstance(payload, dict) else [])),
-                },
-            )
-            break
-        _emit_progress(
-            progress,
-            "analyst_decision_model_call",
-            "retry_needed" if attempt < attempts else "failed",
-            {
-                "attempt": attempt,
-                "call_status": "invalid",
-                "raw_chars": len(raw),
-                "issue_count": len(_list(parse_report.get("issues"))),
-                "missing_evidence_item_count": len(_list(parse_report.get("missing_evidence_item_ids"))),
-            },
-        )
+    call = _run_decision_model_call_with_retries(
+        prompt=prompt,
+        context=context,
+        ledger=ledger,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        progress=progress,
+    )
+    if call.get("terminal_result"):
+        return call["terminal_result"]
+    raw = str(call.get("raw") or "")
+    payload = call.get("payload")
+    parse_report = _dict(call.get("parse_report"))
+    retry_reports = _list(call.get("retry_reports"))
     if not parse_report.get("valid"):
         return {
             "analyst_decision_context": context,
@@ -221,6 +155,154 @@ def run_analyst_decision_model(
         "analyst_decision_model_repair_report": compact_decision_model_repair_report(repair),
         "analyst_decision_model_ranking_guard": ranking_guard,
     }
+
+
+def _run_decision_model_call_with_retries(
+    *,
+    prompt: str,
+    context: dict[str, Any],
+    ledger: dict[str, Any],
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+) -> dict[str, Any]:
+    retry_reports: list[dict[str, Any]] = []
+    raw = ""
+    payload: Any = {}
+    parse_report: dict[str, Any] = {}
+    attempts = model_stage_attempts()
+    for attempt in range(1, attempts + 1):
+        _emit_decision_model_call_started(progress, attempt=attempt, context=context, prompt=prompt)
+        try:
+            result = run_model_backend(
+                prompt,
+                backend,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+                num_predict=analyst_decision_model_num_predict(context),
+            )
+        except RuntimeError as exc:
+            parse_report = build_analyst_decision_model_parse_report({}, ledger, retention_obligations=context.get("retention_obligations"))
+            retry_reports.append(model_retry_report(attempt, "backend_error", parse_report, str(exc)))
+            if attempt < attempts:
+                _emit_progress(
+                    progress,
+                    "analyst_decision_model_call",
+                    "retry_needed",
+                    {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
+                )
+                continue
+            return {
+                "terminal_result": _decision_model_backend_error_result(
+                    exc,
+                    context=context,
+                    prompt=prompt,
+                    parse_report=parse_report,
+                    retry_reports=retry_reports,
+                    progress=progress,
+                    attempt=attempt,
+                )
+            }
+        raw = result.text
+        extracted = _extract_json(raw)
+        payload = apply_routed_away_accounting(extracted if isinstance(extracted, dict) else {}, context)
+        parse_report = build_analyst_decision_model_parse_report(payload, ledger, retention_obligations=context.get("retention_obligations"))
+        retry_reports.append(model_retry_report(attempt, "accepted" if parse_report.get("valid") else "invalid", parse_report))
+        if parse_report.get("valid"):
+            _emit_decision_model_call_completed(progress, attempt=attempt, raw=raw, payload=payload)
+            break
+        _emit_decision_model_call_invalid(progress, attempt=attempt, attempts=attempts, raw=raw, parse_report=parse_report)
+    return {"raw": raw, "payload": payload, "parse_report": parse_report, "retry_reports": retry_reports}
+
+
+def _emit_decision_model_call_started(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    *,
+    attempt: int,
+    context: dict[str, Any],
+    prompt: str,
+) -> None:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_call",
+        "started" if attempt == 1 else "retry_started",
+        {
+            "attempt": attempt,
+            "row_count": len(_list(context.get("evidence_rows"))),
+            "prompt_chars": len(prompt),
+            "num_predict": analyst_decision_model_num_predict(context),
+        },
+    )
+
+
+def _decision_model_backend_error_result(
+    exc: RuntimeError,
+    *,
+    context: dict[str, Any],
+    prompt: str,
+    parse_report: dict[str, Any],
+    retry_reports: list[dict[str, Any]],
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    attempt: int,
+) -> dict[str, Any]:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_call",
+        "failed",
+        {"attempt": attempt, "call_status": "backend_error", "error": _short_text(str(exc), 240)},
+    )
+    return {
+        "analyst_decision_context": context,
+        "analyst_decision_model": _invalid_decision_model(context),
+        "analyst_decision_model_prompt": prompt,
+        "analyst_decision_model_raw": "",
+        "analyst_decision_model_parse_report": parse_report,
+        "analyst_decision_model_report": _report("backend_error", parse_report, issues=[str(exc)], retry_reports=retry_reports),
+    }
+
+
+def _emit_decision_model_call_completed(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    *,
+    attempt: int,
+    raw: str,
+    payload: Any,
+) -> None:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_call",
+        "completed",
+        {
+            "attempt": attempt,
+            "call_status": "accepted",
+            "raw_chars": len(raw),
+            "group_count": len(_list(payload.get("evidence_groups") if isinstance(payload, dict) else [])),
+            "disposition_count": len(_list(payload.get("evidence_dispositions") if isinstance(payload, dict) else [])),
+        },
+    )
+
+
+def _emit_decision_model_call_invalid(
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+    *,
+    attempt: int,
+    attempts: int,
+    raw: str,
+    parse_report: dict[str, Any],
+) -> None:
+    _emit_progress(
+        progress,
+        "analyst_decision_model_call",
+        "retry_needed" if attempt < attempts else "failed",
+        {
+            "attempt": attempt,
+            "call_status": "invalid",
+            "raw_chars": len(raw),
+            "issue_count": len(_list(parse_report.get("issues"))),
+            "missing_evidence_item_count": len(_list(parse_report.get("missing_evidence_item_ids"))),
+        },
+    )
 
 
 def _run_parallel_decision_model_candidate(
