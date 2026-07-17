@@ -13,6 +13,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_section_num_predict
+from epistemic_case_mapper.map_briefing_priority_quantity_contracts import (
+    build_priority_quantity_contract_coverage_report,
+    build_priority_quantity_contracts,
+)
 from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
     build_evidence_reconciliation_report,
@@ -99,12 +103,16 @@ def run_parallel_memo_ready_section_generation(
         if evidence_contracts
         else {"schema_id": "evidence_reconciliation_report_v1", "status": "not_available"}
     )
+    priority_quantity_contracts = build_priority_quantity_contracts(memo_ready_packet or {})
+    priority_quantity_coverage = build_priority_quantity_contract_coverage_report(rendered["memo"], priority_quantity_contracts)
     if reconciliation.get("status") == "warning":
         report["status"] = "accepted_with_evidence_tag_warnings"
         report["issues"] = ["evidence_reconciliation_warnings"]
     report.update(
         {
             "evidence_reconciliation_report": reconciliation,
+            "priority_quantity_contracts": priority_quantity_contracts,
+            "priority_quantity_contract_coverage_report": priority_quantity_coverage,
             "evidence_trace_count": len(_list(rendered.get("trace"))),
         }
     )
@@ -116,6 +124,8 @@ def run_parallel_memo_ready_section_generation(
         "tagged_memo": tagged_memo,
         "section_raw": combined_raw,
         "evidence_expression_contracts": evidence_contracts,
+        "priority_quantity_contracts": priority_quantity_contracts,
+        "priority_quantity_contract_coverage_report": priority_quantity_coverage,
         "evidence_trace": rendered.get("trace", []),
         "evidence_reconciliation_report": reconciliation,
         "evidence_tag_section_reports": section_reports,

@@ -75,6 +75,47 @@ def test_priority_quantity_contracts_exclude_background_noise() -> None:
     assert "1.25" in contracts["rows"][0]["quantity_text"]
 
 
+def test_priority_quantity_contracts_do_not_promote_secondary_must_preserve_quantity_groups() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "reader_claim": "The biomarker ratio bounds the answer.",
+                "role": "counterweight",
+                "obligation_level": "should_include",
+                "quantities": [
+                    {
+                        "value": "0.14",
+                        "interpretation": "mean difference of 0.14",
+                        "must_retain": True,
+                        "analyst_quantity_relevance": {
+                            "quantity_role": "biomarker_calibration",
+                            "retention_phrase": "mean difference of 0.14",
+                        },
+                    }
+                ],
+                "must_preserve_terms": [
+                    "LDL-c/HDL-c ratio",
+                    "MD = 0.14",
+                    "95% CI: 0.05 to 0.22",
+                    "healthy subjects",
+                    "LDL-c",
+                    "MD = 8.14",
+                    "95% CI: 4.46 to 11.82",
+                ],
+            }
+        ]
+    }
+
+    contracts = build_priority_quantity_contracts(packet)
+    quantities = [row["quantity_text"] for row in contracts["rows"]]
+
+    assert "MD = 0.14" in quantities
+    assert "95% CI: 0.05 to 0.22" in quantities
+    assert "MD = 8.14" not in quantities
+    assert "95% CI: 4.46 to 11.82" not in quantities
+
+
 def test_priority_quantity_contracts_can_be_filtered_by_evidence_id() -> None:
     contracts = {
         "rows": [

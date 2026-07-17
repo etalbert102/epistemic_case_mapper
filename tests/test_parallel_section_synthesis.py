@@ -86,6 +86,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert result["report"]["decision_usefulness_surface_report"]["schema_id"] == "decision_usefulness_surface_report_v1"
     assert result["report"]["analyst_judgment_utilization_report"]["schema_id"] == "analyst_judgment_utilization_report_v1"
     assert result["report"]["reader_judgment_surface_report"]["judgment_count"] >= 1
+    assert result["report"]["priority_quantity_contract_coverage_report"]["schema_id"] == "priority_quantity_contract_coverage_report_v1"
     assert "## How to Weight the Evidence" in result["memo"]
     assert "## Why This Is the Best Current Read" in result["memo"]
     assert "## What Could Change or Bound the Answer" in result["memo"]

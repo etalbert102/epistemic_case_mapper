@@ -154,7 +154,8 @@ def _quantity_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _numeric_must_preserve_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
-    for term in _string_list(item.get("must_preserve_terms")):
+    terms = _selected_numeric_must_preserve_terms(item)
+    for term in terms:
         if not _term_has_decision_quantity(term):
             continue
         rows.append(
@@ -167,6 +168,50 @@ def _numeric_must_preserve_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return rows
+
+
+def _selected_numeric_must_preserve_terms(item: dict[str, Any]) -> list[str]:
+    terms = _string_list(item.get("must_preserve_terms"))
+    anchor_numbers = _analyst_quantity_numbers(item)
+    if not anchor_numbers:
+        return terms
+    groups: list[tuple[list[str], set[str]]] = []
+    current_group: list[str] = []
+    current_group_numbers: set[str] = set()
+    for term in terms:
+        if _term_has_decision_quantity(term):
+            current_group.append(term)
+            current_group_numbers.update(_numbers(term))
+            continue
+        if current_group:
+            groups.append((current_group, current_group_numbers))
+            current_group = []
+            current_group_numbers = set()
+    if current_group:
+        groups.append((current_group, current_group_numbers))
+    selected = []
+    for group, numbers in groups:
+        if numbers.intersection(anchor_numbers):
+            selected.extend(group)
+        elif len(groups) == 1 and any(_looks_like_interval(term) for term in group):
+            selected.extend(group)
+    return selected
+
+
+def _analyst_quantity_numbers(item: dict[str, Any]) -> set[str]:
+    numbers: set[str] = set()
+    for quantity in _list(item.get("quantities")):
+        if not isinstance(quantity, dict):
+            continue
+        if quantity.get("must_retain") is True or _dict(quantity.get("analyst_quantity_relevance")):
+            for value in (
+                quantity.get("value"),
+                quantity.get("interpretation"),
+                quantity.get("retention_phrase"),
+                _dict(quantity.get("analyst_quantity_relevance")).get("retention_phrase"),
+            ):
+                numbers.update(_numbers(str(value or "")))
+    return numbers
 
 
 def _quantity_text(quantity: dict[str, Any]) -> str:
@@ -276,6 +321,11 @@ def _high_priority_quantity_text(text: str) -> bool:
     )
 
 
+def _looks_like_interval(text: str) -> bool:
+    lowered = str(text or "").lower()
+    return "confidence interval" in lowered or "95% ci" in lowered or " ci:" in lowered
+
+
 def _decision_role_from_text(text: str, item: dict[str, Any]) -> str:
     combined = " ".join([str(text or ""), str(item.get("reader_claim") or ""), str(item.get("role") or ""), str(item.get("memo_function") or "")]).lower()
     if any(token in combined for token in ("subgroup", "diabetes", "high ldl", "older", "boundary", "scope")):
@@ -307,6 +357,10 @@ def _dedupe_contract_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _quantity_key(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9.%/-]+", " ", str(text or "").lower())).strip()
+
+
+def _numbers(text: str) -> set[str]:
+    return set(re.findall(r"\d+(?:\.\d+)?", str(text or "")))
 
 
 def _contract_id(evidence_id: str, quantity_text: str) -> str:
