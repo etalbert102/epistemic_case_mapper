@@ -413,6 +413,7 @@ def build_decision_usefulness_surface_report(memo: str, packet: dict[str, Any]) 
         row
         for row in _list(contract.get("argument_moves"))
         if isinstance(row, dict) and str(row.get("section_id") or "") != "bottom_line"
+        and str(row.get("point") or "").strip()
     ]
     statuses = [_decision_argument_move_surface_status(memo, row) for row in moves]
     issues = [row for row in statuses if not row.get("surfaced")]

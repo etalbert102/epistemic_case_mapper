@@ -68,7 +68,9 @@ def build_decision_argument_contract_report(
     generic = [
         row.get("move_id")
         for row in moves
-        if _generic_point(row.get("point")) and str(row.get("move_type") or "") not in {"answer"}
+        if str(row.get("point") or "").strip()
+        and _generic_point(row.get("point"))
+        and str(row.get("move_type") or "") not in {"answer"}
     ]
     if generic:
         warnings.append("generic_argument_move_points")

@@ -427,6 +427,21 @@ Suggested slices:
    - Result:
      - Synthesis reports now include `decision_usefulness_surface_report_v1` and `analyst_judgment_utilization_report_v1`.
 
+5. Eggs replay and posthoc evaluation
+   - Artifact:
+     - `artifacts/replay/eggs_decision_argument_contract_live_v3_20260717/BRIEFING_READER.md`
+     - `artifacts/replay/eggs_decision_argument_contract_live_v3_20260717/posthoc_decision_argument_evaluation.json`
+   - Verification:
+     - Live synthesis using `ollama:gemma4:12b-mlx` against the saved eggs memo-ready packet.
+     - Posthoc telemetry recomputed after finalization learned to build the decision argument contract from older saved canonical packets.
+   - Result:
+     - Synthesis status: `accepted_with_evidence_tag_warnings`.
+     - Required evidence retention: `ready`, `missing_mandatory_count = 0`.
+     - Decision usefulness surface: `ready`, `missing_move_count = 0`.
+     - Analyst utilization: `ready`, no utilization issues.
+   - Remaining limitation:
+     - Source-binding/citation-care warnings remain (`source_binding_warning_count = 11`), so citation presentation still needs a separate polish/hardening pass.
+
 ## Completion Audit
 
 The plan is complete only when:
