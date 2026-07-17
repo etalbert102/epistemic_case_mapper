@@ -206,6 +206,39 @@ def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() ->
     assert care["warning_count"] == 0
 
 
+def test_citation_care_prefers_analyst_source_weight_role_over_mixed_atom_roles() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s1", "source_label": "Support Study"}],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["s1"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Use as direct support for the current answer.",
+                }
+            ],
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Option A is not associated with increased risk in the general population.",
+                    "source_ids": ["s1"],
+                    "main_use": "drives_answer",
+                },
+                {
+                    "statement": "The same source also describes a subgroup boundary.",
+                    "source_ids": ["s1"],
+                    "main_use": "bounds_answer",
+                },
+            ],
+        },
+    }
+    memo = "Option A is not associated with increased risk in the general population [s1]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    care = report["source_binding_report"]["citation_care_report"]
+    assert care["warning_count"] == 0
+
+
 def test_retention_report_accepts_quantity_with_bound_source_nearby() -> None:
     packet = {
         "source_trail": [{"source_id": "s1", "source_label": "Outcome Study"}],

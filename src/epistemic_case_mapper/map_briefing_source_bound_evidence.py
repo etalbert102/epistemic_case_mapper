@@ -43,7 +43,12 @@ def build_source_binding_report(
         atoms,
         source_aliases=aliases,
     )
-    citation_care = build_citation_care_report(memo, atoms, source_aliases=aliases)
+    citation_care = build_citation_care_report(
+        memo,
+        atoms,
+        source_aliases=aliases,
+        source_roles_override=_source_weight_roles_by_source(packet),
+    )
     ambiguous = _ambiguous_quantity_surfaces(atoms)
     warnings = [*invalid_tuples, *sentence_warnings, *ambiguous, *_list(citation_care.get("warnings"))]
     return {
@@ -173,9 +178,10 @@ def build_citation_care_report(
     atoms: list[dict[str, Any]],
     *,
     source_aliases: dict[str, list[str]] | None = None,
+    source_roles_override: dict[str, set[str]] | None = None,
 ) -> dict[str, Any]:
     alias_to_source = _citation_alias_to_source(atoms, source_aliases or {})
-    roles_by_source = _citation_roles_by_source(atoms)
+    roles_by_source = _citation_roles_by_source(atoms, override=source_roles_override or {})
     warnings: list[dict[str, Any]] = []
     cited_sentence_count = 0
     for sentence in _memo_sentences(memo):
@@ -225,7 +231,7 @@ def build_citation_care_report(
         "status": "ready" if not deduped else "warning",
         "method": "deterministic_sentence_citation_role_audit",
         "cited_sentence_count": cited_sentence_count,
-        "known_citation_source_count": len(_citation_roles_by_source(atoms)),
+        "known_citation_source_count": len(roles_by_source),
         "warning_count": len(deduped),
         "warnings": deduped[:48],
     }
@@ -548,13 +554,63 @@ def _citation_alias_to_source(atoms: list[dict[str, Any]], source_aliases: dict[
     return {key: value for key, value in alias_to_source.items() if key and value}
 
 
-def _citation_roles_by_source(atoms: list[dict[str, Any]]) -> dict[str, set[str]]:
-    roles: dict[str, set[str]] = {}
+def _citation_roles_by_source(atoms: list[dict[str, Any]], *, override: dict[str, set[str]] | None = None) -> dict[str, set[str]]:
+    roles: dict[str, set[str]] = {source_id: set(role_set) for source_id, role_set in (override or {}).items()}
     for atom in atoms:
         role = str(atom.get("citation_role") or "direct_support").strip() or "direct_support"
         for source_id in _string_list(atom.get("source_ids")):
+            if source_id in roles:
+                continue
             roles.setdefault(source_id, set()).add(role)
     return roles
+
+
+def _source_weight_roles_by_source(packet: dict[str, Any]) -> dict[str, set[str]]:
+    canonical = packet.get("canonical_decision_writer_packet") if isinstance(packet.get("canonical_decision_writer_packet"), dict) else {}
+    roles: dict[str, set[str]] = {}
+    for row in _list(canonical.get("source_weight_judgments")):
+        if not isinstance(row, dict):
+            continue
+        role = _source_weight_citation_role(row)
+        if not role:
+            continue
+        for source_id in _string_list(row.get("source_ids")):
+            roles[source_id] = {role}
+    return roles
+
+
+def _source_weight_citation_role(row: dict[str, Any]) -> str:
+    text = _norm(
+        " ".join(
+            str(row.get(key) or "")
+            for key in (
+                "main_use",
+                "memo_weight_sentence",
+                "why_weight_this_way",
+                "reader_facing_limit",
+            )
+        )
+    )
+    main_use = _norm(str(row.get("main_use") or ""))
+    if re.search(r"\b(calibrat|magnitude|quant|estimate)\b", main_use):
+        return "calibration"
+    if re.search(r"\b(bounds?|boundary|scope|limit)\b", main_use):
+        return "boundary"
+    if re.search(r"\b(counter|tension|weaken)\b", main_use):
+        return "counterweight"
+    if re.search(r"\b(context|contextual|guidance)\b", main_use):
+        return "context"
+    if re.search(r"\b(drives?|support|primary|answer)\b", main_use):
+        return "direct_support"
+    if re.search(r"\b(calibrat|magnitude|dose|threshold|estimate|ratio)\b", text):
+        return "calibration"
+    if re.search(r"\b(bound|bounds|boundary|scope|limit|caveat|subgroup)\b", text):
+        return "boundary"
+    if re.search(r"\b(context|guidance|practical|pattern|implementation)\b", text):
+        return "context"
+    if re.search(r"\b(drive|support|primary)\b", text):
+        return "direct_support"
+    return ""
 
 
 def _sentence_cited_source_ids(sentence: str, alias_to_source: dict[str, str]) -> list[str]:
@@ -572,9 +628,12 @@ def _sentence_cited_source_ids(sentence: str, alias_to_source: dict[str, str]) -
 def _sentence_citation_roles(sentence: str) -> set[str]:
     text = _norm(_strip_bracket_citations(sentence))
     roles: set[str] = set()
-    if re.search(r"\b(bound\w*|limit\w*|scope|caveat\w*|except\w*|subgroup|higher risk|high risk|dose response|qualif\w*)\b", text):
+    risk_counter = bool(re.search(r"\b(?:increased|higher)\s+risk\b", text)) and not bool(
+        re.search(r"\b(?:not associated with|no|does not|without)\s+(?:\w+\s+){0,4}(?:increased|higher)\s+risk\b", text)
+    )
+    if re.search(r"\b(bound\w*|limit\w*|scope|caveat\w*|except\w*|subgroup|high risk|dose[- ]?response|mortality|qualif\w*)\b", text) or risk_counter:
         roles.add("boundary")
-    if re.search(r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*)\b", text):
+    if re.search(r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*|harm|mortality)\b", text) or risk_counter:
         roles.add("counterweight")
     if re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|eggs? per day|per day|hr|rr|or|md|ci|ratio)\b", text):
         roles.add("calibration")
@@ -793,7 +852,14 @@ def _quantity_surface_specific_enough(value: str) -> bool:
 
 def _memo_sentences(memo: str) -> list[str]:
     chunks = re.split(r"(?<=[.!?])\s+|\n+", str(memo or ""))
-    return [" ".join(chunk.split()) for chunk in chunks if chunk.strip() and not chunk.lstrip().startswith("#")]
+    return [
+        " ".join(chunk.split())
+        for chunk in chunks
+        if chunk.strip()
+        and not chunk.lstrip().startswith("#")
+        and not re.match(r"^\s*\[[^\]\n]+\]:\s+", chunk)
+        and not chunk.lstrip().startswith("[^")
+    ]
 
 
 def _row_source_ids(row: dict[str, Any]) -> list[str]:

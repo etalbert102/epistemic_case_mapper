@@ -22,6 +22,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
     canonical = _dict(packet.get("canonical_decision_writer_packet"))
     obligations_by_item = _obligations_by_item(canonical)
     source_ids_by_label = _source_ids_by_label(packet)
+    source_weights = _source_weight_judgments_by_source(canonical)
     language_by_item = {
         str(row.get("item_id") or ""): row
         for row in _list(canonical.get("evidence_language_contracts"))
@@ -46,6 +47,14 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                 *_source_ids_from_labels(item, source_ids_by_label),
             ]
         )
+        citation_sources = _citation_source_ids_for_contract(
+            sources,
+            role=role,
+            item=item,
+            obligation=obligation,
+            quantities=quantities,
+            source_weights=source_weights,
+        )
         contracts.append(
             _drop_empty(
                 {
@@ -56,6 +65,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "claim": item.get("reader_claim") or item.get("claim") or obligation.get("statement"),
                     "role": role,
                     "source_ids": sources,
+                    "citation_source_ids": citation_sources,
                     "source_labels": item.get("source_labels")
                     or ([item.get("source_label")] if item.get("source_label") else None),
                     "required_quantity_atoms": quantities,
@@ -135,9 +145,10 @@ def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]
     known_source_ids = {
         source_id
         for contract in contracts
-        for source_id in _string_list(contract.get("source_ids"))
+        for source_id in _string_list(contract.get("source_ids")) + _string_list(contract.get("citation_source_ids"))
     }
     trace = []
+    tagged_memo = _strip_source_citations_adjacent_to_evidence_tags(tagged_memo, known_source_ids)
 
     def replace(match: re.Match[str]) -> str:
         content = match.group(1).strip()
@@ -146,7 +157,7 @@ def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]
             source_ids = []
             for evidence_id in evidence_ids:
                 contract = contracts_by_id.get(evidence_id, {})
-                row_source_ids = _string_list(contract.get("source_ids"))
+                row_source_ids = _string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids"))
                 source_ids.extend(row_source_ids)
                 trace.append(
                     {
@@ -168,6 +179,42 @@ def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]
     memo = re.sub(r"[ \t]+(\n)", r"\1", memo)
     memo = re.sub(r"\s+\.", ".", memo)
     return {"memo": repair_markdown_structure(memo), "trace": trace}
+
+
+def _strip_source_citations_adjacent_to_evidence_tags(text: str, known_source_ids: set[str]) -> str:
+    """Make evidence tags authoritative when a model also emits source brackets.
+
+    Evidence-tagged prompts reserve square-bracket citations for the renderer,
+    but weaker local models sometimes append broad `[source_a, source_b]`
+    bundles after `{E:item}`. Keeping both recreates over-citation, so remove
+    only bracket groups that are adjacent to evidence tags and contain known
+    source IDs.
+    """
+    if not known_source_ids:
+        return str(text or "")
+    result = str(text or "")
+    tag = r"\{[^{}\n]*\bE:[^{}\n]*\}"
+    bracket = r"\[([^\[\]\n]{1,300})\]"
+
+    def remove_after(match: re.Match[str]) -> str:
+        content = match.group(2)
+        return match.group(1) if _bracket_contains_known_source_ids(content, known_source_ids) else match.group(0)
+
+    def remove_before(match: re.Match[str]) -> str:
+        content = match.group(1)
+        return match.group(2) if _bracket_contains_known_source_ids(content, known_source_ids) else match.group(0)
+
+    previous = None
+    while previous != result:
+        previous = result
+        result = re.sub(rf"({tag})\s*{bracket}", remove_after, result)
+        result = re.sub(rf"{bracket}\s*({tag})", remove_before, result)
+    return result
+
+
+def _bracket_contains_known_source_ids(content: str, known_source_ids: set[str]) -> bool:
+    tokens = {token.strip() for token in re.split(r"\s*(?:,|;)\s*", str(content or "")) if token.strip()}
+    return bool(tokens and tokens.intersection(known_source_ids))
 
 
 def build_evidence_reconciliation_report(
@@ -259,6 +306,122 @@ def _source_ids_from_labels(item: dict[str, Any], source_ids_by_label: dict[str,
         if source_id:
             ids.append(source_id)
     return _dedupe(ids)
+
+
+def _source_weight_judgments_by_source(canonical: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    by_source: dict[str, dict[str, Any]] = {}
+    for row in _list(canonical.get("source_weight_judgments")):
+        if not isinstance(row, dict):
+            continue
+        for source_id in _string_list(row.get("source_ids")):
+            by_source[source_id] = row
+    return by_source
+
+
+def _citation_source_ids_for_contract(
+    source_ids: list[str],
+    *,
+    role: str,
+    item: dict[str, Any],
+    obligation: dict[str, Any],
+    quantities: list[dict[str, Any]],
+    source_weights: dict[str, dict[str, Any]],
+) -> list[str]:
+    source_ids = _dedupe(source_ids)
+    if len(source_ids) <= 1:
+        return source_ids
+    desired = _desired_source_weight_roles(role, item=item, obligation=obligation, quantities=quantities)
+    if not desired:
+        return source_ids
+    scored: list[tuple[int, str]] = []
+    for source_id in source_ids:
+        weight = source_weights.get(source_id, {})
+        score = _source_role_score(weight, desired)
+        if score > 0:
+            scored.append((score, source_id))
+    selected = [source_id for _, source_id in sorted(scored, key=lambda row: (-row[0], source_ids.index(row[1])))]
+    if selected:
+        return selected[:2]
+    quantity_sources = _quantity_source_ids(quantities)
+    if quantity_sources and "calibration" in desired:
+        return [source_id for source_id in source_ids if source_id in quantity_sources][:2] or source_ids[:2]
+    return source_ids[:2] if len(source_ids) > 3 else source_ids
+
+
+def _desired_source_weight_roles(
+    role: str,
+    *,
+    item: dict[str, Any],
+    obligation: dict[str, Any],
+    quantities: list[dict[str, Any]],
+) -> set[str]:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            role,
+            item.get("role"),
+            item.get("reader_evidence_role"),
+            item.get("decision_relevance"),
+            obligation.get("role"),
+            obligation.get("prose_instruction"),
+        )
+    ).lower()
+    if quantities or any(token in text for token in ("quant", "magnitude", "calibrat", "estimate", "threshold", "dose")):
+        return {"calibration"}
+    if any(token in text for token in ("counter", "tension", "against", "weaken")):
+        return {"counterweight", "boundary", "calibration"}
+    if any(token in text for token in ("scope", "bound", "boundary", "limit", "caveat", "subgroup", "exception")):
+        return {"boundary", "counterweight", "calibration"}
+    if any(token in text for token in ("context", "practical", "guidance", "implementation")):
+        return {"context", "direct_support"}
+    return {"direct_support"}
+
+
+def _source_weight_text(row: dict[str, Any]) -> str:
+    return " ".join(
+        str(row.get(key) or "")
+        for key in (
+            "main_use",
+            "source_type",
+            "memo_weight_sentence",
+            "why_weight_this_way",
+            "reader_facing_limit",
+            "what_not_to_use_it_for",
+        )
+    ).lower()
+
+
+def _source_role_score(row: dict[str, Any], desired: set[str]) -> int:
+    main_use = str(row.get("main_use") or "").lower()
+    text = _source_weight_text(row)
+    score = 0
+    if "direct_support" in desired and re.search(r"\b(drives?_answer|primary_answer|direct_support|supports?_answer)\b", main_use):
+        score += 6
+    if "boundary" in desired and re.search(r"\b(bounds?_answer|boundary|scope|limiter|limits?_answer)\b", main_use):
+        score += 6
+    if "counterweight" in desired and re.search(r"\b(counter|tension|weaken)\b", main_use):
+        score += 6
+    if "calibration" in desired and re.search(r"\b(calibrat|magnitude|quant|estimate)\b", main_use):
+        score += 6
+    if "context" in desired and re.search(r"\b(context|contextual|guidance)\b", main_use):
+        score += 6
+    if score:
+        return score
+    if "direct_support" in desired and re.search(r"\b(directly supports|primary driver|drives the answer|load-bearing support)\b", text):
+        score += 3
+    if "boundary" in desired and re.search(r"\b(bound|bounds|boundary|scope|limit|caveat|subgroup)\b", text):
+        score += 3
+    if "counterweight" in desired and re.search(r"\b(counter|tension|weaken|risk|harm|mortality)\b", text):
+        score += 3
+    if "calibration" in desired and re.search(r"\b(calibrat|magnitude|dose|threshold|estimate|ratio|quantity)\b", text):
+        score += 3
+    if "context" in desired and re.search(r"\b(context|guidance|practical|pattern|implementation|advisory)\b", text):
+        score += 3
+    return score
+
+
+def _quantity_source_ids(quantities: list[dict[str, Any]]) -> list[str]:
+    return _dedupe(source_id for quantity in quantities for source_id in _string_list(quantity.get("source_ids")))
 
 
 def _label_key(value: Any) -> str:
@@ -435,6 +598,7 @@ def _compact_contract_for_prompt(row: dict[str, Any]) -> dict[str, Any]:
             "claim": row.get("claim"),
             "required": row.get("required"),
             "source_ids": row.get("source_ids"),
+            "citation_source_ids": row.get("citation_source_ids"),
             "quantities": row.get("required_quantity_atoms"),
             "scope": row.get("population_scope"),
             "caveat": row.get("required_caveat"),

@@ -16,6 +16,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import (
     _repair_near_miss_source_ids,
     _unknown_section_source_ids,
 )
+from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+    build_evidence_expression_contracts,
+    render_evidence_tagged_memo,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import _quantity_collision_warnings
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -109,6 +113,60 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert "balanced_answer_frame" not in practical["top_context"]
     assert "bluf_contract" not in practical["top_context"]
     assert "current_read_reference" in practical["top_context"]
+
+
+def test_evidence_tag_renderer_uses_role_appropriate_citation_sources() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "support_source", "source_label": "Support Study"},
+            {"source_id": "boundary_source", "source_label": "Boundary Study"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["support_source"],
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "Directly supports the answer.",
+                },
+                {
+                    "source_ids": ["boundary_source"],
+                    "main_use": "bounds_answer",
+                    "why_weight_this_way": "Bounds the recommendation in a subgroup.",
+                },
+            ],
+            "mandatory_retention_checklist": [],
+        },
+        "evidence_items": [
+            {
+                "item_id": "support_item",
+                "role": "strongest_support",
+                "reader_claim": "Option A is not associated with increased risk in the general population.",
+                "source_ids": ["support_source", "boundary_source"],
+            },
+            {
+                "item_id": "boundary_item",
+                "role": "scope_boundary",
+                "reader_claim": "The answer is bounded in high-risk subgroups.",
+                "source_ids": ["support_source", "boundary_source"],
+            },
+        ],
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+    by_id = {row["evidence_id"]: row for row in contracts}
+
+    assert by_id["support_item"]["citation_source_ids"] == ["support_source"]
+    assert by_id["boundary_item"]["citation_source_ids"] == ["boundary_source"]
+
+    rendered = render_evidence_tagged_memo(
+        "Support claim {E:support_item} [support_source, boundary_source]. "
+        "Boundary claim [support_source, boundary_source] {E:boundary_item}.",
+        contracts,
+    )
+
+    assert "Support claim [support_source]." in rendered["memo"]
+    assert "Boundary claim [boundary_source]." in rendered["memo"]
+    assert "Support claim [support_source, boundary_source]." not in rendered["memo"]
 
 
 def test_section_prompt_renders_sparse_top_context_markdown_notes() -> None:
