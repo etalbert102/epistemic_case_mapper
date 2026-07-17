@@ -65,7 +65,11 @@ def compact_reader_judgments_for_section(
 
 def build_reader_judgment_surface_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
     canonical = _dict(packet.get("canonical_decision_writer_packet")) or packet
-    judgment_packet = _dict(canonical.get("reader_judgment_packet")) or _dict(packet.get("reader_judgment_packet"))
+    judgment_packet = (
+        _dict(canonical.get("reader_judgment_packet"))
+        or _dict(packet.get("reader_judgment_packet"))
+        or build_reader_judgment_packet(canonical)
+    )
     if not judgment_packet:
         return {
             "schema_id": "reader_judgment_surface_report_v1",

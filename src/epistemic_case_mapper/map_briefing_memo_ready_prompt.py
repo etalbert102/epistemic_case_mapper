@@ -17,7 +17,10 @@ from epistemic_case_mapper.map_briefing_memo_ready_action_contract import build_
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_section_jobs import with_section_specific_jobs
-from epistemic_case_mapper.map_briefing_reader_judgment_packet import compact_reader_judgments_for_section
+from epistemic_case_mapper.map_briefing_reader_judgment_packet import (
+    build_reader_judgment_packet,
+    compact_reader_judgments_for_section,
+)
 from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_contract, build_source_weighting_flow_audit, build_source_weighting_section_packet
 
 
@@ -149,6 +152,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
     packet = canonical_packet if isinstance(canonical_packet, dict) else {}
     spine = _dict(packet.get("evidence_weighted_argument_spine"))
     source_weighting_contract = _dict(packet.get("source_weighting_contract")) or build_source_weighting_contract(packet)
+    reader_judgment_packet = _dict(packet.get("reader_judgment_packet")) or build_reader_judgment_packet(packet)
     return {
         "schema_id": "reader_synthesis_packet_v1",
         "canonical_schema_id": packet.get("schema_id"),
@@ -164,7 +168,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "analyst_decision_spine": compact_analyst_decision_spine_for_prompt(_dict(packet.get("analyst_decision_spine"))),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
         "source_weighting": [_compact_source_judgment(row) for row in _list(packet.get("source_weight_judgments")) if isinstance(row, dict)],
-        "reader_judgment_packet": packet.get("reader_judgment_packet"),
+        "reader_judgment_packet": reader_judgment_packet,
         "source_weighting_contract": source_weighting_contract,
         "source_weighting_flow_audit": build_source_weighting_flow_audit(packet, {"source_weighting_contract": source_weighting_contract}),
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
