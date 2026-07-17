@@ -25,6 +25,7 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- Keep packet IDs, schema terms, validation machinery, and audit language out of the prose.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
+        "- For reader-facing judgments, follow the allowed-use and not-enough-for limits when deciding what the judgment can support.\n"
         "- Split evidence with different citation jobs into separate clauses or sentences so each citation supports the exact claim beside it.\n"
         "- Make each paragraph do a distinct reasoning job with fresh sentence-level value.\n\n"
         f"{render_memo_ready_section_markdown_notes(section_packet, known_source_ids=known_source_ids)}\n"
@@ -243,6 +244,10 @@ def _reader_judgment_lines(value: Any) -> list[str]:
             _citations(item),
         ]
         rows.append(_bullet("; ".join(part for part in parts if part)))
+        if allowed := _text(item.get("allowed_use")):
+            rows.append(f"  - Allowed use: {allowed}")
+        if limits := _string_list(item.get("not_enough_for")):
+            rows.append(f"  - Not enough for: {'; '.join(limits[:3])}")
     return rows
 
 

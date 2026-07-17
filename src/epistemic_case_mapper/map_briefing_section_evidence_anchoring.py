@@ -136,6 +136,7 @@ def build_evidence_tagged_section_prompt(
 ) -> str:
     heading = str(section_packet.get("heading") or "").strip()
     compact_contracts = [_compact_contract_for_prompt(row) for row in contracts]
+    section_jobs = build_section_local_evidence_jobs(section_packet, contracts)
     return (
         "You are writing one section of a source-grounded decision memo from markdown analyst notes.\n"
         "Write polished decision-ready prose. Evidence tags are trace anchors that the renderer converts into reader citations.\n\n"
@@ -148,12 +149,187 @@ def build_evidence_tagged_section_prompt(
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"
+        "- Reader-facing allowed-use and not-enough-for limits define the claim role while required contracts still keep their own tags and listed quantities.\n"
+        "- If a quantity appears in an evidence expression contract, keep that quantity in the same sentence as that exact contract's tag.\n"
+        "- When Section-local evidence jobs are present, write around those paragraph jobs and attach tags from each job's allowed evidence IDs for that paragraph.\n"
         "- Write natural prose; tags are trace markers attached to sentences.\n\n"
         f"{render_memo_ready_section_markdown_notes(section_packet, known_source_ids=known_source_ids)}\n\n"
+        f"{_render_section_local_evidence_jobs(section_jobs)}"
         "### Evidence expression contracts\n"
         f"{json.dumps(compact_contracts, indent=2, ensure_ascii=False)}\n\n"
         "Now write the section as natural Markdown prose with evidence tags.\n"
     )
+
+
+def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    section_id = str(_dict(section_packet).get("section_id") or "").strip()
+    if section_id != "counterweights":
+        return []
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        job_id = _counterweight_job_id(contract)
+        grouped.setdefault(job_id, []).append(contract)
+    jobs = []
+    for job_id in _counterweight_job_order():
+        rows = grouped.get(job_id, [])
+        if not rows:
+            continue
+        jobs.append(_section_local_job(job_id, rows))
+    return jobs
+
+
+def _render_section_local_evidence_jobs(jobs: list[dict[str, Any]]) -> str:
+    if not jobs:
+        return ""
+    return "### Section-local evidence jobs\n" + json.dumps(jobs, indent=2, ensure_ascii=False) + "\n\n"
+
+
+def _counterweight_job_order() -> list[str]:
+    return [
+        "dose_or_endpoint_boundary",
+        "subgroup_or_population_boundary",
+        "comparator_or_context_boundary",
+        "update_or_crux_trigger",
+        "other_boundary_or_counterweight",
+    ]
+
+
+def _counterweight_job_id(contract: dict[str, Any]) -> str:
+    text = _contract_job_text(contract)
+    if _matches_any(
+        text,
+        (
+            "subgroup",
+            "subpopulation",
+            "population",
+            "high-risk",
+            "risk group",
+            "baseline risk",
+            "comorbidity",
+            "condition",
+            "diagnosed",
+            "patients with",
+            "participants with",
+            "adults with",
+            "treated population",
+        ),
+    ):
+        return "subgroup_or_population_boundary"
+    if _matches_any(
+        text,
+        (
+            "comparator",
+            "comparison",
+            "instead of",
+            "replace",
+            "substitution",
+            "alternative",
+            "background",
+            "context",
+            "pattern",
+            "mechanism",
+            "pathway",
+            "co-intervention",
+            "control group",
+        ),
+    ):
+        return "comparator_or_context_boundary"
+    if any(term in text for term in ("would change", "would update", "update", "guideline", "monitoring trigger", "threshold", "crux")):
+        return "update_or_crux_trigger"
+    if _matches_any(
+        text,
+        (
+            "dose",
+            "dosage",
+            "serving",
+            "intake",
+            "exposure",
+            "frequency",
+            "threshold",
+            "gradient",
+            "biomarker",
+            "endpoint",
+            "outcome measure",
+            "ratio",
+            "mean difference",
+            "hazard ratio",
+            "relative risk",
+            "odds ratio",
+            "confidence interval",
+        ),
+    ) or _contract_has_quantities(contract):
+        return "dose_or_endpoint_boundary"
+    return "other_boundary_or_counterweight"
+
+
+def _matches_any(text: str, terms: tuple[str, ...]) -> bool:
+    return any(term in text for term in terms)
+
+
+def _section_local_job(job_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "job_id": job_id,
+            "paragraph_job": _counterweight_job_label(job_id),
+            "allowed_evidence_ids": [str(row.get("evidence_id")) for row in rows if row.get("evidence_id")],
+            "required_quantities_by_evidence_id": {
+                str(row.get("evidence_id")): _quantity_values_for_job(row)
+                for row in rows
+                if row.get("evidence_id") and _quantity_values_for_job(row)
+            },
+            "writing_guidance": _counterweight_job_guidance(job_id),
+        }
+    )
+
+
+def _counterweight_job_label(job_id: str) -> str:
+    labels = {
+        "dose_or_endpoint_boundary": "Explain the dose, endpoint, or biomarker boundary.",
+        "subgroup_or_population_boundary": "Explain the subgroup or population boundary.",
+        "comparator_or_context_boundary": "Explain the comparator, context, or mechanism boundary.",
+        "update_or_crux_trigger": "Explain what would change or update the answer.",
+        "other_boundary_or_counterweight": "Explain any remaining boundary or counterweight.",
+    }
+    return labels.get(job_id, "Explain the boundary or counterweight.")
+
+
+def _counterweight_job_guidance(job_id: str) -> str:
+    guidance = {
+        "dose_or_endpoint_boundary": "Use these tags for measured quantities, dose thresholds, biomarker endpoints, and clinical endpoint limits.",
+        "subgroup_or_population_boundary": "Use these tags for subgroup-specific or population-specific limits.",
+        "comparator_or_context_boundary": "Use these tags for comparator, background-context, substitution, or mechanism boundaries.",
+        "update_or_crux_trigger": "Use these tags for future evidence, thresholds, or guideline changes that would alter the answer.",
+        "other_boundary_or_counterweight": "Use these tags for remaining limiting evidence not covered above.",
+    }
+    return guidance.get(job_id, "Use these tags for their listed boundary role.")
+
+
+def _quantity_values_for_job(contract: dict[str, Any]) -> list[str]:
+    values = []
+    for quantity in _list(contract.get("required_quantity_atoms")):
+        if isinstance(quantity, dict):
+            values.extend(_string_list(quantity.get("value")))
+        else:
+            values.extend(_string_list(quantity))
+    return _dedupe(values)
+
+
+def _contract_has_quantities(contract: dict[str, Any]) -> bool:
+    return bool(_quantity_values_for_job(contract))
+
+
+def _contract_job_text(contract: dict[str, Any]) -> str:
+    parts = [
+        contract.get("claim"),
+        contract.get("role"),
+        contract.get("decision_relevance"),
+        contract.get("population_scope"),
+        contract.get("required_caveat"),
+        " ".join(_quantity_values_for_job(contract)),
+    ]
+    return " ".join(str(part or "") for part in parts).lower()
 
 
 def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]]) -> dict[str, Any]:

@@ -48,6 +48,8 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["reader_judgment_packet"]["judgments"]
     assert any(row["target_section"] == "source_weighting" for row in canonical["reader_judgment_packet"]["judgments"])
     assert any(row["judgment_type"] == "counterweight_disposition" for row in canonical["reader_judgment_packet"]["judgments"])
+    assert any(row.get("allowed_use") for row in canonical["reader_judgment_packet"]["judgments"])
+    assert any(row.get("not_enough_for") for row in canonical["reader_judgment_packet"]["judgments"])
     assert canonical["mandatory_retention_checklist"]
     assert canonical["citation_registry"]
     assert canonical["quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
@@ -89,14 +91,25 @@ def test_section_packets_receive_reader_judgments_to_surface() -> None:
 
     source_weighting = by_id["source_weighting"]["top_context"]["reader_judgments_to_surface"]
     counterweights = by_id["counterweights"]["top_context"]["reader_judgments_to_surface"]
+    answer = by_id["answer_evidence"]["top_context"]["reader_judgments_to_surface"]
 
     assert source_weighting
     assert any(row["judgment_type"] == "confidence_rationale" for row in source_weighting)
     assert counterweights
     assert any(row["judgment_type"] == "counterweight_disposition" for row in counterweights)
+    limiting = [row for row in counterweights if row["judgment_type"] in {"counterweights", "counterweight_disposition", "scope_boundaries"}]
+    assert limiting
+    assert all(row.get("allowed_use") for row in limiting)
+    assert any("broad support" in " ".join(row.get("not_enough_for", [])).lower() for row in limiting)
+    calibrators = [row for row in answer if row["judgment_type"] == "calibrators"]
+    assert calibrators
+    assert all("calibrate" in row.get("allowed_use", "") for row in calibrators)
+    assert any("direct outcome evidence" in " ".join(row.get("not_enough_for", [])).lower() for row in calibrators)
     assert "### Reader-facing judgments to surface" in plan["sections"][0]["prompt"] or any(
         "### Reader-facing judgments to surface" in section["prompt"] for section in plan["sections"]
     )
+    assert any("Allowed use:" in section["prompt"] for section in plan["sections"])
+    assert any("Not enough for:" in section["prompt"] for section in plan["sections"])
 
 
 def test_canonical_source_weighting_uses_explicit_analyst_hierarchy_over_projected_role() -> None:

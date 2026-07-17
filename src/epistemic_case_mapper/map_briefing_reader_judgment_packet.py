@@ -157,6 +157,7 @@ def _source_weighting_judgments(packet: dict[str, Any]) -> list[dict[str, Any]]:
             claim = _first_text(item.get("claim"), item.get("why_this_weight"), item.get("decision_relevance"))
             if not claim:
                 continue
+            use_contract = _judgment_use_contract(kind, lane=str(lane), row=item)
             rows.append(
                 _judgment(
                     kind,
@@ -166,6 +167,8 @@ def _source_weighting_judgments(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     evidence_item_ids=_string_list(item.get("evidence_item_ids") or item.get("item_id")),
                     why_surface=_first_text(item.get("why_this_weight"), item.get("decision_relevance"), default_why),
                     priority="high" if kind in {"evidence_drivers", "counterweights", "scope_boundaries"} else "medium",
+                    allowed_use=use_contract["allowed_use"],
+                    not_enough_for=use_contract["not_enough_for"],
                     search_text=[claim, item.get("why_this_weight"), *_quantity_values(item)],
                 )
             )
@@ -184,6 +187,8 @@ def _source_weighting_judgments(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 evidence_item_ids=_string_list(source.get("evidence_item_ids")),
                 why_surface="The reader should know how much work this source can do in the answer.",
                 priority="medium",
+                allowed_use=_source_judgment_allowed_use(source),
+                not_enough_for=_source_judgment_not_enough_for(source),
                 search_text=[judgment_text, source.get("main_use"), source.get("reader_facing_limit")],
             )
         )
@@ -201,6 +206,8 @@ def _counterweight_judgments(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 analyst.get("counterweight_weighting"),
                 why_surface="The memo should say whether counterweights overturn, bound, weaken, or merely calibrate the answer.",
                 priority="high",
+                allowed_use="Use this to state what the limiting evidence does to the answer.",
+                not_enough_for=["Independent support for the main answer."],
                 search_text=[analyst.get("counterweight_weighting")],
             )
         )
@@ -219,6 +226,13 @@ def _counterweight_judgments(packet: dict[str, Any]) -> list[dict[str, Any]]:
                 evidence_item_ids=_string_list(row.get("item_id")),
                 why_surface="The reader needs to know what this limitation does to the answer.",
                 priority="high",
+                allowed_use="Use this to bound, weaken, qualify, or create a crux for the answer.",
+                not_enough_for=_dedupe(
+                    [
+                        *_string_list(row.get("not_enough_for")),
+                        "Broad support for the answer.",
+                    ]
+                ),
                 search_text=[row.get("claim"), row.get("disposition"), row.get("disposition_rationale"), *_quantity_values(row)],
             )
         )
@@ -378,6 +392,8 @@ def _judgment(
     source_ids: list[str] | None = None,
     evidence_item_ids: list[str] | None = None,
     priority: str = "medium",
+    allowed_use: str = "",
+    not_enough_for: list[str] | None = None,
     search_text: list[Any] | None = None,
 ) -> dict[str, Any]:
     text = _short_text(str(judgment or "").strip(), 700)
@@ -388,6 +404,8 @@ def _judgment(
         "priority": priority,
         "judgment": text,
         "why_surface": _short_text(why_surface, 360),
+        "allowed_use": _short_text(allowed_use, 360),
+        "not_enough_for": _dedupe(not_enough_for or []),
         "source_ids": _dedupe(source_ids or []),
         "evidence_item_ids": _dedupe(evidence_item_ids or []),
         "search_terms": _search_terms([text, *(search_text or [])]),
@@ -421,6 +439,8 @@ def _compact_judgment(row: dict[str, Any]) -> dict[str, Any]:
             "priority": row.get("priority"),
             "judgment": _short_text(row.get("judgment"), 520),
             "why_surface": _short_text(row.get("why_surface"), 260),
+            "allowed_use": _optional_short_text(row.get("allowed_use"), 260),
+            "not_enough_for": _string_list(row.get("not_enough_for"))[:6],
             "source_ids": _string_list(row.get("source_ids"))[:6],
             "evidence_item_ids": _string_list(row.get("evidence_item_ids"))[:6],
             "search_terms": _string_list(row.get("search_terms"))[:8],
@@ -523,6 +543,11 @@ def _first_text(*values: Any) -> str:
     return ""
 
 
+def _optional_short_text(value: Any, limit: int) -> str:
+    text = str(value or "").strip()
+    return _short_text(text, limit) if text else ""
+
+
 def _join_parts(parts: list[Any]) -> str:
     return _short_text("; ".join(str(part).strip() for part in parts if str(part or "").strip()), 700)
 
@@ -535,6 +560,81 @@ def _quantity_values(row: dict[str, Any]) -> list[str]:
         else:
             values.extend(_string_list(quantity))
     return values
+
+
+def _judgment_use_contract(kind: str, *, lane: str, row: dict[str, Any]) -> dict[str, Any]:
+    existing_limits = _string_list(row.get("not_enough_for"))
+    if kind == "evidence_drivers":
+        return {
+            "allowed_use": "Use this to carry the main answer.",
+            "not_enough_for": existing_limits,
+        }
+    if kind == "calibrators":
+        return {
+            "allowed_use": "Use this to calibrate magnitude, mechanism, or plausibility while keeping its endpoint and design limits attached.",
+            "not_enough_for": _dedupe(
+                [
+                    *existing_limits,
+                    "Direct outcome evidence by itself.",
+                    "A recommendation beyond the measured endpoint by itself.",
+                ]
+            ),
+        }
+    if kind in {"counterweights", "scope_boundaries"}:
+        return {
+            "allowed_use": "Use this to bound, narrow, or stress-test the answer.",
+            "not_enough_for": _dedupe(
+                [
+                    *existing_limits,
+                    "Broad support for the main answer.",
+                    "Application outside the stated scope.",
+                ]
+            ),
+        }
+    if kind == "decision_crux":
+        return {
+            "allowed_use": "Use this to state what would change the answer.",
+            "not_enough_for": _dedupe([*existing_limits, "Settled evidence when framed as a crux."]),
+        }
+    if kind == "contextual_evidence":
+        return {
+            "allowed_use": "Use this for application context or interpretation.",
+            "not_enough_for": _dedupe([*existing_limits, "Independent evidence for the main answer."]),
+        }
+    return {
+        "allowed_use": _first_text(row.get("how_to_use"), f"Use this according to its {str(lane).replace('_', ' ')} source role."),
+        "not_enough_for": existing_limits,
+    }
+
+
+def _source_judgment_allowed_use(source: dict[str, Any]) -> str:
+    main_use = str(source.get("main_use") or "").lower()
+    if "drive" in main_use or "support" in main_use:
+        return "Use this source to carry the main answer only for the claims it directly supports."
+    if "calibrat" in main_use or "interpret" in main_use:
+        return "Use this source to calibrate magnitude, mechanism, or interpretation while keeping endpoint limits visible."
+    if "bound" in main_use or "counter" in main_use or "limit" in main_use:
+        return "Use this source to bound, narrow, or stress-test the answer."
+    if "context" in main_use:
+        return "Use this source for context or application rather than as independent answer support."
+    return "Use this source only for the role assigned by the analyst source hierarchy."
+
+
+def _source_judgment_not_enough_for(source: dict[str, Any]) -> list[str]:
+    limits = _string_list(source.get("what_not_to_use_it_for") or source.get("limits"))
+    main_use = str(source.get("main_use") or "").lower()
+    if "calibrat" in main_use or "interpret" in main_use:
+        limits.extend(
+            [
+                "Direct outcome evidence by itself.",
+                "A recommendation beyond the measured endpoint by itself.",
+            ]
+        )
+    if "bound" in main_use or "counter" in main_use or "limit" in main_use:
+        limits.append("Broad support for the main answer.")
+    if "context" in main_use:
+        limits.append("Independent answer support.")
+    return _dedupe(limits)
 
 
 _STOPWORDS = {

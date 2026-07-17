@@ -18,7 +18,9 @@ from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import (
     run_parallel_memo_ready_section_generation,
 )
 from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+    build_evidence_tagged_section_prompt,
     build_evidence_expression_contracts,
+    build_section_local_evidence_jobs,
     render_evidence_tagged_memo,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import _quantity_collision_warnings
@@ -69,6 +71,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert any("### Reader-facing judgments to surface" in prompt for prompt in calls)
     assert any("### Required evidence points" in prompt for prompt in calls)
     assert any("### Source weighting notes" in prompt for prompt in calls)
+    assert any("required contracts still keep their own tags and listed quantities" in prompt for prompt in calls)
     assert any("Translate the settled answer and its limits into what guidance should say" in prompt for prompt in calls)
     assert all("section_packet:" not in prompt for prompt in calls)
     assert any("### Evidence expression contracts" in prompt for prompt in calls)
@@ -155,6 +158,58 @@ def test_section_synthesis_retries_when_required_quantity_is_dropped(monkeypatch
     assert result["report"]["status"] == "accepted"
     assert result["report"]["section_reports"][0]["validation_attempts"] == 2
     assert "25% loss reduction" in result["memo"]
+
+
+def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
+    section_packet = {
+        "section_id": "counterweights",
+        "heading": "What Could Change or Bound the Answer",
+        "section_job": "Explain limiting evidence.",
+        "evidence_context": [
+            {"item_id": "dose_item", "claim": "Higher dose evidence changes the endpoint boundary."},
+            {"item_id": "subgroup_item", "claim": "A subgroup has a different baseline risk."},
+            {"item_id": "comparator_item", "claim": "The comparator matters for interpretation."},
+        ],
+    }
+    contracts = [
+        {
+            "evidence_id": "dose_item",
+            "claim": "Higher intake changes the biomarker endpoint.",
+            "role": "scope_boundary",
+            "required": True,
+            "source_ids": ["s1"],
+            "required_quantity_atoms": [{"value": "1.25", "interpretation": "effect estimate"}],
+        },
+        {
+            "evidence_id": "subgroup_item",
+            "claim": "Participants with a baseline condition have a different risk profile.",
+            "role": "scope_boundary",
+            "required": True,
+            "source_ids": ["s2"],
+        },
+        {
+            "evidence_id": "comparator_item",
+            "claim": "The result depends on the comparator and background context.",
+            "role": "scope_boundary",
+            "required": True,
+            "source_ids": ["s3"],
+        },
+    ]
+
+    jobs = build_section_local_evidence_jobs(section_packet, contracts)
+    prompt = build_evidence_tagged_section_prompt(section_packet, known_source_ids=["s1", "s2", "s3"], contracts=contracts)
+
+    assert [job["job_id"] for job in jobs] == [
+        "dose_or_endpoint_boundary",
+        "subgroup_or_population_boundary",
+        "comparator_or_context_boundary",
+    ]
+    assert "### Section-local evidence jobs" in prompt
+    assert '"allowed_evidence_ids"' in prompt
+    assert '"required_quantities_by_evidence_id"' in prompt
+    assert '"dose_item": [' in prompt
+    assert '"1.25"' in prompt
+    assert "attach tags from each job's allowed evidence IDs" in prompt
 
 
 def test_section_synthesis_retry_restates_missing_contract(monkeypatch: pytest.MonkeyPatch) -> None:
