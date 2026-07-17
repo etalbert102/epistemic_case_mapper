@@ -199,6 +199,31 @@ def test_presentation_smooths_stock_phrasing_without_changing_citations() -> Non
     assert "smoothed_stock_phrasing" in result["report"]["changes"]
 
 
+def test_presentation_smooths_generic_model_prose_without_changing_sources() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\n"
+        "**Bottom Line:** Adopt option A conditionally.\n\n"
+        "These sources provide the foundational basis for the neutral stance [outcome_2025]. "
+        "Other sources serve to narrow the scope of the recommendation. "
+        "To ensure practical application without overclaiming, use the boundary."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "provide the foundational basis" not in result["memo"]
+    assert "the neutral stance" not in result["memo"]
+    assert "serve to narrow the scope" not in result["memo"]
+    assert "To ensure practical application without overclaiming" not in result["memo"]
+    assert "carry the main answer" in result["memo"]
+    assert "[Outcome 2025]" in result["memo"]
+    assert "smoothed_stock_phrasing" in result["report"]["changes"]
+
+
 def test_presentation_compacts_repeated_adjacent_sentence_citations() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

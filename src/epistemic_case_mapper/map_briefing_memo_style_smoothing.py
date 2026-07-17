@@ -10,6 +10,23 @@ def smooth_stock_memo_phrasing(memo: str) -> str:
         "The current read is further bounded": "The read is also bounded",
         "It is essential to": "The important move is to",
         "To avoid over-applying this answer": "In applying this answer",
+        "provide the foundational basis for a neutral stance": "carry the main answer",
+        "provides the foundational basis for a neutral stance": "carries the main answer",
+        "provide the necessary nuance to ensure": "help ensure",
+        "provides the necessary nuance to ensure": "helps ensure",
+        "primary empirical basis for a neutral stance": "primary empirical support for that conclusion",
+        "provide the foundational basis": "carry the main answer",
+        "provides the foundational basis": "carries the main answer",
+        "serve to narrow the scope": "mainly narrow the scope",
+        "serves to narrow the scope": "mainly narrows the scope",
+        "provide the necessary nuance": "keep the recommendation calibrated",
+        "provides the necessary nuance": "keeps the recommendation calibrated",
+        "To ensure practical application without overclaiming": "In practice",
+        "current neutral stance": "current neutral conclusion",
+        "The neutral stance": "The neutral conclusion",
+        "a neutral stance": "a neutral conclusion",
+        "the neutral stance": "the neutral conclusion",
+        "This neutral stance": "This neutral conclusion",
     }
     next_memo = memo
     for stock, replacement in replacements.items():
