@@ -18,6 +18,7 @@ GLOBAL_ANALYST_TASKS: tuple[str, ...] = (
     "evidence_roles",
     "quantity_plan",
     "source_hierarchy",
+    "source_weighting_guidance",
     "argument_blueprint",
 )
 
@@ -57,6 +58,7 @@ def _task_instruction(task_id: str) -> str:
         "evidence_roles": "Classify every evidence row's whole-case decision role and memo inclusion.",
         "quantity_plan": "Decide which quantities must survive in the memo and how to word them safely.",
         "source_hierarchy": "Create a global comparative source hierarchy by marginal decision role.",
+        "source_weighting_guidance": "Create compact reader-facing source-weight judgments for memo synthesis.",
         "argument_blueprint": "Create the reader-facing argument blueprint that should control memo synthesis.",
     }[task_id]
 
@@ -122,6 +124,22 @@ def _task_schema(task_id: str) -> dict[str, Any]:
             ],
             "footnote_or_appendix_material": [{"evidence_item_id": "evidence_id", "reason": "why it should not be in main prose"}],
         },
+        "source_weighting_guidance": {
+            "schema_id": "global_source_weighting_guidance_v1",
+            "source_weight_judgments": [
+                {
+                    "source_ids": ["source_id"],
+                    "source_type": "observational_primary | trial_or_intervention | evidence_synthesis | guidance_or_advisory | contextual_summary | mixed_or_unclear",
+                    "main_use": "drives_answer | calibrates_magnitude | bounds_answer | defines_scope | identifies_crux | contextualizes",
+                    "why_weight_this_way": "why this source has this marginal decision role",
+                    "reader_facing_limit": "short limitation a reader should understand",
+                    "what_not_to_use_it_for": ["unsupported uses"],
+                    "memo_weight_sentence": "one natural sentence the memo can adapt",
+                    "confidence_effect": "raises_confidence | lowers_confidence | narrows_scope | mixed | neutral",
+                    "evidence_item_ids": ["evidence_id"],
+                }
+            ],
+        },
     }
     return schemas[task_id]
 
@@ -159,6 +177,15 @@ def _task_context(task_id: str, context: dict[str, Any]) -> dict[str, Any]:
             "source_inventory": _source_inventory(rows),
             "source_lane_hints": _source_lane_hints(rows),
             "top_decision_evidence": [_summary_row(row) for row in _select_decision_rows(rows, limit=18)],
+        }
+    if task_id == "source_weighting_guidance":
+        selected = _select_decision_rows(rows, limit=20)
+        return {
+            **common,
+            "source_inventory": _source_inventory(selected),
+            "source_lane_hints": _source_lane_hints(selected),
+            "top_decision_evidence": [_source_weighting_row(row) for row in selected],
+            "selection_note": "Compact context for source-role prose only; do not reclassify every evidence item.",
         }
     if task_id == "argument_blueprint":
         selected = _select_decision_rows(rows, limit=24)
@@ -287,6 +314,27 @@ def _blueprint_row(row: dict[str, Any]) -> dict[str, Any]:
 
 def _summary_row(row: dict[str, Any]) -> dict[str, Any]:
     return _keep(row, ["evidence_item_id", "claim", "source_ids", "adjudicated_memo_use", "adjudicated_answer_relation", "effect_on_final_answer", "quantity_values", "source_weight_note"])
+
+
+def _source_weighting_row(row: dict[str, Any]) -> dict[str, Any]:
+    return _keep(
+        row,
+        [
+            "evidence_item_id",
+            "claim",
+            "source_ids",
+            "adjudicated_memo_use",
+            "adjudicated_answer_relation",
+            "effect_on_final_answer",
+            "decision_contribution",
+            "use_in_reasoning",
+            "key_qualifier",
+            "quantity_values",
+            "source_weight_note",
+            "misuse_warning",
+            "source_quality",
+        ],
+    )
 
 
 def _compact_obligations(value: Any, selected_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

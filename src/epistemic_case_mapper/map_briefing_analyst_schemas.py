@@ -356,6 +356,8 @@ class AnalystDecisionModel(BaseModel):
     quantity_relevance_decisions: list[AnalystQuantityRelevanceDecision] = Field(default_factory=list)
     source_hierarchy: dict[str, Any] = Field(default_factory=dict)
     source_hierarchy_report: dict[str, Any] = Field(default_factory=dict)
+    source_weight_judgments: list[dict[str, Any]] = Field(default_factory=list)
+    source_weight_judgment_report: dict[str, Any] = Field(default_factory=dict)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
 

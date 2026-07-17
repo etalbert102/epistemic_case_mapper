@@ -119,6 +119,10 @@ def build_analyst_decision_model_from_global_tasks(
         _dict(payloads.get("source_hierarchy")),
         allowed_source_ids=_context_source_ids(context),
     )
+    source_weight_judgments = _valid_source_weight_judgments(
+        context,
+        _list(_dict(payloads.get("source_weighting_guidance")).get("source_weight_judgments")),
+    )
     blueprint = _dict(payloads.get("argument_blueprint"))
     groups = _groups_from_global_tasks(context, answer_frame, evidence_roles, blueprint)
     groups, _ranking_guard = apply_decision_diagnostic_ranking(groups, _rows(context))
@@ -143,6 +147,8 @@ def build_analyst_decision_model_from_global_tasks(
         "quantity_relevance_decisions": quantity_relevance,
         "source_hierarchy": source_hierarchy,
         "source_hierarchy_report": source_report,
+        "source_weight_judgments": source_weight_judgments,
+        "source_weight_judgment_report": _source_weight_judgment_report(context, source_weight_judgments),
         "quantitative_anchors": _quantity_anchors(quantity_relevance),
         "what_would_change_the_answer": _what_would_change(answer_frame, evidence_roles),
         "decision_logic": _decision_logic(answer_frame, groups, evidence_roles, source_hierarchy),
@@ -477,6 +483,58 @@ def _valid_quantity_decisions(context: dict[str, Any], rows: list[Any]) -> list[
     return result
 
 
+def _valid_source_weight_judgments(context: dict[str, Any], rows: list[Any]) -> list[dict[str, Any]]:
+    known_sources = set(_context_source_ids(context))
+    known_evidence = {str(row.get("evidence_item_id") or "") for row in _rows(context)}
+    result = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            continue
+        source_ids = [source_id for source_id in _string_list(row.get("source_ids") or row.get("source_id")) if source_id in known_sources]
+        if not source_ids:
+            continue
+        evidence_ids = [evidence_id for evidence_id in _string_list(row.get("evidence_item_ids")) if evidence_id in known_evidence]
+        result.append(
+            _drop_empty(
+                {
+                    "judgment_id": f"analyst_source_weight_{index:03d}",
+                    "source_ids": _dedupe(source_ids),
+                    "source_type": _source_type(row.get("source_type")),
+                    "main_use": _main_use(row.get("main_use")),
+                    "why_weight_this_way": _short_text(row.get("why_weight_this_way"), 700),
+                    "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
+                    "what_not_to_use_it_for": [_short_text(value, 360) for value in _string_list(row.get("what_not_to_use_it_for")) if _short_text(value, 360)],
+                    "memo_weight_sentence": _short_text(row.get("memo_weight_sentence"), 520),
+                    "confidence_effect": _confidence_effect(row.get("confidence_effect")),
+                    "evidence_item_ids": evidence_ids,
+                    "method": "parallel_global_analyst_source_weighting",
+                }
+            )
+        )
+    return result
+
+
+def _source_weight_judgment_report(context: dict[str, Any], judgments: list[dict[str, Any]]) -> dict[str, Any]:
+    source_ids = set(_context_source_ids(context))
+    judged = {source_id for row in judgments for source_id in _string_list(row.get("source_ids"))}
+    missing = sorted(source_ids - judged)
+    warnings = []
+    if source_ids and not judgments:
+        warnings.append("missing_parallel_source_weight_judgments")
+    if missing:
+        warnings.append("source_ids_without_parallel_source_weight_judgment")
+    return {
+        "schema_id": "parallel_global_source_weight_judgment_report_v1",
+        "status": "ready" if not warnings else "warning",
+        "method": "parallel_global_analyst_source_weighting",
+        "source_count": len(source_ids),
+        "judgment_count": len(judgments),
+        "judged_source_count": len(judged),
+        "missing_source_ids": missing[:20],
+        "warnings": warnings,
+    }
+
+
 def _context_source_ids(context: dict[str, Any]) -> list[str]:
     return _dedupe(source_id for row in _rows(context) for source_id in _string_list(row.get("source_ids")))
 
@@ -594,6 +652,7 @@ def _task_num_predict(task_id: str) -> int:
         "evidence_roles": 8192,
         "quantity_plan": 6144,
         "source_hierarchy": 4096,
+        "source_weighting_guidance": 4096,
         "argument_blueprint": 6144,
     }.get(task_id, 4096)
 
@@ -618,6 +677,62 @@ def _dedupe_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen.add(str(group.get("group_id") or ""))
         deduped.append(group)
     return deduped
+
+
+def _source_type(value: Any) -> str:
+    text = _enum_text(value)
+    aliases = {
+        "observational": "observational_primary",
+        "cohort": "observational_primary",
+        "trial": "trial_or_intervention",
+        "rct": "trial_or_intervention",
+        "intervention": "trial_or_intervention",
+        "review": "evidence_synthesis",
+        "meta_analysis": "evidence_synthesis",
+        "synthesis": "evidence_synthesis",
+        "guidance": "guidance_or_advisory",
+        "guideline": "guidance_or_advisory",
+        "advisory": "guidance_or_advisory",
+        "context": "contextual_summary",
+        "background": "contextual_summary",
+    }
+    allowed = {"observational_primary", "trial_or_intervention", "evidence_synthesis", "guidance_or_advisory", "contextual_summary", "mixed_or_unclear"}
+    return aliases.get(text, text) if aliases.get(text, text) in allowed else "mixed_or_unclear"
+
+
+def _main_use(value: Any) -> str:
+    text = _enum_text(value)
+    aliases = {
+        "support": "drives_answer",
+        "primary": "drives_answer",
+        "driver": "drives_answer",
+        "calibrate": "calibrates_magnitude",
+        "magnitude": "calibrates_magnitude",
+        "bound": "bounds_answer",
+        "counterweight": "bounds_answer",
+        "scope": "defines_scope",
+        "applicability": "defines_scope",
+        "crux": "identifies_crux",
+        "context": "contextualizes",
+        "background": "contextualizes",
+    }
+    allowed = {"drives_answer", "calibrates_magnitude", "bounds_answer", "defines_scope", "identifies_crux", "contextualizes"}
+    return aliases.get(text, text) if aliases.get(text, text) in allowed else "contextualizes"
+
+
+def _confidence_effect(value: Any) -> str:
+    text = _enum_text(value)
+    aliases = {"raise": "raises_confidence", "raises": "raises_confidence", "lower": "lowers_confidence", "lowers": "lowers_confidence", "narrows": "narrows_scope"}
+    allowed = {"raises_confidence", "lowers_confidence", "narrows_scope", "mixed", "neutral"}
+    return aliases.get(text, text) if aliases.get(text, text) in allowed else "neutral"
+
+
+def _enum_text(value: Any) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in ("", [], {}, None)}
 
 
 def _reason_or_claim(context: dict[str, Any], row: Any, *, fallback: str) -> str:

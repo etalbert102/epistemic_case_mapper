@@ -27,7 +27,10 @@ from epistemic_case_mapper.map_briefing_source_hierarchy_projection import (
     source_hierarchy_lane_index,
     source_hierarchy_match_for_row,
 )
-from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_bundle
+from epistemic_case_mapper.map_briefing_source_weight_judgments import (
+    build_source_weight_judgment_bundle,
+    build_source_weight_judgment_report,
+)
 from epistemic_case_mapper.map_briefing_source_weighting_contract import (
     build_source_weighting_contract,
     build_source_weighting_flow_audit,
@@ -49,7 +52,7 @@ def build_canonical_decision_writer_packet(
         else build_writer_decision_interface(packet)
     )
     source_trail = _list(packet.get("source_trail"))
-    source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
+    source_weight_bundle = _source_weight_bundle(packet, interface, source_trail)
     skeleton = _decision_brief_skeleton(interface)
     weighted_frame = _source_weighted_answer_frame(packet, interface)
     counterweights = _counterweight_dispositions(interface)
@@ -68,7 +71,7 @@ def build_canonical_decision_writer_packet(
     packet = reconcile_packet_evidence_items(packet, interface)
     skeleton = _decision_brief_skeleton(interface)
     analyst_frame = _analyst_reasoning_frame(packet, interface)
-    source_weight_bundle = build_source_weight_judgment_bundle(interface, source_trail)
+    source_weight_bundle = _source_weight_bundle(packet, interface, source_trail)
     weighted_frame = _source_weighted_answer_frame(packet, interface)
     counterweights = _counterweight_dispositions(interface)
     scope_boundaries = _scope_boundaries(interface)
@@ -122,6 +125,16 @@ def build_canonical_decision_writer_packet(
     canonical["source_weighting_flow_audit"] = build_source_weighting_flow_audit(canonical)
     canonical["quality_report"] = build_canonical_decision_writer_packet_quality_report(canonical)
     return canonical
+
+
+def _source_weight_bundle(packet: dict[str, Any], interface: dict[str, Any], source_trail: list[Any]) -> dict[str, Any]:
+    analyst_judgments = [row for row in _list(packet.get("analyst_source_weight_judgments")) if isinstance(row, dict)]
+    if analyst_judgments:
+        return {
+            "source_weight_judgments": analyst_judgments,
+            "source_weight_judgment_report": build_source_weight_judgment_report(analyst_judgments, source_trail),
+        }
+    return build_source_weight_judgment_bundle(interface, source_trail)
 
 
 def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:

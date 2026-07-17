@@ -272,12 +272,15 @@ def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any
     _progress(progress, "decision_usefulness", "completed", _report_status(scaffold, "decision_usefulness_report"))
 
     _progress(progress, "model_source_weighting", "started")
-    source_weighting_bundle = run_model_source_weight_judgments(
-        memo_ready if isinstance(memo_ready, dict) else {},
-        backend=backend_config.backend,
-        backend_timeout=backend_config.timeout,
-        backend_retries=backend_config.retries,
-    )
+    if _parallel_analyst_source_weighting_ready(canonical):
+        source_weighting_bundle = _skipped_model_source_weighting_bundle(canonical)
+    else:
+        source_weighting_bundle = run_model_source_weight_judgments(
+            memo_ready if isinstance(memo_ready, dict) else {},
+            backend=backend_config.backend,
+            backend_timeout=backend_config.timeout,
+            backend_retries=backend_config.retries,
+        )
     scaffold.update(source_weighting_bundle)
     if isinstance(memo_ready, dict):
         scaffold["memo_ready_packet"] = attach_model_source_weighting_to_packet(memo_ready, source_weighting_bundle)
@@ -316,6 +319,36 @@ def _skipped_analyst_packet_refinement_bundle() -> dict[str, Any]:
             "status": "skipped",
             "reason": reason,
             "active_path": "decision_writer_packet",
+        },
+    }
+
+
+def _parallel_analyst_source_weighting_ready(canonical: Any) -> bool:
+    if not isinstance(canonical, dict):
+        return False
+    judgments = [row for row in _list_value(canonical.get("source_weight_judgments")) if isinstance(row, dict)]
+    if not judgments:
+        return False
+    return any(str(row.get("method") or "") == "parallel_global_analyst_source_weighting" for row in judgments)
+
+
+def _skipped_model_source_weighting_bundle(canonical: dict[str, Any]) -> dict[str, Any]:
+    judgments = [row for row in _list_value(canonical.get("source_weight_judgments")) if isinstance(row, dict)]
+    return {
+        "model_source_weight_judgments": [],
+        "model_source_weighting_prompt_preview": "",
+        "model_source_weighting_report": {
+            "schema_id": "model_source_weighting_report_v1",
+            "status": "skipped",
+            "method": "parallel_global_analyst_source_weighting_reused",
+            "source_count": len({source_id for row in judgments for source_id in _list_value(row.get("source_ids"))}),
+            "judgment_count": len(judgments),
+            "fallback_count": 0,
+            "warning_count": 0,
+            "prompt_preview_chars": 0,
+            "reports": [],
+            "warnings": [],
+            "reason": "parallel_analyst_source_weight_judgments_available",
         },
     }
 

@@ -138,6 +138,8 @@ def decision_writer_packet_to_memo_ready_packet(
         "analyst_quantity_relevance_plan": serializable_quantity_relevance_plan(semantic_context.get("analyst_quantity_relevance_plan")),
         "analyst_source_hierarchy": _dict(_dict(semantic_context.get("analyst_decision_model")).get("source_hierarchy")) or _dict(_dict(global_decision_model).get("source_hierarchy")),
         "analyst_source_hierarchy_report": _dict(_dict(semantic_context.get("analyst_decision_model")).get("source_hierarchy_report")) or _dict(_dict(global_decision_model).get("source_hierarchy_report")),
+        "analyst_source_weight_judgments": _list(_dict(semantic_context.get("analyst_decision_model")).get("source_weight_judgments")) or _list(_dict(global_decision_model).get("source_weight_judgments")),
+        "analyst_source_weight_judgment_report": _dict(_dict(semantic_context.get("analyst_decision_model")).get("source_weight_judgment_report")) or _dict(_dict(global_decision_model).get("source_weight_judgment_report")),
         "writer_packet_writeability_report": writeability,
         "writer_packet_fallback_requests": writeability.get("fallback_requests", []),
         "quantity_obligation_plan": semantic_context.get("quantity_obligation_plan", {}),

@@ -89,6 +89,8 @@ def build_global_decision_model(
         "decision_logic": _dict(analyst_decision_model.get("decision_logic")),
         "source_hierarchy": _dict(analyst_decision_model.get("source_hierarchy")),
         "source_hierarchy_report": _dict(analyst_decision_model.get("source_hierarchy_report")),
+        "source_weight_judgments": _list(analyst_decision_model.get("source_weight_judgments")),
+        "source_weight_judgment_report": _dict(analyst_decision_model.get("source_weight_judgment_report")),
         "evidence_accounting": evidence_accounting,
         "routing_accounting": routing_accounting,
         "failure_accounting": failure_accounting,

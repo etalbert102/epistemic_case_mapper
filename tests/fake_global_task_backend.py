@@ -95,6 +95,24 @@ def fake_global_task_payload(prompt: str) -> dict:
                 for source_id in source_ids
             ],
         }
+    if schema == "global_source_weighting_guidance_v1":
+        return {
+            "schema_id": schema,
+            "source_weight_judgments": [
+                {
+                    "source_ids": [source_id],
+                    "source_type": "evidence_synthesis",
+                    "main_use": "drives_answer" if index == 1 else "contextualizes",
+                    "why_weight_this_way": f"Source {source_id} has a distinct decision role.",
+                    "reader_facing_limit": "Use according to its supplied evidence role.",
+                    "what_not_to_use_it_for": ["Do not use as broader proof than the evidence supports."],
+                    "memo_weight_sentence": f"Use {source_id} for its assigned decision role.",
+                    "confidence_effect": "raises_confidence" if index == 1 else "neutral",
+                    "evidence_item_ids": evidence_ids[:2],
+                }
+                for index, source_id in enumerate(source_ids, start=1)
+            ],
+        }
     if schema == "global_argument_blueprint_v1":
         return {
             "schema_id": schema,

@@ -168,6 +168,39 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["writer_packet_writeability_report"]["schema_id"] == "writer_packet_writeability_report_v1"
     assert packet["decision_memo_contract"]["schema_id"] == "decision_memo_contract_v1"
     assert packet["writer_decision_interface"]["schema_id"] == "writer_decision_interface_v1"
+
+
+def test_memo_ready_packet_prefers_parallel_analyst_source_weight_judgments() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    analyst_model = {
+        "schema_id": "analyst_decision_model_v1",
+        "source_weight_judgments": [
+            {
+                "judgment_id": "analyst_source_weight_001",
+                "source_ids": ["s1"],
+                "main_use": "drives_answer",
+                "why_weight_this_way": "Outcome Review carries the answer because it covers the main outcome.",
+                "memo_weight_sentence": "Outcome Review carries the main answer.",
+                "method": "parallel_global_analyst_source_weighting",
+                "evidence_item_ids": ["item:support"],
+            }
+        ],
+        "source_weight_judgment_report": {
+            "schema_id": "parallel_global_source_weight_judgment_report_v1",
+            "status": "ready",
+        },
+    }
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+        analyst_decision_model=analyst_model,
+    )
+
+    judgments = packet["canonical_decision_writer_packet"]["source_weight_judgments"]
+    assert judgments[0]["judgment_id"] == "analyst_source_weight_001"
+    assert judgments[0]["method"] == "parallel_global_analyst_source_weighting"
+    assert packet["analyst_source_weight_judgments"] == analyst_model["source_weight_judgments"]
     assert packet["writer_decision_interface_quality_report"]["schema_id"] == "writer_decision_interface_quality_report_v1"
 
 
