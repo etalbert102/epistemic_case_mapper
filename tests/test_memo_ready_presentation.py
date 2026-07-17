@@ -216,7 +216,7 @@ def test_presentation_smooths_generic_model_prose_without_changing_sources() -> 
     assert "the neutral stance" not in result["memo"]
     assert "serve to narrow the scope" not in result["memo"]
     assert "To ensure practical application without overclaiming" not in result["memo"]
-    assert "carry the main answer" in result["memo"]
+    assert "That is the core of the answer" in result["memo"]
     assert "[Outcome 2025]" in result["memo"]
     assert "smoothed_stock_phrasing" in result["report"]["changes"]
 
