@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_read
 from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_repair_num_predict, memo_ready_whole_memo_num_predict
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
+from epistemic_case_mapper.map_briefing_reader_judgment_packet import build_reader_judgment_surface_report
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
     build_memo_polish_diagnostics,
     high_confidence_unsupported_additions,
@@ -126,6 +127,7 @@ def _run_whole_memo_ready_packet_synthesis(
         return {"memo": "", "prompt": prompt, "raw": raw, "report": report}
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
     decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_repair = run_decision_usefulness_memo_repair(
         candidate,
         memo_ready_packet,
@@ -138,6 +140,7 @@ def _run_whole_memo_ready_packet_synthesis(
         candidate = decision_usefulness_repair["memo"]
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+        reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     report.update(
@@ -155,6 +158,7 @@ def _run_whole_memo_ready_packet_synthesis(
             "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
+            "reader_judgment_surface_report": reader_judgment_surface,
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
         }
     )
@@ -196,6 +200,7 @@ def _run_parallel_memo_ready_section_synthesis(
     candidate = str(generated["memo"])
     retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
     decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_repair = run_decision_usefulness_memo_repair(
         candidate,
         memo_ready_packet,
@@ -208,6 +213,7 @@ def _run_parallel_memo_ready_section_synthesis(
         candidate = decision_usefulness_repair["memo"]
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+        reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     strict_contract = _strict_packet_contract(memo_ready_packet)
     accepted = _acceptable_synthesis(candidate, retention, strict_contract=strict_contract)
     section_issues = _list(section_report.get("issues"))
@@ -230,6 +236,7 @@ def _run_parallel_memo_ready_section_synthesis(
             "source_weighting_fidelity_report": build_source_weighting_fidelity_report(candidate, memo_ready_packet),
             "decision_usefulness_retention_report": decision_usefulness_retention,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
+            "reader_judgment_surface_report": reader_judgment_surface,
             "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),
             "evidence_expression_contract_count": len(_list(generated.get("evidence_expression_contracts"))),
             "evidence_trace_count": len(_list(generated.get("evidence_trace"))),

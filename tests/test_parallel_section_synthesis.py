@@ -66,6 +66,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert all("Reader question:" in prompt for prompt in calls)
     assert all("### Calibration limits" in prompt for prompt in calls)
     assert all("### Source language and use limits" in prompt for prompt in calls)
+    assert any("### Reader-facing judgments to surface" in prompt for prompt in calls)
     assert any("### Required evidence points" in prompt for prompt in calls)
     assert any("### Source weighting notes" in prompt for prompt in calls)
     assert any("Translate the settled answer and its limits into what guidance should say" in prompt for prompt in calls)
@@ -76,6 +77,8 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
     assert result["report"]["num_predict"] == 4096
     assert all(row["accepted"] for row in result["report"]["section_reports"])
     assert all(row["num_predict"] == 4096 for row in result["report"]["section_reports"])
+    assert result["report"]["reader_judgment_surface_report"]["schema_id"] == "reader_judgment_surface_report_v1"
+    assert result["report"]["reader_judgment_surface_report"]["judgment_count"] >= 1
     assert "## How to Weight the Evidence" in result["memo"]
     assert "## Why This Is the Best Current Read" in result["memo"]
     assert "## What Could Change or Bound the Answer" in result["memo"]

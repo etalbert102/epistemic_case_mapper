@@ -44,6 +44,10 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
     assert canonical["organized_evidence_inventory"]["item_count"] == len(packet["evidence_items"])
     assert canonical["counterweight_dispositions"]
     assert canonical["source_weight_notes"]
+    assert canonical["reader_judgment_packet"]["schema_id"] == "reader_judgment_packet_v1"
+    assert canonical["reader_judgment_packet"]["judgments"]
+    assert any(row["target_section"] == "source_weighting" for row in canonical["reader_judgment_packet"]["judgments"])
+    assert any(row["judgment_type"] == "counterweight_disposition" for row in canonical["reader_judgment_packet"]["judgments"])
     assert canonical["mandatory_retention_checklist"]
     assert canonical["citation_registry"]
     assert canonical["quality_report"]["schema_id"] == "canonical_decision_writer_packet_quality_report_v1"
@@ -74,6 +78,25 @@ def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
     assert all(row.get("reader_evidence_role") for rows in lanes.values() for row in rows)
     assert "source_labels" not in str(frame)
     assert any("main answer" in move for move in frame["required_weighting_moves"])
+
+
+def test_section_packets_receive_reader_judgments_to_surface() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+
+    plan = build_memo_ready_section_synthesis_plan(packet)
+    by_id = {section["section_id"]: section["packet"] for section in plan["sections"]}
+
+    source_weighting = by_id["source_weighting"]["top_context"]["reader_judgments_to_surface"]
+    counterweights = by_id["counterweights"]["top_context"]["reader_judgments_to_surface"]
+
+    assert source_weighting
+    assert any(row["judgment_type"] == "confidence_rationale" for row in source_weighting)
+    assert counterweights
+    assert any(row["judgment_type"] == "counterweight_disposition" for row in counterweights)
+    assert "### Reader-facing judgments to surface" in plan["sections"][0]["prompt"] or any(
+        "### Reader-facing judgments to surface" in section["prompt"] for section in plan["sections"]
+    )
 
 
 def test_canonical_source_weighting_uses_explicit_analyst_hierarchy_over_projected_role() -> None:

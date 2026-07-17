@@ -65,6 +65,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         *_section("### Section argument steps", _argument_step_lines(packet.get("section_argument_steps"))),
         *_section("### Additional evidence context", _evidence_context_lines(packet.get("evidence_context"))),
         *_section("### Source weighting notes", _source_weighting_lines(packet.get("source_weighting"))),
+        *_section("### Reader-facing judgments to surface", _reader_judgment_lines(top.get("reader_judgments_to_surface"))),
         *_section("### Decision cruxes, thresholds, and update triggers", _decision_usefulness_lines(top.get("decision_usefulness"))),
         *_section(
             "### Writing guidance, caveats, and quantity risks",
@@ -226,6 +227,22 @@ def _source_weighting_lines(value: Any) -> list[str]:
         )
         if line:
             rows.append(_bullet(line))
+    return rows
+
+
+def _reader_judgment_lines(value: Any) -> list[str]:
+    rows = []
+    for item in _dict_rows(value)[:8]:
+        judgment = _text(item.get("judgment"))
+        if not judgment:
+            continue
+        parts = [
+            _text(item.get("judgment_type")).replace("_", " "),
+            judgment,
+            f"Why it matters: {_text(item.get('why_surface'))}" if _text(item.get("why_surface")) else "",
+            _citations(item),
+        ]
+        rows.append(_bullet("; ".join(part for part in parts if part)))
     return rows
 
 

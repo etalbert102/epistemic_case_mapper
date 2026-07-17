@@ -19,6 +19,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     string_list as _string_list,
 )
 from epistemic_case_mapper.map_briefing_reader_evidence_roles import reader_evidence_role, source_weight_lane
+from epistemic_case_mapper.map_briefing_reader_judgment_packet import build_reader_judgment_packet
 from epistemic_case_mapper.map_briefing_source_identity import (
     project_sources_to_ids_for_model,
     source_id_registry_for_model,
@@ -121,6 +122,7 @@ def build_canonical_decision_writer_packet(
         "mandatory_retention_checklist": mandatory_checklist,
         "citation_registry": _citation_registry(source_trail),
     }
+    canonical["reader_judgment_packet"] = build_reader_judgment_packet(canonical)
     canonical = project_reader_language_for_model(project_sources_to_ids_for_model(canonical, source_trail))
     canonical["source_weighting_contract"] = build_source_weighting_contract(canonical)
     canonical["source_weighting_flow_audit"] = build_source_weighting_flow_audit(canonical)
