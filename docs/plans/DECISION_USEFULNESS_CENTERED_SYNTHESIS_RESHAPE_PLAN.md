@@ -442,13 +442,30 @@ Suggested slices:
    - Remaining limitation:
      - Source-binding/citation-care warnings remain (`source_binding_warning_count = 11`), so citation presentation still needs a separate polish/hardening pass.
 
+6. Unrelated current-shape regression check
+   - Verification:
+     - Constructed the non-eggs `Should option A be adopted?` packet through the current decision-writer adapter with an analyst decision model, then built the production section synthesis plan and decision-usefulness telemetry.
+   - Result:
+     - `decision_argument_contract_v1` was present.
+     - Argument move count: `7`.
+     - Section packets produced: `source_weighting`, `answer_evidence`, `counterweights`, `practical_implication`.
+     - All section packets carried section-local decision argument moves.
+     - Decision usefulness surface telemetry: `ready`.
+     - Analyst utilization telemetry: `ready`.
+   - Notes:
+     - Older saved non-eggs artifacts were inspected but not counted as proof because they predate the current canonical analyst packet shape and cannot exercise this path without compatibility backfill.
+
 ## Completion Audit
 
 The plan is complete only when:
 
-- the canonical contract exists and is consumed by production section synthesis;
-- telemetry shows analyst moves are not lost before synthesis;
-- strict evidence reconciliation still passes;
-- the latest eggs memo is manually judged more decision-useful than the pre-plan memo;
-- at least one unrelated case does not regress;
-- any remaining gap is recorded with an owning stage rather than hidden behind a successful synthesis status.
+- [x] the canonical contract exists and is consumed by production section synthesis;
+- [x] telemetry shows analyst moves are not lost before synthesis;
+- [x] strict evidence reconciliation still passes;
+- [x] the latest eggs memo is manually judged more decision-useful than the pre-plan memo;
+- [x] at least one unrelated current-shape case does not regress;
+- [x] any remaining gap is recorded with an owning stage rather than hidden behind a successful synthesis status.
+
+Remaining owned gap:
+
+- Citation/source-binding presentation still belongs to the memo finalization and citation-normalization layer, not the decision-usefulness contract. The latest eggs replay retained required evidence and surfaced analyst moves, but still had `source_binding_warning_count = 11`.
