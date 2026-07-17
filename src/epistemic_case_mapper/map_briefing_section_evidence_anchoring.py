@@ -127,10 +127,66 @@ def contracts_for_section(
         or _heading_matches_section(str(row.get("primary_section") or ""), heading)
     ]
     if selected:
-        return selected[:18]
+        return _dedupe_section_quantity_obligations(selected[:18])
     if section_id and section_id not in {"answer_evidence", "bottom_line"}:
         return []
-    return [row for row in contracts if row.get("required")][:12]
+    return _dedupe_section_quantity_obligations([row for row in contracts if row.get("required")][:12])
+
+
+def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    owners: dict[str, str] = {}
+    by_id = {str(row.get("evidence_id") or ""): row for row in contracts if isinstance(row, dict)}
+    for row in contracts:
+        if not isinstance(row, dict):
+            continue
+        evidence_id = str(row.get("evidence_id") or "").strip()
+        for quantity in _list(row.get("required_quantity_atoms")):
+            if not isinstance(quantity, dict):
+                continue
+            key = _quantity_dedupe_key(quantity)
+            if not key:
+                continue
+            current = owners.get(key)
+            if not current or _quantity_owner_priority(row) < _quantity_owner_priority(by_id.get(current, {})):
+                owners[key] = evidence_id
+    cleaned = []
+    for row in contracts:
+        if not isinstance(row, dict):
+            cleaned.append(row)
+            continue
+        evidence_id = str(row.get("evidence_id") or "").strip()
+        kept_quantities = []
+        for quantity in _list(row.get("required_quantity_atoms")):
+            if not isinstance(quantity, dict):
+                continue
+            key = _quantity_dedupe_key(quantity)
+            if key and owners.get(key) == evidence_id:
+                kept_quantities.append(quantity)
+        if kept_quantities == _list(row.get("required_quantity_atoms")):
+            cleaned.append(row)
+        else:
+            updated = dict(row)
+            if kept_quantities:
+                updated["required_quantity_atoms"] = kept_quantities
+            else:
+                updated.pop("required_quantity_atoms", None)
+            cleaned.append(updated)
+    return cleaned
+
+
+def _quantity_dedupe_key(quantity: dict[str, Any]) -> str:
+    value = str(quantity.get("value") or "").strip().lower()
+    numbers = re.findall(r"\d+(?:\.\d+)?", value)
+    return numbers[0] if numbers else re.sub(r"\s+", " ", value)
+
+
+def _quantity_owner_priority(contract: dict[str, Any]) -> int:
+    text = _contract_job_text(contract)
+    if _matches_any(text, ("dose", "dosage", "intake", "biomarker", "endpoint", "ratio", "mean difference", "hazard ratio", "relative risk", "confidence interval")):
+        return 0
+    if _matches_any(text, ("subgroup", "population", "condition", "diagnosed", "participants with", "patients with")):
+        return 2
+    return 1
 
 
 def build_evidence_tagged_section_prompt(
