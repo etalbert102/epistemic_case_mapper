@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_canonical_packet_retention import (
     build_canonical_packet_retention_report,
     canonical_repair_items,
 )
+from epistemic_case_mapper.map_briefing_decision_argument_contract import build_decision_argument_contract
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_repair_num_predict, memo_ready_whole_memo_num_predict
@@ -1339,7 +1340,12 @@ def _source_lines(packet: dict[str, Any]) -> list[str]:
 
 def _decision_argument_contract(packet: dict[str, Any]) -> dict[str, Any]:
     canonical = _dict(packet.get("canonical_decision_writer_packet"))
-    return _dict(packet.get("decision_argument_contract")) or _dict(canonical.get("decision_argument_contract"))
+    existing = _dict(packet.get("decision_argument_contract")) or _dict(canonical.get("decision_argument_contract"))
+    if existing:
+        return existing
+    if canonical:
+        return build_decision_argument_contract(canonical)
+    return {}
 
 
 def _decision_argument_move_surface_status(memo: str, move: dict[str, Any]) -> dict[str, Any]:
