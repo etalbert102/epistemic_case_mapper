@@ -20,6 +20,8 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- Use bracketed citations only for source IDs listed in Known source IDs.\n"
         "- Use parentheses, not square brackets, for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Every bracketed citation must contain one or more known source IDs separated by comma-space.\n"
+        "- When one paragraph uses the same source cluster throughout, cite the cluster once at the end of the paragraph.\n"
+        "- When sources support different jobs in the same paragraph, cite each source beside the clause it supports.\n"
         "- Keep packet IDs, schema terms, validation machinery, and audit language out of the prose.\n"
         "- Combine, reorder, and compress the notes naturally, but preserve every required claim, quantity, boundary, and citation.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
@@ -96,6 +98,8 @@ def _source_bound_atom_lines(value: Any) -> list[str]:
             rows.append(_bullet(f"{claim} {_citations(atom)}".strip()))
         if citation_role := _text(atom.get("citation_role")):
             rows.append(f"  - Citation job: {citation_role.replace('_', ' ')}")
+        if section_job := _text(atom.get("section_specific_job")):
+            rows.append(f"  - Section-specific job: {section_job}")
         if use_for := _text(atom.get("use_for")):
             rows.append(f"  - Use for: {use_for}")
         if avoid := _string_list(atom.get("do_not_use_for")):
@@ -191,6 +195,7 @@ def _evidence_context_lines(value: Any) -> list[str]:
             part
             for part in (
                 _text(item.get("reader_claim") or item.get("claim") or item.get("statement")),
+                f"Section job: {_text(item.get('section_specific_job'))}" if _text(item.get("section_specific_job")) else "",
                 _text(item.get("decision_relevance")),
                 _citations(item),
             )

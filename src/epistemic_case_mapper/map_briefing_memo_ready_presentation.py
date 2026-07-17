@@ -4,7 +4,11 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
-from epistemic_case_mapper.map_briefing_citation_dedupe import dedupe_linked_citation_clusters, dedupe_reference_citation_runs
+from epistemic_case_mapper.map_briefing_citation_dedupe import (
+    compact_repeated_sentence_citations,
+    dedupe_linked_citation_clusters,
+    dedupe_reference_citation_runs,
+)
 from epistemic_case_mapper.map_briefing_lightweight_guidance import evidence_quality_caveat_text
 from epistemic_case_mapper.map_briefing_model_source_weighting_presentation import render_model_source_weighting_section
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -89,6 +93,10 @@ def run_memo_ready_presentation_normalization(
     next_memo = dedupe_reference_citation_runs(normalized, citation_displays)
     if next_memo != normalized:
         changes.append("deduplicated_reference_citations")
+        normalized = next_memo
+    next_memo = compact_repeated_sentence_citations(normalized, citation_displays)
+    if next_memo != normalized:
+        changes.append("compacted_repeated_sentence_citations")
         normalized = next_memo
     next_memo = _replace_sources_section(normalized, packet)
     if next_memo != normalized:

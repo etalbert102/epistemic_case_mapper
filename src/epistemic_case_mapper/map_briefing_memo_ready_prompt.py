@@ -7,10 +7,7 @@ from typing import Any
 from epistemic_case_mapper.map_briefing_decision_usefulness import compact_decision_usefulness_for_prompt
 from epistemic_case_mapper.map_briefing_lightweight_guidance import compact_lightweight_guidance_for_prompt
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import build_canonical_decision_writer_packet
-from epistemic_case_mapper.map_briefing_analyst_decision_spine import (
-    compact_analyst_decision_spine_for_prompt,
-    section_spine_for_prompt,
-)
+from epistemic_case_mapper.map_briefing_analyst_decision_spine import compact_analyst_decision_spine_for_prompt, section_spine_for_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import norm as _norm
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
@@ -22,6 +19,7 @@ from epistemic_case_mapper.map_briefing_source_bound_evidence import (
 from epistemic_case_mapper.map_briefing_memo_ready_guidance_application import build_section_reader_guidance_application
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_section_jobs import with_section_specific_jobs
 from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_contract, build_source_weighting_flow_audit, build_source_weighting_section_packet
 
 
@@ -200,7 +198,10 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
         heading = _canonical_section_heading(source_section)
         if section_id == "bottom_line" or not heading:
             continue
-        source_bound_atoms = _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw))
+        source_bound_atoms = with_section_specific_jobs(
+            _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw)),
+            section_id=section_id,
+        )
         packets.append(
             _drop_empty(
                 {
@@ -220,7 +221,10 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "protected_quantity_sets": _protected_quantity_sets(raw),
                     "source_bound_evidence_atoms": source_bound_atoms,
                     "quantity_collision_warnings": _quantity_collision_warnings(source_bound_atoms),
-                    "evidence_context": raw.get("evidence_context"),
+                    "evidence_context": with_section_specific_jobs(
+                        [row for row in _list(raw.get("evidence_context")) if isinstance(row, dict)],
+                        section_id=section_id,
+                    ),
                     "source_weighting": raw.get("source_weighting"),
                 }
             )

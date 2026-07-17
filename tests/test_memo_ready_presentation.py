@@ -199,6 +199,51 @@ def test_presentation_smooths_stock_phrasing_without_changing_citations() -> Non
     assert "smoothed_stock_phrasing" in result["report"]["changes"]
 
 
+def test_presentation_compacts_repeated_adjacent_sentence_citations() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "outcome_2025", "source_label": "Outcome Study 2025"}],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\n"
+        "**Bottom Line:** Adopt option A when the setting matches.\n\n"
+        "Outcome evidence supports adoption [outcome_2025]. "
+        "The same source also bounds confidence [outcome_2025]. "
+        "Different evidence should keep its own citation when it appears [outcome_2025]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    paragraph = result["memo"].split("**Bottom Line:**", maxsplit=1)[-1].split("## Sources", maxsplit=1)[0]
+    assert paragraph.count("[Outcome 2025]") == 1
+    assert "compacted_repeated_sentence_citations" in result["report"]["changes"]
+
+
+def test_presentation_keeps_repeated_citations_in_mixed_source_paragraphs() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "outcome_2025", "source_label": "Outcome Study 2025"},
+            {"source_id": "mechanism_2024", "source_label": "Mechanism Trial 2024"},
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\n"
+        "**Bottom Line:** Adopt option A when the setting matches.\n\n"
+        "Outcome evidence supports adoption [outcome_2025]. "
+        "Mechanistic evidence calibrates the threshold [mechanism_2024]. "
+        "The key effect estimate is 0.93 [outcome_2025]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    paragraph = result["memo"].split("**Bottom Line:**", maxsplit=1)[-1].split("## Sources", maxsplit=1)[0]
+    assert paragraph.count("[Outcome 2025]") == 2
+    assert "[Mechanism 2024]" in paragraph
+
+
 def test_presentation_source_weighting_section_uses_source_weight_judgments() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

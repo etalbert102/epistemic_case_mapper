@@ -259,6 +259,14 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert "confidence" not in practical["top_context"]
     assert "decision_question" in practical["top_context"]
     assert practical["section_job"] == "Translate the settled answer and its limits into what guidance should say; keep evidence basis short."
+    assert all(
+        atom.get("section_specific_job") == "Use this evidence only to translate the answer into advice, exceptions, monitoring, or wording; keep the evidence recap brief."
+        for atom in practical["source_bound_evidence_atoms"]
+    )
+    assert all(
+        row.get("section_specific_job") == "Use this evidence only to translate the answer into advice, exceptions, monitoring, or wording; keep the evidence recap brief."
+        for row in practical["evidence_context"]
+    )
     assert practical["section_role_contract"]["do"][0] == "state the practical recommendation in ordinary decision language"
 
     source_weighting = sections["source_weighting"]
