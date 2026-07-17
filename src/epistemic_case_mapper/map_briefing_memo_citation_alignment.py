@@ -72,7 +72,7 @@ def _align_citation_line(
         desired_roles = _presentation_clause_roles(clause)
         selected = _aligned_citation_sources(mapped, desired_roles, role_by_source)
         if not selected:
-            return ""
+            return match.group(0)
         if [source_id for _, source_id in selected] == [source_id for _, source_id in mapped]:
             return match.group(0)
         return "[" + ", ".join(display for display, _ in selected) + "]"
@@ -157,8 +157,17 @@ def _presentation_citation_clause(line: str, start: int, end: int) -> str:
 
 def _clause_boundary_indexes(text: str, start: int, end: int) -> list[int]:
     boundaries: list[int] = []
+    depth = 0
     for index in range(max(start, 0), min(end, len(text))):
         char = text[index]
+        if char == "(":
+            depth += 1
+            continue
+        if char == ")":
+            depth = max(0, depth - 1)
+            continue
+        if depth:
+            continue
         if char in ";:":
             boundaries.append(index)
         elif char == "." and not _is_decimal_period(text, index):
@@ -171,8 +180,11 @@ def _is_decimal_period(text: str, index: int) -> bool:
 
 
 def _presentation_clause_roles(text: str) -> set[str]:
-    normed = _norm(re.sub(r"\[[^\[\]\n]{1,260}\]", "", str(text or "")))
+    citationless = re.sub(r"\[[^\[\]\n]{1,260}\]", "", str(text or ""))
+    normed = _norm(citationless)
     roles: set[str] = set()
+    if _looks_like_quantitative_clause(citationless):
+        roles.add("calibration")
     risk_counter = bool(re.search(r"\b(?:increased|higher)\s+risk\b", normed)) and not bool(
         re.search(r"\b(?:not associated with|no|does not|without)\s+(?:\w+\s+){0,4}(?:increased|higher)\s+risk\b", normed)
     )
@@ -189,6 +201,15 @@ def _presentation_clause_roles(text: str) -> set[str]:
     if re.search(r"\b(neutral|not associated|safe|supports?|driven by|primary conclusion|best current read|does not increase|no increased|without specific concern)\b", normed):
         roles.add("direct_support")
     return roles or {"direct_support"}
+
+
+def _looks_like_quantitative_clause(text: str) -> bool:
+    raw = str(text or "")
+    if re.search(r"\b(?:MD|HR|RR|OR|CI|I2|I²)\s*[=:]?\s*\d", raw, flags=re.IGNORECASE):
+        return True
+    if re.search(r"\b(?:hazard ratio|relative risk|mean difference|confidence interval)\b", raw, flags=re.IGNORECASE) and re.search(r"\d", raw):
+        return True
+    return bool(re.search(r"\d+(?:\.\d+)?\s*(?:%|percent|per day|[A-Za-z]+/day|ratio)\b", raw, flags=re.IGNORECASE))
 
 
 def _aligned_citation_sources(
