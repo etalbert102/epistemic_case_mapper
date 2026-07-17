@@ -155,6 +155,23 @@ def test_answer_frame_requires_direct_supported_answer() -> None:
     assert parsed.supporting_evidence_item_ids == ["bundle:one"]
 
 
+def test_answer_frame_accepts_explicit_bluf_hierarchy() -> None:
+    parsed = AnalystAnswerFrame.model_validate(
+        {
+            "decision_question": "Should option A be adopted?",
+            "direct_answer": "Adopt option A in the main case; however, boundary cases need review.",
+            "primary_answer": "Adopt option A in the main case.",
+            "secondary_detail": "Boundary cases need review.",
+            "secondary_detail_type": "scope_boundary",
+            "confidence": "medium",
+            "why_this_read": "The support is strong inside scope.",
+        }
+    )
+
+    assert parsed.primary_answer == "Adopt option A in the main case."
+    assert parsed.secondary_detail_type == "scope_boundary"
+
+
 def test_synthesis_packet_schema_accepts_compact_reasoning_packet() -> None:
     parsed = AnalystSynthesisPacket.model_validate(
         {
@@ -181,7 +198,11 @@ def test_analyst_decision_model_parse_report_accepts_global_groups() -> None:
     payload = {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": "Should option A be adopted?",
-        "direct_answer": "Adopt option A only with the risk condition.",
+        "direct_answer": "Adopt option A only with the risk condition; however, high-risk settings need separate review.",
+        "primary_answer": "Adopt option A only with the risk condition.",
+        "secondary_detail": "High-risk settings need separate review.",
+        "secondary_detail_type": "scope_boundary",
+        "full_direct_answer": "Adopt option A only with the risk condition; however, high-risk settings need separate review.",
         "confidence": "medium",
         "overall_rationale": "Support is strong but the warning bounds the answer.",
         "evidence_groups": [
@@ -219,6 +240,8 @@ def test_analyst_decision_model_parse_report_accepts_global_groups() -> None:
     report = build_analyst_decision_model_parse_report(payload, _ledger())
 
     assert parsed.evidence_groups[0].memo_role == "load_bearing_primary_support"
+    assert parsed.primary_answer == "Adopt option A only with the risk condition."
+    assert parsed.secondary_detail_type == "scope_boundary"
     assert report["status"] == "warning"
     assert "missing_practical_implications" in report["issues"]
     assert report["valid"] is True

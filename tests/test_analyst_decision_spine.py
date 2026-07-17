@@ -16,6 +16,17 @@ def test_memo_ready_packet_exposes_analyst_decision_spine_to_writer() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     analyst_model = {
         "schema_id": "analyst_decision_model_v1",
+        "direct_answer": (
+            "Adopt option A where the narrower setting is not decisive; "
+            "however, settings with unresolved transport risk need a separate review."
+        ),
+        "primary_answer": "Adopt option A where the narrower setting is not decisive.",
+        "secondary_detail": "Settings with unresolved transport risk need a separate review.",
+        "secondary_detail_type": "scope_boundary",
+        "full_direct_answer": (
+            "Adopt option A where the narrower setting is not decisive; "
+            "however, settings with unresolved transport risk need a separate review."
+        ),
         "decision_logic": {
             "bounded_bottom_line": "Adopt option A only where the narrower setting is not decisive.",
             "support_summary": "Outcome Review carries the main outcome finding.",
@@ -56,6 +67,15 @@ def test_memo_ready_packet_exposes_analyst_decision_spine_to_writer() -> None:
     prompt = build_memo_ready_packet_synthesis_prompt(packet)
 
     assert interface_spine["schema_id"] == "analyst_decision_spine_v1"
+    assert packet["answer_spine"]["primary_answer"] == "Adopt option A where the narrower setting is not decisive."
+    assert "unresolved transport risk" in packet["answer_spine"]["full_direct_answer"]
+    assert packet["writer_decision_interface"]["answer_frame"]["primary_answer"] == "Adopt option A where the narrower setting is not decisive."
+    assert "unresolved transport risk" in packet["writer_decision_interface"]["answer_frame"]["full_direct_answer"]
+    assert interface_spine["primary_answer"] == "Adopt option A where the narrower setting is not decisive."
+    assert interface_spine["secondary_detail_type"] == "scope_boundary"
+    assert packet["canonical_decision_writer_packet"]["decision_brief_skeleton"]["primary_answer"] == "Adopt option A where the narrower setting is not decisive."
+    assert packet["canonical_decision_writer_packet"]["bluf_contract"]["recommended_read"] == "Adopt option A where the narrower setting is not decisive."
+    assert "unresolved transport risk" in packet["canonical_decision_writer_packet"]["bluf_contract"]["secondary_detail"]
     assert interface_spine["quality_report"]["source_weight_move_count"] == 2
     assert any(move["move_id"] == "source_weighting" for move in interface_spine["decision_moves"])
     assert canonical_spine["source_weight_moves"][0]["point"] == "Outcome Review carries the main answer."

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -32,7 +33,15 @@ def build_balanced_answer_frame(
     return _drop_empty(
         {
             "schema_id": "balanced_answer_frame_v1",
-            "best_current_read": _short_text(_text(skeleton.get("direct_answer")) or _text(analyst_reasoning_frame.get("bottom_line")), 700),
+            "best_current_read": _short_text(
+                _text(skeleton.get("full_direct_answer"))
+                or _text(skeleton.get("direct_answer"))
+                or _text(analyst_reasoning_frame.get("bottom_line")),
+                700,
+            ),
+            "primary_answer": _short_text(_text(skeleton.get("primary_answer")), 520),
+            "secondary_detail": _short_text(_text(skeleton.get("secondary_detail")), 420),
+            "secondary_detail_type": _text(skeleton.get("secondary_detail_type")),
             "confidence": _text(skeleton.get("confidence")),
             "confidence_basis": _short_text(_text(skeleton.get("confidence_basis")) or _text(analyst_reasoning_frame.get("why_this_answer")), 700),
             "main_support": _short_text(support, 700),
@@ -57,6 +66,22 @@ def build_bluf_contract(
     """Build an answer-first contract for the memo opening."""
 
     recommended = _text(balanced_answer_frame.get("best_current_read")) or _text(skeleton.get("direct_answer"))
+    hierarchy = split_bluf_answer_hierarchy(recommended)
+    primary_recommended = (
+        _text(balanced_answer_frame.get("primary_answer"))
+        or _text(skeleton.get("primary_answer"))
+        or hierarchy["primary_answer"]
+    )
+    secondary_detail = (
+        _text(balanced_answer_frame.get("secondary_detail"))
+        or _text(skeleton.get("secondary_detail"))
+        or hierarchy["secondary_detail"]
+    )
+    secondary_detail_type = (
+        _text(balanced_answer_frame.get("secondary_detail_type"))
+        or _text(skeleton.get("secondary_detail_type"))
+        or hierarchy["secondary_detail_type"]
+    )
     scope = _text(balanced_answer_frame.get("scope")) or _text(skeleton.get("scope"))
     exception = _text(balanced_answer_frame.get("main_counterweight")) or _text(skeleton.get("strongest_counterweight"))
     practical = _text(balanced_answer_frame.get("practical_read")) or _text(skeleton.get("practical_implication"))
@@ -64,20 +89,84 @@ def build_bluf_contract(
     return _drop_empty(
         {
             "schema_id": "bluf_contract_v1",
-            "recommended_read": _short_text(recommended, 520),
+            "recommended_read": _short_text(primary_recommended, 520),
+            "full_recommended_read": _short_text(recommended, 700) if secondary_detail else "",
+            "secondary_detail": _short_text(secondary_detail, 420),
+            "secondary_detail_type": secondary_detail_type,
             "who_it_applies_to": _short_text(scope, 360),
             "main_exception_or_boundary": _short_text(exception, 360),
             "confidence": confidence,
             "practical_read": _short_text(practical, 360),
-            "one_sentence_version": _short_text(recommended, 420),
+            "one_sentence_version": _short_text(primary_recommended, 420),
             "writing_contract": [
                 "Answer the decision question in the first sentence.",
+                "Keep secondary calibration or boundary detail for the following sentence or body sections.",
                 "Add the main scope or exception in the same sentence or the next sentence.",
                 "Name confidence without turning uncertainty into a research-status lead.",
                 "Lead with the synthesized decision read before study details, method caveats, or evidence inventory.",
             ],
         }
     )
+
+
+def split_bluf_answer_hierarchy(answer: str) -> dict[str, str]:
+    """Separate the primary BLUF answer from secondary calibration when the boundary is explicit."""
+
+    text = " ".join(_text(answer).split())
+    if not text:
+        return {"primary_answer": "", "secondary_detail": "", "secondary_detail_type": ""}
+
+    split = _explicit_secondary_split(text)
+    if not split:
+        return {"primary_answer": text, "secondary_detail": "", "secondary_detail_type": ""}
+
+    primary, secondary, marker = split
+    primary = _ensure_sentence_punctuation(primary)
+    secondary = _ensure_sentence_punctuation(secondary)
+    return {
+        "primary_answer": primary,
+        "secondary_detail": secondary,
+        "secondary_detail_type": _secondary_detail_type(marker, secondary),
+    }
+
+
+def _explicit_secondary_split(text: str) -> tuple[str, str, str] | None:
+    semicolon_index = text.find(";")
+    if semicolon_index != -1:
+        primary = text[:semicolon_index].strip(" ,;:")
+        secondary = text[semicolon_index + 1 :].strip(" ,;:")
+        if _valid_bluf_split(primary, secondary):
+            return primary, secondary, "semicolon"
+
+    marker_match = re.search(r"\b(however|but|except|although|though|unless|while|whereas)\b[:,]?\s+", text, flags=re.IGNORECASE)
+    if not marker_match:
+        return None
+    primary = text[: marker_match.start()].strip(" ,;:")
+    secondary = text[marker_match.start() :].strip(" ,;:")
+    if _valid_bluf_split(primary, secondary):
+        return primary, secondary, marker_match.group(1).lower()
+    return None
+
+
+def _valid_bluf_split(primary: str, secondary: str) -> bool:
+    return len(primary) >= 45 and len(secondary) >= 30 and len(primary.split()) >= 7 and len(secondary.split()) >= 5
+
+
+def _ensure_sentence_punctuation(text: str) -> str:
+    text = _text(text)
+    if text and text[-1] not in ".?!":
+        return text + "."
+    return text
+
+
+def _secondary_detail_type(marker: str, secondary: str) -> str:
+    marker = marker.lower()
+    lowered = secondary.lower()
+    if marker in {"except", "unless"} or any(token in lowered for token in ("only applies", "scope", "boundary", "limited to")):
+        return "scope_boundary"
+    if marker in {"however", "but", "although", "though", "while", "whereas"}:
+        return "counterweight_or_calibration"
+    return "secondary_calibration"
 
 
 def _underused_balance_evidence(inventory: dict[str, Any], lanes: dict[str, Any]) -> list[dict[str, Any]]:

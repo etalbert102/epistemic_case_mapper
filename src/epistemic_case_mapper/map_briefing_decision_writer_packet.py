@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import split_bluf_answer_hierarchy
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -114,12 +115,17 @@ def decision_writer_packet_to_memo_ready_packet(
         decision_obligation_plan=decision_obligation_plan,
         writeability=writeability,
     )
+    answer_hierarchy = _semantic_answer_hierarchy(packet, semantic_context)
     memo_ready = {
         "schema_id": "memo_ready_packet_v1",
         "method": "global_decision_writer_packet_adapter",
         "decision_question": packet.get("decision_question"),
         "answer_spine": {
             "default_read": _dict(packet.get("answer")).get("bounded_answer"),
+            "primary_answer": answer_hierarchy["primary_answer"],
+            "secondary_detail": answer_hierarchy["secondary_detail"],
+            "secondary_detail_type": answer_hierarchy["secondary_detail_type"],
+            "full_direct_answer": answer_hierarchy["full_direct_answer"],
             "confidence": _dict(packet.get("answer")).get("confidence", "not_specified"),
             "why_this_read": "; ".join(_string_list(_dict(packet.get("answer")).get("confidence_reasons"))[:3]),
             "synthesis_strategy": "Write directly from the global decision writer packet.",
@@ -446,9 +452,46 @@ def _semantic_context(
         "quantity_plan_by_evidence_value": quantity_plan_by_evidence_value(quantity_plan),
         "analyst_relevance_plan": analyst_relevance_plan(analyst_model),
         "analyst_quantity_relevance_plan": analyst_quantity_relevance,
+        "answer_hierarchy": _compact_answer_hierarchy(analyst_model, global_decision_model if isinstance(global_decision_model, dict) else {}),
         "memo_use_by_evidence_id": memo_use_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
         "answer_relation_by_evidence_id": answer_relation_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
         "adjudication_by_evidence_id": _adjudication_by_evidence_id(analyst_adjudication if isinstance(analyst_adjudication, dict) else {}),
+    }
+
+
+def _semantic_answer_hierarchy(packet: dict[str, Any], semantic_context: dict[str, Any]) -> dict[str, str]:
+    hierarchy = _dict(semantic_context.get("answer_hierarchy"))
+    direct = str(hierarchy.get("full_direct_answer") or hierarchy.get("direct_answer") or _dict(packet.get("answer")).get("bounded_answer") or "").strip()
+    split = split_bluf_answer_hierarchy(direct)
+    primary = str(hierarchy.get("primary_answer") or split["primary_answer"]).strip()
+    secondary = str(hierarchy.get("secondary_detail") or split["secondary_detail"]).strip()
+    secondary_type = str(hierarchy.get("secondary_detail_type") or split["secondary_detail_type"]).strip()
+    if secondary_type == "none":
+        secondary_type = ""
+    return {
+        "direct_answer": _short_text(direct, 700),
+        "primary_answer": _short_text(primary, 520),
+        "secondary_detail": _short_text(secondary, 420),
+        "secondary_detail_type": secondary_type,
+        "full_direct_answer": _short_text(hierarchy.get("full_direct_answer") or direct, 700) if secondary else "",
+    }
+
+
+def _compact_answer_hierarchy(analyst_model: dict[str, Any], global_model: dict[str, Any]) -> dict[str, str]:
+    source = analyst_model if analyst_model else global_model
+    direct = str(source.get("full_direct_answer") or source.get("direct_answer") or _dict(global_model.get("answer")).get("bounded_answer") or "").strip()
+    split = split_bluf_answer_hierarchy(direct)
+    primary = str(source.get("primary_answer") or split["primary_answer"]).strip()
+    secondary = str(source.get("secondary_detail") or split["secondary_detail"]).strip()
+    secondary_type = str(source.get("secondary_detail_type") or split["secondary_detail_type"]).strip()
+    if secondary_type == "none":
+        secondary_type = ""
+    return {
+        "direct_answer": _short_text(direct, 700),
+        "primary_answer": _short_text(primary, 520),
+        "secondary_detail": _short_text(secondary, 420),
+        "secondary_detail_type": secondary_type,
+        "full_direct_answer": _short_text(direct, 700) if secondary else "",
     }
 
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import build_bluf_contract, split_bluf_answer_hierarchy
 from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import (
     build_canonical_decision_writer_packet,
     build_canonical_decision_writer_packet_quality_report,
 )
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
@@ -146,6 +148,53 @@ def test_canonical_packet_builds_bluf_contract_from_balanced_frame() -> None:
     assert "within this scope" not in contract["one_sentence_version"]
     assert "..." not in contract["one_sentence_version"]
     assert any("Answer the decision question" in item for item in contract["writing_contract"])
+
+
+def test_bluf_contract_separates_primary_answer_from_secondary_calibration() -> None:
+    answer = (
+        "Adopt option A for standard sites where the source conditions apply; "
+        "however, sites with unusual operating constraints need a separate implementation review."
+    )
+
+    split = split_bluf_answer_hierarchy(answer)
+    contract = build_bluf_contract(
+        skeleton={},
+        balanced_answer_frame={
+            "best_current_read": answer,
+            "confidence": "medium",
+            "scope": "Standard sites where source conditions apply.",
+        },
+    )
+
+    assert split["primary_answer"] == "Adopt option A for standard sites where the source conditions apply."
+    assert "unusual operating constraints" in split["secondary_detail"]
+    assert contract["recommended_read"] == split["primary_answer"]
+    assert contract["one_sentence_version"] == split["primary_answer"]
+    assert contract["full_recommended_read"] == answer
+    assert contract["secondary_detail"] == split["secondary_detail"]
+
+
+def test_section_synthesis_plan_uses_primary_bluf_as_bottom_line() -> None:
+    built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
+    packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    full_answer = (
+        "Adopt option A for standard sites where the source conditions apply; "
+        "however, sites with unusual operating constraints need a separate implementation review."
+    )
+    contract = build_bluf_contract(
+        skeleton={},
+        balanced_answer_frame={
+            "best_current_read": full_answer,
+            "confidence": "medium",
+            "scope": "Standard sites where source conditions apply.",
+        },
+    )
+    packet["canonical_decision_writer_packet"]["bluf_contract"] = contract
+
+    plan = build_memo_ready_section_synthesis_plan(packet)
+
+    assert plan["bottom_line"] == "Adopt option A for standard sites where the source conditions apply."
+    assert "unusual operating constraints" not in plan["bottom_line"]
 
 
 def test_canonical_packet_exposes_source_weight_judgments_with_source_ids() -> None:

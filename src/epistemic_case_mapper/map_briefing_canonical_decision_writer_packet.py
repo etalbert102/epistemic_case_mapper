@@ -148,6 +148,10 @@ def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:
     return _drop_empty(
         {
             "direct_answer": _calibrated_short(answer_frame.get("direct_answer") or interface.get("bottom_line"), limit=520),
+            "primary_answer": _calibrated_short(answer_frame.get("primary_answer"), limit=520),
+            "secondary_detail": _calibrated_short(answer_frame.get("secondary_detail"), limit=420),
+            "secondary_detail_type": answer_frame.get("secondary_detail_type"),
+            "full_direct_answer": _calibrated_short(answer_frame.get("full_direct_answer"), limit=700),
             "scope": _calibrated_short(answer_frame.get("scope_note") or answer_frame.get("scoping_policy"), limit=520),
             "confidence": answer_frame.get("confidence") or interface.get("confidence"),
             "confidence_basis": _calibrated_short(answer_frame.get("confidence_basis"), limit=520),

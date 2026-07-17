@@ -7,7 +7,11 @@ def decision_model_required_output_schema(decision_question: Any) -> dict[str, A
     return {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": decision_question,
-        "direct_answer": "one sentence answering the decision question",
+        "direct_answer": "complete bounded answer, including important secondary calibration or boundary detail",
+        "primary_answer": "crisp first-sentence answer before secondary calibration, exception, or subgroup detail",
+        "secondary_detail": "important calibration, exception, subgroup, or boundary detail that should appear after the BLUF if present",
+        "secondary_detail_type": "scope_boundary | counterweight_or_calibration | secondary_calibration | none",
+        "full_direct_answer": "same substance as direct_answer; use when direct_answer is intentionally split into primary_answer plus secondary_detail",
         "confidence": "low | medium | high | not_specified",
         "overall_rationale": "why the evidence groups support this answer",
         "evidence_groups": [

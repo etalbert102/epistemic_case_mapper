@@ -130,6 +130,9 @@ class AnalystAnswerFrame(BaseModel):
     schema_id: Literal["analyst_answer_frame_v1"] = "analyst_answer_frame_v1"
     decision_question: str
     direct_answer: str = Field(min_length=1)
+    primary_answer: str = ""
+    secondary_detail: str = ""
+    secondary_detail_type: str = ""
     confidence: Literal["low", "medium", "high", "not_specified"] = "not_specified"
     why_this_read: str = Field(min_length=1)
     strongest_counterargument: str = ""
@@ -346,6 +349,10 @@ class AnalystDecisionModel(BaseModel):
     schema_id: Literal["analyst_decision_model_v1"] = "analyst_decision_model_v1"
     decision_question: str
     direct_answer: str = Field(min_length=1)
+    primary_answer: str = ""
+    secondary_detail: str = ""
+    secondary_detail_type: str = ""
+    full_direct_answer: str = ""
     confidence: Literal["low", "medium", "high", "not_specified"] = "not_specified"
     overall_rationale: str = Field(min_length=1)
     evidence_groups: list[AnalystDecisionEvidenceGroup] = Field(default_factory=list)

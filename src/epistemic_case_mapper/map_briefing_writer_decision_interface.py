@@ -5,6 +5,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
 from epistemic_case_mapper.map_briefing_analyst_decision_spine import build_analyst_decision_spine
+from epistemic_case_mapper.map_briefing_answer_hierarchy import answer_hierarchy_from_fields
 from epistemic_case_mapper.map_briefing_claim_calibration import calibrate_claim_for_writer, calibrate_text_for_writer
 from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract, contract_quality_summary
 from epistemic_case_mapper.map_briefing_memo_obligations import required_memo_obligations
@@ -12,16 +13,14 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe 
 from epistemic_case_mapper.map_briefing_source_identity import project_sources_to_ids_for_model, source_id_registry_for_model
 from epistemic_case_mapper.map_briefing_source_claim_context import writer_source_local_context as _writer_source_local_context
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
+from epistemic_case_mapper.map_briefing_writer_interface_quality_helpers import (
+    contains_generic_judgment,
+    informative_source_appraisal,
+    reader_facing_judgment_surface,
+)
 from epistemic_case_mapper.map_briefing_writer_value_projection import drop_empty as _drop_empty, quantity_values as _quantity_values
 
 
-GENERIC_JUDGMENT_PATTERNS = (
-    "use counterweights to bound",
-    "connect this reasoning step",
-    "write directly from",
-    "answer the decision question",
-    "if they do not overturn",
-)
 def build_writer_decision_interface(memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
     """Compile a memo-ready packet into the only context the writer model should see."""
 
@@ -128,7 +127,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
     analyst_spine = _dict(interface.get("analyst_decision_spine"))
     if not _list(analyst_spine.get("decision_moves")):
         warnings.append("missing_analyst_decision_spine_moves")
-    if _contains_generic_judgment(_reader_facing_judgment_surface(interface)):
+    if contains_generic_judgment(reader_facing_judgment_surface(interface)):
         warnings.append("generic_or_scaffolded_judgment_present")
     guidance = _dict(interface.get("critique_writer_guidance"))
     if guidance.get("status") == "ready" and not _list(guidance.get("guidance")):
@@ -157,7 +156,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
     if missing_obligation_evidence:
         warnings.append("retention_obligation_without_visible_evidence")
     source_appraisal_rows = _list(interface.get("source_appraisal_summary"))
-    informative_source_appraisal_count = sum(1 for row in source_appraisal_rows if _informative_source_appraisal(row))
+    informative_source_appraisal_count = sum(1 for row in source_appraisal_rows if informative_source_appraisal(row))
     if source_appraisal_rows and informative_source_appraisal_count == 0:
         warnings.append("source_appraisal_summary_uninformative")
     return {
@@ -180,7 +179,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
 def _bottom_line(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> str:
     spine = _dict(packet.get("answer_spine"))
     logic = _dict(packet.get("analyst_decision_logic"))
-    for value in (spine.get("default_read"), spine.get("bounded_answer"), logic.get("bounded_bottom_line")):
+    for value in (spine.get("full_direct_answer"), spine.get("default_read"), spine.get("bounded_answer"), logic.get("bounded_bottom_line")):
         text = _clean_answer_text(value)
         if text:
             return calibrate_text_for_writer(text)
@@ -194,11 +193,16 @@ def _answer_frame(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -
     cruxes = _sort_items([item for item in visible_items if _answer_relation(item) == "identifies_crux"])
     support = _sort_items([item for item in visible_items if _answer_relation(item) == "supports_answer"])
     direct_answer = _bottom_line(packet, visible_items)
+    hierarchy = _answer_hierarchy(packet, direct_answer)
     main_counterweight = _clean_answer_text(logic.get("strongest_counterweight")) or _claim_text(_first_item(counterweights))
     scope_note = _short_text("; ".join(_claim_text(item) for item in scope[:3]), 520)
     return {
         "bottom_line": direct_answer,
         "direct_answer": direct_answer,
+        "primary_answer": hierarchy["primary_answer"],
+        "secondary_detail": hierarchy["secondary_detail"],
+        "secondary_detail_type": hierarchy["secondary_detail_type"],
+        "full_direct_answer": hierarchy["full_direct_answer"],
         "confidence": _dict(packet.get("answer_spine")).get("confidence", "not_specified"),
         "confidence_basis": _confidence_basis(packet, visible_items),
         "main_support": _clean_answer_text(logic.get("support_summary")) or _claim_text(_first_item(support)),
@@ -208,6 +212,17 @@ def _answer_frame(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -
         "main_uncertainty": _short_text("; ".join(_claim_text(item) for item in [*counterweights[:2], *cruxes[:2]]), 520),
         "scoping_policy": "State the answer for the population, option, or use case supported by the evidence; use scope and counterweight rows to bound rather than overstate it.",
     }
+
+
+def _answer_hierarchy(packet: dict[str, Any], direct_answer: str) -> dict[str, str]:
+    spine = _dict(packet.get("answer_spine"))
+    return answer_hierarchy_from_fields(
+        direct_answer=direct_answer,
+        primary_answer=str(spine.get("primary_answer") or ""),
+        secondary_detail=str(spine.get("secondary_detail") or ""),
+        secondary_detail_type=str(spine.get("secondary_detail_type") or ""),
+        full_direct_answer=str(spine.get("full_direct_answer") or ""),
+    )
 
 
 def _counterweights(packet: dict[str, Any], visible_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -275,7 +290,7 @@ def _confidence_basis(packet: dict[str, Any], visible_items: list[dict[str, Any]
     ]
     for candidate in candidates:
         text = _clean_answer_text(candidate)
-        if text and not _contains_generic_judgment(text):
+        if text and not contains_generic_judgment(text):
             return _short_text(calibrate_text_for_writer(text), 420)
     support = _first_claim(visible_items, {"strongest_support", "quantitative_anchor"})
     counter = _first_claim(visible_items, {"strongest_counterweight"})
@@ -739,17 +754,6 @@ def _evidence_item_model_visible(item: dict[str, Any]) -> bool:
     return bool(item.get("must_use")) or str(item.get("obligation_level") or "") == "must_include"
 
 
-def _contains_generic_judgment(value: Any) -> bool:
-    text = str(value or "").lower()
-    if any(pattern in text for pattern in GENERIC_JUDGMENT_PATTERNS):
-        return True
-    if isinstance(value, dict):
-        return any(_contains_generic_judgment(row) for row in value.values())
-    if isinstance(value, list):
-        return any(_contains_generic_judgment(row) for row in value)
-    return False
-
-
 def _looks_truncated_or_scaffolded(value: Any) -> bool:
     text = str(value or "").strip()
     if not text:
@@ -761,64 +765,7 @@ def _looks_truncated_or_scaffolded(value: Any) -> bool:
         or "{'classification'" in text
         or "use the grouped evidence to answer" in lowered
         or "state the default" in lowered
-        or _contains_generic_judgment(text)
-    )
-
-
-def _reader_facing_judgment_surface(interface: dict[str, Any]) -> dict[str, Any]:
-    """Return generated judgment fields, excluding internal writer instructions."""
-
-    return {
-        "bottom_line": interface.get("bottom_line"),
-        "answer_frame": interface.get("answer_frame"),
-        "support_that_drives_answer": _claim_surface(interface.get("support_that_drives_answer")),
-        "counterweights_and_disposition": [
-            {
-                "claim": row.get("claim"),
-                "disposition": row.get("disposition"),
-                "disposition_rationale": row.get("disposition_rationale"),
-            }
-            for row in _list(interface.get("counterweights_and_disposition"))
-            if isinstance(row, dict)
-        ],
-        "scope_boundaries": _claim_surface(interface.get("scope_boundaries")),
-        "decision_cruxes": _claim_surface(interface.get("decision_cruxes")),
-        "practical_implications": interface.get("practical_implications"),
-        "practical_implication_cards": [
-            {
-                "implication_type": row.get("implication_type"),
-                "statement": row.get("statement"),
-            }
-            for row in _list(interface.get("practical_implication_cards"))
-            if isinstance(row, dict)
-        ],
-        "critique_writer_guidance": interface.get("critique_writer_guidance"),
-    }
-
-
-def _claim_surface(rows: Any) -> list[dict[str, Any]]:
-    return [
-        {
-            "claim": row.get("claim"),
-            "why_it_matters": row.get("why_it_matters"),
-            "answer_relation": row.get("answer_relation"),
-        }
-        for row in _list(rows)
-        if isinstance(row, dict)
-    ]
-
-
-def _informative_source_appraisal(row: Any) -> bool:
-    if not isinstance(row, dict):
-        return False
-    if str(row.get("decision_directness") or "").strip() not in {"", "unknown"}:
-        return True
-    return bool(
-        _list(row.get("evidence_proximity"))
-        or _list(row.get("recommended_uses"))
-        or _list(row.get("source_use_warnings"))
-        or _list(row.get("interpretation_caveats"))
-        or _dict(row.get("allowed_wording"))
+        or contains_generic_judgment(text)
     )
 
 

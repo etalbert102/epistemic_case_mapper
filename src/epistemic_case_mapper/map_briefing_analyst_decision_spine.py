@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import split_bluf_answer_hierarchy
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -24,6 +25,7 @@ def build_analyst_decision_spine(packet: dict[str, Any], writer_interface: dict[
     quantity_lookup = _quantity_binding_lookup(packet)
     quantity_rows = _quantity_rows(packet, interface, quantity_lookup=quantity_lookup)
     source_weight_moves = _source_weight_moves(packet)
+    answer_hierarchy = _answer_hierarchy(interface, answer_frame, logic)
     section_plan = _section_plan(
         packet=packet,
         interface=interface,
@@ -43,20 +45,17 @@ def build_analyst_decision_spine(packet: dict[str, Any], writer_interface: dict[
         source_weight_moves=source_weight_moves,
         section_plan=section_plan,
         quantity_lookup=quantity_lookup,
+        answer_hierarchy=answer_hierarchy,
     )
     return {
         "schema_id": "analyst_decision_spine_v1",
         "method": "deterministic_projection_from_post_adjudication_model_judgments",
         "decision_question": packet.get("decision_question") or interface.get("decision_question"),
-        "direct_answer": _first_text(
-            [
-                interface.get("bottom_line"),
-                answer_frame.get("direct_answer"),
-                _dict(packet.get("answer_spine")).get("default_read"),
-                logic.get("bounded_bottom_line"),
-            ],
-            limit=900,
-        ),
+        "direct_answer": answer_hierarchy["direct_answer"],
+        "primary_answer": answer_hierarchy["primary_answer"],
+        "secondary_detail": answer_hierarchy["secondary_detail"],
+        "secondary_detail_type": answer_hierarchy["secondary_detail_type"],
+        "full_direct_answer": answer_hierarchy["full_direct_answer"],
         "confidence": interface.get("confidence") or answer_frame.get("confidence"),
         "controlling_thesis": _controlling_thesis(answer_frame, logic, source_weight_moves),
         "source_weight_moves": source_weight_moves,
@@ -75,6 +74,9 @@ def compact_analyst_decision_spine_for_prompt(spine: dict[str, Any]) -> dict[str
             "schema_id": spine.get("schema_id"),
             "decision_question": spine.get("decision_question"),
             "direct_answer": spine.get("direct_answer"),
+            "primary_answer": spine.get("primary_answer"),
+            "secondary_detail": spine.get("secondary_detail"),
+            "secondary_detail_type": spine.get("secondary_detail_type"),
             "confidence": spine.get("confidence"),
             "controlling_thesis": spine.get("controlling_thesis"),
             "source_weight_moves": _list(spine.get("source_weight_moves"))[:8],
@@ -121,6 +123,7 @@ def _decision_moves(
     source_weight_moves: list[dict[str, Any]],
     section_plan: list[dict[str, Any]],
     quantity_lookup: dict[str, dict[str, Any]],
+    answer_hierarchy: dict[str, str],
 ) -> list[dict[str, Any]]:
     section_by_move = {
         move_id: str(section.get("section_id") or "")
@@ -131,7 +134,7 @@ def _decision_moves(
         _move(
             "answer",
             "answer",
-            _first_text([answer_frame.get("direct_answer"), logic.get("bounded_bottom_line")], limit=900),
+            _first_text([answer_hierarchy.get("primary_answer"), answer_frame.get("direct_answer"), logic.get("bounded_bottom_line")], limit=900),
             "State the bounded answer, scope, and confidence as the reference point for the rest of the memo.",
             section_by_move=section_by_move,
             support_rows=[],
@@ -193,6 +196,31 @@ def _decision_moves(
         ),
     ]
     return [move for move in moves if move.get("point") or move.get("evidence_item_ids") or move.get("source_ids")]
+
+
+def _answer_hierarchy(interface: dict[str, Any], answer_frame: dict[str, Any], logic: dict[str, Any]) -> dict[str, str]:
+    direct = _first_text(
+        [
+            answer_frame.get("full_direct_answer"),
+            interface.get("bottom_line"),
+            answer_frame.get("direct_answer"),
+            logic.get("bounded_bottom_line"),
+        ],
+        limit=900,
+    )
+    split = split_bluf_answer_hierarchy(direct)
+    primary = _first_text([answer_frame.get("primary_answer"), split["primary_answer"]], limit=520)
+    secondary = _first_text([answer_frame.get("secondary_detail"), split["secondary_detail"]], limit=420)
+    secondary_type = str(answer_frame.get("secondary_detail_type") or split["secondary_detail_type"] or "").strip()
+    if secondary_type == "none":
+        secondary_type = ""
+    return {
+        "direct_answer": direct,
+        "primary_answer": primary,
+        "secondary_detail": secondary,
+        "secondary_detail_type": secondary_type,
+        "full_direct_answer": direct if secondary else "",
+    }
 
 
 def _move(

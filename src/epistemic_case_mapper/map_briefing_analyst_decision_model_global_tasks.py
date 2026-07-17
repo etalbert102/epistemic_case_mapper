@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_promp
     build_global_analyst_task_prompt,
     build_global_analyst_tasks,
 )
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import split_bluf_answer_hierarchy
 from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_runner import (
     public_global_task_report,
     run_global_analyst_task_calls,
@@ -133,10 +134,15 @@ def build_analyst_decision_model_from_global_tasks(
     dispositions = _dispositions_from_roles(context, groups, evidence_roles, covered)
     memo_relevance = _memo_relevance_from_roles(context, groups, evidence_roles, dispositions)
     quantity_relevance = _quantity_relevance_from_decisions(context, quantity_decisions, memo_relevance)
+    answer_hierarchy = _answer_hierarchy(answer_frame, context)
     return {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": str(context.get("decision_question") or ""),
-        "direct_answer": _short_text(answer_frame.get("best_answer") or _stable_answer(context), 700),
+        "direct_answer": answer_hierarchy["direct_answer"],
+        "primary_answer": answer_hierarchy["primary_answer"],
+        "secondary_detail": answer_hierarchy["secondary_detail"],
+        "secondary_detail_type": answer_hierarchy["secondary_detail_type"],
+        "full_direct_answer": answer_hierarchy["full_direct_answer"],
         "confidence": _confidence(answer_frame.get("confidence")),
         "overall_rationale": _overall_rationale(answer_frame, source_hierarchy, blueprint),
         "evidence_groups": groups,
@@ -151,6 +157,23 @@ def build_analyst_decision_model_from_global_tasks(
         "what_would_change_the_answer": _what_would_change(answer_frame, evidence_roles),
         "decision_logic": _decision_logic(answer_frame, groups, evidence_roles, source_hierarchy),
         "argument_plan": _argument_plan_from_blueprint(blueprint, groups),
+    }
+
+
+def _answer_hierarchy(answer_frame: dict[str, Any], context: dict[str, Any]) -> dict[str, str]:
+    direct = _short_text(answer_frame.get("best_answer") or _stable_answer(context), 700)
+    split = split_bluf_answer_hierarchy(direct)
+    primary = _short_text(answer_frame.get("primary_answer") or split["primary_answer"], 520)
+    secondary = _short_text(answer_frame.get("secondary_detail") or split["secondary_detail"], 420)
+    secondary_type = str(answer_frame.get("secondary_detail_type") or split["secondary_detail_type"] or "").strip()
+    if secondary_type == "none":
+        secondary_type = ""
+    return {
+        "direct_answer": direct,
+        "primary_answer": primary,
+        "secondary_detail": secondary,
+        "secondary_detail_type": secondary_type,
+        "full_direct_answer": direct if secondary else "",
     }
 
 

@@ -54,7 +54,7 @@ def _global_task_packet(task_id: str, context: dict[str, Any]) -> dict[str, Any]
 
 def _task_instruction(task_id: str) -> str:
     return {
-        "answer_frame": "Create the global answer frame: best answer, confidence, main answer drivers, main counterweights, scope, and practical implication.",
+        "answer_frame": "Create the global answer frame: primary answer, full bounded answer, confidence, main answer drivers, main counterweights, scope, and practical implication.",
         "evidence_roles": "Classify every evidence row's whole-case decision role and memo inclusion.",
         "quantity_plan": "Decide which quantities must survive in the memo and how to word them safely.",
         "source_hierarchy": "Create a global comparative source hierarchy by marginal decision role.",
@@ -69,7 +69,10 @@ def _task_schema(task_id: str) -> dict[str, Any]:
     schemas: dict[str, dict[str, Any]] = {
         "answer_frame": {
             "schema_id": "global_answer_frame_v1",
-            "best_answer": "bounded direct answer",
+            "best_answer": "complete bounded answer, including important secondary calibration or boundary detail",
+            "primary_answer": "crisp first-sentence answer before secondary calibration, exception, or subgroup detail",
+            "secondary_detail": "important calibration, exception, subgroup, or boundary detail that should appear after the BLUF if present",
+            "secondary_detail_type": "scope_boundary | counterweight_or_calibration | secondary_calibration | none",
             "confidence": "low | medium | high",
             "confidence_basis": "why this confidence is warranted",
             "main_answer_drivers": [{"source_ids": ["source_id"], "evidence_item_ids": ["evidence_id"], "reason": "why this drives the answer"}],

@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_prompt_contract i
     decision_model_required_output_schema,
 )
 from epistemic_case_mapper.map_briefing_analyst_decision_group_schema import schema_safe_decision_group
+from epistemic_case_mapper.map_briefing_balanced_answer_frame import split_bluf_answer_hierarchy
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -200,10 +201,15 @@ def merge_decision_model_payloads(context: dict[str, Any], payloads: list[dict[s
     covered = {evidence_id for group in groups for evidence_id in _string_list(group.get("covered_evidence_item_ids"))}
     dispositions = _merged_dispositions(context, groups, dispositions_by_id, covered)
     memo_relevance_decisions = _merged_memo_relevance_decisions(context, payloads, groups, dispositions)
+    answer_hierarchy = _merged_answer_hierarchy(payloads)
     return {
         "schema_id": "analyst_decision_model_v1",
         "decision_question": context.get("decision_question", ""),
-        "direct_answer": _merged_direct_answer(payloads),
+        "direct_answer": answer_hierarchy["direct_answer"],
+        "primary_answer": answer_hierarchy["primary_answer"],
+        "secondary_detail": answer_hierarchy["secondary_detail"],
+        "secondary_detail_type": answer_hierarchy["secondary_detail_type"],
+        "full_direct_answer": answer_hierarchy["full_direct_answer"],
         "confidence": _merged_confidence(payloads),
         "overall_rationale": _overall_rationale(groups, payloads),
         "evidence_groups": groups,
@@ -887,6 +893,35 @@ def _merged_direct_answer(payloads: list[dict[str, Any]]) -> str:
         if text and not is_scaffolded_decision_logic_text(text):
             return _short_text(text, 700)
     return ""
+
+
+def _merged_answer_hierarchy(payloads: list[dict[str, Any]]) -> dict[str, str]:
+    direct = _merged_direct_answer(payloads)
+    split = split_bluf_answer_hierarchy(direct)
+    primary = ""
+    secondary = ""
+    secondary_type = ""
+    for payload in payloads:
+        primary = naturalize_decision_logic_text(str(payload.get("primary_answer") or ""))
+        if primary and not is_scaffolded_decision_logic_text(primary):
+            primary = _short_text(primary, 520)
+            break
+    for payload in payloads:
+        secondary = naturalize_decision_logic_text(str(payload.get("secondary_detail") or ""))
+        if secondary and not is_scaffolded_decision_logic_text(secondary):
+            secondary = _short_text(secondary, 420)
+            secondary_type = str(payload.get("secondary_detail_type") or "").strip()
+            break
+    primary = primary or split["primary_answer"]
+    secondary = secondary or split["secondary_detail"]
+    secondary_type = "" if secondary_type == "none" else secondary_type or split["secondary_detail_type"]
+    return {
+        "direct_answer": direct,
+        "primary_answer": primary,
+        "secondary_detail": secondary,
+        "secondary_detail_type": secondary_type,
+        "full_direct_answer": direct if secondary else "",
+    }
 
 
 def _first_group(groups: list[dict[str, Any]], role: str) -> str:
