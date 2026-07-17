@@ -228,6 +228,16 @@ def test_section_synthesis_retry_restates_missing_contract(monkeypatch: pytest.M
 def test_section_packets_are_section_local_and_practical_gets_evidence() -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
+    packet["canonical_decision_writer_packet"]["decision_usefulness_packet"] = {
+        "schema_id": "decision_usefulness_packet_v1",
+        "recommended_stance": {
+            "stance": "Adopt option A where monitoring can be maintained.",
+            "confidence": "medium",
+            "scope": "Sites matching the evidence base.",
+        },
+        "tradeoffs": [{"tradeoff": "Protection versus implementation burden."}],
+        "monitoring_triggers": [{"trigger": "New implementation failure evidence."}],
+    }
     inventory = packet["canonical_decision_writer_packet"]["organized_evidence_inventory"]["lanes"]
     inventory.setdefault("interpretive_context", []).append(
         {
@@ -258,6 +268,10 @@ def test_section_packets_are_section_local_and_practical_gets_evidence() -> None
     assert "current_read_reference" not in practical["top_context"]
     assert "confidence" not in practical["top_context"]
     assert "decision_question" in practical["top_context"]
+    assert practical["top_context"]["decision_action_contract"]["default_action"] == "Adopt option A where monitoring can be maintained."
+    assert practical["top_context"]["decision_action_contract"]["scope"] == "Sites matching the evidence base."
+    assert practical["top_context"]["decision_action_contract"]["tradeoff"] == "Protection versus implementation burden."
+    assert practical["top_context"]["decision_action_contract"]["update_trigger"] == "New implementation failure evidence."
     assert practical["section_job"] == "Translate the settled answer and its limits into what guidance should say; keep evidence basis short."
     assert all(
         atom.get("section_specific_job") == "Use this evidence only to translate the answer into advice, exceptions, monitoring, or wording; keep the evidence recap brief."
@@ -439,6 +453,34 @@ def test_section_prompt_prioritizes_applied_reader_guidance() -> None:
     assert "Frame the claim as association, not proof." in prompt
     assert "### Writing guidance, caveats, and quantity risks" not in prompt
     assert "This generic row should be suppressed" not in prompt
+
+
+def test_practical_section_prompt_renders_decision_action_contract() -> None:
+    prompt = build_memo_ready_section_synthesis_prompt(
+        {
+            "heading": "Practical Implication",
+            "section_job": "Translate the answer into advice.",
+            "section_role_contract": {"do": ["state the action"]},
+            "top_context": {
+                "decision_question": "Should option A be adopted?",
+                "decision_action_contract": {
+                    "default_action": "Adopt option A in matched settings.",
+                    "scope": "Matched settings only.",
+                    "exception_handling": "Pause when monitoring fails.",
+                    "confidence": "medium",
+                    "tradeoff": "Benefit versus implementation burden.",
+                    "update_trigger": "New failure evidence.",
+                    "what_not_to_say": ["Do not claim unconditional adoption."],
+                },
+            },
+        },
+        known_source_ids=["s1"],
+    )
+
+    assert "### Decision action contract" in prompt
+    assert "Default action: Adopt option A in matched settings." in prompt
+    assert "Exception handling: Pause when monitoring fails." in prompt
+    assert "Do not overstate: Do not claim unconditional adoption." in prompt
 
 
 def test_section_synthesis_num_predict_can_be_overridden(

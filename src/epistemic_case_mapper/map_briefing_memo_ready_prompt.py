@@ -11,12 +11,9 @@ from epistemic_case_mapper.map_briefing_analyst_decision_spine import compact_an
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import norm as _norm
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
-from epistemic_case_mapper.map_briefing_source_bound_evidence import (
-    build_source_bound_evidence_atoms,
-    quantity_binding_rows,
-    source_bound_quantity_tuples,
-)
+from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_bound_evidence_atoms, quantity_binding_rows, source_bound_quantity_tuples
 from epistemic_case_mapper.map_briefing_memo_ready_guidance_application import build_section_reader_guidance_application
+from epistemic_case_mapper.map_briefing_memo_ready_action_contract import build_decision_action_contract
 from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.map_briefing_memo_ready_section_notes import build_memo_ready_section_markdown_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_section_jobs import with_section_specific_jobs
@@ -422,6 +419,7 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
                 "scope": bluf.get("who_it_applies_to") or balanced.get("scope"),
                 "main_boundary": bluf.get("main_exception_or_boundary") or balanced.get("main_counterweight"),
                 "decision_usefulness": _practical_decision_usefulness(reader_packet.get("decision_usefulness")),
+                "decision_action_contract": build_decision_action_contract(reader_packet),
             }
         )
     return _drop_empty(base)

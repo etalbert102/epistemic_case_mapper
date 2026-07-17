@@ -52,6 +52,7 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         "### Section job",
         *_bullet_list(role.get("do")),
         *_section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application)),
+        *_section("### Decision action contract", _decision_action_contract_lines(top.get("decision_action_contract"))),
         *_section("### Avoid", _bullet_list(role.get("avoid"))),
         *_section("### Calibration limits", _bullet_list(top.get("must_not_overstate"))),
         *_section("### Required evidence points", _source_bound_atom_lines(packet.get("source_bound_evidence_atoms"))),
@@ -321,6 +322,23 @@ def _reader_guidance_application_lines(value: Any) -> list[str]:
         rows.append(_bullet(f"Repeat control: {repeat}"))
     rows.extend(_applied_guidance_rows(application.get("matched_reader_guidance"), "Use"))
     rows.extend(_applied_guidance_rows(application.get("matched_quantity_wording_risks"), "Quantity wording"))
+    return rows
+
+
+def _decision_action_contract_lines(value: Any) -> list[str]:
+    contract = _dict(value)
+    rows = []
+    for key, label in (
+        ("default_action", "Default action"),
+        ("scope", "Scope"),
+        ("exception_handling", "Exception handling"),
+        ("confidence", "Confidence"),
+        ("tradeoff", "Tradeoff"),
+        ("update_trigger", "Update trigger"),
+    ):
+        if text := _text(contract.get(key)):
+            rows.append(_bullet(f"{label}: {text}"))
+    rows.extend(_bullet_list(contract.get("what_not_to_say"), prefix="Do not overstate: "))
     return rows
 
 
