@@ -48,6 +48,8 @@ ecm --repo-root /path/to/package --package package.yaml semantic staged status \
   --region my_case_initial_region
 ```
 
+The status view shows a compact stage table and a suggested next command. Add `--verbose` when you need the full checked-artifact inventory.
+
 Resume from the original documents and rebuild the full default staged run:
 
 ```bash

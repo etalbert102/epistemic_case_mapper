@@ -389,6 +389,7 @@ def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int
             map_path=args.map,
             quality_report_path=args.quality_report,
             briefing_dir=args.briefing_dir,
+            verbose=args.verbose,
         )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)

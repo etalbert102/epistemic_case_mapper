@@ -271,7 +271,9 @@ def _add_semantic_parsers(subparsers: Any) -> None:
             "Stages:\n"
             "  documents: case manifest and required source files are available.\n"
             "  map: generated_map.json and map/map_quality_report.json are available.\n"
-            "  briefing: briefing/BRIEFING.md, briefing_summary.json, and FINAL_REVIEW_PACKET.md are available."
+            "  briefing: briefing/BRIEFING.md, briefing_summary.json, and FINAL_REVIEW_PACKET.md are available.\n"
+            "\n"
+            "Use --verbose to list every checked artifact path."
         ),
     )
     semantic_staged_status.add_argument("--region", required=True)
@@ -279,6 +281,7 @@ def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_staged_status.add_argument("--map", help="Generated map path. Defaults to <run-dir>/generated_map.json.")
     semantic_staged_status.add_argument("--quality-report", help="Map quality report path. Defaults to <run-dir>/map/map_quality_report.json.")
     semantic_staged_status.add_argument("--briefing-dir", help="Briefing artifact directory. Defaults to <run-dir>/briefing.")
+    semantic_staged_status.add_argument("--verbose", action="store_true", help="List every checked artifact path.")
     semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
     semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
     semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")

@@ -423,7 +423,10 @@ def _run_staged_semantic_resume(
     if from_stage == "map":
         missing = _missing_paths([paths["map_path"], paths["quality_report_path"]])
         if missing:
-            print(f"semantic_staged_resume_failed missing_map_artifacts={','.join(missing)}", file=sys.stderr)
+            print("semantic_staged_resume_failed missing_map_artifacts:", file=sys.stderr)
+            for item in _display_missing_paths(repo_root, missing):
+                print(f"  - {item}", file=sys.stderr)
+            print(f"Run: ecm semantic staged status --region {region_id}", file=sys.stderr)
             return 1
         print("Resuming from map artifacts: running memo synthesis only.")
         return _run_map_briefing(
@@ -455,6 +458,7 @@ def _run_staged_semantic_status(
     map_path: str | None,
     quality_report_path: str | None,
     briefing_dir: str | None,
+    verbose: bool,
 ) -> int:
     paths = _staged_resume_paths(
         repo_root=repo_root,
@@ -478,13 +482,33 @@ def _run_staged_semantic_status(
         _stage_status_row(repo_root, "map", paths["map_path"].exists() and paths["quality_report_path"].exists(), [paths["map_path"], paths["quality_report_path"], paths["run_summary_path"], paths["pipeline_progress_path"]]),
         _stage_status_row(repo_root, "briefing", paths["briefing_path"].exists() and paths["briefing_summary_path"].exists() and paths["final_review_packet_path"].exists(), [paths["briefing_path"], paths["briefing_summary_path"], paths["final_review_packet_path"], paths["memo_progress_path"]]),
     ]
-    print(f"Staged pipeline status region={region_id}")
-    print("Pipeline: documents -> map -> briefing")
+    print("Staged Pipeline")
+    print(f"Region: {region_id}")
+    print(f"Run dir: {_display_path(repo_root, paths['run_dir'])}")
+    print("Flow: documents -> map -> briefing")
+    print("")
+    print("Stage       State       Summary")
     for row in rows:
-        print(f"{row['stage']}: {row['status']}")
-        for artifact in row["artifacts"]:
-            marker = "ok" if artifact["exists"] else "missing"
-            print(f"  [{marker}] {artifact['path']}")
+        print(_stage_summary_line(row))
+    if verbose:
+        print("")
+        print("Checked Artifacts")
+        for row in rows:
+            print(f"{row['stage']}:")
+            for artifact in row["artifacts"]:
+                marker = "ok" if artifact["exists"] else "missing"
+                print(f"  [{marker}] {artifact['path']}")
+    else:
+        print("")
+        print("Use --verbose to list every checked artifact path.")
+    print("")
+    _print_staged_next_actions(
+        repo_root=repo_root,
+        region_id=region_id,
+        backend=manifest.default_model_backend,
+        rows=rows,
+        paths=paths,
+    )
     return 0
 
 
@@ -497,7 +521,10 @@ def _report_existing_briefing(*, repo_root: Path, package: str, region_id: str, 
         return 1
     missing = _missing_paths([paths["briefing_path"], paths["briefing_summary_path"], paths["final_review_packet_path"]])
     if missing:
-        print(f"semantic_staged_resume_failed missing_briefing_artifacts={','.join(missing)}", file=sys.stderr)
+        print("semantic_staged_resume_failed missing_briefing_artifacts:", file=sys.stderr)
+        for item in _display_missing_paths(repo_root, missing):
+            print(f"  - {item}", file=sys.stderr)
+        print(f"Run: ecm semantic staged status --region {region_id}", file=sys.stderr)
         return 1
     print("Existing briefing artifacts are ready.")
     print(f"Briefing memo: {_display_path(repo_root, paths['briefing_path'])}")
@@ -546,16 +573,88 @@ def _missing_paths(paths: list[Path]) -> list[str]:
     return [str(path) for path in paths if not path.exists()]
 
 
+def _display_missing_paths(repo_root: Path, paths: list[str]) -> list[str]:
+    return [_display_path(repo_root, Path(path)) for path in paths]
+
+
 def _case_source_paths(repo_root: Path, case_manifest: CaseManifest) -> list[Path]:
     return [repo_root / source.path for source in case_manifest.sources if source.path]
 
 
 def _stage_status_row(repo_root: Path, stage: str, ready: bool, artifacts: list[Path]) -> dict[str, Any]:
+    missing = [path for path in artifacts if not path.exists()]
     return {
         "stage": stage,
         "status": "ready" if ready else "incomplete",
+        "missing_count": len(missing),
+        "artifact_count": len(artifacts),
         "artifacts": [{"path": _display_path(repo_root, path), "exists": path.exists()} for path in artifacts],
     }
+
+
+def _stage_summary_line(row: dict[str, Any]) -> str:
+    stage = str(row["stage"])
+    status = str(row["status"])
+    artifacts = row.get("artifacts", []) if isinstance(row.get("artifacts"), list) else []
+    if status == "ready":
+        summary = _ready_stage_summary(stage, artifacts)
+    else:
+        missing = [item["path"] for item in artifacts if isinstance(item, dict) and not item.get("exists")]
+        summary = _missing_stage_summary(stage, missing)
+    return f"{stage:<11} {status:<11} {summary}"
+
+
+def _ready_stage_summary(stage: str, artifacts: list[dict[str, Any]]) -> str:
+    if stage == "documents":
+        source_count = max(0, len(artifacts) - 1)
+        return f"case manifest and {source_count} source file(s) available"
+    if stage == "map":
+        return "generated map and quality report available"
+    if stage == "briefing":
+        return "memo, summary, and final review packet available"
+    return "ready"
+
+
+def _missing_stage_summary(stage: str, missing: list[str]) -> str:
+    if not missing:
+        return "not ready"
+    if stage == "documents":
+        return f"{len(missing)} required document artifact(s) missing"
+    if stage in {"map", "briefing"}:
+        labels = [_artifact_basename(path) for path in missing[:2]]
+        suffix = "" if len(missing) <= 2 else f" and {len(missing) - 2} more"
+        return "missing " + ", ".join(labels) + suffix
+    return f"{len(missing)} artifact(s) missing"
+
+
+def _artifact_basename(path: str) -> str:
+    return Path(path).name or path
+
+
+def _print_staged_next_actions(
+    *,
+    repo_root: Path,
+    region_id: str,
+    backend: str,
+    rows: list[dict[str, Any]],
+    paths: dict[str, Path],
+) -> None:
+    status_by_stage = {str(row["stage"]): str(row["status"]) for row in rows}
+    print("Next Actions")
+    if status_by_stage.get("briefing") == "ready":
+        print(f"  Read memo: {_display_path(repo_root, paths['briefing_path'])}")
+        print(f"  Review packet: {_display_path(repo_root, paths['final_review_packet_path'])}")
+        print(f"  Rebuild memo: ecm semantic staged resume --region {region_id} --from-stage map --backend {backend}")
+        return
+    if status_by_stage.get("map") == "ready":
+        print(f"  Build memo: ecm semantic staged resume --region {region_id} --from-stage map --backend {backend}")
+        print(f"  Existing map: {_display_path(repo_root, paths['map_path'])}")
+        return
+    if status_by_stage.get("documents") == "ready":
+        print(f"  Build map and memo: ecm semantic staged resume --region {region_id} --from-stage documents --backend {backend}")
+        print(f"  Or run directly: ecm semantic staged brief --region {region_id} --backend {backend}")
+        return
+    print(f"  Fix missing case/source files, then run: ecm semantic staged status --region {region_id} --verbose")
 
 
 def _write_backend_result(
