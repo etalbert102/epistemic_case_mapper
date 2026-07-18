@@ -5,7 +5,7 @@ package_label: FLF Submission
 ui_hero:
   eyebrow: Judge Mode
   title: See the value in one dependency.
-  body: "A flat synthesis can say cosmic-ray exposure rules out LHC black-hole risk. The map keeps the hidden dependency reviewable: slower LHC products may be more trappable than cosmic-ray products, so compact-star arguments become decision-relevant."
+  body: "A flat synthesis can say cosmic-ray exposure rules out LHC black-hole risk. The map preserves the judgment chain: declared sources, normalized claims, dependency handles, repairable relations, and update ledgers."
   links:
     - label: Start here
       path: docs/START_HERE.md
@@ -42,6 +42,7 @@ judge_paths:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
   - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
@@ -113,6 +114,7 @@ required_docs:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
   - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
@@ -158,6 +160,7 @@ reference_scan_paths:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
   - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
@@ -201,6 +204,10 @@ extension_artifacts:
     case: Cross-case
     path: docs/INVESTIGATOR_CHALLENGE.md
     status: deterministic replay demo
+  - artifact: Decision-space framework integration
+    case: Submission
+    path: docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
+    status: judge-facing framing
   - artifact: Recover, repair, update judge packet
     case: LHC black holes
     path: docs/RECOVER_REPAIR_UPDATE_DEMO.md

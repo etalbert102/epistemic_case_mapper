@@ -6,9 +6,9 @@ Purpose: give reviewers one place to inspect where the evidence is strongest, wh
 
 ## Summary
 
-This submission is strongest as a methodology plus runnable reference prototype for preserving and auditing decision-relevant structure during AI-assisted investigation. It is not a finished epistemic stack or a human-validated knowledge base.
+This submission is strongest as a methodology plus runnable reference prototype for preserving operational judgment during AI-assisted investigation. It is not a finished epistemic stack or a human-validated knowledge base.
 
-The central claim is that flat synthesis can be broadly useful while still eroding the decision space a later reviewer needs: source boundaries, caveats, dependencies, cruxes, similar-but-not-identical claims, and critique/response structure. The prototype does not claim that all summaries fail. It claims that preservation is brittle and hard to audit unless the structure is made explicit.
+The central claim is that AI-assisted workflows can lose reasoning structure during retrieval, claim normalization, mapping, and synthesis even when the final answer is broadly useful. That becomes decision-space erosion when a decision-relevant option, interpretation, evidence path, caveat, or review boundary becomes materially less visible or recoverable before accountable review. The prototype does not claim that all summaries fail. It claims that preservation is brittle and hard to audit unless the structure is made explicit.
 
 ## Evidence Ledger
 
@@ -19,10 +19,11 @@ This table is organized around the submission's own evidence, not as a scoring g
 | Concrete reasoning gain | `docs/FLF_BEFORE_AFTER_COMPARISON.md`, worked maps, and erosion audits show distinctions that ordinary synthesis can flatten: LHC velocity/trapping dependencies, eggs endpoint boundaries, and COVID disagreement structure. | The comparison against off-the-shelf deep research and top-range Claude Code is still mostly qualitative, despite multi-model baseline audits. | Compare the map workflow against a fresh deep-research baseline on the same sub-question. |
 | Transfer across case shapes | LHC black-hole risk, eggs/health, and a narrow COVID origins slice differ by closure, controversy, evidence type, and adversarial pressure. `docs/GENERALIZABILITY_RED_TEAM.md` now names failure boundaries and transfer-test criteria. | The strongest maps are still author-selected worked regions rather than randomly sampled case slices, and no second operator has applied the method independently. | Run one fresh-case transfer test outside the current set, or have a second reviewer revise 10 claims and 10 relations while recording accept/revise/reject decisions. |
 | Reusable artifacts | Stable source IDs, claim IDs, relation IDs, Markdown/JSON exports, review packets, and task queues let another investigator inspect or extend local pieces. | Multi-reviewer merge and conflict-resolution workflow is specified but not implemented. | Have a second reviewer revise one map while preserving IDs and recording accept/revise/reject decisions. |
+| Framework integration | `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` maps retrieval-gated reasoning, claim normalization, decision-space construction, judgment anchors, artifact fidelity, and auditable authority onto concrete repo artifacts. | The current integration is strongest as a submission framing and artifact audit; the UI does not yet persist reviewer interventions. | Run a reviewer session and verify that accept/revise/reject decisions propagate through regenerated artifacts. |
 | Ability to absorb more work | Validators, schema, prompt inventory, source manifests, and JSON exports can accept more sources, claims, relations, and model passes. | Extraction and relation labeling are still curated; the current strongest artifact depends on careful human/agent curation. | Run a logged LLM extraction pass and compare it against the curated maps for recall, precision, and review cost. |
 | Inspectable method | Workflow docs, prompt inventory, validators, source manifests, audit notes, and `human-review-needed` status make design choices and uncertainty visible. | Some source-fidelity and relation-correctness judgments are still embedded in curated Markdown rather than independently reviewed. | Add a completed review log that shows which claims, relations, and losses were accepted, revised, or rejected. |
 | Stress under disagreement | Erosion audits, blinded local-model baselines, multi-model baseline audit, failure-mode discussion, and narrow COVID stress test expose where flat synthesis is brittle. | No external adversarial review has tried to break the maps or source selections. | Ask a motivated reviewer to challenge one worked region and record whether the map helps localize disagreement. |
-| Framing contribution | The submission argues that broad correctness is not enough: a synthesis can be right while erasing the reviewable structure needed for compounding epistemic work. `docs/REFERENCE_LINEAGE.md` ties this to contest examples around measurement, construct validity, systems safety, and structured analysis. | The framing may still look like provenance or argument mapping unless the LHC one-minute example lands. | Add a short comparison showing how decision-space erosion differs from ordinary provenance, summarization faithfulness, and argument mining. |
+| Framing contribution | The submission argues that broad correctness is not enough: a synthesis can be right while losing the reviewable structure needed for compounding epistemic work. `docs/REFERENCE_LINEAGE.md` ties this to contest examples around measurement, construct validity, systems safety, and structured analysis. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` maps the broader decision-space framework onto repo artifacts. | The framing may still look like provenance or argument mapping unless the mechanism chain and LHC one-minute example land. | Have an external reviewer judge whether the framework mapping clarifies the project or feels like terminology layered on top of argument mapping. |
 | Matched strong-model check | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` shows that a strong model can recover much of the LHC dependency chain from the same source universe when directly asked. | This is a single run, not a benchmark. It narrows rather than expands the claim: the map is a review surface, not proof of prose superiority. | Repeat on fresh cases and have humans judge recovery, repairability, and update cost. |
 
 ## Best Evidence To Inspect
@@ -39,13 +40,14 @@ This table is organized around the submission's own evidence, not as a scoring g
 10. `docs/HUMAN_AUDIT_GUIDE.md`
 11. `docs/NEW_SOURCE_UPDATE_DEMO.md`
 12. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
-13. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
-14. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
-15. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-16. `examples/eggs/full_case_flat_synthesis_baseline.md`
-17. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-18. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-19. `ui/index.html`
+13. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`
+14. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
+15. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
+16. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+17. `examples/eggs/full_case_flat_synthesis_baseline.md`
+18. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+19. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+20. `ui/index.html`
 
 ## Failure Modes
 
@@ -86,7 +88,7 @@ Review packets can look rigorous while reviewers only skim. The method needs exp
 | Static UI is inspection-only | Judges can browse the artifact more easily, but cannot edit or review inside the UI. | The UI links back to canonical Markdown/CSV review packets. | Add reviewer decision editing only if persistence and provenance can be handled safely. |
 | Relation labels need domain review | Incorrect support/challenge/dependency labels can mislead reviewers. | Relation rationales and source excerpts are explicit. | Domain reviewers should assess relation correctness. |
 | Extraction is not fully automated | Manual curation limits scale. | Deterministic scripts and prompt inventory make the process repeatable. | Add LLM extraction passes with reproducible prompt/model logging. |
-| Decision-space erosion is a new framing | Judges may see it as a relabeling of known provenance or argument-mining concerns. | `docs/REFERENCE_LINEAGE.md` now connects the framing to contest-provided examples of construct-validity, measurement, safety, evidence-grading, and structured-analysis work. | Add a short judge-facing comparison showing how this differs from ordinary provenance, summarization faithfulness, and argument mining. |
+| Decision-space framework may look like relabeling | Judges may see the project as ordinary provenance, argument mapping, or summarization faithfulness under new vocabulary. | `docs/REFERENCE_LINEAGE.md`, `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`, and `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md` connect the terms to concrete artifacts and intervention points. | Test whether a reviewer can explain the mechanism chain after the five-minute path without coaching. |
 | Evidence is not quantitative enough for a paper | The contest accepts prototypes, but a paper needs stronger evaluation. | Artifact counts, multi-model baselines, and audit packets provide a measurement scaffold. | Run human-reviewed evaluations across more tasks and models. |
 | Draft extension region is not canonical | The public-risk framing map strengthens realism but is not yet fully wired into the validated worked-region pipeline. | It is explicitly labeled as a draft extension and linked from the judge path. | Promote it into the canonical validator set after human/source review. |
 

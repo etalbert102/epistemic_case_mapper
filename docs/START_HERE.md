@@ -4,14 +4,24 @@ Status: `human-review-needed`
 
 This prototype is easiest to judge through one concrete question:
 
-> Can an AI-assisted workflow preserve the reasoning structure that a normal synthesis tends to flatten?
+> Can an AI-assisted workflow preserve operational judgment as evidence is retrieved, normalized, mapped, synthesized, reviewed, repaired, and updated?
 
-The demonstrated answer is not "a nicer summary." It is a reusable review surface: source-grounded claims, relation IDs, caveats, cruxes, erosion losses, and human-review handoff packets.
+The demonstrated answer is not "a nicer summary." It is a reusable review surface: source-grounded claims, relation IDs, caveats, cruxes, erosion losses, and human-review handoff packets that operate as judgment anchors.
+
+The governing mechanism chain is:
+
+```text
+retrieval gate -> claim normalization -> decision-space construction -> judgment anchors -> artifact fidelity -> auditable authority
+```
+
+That means the project is not only asking whether a final memo is good. It is asking whether the workflow preserves enough evidence, distinctions, dependencies, source identity, and review state for another investigator to understand and change the reasoning locally.
 
 ## What To Judge
 
 Judge the package on whether it makes later reasoning easier to audit and extend:
 
+- Can you see which evidence entered the case and which boundaries shaped retrieval?
+- Can you see how source material was normalized into claims without losing caveats?
 - Can you see which distinctions carry the conclusion?
 - Can you tell what a flat synthesis compressed or lost?
 - Can another investigator accept, revise, reject, or extend a local piece without redoing the whole case?
@@ -46,12 +56,13 @@ This is the submission's value proposition: the map keeps the part of the reason
 ## Five-Minute Path
 
 1. Read the one-minute demo above.
-2. Open `docs/INVESTIGATOR_CHALLENGE.md` for the runnable challenge boundary.
-3. Open `docs/RECOVER_REPAIR_UPDATE_DEMO.md` and inspect the three-part recover, repair, and update result.
-4. Open `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` to see the honest comparison: a strong model can recover much of the LHC chain, but the map supplies stable handles for review and update.
-5. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-6. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
-7. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
+2. Open `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` for the concept-to-artifact map.
+3. Open `docs/INVESTIGATOR_CHALLENGE.md` for the runnable challenge boundary.
+4. Open `docs/RECOVER_REPAIR_UPDATE_DEMO.md` and inspect the three-part recover, repair, and update result.
+5. Open `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` to see the honest comparison: a strong model can recover much of the LHC chain, but the map supplies stable handles for review and update.
+6. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
+7. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
+8. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
 
 That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
 
@@ -85,9 +96,9 @@ Read these before giving the submission credit beyond the core mechanism:
 
 Demonstrated:
 
-- structured maps provide queryable handles for dependency tracing, local correction, and held-out-source update in deterministic replay,
+- structured maps provide queryable judgment anchors for dependency tracing, local correction, and held-out-source update in deterministic replay,
 - the LHC velocity/trapping dependency is easier to recover from map artifacts than from the checked-in flat baseline under the frozen challenge,
-- the workflow records what changed and what stayed stable.
+- the workflow records what changed and what stayed stable, preserving artifact fidelity across repair and update.
 
 Plausible but under-tested:
 

@@ -6,15 +6,21 @@ This is the fuller submission boundary. For the fastest path, start with `docs/S
 
 ## Core Claim
 
-AI synthesis can be broadly correct while still erasing the structure a later investigator needs to audit: source boundaries, caveats, dependencies, cruxes, similar-but-not-identical claims, and live disagreements.
+AI synthesis can be broadly correct while still losing the structure a later investigator needs to audit: source boundaries, caveats, dependencies, cruxes, similar-but-not-identical claims, and live disagreements.
 
-The prototype tests a simple alternative: preserve those elements as source-grounded map artifacts, compare them to ordinary flat syntheses, and audit what survived, flattened, disappeared, or distorted.
+The prototype tests a simple alternative: treat the research output as an authority-bearing artifact. It records the retrieval boundary, normalizes source material into reviewable claims, constructs a decision space of options and dependencies, turns claims and relations into judgment anchors, preserves artifact fidelity across synthesis and update, and gives reviewers local operational authority to accept, revise, reject, or extend the case.
+
+The short mechanism chain is:
+
+```text
+retrieval gate -> claim normalization -> decision-space construction -> judgment anchors -> artifact fidelity -> auditable authority
+```
 
 ## Contest Reference Lineage
 
 The contest reference examples are not just related work; they clarify the kind of epistemic labor this prototype is trying to support. Transparent Replications, Measurement Schmeasurement, construct-validity critiques of development RCTs, systems-theoretic safety work, Society Library-style perspective mapping, and structured analytic techniques all point toward the same need: make hidden mismatches inspectable before synthesis smooths them away.
 
-This prototype translates that need into claim maps, relation maps, cruxes, caveats, and erosion audits. See `docs/REFERENCE_LINEAGE.md` for the compact mapping.
+This prototype translates that need into claim maps, relation maps, cruxes, caveats, erosion audits, update ledgers, and review packets. See `docs/REFERENCE_LINEAGE.md` for the compact mapping and `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` for the decision-space mechanism map.
 
 ## One-Minute Example
 
@@ -32,10 +38,12 @@ Why this matters: the map does not merely cite sources. It preserves the part of
 
 ## What The Package Is Trying To Show
 
-The package is built around one empirical bet: when a later reviewer needs to inspect a disputed distinction, a structured map leaves better handles than a fluent synthesis alone.
+The package is built around one empirical bet: when a later reviewer needs to inspect a disputed distinction, a structured artifact leaves better operational handles than a fluent synthesis alone.
 
 The most relevant handles are:
 
+- declared source and retrieval boundaries,
+- normalized claims with source anchors,
 - source-grounded claim IDs and relation IDs,
 - visible caveats and scope limits,
 - critique/response structure,
@@ -52,13 +60,14 @@ For the fastest orientation, use `docs/START_HERE.md`. It gives the shorter vers
 Read these in order if you want the fuller package boundary:
 
 1. `docs/INVESTIGATOR_CHALLENGE.md`: run or inspect the frozen flat-vs-map investigator challenge, local correction exercise, and held-out-source update.
-2. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`: read the compact recover, repair, and update packet.
-3. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`: inspect the matched strong-model comparison that clarifies the claim boundary.
-4. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`: see how this differs from provenance, faithful summarization, argument mapping, and knowledge graphs.
-5. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-6. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
-7. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
-8. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
+2. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`: see how the decision-space writing concepts map onto concrete artifacts.
+3. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`: read the compact recover, repair, and update packet.
+4. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`: inspect the matched strong-model comparison that clarifies the claim boundary.
+5. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`: see how this differs from provenance, faithful summarization, argument mapping, and knowledge graphs.
+6. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
+7. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
+8. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
+9. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
 
 Then check transfer and limits:
 
@@ -150,7 +159,7 @@ Primary files:
 
 The submission is about compounding epistemic work. A flat synthesis can be useful for immediate understanding, but it is hard for another person to revise locally. A case map gives future reviewers stable source IDs, claim IDs, relation IDs, excerpts, rationales, cruxes, and open questions.
 
-The useful comparison is not "map good, summary bad." The useful comparison is: when a later reviewer needs to inspect a disputed distinction, which artifact still exposes the distinction as something reviewable?
+The decision-space claim is stronger than "map good, summary bad." AI workflows exercise practical authority when they decide what evidence enters context, how claims are normalized, which distinctions remain visible, and which artifact a reviewer can contest. The useful comparison is: when a later reviewer needs to inspect or change a disputed distinction, which artifact still gives them operational authority to do it?
 
 ## Claim Hierarchy
 
@@ -159,6 +168,7 @@ Demonstrated:
 - Source-grounded worked-region maps preserve dependencies, caveats, critique/response structure, and review handles that flat syntheses can compress.
 - The investigator challenge shows better deterministic recoverability for selected hidden-dependency tasks.
 - Local repair and held-out-source update can preserve stable IDs for unaffected map objects.
+- The package demonstrates artifact fidelity across Markdown, JSON, review packets, mutation repair, and update ledgers.
 
 Plausible but under-tested:
 

@@ -19,7 +19,17 @@ This repo is intentionally separate from `decision_space_harness`.
 
 ## Goal
 
-Help an investigator preserve the structure of a complex epistemic case while synthesizing it:
+Help an investigator preserve operational judgment while AI systems transform evidence into claims, maps, and prose.
+
+The project uses the decision-space writing framework as its organizing logic:
+
+```text
+retrieval gate -> claim normalization -> decision-space construction -> judgment anchors -> artifact fidelity -> auditable authority
+```
+
+In plain terms: the workflow records what evidence entered, how source material was normalized into claims, which options and dependencies remained visible, which checkpoints preserve human judgment, whether the artifact stayed reviewable, and where a reviewer can intervene.
+
+The core artifacts preserve:
 
 - source provenance
 - claims and similar claims
@@ -28,7 +38,7 @@ Help an investigator preserve the structure of a complex epistemic case while sy
 - missing perspectives
 - uncertainty and audit notes
 
-The central failure mode is **decision-space erosion**: a synthesis can remain fluent and plausible while flattening the options, frames, caveats, cruxes, or disagreements that a serious investigator needs.
+The immediate failure mode is reasoning-structure loss during evidence transformation. That becomes **decision-space erosion** when a synthesis or workflow makes a decision-relevant option, interpretation, evidence path, caveat, or review boundary materially less visible or recoverable before accountable review.
 
 ## Current Shape
 
@@ -109,6 +119,7 @@ Start with `docs/START_HERE.md`. It now opens with the investigator challenge, a
 For the full submission boundary, read:
 
 - `docs/SUBMISSION_PACKET.md`
+- `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`
 - `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
 - `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
 - `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`

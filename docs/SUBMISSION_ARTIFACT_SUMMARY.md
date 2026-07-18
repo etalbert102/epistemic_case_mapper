@@ -26,6 +26,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | Draft public-risk worked region | LHC black holes | `examples/lhc_black_holes/worked_region_public_risk_framing_map.md` | draft extension, not canonical counts |
 | New-to-map source update demo | LHC black holes | `docs/NEW_SOURCE_UPDATE_DEMO.md` | demo from already acquired source |
 | Investigator challenge demonstration | Cross-case | `docs/INVESTIGATOR_CHALLENGE.md` | deterministic replay demo |
+| Decision-space framework integration | Submission | `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` | judge-facing framing |
 | Recover, repair, update judge packet | LHC black holes | `docs/RECOVER_REPAIR_UPDATE_DEMO.md` | deterministic replay demo |
 | Decision-space erosion differentiation | Submission | `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md` | judge-facing framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | single-run comparison |
