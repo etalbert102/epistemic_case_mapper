@@ -662,6 +662,7 @@ def build_analyst_decision_model_prompt(context: dict[str, Any]) -> str:
             "covered_by_group",
             "needs_review",
         ],
+        "accepted_schema_ids": ["analyst_decision_model_v2", "analyst_decision_model_v1"],
         "required_output_schema": decision_model_required_output_schema(context.get("decision_question")),
         "context": _context_for_model(context),
     }

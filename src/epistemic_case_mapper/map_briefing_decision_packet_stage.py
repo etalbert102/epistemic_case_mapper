@@ -134,6 +134,7 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
     from epistemic_case_mapper.map_briefing_analyst_verifier import build_analyst_decision_model_verification_report
     from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
+    from epistemic_case_mapper.map_briefing_evidence_budget import build_evidence_budget_bundle
     from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
 
     _progress(progress, "analyst_evidence_routing", "started", {"row_count": _ledger_row_count(ledger)})
@@ -167,6 +168,14 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
     )
     _progress(progress, "analyst_decision_model_verifier", "completed", _report_status(scaffold, "analyst_decision_model_verification_report"))
     _assert_analyst_decision_model_verified(scaffold)
+    _progress(progress, "evidence_budget", "started")
+    scaffold.update(
+        build_evidence_budget_bundle(
+            analyst_decision_model=scaffold.get("analyst_decision_model", {}),
+            ledger=ledger,
+        )
+    )
+    _progress(progress, "evidence_budget", "completed", _report_status(scaffold, "evidence_accounting_report"))
     _progress(progress, "global_decision_model", "started")
     scaffold.update(
         build_global_decision_model_bundle(

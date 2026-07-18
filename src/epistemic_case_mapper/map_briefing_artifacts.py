@@ -229,6 +229,12 @@ def _decision_contract_artifact_specs() -> tuple[ArtifactSpec, ...]:
 def _global_decision_artifact_specs() -> tuple[ArtifactSpec, ...]:
     return (
         ArtifactSpec("analyst_decision_model_verification_report", "analyst_decision_model_verification_report.json", "json", _scaffold_value("analyst_decision_model_verification_report"), review_label="Analyst decision model verifier"),
+        ArtifactSpec("evidence_universe", "evidence_universe.json", "json", _scaffold_value("evidence_universe"), review_label="Evidence universe"),
+        ArtifactSpec("source_dependency_report", "source_dependency_report.json", "json", _scaffold_value("source_dependency_report"), review_label="Source dependency report"),
+        ArtifactSpec("active_cited_source_report", "active_cited_source_report.json", "json", _scaffold_value("active_cited_source_report"), review_label="Active cited sources"),
+        ArtifactSpec("evidence_budget", "evidence_budget.json", "json", _scaffold_value("evidence_budget"), review_label="Evidence budget"),
+        ArtifactSpec("evidence_accounting_report", "evidence_accounting_report.json", "json", _scaffold_value("evidence_accounting_report"), review_label="Evidence accounting"),
+        ArtifactSpec("foreground_evidence_report", "foreground_evidence_report.json", "json", _scaffold_value("foreground_evidence_report"), review_label="Foreground evidence"),
         ArtifactSpec("global_decision_model", "global_decision_model.json", "json", _scaffold_value("global_decision_model"), review_label="Global decision model"),
         ArtifactSpec("global_decision_model_report", "global_decision_model_report.json", "json", _scaffold_value("global_decision_model_report"), review_label="Global decision model report"),
         ArtifactSpec("global_decision_model_reconciliation_report", "global_decision_model_reconciliation_report.json", "json", _scaffold_value("global_decision_model_reconciliation_report"), review_label="Global decision reconciliation"),
