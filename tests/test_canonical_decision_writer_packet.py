@@ -229,7 +229,7 @@ def test_section_synthesis_plan_uses_primary_bluf_as_bottom_line() -> None:
 
     plan = build_memo_ready_section_synthesis_plan(packet)
 
-    assert plan["bottom_line"] == "Adopt option A for standard sites where the source conditions apply."
+    assert plan["bottom_line"] == "Adopt option A for standard sites where the source conditions apply. Confidence: medium."
     assert "unusual operating constraints" not in plan["bottom_line"]
 
 

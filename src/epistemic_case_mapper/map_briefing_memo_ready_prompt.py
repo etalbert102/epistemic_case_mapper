@@ -831,18 +831,74 @@ def _known_source_ids(
 
 def _bottom_line_from_reader_packet(reader_packet: dict[str, Any]) -> str:
     balanced = _dict(reader_packet.get("balanced_answer_frame"))
+    bluf = _dict(reader_packet.get("bluf_contract"))
+    decision_usefulness = _dict(reader_packet.get("decision_usefulness"))
     answer_frame = _dict(reader_packet.get("answer_frame"))
     skeleton = _dict(answer_frame.get("skeleton"))
     classification = _dict(answer_frame.get("classification"))
     for value in (
-        _dict(reader_packet.get("bluf_contract")).get("recommended_read"),
-        _dict(reader_packet.get("bluf_contract")).get("one_sentence_version"),
+        bluf.get("recommended_read"),
+        bluf.get("one_sentence_version"),
         balanced.get("best_current_read"),
         skeleton.get("direct_answer"),
         skeleton.get("bottom_line"),
         classification.get("current_answer_state"),
         classification.get("recommended_stance"),
     ):
+        text = str(value or "").strip()
+        if text:
+            return _decision_grade_bottom_line(text, bluf=bluf, balanced=balanced, decision_usefulness=decision_usefulness)
+    return ""
+
+
+def _decision_grade_bottom_line(
+    answer: str,
+    *,
+    bluf: dict[str, Any],
+    balanced: dict[str, Any],
+    decision_usefulness: dict[str, Any],
+) -> str:
+    parts = [answer.rstrip(".")]
+    confidence = _first_short_text(bluf.get("confidence"), balanced.get("confidence"))
+    if confidence and "confidence" not in answer.lower():
+        parts.append(f"Confidence: {confidence.rstrip('.')}")
+    stance = _dict(decision_usefulness.get("recommended_stance"))
+    scope = _compact_bottom_line_scope(
+        _first_short_text(
+            stance.get("scope"),
+            bluf.get("who_it_applies_to"),
+            balanced.get("scope"),
+        )
+    )
+    if scope and not _scope_already_present(answer, scope):
+        parts.append(f"Scope: {scope.rstrip('.')}")
+    return ". ".join(part for part in parts if part).strip() + "."
+
+
+def _compact_bottom_line_scope(text: str) -> str:
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    generic = ("state the answer", "population, option, or use case", "supported by the evidence")
+    if any(fragment in raw.lower() for fragment in generic):
+        return ""
+    if len(raw) <= 220:
+        return raw.rstrip(".")
+    clipped = raw[:220].rsplit(" ", 1)[0].strip()
+    return clipped.rstrip(" ,;:.") + "..."
+
+
+def _scope_already_present(answer: str, scope: str) -> bool:
+    answer_norm = _norm(answer)
+    scope_norm = _norm(scope)
+    if not answer_norm or not scope_norm:
+        return False
+    scope_terms = [term for term in scope_norm.split() if len(term) >= 7]
+    return bool(scope_terms) and sum(1 for term in scope_terms if term in answer_norm) >= min(3, len(scope_terms))
+
+
+def _first_short_text(*values: Any) -> str:
+    for value in values:
         text = str(value or "").strip()
         if text:
             return text
