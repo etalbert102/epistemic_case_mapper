@@ -181,6 +181,8 @@ def _run_memo_ready_final_output_path(
         backend=backend_config.backend,
         backend_timeout=backend_config.timeout,
         backend_retries=backend_config.retries,
+        production_context=memo_package["scaffold"],
+        artifacts=artifacts,
     )
     record_memo_progress(
         artifacts,

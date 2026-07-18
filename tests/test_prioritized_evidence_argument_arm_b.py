@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
+from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
     build_arm_comparison_to_current,
     resolve_current_baseline,
@@ -18,6 +20,7 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
     normalize_arm_c_prioritized_argument_ids,
     verify_arm_c_prioritized_argument,
 )
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 FROZEN_EGGS = Path("artifacts/truth_boundary_verification_eggs_live/briefing")
@@ -196,6 +199,79 @@ def test_arm_c_projection_uses_prioritized_move_required_ids_not_legacy_must_use
     assert "decision_writer_item_004" not in projection["projection_evaluation_packet"]["mandatory_evidence_ids"]
 
 
+def test_production_synthesis_uses_prioritized_argument_path(monkeypatch, tmp_path: Path) -> None:
+    inputs = load_frozen_arm_b_inputs(FROZEN_EGGS)
+    packet = inputs["memo_ready_packet"]
+    analyst = inputs["analyst_decision_model"]
+    calls: list[dict[str, object]] = []
+
+    def fake_backend(prompt: str, backend: str, **kwargs) -> ModelBackendResult:
+        calls.append({"prompt": prompt, "json_mode": kwargs.get("json_mode"), "response_schema": kwargs.get("response_schema")})
+        if kwargs.get("response_schema"):
+            payload = {
+                "schema_id": "arm_c_prioritized_argument_v1",
+                "decision_question": analyst["decision_question"],
+                "frozen_direct_answer": analyst["direct_answer"],
+                "confidence": analyst["confidence"],
+                "argument_thesis": "Use the prioritized evidence to explain the decision answer.",
+                "moves": [
+                    {
+                        "move_id": "m1",
+                        "primary_section": "answer_evidence",
+                        "move_type": "primary_support",
+                        "proposition": "The strongest evidence carries the current read.",
+                        "warrant": "This item directly addresses the decision question.",
+                        "decision_effect": "It supports the answer.",
+                        "evidence_item_ids": ["decision_writer_item_001"],
+                        "required": True,
+                    },
+                    {
+                        "move_id": "m2",
+                        "primary_section": "counterweights",
+                        "move_type": "counterweight",
+                        "proposition": "Counterevidence bounds the current read.",
+                        "warrant": "The decision turns on whether this limitation applies.",
+                        "decision_effect": "It calibrates confidence.",
+                        "evidence_item_ids": ["decision_writer_item_004"],
+                        "required": True,
+                    },
+                ],
+                "evidence_accounting": [
+                    {"evidence_item_id": "decision_writer_item_001", "disposition": "owned", "rationale": "Primary support."},
+                    {"evidence_item_id": "decision_writer_item_004", "disposition": "owned", "rationale": "Primary counterweight."},
+                ],
+            }
+            return ModelBackendResult(text=json.dumps(payload), backend=backend)
+        heading = _heading_from_prompt(prompt)
+        evidence_ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
+        tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in evidence_ids)
+        body = (
+            "This section uses the prioritized argument rather than the generic packet plan. "
+            f"The source-grounded evidence is retained here {tags}."
+        )
+        return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_prioritized_argument_arm_c.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_packet_synthesis(
+        packet,
+        backend="ollama:test",
+        backend_timeout=30,
+        backend_retries=0,
+        production_context=inputs,
+        artifacts=tmp_path,
+    )
+
+    assert result["report"]["prioritized_argument_synthesis"] is True
+    assert result["report"]["prioritized_argument_synthesis_report"]["accepted"] is True
+    assert (tmp_path / "prioritized_evidence_argument.json").exists()
+    assert (tmp_path / "prioritized_argument_section_synthesis_packets.json").exists()
+    assert any(call["response_schema"] for call in calls)
+    assert "Prioritized evidence argument section synthesis" in result["prompt"]
+    assert "## Why This Is the Best Current Read" in result["memo"]
+
+
 def test_arm_b_b0_captures_initial_and_retry_prompts(tmp_path) -> None:
     result = run_arm_b_b0(briefing_dir=FROZEN_EGGS, output_dir=tmp_path, force_retry=True)
 
@@ -222,3 +298,12 @@ def test_arm_b_prompt_audit_flags_legacy_context() -> None:
 
     assert audit["status"] == "fail"
     assert any("balanced_answer_frame" in issue for issue in audit["issues"])
+
+
+def _heading_from_prompt(prompt: str) -> str:
+    match = re.search(r"exactly(?: with)?: ## (.+)", prompt)
+    if not match:
+        match = re.search(r"Output starts exactly with: ## (.+)", prompt)
+    if not match:
+        match = re.search(r"Output must start exactly with: ## (.+)", prompt)
+    return match.group(1).strip() if match else "Why This Is the Best Current Read"

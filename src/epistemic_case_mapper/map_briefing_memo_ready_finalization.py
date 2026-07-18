@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_analytical_balance_contract import required_analytical_balance_cards
@@ -74,6 +75,8 @@ def run_memo_ready_packet_synthesis(
     backend: str,
     backend_timeout: int | None,
     backend_retries: int,
+    production_context: dict[str, Any] | None = None,
+    artifacts: Path | None = None,
 ) -> dict[str, Any]:
     compression_run = _prepare_expert_judgment_compression(
         memo_ready_packet,
@@ -131,6 +134,36 @@ def run_memo_ready_packet_synthesis(
         }
     if outline_contract_run.get("accepted"):
         active_packet = _dict(outline_contract_run.get("memo_ready_packet")) or active_packet
+    prioritized_argument_synthesis = _prepare_prioritized_argument_synthesis(
+        active_packet,
+        production_context=production_context,
+        artifacts=artifacts,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        expert_judgment_compression_run=compression_run,
+        source_weighted_outline_contract_run=outline_contract_run,
+    )
+    if prioritized_argument_synthesis.get("enabled"):
+        if prioritized_argument_synthesis.get("accepted"):
+            return _dict(prioritized_argument_synthesis.get("synthesis_result"))
+        report = {
+            "schema_id": "memo_ready_packet_synthesis_report_v1",
+            "status": "prioritized_argument_synthesis_failed",
+            "accepted": False,
+            "live_enrichment_required": True,
+            "used_default_path": False,
+            "prioritized_argument_synthesis_report": prioritized_argument_synthesis.get("report", {}),
+            "expert_judgment_compression_report": compression_run.get("report", {}),
+            "source_weighted_outline_contract_run": outline_contract_run.get("report", {}),
+            "issues": ["prioritized_argument_synthesis_failed"],
+        }
+        return {
+            "memo": "",
+            "prompt": str(prioritized_argument_synthesis.get("prompt") or ""),
+            "raw": str(prioritized_argument_synthesis.get("raw") or ""),
+            "report": report,
+        }
     prompt = build_memo_ready_packet_synthesis_prompt(active_packet)
     draft = render_memo_ready_packet_draft(active_packet)
     report = {
@@ -167,6 +200,186 @@ def run_memo_ready_packet_synthesis(
         report=report,
         expert_judgment_compression_run=compression_run,
         source_weighted_outline_contract_run=outline_contract_run,
+    )
+
+
+def _prioritized_argument_synthesis_enabled(backend: str, production_context: dict[str, Any] | None) -> bool:
+    spec = backend.strip()
+    if spec in {"prompt", "fake"}:
+        return False
+    if os.environ.get("ECM_PRIORITIZED_ARGUMENT_SYNTHESIS", "").strip().lower() in {"0", "false", "no", "off"}:
+        return False
+    context = _dict(production_context)
+    return bool(context.get("analyst_decision_model") and context.get("evidence_budget"))
+
+
+def _prepare_prioritized_argument_synthesis(
+    packet: dict[str, Any],
+    *,
+    production_context: dict[str, Any] | None,
+    artifacts: Path | None,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    expert_judgment_compression_run: dict[str, Any] | None,
+    source_weighted_outline_contract_run: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not _prioritized_argument_synthesis_enabled(backend, production_context):
+        return {
+            "enabled": False,
+            "accepted": False,
+            "report": {
+                "schema_id": "prioritized_argument_synthesis_run_report_v1",
+                "status": "disabled",
+                "accepted": False,
+                "issues": [],
+            },
+        }
+    from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+        build_arm_c_projection,
+        run_arm_c_prioritization,
+    )
+    from epistemic_case_mapper.io import write_json
+
+    inputs = _prioritized_argument_inputs(packet, _dict(production_context))
+    argument_run = run_arm_c_prioritization(
+        inputs,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    _write_prioritized_argument_artifacts(artifacts, argument_run=argument_run)
+    if not argument_run.get("accepted"):
+        report = {
+            "schema_id": "prioritized_argument_synthesis_run_report_v1",
+            "status": "prioritized_argument_failed",
+            "accepted": False,
+            "argument_report": _dict(argument_run.get("report")),
+            "issues": ["prioritized_argument_failed"],
+        }
+        if artifacts:
+            write_json(artifacts / "prioritized_argument_synthesis_report.json", report)
+        return {
+            "enabled": True,
+            "accepted": False,
+            "prompt": argument_run.get("prompt", ""),
+            "raw": argument_run.get("raw", ""),
+            "report": report,
+        }
+    projection = build_arm_c_projection(inputs, _dict(argument_run.get("prioritized_argument")))
+    _write_prioritized_argument_projection_artifacts(artifacts, projection=projection)
+    if projection.get("status") != "pass":
+        report = {
+            "schema_id": "prioritized_argument_synthesis_run_report_v1",
+            "status": "prioritized_argument_projection_failed",
+            "accepted": False,
+            "argument_report": _dict(argument_run.get("report")),
+            "projection_report": _dict(projection.get("projection_evaluation_packet")),
+            "issues": ["prioritized_argument_projection_failed"],
+        }
+        if artifacts:
+            write_json(artifacts / "prioritized_argument_synthesis_report.json", report)
+        return {
+            "enabled": True,
+            "accepted": False,
+            "prompt": argument_run.get("prompt", ""),
+            "raw": argument_run.get("raw", ""),
+            "report": report,
+        }
+    synthesis = _run_parallel_memo_ready_section_synthesis(
+        packet,
+        section_plan=_dict(projection.get("section_plan")),
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+        whole_prompt="Prioritized evidence argument section synthesis.",
+        expert_judgment_compression_run=expert_judgment_compression_run,
+        source_weighted_outline_contract_run=source_weighted_outline_contract_run,
+    )
+    synthesis_report = _dict(synthesis.get("report"))
+    report = {
+        "schema_id": "prioritized_argument_synthesis_run_report_v1",
+        "status": "accepted" if synthesis_report.get("accepted") is True else "section_synthesis_failed",
+        "accepted": synthesis_report.get("accepted") is True,
+        "argument_report": _dict(argument_run.get("report")),
+        "projection_report": _dict(projection.get("projection_evaluation_packet")),
+        "section_generation_status": synthesis_report.get("status"),
+        "issues": [] if synthesis_report.get("accepted") is True else _string_list(synthesis_report.get("issues")),
+    }
+    synthesis_report.update(
+        {
+            "prioritized_argument_synthesis": True,
+            "prioritized_argument_synthesis_report": report,
+            "prioritized_argument_report": _dict(argument_run.get("report")),
+            "prioritized_argument_projection_report": _dict(projection.get("projection_evaluation_packet")),
+        }
+    )
+    synthesis["report"] = synthesis_report
+    if artifacts:
+        write_json(artifacts / "prioritized_argument_synthesis_report.json", report)
+    return {
+        "enabled": True,
+        "accepted": synthesis_report.get("accepted") is True,
+        "synthesis_result": synthesis,
+        "prompt": synthesis.get("prompt", argument_run.get("prompt", "")),
+        "raw": synthesis.get("raw", argument_run.get("raw", "")),
+        "report": report,
+    }
+
+
+def _prioritized_argument_inputs(packet: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    canonical = _dict(packet.get("canonical_decision_writer_packet")) or _dict(
+        context.get("canonical_decision_writer_packet")
+    )
+    return {
+        "memo_ready_packet": packet,
+        "memo_ready_packet_source": "in_memory_production_packet",
+        "analyst_memo_ready_packet": _dict(context.get("analyst_memo_ready_packet")),
+        "canonical_decision_writer_packet": canonical,
+        "analyst_decision_model": _dict(context.get("analyst_decision_model")),
+        "analyst_decision_model_verification_report": _dict(
+            context.get("analyst_decision_model_verification_report")
+        ),
+        "evidence_budget": _dict(context.get("evidence_budget")),
+        "evidence_accounting_report": _dict(context.get("evidence_accounting_report")),
+        "analyst_evidence_ledger": _dict(context.get("analyst_evidence_ledger")),
+    }
+
+
+def _write_prioritized_argument_artifacts(
+    artifacts: Path | None,
+    *,
+    argument_run: dict[str, Any],
+) -> None:
+    if not artifacts:
+        return
+    from epistemic_case_mapper.io import write_json, write_markdown
+
+    write_json(artifacts / "prioritized_evidence_argument.json", argument_run.get("prioritized_argument", {}))
+    write_json(artifacts / "prioritized_argument_verification_projection_report.json", argument_run.get("report", {}))
+    if argument_run.get("prompt"):
+        write_markdown(artifacts / "prioritized_argument_prompt.txt", str(argument_run.get("prompt", "")))
+    if argument_run.get("raw"):
+        write_markdown(artifacts / "prioritized_argument_raw.txt", str(argument_run.get("raw", "")))
+
+
+def _write_prioritized_argument_projection_artifacts(
+    artifacts: Path | None,
+    *,
+    projection: dict[str, Any],
+) -> None:
+    if not artifacts:
+        return
+    from epistemic_case_mapper.io import write_json
+
+    write_json(artifacts / "prioritized_argument_section_synthesis_packets.json", projection.get("section_packets", []))
+    write_json(
+        artifacts / "prioritized_argument_projection_evaluation_packet.json",
+        projection.get("projection_evaluation_packet", {}),
+    )
+    write_json(
+        artifacts / "prioritized_argument_section_contract_overlap_report.json",
+        projection.get("section_contract_overlap_report", {}),
     )
 
 
