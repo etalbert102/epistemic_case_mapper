@@ -417,6 +417,7 @@ def _build_final_reader_diagnostics(
     )
     from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
+    from epistemic_case_mapper.map_briefing_plan_qa_reports import build_adversarial_memo_qa_report, build_memo_mutation_eval
     from epistemic_case_mapper.map_briefing_readiness import (
         build_final_decision_readiness_report,
         build_final_lineage_report,
@@ -487,6 +488,8 @@ def _build_final_reader_diagnostics(
         lineage_report=final_lineage,
     )
     semantic_acceptance = build_memo_semantic_acceptance_report(final_readiness_report=final_readiness, memo_quality_report=memo_quality, polish_report=polish_report, validation_report=validation, packet_retention_report=packet_retention, final_evaluation=final_eval)
+    adversarial_qa = build_adversarial_memo_qa_report(memo_markdown=reader_memo, scaffold=memo_package["scaffold"])
+    memo_mutation_eval = build_memo_mutation_eval(memo_markdown=reader_memo, scaffold=memo_package["scaffold"])
     packet_comparison = build_packet_first_comparison_report(
         scaffold=memo_package["scaffold"],
         section_rewrite_report=section_rewrite_result.get("report", {}),
@@ -523,6 +526,8 @@ def _build_final_reader_diagnostics(
         "final_eval": final_eval,
         "final_readiness": final_readiness,
         "final_lineage": final_lineage,
+        "adversarial_qa": adversarial_qa,
+        "memo_mutation_eval": memo_mutation_eval,
         "semantic_acceptance": semantic_acceptance,
         "packet_retention": packet_retention,
         "packet_comparison": packet_comparison,
@@ -625,6 +630,8 @@ def _write_final_reader_artifacts(
     write_json(paths.final_brief_evaluation, diagnostics["final_eval"])
     write_json(paths.final_decision_readiness, diagnostics["final_readiness"])
     write_json(paths.final_lineage, diagnostics["final_lineage"])
+    write_json(paths.adversarial_memo_qa, diagnostics["adversarial_qa"])
+    write_json(paths.memo_mutation_eval, diagnostics["memo_mutation_eval"])
     write_json(paths.memo_semantic_acceptance, diagnostics["semantic_acceptance"])
     write_json(paths.memo_packet_retention, diagnostics["packet_retention"])
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
@@ -687,6 +694,8 @@ def _final_reader_summary_paths(
         "final_brief_evaluation": paths.final_brief_evaluation,
         "final_decision_readiness_report": paths.final_decision_readiness,
         "final_lineage_report": paths.final_lineage,
+        "adversarial_memo_qa_report": paths.adversarial_memo_qa,
+        "memo_mutation_eval": paths.memo_mutation_eval,
         "memo_semantic_acceptance_report": paths.memo_semantic_acceptance,
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "memo_packet_retention_report": paths.memo_packet_retention,

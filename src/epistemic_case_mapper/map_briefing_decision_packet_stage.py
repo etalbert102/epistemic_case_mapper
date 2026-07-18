@@ -85,7 +85,7 @@ def _attach_analyst_packet_flow(
         return
 
     _run_analyst_adjudication(scaffold, ledger, backend_config=backend_config, progress=progress)
-    _run_analyst_decision_model(scaffold, ledger, backend_config=backend_config, progress=progress)
+    _run_analyst_decision_model(scaffold, ledger, prioritized_map=prioritized_map, backend_config=backend_config, progress=progress)
     _run_analyst_packet_builders(scaffold, packet, ledger, backend_config=backend_config, progress=progress)
 
 
@@ -129,13 +129,25 @@ def _assert_analyst_adjudication_complete(scaffold: dict[str, Any]) -> None:
     raise RuntimeError(f"analyst_adjudication_failed_before_decision_model: {detail}")
 
 
-def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
+def _run_analyst_decision_model(
+    scaffold: dict[str, Any],
+    ledger: dict[str, Any],
+    *,
+    prioritized_map: dict[str, Any],
+    backend_config: Any,
+    progress: Callable[[str, str, dict[str, Any] | None], None] | None,
+) -> None:
     from epistemic_case_mapper.map_briefing_analyst_evidence_routing import build_analyst_evidence_routing_bundle
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
     from epistemic_case_mapper.map_briefing_analyst_verifier import build_analyst_decision_model_verification_report
     from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
     from epistemic_case_mapper.map_briefing_evidence_budget import build_evidence_budget_bundle
     from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
+    from epistemic_case_mapper.map_briefing_plan_qa_reports import (
+        build_compact_review_packet,
+        build_relation_value_ablation_report,
+        build_reviewer_effort_ablation_report,
+    )
 
     _progress(progress, "analyst_evidence_routing", "started", {"row_count": _ledger_row_count(ledger)})
     scaffold.update(
@@ -176,6 +188,12 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
         )
     )
     _progress(progress, "evidence_budget", "completed", _report_status(scaffold, "evidence_accounting_report"))
+    scaffold["relation_value_ablation_report"] = build_relation_value_ablation_report(
+        prioritized_map=prioritized_map,
+        scaffold=scaffold,
+    )
+    scaffold["compact_review_packet"] = build_compact_review_packet(scaffold=scaffold)
+    scaffold["reviewer_effort_ablation_report"] = build_reviewer_effort_ablation_report(scaffold=scaffold)
     _progress(progress, "global_decision_model", "started")
     scaffold.update(
         build_global_decision_model_bundle(

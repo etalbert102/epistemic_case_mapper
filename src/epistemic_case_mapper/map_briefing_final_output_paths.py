@@ -28,6 +28,8 @@ class FinalReaderOutputPaths:
     final_brief_evaluation: Path
     final_decision_readiness: Path
     final_lineage: Path
+    adversarial_memo_qa: Path
+    memo_mutation_eval: Path
     memo_semantic_acceptance: Path
     section_rewrite_report: Path
     reader_memo_rewrite_prompt: Path
@@ -90,6 +92,8 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         final_brief_evaluation=artifacts / "final_brief_evaluation.json",
         final_decision_readiness=artifacts / "final_decision_readiness_report.json",
         final_lineage=artifacts / "final_lineage_report.json",
+        adversarial_memo_qa=artifacts / "adversarial_memo_qa_report.json",
+        memo_mutation_eval=artifacts / "memo_mutation_eval.json",
         memo_semantic_acceptance=artifacts / "memo_semantic_acceptance_report.json",
         section_rewrite_report=artifacts / "section_rewrite_report.json",
         reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
