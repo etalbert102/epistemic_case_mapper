@@ -27,6 +27,7 @@ class FinalReaderOutputPaths:
     stage_value: Path
     final_brief_evaluation: Path
     final_decision_readiness: Path
+    final_lineage: Path
     memo_semantic_acceptance: Path
     section_rewrite_report: Path
     reader_memo_rewrite_prompt: Path
@@ -61,6 +62,7 @@ class FinalReaderOutputPaths:
     memo_ready_final_polish_report: Path
     scoped_metric_report: Path
     final_source_lineage: Path
+    source_universe_report: Path
     pipeline_measurement_audit: Path
 
 
@@ -87,6 +89,7 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         stage_value=artifacts / "stage_value_report.json",
         final_brief_evaluation=artifacts / "final_brief_evaluation.json",
         final_decision_readiness=artifacts / "final_decision_readiness_report.json",
+        final_lineage=artifacts / "final_lineage_report.json",
         memo_semantic_acceptance=artifacts / "memo_semantic_acceptance_report.json",
         section_rewrite_report=artifacts / "section_rewrite_report.json",
         reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
@@ -121,5 +124,6 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         memo_ready_final_polish_report=artifacts / "memo_ready_final_polish_report.json",
         scoped_metric_report=artifacts / "scoped_metric_report.json",
         final_source_lineage=artifacts / "final_source_lineage_report.json",
+        source_universe_report=artifacts / "source_universe_report.json",
         pipeline_measurement_audit=artifacts / "pipeline_measurement_audit.json",
     )

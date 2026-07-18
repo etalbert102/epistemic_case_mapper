@@ -318,13 +318,21 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert summary["paths"]["source_evidence_cards"].endswith("source_evidence_cards.json")
     assert summary["paths"]["source_sufficiency_report"].endswith("source_sufficiency_report.json")
     assert summary["paths"]["evidence_quality_report"].endswith("evidence_quality_report.json")
-    assert summary["paths"]["section_context_acceptance_report"].endswith("section_context_acceptance_report.json")
+    assert summary["paths"]["section_context_acceptance_report"] is None
     assert summary["paths"]["memo_coherence_report"].endswith("memo_coherence_report.json")
     assert summary["paths"]["pipeline_migration_ledger"].endswith("pipeline_migration_ledger.json")
     assert summary["paths"]["runtime_budget_report"].endswith("runtime_budget_report.json")
     assert summary["paths"]["final_brief_evaluation"].endswith("final_brief_evaluation.json")
     assert summary["paths"]["scoped_metric_report"].endswith("scoped_metric_report.json")
     assert summary["paths"]["final_source_lineage_report"].endswith("final_source_lineage_report.json")
+    assert summary["paths"]["final_lineage_report"].endswith("final_lineage_report.json")
+    assert summary["paths"]["source_universe_report"].endswith("source_universe_report.json")
+    final_lineage = json.loads((tmp_path / summary["paths"]["final_lineage_report"]).read_text(encoding="utf-8"))
+    final_readiness = json.loads((tmp_path / summary["paths"]["final_decision_readiness_report"]).read_text(encoding="utf-8"))
+    assert final_lineage["status"] == "blocked"
+    assert "synthesis_not_accepted" in final_lineage["fatal_issues"]
+    assert final_readiness["reader_output_available"] is True
+    assert final_readiness["decision_ready"] is False
     assert summary["paths"]["pipeline_measurement_audit"].endswith("pipeline_measurement_audit.json")
     assert summary["paths"]["pipeline_simplification_comparison"].endswith("pipeline_simplification_comparison.json")
     assert (tmp_path / summary["paths"]["pipeline_simplification_comparison"]).exists()
@@ -509,10 +517,13 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
     assert cli.main() == 0
     assert (tmp_path / "generated_map.json").exists()
     rendered = (tmp_path / "brief/BRIEFING.md").read_text(encoding="utf-8")
-    assert "# Decision Memo" in rendered
+    assert "## Decision Brief" in rendered
     assert "Doc A" in rendered
     assert "Alpha supports the decision" in rendered
     assert "demo_case_doc_a" not in rendered
+    final_readiness = json.loads((tmp_path / "brief/final_decision_readiness_report.json").read_text(encoding="utf-8"))
+    assert final_readiness["reader_output_available"] is True
+    assert final_readiness["decision_ready"] is False
     run_summary = json.loads((tmp_path / "map_artifacts/run_summary.json").read_text(encoding="utf-8"))
     claim_prompt = next((tmp_path / "map_artifacts/claim_sources").glob("*_prompt.txt")).read_text(encoding="utf-8")
     assert run_summary["decision_question"] == decision_question

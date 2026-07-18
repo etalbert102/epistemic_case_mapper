@@ -3,6 +3,49 @@ from __future__ import annotations
 from typing import Any
 
 
+def build_final_lineage_report(
+    *,
+    scaffold: dict[str, Any],
+    synthesis_report: dict[str, Any],
+    repair_report: dict[str, Any],
+    polish_report: dict[str, Any],
+    presentation_report: dict[str, Any],
+    reader_output_available: bool,
+) -> dict[str, Any]:
+    """Build append-only final-stage lineage without inferring success from prose."""
+
+    stages = [
+        _packet_lineage_stage(_dict(scaffold.get("packet_quality_gate_report"))),
+        _lineage_stage("synthesis", synthesis_report),
+        _lineage_stage("repair", repair_report, not_applicable_statuses={"not_needed"}),
+        _lineage_stage("polish", polish_report),
+        _lineage_stage("presentation", presentation_report),
+    ]
+    fatal_issues = [
+        f"{stage['stage']}_not_accepted"
+        for stage in stages
+        if not stage.get("accepted")
+    ]
+    if not reader_output_available:
+        fatal_issues.append("reader_output_unavailable")
+    warning_stages = [
+        str(stage.get("stage"))
+        for stage in stages
+        if stage.get("accepted") and "warning" in str(stage.get("status") or "").lower()
+    ]
+    status = "blocked" if fatal_issues else "accepted_with_warnings" if warning_stages else "accepted"
+    return {
+        "schema_id": "final_lineage_report_v1",
+        "status": status,
+        "accepted": not fatal_issues,
+        "reader_output_available": bool(reader_output_available),
+        "stages": stages,
+        "fatal_issues": fatal_issues,
+        "warning_stages": warning_stages,
+        "policy": "append_only_fail_closed_stage_acceptance",
+    }
+
+
 def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]:
     packet = _dict(scaffold.get("decision_briefing_packet"))
     sufficiency = _dict(scaffold.get("packet_sufficiency_report"))
@@ -50,9 +93,14 @@ def build_final_decision_readiness_report(
     memo_coherence_report: dict[str, Any],
     packet_retention_report: dict[str, Any],
     final_evaluation: dict[str, Any],
+    lineage_report: dict[str, Any],
 ) -> dict[str, Any]:
     packet_gate = _dict(scaffold.get("packet_quality_gate_report"))
     issues: list[dict[str, Any]] = []
+    if lineage_report.get("status") == "blocked" or lineage_report.get("accepted") is not True:
+        issues.append(_issue("blocker", "final_lineage_not_accepted", lineage_report.get("fatal_issues", [])))
+    elif lineage_report.get("status") == "accepted_with_warnings":
+        issues.append(_issue("warning", "final_lineage_warnings", lineage_report.get("warning_stages", [])))
     if packet_gate.get("status") == "not_ready":
         issues.append(_issue("blocker", "packet_quality_gate_not_ready", packet_gate.get("issues", [])))
     elif packet_gate.get("status") == "warning":
@@ -78,6 +126,7 @@ def build_final_decision_readiness_report(
     return {
         "schema_id": "final_decision_readiness_report_v1",
         "status": status,
+        "reader_output_available": bool(lineage_report.get("reader_output_available")),
         "decision_ready": status == "decision_ready",
         "decision_ready_with_warnings": status in {"decision_ready", "decision_ready_with_warnings"},
         "issues": issues,
@@ -87,6 +136,7 @@ def build_final_decision_readiness_report(
             "final_evaluation_status": final_evaluation.get("status", "missing"),
             "memo_coherence_status": memo_coherence_report.get("status", "missing"),
             "briefing_validation_status": validation_report.get("status", "missing"),
+            "final_lineage_status": lineage_report.get("status", "missing"),
         },
     }
 
@@ -137,6 +187,54 @@ def build_memo_semantic_acceptance_report(
 
 def _issue(severity: str, issue_type: str, detail: Any = "") -> dict[str, Any]:
     return {"severity": severity, "issue_type": issue_type, "detail": detail}
+
+
+def _packet_lineage_stage(report: dict[str, Any]) -> dict[str, Any]:
+    status = str(report.get("status") or "missing")
+    explicit_acceptance = report.get("accepted")
+    if explicit_acceptance is False:
+        accepted = False
+        acceptance_basis = "explicit_accepted_false"
+    elif explicit_acceptance is True:
+        accepted = True
+        acceptance_basis = "explicit_accepted_true"
+    else:
+        accepted = report.get("packet_ready_for_synthesis") is True and status in {"ready", "warning"}
+        acceptance_basis = "packet_quality_gate" if accepted else "missing_or_unknown_acceptance"
+    return {
+        "stage": "packet",
+        "status": status,
+        "accepted": accepted,
+        "applicable": True,
+        "acceptance_basis": acceptance_basis,
+        "schema_id": report.get("schema_id", "missing"),
+    }
+
+
+def _lineage_stage(
+    stage: str,
+    report: dict[str, Any],
+    *,
+    not_applicable_statuses: set[str] | None = None,
+) -> dict[str, Any]:
+    report = _dict(report)
+    status = str(report.get("status") or "missing")
+    if status in (not_applicable_statuses or set()):
+        accepted = True
+        applicable = False
+        acceptance_basis = "not_applicable"
+    else:
+        accepted = report.get("accepted") is True
+        applicable = True
+        acceptance_basis = "explicit_accepted_true" if accepted else "missing_or_explicitly_unaccepted"
+    return {
+        "stage": stage,
+        "status": status,
+        "accepted": accepted,
+        "applicable": applicable,
+        "acceptance_basis": acceptance_basis,
+        "schema_id": report.get("schema_id", "missing"),
+    }
 
 
 def _acceptance_issues(

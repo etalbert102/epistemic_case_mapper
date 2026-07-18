@@ -351,6 +351,7 @@ def test_concept_evidence_packets_render_decision_lever_section() -> None:
 def test_reader_polish_creates_executive_brief_and_appendix() -> None:
     scaffold = {
         "question": "Should generally healthy adults treat moderate egg intake as acceptable?",
+        "active_cited_source_ids": ["demo_sources_dehghan_2020_full"],
         "source_display_names": {"demo_sources_dehghan_2020_full": "Dehghan 2020"},
         "quality_status": "usable_with_review",
         "confidence_cap": "medium",
@@ -445,6 +446,7 @@ def test_clean_reader_briefing_text_removes_extraction_fragments() -> None:
 def test_final_reader_memo_separates_beautiful_brief_from_appendix() -> None:
     scaffold = {
         "question": "Should generally healthy adults treat moderate egg intake as acceptable?",
+        "active_cited_source_ids": ["demo_sources_dehghan_2020_full"],
         "source_display_names": {"demo_sources_dehghan_2020_full": "Dehghan 2020"},
         "quality_status": "usable_with_review",
         "confidence_cap": "medium",
@@ -572,7 +574,10 @@ The study population from three cohorts WHO were eligible also met the scope con
 Trailing escaped newline.\\n
 """
 
-    updated = ensure_reader_memo_metadata(memo, {"source_display_names": {"study": "Study"}})
+    updated = ensure_reader_memo_metadata(
+        memo,
+        {"active_cited_source_ids": ["study"], "source_display_names": {"study": "Study"}},
+    )
 
     assert "Participants who were enrolled" in updated
     assert "Participants from three cohorts who were eligible" in updated

@@ -362,6 +362,9 @@ def _allowed_quantity_surfaces(contracts: list[dict[str, Any]]) -> list[str]:
 
 def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     section_id = str(_dict(section_packet).get("section_id") or "").strip()
+    explicit_jobs = _explicit_section_local_evidence_jobs(section_packet, contracts)
+    if explicit_jobs:
+        return explicit_jobs
     if section_id != "counterweights":
         return []
     move_jobs = _section_jobs_from_argument_moves(section_packet, contracts)
@@ -440,6 +443,68 @@ def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts:
             rows = grouped.get(job_id, [])
             if rows:
                 jobs.append(_section_local_job(job_id, rows))
+    return jobs
+
+
+def _explicit_section_local_evidence_jobs(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    section_id = str(_dict(section_packet).get("section_id") or "").strip()
+    contract_ids = {str(row.get("evidence_id") or "").strip() for row in contracts if isinstance(row, dict)}
+    jobs = []
+    covered_ids: set[str] = set()
+    for row in _list(_dict(section_packet).get("section_local_evidence_jobs")):
+        if not isinstance(row, dict):
+            continue
+        allowed = [evidence_id for evidence_id in _string_list(row.get("allowed_evidence_ids")) if evidence_id in contract_ids]
+        if not allowed:
+            continue
+        covered_ids.update(allowed)
+        jobs.append(
+            _drop_empty(
+                {
+                    "job_id": row.get("job_id"),
+                    "paragraph_job": row.get("paragraph_job"),
+                    "allowed_evidence_ids": allowed,
+                    "required_quantities_by_evidence_id": {
+                        evidence_id: quantities
+                        for evidence_id, quantities in _dict(row.get("required_quantities_by_evidence_id")).items()
+                        if evidence_id in allowed and quantities
+                    },
+                    "writing_guidance": row.get("writing_guidance"),
+                }
+            )
+        )
+    remaining_required = [
+        row
+        for row in contracts
+        if isinstance(row, dict)
+        and row.get("required")
+        and str(row.get("evidence_id") or "").strip()
+        and str(row.get("evidence_id") or "").strip() not in covered_ids
+    ]
+    if section_id == "counterweights":
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for contract in remaining_required:
+            grouped.setdefault(f"required_{_counterweight_job_id(contract)}", []).append(contract)
+        for job_id in [f"required_{value}" for value in _counterweight_job_order()]:
+            rows = grouped.get(job_id, [])
+            if rows:
+                jobs.append(_section_local_job(job_id, rows))
+    elif remaining_required:
+        jobs.append(
+            _drop_empty(
+                {
+                    "job_id": "remaining_required_evidence",
+                    "paragraph_job": "Briefly include remaining required evidence that does not fit the prior paragraph jobs.",
+                    "allowed_evidence_ids": [str(row.get("evidence_id")) for row in remaining_required if row.get("evidence_id")],
+                    "required_quantities_by_evidence_id": {
+                        str(row.get("evidence_id")): _quantity_values_for_job(row)
+                        for row in remaining_required
+                        if row.get("evidence_id") and _quantity_values_for_job(row)
+                    },
+                    "writing_guidance": "Keep this brief and explain the decision function of each remaining required item.",
+                }
+            )
+        )
     return jobs
 
 

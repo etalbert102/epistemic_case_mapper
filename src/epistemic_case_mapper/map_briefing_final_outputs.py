@@ -68,6 +68,8 @@ def write_final_reader_outputs(
     memo_ready_synthesis_result = output_path_result["memo_ready_synthesis_result"]
     memo_ready_repair_result = output_path_result["memo_ready_repair_result"]
     memo_ready_final_polish_result = output_path_result["memo_ready_final_polish_result"]
+    memo_ready_presentation_result = output_path_result["memo_ready_presentation_result"]
+    reader_output_available = bool(str(rewrite_result.get("memo") or "").strip())
     reader_memo = ensure_reader_memo_metadata(str(rewrite_result["memo"]), memo_package["scaffold"])
     record_memo_progress(
         artifacts,
@@ -91,6 +93,8 @@ def write_final_reader_outputs(
         memo_ready_synthesis_result=memo_ready_synthesis_result,
         memo_ready_repair_result=memo_ready_repair_result,
         memo_ready_final_polish_result=memo_ready_final_polish_result,
+        memo_ready_presentation_result=memo_ready_presentation_result,
+        reader_output_available=reader_output_available,
         briefing_path=paths.briefing,
     )
     edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
@@ -187,6 +191,9 @@ def _run_memo_ready_final_output_path(
     )
     if _memo_ready_synthesis_failed(synthesis):
         rewrite_result = _memo_ready_rewrite_result(synthesis)
+        rewrite_result["memo"] = str(memo_package.get("memo") or "")
+        rewrite_result.setdefault("report", {})["reader_output_fallback"] = "pre_synthesis_inspectable_memo"
+        rewrite_result.setdefault("report", {})["reader_output_fallback_decision_ready"] = False
         failure_result = _memo_ready_failure_result(rewrite_result)
         return {
             "section_rewrite_result": failure_result,
@@ -198,6 +205,7 @@ def _run_memo_ready_final_output_path(
             "memo_ready_synthesis_result": synthesis,
             "memo_ready_repair_result": failure_result,
             "memo_ready_final_polish_result": failure_result,
+            "memo_ready_presentation_result": {},
         }
     section_rewrite_result = _memo_ready_section_rewrite_result(synthesis, artifacts=artifacts)
     memo_package["scaffold"]["section_context_acceptance_status"] = "ready"
@@ -275,6 +283,7 @@ def _run_memo_ready_final_output_path(
         "memo_ready_synthesis_result": synthesis,
         "memo_ready_repair_result": repair,
         "memo_ready_final_polish_result": final_polish,
+        "memo_ready_presentation_result": presentation,
     }
 
 
@@ -344,14 +353,7 @@ def _memo_ready_synthesis_failed(synthesis_result: dict[str, Any]) -> bool:
     report = synthesis_result.get("report") if isinstance(synthesis_result, dict) else {}
     if not isinstance(report, dict):
         return True
-    if report.get("accepted") is True:
-        return False
-    status = str(report.get("status") or "")
-    return status in {
-        "backend_error_live_enrichment_failed",
-        "empty_or_unparseable_live_enrichment_failed",
-        "section_synthesis_failed",
-    }
+    return report.get("accepted") is not True
 
 
 def _memo_ready_failure_result(rewrite_result: dict[str, Any]) -> dict[str, Any]:
@@ -397,6 +399,8 @@ def _build_final_reader_diagnostics(
     memo_ready_synthesis_result: dict[str, Any],
     memo_ready_repair_result: dict[str, Any],
     memo_ready_final_polish_result: dict[str, Any],
+    memo_ready_presentation_result: dict[str, Any],
+    reader_output_available: bool,
     briefing_path: Path,
 ) -> dict[str, Any]:
     from epistemic_case_mapper.decision_argument_artifacts import evaluate_traceability_against_memo
@@ -413,7 +417,11 @@ def _build_final_reader_diagnostics(
     )
     from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
-    from epistemic_case_mapper.map_briefing_readiness import build_final_decision_readiness_report, build_memo_semantic_acceptance_report
+    from epistemic_case_mapper.map_briefing_readiness import (
+        build_final_decision_readiness_report,
+        build_final_lineage_report,
+        build_memo_semantic_acceptance_report,
+    )
     from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
     from epistemic_case_mapper.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
     from epistemic_case_mapper.map_briefing_section_role_quality import section_role_quality_report
@@ -462,7 +470,22 @@ def _build_final_reader_diagnostics(
         packet_retention_report=packet_retention,
         final_evaluation=final_eval,
     )
-    final_readiness = build_final_decision_readiness_report(scaffold=memo_package["scaffold"], validation_report=validation, memo_coherence_report=memo_coherence, packet_retention_report=packet_retention, final_evaluation=final_eval)
+    final_lineage = build_final_lineage_report(
+        scaffold=memo_package["scaffold"],
+        synthesis_report=_dict(memo_ready_synthesis_result.get("report")),
+        repair_report=_dict(memo_ready_repair_result.get("report")),
+        polish_report=_dict(memo_ready_final_polish_result.get("report")),
+        presentation_report=_dict(memo_ready_presentation_result.get("report")),
+        reader_output_available=reader_output_available,
+    )
+    final_readiness = build_final_decision_readiness_report(
+        scaffold=memo_package["scaffold"],
+        validation_report=validation,
+        memo_coherence_report=memo_coherence,
+        packet_retention_report=packet_retention,
+        final_evaluation=final_eval,
+        lineage_report=final_lineage,
+    )
     semantic_acceptance = build_memo_semantic_acceptance_report(final_readiness_report=final_readiness, memo_quality_report=memo_quality, polish_report=polish_report, validation_report=validation, packet_retention_report=packet_retention, final_evaluation=final_eval)
     packet_comparison = build_packet_first_comparison_report(
         scaffold=memo_package["scaffold"],
@@ -472,6 +495,7 @@ def _build_final_reader_diagnostics(
         memo_packet_retention_report=packet_retention,
     )
     source_lineage = build_final_source_lineage_report(reader_memo, memo_package["scaffold"])
+    source_universe = _build_source_universe_report(source_lineage)
     scoped_metrics = build_scoped_metric_report(
         scaffold=memo_package["scaffold"],
         prioritized_map=prioritized_map,
@@ -498,10 +522,12 @@ def _build_final_reader_diagnostics(
         "stage_value": stage_value,
         "final_eval": final_eval,
         "final_readiness": final_readiness,
+        "final_lineage": final_lineage,
         "semantic_acceptance": semantic_acceptance,
         "packet_retention": packet_retention,
         "packet_comparison": packet_comparison,
         "source_lineage": source_lineage,
+        "source_universe": source_universe,
         "scoped_metrics": scoped_metrics,
         "measurement_audit": measurement_audit,
     }
@@ -598,6 +624,7 @@ def _write_final_reader_artifacts(
     write_json(paths.stage_value, diagnostics["stage_value"])
     write_json(paths.final_brief_evaluation, diagnostics["final_eval"])
     write_json(paths.final_decision_readiness, diagnostics["final_readiness"])
+    write_json(paths.final_lineage, diagnostics["final_lineage"])
     write_json(paths.memo_semantic_acceptance, diagnostics["semantic_acceptance"])
     write_json(paths.memo_packet_retention, diagnostics["packet_retention"])
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
@@ -609,6 +636,7 @@ def _write_final_reader_artifacts(
     write_json(paths.memo_ready_repair_report, memo_ready_repair_result.get("report", {}))
     write_json(paths.memo_ready_final_polish_report, memo_ready_final_polish_result.get("report", {}))
     write_json(paths.final_source_lineage, diagnostics["source_lineage"])
+    write_json(paths.source_universe_report, diagnostics["source_universe"])
     write_json(paths.scoped_metric_report, diagnostics["scoped_metrics"])
     write_json(paths.pipeline_measurement_audit, diagnostics["measurement_audit"])
     write_json(paths.briefing_validation, diagnostics["validation"])
@@ -658,6 +686,7 @@ def _final_reader_summary_paths(
         "stage_value_report": paths.stage_value,
         "final_brief_evaluation": paths.final_brief_evaluation,
         "final_decision_readiness_report": paths.final_decision_readiness,
+        "final_lineage_report": paths.final_lineage,
         "memo_semantic_acceptance_report": paths.memo_semantic_acceptance,
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "memo_packet_retention_report": paths.memo_packet_retention,
@@ -676,6 +705,7 @@ def _final_reader_summary_paths(
         "decision_memo_editorial_report": paths.decision_memo_editorial_report,
         "scoped_metric_report": paths.scoped_metric_report,
         "final_source_lineage_report": paths.final_source_lineage,
+        "source_universe_report": paths.source_universe_report,
         "pipeline_measurement_audit": paths.pipeline_measurement_audit,
         "decision_memo_editorial_prompt": paths.decision_memo_editorial_prompt
         if editorial_result and editorial_result.get("prompt")
@@ -764,3 +794,24 @@ def _build_packet_retention_for_final_memo(reader_memo: str, scaffold: dict[str,
     from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
 
     return build_memo_packet_retention_report(reader_memo, scaffold.get("decision_briefing_packet"))
+
+
+def _build_source_universe_report(source_lineage: dict[str, Any]) -> dict[str, Any]:
+    outside_count = int(source_lineage.get("unused_memo_source_count") or 0)
+    missing_count = int(source_lineage.get("missing_packet_source_count") or 0)
+    status = "blocked" if outside_count else "warning" if missing_count else "aligned"
+    return {
+        "schema_id": "source_universe_report_v1",
+        "status": status,
+        "active_source_count": int(source_lineage.get("packet_source_count") or 0),
+        "reader_source_count": int(source_lineage.get("memo_source_count") or 0),
+        "reader_sources_outside_active_count": outside_count,
+        "active_sources_missing_from_reader_count": missing_count,
+        "reader_source_list_subset_of_active_sources": outside_count == 0,
+        "reader_sources_outside_active": source_lineage.get("unused_memo_sources", []),
+        "active_source_ids_missing_from_reader": source_lineage.get("missing_packet_source_ids", []),
+    }
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}

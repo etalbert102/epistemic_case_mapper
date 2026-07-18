@@ -16,6 +16,7 @@ The strongest support comes from Dehghan 2020 (Egg Consumption And Risk Of Cardi
 **Confidence:** medium
 """
     scaffold = {
+        "active_cited_source_ids": ["dehghan", "bmj", "study_without_url"],
         "source_display_names": {
             "dehghan": "Dehghan 2020",
             "bmj": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis",
@@ -63,6 +64,7 @@ The support comes from Study A. The old source section should not keep uncited s
 - Study C
 """
     scaffold = {
+        "active_cited_source_ids": ["a", "b", "c"],
         "source_display_names": {
             "a": "Study A",
             "b": "Study B",
@@ -101,7 +103,10 @@ def test_ensure_reader_memo_metadata_repairs_collapsed_model_metadata() -> None:
         "The evidence is mixed. **Confidence:** medium\n"
     )
 
-    updated = ensure_reader_memo_metadata(memo, {"question": question, "source_display_names": {"a": "Study A"}})
+    updated = ensure_reader_memo_metadata(
+        memo,
+        {"question": question, "active_cited_source_ids": ["a"], "source_display_names": {"a": "Study A"}},
+    )
 
     assert f"**Decision question:** {question}\n\nThe best current answer" in updated
     assert "The evidence is mixed.\n\n**Confidence:** medium" in updated
@@ -189,3 +194,56 @@ Current evidence suggests the risk is not explained by baseline differences [[Ca
 
     assert "[[Zhong et al. 2019](CITATION_TRACE.md#zhong-et-al-2019); [American Heart Association News 2023](CITATION_TRACE.md#american-heart-association-news-2023)]" in updated
     assert "[[Zhong et al.\n" not in updated
+
+
+def test_reader_source_fallback_uses_only_active_packet_sources() -> None:
+    source_display_names = {f"source_{index}": f"Source {index}" for index in range(12)}
+    source_urls = {f"source_{index}": f"https://example.test/source-{index}" for index in range(12)}
+    memo = """## Decision Brief
+
+The memo has no recoverable inline source labels.
+
+## Sources
+
+- stale model-provided source list
+"""
+    scaffold = {
+        "source_display_names": source_display_names,
+        "source_urls": source_urls,
+        "memo_ready_packet": {
+            "source_trail": [
+                {"source_id": f"SRC_{index}", "original_source_id": f"source_{index}"}
+                for index in range(7)
+            ]
+        },
+    }
+
+    updated = ensure_reader_memo_metadata(memo, scaffold)
+
+    assert updated.count("\n- [Source ") == 7
+    for index in range(7):
+        assert f"- [Source {index}](https://example.test/source-{index})" in updated
+    for index in range(7, 12):
+        assert f"Source {index}" not in updated
+    assert "stale model-provided source list" not in updated
+
+
+def test_reader_source_fallback_removes_unverifiable_case_wide_list() -> None:
+    memo = """## Decision Brief
+
+No active source trail is available.
+
+## Sources
+
+- Study A
+- Study B
+"""
+
+    updated = ensure_reader_memo_metadata(
+        memo,
+        {"source_display_names": {"a": "Study A", "b": "Study B"}},
+    )
+
+    assert "## Sources" not in updated
+    assert "- Study A" not in updated
+    assert "- Study B" not in updated

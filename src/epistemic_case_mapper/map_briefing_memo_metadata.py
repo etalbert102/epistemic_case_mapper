@@ -14,9 +14,8 @@ def ensure_reader_memo_metadata(markdown: str, scaffold: dict[str, Any]) -> str:
     if question:
         memo = remove_standalone_question_restatement(memo, question)
         memo = ensure_decision_question_line(memo, question)
-    source_lines = cited_source_list_lines(memo, scaffold) or source_list_lines(scaffold)
-    if source_lines:
-        memo = _replace_sources_section(memo, source_lines)
+    source_lines = cited_source_list_lines(memo, scaffold) or active_source_list_lines(scaffold)
+    memo = _replace_sources_section(memo, source_lines) if source_lines else _remove_sources_section(memo)
     if question:
         memo = normalize_reader_memo_metadata_layout(memo, question)
     memo = replace_internal_reader_phrases(memo)
@@ -94,9 +93,17 @@ def source_list_lines(scaffold: dict[str, Any]) -> list[str]:
     return ["", "## Sources", "", *rows] if rows else []
 
 
+def active_source_list_lines(scaffold: dict[str, Any]) -> list[str]:
+    rows = [
+        _source_list_row(entry)
+        for entry in sorted(_active_source_entries(scaffold), key=lambda entry: entry["display"].lower())
+    ]
+    return ["", "## Sources", "", *rows] if rows else []
+
+
 def cited_source_list_lines(markdown: str, scaffold: dict[str, Any]) -> list[str]:
     body = _body_without_sources(markdown)
-    rows = [_source_list_row(entry) for entry in _cited_source_entries(body, scaffold)]
+    rows = [_source_list_row(entry) for entry in _cited_source_entries(body, _active_source_entries(scaffold))]
     return ["", "## Sources", "", *rows] if rows else []
 
 
@@ -114,12 +121,11 @@ def link_source_mentions(markdown: str, scaffold: dict[str, Any]) -> str:
     if not isinstance(source_citations, dict):
         source_citations = {}
     label_targets = {
-        str(display).strip(): (
-            str(source_urls.get(source_id, "")).strip(),
-            str(source_citations.get(source_id, "")).strip() or str(display).strip(),
-        )
-        for source_id, display in source_lookup.items()
-        if str(display).strip() and _is_linkable_url(str(source_urls.get(source_id, "")).strip())
+        alias: (entry["url"], entry["citation_label"] or entry["display"])
+        for entry in _active_source_entries(scaffold)
+        if _is_linkable_url(entry["url"])
+        for alias in [entry["display"], *entry.get("aliases", [])]
+        if alias
     }
     if not label_targets:
         return markdown
@@ -143,6 +149,11 @@ def _replace_sources_section(markdown: str, source_lines: list[str]) -> str:
     if pattern.search(markdown):
         return pattern.sub("\n" + source_block, markdown.rstrip())
     return markdown.rstrip() + "\n" + source_block
+
+
+def _remove_sources_section(markdown: str) -> str:
+    pattern = re.compile(r"\n## Sources\n.*\Z", flags=re.DOTALL)
+    return pattern.sub("", markdown.rstrip())
 
 
 def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
@@ -181,13 +192,61 @@ def _source_entries(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
     return entries
 
 
-def _cited_source_entries(body: str, scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+def _active_source_entries(scaffold: dict[str, Any]) -> list[dict[str, Any]]:
+    active_source_ids = set(_active_source_ids(scaffold))
+    if not active_source_ids:
+        return []
+    return [entry for entry in _source_entries(scaffold) if entry["source_id"] in active_source_ids]
+
+
+def _active_source_ids(scaffold: dict[str, Any]) -> list[str]:
+    explicit = scaffold.get("active_cited_source_ids")
+    if isinstance(explicit, list):
+        return _dedupe(str(value).strip() for value in explicit if str(value).strip())
+    memo_ready_packet = scaffold.get("memo_ready_packet")
+    if isinstance(memo_ready_packet, dict):
+        source_ids = _source_trail_original_ids(memo_ready_packet.get("source_trail"))
+        if source_ids:
+            return source_ids
+    decision_packet = scaffold.get("decision_briefing_packet")
+    if isinstance(decision_packet, dict):
+        source_trail = decision_packet.get("source_trail")
+        if isinstance(source_trail, list):
+            active_rows = [row for row in source_trail if isinstance(row, dict) and row.get("appears_in_packet") is True]
+            source_ids = _source_trail_original_ids(active_rows)
+            if source_ids:
+                return source_ids
+    return []
+
+
+def _source_trail_original_ids(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return _dedupe(
+        str(row.get("original_source_id") or row.get("source_slug") or row.get("source_id") or "").strip()
+        for row in value
+        if isinstance(row, dict)
+    )
+
+
+def _cited_source_entries(body: str, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     cited = []
-    for entry in _source_entries(scaffold):
+    for entry in entries:
         position = _source_mention_position(body, entry)
         if position >= 0:
             cited.append((position, entry))
     return [entry for _, entry in sorted(cited, key=lambda row: row[0])]
+
+
+def _dedupe(values: Any) -> list[str]:
+    seen: set[str] = set()
+    rows = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            rows.append(text)
+    return rows
 
 
 def _source_mention_position(body: str, entry: dict[str, Any]) -> int:

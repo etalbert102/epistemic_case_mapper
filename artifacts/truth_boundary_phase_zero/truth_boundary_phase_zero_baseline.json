@@ -1,0 +1,138 @@
+{
+  "schema_id": "truth_boundary_phase_zero_baseline_v1",
+  "recorded_at": "2026-07-18T02:30:00-04:00",
+  "baseline_record_commit": "adcc06d04b1351977157102c93880e66286cfa69",
+  "saved_run_generation_commit": "unknown",
+  "saved_run_generation_commit_caveat": "The saved full replay completed at 2026-07-18T00:31:52-04:00, before the current HEAD commit at 2026-07-18T01:24:41-04:00. It is the latest complete eggs replay, but it cannot be claimed as an exact clean-current-HEAD replay.",
+  "dirty_worktree": {
+    "dirty": true,
+    "status_short": [
+      " M src/epistemic_case_mapper/map_briefing_gap_closer_experiment.py",
+      " M src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py",
+      " M tests/test_memo_gap_closer_experiment.py",
+      "?? docs/plans/DECISION_MEMO_TRUTH_BOUNDARY_HARDENING_PLAN.md",
+      "?? src/epistemic_case_mapper/map_briefing_role_bound_citations.py"
+    ],
+    "ownership_note": "The gap-closer, evidence-anchoring, role-bound citation, and pre-existing test changes are user-owned and were not modified for this baseline."
+  },
+  "replay": {
+    "status": "saved_run_baseline_with_live_replay_blocker",
+    "artifact_root": "artifacts/fresh_eggs_20260718_000324",
+    "completed_at": "2026-07-18T00:31:52-04:00",
+    "duration_seconds_from_progress_log": 972.559,
+    "backend": "ollama:gemma4:12b-mlx",
+    "backend_timeout_seconds": 240,
+    "backend_retries": 2,
+    "live_replay_blocker": "The local Ollama endpoint at 127.0.0.1:11434 is unavailable from the managed sandbox (operation not permitted), so a fresh current-HEAD model replay is impractical in this run.",
+    "recorded_command": "unavailable_in_saved_run",
+    "reconstructable_configuration": {
+      "case_manifest": "data/cases/eggs/case.yaml",
+      "case_id": "eggs",
+      "region_id": "eggs_observational_vs_rct",
+      "scope": "worked_region",
+      "question": "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?",
+      "chunk_lines": 40,
+      "chunk_overlap_lines": 0,
+      "all_chunk_count": 80,
+      "requested_max_claims": 0,
+      "effective_max_claims": 23
+    }
+  },
+  "prompt_and_runtime": {
+    "prompt_schema_ids": [
+      "analyst_decision_model_v1",
+      "canonical_decision_writer_packet_v1",
+      "memo_ready_packet_v1",
+      "memo_ready_packet_synthesis_report_v1",
+      "memo_ready_packet_repair_report_v1",
+      "memo_ready_final_polish_report_v1"
+    ],
+    "prompt_file_total_bytes": 1312108,
+    "late_briefing_model_call_count": 8,
+    "model_call_count_scope": "runtime_budget_report_v1 excludes claim extraction, claim consolidation, relation candidate selection, and relation mapping; no trustworthy all-run call total is recorded",
+    "selected_prompt_hashes_sha256": {
+      "analyst_decision_model_prompt.txt": "ce04998d1beec32757c3f86175ca61a66ab99460feffdacf938a2d669bb524b7",
+      "memo_ready_packet_synthesis_prompt.txt": "eab2cff997a0e9973655f8427a6b16f69772b8d550d874a28a0aaa9a2b503a9d",
+      "memo_ready_final_polish_prompt.txt": "d0a197eff7aa15699dbd1f12f27c38fed894161ffc12ab58a00d7260c4fe9b75"
+    }
+  },
+  "input_hashes_sha256": {
+    "data/cases/eggs/case.yaml": "bbca2a01cd58754f9747b6427a9d1ab8dae033bf79023aed34c3c5d6e0818822",
+    "prioritized_map.json": "c34a4ff0abcd78daa03115e007b67c09117e76afc64a8db27252f3bb8f0f1e67",
+    "aha_2023_dietary_cholesterol_news.txt": "1924e10645a154b2431a97cb1c11db5e99e3eacca5aedbbc172ccf10a738abbe",
+    "aha_2019_dietary_cholesterol_pubmed.txt": "ecb2c2637641144f59f7964345ba26e8683cb41cdc18fda369042164e826fab6",
+    "bmj_2020_egg_consumption_cvd_pmc.txt": "a902fbe879ee9356f1a18635736cae1b98fd3a28f4aaefd932df6b056a996f63",
+    "li_2020_egg_cholesterol_rct_meta_pmc.txt": "308cf2076a639367dd7c7a685e72d7c52abdb59cff5163d7ca6c31f238db2dff",
+    "nnr_2023_eggs_scoping_review_pmc.txt": "3fe0e299dff7d77391a64d7734d7b17c29f1b76b4fae5cd09d068ec3729f9193",
+    "dga_2020_2025_pmc_summary.txt": "055eec11ec27dbd01e979e08a9cfdc1e28aad60c271efaf7e94791dda2ee6d65",
+    "jama_2019_dietary_cholesterol_eggs_pmc.txt": "bd8237dee5cf3dc937d799fa1e73f0a5fe601d33dcf670fbb8a08883b9888495"
+  },
+  "artifact_paths_and_hashes_sha256": {
+    "memo": {
+      "path": "artifacts/fresh_eggs_20260718_000324/briefing/BRIEFING.md",
+      "sha256": "7c12fd224f3a66a3a6084e4cc135873d8a3bb189a4ecdd83364f1fe6294a4d0b"
+    },
+    "memo_ready_packet": {
+      "path": "artifacts/fresh_eggs_20260718_000324/briefing/memo_ready_packet.json",
+      "sha256": "d87eceecbe4c1a4dafad53c4a6d8ae482671c2f19051e16a2803002377d44c98"
+    },
+    "final_decision_readiness": {
+      "path": "artifacts/fresh_eggs_20260718_000324/briefing/final_decision_readiness_report.json",
+      "sha256": "89dbaae14acc2e26e610243f72c6ae697fc15f0f6786cf3a24f83e85049d38a8"
+    },
+    "final_source_lineage": {
+      "path": "artifacts/fresh_eggs_20260718_000324/briefing/final_source_lineage_report.json",
+      "sha256": "a6bb902d6eac52aff7085b976f087449fc05b1d03b30ffd12bad183bcbe9d6e6"
+    }
+  },
+  "observations": {
+    "readiness_false_acceptance": {
+      "memo_ready_synthesis": {
+        "status": "production_readiness_blocked",
+        "accepted": false
+      },
+      "memo_ready_repair": {
+        "status": "partial_retention_improvement_applied_with_warnings",
+        "accepted": false
+      },
+      "memo_ready_final_polish": {
+        "status": "rejected_kept_original",
+        "accepted": false
+      },
+      "final_decision_readiness": {
+        "status": "decision_ready",
+        "decision_ready": true
+      },
+      "memo_semantic_acceptance": {
+        "status": "accepted",
+        "accepted_for_decision_use": true
+      }
+    },
+    "source_universe_mismatch": {
+      "active_packet_source_count": 7,
+      "reader_source_list_count": 12,
+      "reader_sources_outside_active_packet_count": 5,
+      "reader_sources_outside_active_packet": [
+        "dietary_cholesterol_lack_evidence_cvd_review",
+        "eggs_dietary_cholesterol_cvd_review",
+        "huang_2020_egg_health_outcomes_evidence_mapping",
+        "ma_2021_egg_cvd_dose_response",
+        "bmj_2013_egg_consumption_chd_stroke"
+      ]
+    },
+    "quantity": {
+      "extracted_quantity_count": 119,
+      "quantitative_anchor_count": 12,
+      "manual_observation": "The memo states RR 0.93 with a 95% interval of 0.93 to 1.03 and calls it a safety ceiling. Result-level tuple identity and endpoint binding were not validated in this baseline slice."
+    },
+    "counterweight": {
+      "canonical_counterweight_disposition_count": 0,
+      "quality_warnings": [
+        "missing_skeleton_counterweight_disposition",
+        "missing_counterweight_dispositions"
+      ]
+    }
+  },
+  "review_status": "agent-reviewed-baseline-only",
+  "human_reviewed": false
+}

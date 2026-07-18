@@ -17,7 +17,7 @@ from epistemic_case_mapper.config_profiles import DEFAULT_PROFILE_ID, infer_prof
 from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.map_briefing_length_policy import executive_length_policy, executive_length_report_fields
 from epistemic_case_mapper.model_backends import run_model_backend
-from epistemic_case_mapper.map_briefing_memo_metadata import decision_question_lines, source_list_lines
+from epistemic_case_mapper.map_briefing_memo_metadata import active_source_list_lines, decision_question_lines
 from epistemic_case_mapper.map_briefing_markdown_quality import extraction_debris_issues, markdown_structure_issues
 from epistemic_case_mapper.map_briefing_practical_text import reader_facing_practical_items
 from epistemic_case_mapper.map_briefing_quantities import quantity_ledger_markdown
@@ -207,7 +207,7 @@ def _build_final_reader_memo(rendered: str, scaffold: dict[str, Any]) -> str:
             "## Evidence Trail",
             "",
             "The structured evidence trail, decision-lever tables, coverage snapshot, and excluded extraction artifacts are in `EVIDENCE_APPENDIX.md`.",
-            *source_list_lines(scaffold),
+            *active_source_list_lines(scaffold),
         ]
     )
     return "\n".join(lines)
