@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
 from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
@@ -670,6 +671,8 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     )
 
     prompt = build_memo_ready_packet_synthesis_prompt(result["analyst_memo_ready_packet"])
+    section_plan = build_memo_ready_section_synthesis_plan(result["analyst_memo_ready_packet"])
+    answer_section = next(row for row in section_plan["sections"] if row["section_id"] == "answer_evidence")
 
     assert "canonical decision writer packet" in prompt
     assert "canonical_decision_writer_packet_v1" in prompt
@@ -678,6 +681,11 @@ def test_memo_ready_prompt_treats_analyst_argument_plan_as_controlling_order() -
     assert "excluded_evidence_log" not in prompt
     assert "lineage_report" not in prompt
     assert '"evidence_items"' not in prompt
+    assert answer_section["packet"]["analyst_argument_moves"][0]["step_id"] == "weigh_risk"
+    assert answer_section["packet"]["analyst_argument_moves"][0]["writing_goal"].startswith("Weigh the operating-risk")
+    assert "### Analyst argument moves" in answer_section["prompt"]
+    assert "Do not leave the counterweight to repair." in answer_section["prompt"]
+    assert "Contrast support with risk." in answer_section["prompt"]
 
 
 def test_memo_ready_prompt_includes_critique_writer_guidance() -> None:

@@ -50,8 +50,9 @@ def build_memo_ready_production_readiness_report(packet: dict[str, Any]) -> dict
         fatal_issues.append("writer_role_projection_source_weight_fallback_used")
     if _scaffolded_answer_spine(answer_spine):
         fatal_issues.append("scaffolded_or_truncated_answer_spine")
-    if _canonical_quality_blocks(canonical_quality):
-        fatal_issues.append("canonical_writer_packet_quality_blocked")
+    canonical_quality_warnings = _canonical_quality_blocking_warnings(canonical_quality)
+    if canonical_quality_warnings:
+        warnings.extend(f"canonical_quality_warning:{warning}" for warning in canonical_quality_warnings)
     elif _report_has_warning(canonical_quality):
         warnings.append("canonical_writer_packet_quality_warning")
 
@@ -141,12 +142,19 @@ def _scaffolded_answer_spine(answer_spine: dict[str, Any]) -> bool:
     )
 
 
-def _canonical_quality_blocks(report: dict[str, Any]) -> bool:
-    blocking = {
+def _canonical_quality_blocking_warnings(report: dict[str, Any]) -> list[str]:
+    """Warnings that used to block synthesis, now surfaced for downstream repair.
+
+    These are important signals, but replay showed they can be over-conservative:
+    final synthesis plus validated polish can preserve the evidence payload while
+    improving readability. Truly absent analyst/source inputs still block above.
+    """
+
+    important = {
         "truncated_or_scaffolded_direct_answer",
         "missing_source_weight_judgments",
         "source_weight_judgments_warning",
         "source_hierarchy_warning",
     }
-    warnings = set(_string_list(report.get("warnings")))
-    return bool(warnings.intersection(blocking))
+    warnings = _string_list(report.get("warnings"))
+    return [warning for warning in warnings if warning in important]

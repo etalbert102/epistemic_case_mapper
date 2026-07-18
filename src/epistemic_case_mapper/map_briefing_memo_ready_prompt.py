@@ -209,6 +209,12 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "source_weighting_flow_audit": build_source_weighting_flow_audit(packet, {"source_weighting_contract": source_weighting_contract}),
         "lightweight_writer_guidance": compact_lightweight_guidance_for_prompt(_dict(packet.get("lightweight_writer_guidance"))),
         "decision_usefulness": compact_decision_usefulness_for_prompt(_dict(packet.get("decision_usefulness_packet"))),
+        "analyst_decision_logic": _compact_analyst_decision_logic(_dict(packet.get("analyst_decision_logic"))),
+        "analyst_argument_plan": [
+            _compact_analyst_argument_step(row)
+            for row in _list(packet.get("analyst_argument_plan"))
+            if isinstance(row, dict)
+        ][:8],
         "argument_spine": _drop_empty(
             {
                 "section_plan": spine.get("section_plan"),
@@ -243,6 +249,8 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
         if section_id == "bottom_line" or not heading:
             continue
         evidence_ids = _section_evidence_ids(raw)
+        analyst_moves = _section_analyst_argument_moves(reader_packet, raw, section_id=section_id)
+        usefulness_moves = _section_decision_usefulness_moves(reader_packet, section_id=section_id, evidence_ids=evidence_ids)
         source_bound_atoms = with_section_specific_jobs(
             _model_safe_source_bound_evidence_atoms(_source_bound_atom_rows(raw)),
             section_id=section_id,
@@ -268,6 +276,8 @@ def _section_synthesis_packets(reader_packet: dict[str, Any]) -> list[dict[str, 
                     "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), section_id),
                     "top_context": _section_top_context(reader_packet, raw, section_id=section_id),
                     "reader_guidance_application": _guidance_application(reader_packet, raw, section_id),
+                    "analyst_argument_moves": analyst_moves,
+                    "decision_usefulness_moves": usefulness_moves,
                     "section_argument_steps": raw.get("argument_steps"),
                     "required_points": raw.get("required_points"),
                     "section_retention_requirements": raw.get("retention_requirements"),
@@ -302,6 +312,16 @@ def _source_weighting_section_writer_packet(reader_packet: dict[str, Any], sourc
             "analyst_section_spine": section_spine_for_prompt(_dict(reader_packet.get("analyst_decision_spine")), "source_weighting"),
             "top_context": _section_top_context(reader_packet, source_weighting, section_id="source_weighting"),
             "reader_guidance_application": _guidance_application(reader_packet, source_weighting, "source_weighting"),
+            "analyst_argument_moves": _section_analyst_argument_moves(
+                reader_packet,
+                source_weighting,
+                section_id="source_weighting",
+            ),
+            "decision_usefulness_moves": _section_decision_usefulness_moves(
+                reader_packet,
+                section_id="source_weighting",
+                evidence_ids=_section_evidence_ids(source_weighting),
+            ),
             "required_points": source_weighting.get("required_points"), "source_weighting_contract": reader_packet.get("source_weighting_contract"),
             "source_role_groups": source_weighting.get("source_role_groups"), "lane_cards": source_weighting.get("lane_cards"),
             "validation_contract": source_weighting.get("validation_contract"),
@@ -451,6 +471,7 @@ def _section_top_context(reader_packet: dict[str, Any], raw_section: dict[str, A
         "evidence_language_contracts": _filter_language_contracts(reader_packet.get("evidence_language_contracts"), source_ids),
         "lightweight_writer_guidance": reader_packet.get("lightweight_writer_guidance"),
         "reader_judgments_to_surface": compact_reader_judgments_for_section(reader_packet.get("reader_judgment_packet"), section_id),
+        "analyst_decision_logic": _section_analyst_decision_logic(reader_packet, section_id),
         "citation_registry": reader_packet.get("citation_registry"),
     }
     if section_id == "answer_evidence":
@@ -513,6 +534,95 @@ def _section_source_ids(raw_section: dict[str, Any]) -> list[str]:
             ],
         ]
     )
+
+
+def _section_analyst_argument_moves(reader_packet: dict[str, Any], raw_section: dict[str, Any], *, section_id: str) -> list[dict[str, Any]]:
+    evidence_ids = set(_section_evidence_ids(raw_section))
+    rows = []
+    for row in _list(reader_packet.get("analyst_argument_plan")):
+        if not isinstance(row, dict):
+            continue
+        row_section_id = str(row.get("section_id") or "").strip() or _section_id_from_heading(str(row.get("section") or ""))
+        row_evidence_ids = set(_string_list(row.get("evidence_item_ids")))
+        if row_section_id == section_id or (evidence_ids and row_evidence_ids.intersection(evidence_ids)):
+            rows.append(row)
+    return _dedupe_rows(rows, "step_id")[:6]
+
+
+def _section_decision_usefulness_moves(
+    reader_packet: dict[str, Any],
+    *,
+    section_id: str,
+    evidence_ids: list[str],
+) -> dict[str, Any]:
+    usefulness = _dict(reader_packet.get("decision_usefulness"))
+    if not usefulness:
+        return {}
+    evidence_set = set(evidence_ids)
+
+    def matching_rows(key: str, fallback_limit: int = 4) -> list[dict[str, Any]]:
+        rows = [row for row in _list(usefulness.get(key)) if isinstance(row, dict)]
+        matched = [
+            row
+            for row in rows
+            if not evidence_set or set(_string_list(row.get("evidence_item_ids"))).intersection(evidence_set)
+        ]
+        return (matched or rows)[:fallback_limit]
+
+    if section_id == "answer_evidence":
+        return _drop_empty(
+            {
+                "recommended_stance": usefulness.get("recommended_stance"),
+                "decision_criteria": matching_rows("decision_criteria", 4),
+                "diagnostic_evidence": matching_rows("diagnostic_evidence", 4),
+                "tradeoffs": matching_rows("tradeoffs", 2),
+            }
+        )
+    if section_id == "counterweights":
+        return _drop_empty(
+            {
+                "tradeoffs": matching_rows("tradeoffs", 4),
+                "cruxes_and_thresholds": matching_rows("cruxes_and_thresholds", 4),
+                "premortem": matching_rows("premortem", 4),
+                "monitoring_triggers": matching_rows("monitoring_triggers", 4),
+                "diagnostic_evidence": matching_rows("diagnostic_evidence", 2),
+            }
+        )
+    if section_id == "practical_implication":
+        return _drop_empty(
+            {
+                "recommended_stance": usefulness.get("recommended_stance"),
+                "tradeoffs": matching_rows("tradeoffs", 3),
+                "premortem": matching_rows("premortem", 3),
+                "monitoring_triggers": matching_rows("monitoring_triggers", 3),
+            }
+        )
+    if section_id == "source_weighting":
+        return _drop_empty(
+            {
+                "answer_shape": usefulness.get("answer_shape"),
+                "decision_criteria": matching_rows("decision_criteria", 3),
+                "diagnostic_evidence": matching_rows("diagnostic_evidence", 3),
+            }
+        )
+    return {}
+
+
+def _section_analyst_decision_logic(reader_packet: dict[str, Any], section_id: str) -> dict[str, Any]:
+    logic = _dict(reader_packet.get("analyst_decision_logic"))
+    if not logic:
+        return {}
+    shared = {
+        "bounded_bottom_line": logic.get("bounded_bottom_line"),
+        "do_not_overstate": logic.get("do_not_overstate"),
+    }
+    section_fields = {
+        "source_weighting": ("support_summary", "counterweight_weighting"),
+        "answer_evidence": ("support_summary", "reconciled_cruxes"),
+        "counterweights": ("strongest_counterweight", "counterweight_weighting", "scope_boundaries", "reconciled_cruxes"),
+        "practical_implication": ("practical_implications", "scope_boundaries"),
+    }.get(section_id, ())
+    return _drop_empty({**shared, **{field: logic.get(field) for field in section_fields}})
 
 
 def _section_priority_quantity_contracts(reader_packet: dict[str, Any], evidence_ids: list[str], section_id: str) -> list[dict[str, Any]]:
@@ -763,6 +873,8 @@ def _with_top_level_guidance(canonical: dict[str, Any], memo_ready_packet: dict[
             "decision_usefulness_packet": usefulness,
             "decision_usefulness_quality_report": quality,
             "analyst_quantity_binding_report": quantity_binding,
+            "analyst_decision_logic": _dict(canonical.get("analyst_decision_logic")) or _dict(memo_ready_packet.get("analyst_decision_logic")),
+            "analyst_argument_plan": _list(canonical.get("analyst_argument_plan")) or _list(memo_ready_packet.get("analyst_argument_plan")),
             "priority_quantity_contracts": priority_quantity_contracts if priority_quantity_contracts.get("rows") else {},
         }
     )
@@ -781,6 +893,38 @@ def _compact_source_judgment(row: dict[str, Any]) -> dict[str, Any]:
             "limits": row.get("what_not_to_use_it_for"),
             "evidence_item_ids": row.get("evidence_item_ids"),
             "omission_reason": row.get("omission_reason"),
+        }
+    )
+
+
+def _compact_analyst_decision_logic(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "bounded_bottom_line": row.get("bounded_bottom_line"),
+            "support_summary": row.get("support_summary"),
+            "strongest_counterweight": row.get("strongest_counterweight"),
+            "counterweight_weighting": row.get("counterweight_weighting"),
+            "reconciled_cruxes": _string_list(row.get("reconciled_cruxes")),
+            "scope_boundaries": _string_list(row.get("scope_boundaries")),
+            "practical_implications": _string_list(row.get("practical_implications")),
+            "do_not_overstate": _string_list(row.get("do_not_overstate")),
+        }
+    )
+
+
+def _compact_analyst_argument_step(row: dict[str, Any]) -> dict[str, Any]:
+    section = str(row.get("section") or "").strip()
+    return _drop_empty(
+        {
+            "step_id": row.get("step_id"),
+            "section": section,
+            "section_id": _section_id_from_heading(section),
+            "writing_goal": row.get("writing_goal"),
+            "transition_from_previous": row.get("transition_from_previous"),
+            "required_points": _string_list(row.get("required_points"))[:8],
+            "evidence_item_ids": _string_list(row.get("evidence_item_ids"))[:12],
+            "source_ids": _string_list(row.get("source_ids"))[:8],
+            "source_labels": _string_list(row.get("source_labels"))[:8],
         }
     )
 

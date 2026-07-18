@@ -223,12 +223,15 @@ def build_evidence_tagged_section_prompt(
         f"- Output starts exactly with: ## {heading}\n"
         "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
         "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
+        "- Analyst argument notes may refer to upstream claim-map reasoning; express those ideas using the evidence expression contract tags, not raw claim-map IDs.\n"
         "- Treat contracts marked required as a coverage checklist: every required contract appears at least once with its evidence tag.\n"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         "- Factual claims and numeric quantities in this section come from the Evidence expression contracts and Section-local evidence jobs.\n"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Use the Decision argument for this section as the governing structure; use evidence contracts as anchors for those moves.\n"
+        "- Use Analyst argument moves as the narrative spine when present: resolve their writing goals and required reasoning points with the tagged evidence contracts.\n"
+        "- Use Decision-usefulness moves to make tradeoffs, diagnostic evidence, cruxes, update triggers, and practical implications explicit where section-relevant.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"
         "- Use Priority quantity contracts to keep decision-relevant quantities with the exact claim, endpoint, subgroup, and comparator they describe.\n"
         "- Reader-facing allowed-use and not-enough-for limits define the claim role while required contracts still keep their own tags and listed quantities.\n"
@@ -271,7 +274,79 @@ def _render_contract_first_section_notes(
     paragraph_flow = _string_list(focus.get("paragraph_shape"))[:4]
     if paragraph_flow:
         lines.extend(["", "### Paragraph flow", *(f"{index}. {line}" for index, line in enumerate(paragraph_flow, start=1))])
+    if decision_argument := _compact_decision_argument_section(packet.get("decision_argument_section")):
+        lines.extend(["", "### Decision argument for this section", json.dumps(decision_argument, indent=2, ensure_ascii=False)])
+    if analyst_moves := _compact_analyst_argument_moves(packet.get("analyst_argument_moves")):
+        lines.extend(["", "### Analyst argument moves", json.dumps(analyst_moves, indent=2, ensure_ascii=False)])
+    if usefulness_moves := _compact_decision_usefulness_moves(packet.get("decision_usefulness_moves")):
+        lines.extend(["", "### Decision-usefulness moves", json.dumps(usefulness_moves, indent=2, ensure_ascii=False)])
     return "\n".join(line for line in lines if line is not None).strip()
+
+
+def _compact_analyst_argument_moves(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value)[:8]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "step_id": row.get("step_id"),
+                    "writing_goal": _strip_raw_map_ids(row.get("writing_goal")),
+                    "transition_from_previous": _strip_raw_map_ids(row.get("transition_from_previous")),
+                    "required_points": [_strip_raw_map_ids(item) for item in _string_list(row.get("required_points"))[:8]],
+                    "source_ids": _string_list(row.get("source_ids"))[:8],
+                }
+            )
+        )
+    return rows
+
+
+def _compact_decision_argument_section(value: Any) -> dict[str, Any]:
+    row = _dict(value)
+    if not row:
+        return {}
+    return _drop_empty(
+        {
+            "section_job": row.get("section_job"),
+            "reader_question": row.get("reader_question"),
+            "why_this_section_matters": row.get("why_this_section_matters"),
+            "owned_moves": [
+                _drop_empty(
+                    {
+                        "move_id": move.get("move_id"),
+                        "move_type": move.get("move_type"),
+                        "point": _strip_raw_map_ids(move.get("point")),
+                        "writing_job": _strip_raw_map_ids(move.get("writing_job")),
+                        "source_ids": _string_list(move.get("source_ids"))[:8],
+                    }
+                )
+                for move in _list(row.get("owned_moves"))[:8]
+                if isinstance(move, dict)
+            ],
+        }
+    )
+
+
+def _strip_raw_map_ids(text: Any) -> str:
+    return re.sub(r"\b(?:claim|relation):[A-Za-z0-9_:-]+\b", "mapped evidence", str(text or ""))
+
+
+def _compact_decision_usefulness_moves(value: Any) -> dict[str, Any]:
+    row = _dict(value)
+    if not row:
+        return {}
+    return _drop_empty(
+        {
+            "recommended_stance": _dict(row.get("recommended_stance")),
+            "decision_criteria": _list(row.get("decision_criteria"))[:4],
+            "diagnostic_evidence": _list(row.get("diagnostic_evidence"))[:4],
+            "tradeoffs": _list(row.get("tradeoffs"))[:4],
+            "cruxes_and_thresholds": _list(row.get("cruxes_and_thresholds"))[:4],
+            "premortem": _list(row.get("premortem"))[:4],
+            "monitoring_triggers": _list(row.get("monitoring_triggers"))[:4],
+        }
+    )
 
 
 def _allowed_quantity_surfaces(contracts: list[dict[str, Any]]) -> list[str]:

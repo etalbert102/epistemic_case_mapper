@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
@@ -58,6 +59,8 @@ def render_memo_ready_section_markdown_notes(section_packet: dict[str, Any], *, 
         *_section("### Expert judgment brief", _expert_judgment_section_lines(packet.get("expert_judgment_section"))),
         "### Section job",
         *_bullet_list(role.get("do")),
+        *_section("### Analyst argument moves to resolve", _analyst_argument_move_lines(packet.get("analyst_argument_moves"))),
+        *_section("### Decision-usefulness moves to surface", _decision_usefulness_move_lines(packet.get("decision_usefulness_moves"))),
         *_section("### Decision argument for this section", _decision_argument_section_lines(packet.get("decision_argument_section"))),
         *([] if expert_mode else _section("### Reader guidance applied to this section", _reader_guidance_application_lines(guidance_application))),
         *([] if expert_mode else _section("### Decision action contract", _decision_action_contract_lines(top.get("decision_action_contract")))),
@@ -267,6 +270,56 @@ def _argument_step_lines(value: Any) -> list[str]:
         )
         if line:
             rows.append(_bullet(line))
+    return rows
+
+
+def _analyst_argument_move_lines(value: Any) -> list[str]:
+    rows = []
+    for item in _dict_rows(value)[:8]:
+        parts = [
+            _strip_raw_map_ids(_text(item.get("writing_goal"))),
+            f"Transition: {_strip_raw_map_ids(_text(item.get('transition_from_previous')))}"
+            if _text(item.get("transition_from_previous"))
+            else "",
+            _citations(item),
+        ]
+        if line := "; ".join(part for part in parts if part):
+            rows.append(_bullet(line))
+        if required := _string_list(item.get("required_points")):
+            rows.append(f"  - Required reasoning points: {'; '.join(_strip_raw_map_ids(row) for row in required[:6])}")
+    return rows
+
+
+def _decision_usefulness_move_lines(value: Any) -> list[str]:
+    useful = _dict(value)
+    rows = []
+    stance = _dict(useful.get("recommended_stance"))
+    if stance_text := _text(stance.get("stance")):
+        rows.append(_bullet(f"Recommended stance: {stance_text}"))
+        if why := _text(stance.get("why_this_stance")):
+            rows.append(f"  - Why: {why}")
+        if scope := _text(stance.get("scope")):
+            rows.append(f"  - Scope: {scope}")
+    for key, label, fields in (
+        ("decision_criteria", "Decision criterion", ("label", "why_it_matters")),
+        ("diagnostic_evidence", "Diagnostic evidence", ("why_diagnostic", "distinguishes")),
+        ("tradeoffs", "Tradeoff", ("tradeoff", "choose_a_if", "choose_b_if")),
+        ("cruxes_and_thresholds", "Crux", ("crux", "current_read", "threshold", "would_change_if")),
+        ("premortem", "Premortem", ("failure_mode", "why_plausible", "mitigation_or_monitoring")),
+        ("monitoring_triggers", "Monitoring trigger", ("trigger", "would_update")),
+    ):
+        for item in _dict_rows(useful.get(key))[:6]:
+            parts = [label]
+            for field in fields:
+                value_text = _text(item.get(field))
+                if not value_text and field == "distinguishes":
+                    value_text = "; ".join(_string_list(item.get(field))[:4])
+                if value_text:
+                    parts.append(f"{field.replace('_', ' ')}: {value_text}")
+            if sources := _citations(item):
+                parts.append(sources)
+            if line := "; ".join(part for part in parts if part):
+                rows.append(_bullet(line))
     return rows
 
 
@@ -550,3 +603,7 @@ def _bullet(value: str) -> str:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _strip_raw_map_ids(text: Any) -> str:
+    return re.sub(r"\b(?:claim|relation):[A-Za-z0-9_:-]+\b", "mapped evidence", str(text or ""))

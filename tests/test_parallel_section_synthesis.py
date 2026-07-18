@@ -190,6 +190,24 @@ def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
             {"item_id": "subgroup_item", "claim": "A subgroup has a different baseline risk."},
             {"item_id": "comparator_item", "claim": "The comparator matters for interpretation."},
         ],
+        "analyst_argument_moves": [
+            {
+                "step_id": "bound_answer",
+                "writing_goal": "Explain why the counterweight bounds rather than overturns the answer.",
+                "required_points": ["Separate dose, subgroup, and comparator boundaries."],
+                "evidence_item_ids": ["dose_item", "subgroup_item", "comparator_item"],
+            }
+        ],
+        "decision_usefulness_moves": {
+            "tradeoffs": [
+                {
+                    "tradeoff": "Population-level answer versus subgroup caution.",
+                    "choose_a_if": "The reader is deciding for generally healthy adults.",
+                    "choose_b_if": "The reader is deciding for a high-risk subgroup.",
+                    "evidence_item_ids": ["subgroup_item"],
+                }
+            ]
+        },
     }
     contracts = [
         {
@@ -223,6 +241,10 @@ def test_counterweight_prompt_groups_section_local_evidence_jobs() -> None:
     assert jobs[0]["argument_move_type"] == "counterweight_disposition"
     assert jobs[0]["allowed_evidence_ids"] == ["dose_item", "subgroup_item", "comparator_item"]
     assert "### Section-local evidence jobs" in prompt
+    assert "### Analyst argument moves" in prompt
+    assert "Explain why the counterweight bounds rather than overturns the answer." in prompt
+    assert "### Decision-usefulness moves" in prompt
+    assert "Population-level answer versus subgroup caution." in prompt
     assert "### Decision argument for this section" in prompt
     assert '"allowed_evidence_ids"' in prompt
     assert '"required_quantities_by_evidence_id"' in prompt

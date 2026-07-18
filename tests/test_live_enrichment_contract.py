@@ -8,6 +8,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_retention_report,
     run_memo_ready_packet_synthesis,
 )
+from epistemic_case_mapper.map_briefing_production_readiness import build_memo_ready_production_readiness_report
 
 
 def test_live_synthesis_backend_failure_is_visible_not_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,6 +156,39 @@ def test_live_synthesis_blocks_scaffolded_canonical_packet_before_model_call(mon
     assert "missing_or_empty_analyst_source_hierarchy" in readiness["fatal_issues"]
     assert "missing_analyst_source_weight_judgments" in readiness["fatal_issues"]
     assert "writer_role_projection_source_weight_fallback_used" in readiness["fatal_issues"]
+
+
+def test_canonical_packet_quality_warnings_do_not_block_live_synthesis() -> None:
+    packet = {
+        "schema_id": "memo_ready_packet_v1",
+        "decision_question": "Should option A be adopted?",
+        "answer_spine": {"default_read": "Option A is plausible with bounded uncertainty."},
+        "analyst_source_hierarchy": {
+            "schema_id": "source_weight_hierarchy_v1",
+            "lanes": {"primary_answer_drivers": [{"source_id": "study_a"}]},
+        },
+        "analyst_source_hierarchy_report": {"status": "ready", "primary_driver_source_count": 1},
+        "analyst_source_weight_judgments": [{"source_id": "study_a", "weight": "drives_answer"}],
+        "analyst_source_weight_judgment_report": {"status": "ready"},
+        "canonical_decision_writer_packet": {
+            "schema_id": "canonical_decision_writer_packet_v1",
+            "source_weighted_answer_frame": {"lanes": {"primary_answer_drivers": [{"source_id": "study_a"}]}},
+        },
+        "canonical_decision_writer_packet_quality_report": {
+            "schema_id": "canonical_decision_writer_packet_quality_report_v1",
+            "status": "warning",
+            "warnings": ["truncated_or_scaffolded_direct_answer", "source_hierarchy_warning"],
+        },
+        "evidence_items": [{"item_id": "i1", "claim": "Option A reduced losses.", "source_ids": ["study_a"]}],
+        "source_trail": [{"source_id": "study_a", "source_label": "Study A"}],
+    }
+
+    readiness = build_memo_ready_production_readiness_report(packet)
+
+    assert readiness["status"] == "warning"
+    assert readiness["fatal_issues"] == []
+    assert "canonical_quality_warning:truncated_or_scaffolded_direct_answer" in readiness["warnings"]
+    assert "canonical_quality_warning:source_hierarchy_warning" in readiness["warnings"]
 
 
 def test_prompt_synthesis_reports_blocked_production_readiness_but_stays_inspectable() -> None:
