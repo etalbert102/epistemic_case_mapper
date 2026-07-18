@@ -132,6 +132,7 @@ def _assert_analyst_adjudication_complete(scaffold: dict[str, Any]) -> None:
 def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:
     from epistemic_case_mapper.map_briefing_analyst_evidence_routing import build_analyst_evidence_routing_bundle
     from epistemic_case_mapper.map_briefing_analyst_decision_modeling import run_analyst_decision_model
+    from epistemic_case_mapper.map_briefing_analyst_verifier import build_analyst_decision_model_verification_report
     from epistemic_case_mapper.map_briefing_decision_writer_packet import build_decision_writer_packet_bundle
     from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
 
@@ -158,6 +159,14 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
         )
     )
     _progress(progress, "analyst_decision_model", "completed", _analyst_decision_model_details(scaffold))
+    _progress(progress, "analyst_decision_model_verifier", "started")
+    scaffold["analyst_decision_model_verification_report"] = build_analyst_decision_model_verification_report(
+        analyst_decision_model=scaffold.get("analyst_decision_model", {}),
+        ledger=ledger,
+        parse_report=scaffold.get("analyst_decision_model_parse_report", {}),
+    )
+    _progress(progress, "analyst_decision_model_verifier", "completed", _report_status(scaffold, "analyst_decision_model_verification_report"))
+    _assert_analyst_decision_model_verified(scaffold)
     _progress(progress, "global_decision_model", "started")
     scaffold.update(
         build_global_decision_model_bundle(
@@ -179,6 +188,17 @@ def _run_analyst_decision_model(scaffold: dict[str, Any], ledger: dict[str, Any]
         )
     )
     _progress(progress, "decision_writer_packet", "completed", _report_status(scaffold, "decision_writer_packet_quality_report"))
+
+
+def _assert_analyst_decision_model_verified(scaffold: dict[str, Any]) -> None:
+    report = scaffold.get("analyst_decision_model_verification_report")
+    if isinstance(report, dict) and report.get("accepted") is True:
+        return
+    detail = {
+        "status": report.get("status", "unknown") if isinstance(report, dict) else "missing",
+        "fatal_issues": _list_value(report.get("fatal_issues")) if isinstance(report, dict) else ["missing_verification_report"],
+    }
+    raise RuntimeError(f"analyst_decision_model_verification_failed_before_writer_projection: {detail}")
 
 
 def _run_analyst_packet_builders(scaffold: dict[str, Any], packet: dict[str, Any], ledger: dict[str, Any], *, backend_config: Any, progress: Callable[[str, str, dict[str, Any] | None], None] | None) -> None:

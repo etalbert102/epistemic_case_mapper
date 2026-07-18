@@ -570,10 +570,12 @@ def build_analyst_decision_context(*, ledger: dict[str, Any], adjudication: dict
             row["similarity_cluster_id"] = cluster_id
     retention_obligations = _retention_obligation_context(ledger, all_rows)
     routed_summary = compact_routed_away_summary(all_rows, routing)
+    active_universe = _active_evidence_universe(rows, routed_summary)
     return {
         "schema_id": "analyst_decision_context_v1",
         "decision_question": str(ledger.get("decision_question") or "").strip(),
         "stable_final_answer_frame": _dict(ledger.get("stable_final_answer_frame")),
+        "active_evidence_universe": active_universe,
         "row_count": len(all_rows),
         "decision_model_row_count": len(rows),
         "routed_away_row_count": len(routed_summary),
@@ -754,9 +756,11 @@ def deterministic_decision_model_scaffold(
     direct = _scaffold_direct_answer(groups, question)
     support = _first_group(groups, "load_bearing_primary_support")
     counterweight = _first_group(groups, "load_bearing_counterweight")
+    context = context or build_analyst_decision_context(ledger=ledger, adjudication=adjudication)
     model = {
-        "schema_id": "analyst_decision_model_v1",
+        "schema_id": "analyst_decision_model_v2",
         "decision_question": question,
+        "active_evidence_universe": _dict(context.get("active_evidence_universe")),
         "direct_answer": direct,
         "confidence": "not_specified",
         "overall_rationale": "Scaffold only; live global analyst decision modeling was not accepted.",
@@ -774,6 +778,18 @@ def deterministic_decision_model_scaffold(
             for group in groups
             if group.get("memo_role") == "decision_crux"
         ][:6],
+        "memo_relevance_decisions": _memo_relevance_decisions(dispositions, ledger_by_id),
+        "quantity_relevance_decisions": _quantity_relevance_decisions(ledger_by_id, groups),
+        "counterweight_dispositions": _counterweight_dispositions(groups),
+        "cruxes": _cruxes(groups),
+        "update_triggers": [],
+        "practical_implications": [],
+        "do_not_overstate_constraints": [],
+        "appendix_accounting": [
+            {"evidence_item_id": row["evidence_item_id"], "reason": row.get("rationale", "")}
+            for row in dispositions
+            if row.get("disposition") in {"background", "not_decision_relevant", "covered_by_group"}
+        ],
         "decision_logic": {
             "bounded_bottom_line": direct,
             "support_summary": support,
@@ -786,7 +802,7 @@ def deterministic_decision_model_scaffold(
         },
         "argument_plan": _scaffold_argument_plan(groups),
     }
-    ranked_model, _report = _apply_ranking_guard(model, context or build_analyst_decision_context(ledger=ledger, adjudication=adjudication))
+    ranked_model, _report = _apply_ranking_guard(model, context)
     return ranked_model
 
 
@@ -801,8 +817,9 @@ def _apply_ranking_guard(model: dict[str, Any], context: dict[str, Any]) -> tupl
 
 def _invalid_decision_model(context: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema_id": "analyst_decision_model_v1",
+        "schema_id": "analyst_decision_model_v2",
         "decision_question": str(context.get("decision_question") or ""),
+        "active_evidence_universe": _dict(context.get("active_evidence_universe")),
         "direct_answer": "",
         "confidence": "not_specified",
         "overall_rationale": "",
@@ -810,6 +827,14 @@ def _invalid_decision_model(context: dict[str, Any]) -> dict[str, Any]:
         "evidence_dispositions": [],
         "quantitative_anchors": [],
         "what_would_change_the_answer": [],
+        "memo_relevance_decisions": [],
+        "quantity_relevance_decisions": [],
+        "counterweight_dispositions": [],
+        "cruxes": [],
+        "update_triggers": [],
+        "practical_implications": [],
+        "do_not_overstate_constraints": [],
+        "appendix_accounting": [],
         "source_hierarchy": {},
         "source_hierarchy_report": {"schema_id": "source_weight_hierarchy_report_v1", "status": "empty", "warnings": []},
         "decision_logic": {},
@@ -1199,6 +1224,112 @@ def _foreground_memo_uses() -> set[str]:
         "decision_crux",
         "mechanism_or_context",
     }
+
+
+def _active_evidence_universe(rows: list[dict[str, Any]], routed_summary: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema_id": "active_evidence_universe_v1",
+        "evidence_row_count": len(rows),
+        "full_reasoning_evidence_item_ids": _dedupe([str(row.get("evidence_item_id") or "") for row in rows]),
+        "routed_away_evidence_item_ids": _dedupe([str(row.get("evidence_item_id") or "") for row in routed_summary]),
+        "source_ids": _dedupe([source_id for row in rows for source_id in _string_list(row.get("source_ids"))]),
+    }
+
+
+def _memo_relevance_decisions(dispositions: list[dict[str, Any]], ledger_by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    inclusion_for_disposition = {
+        "foreground": "memo_spine",
+        "background": "supporting_context",
+        "covered_by_group": "trace_only",
+        "not_decision_relevant": "exclude",
+        "needs_review": "trace_only",
+    }
+    rows = []
+    for disposition in dispositions:
+        evidence_id = str(disposition.get("evidence_item_id") or "")
+        ledger_row = ledger_by_id.get(evidence_id, {})
+        rows.append(
+            {
+                "evidence_item_id": evidence_id,
+                "memo_inclusion": inclusion_for_disposition.get(str(disposition.get("disposition") or ""), "trace_only"),
+                "group_id": str(disposition.get("group_id") or ""),
+                "source_ids": _string_list(ledger_row.get("source_ids")),
+                "rationale": str(disposition.get("rationale") or "Projected from the analyst evidence disposition."),
+            }
+        )
+    return rows
+
+
+def _quantity_relevance_decisions(ledger_by_id: dict[str, dict[str, Any]], groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    foreground_ids = {
+        evidence_id
+        for group in groups
+        if str(group.get("memo_role") or "") in _foreground_memo_uses()
+        for evidence_id in _string_list(group.get("covered_evidence_item_ids"))
+    }
+    rows = []
+    for evidence_id, ledger_row in ledger_by_id.items():
+        inclusion = "supporting_context" if evidence_id in foreground_ids else "trace_only"
+        role = "supporting_detail" if evidence_id in foreground_ids else "audit_only"
+        for quantity in _string_list(ledger_row.get("quantity_values")):
+            rows.append(
+                {
+                    "evidence_item_id": evidence_id,
+                    "quantity_value": quantity,
+                    "result_tuple_ids": _result_tuple_ids_for_quantity(ledger_row, quantity),
+                    "memo_inclusion": inclusion,
+                    "quantity_role": role,
+                    "retention_phrase": quantity if inclusion != "trace_only" else "",
+                    "rationale": "Projected from analyst foregrounding; model judgment should refine this in live runs.",
+                }
+            )
+    return rows[:80]
+
+
+def _result_tuple_ids_for_quantity(ledger_row: dict[str, Any], quantity: str) -> list[str]:
+    ids = []
+    normalized = _normalize_quantity_text(quantity)
+    for row in _list(ledger_row.get("quantity_tuples")) + _list(ledger_row.get("result_quantity_tuples")):
+        if not isinstance(row, dict):
+            continue
+        values = [
+            row.get("value"),
+            row.get("estimate"),
+            row.get("interval"),
+            row.get("interval_low"),
+            row.get("interval_high"),
+        ]
+        if normalized and any(normalized in _normalize_quantity_text(str(value or "")) for value in values):
+            ids.append(str(row.get("result_tuple_id") or row.get("tuple_id") or ""))
+    return _dedupe(ids)
+
+
+def _normalize_quantity_text(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _counterweight_dispositions(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "evidence_item_ids": _string_list(group.get("covered_evidence_item_ids")),
+            "disposition": "unresolved" if str(group.get("answer_relation") or "") == "challenges_answer" else "bounds_scope",
+            "rationale": str(group.get("answer_impact") or group.get("rationale") or ""),
+        }
+        for group in groups
+        if str(group.get("memo_role") or "") == "load_bearing_counterweight"
+    ]
+
+
+def _cruxes(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "crux": str(group.get("proposition") or ""),
+            "evidence_item_ids": _string_list(group.get("covered_evidence_item_ids")),
+            "current_read": str(group.get("rationale") or ""),
+        }
+        for group in groups
+        if str(group.get("memo_role") or "") == "decision_crux"
+    ]
 
 
 def _scaffold_direct_answer(groups: list[dict[str, Any]], question: str) -> str:

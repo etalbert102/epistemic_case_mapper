@@ -228,6 +228,7 @@ def _decision_contract_artifact_specs() -> tuple[ArtifactSpec, ...]:
 
 def _global_decision_artifact_specs() -> tuple[ArtifactSpec, ...]:
     return (
+        ArtifactSpec("analyst_decision_model_verification_report", "analyst_decision_model_verification_report.json", "json", _scaffold_value("analyst_decision_model_verification_report"), review_label="Analyst decision model verifier"),
         ArtifactSpec("global_decision_model", "global_decision_model.json", "json", _scaffold_value("global_decision_model"), review_label="Global decision model"),
         ArtifactSpec("global_decision_model_report", "global_decision_model_report.json", "json", _scaffold_value("global_decision_model_report"), review_label="Global decision model report"),
         ArtifactSpec("global_decision_model_reconciliation_report", "global_decision_model_reconciliation_report.json", "json", _scaffold_value("global_decision_model_reconciliation_report"), review_label="Global decision reconciliation"),

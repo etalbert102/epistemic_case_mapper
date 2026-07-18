@@ -319,6 +319,7 @@ class AnalystQuantityRelevanceDecision(BaseModel):
 
     evidence_item_id: str
     quantity_value: str
+    result_tuple_ids: list[str] = Field(default_factory=list)
     memo_inclusion: QuantityInclusion
     quantity_role: Literal["decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"] = "audit_only"
     retention_phrase: str = ""
@@ -337,6 +338,16 @@ class AnalystQuantityRelevanceDecision(BaseModel):
     def _strip_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
+    @field_validator("result_tuple_ids", mode="before")
+    @classmethod
+    def _result_tuple_ids_list(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
     @field_validator("memo_inclusion", mode="before")
     @classmethod
     def _normalize_quantity_inclusion(cls, value: Any) -> str:
@@ -346,8 +357,9 @@ class AnalystQuantityRelevanceDecision(BaseModel):
 class AnalystDecisionModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_id: Literal["analyst_decision_model_v1"] = "analyst_decision_model_v1"
+    schema_id: Literal["analyst_decision_model_v1", "analyst_decision_model_v2"] = "analyst_decision_model_v2"
     decision_question: str
+    active_evidence_universe: dict[str, Any] = Field(default_factory=dict)
     direct_answer: str = Field(min_length=1)
     primary_answer: str = ""
     secondary_detail: str = ""
@@ -365,6 +377,12 @@ class AnalystDecisionModel(BaseModel):
     source_hierarchy_report: dict[str, Any] = Field(default_factory=dict)
     source_weight_judgments: list[dict[str, Any]] = Field(default_factory=list)
     source_weight_judgment_report: dict[str, Any] = Field(default_factory=dict)
+    counterweight_dispositions: list[dict[str, Any]] = Field(default_factory=list)
+    cruxes: list[dict[str, Any]] = Field(default_factory=list)
+    update_triggers: list[dict[str, Any]] = Field(default_factory=list)
+    practical_implications: list[dict[str, Any]] = Field(default_factory=list)
+    do_not_overstate_constraints: list[str] = Field(default_factory=list)
+    appendix_accounting: list[dict[str, Any]] = Field(default_factory=list)
     argument_plan: list[dict[str, Any]] = Field(default_factory=list)
     decision_logic: dict[str, Any] = Field(default_factory=dict)
 
@@ -373,7 +391,7 @@ class AnalystDecisionModel(BaseModel):
     def _normalize_payload_aliases(cls, value: Any) -> Any:
         return _normalize_decision_model_payload(value)
 
-    @field_validator("quantitative_anchors", "what_would_change_the_answer", mode="before")
+    @field_validator("quantitative_anchors", "what_would_change_the_answer", "do_not_overstate_constraints", mode="before")
     @classmethod
     def _list_field(cls, value: Any) -> list[str]:
         if value is None:
