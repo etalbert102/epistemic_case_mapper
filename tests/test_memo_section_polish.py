@@ -254,7 +254,7 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     packet["evidence_items"][0]["reader_claim"] = "Outcome evidence supports option A by 20% with feasible monitoring for one egg per day."
 
     def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=memo.replace("one egg per day", "one egg per 1 day"), backend=backend)
+        return ModelBackendResult(text=memo.replace("one egg per day", "one egg per 1 day.; This remains bounded"), backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
@@ -263,6 +263,7 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     assert result["report"]["accepted"] is True
     assert "one egg per 1 day" not in result["memo"]
     assert "one egg per day" in result["memo"]
+    assert ".; This" not in result["memo"]
 
 
 def test_validated_final_polish_validation_detects_duplicate_source_sections() -> None:

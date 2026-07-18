@@ -98,6 +98,10 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("compacted_repeated_sentence_citations")
         normalized = next_memo
+    next_memo = _repair_stitched_surface_punctuation(normalized)
+    if next_memo != normalized:
+        changes.append("repaired_stitched_surface_punctuation")
+        normalized = next_memo
     next_memo = _replace_sources_section(normalized, packet)
     if next_memo != normalized:
         changes.append("deterministic_sources")
@@ -396,9 +400,26 @@ def _insert_after_bottom_line(memo: str, section: str) -> str:
 def _strip_sources_section(memo: str) -> str:
     lines = str(memo or "").splitlines()
     for index, line in enumerate(lines):
-        if line.strip().lower() == "## sources":
-            return "\n".join(lines[:index]).rstrip()
+        if _is_sources_heading(line):
+            end = index
+            while end > 0 and lines[end - 1].strip() in {"***", "---", "___"}:
+                end -= 1
+            return "\n".join(lines[:end]).rstrip()
     return str(memo or "").rstrip()
+
+
+def _is_sources_heading(line: str) -> bool:
+    normalized = re.sub(r"[*_`]+", "", str(line or "").strip()).strip().lower()
+    normalized = normalized.lstrip("#").strip()
+    return normalized in {"sources", "source list", "references"}
+
+
+def _repair_stitched_surface_punctuation(memo: str) -> str:
+    text = str(memo or "")
+    text = re.sub(r"\.;\s*", ". ", text)
+    text = re.sub(r"\s+;", ";", text)
+    text = re.sub(r";\s+(In|This|The|A|An)\b", r". \1", text)
+    return text
 
 
 def _cited_source_lines(body: str, packet: dict[str, Any]) -> list[str]:

@@ -1113,6 +1113,7 @@ def _final_polish_surface_report(memo: str, packet: dict[str, Any]) -> dict[str,
         "corrupt_95_percent": r"\b9/5\s*%",
         "per_1_day": r"\bper\s+1\s+day\b",
         "jam_source_typo": r"\(JAM\)|\bJAM\b(?!A)",
+        "stitched_sentence_punctuation": r"\.;",
     }
     for issue, pattern in corruption_patterns.items():
         if re.search(pattern, text):
@@ -1146,6 +1147,7 @@ def _deterministic_final_polish_cleanup(memo: str) -> str:
         (r"\b9/5\s*%\s+confidence interval\b", "95% confidence interval"),
         (r"\bone egg per 1 day\b", "one egg per day"),
         (r"\bup to one egg per 1 day\b", "up to one egg per day"),
+        (r"\.;\s*", ". "),
     ]
     for pattern, replacement in replacements:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
