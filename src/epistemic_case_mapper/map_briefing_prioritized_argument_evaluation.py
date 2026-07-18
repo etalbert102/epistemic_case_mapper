@@ -23,17 +23,23 @@ def build_arm_comparison_to_current(
     candidate_report: dict[str, Any],
     prompt_audit: dict[str, Any],
     elapsed_seconds: float,
+    baseline_resolution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    baseline_memo = baseline_memo_path.read_text(encoding="utf-8") if baseline_memo_path.exists() else ""
-    baseline_report = _read_json(baseline_report_path)
+    resolved_baseline = baseline_resolution or _baseline_resolution_from_paths(
+        baseline_memo_path, baseline_report_path
+    )
+    baseline_available = resolved_baseline.get("status") == "available"
+    baseline_memo = baseline_memo_path.read_text(encoding="utf-8") if baseline_memo_path.is_file() else ""
+    baseline_report = _read_json(baseline_report_path) if baseline_report_path.is_file() else {}
     baseline_metrics = _memo_comparison_metrics(baseline_memo, baseline_report)
     candidate_metrics = _memo_comparison_metrics(candidate_memo, candidate_report)
-    traceability = _traceability_delta(baseline_metrics, candidate_metrics)
-    repetition = _repetition_delta(baseline_metrics, candidate_metrics)
+    traceability = _traceability_delta(baseline_metrics, candidate_metrics) if baseline_available else {}
+    repetition = _repetition_delta(baseline_metrics, candidate_metrics) if baseline_available else {}
     vetoes = _comparison_vetoes(candidate_report, traceability)
     return {
         "schema_id": "prioritized_argument_comparison_to_current_v1",
-        "status": "pass" if not vetoes else "fail",
+        "status": "pass" if not vetoes and baseline_available else "not_applicable" if not vetoes else "fail",
+        "baseline_resolution": resolved_baseline,
         "baseline": baseline_metrics,
         "candidate": {
             **candidate_metrics,
@@ -44,7 +50,9 @@ def build_arm_comparison_to_current(
         },
         "traceability_delta": traceability,
         "repetition_delta": repetition,
-        "quality_assessment": _quality_assessment(traceability, repetition, candidate_report, prompt_audit),
+        "quality_assessment": _quality_assessment(
+            traceability, repetition, candidate_report, prompt_audit, baseline_available=baseline_available
+        ),
         "issues": vetoes,
     }
 
@@ -64,7 +72,7 @@ def build_live_evaluation_aggregate_report(
         issues.append("prompt_audit_failed")
     if any(row.get("warning_adjudication_status") != "pass" for row in sample_runs):
         issues.append("warning_adjudication_failed")
-    if any(row.get("comparison_status") != "pass" for row in sample_runs):
+    if any(row.get("comparison_status") not in {"pass", "not_applicable"} for row in sample_runs):
         issues.append("comparison_failed")
     same_gap = repeated_semantic_gap(sample_runs)
     return {
@@ -78,8 +86,51 @@ def build_live_evaluation_aggregate_report(
         "repeated_semantic_gap": same_gap,
         "samples": sample_runs,
         "issues": _dedupe(issues),
+        "warnings": _dedupe(
+            [
+                "comparison_baseline_unavailable"
+                for row in sample_runs
+                if row.get("comparison_status") == "not_applicable"
+            ]
+        ),
         **(extra or {}),
     }
+
+
+def resolve_current_baseline(briefing_dir: Path) -> dict[str, Any]:
+    candidates = [
+        (
+            briefing_dir.parent / "replay_after_section_contract_fix_v3" / "memo.md",
+            briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            "replay_after_section_contract_fix_v3",
+        ),
+        (
+            briefing_dir.parent / "replay_after_section_contract_fix_v2" / "memo.md",
+            briefing_dir.parent / "replay_after_section_contract_fix_v2" / "report.json",
+            "replay_after_section_contract_fix_v2",
+        ),
+        (
+            briefing_dir.parent / "replay_after_section_contract_fix" / "memo.md",
+            briefing_dir.parent / "replay_after_section_contract_fix" / "report.json",
+            "replay_after_section_contract_fix",
+        ),
+        (briefing_dir / "memo.md", briefing_dir / "report.json", "briefing_memo"),
+        (
+            briefing_dir / "memo_ready_synthesis_raw.md",
+            briefing_dir / "memo_ready_final_polish_report.json",
+            "memo_ready_synthesis_raw",
+        ),
+        (briefing_dir / "BRIEFING.md", briefing_dir / "final_decision_readiness_report.json", "briefing_markdown"),
+    ]
+    for memo_path, report_path, label in candidates:
+        if memo_path.is_file():
+            return {
+                "status": "available",
+                "label": label,
+                "memo_path": str(memo_path),
+                "report_path": str(report_path) if report_path.is_file() else "",
+            }
+    return {"status": "missing", "label": "", "memo_path": "", "report_path": ""}
 
 
 def repeated_semantic_gap(sample_runs: list[dict[str, Any]]) -> str:
@@ -201,7 +252,21 @@ def _quality_assessment(
     repetition: dict[str, Any],
     candidate_report: dict[str, Any],
     prompt_audit: dict[str, Any],
+    *,
+    baseline_available: bool = True,
 ) -> dict[str, Any]:
+    if not baseline_available:
+        structural_flags = []
+        if prompt_audit.get("status") == "pass":
+            structural_flags.append("submitted_prompts_pass_allowlist")
+        if candidate_report.get("accepted"):
+            structural_flags.append("section_synthesis_accepted")
+        return {
+            "structural_flags": structural_flags,
+            "semantic_flags": ["baseline_unavailable"],
+            "named_semantic_gap": "",
+            "requires_paired_review": True,
+        }
     semantic_flags = []
     if int(repetition.get("repeated_sentence_count") or 0) < 0:
         semantic_flags.append("less_repeated_sentence_text")
@@ -222,6 +287,17 @@ def _quality_assessment(
         "named_semantic_gap": "shallow_or_repetitive_argument" if "no_clear_repetition_improvement" in semantic_flags else "",
         "requires_paired_review": True,
     }
+
+
+def _baseline_resolution_from_paths(baseline_memo_path: Path, baseline_report_path: Path) -> dict[str, Any]:
+    if baseline_memo_path.is_file():
+        return {
+            "status": "available",
+            "label": "explicit",
+            "memo_path": str(baseline_memo_path),
+            "report_path": str(baseline_report_path) if baseline_report_path.is_file() else "",
+        }
+    return {"status": "missing", "label": "explicit", "memo_path": "", "report_path": ""}
 
 
 def _memo_sections(memo: str) -> list[str]:

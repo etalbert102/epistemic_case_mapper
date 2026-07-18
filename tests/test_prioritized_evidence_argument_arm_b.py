@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
+    build_arm_comparison_to_current,
+    resolve_current_baseline,
+)
 from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import (
     audit_prompt_submissions,
     build_arm_b_projection,
@@ -59,6 +64,50 @@ def test_arm_b_projection_marks_section_owned_contract_scope() -> None:
 
     assert section_plan["evidence_contract_scope"] == "section_owned"
     assert all(section["prompt_mode"] == "arm_b_slim" for section in section_plan["sections"])
+
+
+def test_load_frozen_inputs_uses_analyst_packet_when_canonical_packet_is_not_usable(tmp_path) -> None:
+    briefing_dir = tmp_path / "briefing"
+    briefing_dir.mkdir()
+    (briefing_dir / "memo_ready_packet.json").write_text(
+        json.dumps({"decision_usefulness_packet": {}, "evidence_items": []}),
+        encoding="utf-8",
+    )
+    (briefing_dir / "analyst_memo_ready_packet.json").write_text(
+        json.dumps(
+            {
+                "decision_question": "Should the team proceed?",
+                "evidence_items": [{"item_id": "E1", "source_id": "S1", "text": "Relevant finding."}],
+                "canonical_decision_writer_packet": {"answer_sections": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    inputs = load_frozen_arm_b_inputs(briefing_dir)
+
+    assert inputs["memo_ready_packet_source"] == "analyst_memo_ready_packet.json"
+    assert inputs["memo_ready_packet"]["decision_question"] == "Should the team proceed?"
+
+
+def test_comparison_to_current_marks_missing_baseline_not_applicable(tmp_path) -> None:
+    briefing_dir = tmp_path / "briefing"
+    briefing_dir.mkdir()
+    baseline = resolve_current_baseline(briefing_dir)
+
+    comparison = build_arm_comparison_to_current(
+        baseline_memo_path=Path("__missing_baseline_memo__.md"),
+        baseline_report_path=Path("__missing_baseline_report__.json"),
+        candidate_memo="## Answer\nA supported answer. {E:E1}",
+        candidate_report={"status": "accepted", "accepted": True},
+        prompt_audit={"status": "pass", "prompt_count": 1, "retry_prompt_count": 0},
+        elapsed_seconds=1.0,
+        baseline_resolution=baseline,
+    )
+
+    assert baseline["status"] == "missing"
+    assert comparison["status"] == "not_applicable"
+    assert comparison["quality_assessment"]["semantic_flags"] == ["baseline_unavailable"]
 
 
 def test_arm_b_b0_captures_initial_and_retry_prompts(tmp_path) -> None:

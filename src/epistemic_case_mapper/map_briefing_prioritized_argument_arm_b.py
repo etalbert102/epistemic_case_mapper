@@ -37,12 +37,17 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
     LivePromptRecorder,
     build_arm_comparison_to_current,
     build_live_evaluation_aggregate_report,
+    resolve_current_baseline,
 )
 
 
 def load_frozen_arm_b_inputs(briefing_dir: Path) -> dict[str, Any]:
+    memo_ready_packet_path, memo_ready_packet = _load_usable_memo_ready_packet(briefing_dir)
+    analyst_memo_ready_packet = _read_json(briefing_dir / "analyst_memo_ready_packet.json")
     return {
-        "memo_ready_packet": _read_json(briefing_dir / "memo_ready_packet.json"),
+        "memo_ready_packet": memo_ready_packet,
+        "memo_ready_packet_source": memo_ready_packet_path.name if memo_ready_packet_path else "",
+        "analyst_memo_ready_packet": analyst_memo_ready_packet,
         "canonical_decision_writer_packet": _read_json(briefing_dir / "canonical_decision_writer_packet.json"),
         "analyst_decision_model": _read_json(briefing_dir / "analyst_decision_model.json"),
         "analyst_decision_model_verification_report": _read_json(
@@ -200,7 +205,7 @@ def run_arm_b_b0(
     _write_json(output_dir / "prompt_submission_audit.json", prompt_audit)
     _write_json(output_dir / "section_prompt_manifest.json", prompt_manifest(capture.records))
     warning_adjudication = build_warning_adjudication_report(
-        baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+        baseline_report_path=_baseline_report_path(briefing_dir),
         arm_b_report=generation.get("report", {}),
     )
     _write_json(output_dir / "warning_adjudication_report.json", warning_adjudication)
@@ -268,17 +273,19 @@ def run_arm_b_b1(
         )
         elapsed = round(time.time() - sample_started, 3)
         prompt_audit = audit_prompt_submissions(recorder.records)
+        baseline_resolution = resolve_current_baseline(briefing_dir)
         warning_adjudication = build_warning_adjudication_report(
-            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            baseline_report_path=Path(str(baseline_resolution.get("report_path") or "__missing_baseline_report__.json")),
             arm_b_report=generation.get("report", {}),
         )
         comparison = build_arm_comparison_to_current(
-            baseline_memo_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "memo.md",
-            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            baseline_memo_path=Path(str(baseline_resolution.get("memo_path") or "__missing_baseline_memo__.md")),
+            baseline_report_path=Path(str(baseline_resolution.get("report_path") or "__missing_baseline_report__.json")),
             candidate_memo=str(generation.get("memo") or ""),
             candidate_report=_dict(generation.get("report")),
             prompt_audit=prompt_audit,
             elapsed_seconds=elapsed,
+            baseline_resolution=baseline_resolution,
         )
         _write_json(sample_dir / "prompt_submission_audit.json", prompt_audit)
         _write_json(sample_dir / "section_prompt_manifest.json", prompt_manifest(recorder.records))
@@ -709,6 +716,7 @@ def _copy_frozen_inputs(source_dir: Path, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
     for name in (
         "memo_ready_packet.json",
+        "analyst_memo_ready_packet.json",
         "canonical_decision_writer_packet.json",
         "analyst_decision_model.json",
         "analyst_decision_model_verification_report.json",
@@ -721,6 +729,35 @@ def _copy_frozen_inputs(source_dir: Path, target_dir: Path) -> None:
             shutil.copy2(source, target_dir / name)
     hashes = {path.name: _sha256_file(path) for path in sorted(target_dir.glob("*.json"))}
     _write_json(target_dir / "input_hashes.json", hashes)
+
+
+def _load_usable_memo_ready_packet(briefing_dir: Path) -> tuple[Path | None, dict[str, Any]]:
+    first_path = briefing_dir / "memo_ready_packet.json"
+    first_packet = _read_json(first_path)
+    for path, packet in (
+        (first_path, first_packet),
+        (briefing_dir / "analyst_memo_ready_packet.json", _read_json(briefing_dir / "analyst_memo_ready_packet.json")),
+    ):
+        if _is_usable_memo_ready_packet(packet):
+            return path, packet
+    return (first_path if first_path.exists() else None), first_packet
+
+
+def _is_usable_memo_ready_packet(packet: dict[str, Any]) -> bool:
+    if not str(packet.get("decision_question") or "").strip():
+        return False
+    if not _list(packet.get("evidence_items")):
+        return False
+    return bool(
+        _dict(packet.get("canonical_decision_writer_packet"))
+        or _dict(packet.get("writer_packet"))
+        or _dict(packet.get("answer_spine"))
+        or _dict(packet.get("decision_usefulness_packet"))
+    )
+
+
+def _baseline_report_path(briefing_dir: Path) -> Path:
+    return Path(str(resolve_current_baseline(briefing_dir).get("report_path") or "__missing_baseline_report__.json"))
 
 
 def _short_decision_title(question: Any) -> str:

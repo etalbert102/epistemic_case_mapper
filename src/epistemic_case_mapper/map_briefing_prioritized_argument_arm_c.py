@@ -33,6 +33,7 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
     LivePromptRecorder,
     build_arm_comparison_to_current,
     build_live_evaluation_aggregate_report,
+    resolve_current_baseline,
 )
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -190,17 +191,19 @@ def run_arm_c(
         )
         elapsed = round(time.time() - sample_started, 3)
         prompt_audit = audit_prompt_submissions(recorder.records)
+        baseline_resolution = resolve_current_baseline(briefing_dir)
         warning_adjudication = build_warning_adjudication_report(
-            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            baseline_report_path=Path(str(baseline_resolution.get("report_path") or "__missing_baseline_report__.json")),
             arm_b_report=generation.get("report", {}),
         )
         comparison = build_arm_comparison_to_current(
-            baseline_memo_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "memo.md",
-            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            baseline_memo_path=Path(str(baseline_resolution.get("memo_path") or "__missing_baseline_memo__.md")),
+            baseline_report_path=Path(str(baseline_resolution.get("report_path") or "__missing_baseline_report__.json")),
             candidate_memo=str(generation.get("memo") or ""),
             candidate_report=_dict(generation.get("report")),
             prompt_audit=prompt_audit,
             elapsed_seconds=elapsed,
+            baseline_resolution=baseline_resolution,
         )
         _write_json(sample_dir / "prompt_submission_audit.json", prompt_audit)
         _write_json(sample_dir / "section_prompt_manifest.json", prompt_manifest(recorder.records))
