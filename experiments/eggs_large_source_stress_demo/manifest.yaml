@@ -1,0 +1,97 @@
+schema_version: 1
+package_id: eggs_large_source_stress_demo
+package_label: Eggs Large Source Stress Demo
+default_model_backend: ollama:gemma4:12b-mlx
+
+id_patterns:
+  claim: "eggs_large_source_stress_demo_c[0-9]+"
+  relation: "eggs_large_source_stress_demo_r[0-9]+"
+  loss: "eggs_large_source_stress_demo_loss_[0-9]+"
+
+judge_paths:
+  - experiments/eggs_large_source_stress_demo/README.md
+  - experiments/eggs_large_source_stress_demo/worked_region.md
+required_docs:
+  - experiments/eggs_large_source_stress_demo/README.md
+reference_scan_paths:
+  - experiments/eggs_large_source_stress_demo/README.md
+  - data/cases/eggs_large_source_stress/CORPUS_REPORT.md
+  - data/cases/eggs_large_source_stress/sources/SOURCE_INVENTORY.md
+
+cases:
+  - case_key: eggs_large_source_stress
+    case_id: eggs_large_source_stress
+    label: "Eggs and Health: Large Source Stress Case"
+    case_path: data/cases/eggs_large_source_stress/case.yaml
+    worked_regions:
+      - case_key: eggs_large_source_stress
+        case_label: "Eggs and Health: Large Source Stress Case"
+        region_id: eggs_large_source_stress_demo
+        id_prefix: eggs_large_source_stress_demo
+        definition_path: experiments/eggs_large_source_stress_demo/worked_region.md
+        map_path: experiments/eggs_large_source_stress_demo/worked_map_placeholder.md
+        audit_path: experiments/eggs_large_source_stress_demo/decision_space_audit_placeholder.md
+        baseline_path: experiments/eggs_large_source_stress_demo/flat_baseline_placeholder.md
+        best_path: experiments/eggs_large_source_stress_demo/BEST_REGIONS.md
+        output_json_path: artifacts/semantic/eggs_large_source_stress_demo/staged_brief/generated_map.json
+        required_sources:
+          - pmc12229173
+          - pmc2904713
+          - pmc12508433
+          - pmc9129873
+          - pmc4136506
+          - pmc6241631
+          - pmc6267402
+          - pmc8751450
+          - pmc10688106
+          - pmc5916923
+          - pmc8477346
+          - pmc4586539
+          - pmc6315879
+          - pmc10945122
+          - pmc6566236
+          - pmc11767731
+          - pmc11731440
+          - pmc4425170
+          - pmc5852834
+          - pmc12765572
+          - pmc6165023
+          - pmc8620026
+          - pmc7400894
+          - pmc7872242
+          - pmc4621932
+          - pmc8851934
+          - pmc11821034
+          - pmc11068152
+          - pmc2911502
+          - pmc9134263
+          - pmc5360102
+          - pmc8437843
+          - pmc3969252
+          - pmc9690384
+          - pmc10285014
+          - pmc13279293
+          - pmc11931306
+          - pmc11065246
+          - pmc8137614
+          - pmc10870976
+          - pmc4309282
+          - pmc13213267
+          - pmc7942123
+          - pmc7608885
+          - pmc7220326
+          - pmc8912460
+          - pmc10056430
+          - pmc12329997
+          - pmc10574713
+          - pmc4586567
+        thresholds:
+          min_claims: 1
+          max_claims: 1000
+          min_relation_types: 1
+          min_crux_mentions: 0
+          min_evidence_rows: 1
+          min_losses: 0
+          min_surviving_checks: 0
+          min_baseline_words: 1
+          require_best_sections: false
