@@ -91,3 +91,22 @@ def test_bundle_reconciliation_report_indexes_nested_bundles_and_selected_ids() 
     assert report["unknown_selected_bundle_ids"] == ["missing_bundle"]
     codes = {issue["code"] for issue in report["realization_report"]["issues"]}
     assert "statistic_swap_rr_as_hr" in codes
+
+
+def test_duration_ranges_are_not_treated_as_missing_confidence_intervals() -> None:
+    bundles = normalize_assertion_bundles(
+        [
+            {
+                "value": "6 to 12 months",
+                "quantity_role": "population_descriptor",
+                "quantity_type": "duration",
+                "measures": "age range",
+            }
+        ],
+        claim_id="c003",
+        source_id="src003",
+    )
+
+    assert "interval" not in bundles[0]
+    report = semantic_realization_report("The guideline applies to infants 6 to 12 months old.", bundles)
+    assert report["status"] == "pass"

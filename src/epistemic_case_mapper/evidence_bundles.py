@@ -55,7 +55,11 @@ def assertion_bundle_from_quantity(
         population = str(quantity.get("population") or quantity.get("subgroup") or "").strip()
         comparator = str(quantity.get("comparator") or quantity.get("comparison") or "").strip()
         statistic_type = str(quantity.get("statistic_type") or quantity.get("quantity_type") or _statistic_type(value)).strip()
-        interval = str(quantity.get("interval") or quantity.get("confidence_interval") or _interval_from_text(value)).strip()
+        interval = str(
+            quantity.get("interval")
+            or quantity.get("confidence_interval")
+            or _interval_from_text(value, statistic_type=statistic_type)
+        ).strip()
         estimate = str(quantity.get("estimate") or _estimate_from_text(value, statistic_type=statistic_type)).strip()
         direction = str(quantity.get("direction") or _direction_from_text(" ".join([claim_text, value, str(quantity.get("local_interpretation") or quantity.get("interpretation") or "")]))).strip()
         return _drop_empty(
@@ -325,7 +329,15 @@ def _estimate_from_text(value: str, *, statistic_type: str) -> str:
     return match.group(0) if match else ""
 
 
-def _interval_from_text(value: str) -> str:
+def _interval_from_text(value: str, *, statistic_type: str = "") -> str:
+    lowered = str(value or "").lower()
+    if "ci" not in lowered and "confidence interval" not in lowered and statistic_type not in {
+        "relative_risk",
+        "risk_ratio",
+        "hazard_ratio",
+        "odds_ratio",
+    }:
+        return ""
     match = re.search(r"(?:95\s*%\s*)?(?:CI|confidence interval)?\s*[\[(]?\s*[-+]?\d+(?:\.\d+)?\s*(?:-|–|—|to)\s*[-+]?\d+(?:\.\d+)?\s*[\])]?", value, flags=re.I)
     if not match or not re.search(r"(?:-|–|—|to)", match.group(0)):
         return ""

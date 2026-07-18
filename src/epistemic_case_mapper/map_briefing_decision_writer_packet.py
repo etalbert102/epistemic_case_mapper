@@ -238,6 +238,7 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "source_labels": source_labels,
         "source_ids": [],
         "quantities": quantities,
+        "assertion_bundles": _assertion_bundles_from_quantities(quantities),
         "excluded_quantity_values": _excluded_quantity_values(unit, quantity_plan=quantity_plan),
         "lineage": _dict(unit.get("lineage")),
         "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
@@ -267,7 +268,7 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
     }
 
 
-def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dict[str, Any]] | None = None) -> list[dict[str, str]]:
+def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     quantity_plan = quantity_plan if isinstance(quantity_plan, dict) else {}
     rows = []
     for quantity in _list(unit.get("quantities")):
@@ -281,28 +282,54 @@ def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dic
             continue
         if quantity_plan and not plan:
             continue
+        assertion_bundle = _quantity_assertion_bundle(quantity)
         rows.append(
             {
                 "value": value,
-                "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or "").strip(),
-                "assertion_bundle": quantity.get("assertion_bundle") if isinstance(quantity.get("assertion_bundle"), dict) else {},
+                "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or assertion_bundle.get("evidence_bundle_id") or "").strip(),
+                "assertion_bundle": assertion_bundle,
                 "interpretation": str((plan or {}).get("retention_phrase") or (plan or {}).get("interpretation") or quantity.get("interpretation") or "").strip(),
                 "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
                 "source_labels": _string_list(quantity.get("source_label")) or _string_list(quantity.get("source_labels")),
                 "quantity_role": str((plan or {}).get("quantity_role") or "").strip(),
                 "quantity_id": str((plan or {}).get("quantity_id") or (plan or {}).get("candidate_id") or "").strip(),
-                "statistic_type": str(quantity.get("statistic_type") or _dict(quantity.get("assertion_bundle")).get("statistic_type") or "").strip(),
-                "endpoint": str(quantity.get("endpoint") or _dict(quantity.get("assertion_bundle")).get("endpoint") or "").strip(),
-                "population": str(quantity.get("population") or _dict(quantity.get("assertion_bundle")).get("population") or "").strip(),
-                "exposure_or_comparator": str(quantity.get("exposure_or_comparator") or _dict(quantity.get("assertion_bundle")).get("exposure_or_comparator") or "").strip(),
-                "interval": str(quantity.get("interval") or _dict(quantity.get("assertion_bundle")).get("interval") or "").strip(),
-                "allowed_inference": str(quantity.get("allowed_inference") or _dict(quantity.get("assertion_bundle")).get("allowed_inference") or "").strip(),
-                "forbidden_inference": str(quantity.get("forbidden_inference") or _dict(quantity.get("assertion_bundle")).get("forbidden_inference") or "").strip(),
+                "statistic_type": str(quantity.get("statistic_type") or assertion_bundle.get("statistic_type") or "").strip(),
+                "endpoint": str(quantity.get("endpoint") or assertion_bundle.get("endpoint") or "").strip(),
+                "population": str(quantity.get("population") or assertion_bundle.get("population") or "").strip(),
+                "exposure_or_comparator": str(quantity.get("exposure_or_comparator") or assertion_bundle.get("exposure_or_comparator") or "").strip(),
+                "interval": str(quantity.get("interval") or assertion_bundle.get("interval") or "").strip(),
+                "allowed_inference": str(quantity.get("allowed_inference") or assertion_bundle.get("allowed_inference") or "").strip(),
+                "forbidden_inference": str(quantity.get("forbidden_inference") or assertion_bundle.get("forbidden_inference") or "").strip(),
                 "must_retain": bool(plan and quantity_must_retain(plan)),
                 "memo_use": str((plan or {}).get("memo_use") or "").strip(),
                 "analyst_quantity_relevance": _dict((plan or {}).get("analyst_quantity_relevance")),
             }
         )
+    return rows
+
+
+def _quantity_assertion_bundle(quantity: dict[str, Any]) -> dict[str, Any]:
+    direct = quantity.get("assertion_bundle")
+    if isinstance(direct, dict) and direct:
+        return direct
+    for bundle in _list(quantity.get("assertion_bundles")):
+        if isinstance(bundle, dict) and bundle:
+            return bundle
+    return {}
+
+
+def _assertion_bundles_from_quantities(quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for quantity in quantities:
+        if not isinstance(quantity, dict):
+            continue
+        bundle = _dict(quantity.get("assertion_bundle"))
+        bundle_id = str(bundle.get("evidence_bundle_id") or quantity.get("evidence_bundle_id") or "").strip()
+        if not bundle_id or bundle_id in seen:
+            continue
+        seen.add(bundle_id)
+        rows.append({**bundle, "evidence_bundle_id": bundle_id})
     return rows
 
 
@@ -817,25 +844,26 @@ def _quantities(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]
             value = str(quantity.get("value") or "").strip()
             if not value:
                 continue
+            assertion_bundle = _quantity_assertion_bundle(quantity)
             seen.add(" ".join(value.lower().split()))
             interpretation = str(quantity.get("local_interpretation") or quantity.get("measures") or ledger_row.get("why_it_matters") or ledger_row.get("claim") or "")
             rows.append(
                 {
                     "value": value,
-                    "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or "").strip(),
-                    "assertion_bundle": quantity.get("assertion_bundle") if isinstance(quantity.get("assertion_bundle"), dict) else {},
+                    "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or assertion_bundle.get("evidence_bundle_id") or "").strip(),
+                    "assertion_bundle": assertion_bundle,
                     "source_evidence_item_id": evidence_id,
                     "source_label": labels[0] if labels else "",
                     "quantity_role": str(quantity.get("quantity_role") or ""),
                     "quantity_type": str(quantity.get("quantity_type") or ""),
                     "measures": str(quantity.get("measures") or ""),
-                    "statistic_type": str(quantity.get("statistic_type") or _dict(quantity.get("assertion_bundle")).get("statistic_type") or quantity.get("quantity_type") or ""),
-                    "endpoint": str(quantity.get("endpoint") or _dict(quantity.get("assertion_bundle")).get("endpoint") or quantity.get("measures") or ""),
-                    "population": str(quantity.get("population") or _dict(quantity.get("assertion_bundle")).get("population") or ""),
-                    "exposure_or_comparator": str(quantity.get("exposure_or_comparator") or _dict(quantity.get("assertion_bundle")).get("exposure_or_comparator") or ""),
-                    "interval": str(quantity.get("interval") or _dict(quantity.get("assertion_bundle")).get("interval") or ""),
-                    "allowed_inference": str(quantity.get("allowed_inference") or _dict(quantity.get("assertion_bundle")).get("allowed_inference") or ""),
-                    "forbidden_inference": str(quantity.get("forbidden_inference") or _dict(quantity.get("assertion_bundle")).get("forbidden_inference") or ""),
+                    "statistic_type": str(quantity.get("statistic_type") or assertion_bundle.get("statistic_type") or quantity.get("quantity_type") or ""),
+                    "endpoint": str(quantity.get("endpoint") or assertion_bundle.get("endpoint") or quantity.get("measures") or ""),
+                    "population": str(quantity.get("population") or assertion_bundle.get("population") or ""),
+                    "exposure_or_comparator": str(quantity.get("exposure_or_comparator") or assertion_bundle.get("exposure_or_comparator") or ""),
+                    "interval": str(quantity.get("interval") or assertion_bundle.get("interval") or ""),
+                    "allowed_inference": str(quantity.get("allowed_inference") or assertion_bundle.get("allowed_inference") or ""),
+                    "forbidden_inference": str(quantity.get("forbidden_inference") or assertion_bundle.get("forbidden_inference") or ""),
                     "interpretation": _short_text(interpretation, 360),
                     "retention_hint": str(quantity.get("retention_hint") or ""),
                 }

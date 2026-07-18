@@ -124,6 +124,41 @@ def test_decision_writer_packet_uses_global_model_as_answer_owner() -> None:
     assert quality["status"] == "ready"
 
 
+def test_decision_writer_memo_ready_adapter_lifts_assertion_bundles_from_ledger_quantities() -> None:
+    ledger = _ledger()
+    ledger["rows"][0]["claim_quantities"] = [
+        {
+            "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+            "quantity_role": "effect_estimate",
+            "measures": "cardiovascular disease",
+            "evidence_bundle_id": "bundle_demo_001",
+            "assertion_bundles": [
+                {
+                    "schema_id": "source_assertion_bundle_v1",
+                    "evidence_bundle_id": "bundle_demo_001",
+                    "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+                    "statistic_type": "relative_risk",
+                    "endpoint": "cardiovascular disease",
+                    "allowed_inference": "Use as an association.",
+                    "forbidden_inference": "Do not present as causal proof.",
+                    "source_ids": ["s1"],
+                }
+            ],
+        }
+    ]
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=ledger)
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    support = packet["evidence_items"][0]
+
+    assert support["quantities"][0]["evidence_bundle_id"] == "bundle_demo_001"
+    assert support["quantities"][0]["assertion_bundle"]["endpoint"] == "cardiovascular disease"
+    assert support["assertion_bundles"][0]["evidence_bundle_id"] == "bundle_demo_001"
+
+
 def test_decision_writer_packet_builds_deterministic_source_trail_and_traceability() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     packet = bundle["decision_writer_packet"]
@@ -897,4 +932,3 @@ def test_strict_writer_repair_does_not_apply_quantity_only_improvement(monkeypat
     assert result["report"]["status"] == "no_retention_improvement_kept_original"
     assert result["report"]["applied"] is False
     assert result["memo"] == weak_memo
-
