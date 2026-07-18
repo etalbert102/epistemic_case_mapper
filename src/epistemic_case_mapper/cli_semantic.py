@@ -237,6 +237,7 @@ def _run_map_briefing(
         f"confidence={result.model_confidence}->{result.calibrated_confidence}"
     )
     print(f"Summary: {_display_path(repo_root, result.summary_path)}")
+    print(f"Final review packet: {_display_path(repo_root, result.summary_path.parent / 'FINAL_REVIEW_PACKET.md')}")
     print(f"Gap telemetry: {_display_path(repo_root, result.gap_diagnosis_path)}")
     print(f"Prompt: {_display_path(repo_root, result.prompt_path)}")
     return 0
@@ -355,6 +356,8 @@ def _run_staged_semantic_brief(
         f"confidence={briefing_result.model_confidence}->{briefing_result.calibrated_confidence}"
     )
     print(f"Briefing summary: {_display_path(repo_root, briefing_result.summary_path)}")
+    print(f"Final review packet: {_display_path(repo_root, briefing_result.summary_path.parent / 'FINAL_REVIEW_PACKET.md')}")
+    print(f"Map run summary: {_display_path(repo_root, result.artifact_dir / 'run_summary.json')}")
     return 0
 def _write_backend_result(
     repo_root: Path,

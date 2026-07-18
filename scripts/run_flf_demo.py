@@ -29,19 +29,19 @@ def main() -> int:
         for case in manifest.iter_starter_cases():
             _run([sys.executable, "scripts/build_case_map.py", "--case", case.case_path], repo_root, failures)
 
-    for case in manifest.iter_starter_cases():
-        _run(
-            [
-                sys.executable,
-                "scripts/validate_case_artifact.py",
-                "--case",
-                case.case_path,
-                "--examples",
-                str(case.examples_path),
-            ],
-            repo_root,
-            failures,
-        )
+        for case in manifest.iter_starter_cases():
+            _run(
+                [
+                    sys.executable,
+                    "scripts/validate_case_artifact.py",
+                    "--case",
+                    case.case_path,
+                    "--examples",
+                    str(case.examples_path),
+                ],
+                repo_root,
+                failures,
+            )
 
     manifest_args = ["--manifest", args.manifest]
     _run([sys.executable, "scripts/validate_submission_manifest.py", *manifest_args], repo_root, failures)

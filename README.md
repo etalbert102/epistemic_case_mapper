@@ -58,6 +58,28 @@ PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
 
 Generated starter output is written to `artifacts/<case_id>/`. Curated judge-facing snapshots live under `examples/`.
 
+## Use On A New Question
+
+The canonical reusable path is:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml case init \
+  --case-id my_case \
+  --title "My Case" \
+  --question "What should a careful reader conclude?" \
+  --docs doc_a.txt doc_b.md
+
+ecm --repo-root /path/to/package --package package.yaml semantic staged brief \
+  --region my_case_initial_region \
+  --backend prompt
+```
+
+Use `--backend prompt` first to inspect prompts and generated scaffolding without calling a model. Swap in `--backend command:<cmd>` or `--backend ollama:<model>` for a live run.
+
+The staged brief command writes a generated map, a decision briefing, a summary JSON, progress logs, and `FINAL_REVIEW_PACKET.md`. Start with the printed briefing path, then use the final review packet to inspect map quality, traceability, and warnings.
+
+More detail: `docs/CASE_INIT_AND_MODEL_BACKENDS.md`.
+
 ## Judge Path
 
 Start with:

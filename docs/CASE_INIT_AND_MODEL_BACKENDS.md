@@ -14,6 +14,25 @@ ecm --repo-root /path/to/package --package package.yaml case init \
 
 This creates a manifest, case manifest, copied source files, a starter worked region, a starter map, a placeholder erosion audit, a baseline comparator, and UI/review scaffold files. The starter map is explicitly only a source inventory; it is meant to make the package runnable before a substantive model or human mapping pass replaces it.
 
+## End-To-End Briefing
+
+After `case init`, the shortest path from sources to a reader-facing memo is:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged brief \
+  --region my_case_initial_region \
+  --backend prompt
+```
+
+The `prompt` backend is the safe first run: it writes prompts, scaffolds, deterministic review artifacts, and a memo shell without requiring a model. For a live model, replace it with `command:<cmd>` or `ollama:<model>`.
+
+The command prints the briefing memo, summary JSON, map run summary, and `FINAL_REVIEW_PACKET.md`. Read them in that order:
+
+1. Briefing memo: the reader-facing output.
+2. Summary JSON: paths and high-level quality signals.
+3. Final review packet: traceability, warning, and quality review surface.
+4. Map run summary: extraction and relation-building diagnostics.
+
 ## Backend Selection
 
 The package manifest can set:

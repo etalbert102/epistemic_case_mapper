@@ -6,7 +6,18 @@ from typing import Any
 
 
 def build_parser(engine_root: Path) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Epistemic Case Mapper engine CLI.")
+    parser = argparse.ArgumentParser(
+        description="Epistemic Case Mapper engine CLI.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Common paths:\n"
+            "  ecm validate package\n"
+            "  ecm semantic staged brief --region <region_id> --backend prompt\n"
+            "  ecm case init --case-id my_case --title \"My Case\" --question \"What should we conclude?\" --docs doc_a.txt doc_b.md\n"
+            "\n"
+            "Backends: prompt, command:<cmd>, or ollama:<model>."
+        ),
+    )
     parser.add_argument("--repo-root", default=engine_root, help="Package root for relative paths.")
     parser.add_argument("--package", default="submission_manifest.yaml", help="Package manifest path.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -186,6 +197,17 @@ def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_staged_brief = semantic_staged_subparsers.add_parser(
         "brief",
         help="Run staged mapping and produce a readable map-anchored decision briefing.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  # Dry run using prompt files and deterministic rendering:\n"
+            "  ecm semantic staged brief --region my_case_initial_region --backend prompt\n"
+            "\n"
+            "  # Live local model run with reusable defaults:\n"
+            "  ecm semantic staged brief --region my_case_initial_region --backend ollama:gemma4:26b --backend-timeout 120 --backend-retries 1\n"
+            "\n"
+            "Outputs include a generated map, briefing memo, summary JSON, progress logs, and FINAL_REVIEW_PACKET.md."
+        ),
     )
     semantic_staged_brief.add_argument("--region", required=True)
     semantic_staged_brief.add_argument("--backend", help="Override manifest default backend.")
