@@ -48,6 +48,8 @@ class ArmCPrioritizedMove(BaseModel):
     warrant: str = Field(min_length=1)
     decision_effect: str = Field(min_length=1)
     evidence_item_ids: list[str] = Field(default_factory=list)
+    evidence_bundle_ids: list[str] = Field(default_factory=list)
+    bundle_intended_uses: list[dict[str, str]] = Field(default_factory=list)
     required: bool = True
     depends_on_move_ids: list[str] = Field(default_factory=list)
     alternatives_discriminated: list[str] = Field(default_factory=list)
@@ -68,7 +70,7 @@ class ArmCPrioritizedMove(BaseModel):
     def _strip_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
-    @field_validator("evidence_item_ids", "depends_on_move_ids", "alternatives_discriminated", "limitations", mode="before")
+    @field_validator("evidence_item_ids", "evidence_bundle_ids", "depends_on_move_ids", "alternatives_discriminated", "limitations", mode="before")
     @classmethod
     def _list_field(cls, value: Any) -> list[str]:
         if value is None:
@@ -77,6 +79,18 @@ class ArmCPrioritizedMove(BaseModel):
             return [str(item).strip() for item in value if str(item).strip()]
         text = str(value).strip()
         return [text] if text else []
+
+    @field_validator("bundle_intended_uses", mode="before")
+    @classmethod
+    def _bundle_use_rows(cls, value: Any) -> list[dict[str, str]]:
+        rows = []
+        for item in _list(value):
+            if not isinstance(item, dict):
+                continue
+            row = {str(key): str(val).strip() for key, val in item.items() if str(val).strip()}
+            if row.get("evidence_bundle_id"):
+                rows.append(row)
+        return rows
 
 
 class ArmCEvidenceAccounting(BaseModel):
@@ -301,6 +315,7 @@ def build_arm_c_prioritization_prompt(inputs: dict[str, Any]) -> str:
         "source_hierarchy": analyst.get("source_hierarchy"),
         "source_weight_judgments": analyst.get("source_weight_judgments"),
         "evidence_items": _arm_c_evidence_records(packet),
+        "evidence_bundle_registry": _arm_c_evidence_bundle_registry(packet),
         "must_account_writer_evidence_item_ids": _must_account_writer_evidence_ids(inputs),
         "evidence_budget": _compact_evidence_budget(_dict(inputs.get("evidence_budget")), packet),
     }
@@ -311,6 +326,7 @@ def build_arm_c_prioritization_prompt(inputs: dict[str, Any]) -> str:
         f"{json.dumps(ArmCPrioritizedArgument.model_json_schema(), indent=2, ensure_ascii=False)}\n\n"
         "Planning rules:\n"
         "- Use only writer evidence item IDs from input evidence_items[].evidence_item_id in moves and evidence_accounting.\n"
+        "- When a move depends on a specific quantity, include its evidence_bundle_id from evidence_bundle_registry in evidence_bundle_ids and summarize how it should be used in bundle_intended_uses.\n"
         "- Treat upstream claim/relation IDs as lineage only; do not return them as evidence_item_ids.\n"
         "- Keep the frozen_direct_answer exactly as provided.\n"
         "- Create a small set of ordered moves that would help a writer answer the decision question directly.\n"
@@ -378,6 +394,7 @@ def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> d
     analyst = _dict(inputs.get("analyst_decision_model"))
     packet = _dict(inputs.get("memo_ready_packet"))
     known_ids = _writer_evidence_ids(packet)
+    known_bundle_ids = _evidence_bundle_ids(packet)
     if parsed.get("decision_question") != (analyst.get("decision_question") or packet.get("decision_question")):
         issues.append("decision_question_drift")
     if parsed.get("frozen_direct_answer") != (analyst.get("direct_answer") or analyst.get("full_direct_answer")):
@@ -394,6 +411,15 @@ def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> d
     unknown_evidence = sorted({evidence_id for evidence_id in referenced_ids if evidence_id not in known_ids})
     if unknown_evidence:
         issues.append(f"unknown_evidence_ids:{', '.join(unknown_evidence)}")
+    referenced_bundle_ids = [
+        bundle_id
+        for move in _list(parsed.get("moves"))
+        if isinstance(move, dict)
+        for bundle_id in _string_list(move.get("evidence_bundle_ids"))
+    ]
+    unknown_bundles = sorted({bundle_id for bundle_id in referenced_bundle_ids if bundle_id not in known_bundle_ids})
+    if unknown_bundles:
+        issues.append(f"unknown_evidence_bundle_ids:{', '.join(unknown_bundles)}")
     unknown_dependencies = sorted(
         {
             dependency
@@ -426,9 +452,11 @@ def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> d
         "schema_id": "arm_c_prioritized_argument_verification_report_v1",
         "status": "pass" if not issues else "fail",
         "known_evidence_id_count": len(known_ids),
+        "known_evidence_bundle_id_count": len(known_bundle_ids),
         "move_count": len(_list(parsed.get("moves"))),
         "required_evidence_count": len(required_ids),
         "unknown_evidence_ids": unknown_evidence,
+        "unknown_evidence_bundle_ids": unknown_bundles,
         "missing_foreground_accounting_ids": missing_accounting,
         "warnings": [f"missing_foreground_accounting:{', '.join(missing_accounting)}"] if missing_accounting else [],
         "issues": _dedupe(issues),
@@ -439,7 +467,8 @@ def build_arm_c_projection(inputs: dict[str, Any], prioritized_argument: dict[st
     original_canonical = _dict(inputs.get("canonical_decision_writer_packet")) or _dict(
         _dict(inputs.get("memo_ready_packet")).get("canonical_decision_writer_packet")
     )
-    moves = [_arm_c_move_to_argument_move(row) for row in _list(prioritized_argument.get("moves"))]
+    bundle_registry = _bundle_registry_by_id(_dict(inputs.get("memo_ready_packet")))
+    moves = [_arm_c_move_to_argument_move(row, bundle_registry=bundle_registry) for row in _list(prioritized_argument.get("moves"))]
     canonical = {
         **original_canonical,
         "decision_argument_contract": {
@@ -461,6 +490,7 @@ def build_arm_c_projection(inputs: dict[str, Any], prioritized_argument: dict[st
         **projection_report,
         "schema_id": "arm_c_prioritized_argument_verification_projection_report_v1",
         "prioritized_argument_status": "pass",
+        "selected_evidence_bundle_ids": sorted(_arm_c_selected_bundle_ids(prioritized_argument)),
     }
     return projection
 
@@ -487,6 +517,8 @@ def _arm_c_evidence_records(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     "source_ids": _string_list(item.get("source_ids")),
                     "source_appraisal": item.get("source_appraisal"),
                     "quantities": _quantity_values_from_item(item),
+                    "evidence_bundle_ids": _item_evidence_bundle_ids(item),
+                    "assertion_bundles": _compact_bundles_for_prompt(_list(item.get("assertion_bundles"))),
                     "claim_context": _compact_claim_context(_dict(item.get("claim_context"))),
                     "must_use": item.get("must_use"),
                     "obligation_level": item.get("obligation_level"),
@@ -496,6 +528,69 @@ def _arm_c_evidence_records(packet: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return rows
+
+
+def _arm_c_evidence_bundle_registry(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        evidence_id = str(item.get("item_id") or "").strip()
+        for bundle in _list(item.get("assertion_bundles")):
+            if not isinstance(bundle, dict):
+                continue
+            bundle_id = str(bundle.get("evidence_bundle_id") or "").strip()
+            if not bundle_id or bundle_id in seen:
+                continue
+            seen.add(bundle_id)
+            rows.append(
+                _drop_empty(
+                    {
+                        "evidence_bundle_id": bundle_id,
+                        "writer_evidence_item_id": evidence_id,
+                        "value": bundle.get("value"),
+                        "estimate": bundle.get("estimate"),
+                        "interval": bundle.get("interval"),
+                        "statistic_type": bundle.get("statistic_type"),
+                        "endpoint": bundle.get("endpoint"),
+                        "population": bundle.get("population"),
+                        "exposure_or_comparator": bundle.get("exposure_or_comparator"),
+                        "allowed_inference": _short_text(bundle.get("allowed_inference"), 260),
+                        "forbidden_inference": _short_text(bundle.get("forbidden_inference"), 260),
+                        "source_ids": _string_list(bundle.get("source_ids")),
+                    }
+                )
+            )
+    return rows
+
+
+def _item_evidence_bundle_ids(item: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            str(bundle.get("evidence_bundle_id") or "").strip()
+            for bundle in _list(item.get("assertion_bundles"))
+            if isinstance(bundle, dict) and str(bundle.get("evidence_bundle_id") or "").strip()
+        ]
+    )
+
+
+def _compact_bundles_for_prompt(bundles: list[Any]) -> list[dict[str, Any]]:
+    return [
+        _drop_empty(
+            {
+                "evidence_bundle_id": bundle.get("evidence_bundle_id"),
+                "value": bundle.get("value"),
+                "endpoint": bundle.get("endpoint"),
+                "population": bundle.get("population"),
+                "interval": bundle.get("interval"),
+                "allowed_inference": _short_text(bundle.get("allowed_inference"), 220),
+                "forbidden_inference": _short_text(bundle.get("forbidden_inference"), 220),
+            }
+        )
+        for bundle in bundles
+        if isinstance(bundle, dict)
+    ]
 
 
 def _compact_evidence_budget(evidence_budget: dict[str, Any], packet: dict[str, Any]) -> dict[str, Any]:
@@ -599,12 +694,13 @@ def _upstream_to_writer_id_map(packet: dict[str, Any]) -> dict[str, list[str]]:
     return mapping
 
 
-def _arm_c_move_to_argument_move(move: dict[str, Any]) -> dict[str, Any]:
+def _arm_c_move_to_argument_move(move: dict[str, Any], *, bundle_registry: dict[str, dict[str, Any]]) -> dict[str, Any]:
     point = str(move.get("proposition") or "").strip()
     warrant = str(move.get("warrant") or "").strip()
     effect = str(move.get("decision_effect") or "").strip()
     disposition = str(move.get("counterweight_disposition") or "").strip()
     limitations = _string_list(move.get("limitations"))
+    bundle_ids = _string_list(move.get("evidence_bundle_ids"))
     return _drop_empty(
         {
             "move_id": move.get("move_id"),
@@ -613,11 +709,42 @@ def _arm_c_move_to_argument_move(move: dict[str, Any]) -> dict[str, Any]:
             "writing_job": _short_text(" ".join(part for part in [warrant, effect] if part), 900),
             "section_id": move.get("primary_section"),
             "evidence_item_ids": _string_list(move.get("evidence_item_ids")),
+            "evidence_bundle_ids": bundle_ids,
+            "selected_assertion_bundles": [bundle_registry[bundle_id] for bundle_id in bundle_ids if bundle_id in bundle_registry],
+            "bundle_intended_uses": _list(move.get("bundle_intended_uses")),
             "disposition": disposition,
             "would_change_if": "; ".join(limitations),
             "required": bool(move.get("required", True)),
         }
     )
+
+
+def _arm_c_selected_bundle_ids(prioritized_argument: dict[str, Any]) -> set[str]:
+    return {
+        bundle_id
+        for move in _list(prioritized_argument.get("moves"))
+        if isinstance(move, dict)
+        for bundle_id in _string_list(move.get("evidence_bundle_ids"))
+    }
+
+
+def _evidence_bundle_ids(packet: dict[str, Any]) -> set[str]:
+    return set(_bundle_registry_by_id(packet))
+
+
+def _bundle_registry_by_id(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    registry: dict[str, dict[str, Any]] = {}
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        evidence_id = str(item.get("item_id") or "").strip()
+        for bundle in _list(item.get("assertion_bundles")):
+            if not isinstance(bundle, dict):
+                continue
+            bundle_id = str(bundle.get("evidence_bundle_id") or "").strip()
+            if bundle_id and bundle_id not in registry:
+                registry[bundle_id] = {**bundle, "writer_evidence_item_id": evidence_id}
+    return registry
 
 
 def _deterministic_arm_c_scaffold(inputs: dict[str, Any]) -> dict[str, Any]:

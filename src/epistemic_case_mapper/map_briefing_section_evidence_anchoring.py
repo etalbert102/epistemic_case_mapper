@@ -104,6 +104,8 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "source_labels": item.get("source_labels")
                     or ([item.get("source_label")] if item.get("source_label") else None),
                     "required_quantity_atoms": quantities,
+                    "evidence_bundle_ids": _evidence_bundle_ids(quantities),
+                    "assertion_bundles": _assertion_bundles(quantities),
                     "must_preserve_terms": _string_list(item.get("must_preserve_terms")),
                     "population_scope": item.get("caveat") or item.get("applicability_scope"),
                     "required_caveat": item.get("caveat"),
@@ -122,6 +124,31 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
             )
         )
     return contracts
+
+
+def _evidence_bundle_ids(quantities: list[dict[str, Any]]) -> list[str]:
+    return _dedupe(
+        [
+            str(quantity.get("evidence_bundle_id") or _dict(quantity.get("assertion_bundle")).get("evidence_bundle_id") or "").strip()
+            for quantity in quantities
+            if isinstance(quantity, dict)
+        ]
+    )
+
+
+def _assertion_bundles(quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for quantity in quantities:
+        if not isinstance(quantity, dict):
+            continue
+        bundle = _dict(quantity.get("assertion_bundle"))
+        bundle_id = str(bundle.get("evidence_bundle_id") or quantity.get("evidence_bundle_id") or "").strip()
+        if not bundle_id or bundle_id in seen:
+            continue
+        seen.add(bundle_id)
+        rows.append({**bundle, "evidence_bundle_id": bundle_id})
+    return rows
 
 
 def contracts_for_section(

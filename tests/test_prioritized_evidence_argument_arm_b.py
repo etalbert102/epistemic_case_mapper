@@ -16,10 +16,12 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import (
     run_arm_b_b0,
 )
 from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+    build_arm_c_prioritization_prompt,
     build_arm_c_projection,
     normalize_arm_c_prioritized_argument_ids,
     verify_arm_c_prioritized_argument,
 )
+from epistemic_case_mapper.map_briefing_section_evidence_anchoring import build_evidence_expression_contracts
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -197,6 +199,117 @@ def test_arm_c_projection_uses_prioritized_move_required_ids_not_legacy_must_use
     required = projection["section_contract_overlap_report"]["required_by_section"]
     assert required["answer_evidence"] == ["decision_writer_item_001"]
     assert "decision_writer_item_004" not in projection["projection_evaluation_packet"]["mandatory_evidence_ids"]
+
+
+def test_arm_c_prompt_validation_and_projection_are_bundle_native() -> None:
+    bundle = {
+        "schema_id": "source_assertion_bundle_v1",
+        "evidence_bundle_id": "bundle_demo_001",
+        "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+        "estimate": "1.17",
+        "interval": "95% CI 1.08 to 1.27",
+        "statistic_type": "relative_risk",
+        "endpoint": "cardiovascular disease",
+        "allowed_inference": "Associated with higher cardiovascular disease risk.",
+        "forbidden_inference": "Do not present observational association as causal.",
+        "source_ids": ["src001"],
+    }
+    inputs = load_frozen_arm_b_inputs(FROZEN_EGGS)
+    packet = dict(inputs["memo_ready_packet"])
+    items = []
+    for item in packet["evidence_items"]:
+        copied = dict(item)
+        if copied.get("item_id") == "decision_writer_item_001":
+            copied["assertion_bundles"] = [bundle]
+            copied["quantities"] = [
+                {
+                    "value": bundle["value"],
+                    "evidence_bundle_id": bundle["evidence_bundle_id"],
+                    "assertion_bundle": bundle,
+                    "endpoint": bundle["endpoint"],
+                }
+            ]
+        items.append(copied)
+    packet["evidence_items"] = items
+    inputs = {**inputs, "memo_ready_packet": packet}
+
+    prompt = build_arm_c_prioritization_prompt(inputs)
+    assert "evidence_bundle_registry" in prompt
+    assert "bundle_demo_001" in prompt
+
+    argument = {
+        "schema_id": "arm_c_prioritized_argument_v1",
+        "decision_question": inputs["analyst_decision_model"]["decision_question"],
+        "frozen_direct_answer": inputs["analyst_decision_model"]["direct_answer"],
+        "confidence": inputs["analyst_decision_model"]["confidence"],
+        "argument_thesis": "The answer should reflect the selected source-bound quantity.",
+        "moves": [
+            {
+                "move_id": "m1",
+                "primary_section": "answer_evidence",
+                "proposition": "Use the selected quantitative association.",
+                "warrant": "The bundle preserves the statistic type, interval, and allowed inference.",
+                "decision_effect": "It supports a calibrated answer.",
+                "evidence_item_ids": ["decision_writer_item_001"],
+                "evidence_bundle_ids": ["bundle_demo_001"],
+                "bundle_intended_uses": [
+                    {
+                        "evidence_bundle_id": "bundle_demo_001",
+                        "intended_use": "Report the RR with its confidence interval as an association.",
+                    }
+                ],
+                "required": True,
+            }
+        ],
+        "evidence_accounting": [
+            {"evidence_item_id": "decision_writer_item_001", "disposition": "owned", "rationale": "Selected bundle carrier."}
+        ],
+    }
+
+    report = verify_arm_c_prioritized_argument(inputs, argument)
+    projection = build_arm_c_projection(inputs, argument)
+
+    assert report["status"] == "pass"
+    assert report["known_evidence_bundle_id_count"] == 1
+    assert projection["status"] == "pass"
+    assert projection["projection_evaluation_packet"]["selected_evidence_bundle_ids"] == ["bundle_demo_001"]
+    assert "bundle_demo_001" in json.dumps(projection["section_packets"])
+
+
+def test_expression_contracts_preserve_source_assertion_bundles() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "E1",
+                "role": "strongest_support",
+                "reader_claim": "Higher exposure was associated with higher risk.",
+                "source_ids": ["S1"],
+                "assertion_bundles": [
+                    {
+                        "evidence_bundle_id": "bundle_demo_001",
+                        "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+                        "endpoint": "cardiovascular disease",
+                    }
+                ],
+                "quantities": [
+                    {
+                        "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+                        "evidence_bundle_id": "bundle_demo_001",
+                        "assertion_bundle": {
+                            "evidence_bundle_id": "bundle_demo_001",
+                            "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+                            "endpoint": "cardiovascular disease",
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+
+    assert contracts[0]["evidence_bundle_ids"] == ["bundle_demo_001"]
+    assert contracts[0]["assertion_bundles"][0]["endpoint"] == "cardiovascular disease"
 
 
 def test_production_synthesis_uses_prioritized_argument_path(monkeypatch, tmp_path: Path) -> None:

@@ -692,6 +692,7 @@ def _memo_ready_item_from_group(
         "source_labels": source_labels,
         "source_ids": _string_list(group.get("source_ids")),
         "quantities": quantities,
+        "assertion_bundles": _assertion_bundles_from_quantities(quantities),
         "source_bound_quantity_phrases": quantity_phrases,
         "source_bound_quantity_tuples": quantity_tuples,
         "lineage": {"analyst_group_id": group.get("group_id"), "evidence_item_ids": group.get("covered_evidence_item_ids", [])},
@@ -715,7 +716,22 @@ def _memo_ready_item_from_group(
     }
 
 
-def _memo_ready_quantity_from_binding(binding: dict[str, Any]) -> dict[str, str]:
+def _assertion_bundles_from_quantities(quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for quantity in quantities:
+        if not isinstance(quantity, dict):
+            continue
+        bundle = _dict(quantity.get("assertion_bundle"))
+        bundle_id = str(bundle.get("evidence_bundle_id") or quantity.get("evidence_bundle_id") or "").strip()
+        if not bundle_id or bundle_id in seen:
+            continue
+        seen.add(bundle_id)
+        rows.append({**bundle, "evidence_bundle_id": bundle_id})
+    return rows
+
+
+def _memo_ready_quantity_from_binding(binding: dict[str, Any]) -> dict[str, Any]:
     return _drop_empty(
         {
             "value": str(binding.get("value") or "").strip(),
