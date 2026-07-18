@@ -23,6 +23,7 @@ This table is organized around the submission's own evidence, not as a scoring g
 | Inspectable method | Workflow docs, prompt inventory, validators, source manifests, audit notes, and `human-review-needed` status make design choices and uncertainty visible. | Some source-fidelity and relation-correctness judgments are still embedded in curated Markdown rather than independently reviewed. | Add a completed review log that shows which claims, relations, and losses were accepted, revised, or rejected. |
 | Stress under disagreement | Erosion audits, blinded local-model baselines, multi-model baseline audit, failure-mode discussion, and narrow COVID stress test expose where flat synthesis is brittle. | No external adversarial review has tried to break the maps or source selections. | Ask a motivated reviewer to challenge one worked region and record whether the map helps localize disagreement. |
 | Framing contribution | The submission argues that broad correctness is not enough: a synthesis can be right while erasing the reviewable structure needed for compounding epistemic work. `docs/REFERENCE_LINEAGE.md` ties this to contest examples around measurement, construct validity, systems safety, and structured analysis. | The framing may still look like provenance or argument mapping unless the LHC one-minute example lands. | Add a short comparison showing how decision-space erosion differs from ordinary provenance, summarization faithfulness, and argument mining. |
+| Matched strong-model check | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` shows that a strong model can recover much of the LHC dependency chain from the same source universe when directly asked. | This is a single run, not a benchmark. It narrows rather than expands the claim: the map is a review surface, not proof of prose superiority. | Repeat on fresh cases and have humans judge recovery, repairability, and update cost. |
 
 ## Best Evidence To Inspect
 
@@ -37,11 +38,14 @@ This table is organized around the submission's own evidence, not as a scoring g
 9. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
 10. `docs/HUMAN_AUDIT_GUIDE.md`
 11. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-12. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-13. `examples/eggs/full_case_flat_synthesis_baseline.md`
-14. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-15. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-16. `ui/index.html`
+12. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
+13. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
+14. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
+15. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
+16. `examples/eggs/full_case_flat_synthesis_baseline.md`
+17. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
+18. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
+19. `ui/index.html`
 
 ## Failure Modes
 

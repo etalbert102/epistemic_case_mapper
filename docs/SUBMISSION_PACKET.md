@@ -51,11 +51,14 @@ For the fastest orientation, use `docs/START_HERE.md`. It gives the shorter vers
 
 Read these in order if you want the fuller package boundary:
 
-1. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-2. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
-3. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
-4. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
-5. `docs/INVESTIGATOR_CHALLENGE.md`: run or inspect the frozen flat-vs-map investigator challenge, local correction exercise, and held-out-source update.
+1. `docs/INVESTIGATOR_CHALLENGE.md`: run or inspect the frozen flat-vs-map investigator challenge, local correction exercise, and held-out-source update.
+2. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`: read the compact recover, repair, and update packet.
+3. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`: inspect the matched strong-model comparison that clarifies the claim boundary.
+4. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`: see how this differs from provenance, faithful summarization, argument mapping, and knowledge graphs.
+5. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
+6. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
+7. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
+8. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
 
 Then check transfer and limits:
 
@@ -148,6 +151,26 @@ Primary files:
 The submission is about compounding epistemic work. A flat synthesis can be useful for immediate understanding, but it is hard for another person to revise locally. A case map gives future reviewers stable source IDs, claim IDs, relation IDs, excerpts, rationales, cruxes, and open questions.
 
 The useful comparison is not "map good, summary bad." The useful comparison is: when a later reviewer needs to inspect a disputed distinction, which artifact still exposes the distinction as something reviewable?
+
+## Claim Hierarchy
+
+Demonstrated:
+
+- Source-grounded worked-region maps preserve dependencies, caveats, critique/response structure, and review handles that flat syntheses can compress.
+- The investigator challenge shows better deterministic recoverability for selected hidden-dependency tasks.
+- Local repair and held-out-source update can preserve stable IDs for unaffected map objects.
+
+Plausible but under-tested:
+
+- The same artifacts will improve multi-investigator handoff.
+- The same method will transfer to more fresh cases without author selection.
+- More complete review logs will make expert disagreement easier to adjudicate.
+
+Not established:
+
+- The current prototype consistently beats strong models on final prose quality.
+- The artifacts are domain-correct without human review.
+- The challenge is a statistically powered benchmark.
 
 ## Current Boundary
 

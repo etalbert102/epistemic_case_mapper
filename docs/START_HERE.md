@@ -46,15 +46,18 @@ This is the submission's value proposition: the map keeps the part of the reason
 ## Five-Minute Path
 
 1. Read the one-minute demo above.
-2. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-3. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
-4. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
+2. Open `docs/INVESTIGATOR_CHALLENGE.md` for the runnable challenge boundary.
+3. Open `docs/RECOVER_REPAIR_UPDATE_DEMO.md` and inspect the three-part recover, repair, and update result.
+4. Open `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` to see the honest comparison: a strong model can recover much of the LHC chain, but the map supplies stable handles for review and update.
+5. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
+6. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
+7. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
 
 That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
 
 For runnable examples keyed to ingestion, structure, assessment, handoff, and reproducibility, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
 
-For the strongest end-to-end demonstration of investigator value, run or inspect `docs/INVESTIGATOR_CHALLENGE.md`. It compares flat and map conditions on frozen follow-up tasks, then shows local relation repair and a held-out-source update.
+For the strongest end-to-end demonstration of investigator value, run or inspect `docs/INVESTIGATOR_CHALLENGE.md`. It compares flat and map conditions on frozen follow-up tasks, then shows local relation repair and a held-out-source update. `docs/RECOVER_REPAIR_UPDATE_DEMO.md` is the compact judge-facing version.
 
 ## Fifteen-Minute Path
 
@@ -77,6 +80,25 @@ Read these before giving the submission credit beyond the core mechanism:
 - LHC: dependency structure and critique/response structure survive as reviewable nodes.
 - Eggs: outcome evidence, lipid-marker evidence, guideline framing, and population caveats stay separate.
 - COVID slice: Bayesian disagreement and subargument boundaries stay visible without claiming to settle origins.
+
+## Claim Boundary
+
+Demonstrated:
+
+- structured maps provide queryable handles for dependency tracing, local correction, and held-out-source update in deterministic replay,
+- the LHC velocity/trapping dependency is easier to recover from map artifacts than from the checked-in flat baseline under the frozen challenge,
+- the workflow records what changed and what stayed stable.
+
+Plausible but under-tested:
+
+- the same surface will improve multi-investigator handoff,
+- the same pattern will transfer cleanly to fresh cases outside the included examples.
+
+Not established:
+
+- the prototype consistently beats strong models on final prose quality,
+- the maps are domain-correct without human review,
+- the current metrics are a scientific benchmark.
 
 ## What To Ignore At First
 

@@ -6,6 +6,8 @@ Start with the polished judge path: `docs/START_HERE.md`.
 
 Then use the fuller judge packet: `docs/SUBMISSION_PACKET.md`.
 
+For the fastest evidence of investigator value, use `docs/INVESTIGATOR_CHALLENGE.md` and `docs/RECOVER_REPAIR_UPDATE_DEMO.md`.
+
 For runnable examples keyed to the pipeline stages, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
 
 For a visual inspection surface, run the static UI at `ui/index.html`.
@@ -102,11 +104,14 @@ The resumable handoffs are `documents`, `map`, and `briefing`. More detail: `doc
 
 ## Judge Path
 
-Start with `docs/START_HERE.md`. It gives a five-minute path through the core LHC example, then a fifteen-minute transfer check using eggs and the COVID slice.
+Start with `docs/START_HERE.md`. It now opens with the investigator challenge, a compact recover/repair/update packet, and a matched strong-model comparison before sending readers into the full LHC map.
 
 For the full submission boundary, read:
 
 - `docs/SUBMISSION_PACKET.md`
+- `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
+- `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
+- `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`
 - `docs/EVIDENCE_AND_LIMITATIONS.md`

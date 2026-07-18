@@ -14,6 +14,12 @@ Latest generated packet:
 artifacts/investigator_challenge/latest/FINAL_EVIDENCE_PACKET.md
 ```
 
+Compact judge packet:
+
+```text
+docs/RECOVER_REPAIR_UPDATE_DEMO.md
+```
+
 ## What To Look At
 
 The challenge starts from capable flat baselines and asks follow-up questions that matter to an investigator:
@@ -36,6 +42,10 @@ The deterministic replay shows the map condition recovering more of the frozen d
 ## Why This Demonstrates Prototype Value
 
 A flat research answer can be good and still make it hard to inspect what the conclusion depends on. This challenge makes that difference concrete: the map gives a downstream investigator stable objects to query, audit, correct, and update.
+
+## Matched Strong-Model Check
+
+`docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` records a single `gpt-5.6-sol` run on the same five LHC sources, with the worked map and answer keys withheld by instruction. The strong model recovered much of the dependency chain. That is useful boundary evidence: the prototype should be judged on recoverability, local revisability, and update surfaces, not on a claim that a strong model cannot ever reconstruct the argument.
 
 ## Limits
 

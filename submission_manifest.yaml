@@ -42,6 +42,11 @@ judge_paths:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/RECOVER_REPAIR_UPDATE_DEMO.md
+  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
@@ -108,6 +113,11 @@ required_docs:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/RECOVER_REPAIR_UPDATE_DEMO.md
+  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
   - docs/SUBMISSION_ARTIFACT_SUMMARY.md
   - docs/SUBMISSION_PACKET.md
   - docs/VALIDATOR_FAILURE_GUIDE.md
@@ -148,6 +158,11 @@ reference_scan_paths:
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/INVESTIGATOR_CHALLENGE.md
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
+  - docs/RECOVER_REPAIR_UPDATE_DEMO.md
+  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
+  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
@@ -186,6 +201,18 @@ extension_artifacts:
     case: Cross-case
     path: docs/INVESTIGATOR_CHALLENGE.md
     status: deterministic replay demo
+  - artifact: Recover, repair, update judge packet
+    case: LHC black holes
+    path: docs/RECOVER_REPAIR_UPDATE_DEMO.md
+    status: deterministic replay demo
+  - artifact: Decision-space erosion differentiation
+    case: Submission
+    path: docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
+    status: judge-facing framing
+  - artifact: Matched strong-model LHC comparison
+    case: LHC black holes
+    path: docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
+    status: single-run comparison
   - artifact: Evidence and limitations
     case: Submission
     path: docs/EVIDENCE_AND_LIMITATIONS.md
