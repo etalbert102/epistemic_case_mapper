@@ -94,45 +94,30 @@ The resumable handoffs are `documents`, `map`, and `briefing`. More detail: `doc
 
 ## Judge Path
 
-Start with:
+Start with `docs/START_HERE.md`. It gives a five-minute path through the core LHC example, then a fifteen-minute transfer check using eggs and the COVID slice.
 
-- `docs/START_HERE.md`
+For the full submission boundary, read:
+
 - `docs/SUBMISSION_PACKET.md`
-- `docs/REFERENCE_LINEAGE.md`
-- `docs/GENERALIZABILITY_RED_TEAM.md`
-- `docs/CODE_GENERALIZABILITY_PLAN.md`
-- `docs/REUSABLE_ENGINE_PLAN.md`
-- `docs/PACKAGE_MANIFEST_SPEC.md`
-- `docs/ADDING_A_CASE.md`
-- `ui/index.html`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+- `docs/EVIDENCE_AND_LIMITATIONS.md`
+- `docs/GENERALIZABILITY_RED_TEAM.md`
+
+For human audit rather than judge orientation, use:
+
 - `docs/review/REVIEWER_START_HERE.md`
 - `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-- `docs/HUMAN_AUDIT_GUIDE.md`
-- `docs/EVIDENCE_AND_LIMITATIONS.md`
-- `docs/FLF_SUBMISSION_DRAFT.md`
 
-Background contest-reference notes, including the recorded judging rubric, live under `docs/reference/`.
+For implementation and reuse details, use:
 
-The fastest evidence check is:
+- `docs/CASE_INIT_AND_MODEL_BACKENDS.md`
+- `docs/PACKAGE_MANIFEST_SPEC.md`
+- `docs/ADDING_A_CASE.md`
+- `docs/ENGINE_ARCHITECTURE.md`
 
-1. Read `docs/START_HERE.md`.
-2. Open the LHC worked-region map and read `What To Notice` plus the first six claims.
-3. Open the LHC erosion audit and inspect `lhc_loss_001`.
-4. Use eggs for generalization and the COVID slice for adversarial disagreement structure.
-5. Read `docs/GENERALIZABILITY_RED_TEAM.md` for the transfer claim and its failure boundary.
-6. Use the case-specific human audit packet before treating any artifact as reviewed.
+Background contest-reference notes and the recorded judging rubric live under `docs/reference/`.
 
-Full-case scaffold entry points:
-
-- `examples/lhc_black_holes/full_case_index.md`
-- `examples/eggs/full_case_index.md`
-
-Operational realism entry points:
-
-- `docs/OPERATIONAL_WORKFLOW_AND_REALISM.md`
-- `examples/lhc_black_holes/investigator_task_queue.md`
-- `examples/eggs/investigator_task_queue.md`
+Full-case scaffold entry points are `examples/lhc_black_holes/full_case_index.md` and `examples/eggs/full_case_index.md`. These are useful after the worked-region value is clear.
 
 To open the UI locally:
 

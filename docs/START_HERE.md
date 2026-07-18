@@ -2,11 +2,22 @@
 
 Status: `human-review-needed`
 
-This prototype is easiest to inspect through one concrete question:
+This prototype is easiest to judge through one concrete question:
 
 > Can an AI-assisted workflow preserve the reasoning structure that a normal synthesis tends to flatten?
 
-The answer demonstrated here is not a better paragraph. It is a reusable review surface: source-grounded claims, relation IDs, caveats, cruxes, erosion losses, and human-review handoff packets.
+The demonstrated answer is not "a nicer summary." It is a reusable review surface: source-grounded claims, relation IDs, caveats, cruxes, erosion losses, and human-review handoff packets.
+
+## What To Judge
+
+Judge the package on whether it makes later reasoning easier to audit and extend:
+
+- Can you see which distinctions carry the conclusion?
+- Can you tell what a flat synthesis compressed or lost?
+- Can another investigator accept, revise, reject, or extend a local piece without redoing the whole case?
+- Does the same workflow plausibly transfer from a closed technical risk case to messy evidence and adversarial disagreement?
+
+Do not judge it as a final literature review, finished UI, or externally validated knowledge base.
 
 ## Reference Lineage
 
@@ -32,15 +43,30 @@ The LHC map preserves that dependency as reviewable pieces:
 
 This is the submission's value proposition: the map keeps the part of the reasoning a later reviewer would need to accept, challenge, or revise.
 
-## Fastest Path
+## Five-Minute Path
 
-1. Read `docs/FLF_BEFORE_AFTER_COMPARISON.md`.
-2. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus the first six claims.
+1. Read the one-minute demo above.
+2. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
 3. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
+4. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
 
 That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
 
-For limits and open validation work, read `docs/EVIDENCE_AND_LIMITATIONS.md`. For the most important transfer concern, read `docs/GENERALIZABILITY_RED_TEAM.md`.
+## Fifteen-Minute Path
+
+After the LHC check:
+
+1. Open `examples/eggs/worked_region_observational_vs_rct_map.md` and read `What To Notice`.
+2. Open `examples/eggs/decision_space_erosion_audit.md` and look for how observational outcomes, randomized lipid markers, guidelines, and subgroup caveats are kept separate.
+3. Open `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md` and check whether disagreement is represented without claiming to settle origins.
+
+## Risk Check
+
+Read these before giving the submission credit beyond the core mechanism:
+
+- `docs/EVIDENCE_AND_LIMITATIONS.md`: what is demonstrated versus still unproven.
+- `docs/GENERALIZABILITY_RED_TEAM.md`: where transfer is plausible and where it may fail.
+- `docs/review/REVIEWER_START_HERE.md`: how a human reviewer would audit the highest-risk claims and relations.
 
 ## What The Prototype Shows
 
@@ -53,6 +79,7 @@ For limits and open validation work, read `docs/EVIDENCE_AND_LIMITATIONS.md`. Fo
 - Do not start with the full-case maps.
 - Do not start with the generated scaffold artifacts under `artifacts/`.
 - Do not treat the UI as the source of truth.
+- Do not read every planning document before checking the worked examples.
 - Do not treat `human-review-needed` as a flaw in itself; it is the current review boundary.
 
 ## Run The Checks

@@ -45,21 +45,24 @@ The most relevant handles are:
 
 The current value is the workflow and audit surface, not a finished interactive product or a fully automated literature-review system.
 
-## Three-Minute Path
+## Judge Inspection Path
 
-Read these in order:
+For the fastest orientation, use `docs/START_HERE.md`. It gives the shorter version of this path.
 
-1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-2. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-3. `examples/lhc_black_holes/decision_space_erosion_audit.md`
+Read these in order if you want the fuller package boundary:
 
-For deeper review, continue with:
+1. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
+2. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
+3. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
+
+Then check transfer and limits:
 
 1. `examples/eggs/worked_region_observational_vs_rct_map.md`
 2. `examples/eggs/decision_space_erosion_audit.md`
 3. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 4. `docs/EVIDENCE_AND_LIMITATIONS.md`
 5. `docs/GENERALIZABILITY_RED_TEAM.md`
+6. `docs/review/REVIEWER_START_HERE.md`
 
 Optional UI:
 
