@@ -617,3 +617,88 @@ The plan is complete only when the repo contains:
 - before/after memo-quality comparison;
 - compact reviewer packet;
 - final audit explaining fixed failures, report-only warnings, open risks, and any deferred items.
+
+### 2026-07-18 Full-Plan Implementation Audit
+
+Implementation status: the codeable production slices in this plan have been
+implemented and committed. The empirical release-gate items remain explicit
+validation work rather than silent success claims.
+
+Implemented commits:
+
+- `76baca5 Harden decision memo truth boundary`
+  - recorded the phase-zero baseline and added fail-closed final lineage plus
+    active-source reader rendering.
+- `aa13962 Add result-level quantity tuple artifacts`
+  - added source-result quantity tuple records, binding reports, and mutation
+    checks.
+- `fb214ef Promote analyst decision model verifier`
+  - upgraded `AnalystDecisionModel` to the v2 contract and added a hard
+    evidence-bound verifier.
+- `1fa23f6 Add verified evidence budgeting reports`
+  - added deterministic evidence-universe, budget, source-dependency, and
+    foreground/accounting projections.
+- `8c243fc Remove deterministic semantic fallbacks`
+  - removed keyword-based semantic backfill from evidence-unit and source
+    bottom-line production paths.
+- `14b76a0 Add report-only semantic QA ablations`
+  - added relation-value, reviewer-effort, compact-review, adversarial memo QA,
+    and memo mutation reports in report-only mode.
+
+Verification completed after implementation:
+
+- `PYTHONPATH=src python3 -m pytest -q tests/test_source_evidence_units.py tests/test_analyst_decision_model_verifier.py tests/test_evidence_budget.py tests/test_plan_qa_reports.py tests/test_source_bottom_lines.py tests/test_map_briefing_decision_contracts.py tests/test_map_briefing_readiness.py tests/test_reader_memo_metadata.py tests/test_analyst_schemas.py tests/test_analyst_decision_modeling.py tests/test_decision_writer_packet.py`
+  passed: 103 tests.
+- `git diff --check` passed before the final audit edit.
+- Focused artifact checks confirmed the partial current-HEAD eggs replay wrote
+  schema-valid source evidence units and quantity tuple reports.
+
+Fresh current-HEAD eggs replay status:
+
+- Command shape:
+  `semantic staged brief --region eggs_observational_vs_rct --backend ollama:gemma4:12b-mlx`
+  with constrained source/chunk/claim/relation budgets.
+- The old source-held replay command in
+  `docs/baselines/deep_research/eggs/prototype_run_gemma4_12b_mlx/RUN_NOTES.md`
+  no longer applies directly because its replay workspace path is absent and
+  its `--max-claims-per-chunk` flag has been replaced by
+  `--max-claims-per-source`.
+- The native root-package run selected seven sources, completed whole-document
+  claim extraction, completed deterministic claim consolidation, completed
+  relation triage, and wrote:
+  - `source_evidence_units.json` with 29 units;
+  - `source_quantity_tuples.json` with 31 result tuples;
+  - `quantity_tuple_binding_report.json` with zero issues;
+  - `quantity_tuple_mutation_eval.json` with all three injected mutations
+    detected;
+  - `accepted_claims.json` with 29 accepted and zero rejected claims;
+  - `claim_relation_triage_report.json` with 25 final-map claims.
+- The run did not reach briefing artifacts before it was stopped after several
+  minutes of no stdout and no new progress beyond relation triage. This counts
+  as a live replay blocker for final memo-quality evaluation, not as a passing
+  end-to-end replay.
+
+Deferred empirical gates:
+
+- True current-stack versus v2 versus v2-plus-verifier memo ablation remains
+  unrun as a full live comparison. The repo now emits report-only relation and
+  reviewer-effort ablation artifacts, but those are not a substitute for a
+  complete blinded or pairwise memo-quality comparison.
+- At least one unrelated case replay remains required to claim broad
+  generalization.
+- Broad semantic QA checks remain report-only until calibrated against clean
+  controls and unrelated cases.
+- A model-based entailment/NLI verifier for causal overstatement, polarity
+  reversal, and action-support drift is still outside this code slice; the hard
+  verifier currently blocks unsupported IDs and source/tuple identity failures,
+  while semantic concerns are surfaced as warnings.
+
+Plan-close assessment:
+
+- Fully implemented by code criteria: source truth stabilization, quantity
+  tuple identity, analyst v2 schema, evidence-bound hard verifier, deterministic
+  evidence budgeting, source-universe/accounting artifacts, semantic fallback
+  retirement, and report-only QA/ablation artifacts.
+- Not fully complete by release criteria: full eggs replay, unrelated-case
+  replay, live comparative ablation, and human/blinded memo-quality review are
+  still open.
