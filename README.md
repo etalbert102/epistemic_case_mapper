@@ -6,6 +6,8 @@ Start with the polished judge path: `docs/START_HERE.md`.
 
 Then use the fuller judge packet: `docs/SUBMISSION_PACKET.md`.
 
+For runnable examples keyed to the pipeline stages, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
+
 For a visual inspection surface, run the static UI at `ui/index.html`.
 
 This repo is intentionally separate from `decision_space_harness`.
@@ -106,6 +108,7 @@ For the full submission boundary, read:
 
 - `docs/SUBMISSION_PACKET.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
+- `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`
 - `docs/EVIDENCE_AND_LIMITATIONS.md`
 - `docs/GENERALIZABILITY_RED_TEAM.md`
 

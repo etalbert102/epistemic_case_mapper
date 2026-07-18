@@ -52,6 +52,8 @@ This is the submission's value proposition: the map keeps the part of the reason
 
 That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
 
+For runnable examples keyed to ingestion, structure, assessment, handoff, and reproducibility, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
+
 ## Fifteen-Minute Path
 
 After the LHC check:

@@ -54,6 +54,7 @@ Read these in order if you want the fuller package boundary:
 1. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
 2. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
 3. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
+4. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
 
 Then check transfer and limits:
 

@@ -39,6 +39,7 @@ judge_paths:
   - docs/MIGRATING_FLF_SUBMISSION.md
   - docs/ADDING_A_CASE.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
+  - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
@@ -102,6 +103,7 @@ required_docs:
   - docs/REFERENCE_LINEAGE.md
   - docs/reference/flf_judging_rubric.md
   - docs/START_HERE.md
+  - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/SUBMISSION_ARTIFACT_SUMMARY.md
   - docs/SUBMISSION_PACKET.md
   - docs/VALIDATOR_FAILURE_GUIDE.md
@@ -139,6 +141,7 @@ reference_scan_paths:
   - docs/ADDING_A_CASE.md
   - docs/reference/flf_judging_rubric.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
+  - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
