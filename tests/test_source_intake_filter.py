@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from urllib import error
 from pathlib import Path
 
 from epistemic_case_mapper import cli
@@ -133,3 +134,68 @@ def test_case_init_can_exclude_unusable_sources_at_intake(monkeypatch, tmp_path:
     case_yaml = (tmp_path / "data/cases/intake_demo/case.yaml").read_text(encoding="utf-8")
     assert "good" in case_yaml
     assert "empty" not in case_yaml
+
+
+def test_source_intake_filter_records_citation_and_traceability_warnings(tmp_path: Path) -> None:
+    uncited = tmp_path / "uncited.txt"
+    uncited.write_text(
+        "Egg prices rose 47 percent in 2024. Retail demand changed 12 percent. "
+        "Supply fell 9 percent. This document gives no source list.",
+        encoding="utf-8",
+    )
+
+    result = run_source_intake_filter(
+        question="What explains egg prices?",
+        doc_paths=[uncited],
+        backend="prompt",
+        output_dir=tmp_path / "filter",
+    )
+
+    row = result.report["sources"][0]
+    assert result.report["status"] == "warning"
+    assert "no_detected_citations" in row["deterministic_flags"]
+    assert "numbers_without_nearby_citations" in row["deterministic_flags"]
+    assert row["citation_profile"]["likely_citation_count"] == 0
+    assert row["citation_profile"]["numeric_sentence_without_citation_count"] >= 3
+
+
+def test_source_intake_filter_can_check_broken_outbound_links(monkeypatch, tmp_path: Path) -> None:
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def geturl(self) -> str:
+            return "https://example.com/ok"
+
+    def fake_urlopen(req, timeout=None):
+        if "missing" in req.full_url:
+            raise error.HTTPError(req.full_url, 404, "missing", hdrs=None, fp=None)
+        return FakeResponse()
+
+    doc = tmp_path / "links.txt"
+    doc.write_text(
+        "References\n"
+        "[1] Useful page https://example.com/ok\n"
+        "[2] Missing page https://example.com/missing\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("epistemic_case_mapper.source_intake_filter.request.urlopen", fake_urlopen)
+
+    result = run_source_intake_filter(
+        question="What explains egg prices?",
+        doc_paths=[doc],
+        backend="prompt",
+        output_dir=tmp_path / "filter",
+        check_links=True,
+    )
+
+    row = result.report["sources"][0]
+    assert result.report["link_check_mode"] == "checked_2_urls"
+    assert row["link_profile"]["checked_count"] == 2
+    assert row["link_profile"]["broken_count"] == 1
+    assert "broken_outbound_links" in row["deterministic_flags"]

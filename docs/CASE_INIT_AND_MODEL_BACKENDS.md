@@ -27,6 +27,8 @@ ecm --repo-root /path/to/package case filter-sources \
 
 The filter writes `source_intake_filter.json` and `SOURCE_INTAKE_FILTER.md`. With `--backend prompt`, it records the model prompt without calling a model. With `command:<cmd>` or `ollama:<model>`, it adds model judgments about likely relevance and trust concerns.
 
+The always-on deterministic intake signals include source readability, extraction noise, question-term overlap, reference-section detection, citation density, persistent identifier counts, numeric claims without nearby citation markers, source-type hints, date hints, and retraction/correction markers. Add `--check-links` for the standalone filter or `--filter-check-links` during `case init` to resolve outbound URLs and flag broken links. Live link checks are opt-in because they can be slow or network-dependent.
+
 The filter is an intake screen, not the final evidence-quality assessment. `case init --filter-sources` records the same report before copying sources but keeps all readable sources by default. Add `--exclude-filtered-sources` only when you want the filter to route final `exclude` decisions away before the full mapping pipeline runs:
 
 ```bash

@@ -46,6 +46,9 @@ def _add_case_parsers(subparsers: Any) -> None:
     case_init.add_argument("--filter-output-dir", help="Artifact directory for intake filter output. Defaults to artifacts/source_intake_filters/<case-id>.")
     case_init.add_argument("--filter-timeout", type=int, default=60, help="Seconds allowed for the intake filter backend call.")
     case_init.add_argument("--filter-retries", type=int, default=0, help="Retries for intake filter backend failures.")
+    case_init.add_argument("--filter-check-links", action="store_true", help="Resolve outbound URLs during intake filtering.")
+    case_init.add_argument("--filter-max-links", type=int, default=25, help="Maximum outbound URLs to resolve per source during intake filtering.")
+    case_init.add_argument("--filter-link-timeout", type=float, default=5.0, help="Seconds allowed for each outbound URL check.")
     case_init.add_argument(
         "--exclude-filtered-sources",
         action="store_true",
@@ -59,6 +62,9 @@ def _add_case_parsers(subparsers: Any) -> None:
     case_filter.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/source_intake_filters/<question-slug>.")
     case_filter.add_argument("--backend-timeout", type=int, default=60)
     case_filter.add_argument("--backend-retries", type=int, default=0)
+    case_filter.add_argument("--check-links", action="store_true", help="Resolve outbound URLs and flag broken links.")
+    case_filter.add_argument("--max-links", type=int, default=25, help="Maximum outbound URLs to resolve per source.")
+    case_filter.add_argument("--link-timeout", type=float, default=5.0, help="Seconds allowed for each outbound URL check.")
     case_filter.add_argument(
         "--exclude-filtered-sources",
         action="store_true",

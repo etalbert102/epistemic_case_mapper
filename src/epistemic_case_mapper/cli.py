@@ -124,6 +124,9 @@ def _dispatch_case_command(repo_root: Path, args: argparse.Namespace) -> int:
             args.filter_output_dir,
             args.filter_timeout,
             args.filter_retries,
+            args.filter_check_links,
+            args.filter_max_links,
+            args.filter_link_timeout,
             args.exclude_filtered_sources,
             args.force,
         )
@@ -136,6 +139,9 @@ def _dispatch_case_command(repo_root: Path, args: argparse.Namespace) -> int:
             output_dir=args.output_dir,
             backend_timeout=args.backend_timeout,
             backend_retries=args.backend_retries,
+            check_links=args.check_links,
+            max_links=args.max_links,
+            link_timeout=args.link_timeout,
             exclude_filtered_sources=args.exclude_filtered_sources,
         )
     if args.command == "case" and args.case_target == "recommend-config":
@@ -439,6 +445,9 @@ def _init_case_package(
     filter_output_dir: str | None,
     filter_timeout: int,
     filter_retries: int,
+    filter_check_links: bool,
+    filter_max_links: int,
+    filter_link_timeout: float,
     exclude_filtered_sources: bool,
     force: bool,
 ) -> int:
@@ -453,6 +462,12 @@ def _init_case_package(
         return 1
     if filter_retries < 0:
         print("case_init_failed filter_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if filter_max_links < 0:
+        print("case_init_failed filter_max_links_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if filter_link_timeout <= 0:
+        print("case_init_failed filter_link_timeout_must_be_positive", file=sys.stderr)
         return 1
     working_docs = list(docs)
     intake_result = None
@@ -469,6 +484,9 @@ def _init_case_package(
                 backend_timeout=filter_timeout,
                 backend_retries=filter_retries,
                 exclude_flagged=exclude_filtered_sources,
+                check_links=filter_check_links,
+                max_links_per_source=filter_max_links,
+                link_timeout=filter_link_timeout,
             )
         except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
             print(f"case_init_failed source_filter_error={exc}", file=sys.stderr)
@@ -534,6 +552,9 @@ def _filter_sources(
     output_dir: str | None,
     backend_timeout: int,
     backend_retries: int,
+    check_links: bool,
+    max_links: int,
+    link_timeout: float,
     exclude_filtered_sources: bool,
 ) -> int:
     if backend_timeout < 1:
@@ -541,6 +562,12 @@ def _filter_sources(
         return 1
     if backend_retries < 0:
         print("source_filter_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if max_links < 0:
+        print("source_filter_failed max_links_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if link_timeout <= 0:
+        print("source_filter_failed link_timeout_must_be_positive", file=sys.stderr)
         return 1
     artifacts = Path(output_dir) if output_dir else Path("artifacts") / "source_intake_filters" / _slugify_path_component(question)
     if not artifacts.is_absolute():
@@ -554,6 +581,9 @@ def _filter_sources(
             backend_timeout=backend_timeout,
             backend_retries=backend_retries,
             exclude_flagged=exclude_filtered_sources,
+            check_links=check_links,
+            max_links_per_source=max_links,
+            link_timeout=link_timeout,
         )
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
         print(f"source_filter_failed error={exc}", file=sys.stderr)
