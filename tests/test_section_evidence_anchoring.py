@@ -11,6 +11,7 @@ from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
     build_evidence_reconciliation_report,
     render_evidence_tagged_memo,
+    unknown_evidence_ids_in_text,
 )
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -216,6 +217,100 @@ def test_render_evidence_tags_normalizes_zero_padded_evidence_ids() -> None:
     assert rendered["trace"][0]["evidence_id"] == "decision_writer_item_011"
 
 
+def test_unknown_evidence_id_detector_flags_demoted_brace_tags() -> None:
+    contracts = [{"evidence_id": "decision_writer_item_052", "source_ids": ["s1"], "claim": "Boundary claim."}]
+    memo = "## Why\n\nKnown evidence {decision_writer_item_052}. Demoted evidence {decision_writer_item_021}. Source context {s1}."
+
+    unknown = unknown_evidence_ids_in_text(memo, contracts, known_source_ids={"s1"})
+
+    assert unknown == ["decision_writer_item_021"]
+
+
+def test_unknown_evidence_id_detector_flags_source_id_inside_evidence_tag() -> None:
+    contracts = [{"evidence_id": "e1", "source_ids": ["SRC_A"], "claim": "Known claim."}]
+    memo = "## Why\n\nThe writer confused a source ID for an evidence tag {E:SRC_A}. Source context {SRC_A}."
+
+    unknown = unknown_evidence_ids_in_text(memo, contracts, known_source_ids={"SRC_A"})
+
+    assert unknown == ["SRC_A"]
+
+
+def test_reconciliation_flags_adjacent_source_evidence_mismatch() -> None:
+    contracts = [
+        {"evidence_id": "e_support", "source_ids": ["s_support"], "claim": "Support claim.", "required": True},
+        {"evidence_id": "e_boundary", "source_ids": ["s_boundary"], "claim": "Boundary claim.", "required": True},
+    ]
+    tagged = "## Why\n\nThe boundary estimate belongs to the boundary source {E:e_support} [s_boundary]. Boundary claim {E:e_boundary}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["status"] == "warning"
+    assert report["source_mismatch_warning_count"] == 1
+    assert report["source_mismatch_warnings"][0]["evidence_ids"] == ["e_support"]
+
+
+def test_reconciliation_flags_unsupported_quantity_near_evidence_tag() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_moderate",
+            "source_ids": ["s_moderate"],
+            "claim": "Moderate egg consumption up to one egg/day is not associated with cardiovascular disease risk.",
+            "required": True,
+        }
+    ]
+    tagged = "## Why\n\nEach additional 300 mg of cholesterol was associated with risk {E:e_moderate}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["status"] == "warning"
+    assert report["unsupported_quantity_warning_count"] == 1
+    assert report["unsupported_quantity_warnings"][0]["unsupported_quantities"] == ["300 mg"]
+
+
+def test_reconciliation_flags_unsupported_untagged_quantity_in_tagged_section() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_moderate",
+            "source_ids": ["s_moderate"],
+            "claim": "Moderate egg consumption up to one egg/day is not associated with cardiovascular disease risk.",
+            "required": True,
+        }
+    ]
+    tagged = (
+        "## Why\n\n"
+        "Each additional 300 mg of cholesterol was associated with risk. "
+        "Moderate intake up to one egg/day was not associated with risk {E:e_moderate}."
+    )
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["status"] == "warning"
+    assert report["untagged_unsupported_quantity_warning_count"] == 1
+    assert report["untagged_unsupported_quantity_warnings"][0]["unsupported_quantities"] == ["300 mg"]
+
+
+def test_reconciliation_allows_quantity_supported_by_another_tag_in_sentence() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_dose",
+            "source_ids": ["s_dose"],
+            "claim": "Increased egg intake greater than 1 egg/day may increase LDL cholesterol.",
+            "required": True,
+        },
+        {
+            "evidence_id": "e_subgroup",
+            "source_ids": ["s_subgroup"],
+            "claim": "High egg consumption was associated with higher cardiovascular disease risk in people with type 2 diabetes.",
+            "required": True,
+        },
+    ]
+    tagged = "## Bounds\n\nIncreased intake greater than 1 egg/day may increase LDL {E:e_dose}, and diabetes changes subgroup risk {E:e_subgroup}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["unsupported_quantity_warning_count"] == 0
+
+
 def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest.MonkeyPatch) -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]
@@ -244,7 +339,8 @@ def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest
     assert result["evidence_trace"]
     assert result["evidence_tag_section_reports"]
     assert any("### Evidence expression contracts" in prompt for prompt in prompts)
-    assert any("### Source weighting notes" in prompt for prompt in prompts)
+    assert any("section-local evidence contracts" in prompt for prompt in prompts)
+    assert not any("### Source weighting notes" in prompt for prompt in prompts if "### Evidence expression contracts" in prompt)
     assert "{E:" not in result["memo"]
     assert result["report"]["evidence_reconciliation_report"]["used_evidence_id_count"] >= 1
 

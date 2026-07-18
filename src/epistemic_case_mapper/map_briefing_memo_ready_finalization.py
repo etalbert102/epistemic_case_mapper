@@ -59,6 +59,10 @@ from epistemic_case_mapper.map_briefing_citation_trace import build_citation_tra
 from epistemic_case_mapper.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report, unresolved_warning_repair_items
 from epistemic_case_mapper.map_briefing_quantity_retention import quantity_retained, retention_quantity_rows
+from epistemic_case_mapper.map_briefing_production_readiness import (
+    build_memo_ready_production_readiness_report,
+    live_synthesis_requires_production_readiness,
+)
 from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_binding_report
 from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
 from epistemic_case_mapper.model_backends import run_model_backend
@@ -89,6 +93,44 @@ def run_memo_ready_packet_synthesis(
         }
         return {"memo": "", "prompt": compression_run.get("prompt", ""), "raw": compression_run.get("raw", ""), "report": report}
     active_packet = _packet_with_expert_judgment_compression(memo_ready_packet, compression_run)
+    readiness = build_memo_ready_production_readiness_report(active_packet)
+    if live_synthesis_requires_production_readiness(backend) and readiness.get("status") == "blocked":
+        report = {
+            "schema_id": "memo_ready_packet_synthesis_report_v1",
+            "status": "production_readiness_blocked",
+            "accepted": False,
+            "live_enrichment_required": True,
+            "used_default_path": False,
+            "production_readiness_report": readiness,
+            "expert_judgment_compression_report": compression_run.get("report", {}),
+            "issues": ["production_readiness_blocked", *_string_list(readiness.get("fatal_issues"))],
+        }
+        return {"memo": "", "prompt": "", "raw": "", "report": report}
+    outline_contract_run = _prepare_source_weighted_outline_contract_path(
+        active_packet,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    if outline_contract_run.get("enabled") and not outline_contract_run.get("accepted"):
+        report = {
+            "schema_id": "memo_ready_packet_synthesis_report_v1",
+            "status": "source_weighted_outline_contract_failed",
+            "accepted": False,
+            "live_enrichment_required": True,
+            "used_default_path": False,
+            "source_weighted_outline_contract_run": outline_contract_run.get("report", {}),
+            "expert_judgment_compression_report": compression_run.get("report", {}),
+            "issues": ["source_weighted_outline_contract_failed"],
+        }
+        return {
+            "memo": "",
+            "prompt": str(outline_contract_run.get("prompt") or ""),
+            "raw": str(outline_contract_run.get("raw") or ""),
+            "report": report,
+        }
+    if outline_contract_run.get("accepted"):
+        active_packet = _dict(outline_contract_run.get("memo_ready_packet")) or active_packet
     prompt = build_memo_ready_packet_synthesis_prompt(active_packet)
     draft = render_memo_ready_packet_draft(active_packet)
     report = {
@@ -97,11 +139,14 @@ def run_memo_ready_packet_synthesis(
         "accepted": backend.strip() == "prompt",
         "live_enrichment_required": backend.strip() != "prompt",
         "used_default_path": True,
+        "production_readiness_report": readiness,
         "issues": [],
     }
     if backend.strip() == "prompt":
+        if outline_contract_run.get("report"):
+            report["source_weighted_outline_contract_run"] = outline_contract_run.get("report", {})
         return {"memo": draft, "prompt": prompt, "raw": "", "report": report}
-    section_plan = build_memo_ready_section_synthesis_plan(active_packet)
+    section_plan = _dict(outline_contract_run.get("section_plan")) or build_memo_ready_section_synthesis_plan(active_packet)
     if section_plan.get("status") == "ready" and _list(section_plan.get("sections")):
         return _run_parallel_memo_ready_section_synthesis(
             active_packet,
@@ -111,6 +156,7 @@ def run_memo_ready_packet_synthesis(
             backend_retries=backend_retries,
             whole_prompt=prompt,
             expert_judgment_compression_run=compression_run,
+            source_weighted_outline_contract_run=outline_contract_run,
         )
     return _run_whole_memo_ready_packet_synthesis(
         active_packet,
@@ -120,7 +166,156 @@ def run_memo_ready_packet_synthesis(
         prompt=prompt,
         report=report,
         expert_judgment_compression_run=compression_run,
+        source_weighted_outline_contract_run=outline_contract_run,
     )
+
+
+def _source_weighted_outline_contracts_enabled(backend: str) -> bool:
+    if backend.strip() in {"prompt", "fake"}:
+        return False
+    return os.environ.get("ECM_SOURCE_WEIGHTED_OUTLINE_CONTRACTS", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _source_weighted_outline_protect_critical_evidence() -> bool:
+    return os.environ.get("ECM_SOURCE_WEIGHTED_OUTLINE_PROTECT_CRITICAL", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _prepare_source_weighted_outline_contract_path(
+    packet: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    if not _source_weighted_outline_contracts_enabled(backend):
+        return {
+            "enabled": False,
+            "accepted": False,
+            "report": {
+                "schema_id": "source_weighted_outline_contract_run_report_v1",
+                "status": "disabled",
+                "accepted": False,
+                "issues": [],
+            },
+        }
+    try:
+        from epistemic_case_mapper.map_briefing_editorial_brief_experiment import (
+            VARIANTS,
+            _parse_source_weighted_outline,
+            build_outline_active_evidence_ids,
+            build_outline_contract_integration_report,
+            build_outline_owned_memo_ready_packet,
+            build_source_weighted_narrative_outline_prompt,
+            build_source_weighted_outline_integrated_section_plan,
+            deterministic_editorial_brief,
+        )
+    except Exception as exc:  # noqa: BLE001 - keep synthesis failure report explicit.
+        return {
+            "enabled": True,
+            "accepted": False,
+            "report": {
+                "schema_id": "source_weighted_outline_contract_run_report_v1",
+                "status": "import_failed",
+                "accepted": False,
+                "issues": [str(exc)],
+            },
+        }
+    section_plan = build_memo_ready_section_synthesis_plan(packet)
+    sections = _list(section_plan.get("sections"))
+    if section_plan.get("status") != "ready" or not sections:
+        return {
+            "enabled": True,
+            "accepted": False,
+            "report": {
+                "schema_id": "source_weighted_outline_contract_run_report_v1",
+                "status": "section_plan_unavailable",
+                "accepted": False,
+                "issues": ["memo_ready_section_synthesis_plan_unavailable"],
+            },
+        }
+    variant = next((row for row in VARIANTS if row.variant_id == "source_weighted"), VARIANTS[0])
+    editorial_briefs = [
+        deterministic_editorial_brief(_dict(section.get("packet")), variant)
+        for section in sections
+        if isinstance(section, dict)
+    ]
+    prompt = build_source_weighted_narrative_outline_prompt(
+        packet,
+        section_plan=section_plan,
+        editorial_briefs=editorial_briefs,
+    )
+    try:
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            json_mode=True,
+            num_predict=2048,
+        )
+    except RuntimeError as exc:
+        return {
+            "enabled": True,
+            "accepted": False,
+            "prompt": prompt,
+            "raw": "",
+            "report": {
+                "schema_id": "source_weighted_outline_contract_run_report_v1",
+                "status": "backend_error",
+                "accepted": False,
+                "issues": [str(exc)],
+            },
+        }
+    raw = result.text
+    outline = _parse_source_weighted_outline(raw)
+    if not outline:
+        return {
+            "enabled": True,
+            "accepted": False,
+            "prompt": prompt,
+            "raw": raw,
+            "report": {
+                "schema_id": "source_weighted_outline_contract_run_report_v1",
+                "status": "parse_failed",
+                "accepted": False,
+                "issues": ["source_weighted_outline_parse_failed"],
+            },
+        }
+    protect_critical = _source_weighted_outline_protect_critical_evidence()
+    active_ids = build_outline_active_evidence_ids(packet, outline, protect_critical_evidence=protect_critical)
+    active_packet = build_outline_owned_memo_ready_packet(packet, outline, active_evidence_ids=active_ids)
+    active_section_plan = build_memo_ready_section_synthesis_plan(active_packet)
+    integrated_section_plan = build_source_weighted_outline_integrated_section_plan(
+        active_section_plan,
+        outline,
+        owned_evidence_ids=active_ids,
+    )
+    integration_report = build_outline_contract_integration_report(
+        packet,
+        active_packet,
+        outline,
+        active_evidence_ids=active_ids,
+    )
+    report = {
+        "schema_id": "source_weighted_outline_contract_run_report_v1",
+        "status": "ready" if integration_report.get("status") == "ready" else "ready_with_qa_warnings",
+        "accepted": True,
+        "outline_status": "accepted",
+        "protect_critical_evidence": protect_critical,
+        "outline_owned_contracts": True,
+        "integration_report": integration_report,
+        "issues": _string_list(integration_report.get("warnings")),
+    }
+    return {
+        "enabled": True,
+        "accepted": True,
+        "memo_ready_packet": active_packet,
+        "section_plan": integrated_section_plan,
+        "outline": outline,
+        "prompt": prompt,
+        "raw": raw,
+        "report": report,
+    }
 
 
 def _expert_judgment_required(packet: dict[str, Any], backend: str) -> bool:
@@ -215,6 +410,7 @@ def _run_whole_memo_ready_packet_synthesis(
     prompt: str,
     report: dict[str, Any],
     expert_judgment_compression_run: dict[str, Any] | None = None,
+    source_weighted_outline_contract_run: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         result = run_model_backend(
@@ -261,6 +457,11 @@ def _run_whole_memo_ready_packet_synthesis(
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
+    presentation = run_memo_ready_presentation_normalization(candidate, memo_ready_packet)
+    candidate = str(presentation.get("memo") or candidate)
+    retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
     analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet)
     expert_utilization = build_expert_judgment_utilization_report(
@@ -287,7 +488,9 @@ def _run_whole_memo_ready_packet_synthesis(
             "analyst_judgment_utilization_report": analyst_utilization,
             "expert_judgment_compression_report": _dict((expert_judgment_compression_run or {}).get("report")),
             "expert_judgment_utilization_report": expert_utilization,
+            "source_weighted_outline_contract_run": _dict((source_weighted_outline_contract_run or {}).get("report")),
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
+            "presentation_normalization_report": presentation.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "issues": [] if accepted else ["synthesis has packet-retention warnings"],
         }
@@ -304,6 +507,7 @@ def _run_parallel_memo_ready_section_synthesis(
     backend_retries: int,
     whole_prompt: str,
     expert_judgment_compression_run: dict[str, Any] | None = None,
+    source_weighted_outline_contract_run: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     generated = run_parallel_memo_ready_section_generation(
         section_plan,
@@ -323,6 +527,7 @@ def _run_parallel_memo_ready_section_synthesis(
         "live_enrichment_required": True,
         "used_default_path": False,
         "source_weighting_flow_audit": section_plan.get("source_weighting_flow_audit", {}),
+        "source_weighted_outline_contract_run": _dict((source_weighted_outline_contract_run or {}).get("report")),
     }
     if not generated.get("memo"):
         base_report["expert_judgment_compression_report"] = _dict((expert_judgment_compression_run or {}).get("report"))
@@ -346,6 +551,11 @@ def _run_parallel_memo_ready_section_synthesis(
         retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
         decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
         reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
+    presentation = run_memo_ready_presentation_normalization(candidate, memo_ready_packet)
+    candidate = str(presentation.get("memo") or candidate)
+    retention = build_memo_ready_packet_retention_report(candidate, memo_ready_packet)
+    decision_usefulness_retention = build_decision_usefulness_retention_report(candidate, memo_ready_packet)
+    reader_judgment_surface = build_reader_judgment_surface_report(candidate, memo_ready_packet)
     decision_usefulness_surface = build_decision_usefulness_surface_report(candidate, memo_ready_packet)
     analyst_utilization = build_analyst_judgment_utilization_report(candidate, memo_ready_packet, section_plan=section_plan)
     expert_utilization = build_expert_judgment_utilization_report(
@@ -378,6 +588,7 @@ def _run_parallel_memo_ready_section_synthesis(
             "expert_judgment_compression_report": _dict((expert_judgment_compression_run or {}).get("report")),
             "expert_judgment_utilization_report": expert_utilization,
             "decision_usefulness_repair_report": decision_usefulness_repair.get("report", {}),
+            "presentation_normalization_report": presentation.get("report", {}),
             "reader_judgment_surface_report": reader_judgment_surface,
             "evidence_reconciliation_report": generated.get("evidence_reconciliation_report", {}),
             "evidence_expression_contract_count": len(_list(generated.get("evidence_expression_contracts"))),

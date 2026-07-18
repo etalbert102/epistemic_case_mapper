@@ -23,6 +23,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_
 from epistemic_case_mapper.map_briefing_memo_warning_packet import build_memo_warning_packet
 from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_packet_synthesis_prompt
+from epistemic_case_mapper.map_briefing_production_readiness import build_memo_ready_production_readiness_report
 from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 from epistemic_case_mapper.map_briefing_answer_frame import is_weak_answer_frame
@@ -357,6 +358,7 @@ def build_memo_ready_packet(
     memo_ready_packet["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
     memo_ready_packet["source_weighting_contract"] = _dict(canonical.get("source_weighting_contract"))
     memo_ready_packet["source_weighting_flow_audit"] = _dict(canonical.get("source_weighting_flow_audit"))
+    memo_ready_packet["production_readiness_report"] = build_memo_ready_production_readiness_report(memo_ready_packet)
     return memo_ready_packet
 
 

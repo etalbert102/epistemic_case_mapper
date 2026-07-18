@@ -24,6 +24,7 @@ from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     contracts_for_section,
     evidence_ids_in_text,
     render_evidence_tagged_memo,
+    unknown_evidence_ids_in_text,
 )
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
@@ -196,8 +197,8 @@ def _run_section(
         reconciliation = {}
         if citation_mode == "evidence_tags":
             used_evidence = evidence_ids_in_text(markdown, contracts)
-            unknown_evidence = sorted(set(used_evidence) - known_evidence_ids)
-            reconciliation = build_evidence_reconciliation_report(markdown, markdown, contracts)
+            unknown_evidence = unknown_evidence_ids_in_text(markdown, contracts, known_source_ids=known_source_ids)
+            reconciliation = build_evidence_reconciliation_report(markdown, markdown, contracts, known_source_ids=known_source_ids)
         else:
             markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
             markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
@@ -267,6 +268,26 @@ def _section_reconciliation_issues(reconciliation: dict[str, Any]) -> list[str]:
         value = str(warning.get("missing_quantity_near_tag") or "").strip()
         if evidence_id and value:
             issues.append(f"missing_required_quantity:{evidence_id}:{value}")
+    for warning in _list(reconciliation.get("source_mismatch_warnings")):
+        if not isinstance(warning, dict):
+            continue
+        evidence_ids = ", ".join(_string_list(warning.get("evidence_ids")))
+        adjacent_sources = ", ".join(_string_list(warning.get("adjacent_source_ids")))
+        if evidence_ids and adjacent_sources:
+            issues.append(f"source_evidence_mismatch:{evidence_ids}:{adjacent_sources}")
+    for warning in _list(reconciliation.get("unsupported_quantity_warnings")):
+        if not isinstance(warning, dict):
+            continue
+        evidence_ids = ", ".join(_string_list(warning.get("evidence_ids")))
+        quantities = ", ".join(_string_list(warning.get("unsupported_quantities")))
+        if evidence_ids and quantities:
+            issues.append(f"unsupported_quantity_near_tag:{evidence_ids}:{quantities}")
+    for warning in _list(reconciliation.get("untagged_unsupported_quantity_warnings")):
+        if not isinstance(warning, dict):
+            continue
+        quantities = ", ".join(_string_list(warning.get("unsupported_quantities")))
+        if quantities:
+            issues.append(f"unsupported_untagged_quantity:{quantities}")
     return issues
 
 
@@ -296,11 +317,41 @@ def _section_retry_prompt(
             for row in _list(reconciliation.get("quantity_warnings"))
             if isinstance(row, dict)
         ],
+        "source_evidence_mismatches": [
+            {
+                "evidence_ids": row.get("evidence_ids"),
+                "tag_source_ids": row.get("tag_source_ids"),
+                "adjacent_source_ids": row.get("adjacent_source_ids"),
+                "previous_sentence": row.get("span"),
+            }
+            for row in _list(reconciliation.get("source_mismatch_warnings"))
+            if isinstance(row, dict)
+        ],
+        "unsupported_quantities_near_tags": [
+            {
+                "evidence_ids": row.get("evidence_ids"),
+                "unsupported_quantities": row.get("unsupported_quantities"),
+                "previous_sentence": row.get("span"),
+            }
+            for row in _list(reconciliation.get("unsupported_quantity_warnings"))
+            if isinstance(row, dict)
+        ],
+        "unsupported_untagged_quantities": [
+            {
+                "unsupported_quantities": row.get("unsupported_quantities"),
+                "previous_sentence": row.get("span"),
+            }
+            for row in _list(reconciliation.get("untagged_unsupported_quantity_warnings"))
+            if isinstance(row, dict)
+        ],
         "instructions": [
             f"Return the complete section starting with ## {heading}.",
             "Keep the prose natural and decision-ready.",
             "Include every missing required contract below with its evidence tag.",
             "For each missing required quantity or detail, include it in the same sentence as that evidence tag.",
+            "For each source-evidence mismatch, attach the claim to the evidence tag whose source IDs match the sentence.",
+            "For each unsupported quantity near a tag, either remove that quantity from the sentence or use the evidence tag whose contract supports it.",
+            "For each unsupported untagged quantity, remove it unless the original contracts list that quantity.",
             "Use only evidence tags and source IDs already listed in the original prompt.",
         ],
     }

@@ -10,9 +10,9 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
     list_value as _list,
+    short_text as _short_text,
     string_list as _string_list,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_section_notes import render_memo_ready_section_markdown_notes
 from epistemic_case_mapper.map_briefing_section_evidence_utils import (
     brace_tokens as _brace_tokens,
     compact_contract_for_prompt as _compact_contract_for_prompt,
@@ -23,6 +23,7 @@ from epistemic_case_mapper.map_briefing_section_evidence_utils import (
     evidence_ids_from_brace_content as _evidence_ids_from_brace_content,
     heading_matches_section as _heading_matches_section,
     label_key as _label_key,
+    paragraph_around_index,
     primary_section_for_role as _primary_section_for_role,
     quantity_contracts as _quantity_contracts,
     quantity_source_ids as _quantity_source_ids,
@@ -214,30 +215,74 @@ def build_evidence_tagged_section_prompt(
     heading = str(section_packet.get("heading") or "").strip()
     compact_contracts = [_compact_contract_for_prompt(row) for row in contracts]
     section_jobs = build_section_local_evidence_jobs(section_packet, contracts)
+    allowed_quantities = _allowed_quantity_surfaces(contracts)
     return (
-        "You are writing one section of a source-grounded decision memo from markdown analyst notes.\n"
-        "Write polished decision-ready prose. Evidence tags are trace anchors that the renderer converts into reader citations.\n\n"
+        "You are writing one section of a source-grounded decision memo from section-local evidence contracts.\n"
+        "Write polished decision-ready prose. The contracts are the factual payload for this section; evidence tags are trace anchors that the renderer converts into reader citations.\n\n"
         "Output rules:\n"
         f"- Output starts exactly with: ## {heading}\n"
         "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
         "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
         "- Treat contracts marked required as a coverage checklist: every required contract appears at least once with its evidence tag.\n"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
+        "- Factual claims and numeric quantities in this section come from the Evidence expression contracts and Section-local evidence jobs.\n"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Use parentheses for confidence intervals, uncertainty ranges, and numeric ranges.\n"
         "- Use the Decision argument for this section as the governing structure; use evidence contracts as anchors for those moves.\n"
         "- Preserve the quantities, scope, direction, and caveats from the evidence contracts.\n"
         "- Use Priority quantity contracts to keep decision-relevant quantities with the exact claim, endpoint, subgroup, and comparator they describe.\n"
         "- Reader-facing allowed-use and not-enough-for limits define the claim role while required contracts still keep their own tags and listed quantities.\n"
+        "- Let each evidence role determine the sentence job: driver evidence carries the answer; boundary evidence narrows scope or dose; calibrator evidence adjusts confidence or magnitude; context evidence explains interpretation.\n"
         "- If a quantity appears in an evidence expression contract, keep that quantity in the same sentence as that exact contract's tag.\n"
         "- When Section-local evidence jobs are present, write around those paragraph jobs and attach tags from each job's allowed evidence IDs for that paragraph.\n"
         "- Write natural prose; tags are trace markers attached to sentences.\n\n"
-        f"{render_memo_ready_section_markdown_notes(section_packet, known_source_ids=known_source_ids)}\n\n"
+        f"{_render_contract_first_section_notes(section_packet, known_source_ids=known_source_ids, allowed_quantities=allowed_quantities)}\n\n"
         f"{_render_section_local_evidence_jobs(section_jobs)}"
         "### Evidence expression contracts\n"
         f"{json.dumps(compact_contracts, indent=2, ensure_ascii=False)}\n\n"
         "Now write the section as natural Markdown prose with evidence tags.\n"
     )
+
+
+def _render_contract_first_section_notes(
+    section_packet: dict[str, Any],
+    *,
+    known_source_ids: list[str],
+    allowed_quantities: list[str],
+) -> str:
+    packet = _dict(section_packet)
+    top = _dict(packet.get("top_context"))
+    focus = _dict(packet.get("section_focus"))
+    role = _dict(packet.get("section_role_contract"))
+    lines = [
+        f"Known source IDs: {', '.join(known_source_ids)}",
+        "",
+        f"## Section to Write: {str(packet.get('heading') or '').strip()}",
+        f"Purpose: {str(packet.get('section_job') or role.get('role') or '').strip()}",
+        f"Reader question: {str(focus.get('reader_question') or '').strip()}",
+        f"Decision question: {str(top.get('decision_question') or '').strip()}",
+        f"Current read: {str(top.get('current_read_reference') or '').strip()}",
+    ]
+    if allowed_quantities:
+        lines.append(f"Section quantity surfaces: {', '.join(allowed_quantities)}")
+    role_lines = _string_list(role.get("do"))[:6]
+    if role_lines:
+        lines.extend(["", "### Section role", *(f"- {line}" for line in role_lines)])
+    paragraph_flow = _string_list(focus.get("paragraph_shape"))[:4]
+    if paragraph_flow:
+        lines.extend(["", "### Paragraph flow", *(f"{index}. {line}" for index, line in enumerate(paragraph_flow, start=1))])
+    return "\n".join(line for line in lines if line is not None).strip()
+
+
+def _allowed_quantity_surfaces(contracts: list[dict[str, Any]]) -> list[str]:
+    rows: list[str] = []
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        for quantity in _list(contract.get("required_quantity_atoms")):
+            if isinstance(quantity, dict):
+                rows.append(str(quantity.get("value") or "").strip())
+    return _dedupe(row for row in rows if row)
 
 
 def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -556,6 +601,8 @@ def build_evidence_reconciliation_report(
     tagged_memo: str,
     rendered_memo: str,
     contracts: list[dict[str, Any]],
+    *,
+    known_source_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     used_ids = set(evidence_ids_in_text(tagged_memo, contracts))
     known_ids = {str(row.get("evidence_id") or "") for row in contracts}
@@ -563,9 +610,19 @@ def build_evidence_reconciliation_report(
     missing_required = [row.get("evidence_id") for row in required if row.get("evidence_id") not in used_ids]
     unknown = sorted(used_ids - known_ids)
     quantity_warnings = _quantity_warnings(tagged_memo, contracts)
+    source_mismatch_warnings = _adjacent_source_mismatch_warnings(tagged_memo, contracts, known_source_ids=known_source_ids)
+    unsupported_quantity_warnings = _tagged_sentence_unsupported_quantity_warnings(tagged_memo, contracts)
+    untagged_unsupported_quantity_warnings = _untagged_sentence_unsupported_quantity_warnings(tagged_memo, contracts)
     untagged = _untagged_high_risk_sentences(tagged_memo)
     status = "ready"
-    if missing_required or unknown or quantity_warnings:
+    if (
+        missing_required
+        or unknown
+        or quantity_warnings
+        or source_mismatch_warnings
+        or unsupported_quantity_warnings
+        or untagged_unsupported_quantity_warnings
+    ):
         status = "warning"
     return {
         "schema_id": "evidence_reconciliation_report_v1",
@@ -577,6 +634,12 @@ def build_evidence_reconciliation_report(
         "unknown_evidence_ids": unknown,
         "quantity_warning_count": len(quantity_warnings),
         "quantity_warnings": quantity_warnings,
+        "source_mismatch_warning_count": len(source_mismatch_warnings),
+        "source_mismatch_warnings": source_mismatch_warnings,
+        "unsupported_quantity_warning_count": len(unsupported_quantity_warnings),
+        "unsupported_quantity_warnings": unsupported_quantity_warnings,
+        "untagged_unsupported_quantity_warning_count": len(untagged_unsupported_quantity_warnings),
+        "untagged_unsupported_quantity_warnings": untagged_unsupported_quantity_warnings,
         "untagged_high_risk_sentence_count": len(untagged),
         "untagged_high_risk_sentences": untagged[:20],
         "raw_tag_count": len(evidence_ids_in_text(tagged_memo, contracts)),
@@ -584,8 +647,217 @@ def build_evidence_reconciliation_report(
     }
 
 
+def _tagged_sentence_unsupported_quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    contracts_by_id = _contracts_by_evidence_alias(contracts)
+    warnings = []
+    text = str(tagged_memo or "")
+    checked_sentences: set[str] = set()
+    for match in BRACE_TAG_RE.finditer(text):
+        sentence = _sentence_around_index(text, match.start())
+        if sentence in checked_sentences:
+            continue
+        checked_sentences.add(sentence)
+        evidence_ids = []
+        for tag_content in BRACE_TAG_RE.findall(sentence):
+            evidence_ids.extend(_evidence_ids_from_brace_content(tag_content, contracts_by_id))
+        evidence_ids = _dedupe(evidence_ids)
+        if not evidence_ids:
+            continue
+        quantities = _quantity_surfaces(sentence)
+        if not quantities:
+            continue
+        allowed_text = " ".join(
+            _contract_quantity_support_text(contracts_by_id.get(evidence_id, {}))
+            for evidence_id in evidence_ids
+        )
+        unsupported = [quantity for quantity in quantities if not _quantity_supported_by_text(quantity, allowed_text)]
+        if unsupported:
+            warnings.append(
+                {
+                    "evidence_ids": evidence_ids,
+                    "unsupported_quantities": unsupported,
+                    "tag": match.group(0),
+                    "span": _short_text(sentence, 300),
+                }
+            )
+    return warnings
+
+
+def _untagged_sentence_unsupported_quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    allowed_text = " ".join(_contract_quantity_support_text(contract) for contract in contracts if isinstance(contract, dict))
+    warnings = []
+    for sentence in _sentences(str(tagged_memo or "")):
+        if BRACE_TAG_RE.search(sentence):
+            continue
+        quantities = _quantity_surfaces(sentence)
+        if not quantities:
+            continue
+        unsupported = [quantity for quantity in quantities if not _quantity_supported_by_text(quantity, allowed_text)]
+        if unsupported:
+            warnings.append(
+                {
+                    "unsupported_quantities": unsupported,
+                    "span": _short_text(sentence, 300),
+                }
+            )
+    return warnings
+
+
+def _sentences(text: str) -> list[str]:
+    return [
+        part.strip()
+        for part in re.split(r"(?<=[.!?])\s+|\n+", str(text or ""))
+        if len(part.strip()) > 20
+    ]
+
+
+def _contract_quantity_support_text(contract: dict[str, Any]) -> str:
+    parts = [
+        contract.get("claim"),
+        contract.get("population_scope"),
+        contract.get("required_caveat"),
+        " ".join(_string_list(contract.get("must_preserve_terms"))),
+    ]
+    for quantity in _list(contract.get("required_quantity_atoms")):
+        if isinstance(quantity, dict):
+            parts.append(str(quantity.get("value") or ""))
+            parts.append(str(quantity.get("interpretation") or ""))
+    return " ".join(str(part or "") for part in parts)
+
+
+def _sentence_around_index(text: str, index: int) -> str:
+    text = str(text or "")
+    start_candidates = [text.rfind(mark, 0, max(index, 0)) for mark in (". ", "? ", "! ", "\n")]
+    start = max(start_candidates)
+    end_candidates = [pos for mark in (".", "?", "!", "\n") if (pos := text.find(mark, index)) >= 0]
+    end = min(end_candidates) + 1 if end_candidates else len(text)
+    return text[start + 1 : end].strip()
+
+
+def _quantity_surfaces(text: str) -> list[str]:
+    pattern = re.compile(
+        r"\b\d+(?:\.\d+)?\s*(?:mg/day|mg per day|mg|g/day|g|%|percent|egg/day|eggs/day|egg|eggs|"
+        r"day|days|week|weeks|month|months|year|years|hr|rr|or|ratio|ci)\b",
+        flags=re.IGNORECASE,
+    )
+    return _dedupe(match.group(0).strip() for match in pattern.finditer(str(text or "")))
+
+
+def _quantity_supported_by_text(quantity: str, allowed_text: str) -> bool:
+    numbers = re.findall(r"\d+(?:\.\d+)?", str(quantity or ""))
+    allowed = str(allowed_text or "").lower()
+    for number in numbers:
+        if number in allowed:
+            continue
+        word = _NUMBER_WORDS.get(number)
+        if word and re.search(rf"\b{re.escape(word)}\b", allowed):
+            continue
+        return False
+    return bool(numbers)
+
+
+_NUMBER_WORDS = {
+    "0": "zero",
+    "1": "one",
+    "2": "two",
+    "3": "three",
+    "4": "four",
+    "5": "five",
+    "6": "six",
+    "7": "seven",
+    "8": "eight",
+    "9": "nine",
+    "10": "ten",
+}
+
+
+def _adjacent_source_mismatch_warnings(
+    tagged_memo: str,
+    contracts: list[dict[str, Any]],
+    *,
+    known_source_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    contracts_by_id = _contracts_by_evidence_alias(contracts)
+    all_known_source_ids = set(known_source_ids or set()) | {
+        source_id
+        for contract in contracts
+        for source_id in [*_string_list(contract.get("source_ids")), *_string_list(contract.get("citation_source_ids"))]
+    }
+    warnings = []
+    text = str(tagged_memo or "")
+    for match in BRACE_TAG_RE.finditer(text):
+        evidence_ids = _evidence_ids_from_brace_content(match.group(1), contracts_by_id)
+        if not evidence_ids:
+            continue
+        tag_sources = set()
+        for evidence_id in evidence_ids:
+            contract = contracts_by_id.get(evidence_id, {})
+            tag_sources.update(_string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids")))
+        adjacent_sources = _adjacent_bracket_source_ids(text, match, all_known_source_ids)
+        if adjacent_sources and tag_sources and not set(adjacent_sources).issubset(tag_sources):
+            warnings.append(
+                {
+                    "evidence_ids": evidence_ids,
+                    "tag_source_ids": sorted(tag_sources),
+                    "adjacent_source_ids": adjacent_sources,
+                    "tag": match.group(0),
+                    "span": _short_text(paragraph_around_index(text, match.start()), 300),
+                }
+            )
+    return warnings
+
+
+def _adjacent_bracket_source_ids(text: str, match: re.Match[str], known_source_ids: set[str]) -> list[str]:
+    rows: list[str] = []
+    after = re.match(r"\s*\[([^\[\]\n]{1,300})\]", text[match.end() : match.end() + 340])
+    if after:
+        rows.extend(_known_sources_from_bracket(after.group(1), known_source_ids))
+    before = re.search(r"\[([^\[\]\n]{1,300})\]\s*$", text[max(0, match.start() - 340) : match.start()])
+    if before:
+        rows.extend(_known_sources_from_bracket(before.group(1), known_source_ids))
+    return _dedupe(rows)
+
+
+def _known_sources_from_bracket(content: str, known_source_ids: set[str]) -> list[str]:
+    return [
+        token
+        for token in (part.strip() for part in re.split(r"\s*(?:,|;)\s*", str(content or "")))
+        if token in known_source_ids
+    ]
+
+
 def evidence_ids_in_text(text: str, contracts: list[dict[str, Any]]) -> list[str]:
     return _evidence_ids_in_contract_text(text, contracts)
+
+
+def unknown_evidence_ids_in_text(
+    text: str,
+    contracts: list[dict[str, Any]],
+    *,
+    known_source_ids: set[str] | None = None,
+) -> list[str]:
+    contracts_by_id = _contracts_by_evidence_alias(contracts)
+    known_aliases = set(contracts_by_id)
+    known_sources = set(known_source_ids or set())
+    unknown = []
+    for content in BRACE_TAG_RE.findall(str(text or "")):
+        for token in _brace_tokens(content):
+            candidate = token.removeprefix("E:").strip()
+            if not candidate or candidate in known_aliases:
+                continue
+            if candidate in known_sources and not str(token or "").strip().startswith("E:"):
+                continue
+            if _looks_like_evidence_reference(token, candidate):
+                unknown.append(candidate)
+    return _dedupe(unknown)
+
+
+def _looks_like_evidence_reference(token: str, candidate: str) -> bool:
+    return bool(
+        str(token or "").strip().startswith("E:")
+        or re.search(r"(?:^|_)(?:evidence|item|claim|decision_writer_item)_?\d+$", candidate)
+        or re.match(r"^(?:e|ev|c)\d+$", candidate)
+    )
 
 
 def _obligations_by_item(canonical: dict[str, Any]) -> dict[str, dict[str, Any]]:

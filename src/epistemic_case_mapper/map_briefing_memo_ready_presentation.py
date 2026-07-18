@@ -60,6 +60,10 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("inserted_source_weighting")
         normalized = next_memo
+    next_memo = _normalize_parenthetical_source_id_citations(normalized, packet)
+    if next_memo != normalized:
+        changes.append("normalized_parenthetical_source_id_citations")
+        normalized = next_memo
     next_memo = _replace_source_aliases(normalized, source_aliases)
     if next_memo != normalized:
         changes.append("normalized_source_labels")
@@ -473,6 +477,25 @@ def _link_inline_citations(memo: str, packet: dict[str, Any], *, citation_trace_
 
     linked = re.sub(r"\(([^\(\)\n]{1,260})\)", replace_parenthetical, memo)
     return re.sub(r"\[([^\[\]\n]{1,260})\](?!\()", replace_bracketed, linked)
+
+
+def _normalize_parenthetical_source_id_citations(memo: str, packet: dict[str, Any]) -> str:
+    known_ids = {
+        str(entry.get("source_id") or "").strip()
+        for entry in _canonical_source_entries(packet)
+        if str(entry.get("source_id") or "").strip()
+    }
+    if not known_ids:
+        return memo
+
+    def replace(match: re.Match[str]) -> str:
+        content = match.group(1)
+        parts = _citation_parts(content)
+        if parts and all(part in known_ids for part in parts):
+            return f"[{', '.join(parts)}]"
+        return match.group(0)
+
+    return re.sub(r"\(([^\(\)\n]{1,260})\)", replace, str(memo or ""))
 
 
 

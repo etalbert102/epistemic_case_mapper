@@ -43,6 +43,28 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     assert "](https://example.test/bmj-2020)" in result["memo"]
     assert retention["missing_mandatory_count"] == 0
 
+
+def test_presentation_normalization_converts_parenthetical_source_ids_to_citations() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "SRC_A", "source_label": "Study A 2025", "source_url": "https://example.test/a"},
+            {"source_id": "SRC_B", "source_label": "Study B 2025", "source_url": "https://example.test/b"},
+        ],
+        "evidence_items": [],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = "# Decision Memo\n\n**Bottom Line:** Option A is supported (SRC_A, SRC_B), with no change to ordinary parentheses (CVD)."
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "[Study A 2025]" in result["memo"]
+    assert "[Study B 2025]" in result["memo"]
+    assert "(SRC_A, SRC_B)" not in result["memo"]
+    assert "(CVD)" in result["memo"]
+    assert "normalized_parenthetical_source_id_citations" in result["report"]["changes"]
+
+
 def test_presentation_sources_use_active_source_trail_only() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

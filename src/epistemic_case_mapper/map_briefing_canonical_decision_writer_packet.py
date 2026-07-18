@@ -140,7 +140,23 @@ def _source_weight_bundle(packet: dict[str, Any], interface: dict[str, Any], sou
             "source_weight_judgments": analyst_judgments,
             "source_weight_judgment_report": build_source_weight_judgment_report(analyst_judgments, source_trail),
         }
-    return build_source_weight_judgment_bundle(interface, source_trail)
+    bundle = build_source_weight_judgment_bundle(interface, source_trail)
+    report = dict(bundle.get("source_weight_judgment_report", {}))
+    warnings = _dedupe(
+        [
+            *_string_list(report.get("warnings")),
+            "analyst_source_weight_judgments_missing_projected_from_writer_roles",
+        ]
+    )
+    report.update(
+        {
+            "status": "warning",
+            "warnings": warnings,
+            "fallback_used": True,
+            "fallback_reason": "analyst_source_weight_judgments_missing",
+        }
+    )
+    return {**bundle, "source_weight_judgment_report": report}
 
 
 def _decision_brief_skeleton(interface: dict[str, Any]) -> dict[str, Any]:

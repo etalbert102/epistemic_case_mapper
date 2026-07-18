@@ -350,7 +350,12 @@ def test_canonical_packet_gives_unassigned_sources_contextual_judgments() -> Non
     assert context_judgment["main_use"] == "contextualizes"
     assert context_judgment["omission_reason"]
     assert "No memo-facing evidence item" in context_judgment["why_weight_this_way"]
-    assert canonical["source_weight_judgment_report"]["status"] == "ready"
+    assert canonical["source_weight_judgment_report"]["status"] == "warning"
+    assert canonical["source_weight_judgment_report"]["fallback_used"] is True
+    assert (
+        "analyst_source_weight_judgments_missing_projected_from_writer_roles"
+        in canonical["source_weight_judgment_report"]["warnings"]
+    )
     assert "source_ids_without_weight_judgment" not in canonical["source_weight_judgment_report"]["warnings"]
 
 

@@ -29,6 +29,7 @@ def build_memo_ready_section_markdown_prompt(section_packet: dict[str, Any], *, 
         "- Use Priority quantity contracts to keep decision-relevant quantities with the claim, endpoint, subgroup, and comparator they belong to.\n"
         "- Cite sources for their listed citation job: support sources for support claims, boundary sources for boundaries, counterweight sources for tensions, calibration sources for quantities, and context sources for context.\n"
         "- For reader-facing judgments, follow the allowed-use and not-enough-for limits when deciding what the judgment can support.\n"
+        "- Let each evidence role determine the sentence job: driver evidence carries the answer; boundary evidence narrows scope or dose; calibrator evidence adjusts confidence or magnitude; context evidence explains interpretation.\n"
         "- Split evidence with different citation jobs into separate clauses or sentences so each citation supports the exact claim beside it.\n"
         "- Make each paragraph do a distinct reasoning job with fresh sentence-level value.\n\n"
         f"{render_memo_ready_section_markdown_notes(section_packet, known_source_ids=known_source_ids)}\n"

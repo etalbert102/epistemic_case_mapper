@@ -40,6 +40,9 @@ from epistemic_case_mapper.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
 )
+from epistemic_case_mapper.map_briefing_production_readiness import (
+    build_memo_ready_production_readiness_report,
+)
 from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
 from epistemic_case_mapper.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
@@ -174,6 +177,7 @@ def decision_writer_packet_to_memo_ready_packet(
     memo_ready["canonical_decision_writer_packet_quality_report"] = canonical.get("quality_report", {})
     memo_ready["source_weighting_contract"] = _dict(canonical.get("source_weighting_contract"))
     memo_ready["source_weighting_flow_audit"] = _dict(canonical.get("source_weighting_flow_audit"))
+    memo_ready["production_readiness_report"] = build_memo_ready_production_readiness_report(memo_ready)
     return memo_ready
 
 
