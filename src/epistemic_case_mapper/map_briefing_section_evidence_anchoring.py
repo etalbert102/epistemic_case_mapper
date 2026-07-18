@@ -130,24 +130,118 @@ def contracts_for_section(
     contracts: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     section_id = str(section_packet.get("section_id") or "").strip()
-    local_ids = {
-        str(row.get("item_id") or row.get("requirement_id") or "")
-        for key in ("evidence_context", "section_retention_requirements", "source_bound_evidence_atoms")
-        for row in _list(section_packet.get(key))
-        if isinstance(row, dict)
+    required_local_ids, allowed_local_ids = _section_local_evidence_id_sets(section_packet)
+    contracts_by_alias = _contracts_by_evidence_alias(contracts)
+    required_contract_ids = {
+        str(contract.get("evidence_id") or "").strip()
+        for evidence_id in required_local_ids
+        if (contract := contracts_by_alias.get(evidence_id))
     }
-    selected = [
-        row
-        for row in contracts
-        if row.get("evidence_id") in local_ids
-        or row.get("primary_section") == section_id
-        or _heading_matches_section(str(row.get("primary_section") or ""), heading)
-    ]
+    allowed_contract_ids = {
+        str(contract.get("evidence_id") or "").strip()
+        for evidence_id in allowed_local_ids
+        if (contract := contracts_by_alias.get(evidence_id))
+    }
+    selected = []
+    for row in contracts:
+        evidence_id = str(row.get("evidence_id") or "").strip()
+        primary_section_match = row.get("primary_section") == section_id or _heading_matches_section(str(row.get("primary_section") or ""), heading)
+        if evidence_id in required_contract_ids or primary_section_match:
+            selected.append(row)
+        elif evidence_id in allowed_contract_ids:
+            selected.append({**row, "required": False})
     if selected:
         return _dedupe_section_quantity_obligations(selected[:18])
     if section_id and section_id not in {"answer_evidence", "bottom_line"}:
         return []
     return _dedupe_section_quantity_obligations([row for row in contracts if row.get("required")][:12])
+
+
+_SECTION_LOCAL_EVIDENCE_ROOTS = {
+    "analyst_argument_moves",
+    "decision_argument_section",
+    "decision_usefulness_moves",
+    "evidence_context",
+    "priority_quantity_contracts",
+    "protected_quantity_sets",
+    "reader_guidance_application",
+    "required_points",
+    "section_argument_steps",
+    "section_retention_requirements",
+    "source_bound_evidence_atoms",
+    "source_weighting",
+}
+
+_SECTION_REQUIRED_EVIDENCE_ROOTS = {
+    "analyst_argument_moves",
+    "decision_argument_section",
+    "evidence_context",
+    "priority_quantity_contracts",
+    "protected_quantity_sets",
+    "section_argument_steps",
+    "section_retention_requirements",
+    "source_bound_evidence_atoms",
+}
+
+_SECTION_LOCAL_EVIDENCE_KEYS = {
+    "allowed_evidence_ids",
+    "atom_id",
+    "covered_evidence_item_ids",
+    "evidence_id",
+    "evidence_ids",
+    "evidence_item_id",
+    "evidence_item_ids",
+    "item_id",
+    "required_evidence_ids",
+    "requirement_id",
+    "source_evidence_item_id",
+}
+
+
+def _section_local_evidence_ids(section_packet: dict[str, Any]) -> set[str]:
+    required_ids, allowed_ids = _section_local_evidence_id_sets(section_packet)
+    return required_ids | allowed_ids
+
+
+def _section_local_evidence_id_sets(section_packet: dict[str, Any]) -> tuple[set[str], set[str]]:
+    required_ids: set[str] = set()
+    allowed_ids: set[str] = set()
+    ids: set[str] = set()
+    for key in _SECTION_LOCAL_EVIDENCE_ROOTS:
+        _collect_section_local_evidence_ids(section_packet.get(key), ids=ids)
+        if key in _SECTION_REQUIRED_EVIDENCE_ROOTS:
+            required_ids.update(ids)
+        else:
+            allowed_ids.update(ids)
+        ids.clear()
+    return {value for value in required_ids if value}, {value for value in allowed_ids if value}
+
+
+def _collect_section_local_evidence_ids(value: Any, *, ids: set[str], parent_key: str = "") -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_text = str(key or "")
+            key_norm = re.sub(r"[^a-z0-9]+", "_", key_text.lower()).strip("_")
+            if key_norm in _SECTION_LOCAL_EVIDENCE_KEYS:
+                for evidence_id in _string_list(child):
+                    evidence_id = str(evidence_id or "").strip()
+                    if evidence_id:
+                        ids.add(evidence_id)
+                if isinstance(child, (dict, list)):
+                    _collect_section_local_evidence_ids(child, ids=ids, parent_key=key_norm)
+                continue
+            if isinstance(child, (dict, list)):
+                _collect_section_local_evidence_ids(child, ids=ids, parent_key=key_norm)
+        return
+    if isinstance(value, list):
+        for child in value:
+            _collect_section_local_evidence_ids(child, ids=ids, parent_key=parent_key)
+        return
+    if parent_key in _SECTION_LOCAL_EVIDENCE_KEYS:
+        for evidence_id in _string_list(value):
+            evidence_id = str(evidence_id or "").strip()
+            if evidence_id:
+                ids.add(evidence_id)
 
 
 def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -217,7 +311,7 @@ def build_evidence_tagged_section_prompt(
     section_jobs = build_section_local_evidence_jobs(section_packet, contracts)
     allowed_quantities = _allowed_quantity_surfaces(contracts)
     return (
-        "You are writing one section of a source-grounded decision memo from section-local evidence contracts.\n"
+        "You are writing one section of a source-grounded decision memo from markdown analyst notes and section-local evidence contracts.\n"
         "Write polished decision-ready prose. The contracts are the factual payload for this section; evidence tags are trace anchors that the renderer converts into reader citations.\n\n"
         "Output rules:\n"
         f"- Output starts exactly with: ## {heading}\n"
@@ -270,17 +364,109 @@ def _render_contract_first_section_notes(
         lines.append(f"Section quantity surfaces: {', '.join(allowed_quantities)}")
     role_lines = _string_list(role.get("do"))[:6]
     if role_lines:
-        lines.extend(["", "### Section role", *(f"- {line}" for line in role_lines)])
+        lines.extend(["", "### Section job", *(f"- {line}" for line in role_lines)])
+    avoid_lines = _string_list(role.get("avoid"))[:6]
+    if avoid_lines:
+        lines.extend(["", "### Avoid", *(f"- {line}" for line in avoid_lines)])
+    calibration_lines = _string_list(top.get("must_not_overstate"))[:8]
+    if calibration_lines:
+        lines.extend(["", "### Calibration limits", *(f"- {line}" for line in calibration_lines)])
     paragraph_flow = _string_list(focus.get("paragraph_shape"))[:4]
     if paragraph_flow:
-        lines.extend(["", "### Paragraph flow", *(f"{index}. {line}" for index, line in enumerate(paragraph_flow, start=1))])
+        lines.extend(["", "### Suggested paragraph flow", *(f"{index}. {line}" for index, line in enumerate(paragraph_flow, start=1))])
     if decision_argument := _compact_decision_argument_section(packet.get("decision_argument_section")):
         lines.extend(["", "### Decision argument for this section", json.dumps(decision_argument, indent=2, ensure_ascii=False)])
     if analyst_moves := _compact_analyst_argument_moves(packet.get("analyst_argument_moves")):
         lines.extend(["", "### Analyst argument moves", json.dumps(analyst_moves, indent=2, ensure_ascii=False)])
     if usefulness_moves := _compact_decision_usefulness_moves(packet.get("decision_usefulness_moves")):
         lines.extend(["", "### Decision-usefulness moves", json.dumps(usefulness_moves, indent=2, ensure_ascii=False)])
+    if required_evidence := _compact_required_evidence_points(packet):
+        lines.extend(["", "### Required evidence points", json.dumps(required_evidence, indent=2, ensure_ascii=False)])
+    if language_limits := _compact_source_language_limits(top.get("evidence_language_contracts")):
+        lines.extend(["", "### Source language and use limits", json.dumps(language_limits, indent=2, ensure_ascii=False)])
+    if source_weighting := _compact_source_weighting_notes(packet.get("source_weighting")):
+        lines.extend(["", "### Source weighting notes", json.dumps(source_weighting, indent=2, ensure_ascii=False)])
+    if reader_judgments := _compact_reader_judgments(top.get("reader_judgments_to_surface")):
+        lines.extend(["", "### Reader-facing judgments to surface", json.dumps(reader_judgments, indent=2, ensure_ascii=False)])
     return "\n".join(line for line in lines if line is not None).strip()
+
+
+def _compact_required_evidence_points(section_packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for row in [*_list(section_packet.get("source_bound_evidence_atoms")), *_list(section_packet.get("evidence_context"))]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "item_id": row.get("item_id") or row.get("atom_id"),
+                    "claim": _short_text(row.get("claim"), 260),
+                    "source_ids": _string_list(row.get("source_ids"))[:8],
+                    "citation_role": row.get("citation_role"),
+                    "decision_relevance": _short_text(row.get("decision_relevance"), 180),
+                    "section_specific_job": _short_text(row.get("section_specific_job"), 180),
+                }
+            )
+        )
+    return rows[:12]
+
+
+def _compact_source_language_limits(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value)[:8]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "item_id": row.get("item_id"),
+                    "source_ids": _string_list(row.get("source_ids"))[:8],
+                    "allowed_language": _string_list(row.get("allowed_language"))[:8],
+                    "must_qualify_with": _string_list(row.get("must_qualify_with"))[:8],
+                    "avoid_language": _string_list(row.get("avoid_language"))[:8],
+                }
+            )
+        )
+    return rows
+
+
+def _compact_source_weighting_notes(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value)[:8]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "source_ids": _string_list(row.get("source_ids"))[:8],
+                    "main_use": row.get("main_use"),
+                    "weight_summary": _short_text(row.get("weight_summary"), 240),
+                    "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 180),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids"))[:8],
+                }
+            )
+        )
+    return rows
+
+
+def _compact_reader_judgments(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    for row in _list(value)[:8]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "judgment_type": row.get("judgment_type"),
+                    "target_section": row.get("target_section"),
+                    "priority": row.get("priority"),
+                    "judgment": _short_text(row.get("judgment"), 240),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids"))[:8],
+                    "source_ids": _string_list(row.get("source_ids"))[:8],
+                }
+            )
+        )
+    return rows
 
 
 def _compact_analyst_argument_moves(value: Any) -> list[dict[str, Any]]:
@@ -363,13 +549,18 @@ def _allowed_quantity_surfaces(contracts: list[dict[str, Any]]) -> list[str]:
 def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     section_id = str(_dict(section_packet).get("section_id") or "").strip()
     explicit_jobs = _explicit_section_local_evidence_jobs(section_packet, contracts)
-    if explicit_jobs:
+    if explicit_jobs and _has_section_local_evidence_job_rows(section_packet, contracts):
         return explicit_jobs
-    if section_id != "counterweights":
+    if section_id == "counterweights":
+        move_jobs = _section_jobs_from_argument_moves(section_packet, contracts)
+        if move_jobs:
+            return move_jobs
+        if explicit_jobs:
+            return explicit_jobs
+    elif explicit_jobs:
+        return explicit_jobs
+    else:
         return []
-    move_jobs = _section_jobs_from_argument_moves(section_packet, contracts)
-    if move_jobs:
-        return move_jobs
     grouped: dict[str, list[dict[str, Any]]] = {}
     for contract in contracts:
         if not isinstance(contract, dict):
@@ -383,6 +574,16 @@ def build_section_local_evidence_jobs(section_packet: dict[str, Any], contracts:
             continue
         jobs.append(_section_local_job(job_id, rows))
     return jobs
+
+
+def _has_section_local_evidence_job_rows(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> bool:
+    contract_ids = {str(row.get("evidence_id") or "").strip() for row in contracts if isinstance(row, dict)}
+    for row in _list(_dict(section_packet).get("section_local_evidence_jobs")):
+        if not isinstance(row, dict):
+            continue
+        if any(evidence_id in contract_ids for evidence_id in _string_list(row.get("allowed_evidence_ids"))):
+            return True
+    return False
 
 
 def _section_jobs_from_argument_moves(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:

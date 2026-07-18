@@ -10,6 +10,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_s
 from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
     build_evidence_reconciliation_report,
+    contracts_for_section,
     render_evidence_tagged_memo,
     unknown_evidence_ids_in_text,
 )
@@ -187,6 +188,45 @@ def test_evidence_expression_contracts_resolve_source_ids_from_labels() -> None:
     assert contracts[0]["required"] is True
 
 
+def test_contracts_for_section_uses_nested_section_local_evidence_ids() -> None:
+    packet = {
+        "evidence_items": [
+            {"item_id": "decision_writer_item_001", "reader_claim": "Primary answer support.", "source_ids": ["s1"], "must_use": True},
+            {"item_id": "decision_writer_item_002", "reader_claim": "Answer calibration.", "source_ids": ["s2"]},
+            {"item_id": "decision_writer_item_007", "reader_claim": "Practical monitoring boundary.", "source_ids": ["s3"]},
+            {"item_id": "decision_writer_item_011", "reader_claim": "Practical guidance.", "source_ids": ["s4"], "must_use": True},
+        ],
+        "source_trail": [
+            {"source_id": "s1", "source_label": "Source One"},
+            {"source_id": "s2", "source_label": "Source Two"},
+            {"source_id": "s3", "source_label": "Source Three"},
+            {"source_id": "s4", "source_label": "Source Four"},
+        ],
+        "canonical_decision_writer_packet": {},
+    }
+    section_packet = {
+        "section_id": "practical_implication",
+        "heading": "Practical Implication",
+        "decision_usefulness_moves": {
+            "recommended_stance": {"evidence_item_ids": ["decision_writer_item_001", "decision_writer_item_002"]},
+            "tradeoffs": [{"evidence_item_ids": ["decision_writer_item_007"]}],
+        },
+        "evidence_context": [{"item_id": "decision_writer_item_011"}],
+    }
+
+    contracts = contracts_for_section(section_packet, "Practical Implication", build_evidence_expression_contracts(packet))
+
+    assert [row["evidence_id"] for row in contracts] == [
+        "decision_writer_item_001",
+        "decision_writer_item_002",
+        "decision_writer_item_007",
+        "decision_writer_item_011",
+    ]
+    by_id = {row["evidence_id"]: row for row in contracts}
+    assert by_id["decision_writer_item_001"]["required"] is False
+    assert by_id["decision_writer_item_011"]["required"] is True
+
+
 def test_render_evidence_tags_to_source_citations_and_trace() -> None:
     rendered = render_evidence_tagged_memo(
         "## Why\n\nOption A reduced losses {E:e1}. Option B is bounded {e1, e2}. Source-level context {s2}.\n",
@@ -340,7 +380,7 @@ def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest
     assert result["evidence_tag_section_reports"]
     assert any("### Evidence expression contracts" in prompt for prompt in prompts)
     assert any("section-local evidence contracts" in prompt for prompt in prompts)
-    assert not any("### Source weighting notes" in prompt for prompt in prompts if "### Evidence expression contracts" in prompt)
+    assert any("### Source weighting notes" in prompt for prompt in prompts if "### Evidence expression contracts" in prompt)
     assert "{E:" not in result["memo"]
     assert result["report"]["evidence_reconciliation_report"]["used_evidence_id_count"] >= 1
 

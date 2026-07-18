@@ -694,7 +694,8 @@ def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monke
     assert result["report"]["status"] in {"accepted", "accepted_with_retention_warnings", "accepted_with_evidence_tag_warnings"}
     assert "[95% CI, 1.12-1.39]" not in result["memo"]
     assert "(95% CI, 1.12-1.39)" in result["memo"]
-    assert "[s1]" in result["memo"]
+    assert "{E:" not in result["memo"]
+    assert "[Outcome Study]" in result["memo"]
 
 
 def test_section_synthesis_repairs_long_near_miss_source_id_but_not_unknowns() -> None:
@@ -716,11 +717,26 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
         bundle["decision_writer_packet"],
         quality_report=bundle["decision_writer_packet_quality_report"],
     )
+    packet.setdefault("memo_obligations", {}).setdefault("obligations", []).append(
+        {
+            "obligation_id": "memo_obligation_test_unmet",
+            "obligation_type": "must_address_crux",
+            "required": True,
+            "role": "decision_crux",
+            "statement": "Name the seasonal maintenance crux before adoption.",
+            "validation_mode": "claim_terms",
+            "validation_terms": ["seasonal", "maintenance", "crux"],
+            "evidence_item_ids": ["decision_writer_item_002"],
+        }
+    )
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         heading = _heading_from_section_prompt(prompt)
         ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
-        tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
+        if ids and heading == "Why This Is the Best Current Read":
+            tag_or_citation = "{E:decision_writer_item_001}"
+        else:
+            tag_or_citation = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids) if ids else "[s1]"
         return ModelBackendResult(
             text=(
                 f"## {heading}\n\n"
@@ -746,4 +762,6 @@ def _heading_from_section_prompt(prompt: str) -> str:
     match = re.search(r"exactly(?: with)?: ## (.+)", prompt)
     if not match:
         match = re.search(r"Output starts exactly with: ## (.+)", prompt)
+    if not match:
+        match = re.search(r"Output must start exactly with: ## (.+)", prompt)
     return match.group(1).strip() if match else "Why This Is the Best Current Read"
