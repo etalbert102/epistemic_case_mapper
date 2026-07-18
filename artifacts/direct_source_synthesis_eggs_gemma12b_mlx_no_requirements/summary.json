@@ -1,0 +1,41 @@
+{
+  "backend": "ollama:gemma4:12b-mlx",
+  "attempts": 1,
+  "wall_seconds": 570.438,
+  "word_count": 574,
+  "heading_count": 4,
+  "citation_count_bracketed": 0,
+  "unique_citations": [],
+  "term_presence": {
+    "0.93": false,
+    "95% CI 0.93–1.03": false,
+    "95% CI 0.93-1.03": false,
+    "0.98": false,
+    "0.96": false,
+    "0.99": false,
+    "1.01": false,
+    "1.06": false,
+    "1.11": false,
+    "0.99 (0.93–1.05)": false,
+    "1.15": false,
+    "1.25": false,
+    "1.40": false,
+    "8.1": false,
+    "8.14": false,
+    "0.14": false,
+    "21 to 84": false,
+    "1.72": false,
+    "139,195": false,
+    "DGA": false,
+    "Dietary Guidelines": true,
+    "bmj_2013": false,
+    "ma_2021": false,
+    "jama_2019": false,
+    "li_2020": false
+  },
+  "paths": {
+    "prompt": "artifacts/direct_source_synthesis_eggs_gemma12b_mlx_no_requirements/direct_source_synthesis_prompt_no_requirements.md",
+    "raw_memo": "artifacts/direct_source_synthesis_eggs_gemma12b_mlx_no_requirements/raw_memo.md",
+    "clean_memo": "artifacts/direct_source_synthesis_eggs_gemma12b_mlx_no_requirements/clean_memo.md"
+  }
+}
