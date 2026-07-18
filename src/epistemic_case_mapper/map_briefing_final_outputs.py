@@ -559,6 +559,13 @@ def _write_final_reader_artifacts(
         write_markdown(paths.memo_ready_final_polish_prompt, str(memo_ready_final_polish_result.get("prompt", "")))
     if memo_ready_final_polish_result.get("raw"):
         write_markdown(paths.memo_ready_final_polish_raw, str(memo_ready_final_polish_result.get("raw", "")))
+    if memo_ready_final_polish_result.get("repair_prompt"):
+        write_markdown(
+            paths.memo_ready_final_polish_repair_prompt,
+            str(memo_ready_final_polish_result.get("repair_prompt", "")),
+        )
+    if memo_ready_final_polish_result.get("repair_raw"):
+        write_markdown(paths.memo_ready_final_polish_repair_raw, str(memo_ready_final_polish_result.get("repair_raw", "")))
     write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
     write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
     write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
@@ -712,6 +719,12 @@ def _memo_ready_summary_paths(
         "memo_ready_final_polish_report": paths.memo_ready_final_polish_report,
         "memo_ready_final_polish_prompt": paths.memo_ready_final_polish_prompt if final_polish_result and final_polish_result.get("prompt") else None,
         "memo_ready_final_polish_raw": paths.memo_ready_final_polish_raw if final_polish_result and final_polish_result.get("raw") else None,
+        "memo_ready_final_polish_repair_prompt": paths.memo_ready_final_polish_repair_prompt
+        if final_polish_result and final_polish_result.get("repair_prompt")
+        else None,
+        "memo_ready_final_polish_repair_raw": paths.memo_ready_final_polish_repair_raw
+        if final_polish_result and final_polish_result.get("repair_raw")
+        else None,
         "memo_creation_progress": memo_progress_path(paths.briefing.parent),
     }
 

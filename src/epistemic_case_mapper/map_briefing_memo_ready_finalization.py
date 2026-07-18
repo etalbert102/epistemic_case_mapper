@@ -914,7 +914,14 @@ def run_memo_ready_final_polish(
             "issues": [] if accepted else _validated_final_polish_issues(final_validation) if applied else ["final polish did not pass validation without regression"],
         }
     )
-    return {"memo": final_candidate if applied else memo, "prompt": prompt, "raw": raw, "report": report}
+    return {
+        "memo": final_candidate if applied else memo,
+        "prompt": prompt,
+        "raw": raw,
+        "repair_prompt": repair.get("prompt", ""),
+        "repair_raw": repair.get("raw", ""),
+        "report": report,
+    }
 
 
 def _final_polish_backend(backend: str) -> str:

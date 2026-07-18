@@ -115,16 +115,22 @@ def test_final_polish_rejects_decision_usefulness_regression(monkeypatch: pytest
     assert result["memo"] == memo
 
 
-def test_production_final_polish_uses_hybrid_section_completion(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_final_polish_uses_validated_whole_memo_polish(monkeypatch: pytest.MonkeyPatch) -> None:
     packet, memo = _packet_and_memo()
+    prompts: list[str] = []
 
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
-        if "Section heading: Practical Implication" in prompt and "mode_id: completion_only" in prompt:
-            markdown = "## Practical Implication\n\nProceed only while benefits remain supported by the evidence [s1]."
-        else:
-            heading = _heading_for_prompt(prompt)
-            markdown = _section_markdown_for_heading(memo, heading)
-        return ModelBackendResult(text=json.dumps({"section_markdown": markdown, "reason": "production hybrid"}), backend="fake")
+        prompts.append(prompt)
+        if "Repair a polished decision memo" in prompt:
+            return ModelBackendResult(text=memo, backend="fake")
+        assert "Memo to polish:" in prompt
+        return ModelBackendResult(
+            text=memo.replace(
+                "Recommendation: use the option with the better benefit-burden profile.",
+                "Recommendation: use the option when the cited benefit evidence is still strong enough to justify the burden.",
+            ),
+            backend="fake",
+        )
 
     monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
@@ -133,9 +139,12 @@ def test_production_final_polish_uses_hybrid_section_completion(monkeypatch: pyt
         memo_with_truncation = memo_with_truncation.replace("## Sources", "The recommendation should be applied...\n\n## Sources")
     result = run_memo_ready_final_polish(memo_with_truncation, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
+    assert "Priority quantity contracts:" in prompts[0]
+    assert any("Repair a polished decision memo" in prompt for prompt in prompts)
     assert result["report"]["schema_id"] == "memo_ready_final_polish_report_v1"
-    assert result["report"]["method"] == "hybrid_section_completion"
-    assert result["report"]["section_proposal_report"]["method"] == "parallel_hybrid_section_memo_polish"
+    assert result["report"]["method"] == "validated_whole_memo_polish"
+    assert "polished_validation_report" in result["report"]
+    assert "section_proposal_report" not in result["report"]
 
 
 def _heading_for_prompt(prompt: str) -> str:

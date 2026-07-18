@@ -244,6 +244,8 @@ def test_validated_final_polish_repairs_missing_priority_quantity(monkeypatch) -
     assert result["report"]["repair_report"]["status"] == "accepted"
     assert result["report"]["accepted"] is True
     assert "20%" in result["memo"]
+    assert "Validation feedback" in result["repair_prompt"]
+    assert "20%" in result["repair_raw"]
 
 
 def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) -> None:

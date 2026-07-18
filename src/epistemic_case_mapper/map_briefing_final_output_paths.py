@@ -56,6 +56,8 @@ class FinalReaderOutputPaths:
     memo_ready_repair_report: Path
     memo_ready_final_polish_prompt: Path
     memo_ready_final_polish_raw: Path
+    memo_ready_final_polish_repair_prompt: Path
+    memo_ready_final_polish_repair_raw: Path
     memo_ready_final_polish_report: Path
     scoped_metric_report: Path
     final_source_lineage: Path
@@ -114,6 +116,8 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         memo_ready_repair_report=artifacts / "memo_ready_repair_report.json",
         memo_ready_final_polish_prompt=artifacts / "memo_ready_final_polish_prompt.txt",
         memo_ready_final_polish_raw=artifacts / "memo_ready_final_polish_raw.md",
+        memo_ready_final_polish_repair_prompt=artifacts / "memo_ready_final_polish_repair_prompt.txt",
+        memo_ready_final_polish_repair_raw=artifacts / "memo_ready_final_polish_repair_raw.md",
         memo_ready_final_polish_report=artifacts / "memo_ready_final_polish_report.json",
         scoped_metric_report=artifacts / "scoped_metric_report.json",
         final_source_lineage=artifacts / "final_source_lineage_report.json",
