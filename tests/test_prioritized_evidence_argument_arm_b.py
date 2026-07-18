@@ -52,6 +52,15 @@ def test_arm_b_projection_suppresses_source_weighting_and_legacy_packet_roots() 
     assert "reader_judgment_packet" not in serialized
 
 
+def test_arm_b_projection_marks_section_owned_contract_scope() -> None:
+    projection = build_arm_b_projection(load_frozen_arm_b_inputs(FROZEN_EGGS))
+
+    section_plan = projection["section_plan"]
+
+    assert section_plan["evidence_contract_scope"] == "section_owned"
+    assert all(section["prompt_mode"] == "arm_b_slim" for section in section_plan["sections"])
+
+
 def test_arm_b_b0_captures_initial_and_retry_prompts(tmp_path) -> None:
     result = run_arm_b_b0(briefing_dir=FROZEN_EGGS, output_dir=tmp_path, force_retry=True)
 

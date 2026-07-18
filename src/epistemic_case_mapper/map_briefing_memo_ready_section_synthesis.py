@@ -45,6 +45,8 @@ def run_parallel_memo_ready_section_generation(
 ) -> dict[str, Any]:
     evidence_contracts = build_evidence_expression_contracts(memo_ready_packet or {})
     sections = _prepare_sections(section_plan, memo_ready_packet or {}, evidence_contracts)
+    if _uses_section_owned_evidence_contracts(section_plan, sections):
+        evidence_contracts = _section_owned_evidence_contracts(sections)
     known_source_ids = set(_string_list(section_plan.get("known_source_ids")))
     known_source_aliases = _source_alias_map(section_plan.get("known_source_aliases"))
     known_evidence_ids = {str(row.get("evidence_id") or "") for row in evidence_contracts}
@@ -104,7 +106,11 @@ def run_parallel_memo_ready_section_generation(
         if evidence_contracts
         else {"schema_id": "evidence_reconciliation_report_v1", "status": "not_available"}
     )
-    priority_quantity_contracts = build_priority_quantity_contracts(memo_ready_packet or {})
+    priority_quantity_contracts = (
+        _priority_quantity_contracts_from_evidence_contracts(evidence_contracts)
+        if _uses_section_owned_evidence_contracts(section_plan, sections)
+        else build_priority_quantity_contracts(memo_ready_packet or {})
+    )
     priority_quantity_coverage = build_priority_quantity_contract_coverage_report(rendered["memo"], priority_quantity_contracts)
     if reconciliation.get("status") == "warning":
         report["status"] = "accepted_with_evidence_tag_warnings"
@@ -249,6 +255,62 @@ def _run_section(
         }
     )
     return section_report
+
+
+def _uses_section_owned_evidence_contracts(
+    section_plan: dict[str, Any],
+    sections: list[dict[str, Any]],
+) -> bool:
+    if section_plan.get("evidence_contract_scope") == "section_owned":
+        return True
+    return any(_dict(section.get("packet")).get("schema_id") == "arm_b_slim_section_packet_v1" for section in sections)
+
+
+def _section_owned_evidence_contracts(sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for section in sections:
+        for contract in _list(section.get("contracts")):
+            if not isinstance(contract, dict):
+                continue
+            evidence_id = str(contract.get("evidence_id") or "").strip()
+            if not evidence_id or evidence_id in seen:
+                continue
+            seen.add(evidence_id)
+            rows.append(contract)
+    return rows
+
+
+def _priority_quantity_contracts_from_evidence_contracts(contracts: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = []
+    for contract in contracts:
+        evidence_id = str(contract.get("evidence_id") or "").strip()
+        claim = str(contract.get("claim") or "").strip()
+        source_labels = _string_list(contract.get("source_labels"))
+        for index, quantity in enumerate(_list(contract.get("required_quantity_atoms")), start=1):
+            if not isinstance(quantity, dict):
+                continue
+            value = str(quantity.get("value") or quantity.get("quantity_text") or "").strip()
+            if not evidence_id or not value:
+                continue
+            rows.append(
+                {
+                    "contract_id": f"{evidence_id}::{index}",
+                    "evidence_id": evidence_id,
+                    "quantity_text": value,
+                    "decision_role": quantity.get("decision_role") or contract.get("role"),
+                    "source_labels": source_labels,
+                    "claim": claim,
+                    "required_if_claim_used": bool(contract.get("required")),
+                    "contract_level": "required_if_related_claim_used",
+                }
+            )
+    return {
+        "schema_id": "priority_quantity_contracts_v1",
+        "selection_method": "section_owned_evidence_contracts",
+        "rule": "When a memo uses the related evidence claim, preserve the quantity with the same decision role.",
+        "rows": rows,
+    }
 
 
 def _section_reconciliation_issues(reconciliation: dict[str, Any]) -> list[str]:

@@ -33,6 +33,11 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b_audit import 
     build_warning_adjudication_report,
     prompt_manifest,
 )
+from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
+    LivePromptRecorder,
+    build_arm_comparison_to_current,
+    build_live_evaluation_aggregate_report,
+)
 
 
 def load_frozen_arm_b_inputs(briefing_dir: Path) -> dict[str, Any]:
@@ -228,6 +233,125 @@ def run_arm_b_b0(
     }
 
 
+def run_arm_b_b1(
+    *,
+    briefing_dir: Path,
+    output_dir: Path,
+    backend: str,
+    backend_timeout: int | None = 120,
+    backend_retries: int = 0,
+    samples: int = 1,
+) -> dict[str, Any]:
+    started = time.time()
+    inputs = load_frozen_arm_b_inputs(briefing_dir)
+    projection = build_arm_b_projection(inputs)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _copy_frozen_inputs(briefing_dir, output_dir / "frozen_inputs")
+    _write_json(output_dir / "section_synthesis_packets.json", projection["section_packets"])
+    _write_json(output_dir / "section_contract_overlap_report.json", projection["section_contract_overlap_report"])
+    _write_json(output_dir / "projection_evaluation_packet.json", projection["projection_evaluation_packet"])
+
+    sample_runs = []
+    for sample_index in range(1, max(1, samples) + 1):
+        sample_dir = output_dir / f"sample_{sample_index:02d}"
+        sample_dir.mkdir(parents=True, exist_ok=True)
+        recorder = LivePromptRecorder()
+        sample_started = time.time()
+        generation = run_parallel_memo_ready_section_generation(
+            projection["section_plan"],
+            memo_ready_packet=inputs["memo_ready_packet"],
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            whole_prompt="Arm B B1 slim existing-argument section synthesis.",
+            run_model=recorder,
+        )
+        elapsed = round(time.time() - sample_started, 3)
+        prompt_audit = audit_prompt_submissions(recorder.records)
+        warning_adjudication = build_warning_adjudication_report(
+            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            arm_b_report=generation.get("report", {}),
+        )
+        comparison = build_arm_comparison_to_current(
+            baseline_memo_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "memo.md",
+            baseline_report_path=briefing_dir.parent / "replay_after_section_contract_fix_v3" / "report.json",
+            candidate_memo=str(generation.get("memo") or ""),
+            candidate_report=_dict(generation.get("report")),
+            prompt_audit=prompt_audit,
+            elapsed_seconds=elapsed,
+        )
+        _write_json(sample_dir / "prompt_submission_audit.json", prompt_audit)
+        _write_json(sample_dir / "section_prompt_manifest.json", prompt_manifest(recorder.records))
+        _write_json(sample_dir / "warning_adjudication_report.json", warning_adjudication)
+        _write_json(sample_dir / "report.json", generation.get("report", {}))
+        _write_json(sample_dir / "comparison_to_current.json", comparison)
+        if generation.get("prompt"):
+            (sample_dir / "prompt.txt").write_text(str(generation["prompt"]), encoding="utf-8")
+        if generation.get("raw"):
+            (sample_dir / "raw.md").write_text(str(generation["raw"]), encoding="utf-8")
+        if generation.get("memo"):
+            (sample_dir / "memo.md").write_text(str(generation["memo"]), encoding="utf-8")
+        sample_runs.append(
+            {
+                "sample": sample_index,
+                "elapsed_seconds": elapsed,
+                "generation_status": _dict(generation.get("report")).get("status"),
+                "accepted": bool(_dict(generation.get("report")).get("accepted")),
+                "prompt_audit_status": prompt_audit.get("status"),
+                "warning_adjudication_status": warning_adjudication.get("status"),
+                "comparison_status": comparison.get("status"),
+                "quality_assessment": comparison.get("quality_assessment"),
+                "artifact_dir": str(sample_dir),
+            }
+        )
+    aggregate = build_arm_b_b1_aggregate_report(
+        projection=projection,
+        sample_runs=sample_runs,
+        elapsed_seconds=round(time.time() - started, 3),
+    )
+    _write_json(output_dir / "comparison_to_current.json", aggregate)
+    _write_json(output_dir / "report.json", aggregate)
+    return {
+        "projection": projection,
+        "samples": sample_runs,
+        "report": aggregate,
+    }
+
+
+def build_arm_b_comparison_to_current(
+    *,
+    baseline_memo_path: Path,
+    baseline_report_path: Path,
+    arm_b_memo: str,
+    arm_b_report: dict[str, Any],
+    prompt_audit: dict[str, Any],
+    elapsed_seconds: float,
+) -> dict[str, Any]:
+    report = build_arm_comparison_to_current(
+        baseline_memo_path=baseline_memo_path,
+        baseline_report_path=baseline_report_path,
+        candidate_memo=arm_b_memo,
+        candidate_report=arm_b_report,
+        prompt_audit=prompt_audit,
+        elapsed_seconds=elapsed_seconds,
+    )
+    return {**report, "schema_id": "arm_b_comparison_to_current_v1", "arm_b": report.get("candidate", {})}
+
+
+def build_arm_b_b1_aggregate_report(
+    *,
+    projection: dict[str, Any],
+    sample_runs: list[dict[str, Any]],
+    elapsed_seconds: float,
+) -> dict[str, Any]:
+    return build_live_evaluation_aggregate_report(
+        schema_id="arm_b_b1_live_evaluation_report_v1",
+        projection=projection,
+        sample_runs=sample_runs,
+        elapsed_seconds=elapsed_seconds,
+    )
+
+
 def _section_plan(section_packets: list[dict[str, Any]], decision_anchor: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_id": "arm_b_slim_section_synthesis_plan_v1",
@@ -235,6 +359,7 @@ def _section_plan(section_packets: list[dict[str, Any]], decision_anchor: dict[s
         "title": _short_decision_title(decision_anchor.get("decision_question")),
         "decision_question": decision_anchor.get("decision_question"),
         "bottom_line": decision_anchor.get("bounded_answer") or decision_anchor.get("compact_answer"),
+        "evidence_contract_scope": "section_owned",
         "known_source_ids": _dedupe(
             source_id
             for packet in section_packets
