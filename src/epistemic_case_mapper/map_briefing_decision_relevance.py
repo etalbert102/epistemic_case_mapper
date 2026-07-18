@@ -24,25 +24,31 @@ def analyst_relevance_plan(model: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 "group_id": str(row.get("group_id") or "").strip(),
                 "source_ids": _string_list(row.get("source_ids")),
                 "rationale": str(row.get("rationale") or "").strip(),
+                "derived_from": "memo_relevance_decision",
             }
-    if rows:
-        return rows
     for group in _list(model.get("evidence_groups")):
         if not isinstance(group, dict):
             continue
         inclusion = _memo_inclusion_from_group(group)
         for evidence_id in _string_list(group.get("covered_evidence_item_ids")):
-            rows.setdefault(
-                evidence_id,
-                {
-                    "evidence_item_id": evidence_id,
-                    "memo_inclusion": inclusion,
-                    "group_id": str(group.get("group_id") or "").strip(),
-                    "source_ids": _string_list(group.get("source_ids")),
-                    "rationale": str(group.get("answer_impact") or group.get("rationale") or "").strip(),
-                    "derived_from": "evidence_group_role",
-                },
-            )
+            group_decision = {
+                "evidence_item_id": evidence_id,
+                "memo_inclusion": inclusion,
+                "group_id": str(group.get("group_id") or "").strip(),
+                "source_ids": _string_list(group.get("source_ids")),
+                "rationale": str(group.get("answer_impact") or group.get("rationale") or "").strip(),
+                "derived_from": "evidence_group_role",
+            }
+            existing = rows.get(evidence_id)
+            if not existing:
+                rows[evidence_id] = group_decision
+            elif _group_decision_should_override(existing, group_decision):
+                rows[evidence_id] = {
+                    **group_decision,
+                    "rationale": _combined_rationale(existing, group_decision),
+                    "overrode_memo_inclusion": existing.get("memo_inclusion", ""),
+                    "override_reason": "Evidence group role is more memo-diagnostic than row-level relevance.",
+                }
     for disposition in _list(model.get("evidence_dispositions")):
         if not isinstance(disposition, dict):
             continue
@@ -133,3 +139,30 @@ def _memo_inclusion_from_disposition(disposition: dict[str, Any]) -> str:
     if value == "not_decision_relevant":
         return "exclude"
     return "trace_only"
+
+
+def _group_decision_should_override(existing: dict[str, Any], group_decision: dict[str, Any]) -> bool:
+    current = str(existing.get("memo_inclusion") or "").strip()
+    proposed = str(group_decision.get("memo_inclusion") or "").strip()
+    if current == "exclude":
+        return False
+    return _memo_inclusion_priority(proposed) < _memo_inclusion_priority(current)
+
+
+def _memo_inclusion_priority(value: str) -> int:
+    return {
+        "memo_spine": 0,
+        "supporting_context": 1,
+        "trace_only": 2,
+        "exclude": 3,
+    }.get(str(value or "").strip(), 9)
+
+
+def _combined_rationale(existing: dict[str, Any], group_decision: dict[str, Any]) -> str:
+    values = _dedupe(
+        [
+            str(group_decision.get("rationale") or "").strip(),
+            str(existing.get("rationale") or "").strip(),
+        ]
+    )
+    return "; ".join(value for value in values if value)

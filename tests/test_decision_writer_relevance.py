@@ -7,23 +7,23 @@ from epistemic_case_mapper.map_briefing_decision_writer_packet import (
 from tests.test_decision_writer_packet import _global_model, _ledger
 
 
-def test_decision_writer_packet_honors_analyst_trace_only_relevance() -> None:
+def test_decision_writer_packet_uses_group_roles_to_override_noisy_trace_only_relevance() -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
     analyst_model = _analyst_model_with_relevance(
         memo_relevance_decisions=[
             {
                 "evidence_item_id": "item:support",
-                "memo_inclusion": "memo_spine",
+                "memo_inclusion": "trace_only",
                 "group_id": "support_group",
                 "source_ids": ["s1"],
-                "rationale": "This directly changes the answer.",
+                "rationale": "Noisy row-level relevance incorrectly routed this to trace.",
             },
             {
                 "evidence_item_id": "item:limit",
                 "memo_inclusion": "trace_only",
                 "group_id": "scope_group",
                 "source_ids": ["s2"],
-                "rationale": "This is available for audit but should not burden the memo.",
+                "rationale": "Noisy row-level relevance incorrectly routed this to trace.",
             },
         ]
     )
@@ -38,12 +38,39 @@ def test_decision_writer_packet_honors_analyst_trace_only_relevance() -> None:
     scope = next(item for item in packet["evidence_items"] if item["reader_claim"] == "The answer depends on whether the narrower setting matters.")
     assert support["must_use"] is True
     assert support["memo_inclusion"] == "memo_spine"
+    assert support["analyst_relevance_decisions"][0]["overrode_memo_inclusion"] == "trace_only"
     assert "analyst_decision_model_relevance" in support["judgment_lineage"]
     assert scope["must_use"] is False
-    assert scope["obligation_level"] == "optional_context"
-    assert scope["memo_inclusion"] == "trace_only"
-    assert scope["analyst_relevance_decisions"][0]["rationale"] == "This is available for audit but should not burden the memo."
-    assert packet["analyst_relevance_plan"]["item:limit"]["memo_inclusion"] == "trace_only"
+    assert scope["obligation_level"] == "should_include"
+    assert scope["memo_inclusion"] == "supporting_context"
+    assert scope["analyst_relevance_decisions"][0]["overrode_memo_inclusion"] == "trace_only"
+    assert packet["analyst_relevance_plan"]["item:limit"]["memo_inclusion"] == "supporting_context"
+
+
+def test_decision_writer_packet_preserves_explicit_exclusion_over_group_role() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    analyst_model = _analyst_model_with_relevance(
+        memo_relevance_decisions=[
+            {
+                "evidence_item_id": "item:support",
+                "memo_inclusion": "exclude",
+                "group_id": "support_group",
+                "source_ids": ["s1"],
+                "rationale": "Explicitly outside the memo answer despite group membership.",
+            }
+        ]
+    )
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+        analyst_decision_model=analyst_model,
+    )
+
+    support = next(item for item in packet["evidence_items"] if item["reader_claim"] == "Option A improves the main outcome.")
+    assert support["must_use"] is False
+    assert support["memo_inclusion"] == "exclude"
+    assert support["obligation_level"] == "optional_context"
 
 
 def test_decision_writer_packet_uses_analyst_quantity_relevance_for_memo_quantities() -> None:
