@@ -119,32 +119,36 @@ def _source_bottom_line_role_hints(card: dict[str, Any]) -> list[str]:
 
 
 def _source_bottom_line_decision_role(card: dict[str, Any]) -> str:
-    return _decision_role_fallback(card)
-
-
-def _decision_role_fallback(card: dict[str, Any]) -> str:
-    polarity = str(card.get("decision_polarity") or "").strip().lower()
-    if polarity in {"supports_current_answer", "support", "supports"}:
-        return "strongest_support"
-    if polarity in {"challenges_current_answer", "challenge", "challenges", "counterweight", "counter"}:
-        return "counterweight"
-    if polarity in {"scopes_current_answer", "scope", "scopes", "scope_boundary"}:
-        return "scope_boundary"
-    text = " ".join(
-        [
-            "source_bottom_line",
-            " ".join(_source_bottom_line_role_hints(card)),
-        ]
-    ).lower()
-    if any(term in text for term in ("counter", "challenge", "conflict", "tension", "contrary")):
-        return "counterweight"
-    if any(term in text for term in ("scope", "boundary", "exception", "limit", "population", "subgroup", "comparator")):
-        return "scope_boundary"
-    if any(term in text for term in ("crux", "decision-changing")):
-        return "decision_crux"
-    if any(term in text for term in ("support", "conclusion", "main_text")):
-        return "strongest_support"
+    for key in ("decision_polarity", "source_card_role", "decision_function", "evidence_role", "role"):
+        role = _explicit_source_role(str(card.get(key) or ""))
+        if role != "context":
+            return role
     return "context"
+
+
+def _explicit_source_role(value: str) -> str:
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return {
+        "supports_current_answer": "strongest_support",
+        "support": "strongest_support",
+        "supports": "strongest_support",
+        "strongest_support": "strongest_support",
+        "main_support": "strongest_support",
+        "challenges_current_answer": "counterweight",
+        "challenge": "counterweight",
+        "challenges": "counterweight",
+        "counterweight": "counterweight",
+        "counter": "counterweight",
+        "scopes_current_answer": "scope_boundary",
+        "scope": "scope_boundary",
+        "scopes": "scope_boundary",
+        "scope_boundary": "scope_boundary",
+        "decision_crux": "decision_crux",
+        "crux": "decision_crux",
+        "quantitative_anchor": "quantitative_anchor",
+        "mechanism": "mechanism",
+        "context": "context",
+    }.get(normalized, "context")
 
 
 def _first_signal_position(text: str, signals: tuple[str, ...]) -> int:

@@ -164,6 +164,27 @@ def test_source_evidence_units_warn_when_exact_quote_does_not_support_claim() ->
     assert report["warning_counts"] == {"weak_quote_claim_overlap": 1}
 
 
+def test_source_evidence_units_do_not_keyword_backfill_semantic_context() -> None:
+    source_text = "The randomized trial reduced risk compared with usual care."
+    source_card = {
+        "source_id": "demo_source",
+        "canonical_claims": [
+            {
+                "claim": "The randomized trial reduced risk compared with usual care.",
+                "supporting_quotes": [{"quote": source_text, "line_hint": "line 1"}],
+                "quantities": [],
+            }
+        ],
+    }
+
+    unit = build_source_evidence_units(source_card, source_id="demo_source", source_text=source_text)["source_evidence_units"]["units"][0]
+
+    assert unit["evidence_type"] == "unspecified"
+    assert unit["endpoint"] == ""
+    assert unit["comparator"] == ""
+    assert unit["method"] == ""
+
+
 def test_whole_doc_extraction_writes_aggregate_evidence_unit_artifacts(monkeypatch, tmp_path: Path) -> None:
     _write_transfer_fixture(tmp_path)
     manifest, region, case_manifest = _load_context(tmp_path, "submission_manifest.yaml", "demo_region_json")

@@ -155,19 +155,18 @@ def _quote_lineage(claim: dict[str, Any], *, source_text: str) -> list[dict[str,
 
 
 def _typed_fields(proposition: str, quantities: list[dict[str, Any]], claim: dict[str, Any]) -> dict[str, str]:
-    text = proposition.lower()
-    quantity_values = [str(row.get("value") or "") for row in quantities]
+    del proposition
     context = _claim_context(claim)
     return {
-        "evidence_type": str(context.get("evidence_design") or _evidence_type(text)),
+        "evidence_type": str(context.get("evidence_design") or "unspecified"),
         "population": str(context.get("population") or _scope_condition_at(0, claim)),
         "exposure_or_intervention": str(context.get("exposure_or_option") or _scope_condition_at(1, claim)),
-        "comparator": _comparator(text),
-        "endpoint": str(context.get("outcome_or_endpoint") or _endpoint(text)),
+        "comparator": str(context.get("comparator") or ""),
+        "endpoint": str(context.get("outcome_or_endpoint") or ""),
         "estimate": str(context.get("stated_dose_or_threshold") or _first_quantity_of_type(quantities, {"percentage", "ratio", "rate", "dose", "unknown"})),
-        "uncertainty_interval": _uncertainty_interval(quantity_values),
-        "method": str(context.get("evidence_design") or _method(text)),
-        "caveat": _compact("; ".join(_string_list(context.get("stated_limitations")) + _string_list(context.get("applicability_limits"))) or _caveat(text)),
+        "uncertainty_interval": str(context.get("uncertainty_interval") or ""),
+        "method": str(context.get("evidence_design") or ""),
+        "caveat": _compact("; ".join(_string_list(context.get("stated_limitations")) + _string_list(context.get("applicability_limits")))),
         "time_horizon": _first_quantity_of_type(quantities, {"duration", "date"}),
     }
 
@@ -179,6 +178,8 @@ def _claim_context(claim: dict[str, Any]) -> dict[str, str]:
         "exposure_or_option",
         "outcome_or_endpoint",
         "evidence_design",
+        "comparator",
+        "uncertainty_interval",
         "stated_dose_or_threshold",
         "stated_scope",
         "stated_limitations",
@@ -387,63 +388,6 @@ def _interval_parts(value: str) -> tuple[str, str, str]:
     return bounds[-2], bounds[-1], "confidence_interval"
 
 
-def _evidence_type(text: str) -> str:
-    if any(term in text for term in ("randomized", "trial", "rct")):
-        return "trial"
-    if any(term in text for term in ("cohort", "observational", "associated", "association")):
-        return "observational"
-    if any(term in text for term in ("meta-analysis", "systematic review", "pooled")):
-        return "synthesis"
-    if any(term in text for term in ("guideline", "advice", "recommend")):
-        return "guidance"
-    if any(term in text for term in ("mechanism", "biomarker", "pathway")):
-        return "mechanistic"
-    return "unspecified"
-
-
-def _endpoint(text: str) -> str:
-    patterns = [
-        r"\brisk of ([A-Za-z0-9 /-]+)",
-        r"\brate of ([A-Za-z0-9 /-]+)",
-        r"\bassociated with ([A-Za-z0-9 /-]+)",
-        r"\breduced ([A-Za-z0-9 /-]+)",
-        r"\bincreased ([A-Za-z0-9 /-]+)",
-        r"\blower ([A-Za-z0-9 /-]+)",
-        r"\bhigher ([A-Za-z0-9 /-]+)",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return _compact(match.group(1), max_chars=120)
-    return ""
-
-
-def _comparator(text: str) -> str:
-    match = re.search(r"\b(compared with|compared to|versus|vs\.?)\s+([^.;,]+)", text)
-    return _compact(match.group(2), max_chars=120) if match else ""
-
-
-def _method(text: str) -> str:
-    if "meta-analysis" in text:
-        return "meta-analysis"
-    if "systematic review" in text:
-        return "systematic review"
-    if "randomized" in text or "trial" in text:
-        return "trial"
-    if "cohort" in text:
-        return "cohort"
-    return ""
-
-
-def _caveat(text: str) -> str:
-    markers = ("but", "however", "although", "except", "limited", "conditional")
-    for marker in markers:
-        match = re.search(rf"\b{marker}\b(.+)$", text)
-        if match:
-            return _compact(match.group(0), max_chars=180)
-    return ""
-
-
 def _scope_condition_at(index: int, claim: dict[str, Any]) -> str:
     conditions = _string_list(claim.get("scope_conditions"))
     return conditions[index] if len(conditions) > index else ""
@@ -453,16 +397,6 @@ def _first_quantity_of_type(quantities: list[dict[str, Any]], types: set[str]) -
     for quantity in quantities:
         if str(quantity.get("quantity_type") or "") in types:
             return str(quantity.get("value") or "")
-    return ""
-
-
-def _uncertainty_interval(quantity_values: list[str]) -> str:
-    for value in quantity_values:
-        if re.search(r"\b(ci|confidence interval|credible interval)\b", value, flags=re.IGNORECASE):
-            return value
-    for value in quantity_values:
-        if re.search(r"\d+(\.\d+)?\s*[-–]\s*\d+(\.\d+)?", value):
-            return value
     return ""
 
 
