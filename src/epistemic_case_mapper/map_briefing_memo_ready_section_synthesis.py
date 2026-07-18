@@ -396,7 +396,13 @@ def _prepare_sections(
         heading = str(section.get("heading") or packet.get("heading") or "").strip()
         section_id = str(section.get("section_id") or packet.get("section_id") or "").strip()
         prepared = dict(section)
-        if memo_ready_packet and evidence_contracts and section_id != "source_weighting":
+        if section.get("prompt_mode") == "arm_b_slim" or packet.get("schema_id") == "arm_b_slim_section_packet_v1":
+            local_contracts = [row for row in _list(section.get("contracts")) if isinstance(row, dict)]
+            prepared["contracts"] = local_contracts
+            prepared["citation_mode"] = "evidence_tags" if local_contracts else "source_ids"
+            if not str(prepared.get("prompt") or "").strip():
+                prepared["prompt"] = str(section.get("prompt") or "")
+        elif memo_ready_packet and evidence_contracts and section_id != "source_weighting":
             local_contracts = contracts_for_section(packet, heading, evidence_contracts)
             if local_contracts:
                 prepared["contracts"] = local_contracts
