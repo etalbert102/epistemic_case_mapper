@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -97,6 +98,8 @@ def _extract_whole_doc_claims(
             max_claims_per_source=max_claims_per_source,
             source_dir=source_dir,
             reuse_claim_cache=reuse_claim_cache,
+            progress=progress,
+            total_sources=len(source_chunks),
         ),
         max_workers=parallelism,
     )
@@ -108,6 +111,7 @@ def _extract_whole_doc_claims(
         backend_retries=backend_retries,
         max_claims_per_source=max_claims_per_source,
         source_dir=source_dir,
+        progress=progress,
     )
     claim_progress["parallelism"] = parallelism
     claim_progress.update(retry_report)
@@ -416,6 +420,7 @@ def _retry_failed_whole_doc_results_serially(
     backend_retries: int,
     max_claims_per_source: int,
     source_dir: Path,
+    progress: PipelineProgress | None = None,
 ) -> dict[str, int]:
     attempts = 0
     recovered = 0
@@ -434,6 +439,9 @@ def _retry_failed_whole_doc_results_serially(
             max_claims_per_source=max_claims_per_source,
             source_dir=source_dir,
             reuse_claim_cache=False,
+            progress=progress,
+            total_sources=len(extraction_results),
+            call_label="serial_retry",
         )
         retry["serial_retry_attempted"] = True
         retry["initial_backend_error"] = initial_error
@@ -460,25 +468,72 @@ def _fetch_whole_doc_payload(
     max_claims_per_source: int,
     source_dir: Path,
     reuse_claim_cache: bool,
+    progress: PipelineProgress | None = None,
+    total_sources: int | None = None,
+    call_label: str = "whole_doc",
 ) -> dict[str, Any]:
     source_index, chunk = item
     source_file_stem = _safe_filename(chunk.source_id)
     canonical_path = source_dir / f"{source_file_stem}_whole_doc_canonical.json"
-    payload, cache_hit, backend_error = whole_doc_claim_payload_for_source(
-        source_id=chunk.source_id,
-        source_title=chunk.title,
-        source_text=chunk.plain_text,
-        decision_question=selected_question,
-        backend=backend,
-        backend_timeout=backend_timeout,
-        backend_retries=backend_retries,
-        max_claims=max_claims_per_source,
-        canonical_path=canonical_path,
-        raw_path=source_dir / f"{source_file_stem}_whole_doc_raw.txt",
-        repair_raw_path=source_dir / f"{source_file_stem}_whole_doc_repair_raw.txt",
-        report_path=source_dir / f"{source_file_stem}_whole_doc_report.json",
-        reuse_claim_cache=reuse_claim_cache,
-    )
+    call_id = ""
+    expected_cache_hit = reuse_claim_cache and _cached_payload_available(canonical_path)
+    if progress and expected_cache_hit:
+        progress.update_stage(
+            "claim_extraction",
+            last_item_id=chunk.source_id,
+            last_item_index=source_index,
+            last_item_status="cache_check",
+            total_items=total_sources,
+        )
+    elif progress:
+        call_id = progress.start_backend_call(
+            stage="claim_extraction",
+            item_id=chunk.source_id,
+            call_id=f"claim_extraction:{chunk.source_id}:{call_label}",
+            item_index=source_index,
+            total_items=total_sources,
+            timeout_seconds=backend_timeout,
+            source_title=chunk.title,
+            prompt_family="whole_doc_source_card",
+            call_label=call_label,
+        )
+    try:
+        payload, cache_hit, backend_error = whole_doc_claim_payload_for_source(
+            source_id=chunk.source_id,
+            source_title=chunk.title,
+            source_text=chunk.plain_text,
+            decision_question=selected_question,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            max_claims=max_claims_per_source,
+            canonical_path=canonical_path,
+            raw_path=source_dir / f"{source_file_stem}_whole_doc_raw.txt",
+            repair_raw_path=source_dir / f"{source_file_stem}_whole_doc_repair_raw.txt",
+            report_path=source_dir / f"{source_file_stem}_whole_doc_report.json",
+            reuse_claim_cache=reuse_claim_cache,
+        )
+    except Exception as exc:
+        if progress and call_id:
+            progress.finish_backend_call(call_id=call_id, status="failed", error=str(exc), item_index=source_index, total_items=total_sources)
+        raise
+    if progress and call_id:
+        progress.finish_backend_call(
+            call_id=call_id,
+            status="backend_error" if backend_error else "completed",
+            error=backend_error,
+            item_index=source_index,
+            total_items=total_sources,
+            cache_hit=cache_hit,
+        )
+    elif progress and cache_hit:
+        progress.update_stage(
+            "claim_extraction",
+            last_item_id=chunk.source_id,
+            last_item_index=source_index,
+            last_item_status="cache_hit",
+            total_items=total_sources,
+        )
     return {
         "source_index": source_index,
         "chunk": chunk,
@@ -561,3 +616,13 @@ def _configured_claim_roles(case_manifest: CaseManifest) -> list[str]:
     if "other" not in roles:
         roles.append("other")
     return roles
+
+
+def _cached_payload_available(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, dict) and bool(payload.get("claims"))

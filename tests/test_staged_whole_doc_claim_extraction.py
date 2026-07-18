@@ -7,6 +7,7 @@ from pathlib import Path
 import epistemic_case_mapper.staged_semantic_whole_doc as whole_doc_adapter
 import epistemic_case_mapper.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
 from epistemic_case_mapper.staged_semantic_pipeline import _extract_claims, _load_context
+from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_whole_doc import effective_whole_doc_claim_cap, whole_doc_num_predict
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -326,6 +327,48 @@ def test_claim_extraction_parallelism_uses_stage_override(monkeypatch) -> None:
     monkeypatch.setenv("ECM_CLAIM_EXTRACTION_PARALLELISM", "3")
 
     assert whole_doc_pipeline.claim_extraction_parallelism("ollama:fake-model") == 3
+
+
+def test_whole_doc_source_fetch_records_monitorable_backend_call(monkeypatch, tmp_path: Path) -> None:
+    chunk = whole_doc_pipeline.WholeDocSourceChunk(
+        chunk_id="demo_source_whole_doc",
+        source_id="demo_source",
+        title="Demo Source",
+        start_line=1,
+        end_line=1,
+        ordinal=1,
+        numbered_text="1: Demo source line.",
+        plain_text="Demo source line.",
+        spans=(),
+    )
+
+    def fake_whole_doc_payload_for_source(**kwargs):
+        return ({"claims": [], "extractor": "whole-doc"}, False, "")
+
+    monkeypatch.setattr(whole_doc_pipeline, "whole_doc_claim_payload_for_source", fake_whole_doc_payload_for_source)
+    progress = PipelineProgress(tmp_path / "pipeline_progress.json", backend_timeout=45)
+    progress.start_stage("claim_extraction", total_items=1)
+
+    result = whole_doc_pipeline._fetch_whole_doc_payload(
+        (1, chunk),
+        selected_question="Should this source be monitored?",
+        backend="ollama:fake-model",
+        backend_timeout=45,
+        backend_retries=0,
+        max_claims_per_source=3,
+        source_dir=tmp_path,
+        reuse_claim_cache=False,
+        progress=progress,
+        total_sources=1,
+    )
+
+    payload = json.loads((tmp_path / "pipeline_progress.json").read_text(encoding="utf-8"))
+    assert result["backend_error"] == ""
+    assert payload["backend_call_count"] == 1
+    assert payload["active_backend_call_count"] == 0
+    assert payload["recent_backend_calls"][-1]["item_id"] == "demo_source"
+    assert payload["recent_backend_calls"][-1]["stage"] == "claim_extraction"
+    assert "stage=claim_extraction" in payload["monitor_summary"]
 
 
 def test_whole_doc_claim_extraction_retries_backend_errors_serially(monkeypatch, tmp_path: Path) -> None:
