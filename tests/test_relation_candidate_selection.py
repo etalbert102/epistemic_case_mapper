@@ -279,6 +279,47 @@ def test_normalize_claim_rejects_unaligned_source_quote() -> None:
     assert claim is None
     assert reason == "source_quote_unaligned"
 
+
+def test_normalize_claim_accepts_quote_aligned_to_local_span_window() -> None:
+    spans = {
+        "demo_s0001": SourceSpan(
+            span_id="demo_s0001",
+            source_id="demo_source",
+            source_span="lines 1-1",
+            text="The relevant argument starts before the model selected line.",
+        ),
+        "demo_s0002": SourceSpan(
+            span_id="demo_s0002",
+            source_id="demo_source",
+            source_span="lines 2-2",
+            text="The source says high-energy comparisons matter for the decision.",
+        ),
+        "demo_s0003": SourceSpan(
+            span_id="demo_s0003",
+            source_id="demo_source",
+            source_span="lines 3-3",
+            text="It adds that adjacent source lines often carry the full quoted point.",
+        ),
+    }
+
+    claim, reason = _normalize_claim_proposal(
+        {
+            "source_quote": "high-energy comparisons matter for the decision and adjacent source lines often carry the full quoted point",
+            "claim": "The high-energy comparison is a local evidence point.",
+            "span_id": "demo_s0002",
+            "entailed_by_excerpt": "yes",
+            "role": "conclusion_support",
+            "question_relevance": "direct",
+        },
+        spans,
+    )
+
+    assert reason == ""
+    assert claim is not None
+    assert claim["source_alignment"]["method"] == "local_window_token_overlap"
+    assert claim["source_alignment"]["resolved_span_id"] == "demo_s0002"
+
+
 def test_candidate_relation_pairs_use_graph_diversity_to_cover_more_claims() -> None:
     claims = [
         _claim("demo_c001", "Primary intervention improves outcomes.", "a", "improves outcomes", "conclusion_support"),

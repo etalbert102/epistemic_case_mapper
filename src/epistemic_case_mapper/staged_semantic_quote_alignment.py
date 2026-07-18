@@ -48,6 +48,20 @@ def align_source_quote_to_span(
     if normalized is not None:
         return _alignment_from_match(normalized, quote, proposed, "normalized_match")
 
+    local = _local_window_quote_match(quote, proposed, span_lookup)
+    if local is not None:
+        span_id, matched_text, coverage, density = local
+        return QuoteAlignment(
+            span_id=span_id,
+            status=_status_for_span(span_id, proposed, "local_window_match"),
+            method="local_window_token_overlap",
+            matched_text=matched_text,
+            proposed_span_id=proposed,
+            quote=quote,
+            coverage=coverage,
+            density=density,
+        )
+
     fuzzy = _fuzzy_quote_match(quote, span_lookup)
     if fuzzy is not None:
         span_id, matched_text, coverage, density = fuzzy
@@ -62,6 +76,55 @@ def align_source_quote_to_span(
             density=density,
         )
     return None
+
+
+def _local_window_quote_match(
+    quote: str,
+    proposed_span_id: str,
+    span_lookup: dict[str, Any],
+    *,
+    radius: int = 3,
+) -> tuple[str, str, float, float] | None:
+    if proposed_span_id not in span_lookup:
+        return None
+    quote_terms = _content_terms(quote)
+    if len(quote_terms) < 4:
+        return None
+    window_ids = _neighbor_span_ids(proposed_span_id, span_lookup, radius=radius)
+    if not window_ids:
+        return None
+    window_text = _normalize_space(" ".join(str(getattr(span_lookup[span_id], "text", "")) for span_id in window_ids))
+    if not window_text:
+        return None
+    window_terms = set(_content_terms(window_text))
+    overlap = sum(1 for term in quote_terms if term in window_terms)
+    coverage = overlap / len(quote_terms)
+    density = overlap / max(1, len(_content_terms(window_text)))
+    if coverage < 0.75:
+        return None
+    return (proposed_span_id, window_text, coverage, density)
+
+
+def _neighbor_span_ids(proposed_span_id: str, span_lookup: dict[str, Any], *, radius: int) -> list[str]:
+    source_id = str(getattr(span_lookup[proposed_span_id], "source_id", ""))
+    source_spans = [
+        (span_id, _span_start_line(str(getattr(span, "source_span", ""))))
+        for span_id, span in span_lookup.items()
+        if str(getattr(span, "source_id", "")) == source_id
+    ]
+    proposed_line = _span_start_line(str(getattr(span_lookup[proposed_span_id], "source_span", "")))
+    if proposed_line is None:
+        return [proposed_span_id]
+    return [
+        span_id
+        for span_id, line in sorted(source_spans, key=lambda item: (item[1] is None, item[1] or 0, item[0]))
+        if line is not None and abs(line - proposed_line) <= radius
+    ]
+
+
+def _span_start_line(source_span: str) -> int | None:
+    match = re.search(r"\b(?:line|lines)\s+(\d+)", source_span)
+    return int(match.group(1)) if match else None
 
 
 def quote_alignment_metadata(alignment: QuoteAlignment) -> dict[str, Any]:
