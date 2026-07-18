@@ -63,6 +63,10 @@ Generated starter output is written to `artifacts/<case_id>/`. Curated judge-fac
 The canonical reusable path is:
 
 ```bash
+ecm --repo-root /path/to/package case filter-sources \
+  --question "What should a careful reader conclude?" \
+  --docs doc_a.txt doc_b.md
+
 ecm --repo-root /path/to/package --package package.yaml case init \
   --case-id my_case \
   --title "My Case" \
@@ -75,6 +79,8 @@ ecm --repo-root /path/to/package --package package.yaml semantic staged brief \
 ```
 
 Use `--backend prompt` first to inspect prompts and generated scaffolding without calling a model. Swap in `--backend command:<cmd>` or `--backend ollama:<model>` for a live run.
+
+`case filter-sources` is an optional intake screen. It records deterministic source-readability signals and, with a live backend, model judgments about likely relevance or trust concerns before sources enter the package. It is report-only unless `case init --filter-sources --exclude-filtered-sources` is used.
 
 The staged brief command writes a generated map, a decision briefing, a summary JSON, progress logs, and `FINAL_REVIEW_PACKET.md`. Start with the printed briefing path, then use the final review packet to inspect map quality, traceability, and warnings.
 

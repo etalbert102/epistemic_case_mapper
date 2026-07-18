@@ -41,7 +41,29 @@ def _add_case_parsers(subparsers: Any) -> None:
     case_init.add_argument("--config-backend", help="Backend for config recommendation. Defaults to --model-backend.")
     case_init.add_argument("--config-timeout", type=int, default=60, help="Seconds allowed for config recommendation backend call.")
     case_init.add_argument("--config-retries", type=int, default=0, help="Retries for config recommendation backend failures.")
+    case_init.add_argument("--filter-sources", action="store_true", help="Run the optional intake source filter before case initialization.")
+    case_init.add_argument("--filter-backend", help="Backend for intake source filtering. Defaults to --model-backend.")
+    case_init.add_argument("--filter-output-dir", help="Artifact directory for intake filter output. Defaults to artifacts/source_intake_filters/<case-id>.")
+    case_init.add_argument("--filter-timeout", type=int, default=60, help="Seconds allowed for the intake filter backend call.")
+    case_init.add_argument("--filter-retries", type=int, default=0, help="Retries for intake filter backend failures.")
+    case_init.add_argument(
+        "--exclude-filtered-sources",
+        action="store_true",
+        help="Apply intake filter exclusions before importing docs. Without this flag the filter is report-only.",
+    )
     case_init.add_argument("--force", action="store_true", help="Overwrite initializer-managed files.")
+    case_filter = case_subparsers.add_parser("filter-sources", help="Run the optional first-phase source intake filter.")
+    case_filter.add_argument("--question", required=True, help="Decision-relevant question.")
+    case_filter.add_argument("--docs", nargs="+", required=True, help="Document files to inspect.")
+    case_filter.add_argument("--backend", default="prompt", help="Backend: prompt, command:<cmd>, or ollama:<model>.")
+    case_filter.add_argument("--output-dir", help="Artifact directory. Defaults to artifacts/source_intake_filters/<question-slug>.")
+    case_filter.add_argument("--backend-timeout", type=int, default=60)
+    case_filter.add_argument("--backend-retries", type=int, default=0)
+    case_filter.add_argument(
+        "--exclude-filtered-sources",
+        action="store_true",
+        help="Mark model-recommended exclusions as final exclusions in the report.",
+    )
     case_config = case_subparsers.add_parser("recommend-config", help="Recommend an epistemic config profile for documents and a question.")
     case_config.add_argument("--question", required=True, help="Decision-relevant question.")
     case_config.add_argument("--docs", nargs="+", required=True, help="Document files to inspect.")

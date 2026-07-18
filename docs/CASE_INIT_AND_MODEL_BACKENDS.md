@@ -14,6 +14,31 @@ ecm --repo-root /path/to/package --package package.yaml case init \
 
 This creates a manifest, case manifest, copied source files, a starter worked region, a starter map, a placeholder erosion audit, a baseline comparator, and UI/review scaffold files. The starter map is explicitly only a source inventory; it is meant to make the package runnable before a substantive model or human mapping pass replaces it.
 
+## Optional Source Intake Filter
+
+Before initialization, run the optional first-phase intake filter when a document packet may contain off-question, unreadable, or low-trust sources:
+
+```bash
+ecm --repo-root /path/to/package case filter-sources \
+  --question "What should a careful reader conclude?" \
+  --docs doc_a.txt doc_b.md \
+  --backend prompt
+```
+
+The filter writes `source_intake_filter.json` and `SOURCE_INTAKE_FILTER.md`. With `--backend prompt`, it records the model prompt without calling a model. With `command:<cmd>` or `ollama:<model>`, it adds model judgments about likely relevance and trust concerns.
+
+The filter is an intake screen, not the final evidence-quality assessment. `case init --filter-sources` records the same report before copying sources but keeps all readable sources by default. Add `--exclude-filtered-sources` only when you want the filter to route final `exclude` decisions away before the full mapping pipeline runs:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml case init \
+  --case-id my_case \
+  --title "My Case" \
+  --question "What should a careful reader conclude?" \
+  --docs doc_a.txt doc_b.md \
+  --filter-sources \
+  --exclude-filtered-sources
+```
+
 ## End-To-End Briefing
 
 After `case init`, the shortest path from sources to a reader-facing memo is:

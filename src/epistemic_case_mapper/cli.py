@@ -29,6 +29,7 @@ from epistemic_case_mapper.semantic_pipeline import (
     validate_map_candidate,
 )
 from epistemic_case_mapper.staged_semantic_pipeline import run_staged_map
+from epistemic_case_mapper.source_intake_filter import run_source_intake_filter
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 from epistemic_case_mapper.unseen_quality import (
     quality_signals,
@@ -118,7 +119,24 @@ def _dispatch_case_command(repo_root: Path, args: argparse.Namespace) -> int:
             args.config_backend,
             args.config_timeout,
             args.config_retries,
+            args.filter_sources,
+            args.filter_backend,
+            args.filter_output_dir,
+            args.filter_timeout,
+            args.filter_retries,
+            args.exclude_filtered_sources,
             args.force,
+        )
+    if args.command == "case" and args.case_target == "filter-sources":
+        return _filter_sources(
+            repo_root=repo_root,
+            question=args.question,
+            docs=[Path(path) for path in args.docs],
+            backend=args.backend,
+            output_dir=args.output_dir,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
+            exclude_filtered_sources=args.exclude_filtered_sources,
         )
     if args.command == "case" and args.case_target == "recommend-config":
         return _recommend_config(
@@ -416,6 +434,12 @@ def _init_case_package(
     config_backend: str | None,
     config_timeout: int,
     config_retries: int,
+    filter_sources: bool,
+    filter_backend: str | None,
+    filter_output_dir: str | None,
+    filter_timeout: int,
+    filter_retries: int,
+    exclude_filtered_sources: bool,
     force: bool,
 ) -> int:
     if config_timeout < 1:
@@ -424,12 +448,47 @@ def _init_case_package(
     if config_retries < 0:
         print("case_init_failed config_retries_must_be_nonnegative", file=sys.stderr)
         return 1
+    if filter_timeout < 1:
+        print("case_init_failed filter_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if filter_retries < 0:
+        print("case_init_failed filter_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    working_docs = list(docs)
+    intake_result = None
+    if filter_sources:
+        artifacts = Path(filter_output_dir) if filter_output_dir else Path("artifacts") / "source_intake_filters" / _slugify_path_component(case_id)
+        if not artifacts.is_absolute():
+            artifacts = repo_root / artifacts
+        try:
+            intake_result = run_source_intake_filter(
+                question=question,
+                doc_paths=docs,
+                backend=filter_backend or model_backend,
+                output_dir=artifacts,
+                backend_timeout=filter_timeout,
+                backend_retries=filter_retries,
+                exclude_flagged=exclude_filtered_sources,
+            )
+        except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+            print(f"case_init_failed source_filter_error={exc}", file=sys.stderr)
+            return 1
+        print(
+            "Source intake filter wrote "
+            f"{_display_path(repo_root, intake_result.json_path)} "
+            f"included={len(intake_result.included_docs)} excluded={len(intake_result.excluded_docs)}"
+        )
+        if exclude_filtered_sources:
+            working_docs = list(intake_result.included_docs)
+            if not working_docs:
+                print("case_init_failed source_filter_excluded_all_sources", file=sys.stderr)
+                return 1
     epistemic_config = None
     if recommend_config:
         try:
             config_run = recommend_config_profile(
                 question=question,
-                doc_paths=docs,
+                doc_paths=working_docs,
                 backend=config_backend or model_backend,
                 timeout_seconds=config_timeout,
                 max_retries=config_retries,
@@ -446,7 +505,7 @@ def _init_case_package(
             case_id=case_id,
             title=title,
             question=question,
-            doc_paths=docs,
+            doc_paths=working_docs,
             region_id=region,
             model_backend=model_backend,
             epistemic_config=epistemic_config,
@@ -458,8 +517,52 @@ def _init_case_package(
     print(f"Initialized case package case={initialized.case_id} region={initialized.region_id}")
     if epistemic_config:
         print(f"Selected epistemic config profile={epistemic_config.get('profile_id')} confidence={epistemic_config.get('confidence', 'low')}")
+    if intake_result:
+        mode = intake_result.report.get("mode", "report_only")
+        print(f"Source intake mode={mode} report={_display_path(repo_root, intake_result.markdown_path)}")
     for path in initialized.written_paths:
         print(f"Wrote {_display_path(repo_root, path)}")
+    return 0
+
+
+def _filter_sources(
+    *,
+    repo_root: Path,
+    question: str,
+    docs: list[Path],
+    backend: str,
+    output_dir: str | None,
+    backend_timeout: int,
+    backend_retries: int,
+    exclude_filtered_sources: bool,
+) -> int:
+    if backend_timeout < 1:
+        print("source_filter_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("source_filter_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    artifacts = Path(output_dir) if output_dir else Path("artifacts") / "source_intake_filters" / _slugify_path_component(question)
+    if not artifacts.is_absolute():
+        artifacts = repo_root / artifacts
+    try:
+        result = run_source_intake_filter(
+            question=question,
+            doc_paths=docs,
+            backend=backend,
+            output_dir=artifacts,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            exclude_flagged=exclude_filtered_sources,
+        )
+    except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(f"source_filter_failed error={exc}", file=sys.stderr)
+        return 1
+    print(
+        "Source intake filter wrote "
+        f"{_display_path(repo_root, result.json_path)} and {_display_path(repo_root, result.markdown_path)} "
+        f"included={len(result.included_docs)} excluded={len(result.excluded_docs)}"
+    )
     return 0
 
 
