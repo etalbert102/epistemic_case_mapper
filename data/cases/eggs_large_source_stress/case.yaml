@@ -1,0 +1,1059 @@
+case_id: eggs_large_source_stress
+title: 'Eggs and Health: Large Source Stress Case'
+question: For generally healthy adults, should eggs be treated as meaningfully harmful,
+  neutral, or beneficial in dietary advice, especially with respect to cardiovascular
+  risk?
+case_type: large noisy source stress case
+evidence_mode: source_grounded
+review_status: draft
+status: in_progress
+notes:
+- Generated from live PMC source acquisition; not a manually curated evidence base.
+- Includes directly and tangentially egg-, dietary-cholesterol-, and nutrition-related
+  sources.
+- Designed to exceed a 256k context-window-scale source corpus so staged processing
+  can be demonstrated.
+sources:
+- source_id: pmc12229173
+  title: 'Association between egg consumption and major and minor ischemia changes
+    on electrocardiogram: A population-based study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12229173/
+  author: Seifi N, Soflaei SS, Islampanah M, Hatamzadeh H et al.
+  publication_date: '2025'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc12229173.txt
+  excerpt: 'BACKGROUND: Eggs, while nutrient-rich, have high cholesterol content.
+    The link between egg consumption and cardiovascular disease (CVD) remains debated.
+    This study investigates how egg intake correlates with minor and major electrocardiogram
+    (ECG) abnormalities, which serve as potential indicators of CVD. METHODS: In this
+    cross-sectional study, a total of 5,'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc2904713
+  title: Daily egg consumption in hyperlipidemic adults - Effects on endothelial function
+    and cardiovascular risk
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2904713/
+  author: Njike V, Faridi Z, Dutta S, Gonzalez-Simon AL et al.
+  publication_date: '2010'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc2904713.txt
+  excerpt: Background Limiting consumption of eggs, which are high in cholesterol,
+    is generally recommended to reduce risk of cardiovascular disease. However, recent
+    evidence suggests that dietary cholesterol has limited influence on serum cholesterol
+    or cardiac risk. Objective To assess the effects of egg consumption on endothelial
+    function and serum lipids in hyperli
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc12508433
+  title: Dietary cholesterol intake and egg consumption in relation to all-cause and
+    cardiovascular mortality after stroke
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12508433/
+  author: Xia L, Xu T, Zhan Z
+  publication_date: '2025-10-08'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc12508433.txt
+  excerpt: 'The findings on the associations of dietary cholesterol intake and egg
+    consumption with mortality in the general population remain inconclusive. Our
+    objective was to evaluate all-cause and cardiovascular mortality in relation to
+    dietary cholesterol intake and egg consumption in a cohort of stroke survivors,
+    a particularly vulnerable population. We conducted '
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc9129873
+  title: 'Association of egg consumption, metabolic markers, and risk of cardiovascular
+    diseases: A nested case-control study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9129873/
+  author: Pan L, Chen L, Lv J, Pang Y et al.
+  publication_date: '2022-05-24'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc9129873.txt
+  excerpt: 'Background: Few studies have assessed the role of individual plasma cholesterol
+    levels in the association between egg consumption and the risk of cardiovascular
+    diseases. This research aims to simultaneously explore the associations of self-reported
+    egg consumption with plasma metabolic markers and these markers with the risk
+    of cardiovascular disease (CVD).'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc4136506
+  title: Egg Consumption and Carotid Atherosclerosis in the Northern Manhattan Study
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4136506/
+  author: Goldberg S, Gardener H, Tiozzo E, Kuen CY et al.
+  publication_date: '2014-04-30'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4136506.txt
+  excerpt: Background The evidence supporting recommendations to limit intake of cholesterol
+    rich foods is inconclusive. We aimed to examine the association between egg consumption
+    and carotid atherosclerosis phenotypes, and the association with clinical vascular
+    events in a prospective, urban, multi-ethnic population. Methods and Results The
+    Northern Manhattan Study i
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc6241631
+  title: Associations of egg consumption with cardiovascular disease in a cohort study
+    of 0.5 million Chinese adults
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6241631/
+  author: Qin C, Lv J, Guo Y, Bian Z et al.
+  publication_date: 2018-11
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc6241631.txt
+  excerpt: "Objective To examine the associations between egg consumption and cardiovascular\
+    \ disease (CVD), ischaemic heart disease (IHD), major coronary events (MCE), haemorrhagic\
+    \ stroke as well as ischaemic stroke. Methods During 2004\u20132008, over 0.5\
+    \ million adults aged 30\u201379 years were recruited from 10 diverse survey sites\
+    \ in China. Participants were asked about the "
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc6267402
+  title: Association between egg consumption and cardiovascular disease events, diabetes
+    and all-cause mortality
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6267402/
+  author: Guo J, Hobbs DA, Cockcroft JR, Elwood PC et al.
+  publication_date: '2017-11-02'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc6267402.txt
+  excerpt: Purpose The association between egg consumption and cardiovascular disease
+    (CVD) or type 2 diabetes (T2D) remains controversial. We investigated the association
+    between egg consumption and risk of CVD (primary outcome), T2D and mortality in
+    the Caerphilly prospective cohort study (CAPS) and National Diet and Nutritional
+    Survey (NDNS). Methods CAPS included 2
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc8751450
+  title: Egg consumption improves vascular and gut microbiota function without increasing
+    inflammatory, metabolic, and oxidative stress markers
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8751450/
+  author: Liu X, Shao Y, Sun J, Tu J et al.
+  publication_date: '2021-11-30'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8751450.txt
+  excerpt: "Abstract Egg consumption is one of the many inconsistencies in evidence\
+    \ linking dietary cholesterol to cardiovascular disease (CVD). In addition, the\
+    \ gut microbiota and its metabolite, trimethylamine\u2010N\u2010oxide (TMAO),\
+    \ have been shown to play a crucial role in the development of CVD. The fact that\
+    \ egg is rich in choline suggests that excessive egg consumption m"
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc10688106
+  title: 'Egg consumption and risk of cardiovascular disease: a PERSIAN cohort-based
+    study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10688106/
+  author: Mohseni Gk, Mohammadi S, Aghakhaninejad Z, Tajadod S et al.
+  publication_date: '2023-11-30'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10688106.txt
+  excerpt: Background Cardiovascular diseases (CVDs) are one of the main causes of
+    death worldwide. Data on the effect of eggs consumption on the risk of CVDs are
+    still unreliable. Therefore, this study aimed to investigate the association between
+    CVDs and the consumption of eggs. Methods In this case-control study, the required
+    data were extracted from the Prospective
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc5916923
+  title: 'Longitudinal association between egg consumption and the risk of cardiovascular
+    disease: interaction with type 2 diabetes mellitus'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5916923/
+  author: Jang J, Shin M, Kim OY, Park K
+  publication_date: '2018-04-25'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc5916923.txt
+  excerpt: Background/objectives It remains unclear if high egg consumption has beneficial
+    or adverse effects on cardiometabolic health. The present study prospectively
+    evaluated the longitudinal association between egg-consumption levels and incident
+    cardiovascular disease (CVD) among Korean adults. Subjects/methods We conducted
+    a prospective cohort study of 9248 Kore
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cardiovascular'
+- source_id: pmc8477346
+  title: Egg intake moderates the rate of memory decline in healthy older adults
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8477346/
+  author: Lee GJ, Oda K, Morton KR, Orlich M et al.
+  publication_date: '2021'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8477346.txt
+  excerpt: Eggs contain important compounds related to enhanced cognition, but it
+    is not clear if egg consumption, as a whole, has a direct impact on memory decline
+    in older adults. This study aimed to determine whether egg intake levels predict
+    the rate of memory decline in healthy older adults after sociodemographic and
+    dietary controls. We conducted a secondary anal
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc4586539
+  title: Egg Consumption and Human Cardio-Metabolic Health in People with and without
+    Diabetes
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4586539/
+  author: Fuller NR, Sainsbury A, Caterson ID, Markovic TP
+  publication_date: '2015-09-03'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4586539.txt
+  excerpt: The guidelines for dietary cholesterol and/or egg intake for both the general
+    population and those at higher risk of cardiovascular disease (for example, people
+    with type 2 diabetes mellitus (T2DM)) differ between countries, and even for different
+    specialist societies in a country. The disparity between these guidelines is at
+    least in part related to the con
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc6315879
+  title: Egg Intake in Chronic Kidney Disease
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6315879/
+  author: Tallman DA, Sahathevan S, Karupaiah T, Khosla P
+  publication_date: '2018-12-07'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc6315879.txt
+  excerpt: Patients with chronic kidney disease (CKD) are often instructed to adhere
+    to a renal-specific diet depending on the severity and stage of their kidney disease.
+    The prescribed diet may limit certain nutrients, such as phosphorus and potassium,
+    or encourage the consumption of others, such as high biological value (HBV) proteins.
+    Eggs are an inexpensive, easily
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc10945122
+  title: Eggs and a Fiber-Rich Diet Are Beneficially Associated with Lipid Levels
+    in Framingham Offspring Study Adults
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10945122/
+  author: Zhou X, Mott MM, Yiannakou I, Bradlee ML et al.
+  publication_date: 2024-03
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10945122.txt
+  excerpt: "Background For many years, United States\u2019 dietary policy recommended\
+    \ limiting egg intake to no more than 3/wk in the belief that restricting dietary\
+    \ cholesterol would lower plasma cholesterol levels and thereby reduce the risk\
+    \ of cardiovascular disease. The evidence supporting these recommendations is\
+    \ controversial. Objectives To examine the impact of eggs, "
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc6566236
+  title: 'Frequency and Quantity of Egg Intake Is Not Associated with Dyslipidemia:
+    The Hellenic National Nutrition and Health Survey (HNNHS)'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6566236/
+  author: Magriplis E, Mitsopoulou A, Karageorgou D, Bakogianni I et al.
+  publication_date: '2019-05-17'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc6566236.txt
+  excerpt: "Background: Gaps remain on the safety of egg intake on cardiovascular\
+    \ health, setting the study\u2019s aim to investigate the association between\
+    \ quantity and frequency of egg consumption, with established dyslipidemia. Methods:\
+    \ Study participants ( N = 3558, 40.3% males) included individuals from the Hellenic\
+    \ National and Nutrition Health Survey (HNNHS), of nati"
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc11767731
+  title: 'Egg Consumption and Mortality: A Prospective Cohort Study of Australian
+    Community-Dwelling Older Adults'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11767731/
+  author: Wild H, Gasevic D, Woods RL, Ryan J et al.
+  publication_date: '2025-01-17'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11767731.txt
+  excerpt: 'Background/Objectives: Egg consumption in adults has been linked with
+    a modestly increased risk of all-cause and CVD mortality. However, evidence on
+    adults aged 65 y+ is limited. The objective of this study was to investigate the
+    association between egg intake and mortality in community-dwelling older adults.
+    Methods: In this prospective cohort study, 8756 a'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc11731440
+  title: 'Association between egg consumption and risk of obesity: A comprehensive
+    review'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11731440/
+  author: Chen J, Pei B, Shi S
+  publication_date: 2025-02
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11731440.txt
+  excerpt: Eggs serve as a vital source of high-quality protein and lipids in the
+    human diet, contributing significantly to nutritional intake; however, the relation
+    between egg intake and health risks has been controversial. This study aimed to
+    assess the relationship between egg intake and obesity and the effects of the
+    various nutrients in eggs on obesity were separ
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc4425170
+  title: Egg Phospholipids and Cardiovascular Health
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4425170/
+  author: Blesso CN
+  publication_date: '2015-04-13'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4425170.txt
+  excerpt: 'Eggs are a major source of phospholipids (PL) in the Western diet. Dietary
+    PL have emerged as a potential source of bioactive lipids that may have widespread
+    effects on pathways related to inflammation, cholesterol metabolism, and high-density
+    lipoprotein (HDL) function. Based on pre-clinical studies, egg phosphatidylcholine
+    (PC) and sphingomyelin appear to '
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc5852834
+  title: Intake of 3 Eggs per Day When Compared to a Choline Bitartrate Supplement,
+    Downregulates Cholesterol Synthesis without Changing the LDL/HDL Ratio
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5852834/
+  author: Lemos BS, Medina-Vera I, Blesso CN, Fernandez ML
+  publication_date: '2018-02-24'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc5852834.txt
+  excerpt: Cardiovascular disease (CVD) risk is associated with high concentrations
+    of low-density lipoprotein cholesterol (LDL-C). The impact of dietary cholesterol
+    on plasma lipid concentrations still remains a concern. The effects of egg intake
+    in comparison to choline bitartrate supplement was studied in a young, healthy
+    population. Thirty participants were enrolle
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc12765572
+  title: 'Egg Consumption and Human Health: A Comprehensive Review of the Effects
+    on Serum Lipids, Antioxidant Status, and Cardiovascular Outcomes'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12765572/
+  author: Kishimoto Y, Sugihara N
+  publication_date: '2026-01-06'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc12765572.txt
+  excerpt: Abstract Eggs are a highly nutritious food and an excellent source of carotenoids,
+    lutein and zeaxanthin, which contribute to antioxidant defenses and ocular health.
+    However, eggs have been viewed skeptically because of their impact on serum cholesterol
+    levels. This review summarizes the evidence from clinical trials, observational
+    studies, and worldwide eco
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg intake" AND cardiovascular'
+- source_id: pmc6165023
+  title: 'Dietary Cholesterol Contained in Whole Eggs Is Not Well Absorbed and Does
+    Not Acutely Affect Plasma Total Cholesterol Concentration in Men and Women: Results
+    from 2 Randomized Controlled Crossover Studies'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6165023/
+  author: Kim JE, Campbell WW
+  publication_date: '2018-09-09'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_trial
+  path: data/cases/eggs_large_source_stress/sources/text/pmc6165023.txt
+  excerpt: Whole egg is a food source of dietary cholesterol and inconsistent research
+    findings exist about the effect of dietary cholesterol from whole egg on blood
+    cholesterol concentration. We assessed the effect of co-consuming cooked whole
+    egg (CWE) on dietary cholesterol absorption from two randomized-crossover studies.
+    For study 1, 16 men consumed raw vegetables
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc8620026
+  title: Relationship between Dietary Habits and Control of Lipid Profiles in Patients
+    with Dyslipidemia Using Pravastatin
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8620026/
+  author: Kang SY, Jeon TH, Yum K, Sunwoo S et al.
+  publication_date: '2021-10-25'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8620026.txt
+  excerpt: "We investigated the association between dietary habits, evaluated using\
+    \ the modified Mini Dietary Assessment Index for Koreans (MDA), and lipid control\
+    \ among patients aged \u226520 years who had used pravastatin for dyslipidemia\
+    \ for 6 months. Participants were administered questionnaires regarding sociodemographic\
+    \ characteristics and lifestyle factors. Odds ratio"
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc7400894
+  title: 'Association between Egg Consumption and Cholesterol Concentration: A Systematic
+    Review and Meta-Analysis of Randomized Controlled Trials'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7400894/
+  author: Li M, Chen J, Chen C, Kang Y
+  publication_date: '2020-07-04'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc7400894.txt
+  excerpt: The association of egg consumption and serum cholesterol concentrations
+    in healthy people has been discussed for a long time. In this study, we aimed
+    to explore association of egg consumption with on low-density lipoprotein cholesterol
+    (LDL-c) and high-density lipoprotein cholesterol (HDL-c) concentrations and the
+    LDL-c/HDL-c ratio through meta-analysis. Thi
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc7872242
+  title: 'Egg and cholesterol consumption and mortality from cardiovascular and different
+    causes in the United States: A population-based cohort study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7872242/
+  author: Zhuang P, Wu F, Mao L, Zhu F et al.
+  publication_date: '2021-02-09'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc7872242.txt
+  excerpt: Background Whether consumption of egg and cholesterol is detrimental to
+    cardiovascular health and longevity is highly debated. Data from large-scale cohort
+    studies are scarce. This study aimed to examine the associations of egg and cholesterol
+    intakes with mortality from all causes, cardiovascular disease (CVD), and other
+    causes in a US population. Methods a
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc4621932
+  title: Fatty acid and cholesterol profiles and hypocholesterolemic, atherogenic,
+    and thrombogenic indices of table eggs in the retail market
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4621932/
+  author: Attia YA, Al-Harthi MA, Korish MA, Shiboob MM
+  publication_date: '2015-10-27'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4621932.txt
+  excerpt: Background Eggs are an important source of food due to its favorable effects
+    on human health derived from the protein, fats, minerals, vitamins and bioactive
+    components. We studied the effects of source of eggs in the retail market on fatty
+    acids, lipid profiles and antioxidant status in eggs. Methods Eggs from four sources
+    named A, B, C, and D in the retail
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc8851934
+  title: 'Egg Consumption and Blood Lipid Parameters According to the Presence of
+    Chronic Metabolic Disorders: The EVIDENT II Study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8851934/
+  author: "Mesas AE, Garrido-Miguel M, Fern\xE1ndez-Rodr\xEDguez R, Fern\xE1ndez Franco\
+    \ S et al."
+  publication_date: 2022-03
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8851934.txt
+  excerpt: 'Abstract Context Egg consumption is one of the main dietary sources of
+    cholesterol, but whether individuals who eat more eggs have a worse blood lipid
+    profile remains controversial. Objective We examined the relationship between
+    egg consumption and lipid parameters and explored whether this relationship changes
+    according to the presence of chronic metabolic '
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc11821034
+  title: 'Egg Consumption: Trends Over 48 Years, Patterns Across the Lifespan, and
+    Predictors of Intake'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11821034/
+  author: Kritz-Silverstein D, Bettencourt R
+  publication_date: '2025-01-31'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11821034.txt
+  excerpt: 'Background/Objectives: Eggs are an excellent nutritional source. However,
+    historical associations of dietary cholesterol with serum cholesterol and cardiovascular
+    disease, along with restrictive dietary guidelines may have been barriers to egg
+    consumption. This study examines trends over time, patterns, and predictors of
+    egg consumption in individuals follow'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc11068152
+  title: An overview of the cholesterol metabolism and its proinflammatory role in
+    the development of MASLD
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11068152/
+  author: Zhang L, Shi Y, Liang B, Li X
+  publication_date: 2024-05
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11068152.txt
+  excerpt: Cholesterol is an essential lipid molecule in mammalian cells. It is not
+    only involved in the formation of cell membranes but also serves as a raw material
+    for the synthesis of bile acids, vitamin D, and steroid hormones. Additionally,
+    it acts as a covalent modifier of proteins and plays a crucial role in numerous
+    life processes. Generally, the metabolic pro
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc2911502
+  title: 'Dietary Fat and Cholesterol and Risk of Cardiovascular Disease in Older
+    Adults: the Health ABC Study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC2911502/
+  author: Houston D, Ding J, Lee J, Garcia M et al.
+  publication_date: '2010-03-24'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc2911502.txt
+  excerpt: "BACKGROUND AND AIMS Although dietary fats and cholesterol have previously\
+    \ been associated with risk of cardiovascular disease (CVD) in middle aged populations,\
+    \ less is known among older adults. The purpose of this study was to determine\
+    \ the association between dietary fats, cholesterol, and eggs and CVD risk among\
+    \ community-dwelling adults aged 70\u201379 in the "
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc9134263
+  title: Associations of Dietary Cholesterol, Serum Cholesterol, and Egg Consumption
+    With Overall and Cause-Specific Mortality, and Systematic Review and Updated Meta-Analysis
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9134263/
+  author: "Zhao B, Gan L, Graubard BI, M\xE4nnist\xF6 S et al."
+  publication_date: '2022-05-17'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc9134263.txt
+  excerpt: 'Background: Despite substantial attention underscoring the importance
+    of exogenous dietary and endogenous serum cholesterol to human health, thorough
+    evaluation of the associations is lacking. Our study objective was to examine
+    overall and cause-specific mortality in relation to dietary and serum cholesterol,
+    as well as egg consumption, and conduct an update'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND cholesterol'
+- source_id: pmc5360102
+  title: 'Dietary Protein Sources and All-Cause and Cause-Specific Mortality: The
+    Golestan Cohort Study in Iran'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5360102/
+  author: Farvid MS, Malekshah AF, Pourshams A, Poustchi H et al.
+  publication_date: 2017-02
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc5360102.txt
+  excerpt: Introduction Dietary protein comes from foods with greatly different compositions
+    that may not relate equally with mortality risk. Few cohort studies from non-Western
+    countries have examined the association between various dietary protein sources
+    and cause-specific mortality. Therefore, the associations between dietary protein
+    sources and all-cause, cardiova
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc8437843
+  title: Egg consumption and risk of all-cause and cause-specific mortality in an
+    Italian adult population
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8437843/
+  author: Ruggiero E, Di Castelnuovo A, Costanzo S, Persichillo M et al.
+  publication_date: '2021-03-24'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8437843.txt
+  excerpt: Purpose Dietary guidelines recommend to limit egg consumption to 4 servings
+    per week but the relation between egg intake and health outcomes is still controversial.
+    To evaluate the association of egg consumption and mortality risk in Italian adults
+    and to investigate nutritional factors and serum lipids as potentially explaining
+    such associations. Methods Lo
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc3969252
+  title: 'Egg consumption and cardiovascular disease among diabetic individuals: a
+    systematic review of the literature'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3969252/
+  author: Tran NL, Barraj LM, Heilman JM, Scrafford CG
+  publication_date: '2014'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc3969252.txt
+  excerpt: Background This study reviewed epidemiological and experimental evidence
+    on the relationship between egg consumption and cardiovascular disease (CVD) risks
+    among type II diabetes mellitus (T2DM) individuals, and T2DM risk in nondiabetic
+    subjects. Results Four of the six studies that examined CVD and mortality and
+    egg consumption among diabetics found a stati
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc9690384
+  title: 'Frequency of Egg Intake Associated with Mortality in Chinese Adults: An
+    8-Year Nationwide Cohort Study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC9690384/
+  author: Wang K, Xiang Q, Hu L, Wang L et al.
+  publication_date: '2022-11-10'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc9690384.txt
+  excerpt: Whether egg consumption plays a beneficial/detrimental role in affecting
+    human health and longevity has been debated for decades. Large-scale cohort evidence
+    from low- and middle-income populations are scarce. In this study, we aimed to
+    assess the association of egg consumption with mortality in Chinese adults. A
+    nationwide cohort of 30,835 participants ages
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc10285014
+  title: 'Eggs and Cardiovascular Disease Risk: An Update of Recent Evidence'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10285014/
+  author: Carter S, Connole ES, Hill AM, Buckley JD et al.
+  publication_date: '2023-05-23'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10285014.txt
+  excerpt: Purpose of Review This review summarizes recent evidence published since
+    a previous review in 2018 on the association between egg consumption and risk
+    of cardiovascular disease (CVD) mortality, CVD incidence, and CVD risk factors.
+    Recent Findings No recent randomized controlled trials were identified. Evidence
+    from observational studies is mixed, with studie
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc13279293
+  title: "Egg Intake and the Incidence of Alzheimer\u2019s Disease in the Adventist\
+    \ Health Study-2 Cohort Linked with Medicare Data"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC13279293/
+  author: Oh J, Oda K, Chiriac G, Fraser GE et al.
+  publication_date: 2026-06
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc13279293.txt
+  excerpt: "Background A substantial knowledge gap remains regarding the relationship\
+    \ between modifiable dietary factors and Alzheimer\u2019s disease risk. Eggs are\
+    \ a source of key nutrients that support brain health. Objectives The aim of this\
+    \ study was to investigate the association between egg consumption and the incidence\
+    \ of Alzheimer\u2019s disease. Methods Data were drawn f"
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc11931306
+  title: Umbrella Review of Systematic Reviews and Meta-analyses on Consumption of
+    Different Food Groups and Risk of All-cause Mortality
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11931306/
+  author: Onni AT, Balakrishna R, Perillo M, Amato M et al.
+  publication_date: 2025-04
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11931306.txt
+  excerpt: Consumption of different food groups is linked to a range of health outcomes.
+    It is essential to integrate the most reliable evidence regarding intake of different
+    food groups and risk of mortality to optimize dietary guidance. Our aim is to
+    systematically and comprehensively assess the associations between the consumption
+    of various food groups and all-caus
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc11065246
+  title: 'Egg consumption and bone mass density among the elderly: A scoping review'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC11065246/
+  author: Olagunju MT, Abodunrin OR, Omotoso IO, Adewole IE et al.
+  publication_date: '2024-05-02'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc11065246.txt
+  excerpt: 'Eggs offer a range of essential nutrients that could support skeletal
+    health as individuals age. Maintaining bone density is crucial for reducing the
+    risk of fractures and improving overall mobility and quality of life in later
+    years. Understanding the potential benefits of habitual egg consumption on bone
+    mass density among older people is essential, given '
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc8137614
+  title: "Egg consumption and cardiovascular risk: a dose\u2013response meta-analysis\
+    \ of prospective cohort studies"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8137614/
+  author: Godos J, Micek A, Brzostek T, Toledo E et al.
+  publication_date: '2020-08-31'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8137614.txt
+  excerpt: Purpose Cardiovascular disease (CVD) is a leading cause of mortality globally
+    and is strongly influenced by dietary risk factors. The aim was to assess the
+    association between egg consumption and risk of CVD risk/mortality, including
+    coronary heart disease (CHD), stroke, and heart failure. Methods MEDLINE, Embase,
+    and Web of Science databases were searched t
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc10870976
+  title: "Eggs \u2013 a scoping review for Nordic Nutrition Recommendations 2023"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10870976/
+  author: Virtanen JK, Larsson SC
+  publication_date: '2024-02-06'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10870976.txt
+  excerpt: Cardiovascular diseases (CVD), type 2 diabetes (T2D), and cancer are a
+    significant public health burden in the Nordic and Baltic countries. High intake
+    of eggs, mainly due to its high cholesterol content, has been suggested to have
+    adverse health effects. The purpose of this scoping review is to describe the
+    evidence related to the impact of egg intake on he
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND mortality'
+- source_id: pmc4309282
+  title: 'Association of egg consumption and calcified atherosclerotic plaque in the
+    coronary arteries: the NHLBI Family Heart Study'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4309282/
+  author: Robbins JM, Petrone AB, Ellison RC, Hunt SC et al.
+  publication_date: 2014-06
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4309282.txt
+  excerpt: Background and Aims Eggs are a ubiquitous and important source of dietary
+    cholesterol and nutrients, yet their relationship to coronary heart disease (CHD)
+    remains unclear. While some data have suggested a positive association between
+    egg consumption and CHD, especially among diabetic subjects, limited data exist
+    on the influence of egg consumption on subcli
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc13213267
+  title: The Risk of Incident Diabetes Mellitus in Relation to Egg Consumption among
+    Working-Aged Korean Adults
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC13213267/
+  author: Park SK, Chung Y, Oh C, Ryoo J et al.
+  publication_date: 2026-06
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc13213267.txt
+  excerpt: Purpose Conflicting results have been published for the association between
+    egg consumption and the risk of diabetes mellitus (DM). The present study was
+    to assess the risk of incident DM in relation to egg consumption. Materials and
+    Methods Study participants were 91005 non-diabetic adults who periodically received
+    health check-ups. They were categorized in
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc7942123
+  title: "Dietary associations with diabetic retinopathy\u2014A cohort study"
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7942123/
+  author: Kadri R, Vishwanath P, Parameshwar D, Hegde S et al.
+  publication_date: 2021-03
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_cohort_study
+  path: data/cases/eggs_large_source_stress/sources/text/pmc7942123.txt
+  excerpt: 'Purpose: To assess the role of dietary factors in the development of diabetic
+    retinopathy (DR) in diabetics. Methods: This prospective study was carried out
+    on patients attending the outpatient department of ophthalmology for a period
+    of 1 year. An interview-based 24-hour diet recall was used to document average
+    daily dietary nutrient intakes. Each patient w'
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc7608885
+  title: Whole egg consumption increases gene expression within the glutathione pathway
+    in the liver of Zucker Diabetic Fatty rats
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7608885/
+  author: Webb JL, Bries AE, Vogel B, Carrillo C et al.
+  publication_date: '2020-11-03'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc7608885.txt
+  excerpt: Nutrigenomic evidence supports the idea that Type 2 Diabetes Mellitus (T2DM)
+    arises due to the interactions between the transcriptome, individual genetic profiles,
+    lifestyle, and diet. Since eggs are a nutrient dense food containing bioactive
+    ingredients that modify gene expression, our goal was to examine the role of whole
+    egg consumption on the transcripto
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc7220326
+  title: Egg consumption and risk of type 2 diabetes mellitus in middle and elderly
+    Chinese population
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC7220326/
+  author: Ni L, Du L, Huang Y, Zhou J
+  publication_date: 2020-04
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc7220326.txt
+  excerpt: 'Abstract Data on the association between egg consumption and the risk
+    of type 2 diabetes mellitus (T2DM) in the Chinese population are scarce. In the
+    present study, we aimed to examine the association between egg consumption and
+    the risk of T2DM in a middle and elderly Chinese population. A total of 3298 subjects
+    (1645 men and 1653 women) from the Nutrition '
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc8912460
+  title: Dietary Intake of Polyphenols or Polyunsaturated Fatty Acids and Its Relationship
+    with Metabolic and Inflammatory State in Patients with Type 2 Diabetes Mellitus
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC8912460/
+  author: "Kosmalski M, P\u0119kala-Wojciechowska A, Sut A, Pietras T et al."
+  publication_date: '2022-03-04'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc8912460.txt
+  excerpt: "Background: The aim of the study was to evaluate the relationship between\
+    \ polyphenol or polyunsaturated fatty acids (PUFAs) consumption and the selected\
+    \ metabolic and inflammatory markers in type 2 diabetes (T2DM) patients. Methods:\
+    \ The study enrolled 129 diabetics (49 men, mean age 64.1 \xB1 9.8 years) with\
+    \ different amounts of polyphenol and PUFAs consumption"
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc10056430
+  title: 'Cardiometabolic Care: Assessing Patients with Diabetes Mellitus with No
+    Overt Cardiovascular Disease in the Light of Heart Failure Development Risk'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10056430/
+  author: Chrysohoou C, Fragoulis C, Leontsinis I, Gastouniotis I et al.
+  publication_date: '2023-03-13'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10056430.txt
+  excerpt: The mechanisms leading to the development of heart failure (HF) in diabetes
+    mellitus (DM) patients are multifactorial. Assessing the risk of HF development
+    in patients with DM is valuable not only for the identification of a high-risk
+    subgroup, but also equally important for defining low-risk subpopulations. Nowadays,
+    DM and HF have been recognized as sharin
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc12329997
+  title: 'Association of diabetes mellitus and breast cancer in adult men and women:
+    a cross-sectional survey'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC12329997/
+  author: Saroosh R, Ahmad N, Israr B, Nazir A et al.
+  publication_date: '2025-08-07'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_article
+  path: data/cases/eggs_large_source_stress/sources/text/pmc12329997.txt
+  excerpt: Background The co-occurrence of diabetes mellitus and breast cancer poses
+    a significant global health challenge. Most research has focused on Western populations,
+    with genetics, lifestyle, and environmental differences limiting generalizability
+    to Pakistanis. This study aimed to fill this gap by investigating the diabetes-breast
+    cancer association among Paki
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc10574713
+  title: 'Unveiling the Evidence for the Use of Pulses in Managing Type 2 Diabetes
+    Mellitus: A Scoping Review'
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC10574713/
+  author: Thomas DJ, Shafiee M, Nosworthy MG, Lane G et al.
+  publication_date: '2023-09-30'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc10574713.txt
+  excerpt: Management of type 2 diabetes mellitus (T2DM) is a pressing global healthcare
+    challenge. Innovative strategies that integrate superior medical and nutritional
+    practices are essential for holistic care. As such, pulse consumption is encouraged
+    for its potential benefit in reducing hypercholesterolaemia, dyslipidaemia, and
+    triglyceride levels, as well as enhan
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'
+- source_id: pmc4586567
+  title: Bioactive Egg Components and Inflammation
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4586567/
+  author: Andersen CJ
+  publication_date: '2015-09-16'
+  retrieval_date: '2026-07-18'
+  source_type: peer_reviewed_review
+  path: data/cases/eggs_large_source_stress/sources/text/pmc4586567.txt
+  excerpt: Inflammation is a normal acute response of the immune system to pathogens
+    and tissue injury. However, chronic inflammation is known to play a significant
+    role in the pathophysiology of numerous chronic diseases, such as cardiovascular
+    disease, type 2 diabetes mellitus, and cancer. Thus, the impact of dietary factors
+    on inflammation may provide key insight in
+  provenance_level: peer_reviewed
+  evidence_role: broad_acquired_source
+  limitations:
+  - Acquired by a broad PMC query for stress testing; source relevance is not manually
+    curated.
+  - May be tangential to the specific healthy-adult egg guidance question.
+  notes: 'PMC full-text XML acquired from query: "egg consumption" AND diabetes'

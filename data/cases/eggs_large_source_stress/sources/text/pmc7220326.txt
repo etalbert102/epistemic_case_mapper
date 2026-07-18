@@ -1,0 +1,129 @@
+# Egg consumption and risk of type 2 diabetes mellitus in middle and elderly Chinese population
+
+## Abstract
+
+Abstract Data on the association between egg consumption and the risk of type 2 diabetes mellitus (T2DM) in the Chinese population are scarce. In the present study, we aimed to examine the association between egg consumption and the risk of T2DM in a middle and elderly Chinese population. A total of 3298 subjects (1645 men and 1653 women) from the Nutrition and Health Survey (2015–2017) in Hangzhou city were selected for the final analysis. Egg consumption was assessed using a validated food frequency questionnaire. All biochemical data and anthropometric measurements were collected following standardized procedures. Multivariable logistic regression analyses were used to assess the association between egg consumption and the risk of T2DM and the results were presented as odds ratios and 95% confidence interval (CI). Restricted cubic spline combined with logistic regression was used to explore the dose-response relationship between egg consumption and T2DM. Among 3298 subjects, 693 (21.0%) people had T2DM. Compared with participants who did not consume egg per week, the multivariable-adjusted odds ratios were 0.97 (95%CI : 0.78–1.21), 1.08 (95%CI : 0.91–1.06), 1.20 (95%CI : 0.94–1.55), 1.27 (95%CI : 0.99–1.68) in men ( P > .05); 1.06 (95%CI : 0.81–1.37), 0.97 (95%CI : 0.78–1.21), 1.26 (95%CI : 0.99–1.59), 1.19 (0.92–1.54) in women ( P > .05); 0.89 (95%CI : 0.79–1.04), 0.98 (95%CI : 0.91–1.06), 1.06 (95%CI : 0.87–1.30), 1.09 (95%CI : 0.88–1.34) in both men and women for egg consumption 0∼7, 7, 7∼14, and ≥14 eggs/week, respectively ( P > .05). The dose-response curve showed that, with the increase of egg consumption, the risk of T2DM first increased and then decreased ( P = .027). We found that the association between egg consumption and T2DM was nonlinear, and higher egg consumption was not associated with an elevated risk for T2DM in middle-aged and elderly Chinese. However, future prospective studies are needed to confirm these findings.
+
+
+## Introduction
+
+
+Type 2 diabetes mellitus (T2DM) remains a major public health problem, and the rapid increase in the prevalence over the past decades is expected to continue. [ 1 ] In the United Kingdom, about 3.2 million people have type 2 diabetes, and it is predicted that this will increase to 5 million by 2025. [ 2 ] In the United States, 12.0 million older adults had diabetes, comprising 40% of the 30.2 million persons with the disease in 2003. [ 3 ] In China, T2DM has become an alarming health problem and the prevalence has rapidly increased from 13.7% between 2000 and 2001 to 27.4% between 2009 and 2010. [ 4 ] Known risk factors for T2DM included genetic factors, physical inactivity, tobacco use and cigarette smoking. [ 5 ] Besides, epidemiological data suggests that dietary factors have an important role in the prevention and management of T2DM. [ 6 , 7 ]
+
+Among the dietary factors, egg consumption has been recognized as a possible risk factor for T2DM. Eggs are a major source of dietary cholesterol that may disrupt glucose metabolism [ 8 ] and increase inflammation. [ 9 ] Many observational studies have reported the associations between egg consumption and the risk of T2DM, [ 10 – 15 ] but the majority of studies are based on data from Western countries, and the findings are inconsistent. Although previous 2 meta-analyses of prospective cohorts showed a positive association between egg consumption and the risk of T2DM, [ 16 , 17 ] other studies in European, [ 11 , 12 ] Asian, [ 13 ] and US populations [ 10 ] have also reported no association or an inverse association. [ 14 ] But at the same time, epidemiological data on the impact of egg consumption on the risk of T2DM in a Chinese population are scarce. To date, only a published epidemiological study [ 15 ] to our knowledge, has examined the association of egg consumption in relation to diabetes risk in Jiangsu, East China. Given the inconsistent findings across populations, the potential relation between egg consumption and the risk of T2DM warrants further study in other populations. Therefore, we conducted this study to investigate the association of egg consumption with the risk of T2DM in a middle and elderly Chinese population.
+
+
+## Subjects and methods
+
+
+
+## Study population
+
+
+This cross-sectional study was carried out performed in the city of Hangzhou, Zhejiang Province in China from May 2015 to August 2017. The Nutrition and Health Survey is designed to evaluate the association between diet and some chronic diseases in the city of Hangzhou, Zhejiang Province. The details of this study and the recruitment procedures are described elsewhere. [ 18 ] Participants aged 45 years and above from Hangzhou were selected from 10 areas (Xihu, Gongshu, Shangcheng, Xiacheng, Bingjiang, Jianggan, Xiaoshan, Yuhang, Fuyang, and Linan) and 3 counties (Tonglu, Chunan, and Jiande) by a stratified cluster random-sampling method. The 10 areas and 3 counties represented a geographically and economically diverse population in Hangzhou. Hangzhou city is designed as 13 monitoring points (areas/counties) in accordance with the principle of representativeness. The sample population at each monitoring point is designed to be 300, and the total sample population at 13 monitoring points is 3600. Considering the 10% missed rate, the final sample size is determined to be 3962. Each monitoring point (area/county) draws 2 committees (residential villages), and each committee (residential village) draws 58 households (calculated based on the monitoring results of 2.6 persons per household in Hangzhou Nutrition and Health Surveillance in 2009). A total of 3962 eligible participants were invited to attend a health examination at the Medical Center for Physical Examination, Zhejiang Hospital, where the participant was face-to-face interviewed by a trained interviewer using written questionnaires. We excluded 240 participants who had missing values for egg consumption; 18 participants with type 1 diabetes mellitus; 406 participants with an unrealistic energy consumption. Finally, 3298 participants (1645 men and 1653 women) were included for the present analyses. Each participant gave written informed consent and the study protocol was approved by the Institutional Review Board and Ethic Committee of Zhejiang Hospital.
+
+
+## Assessment of egg consumption
+
+
+Egg consumption was assessed through using a semi-quantitative food frequency questionnaire (FFQ) containing questions on the frequency with which 83 food items were eaten in the previous a year. [ 19 ] The frequency of egg consumption was measured using 5 categories: <1 time/week, 1 time/week, 2 to 4 times/week, 5 to 6 times/week, ≥7 times/week. Participants were asked to report how often, on average, they had consumed eggs of hen (1 egg was a unit of consumption) during the previous week. Then, egg consumption was converted into an average daily consumption in the present analysis. Egg consumption were categorized into quintiles, Q1 : 0 egg/d; Q2 : 0∼1 egg/d; Q3 : 1 egg/d; Q4 : 1∼2 egg/d; Q5 ≥ 2 eggs/d (Q1 represented a lower egg consumption; Q5 represented a higher egg consumption).
+
+
+## Assessment of blood pressure
+
+
+After a 5 to 10 minutes rest in a quiet room, blood pressure was measured by a trained nurse twice at an interval of a few minutes on the right arm with a standard mercury sphygmomanometer. Thereafter, the mean of 2 measurements was considered as the subject's blood pressure.
+
+
+## Assessment of biomarker
+
+
+A blood sample was drawn between 7:00 and 9:00 into evacuated tubes from each participant after 12 hours of fasting overnight. Then, samples could be allowed to clot at room temperature for 1 to 3 hours. Serum samples were separated from whole blood and stored at −80°C until subsequent analyses. Finally, serum was separated by centrifugation for 15 to 30 minutes at 3000 r.p.m. The blood samples were analyzed in the department of laboratory, Zhejiang Hospital for fasting plasma glucose (FPG), total cholesterol (TC), triglycerides (TG), high-density lipoprotein-cholesterol (HDL-C), low-density lipoprotein-cholesterol (LDL-C), serum uric acid (SUA), alanine aminotransferase (ALT), and asparagine aminotransferase (AST) using the Hitachi 7180 auto-analyzer (Hitachi, Tokyo, Japan).
+
+
+## Assessment of anthropometric measurements
+
+
+Body weight was measured to the nearest 0.1 kg with a digital scale when the subjects were in light clothes and not wearing shoes. Height was measured to the nearest 0.1 cm when subjects were standing and not wearing shoes. Body mass index (BMI) was calculated as weight (in kilograms) divided by squared height (in meters). Waist circumference was measured at the narrowest level (minimal circumference between umbilicus and xiphoid process). [ 20 ] All anthropometric measurements were carried out by a dietitian.
+
+
+## Assessment of other variables
+
+
+Information on physical activity was collected using the International Physical Activity Questionnaire, [ 20 ] and expressed as metabolic equivalent hours per week (MET-h/week). Additional information such as smoking habits (never, current, and former smokers), educational level (middle school or below, high school, college or above) was obtained with questionnaires. Besides, total energy intake was estimated through the reliable semi-quantitative FFQ, expressed in kilocalorie per day (kcal/day) and categorized according to quartile.
+
+
+## Definition of T2DM
+
+
+T2DM was defined as the presence of any one of the following:
+
+FPG≥7.0 mmol/L on at least 2 separate occasions, or an oral glucose tolerance test with a value ≥11.1 mmol/L;
+
+current use of insulin or oral hypoglycemic agents; or
+
+a positive response to the question: have you ever been diagnosed with diabetes by a doctor? [ 18 ]
+
+
+## Statistical analysis
+
+
+Data were analyzed based on the frequency of egg consumption, and results for continuous variables are presented as mean ± standard deviation (SD), and categorical variables are presented as sum and percentages. We categorized egg consumption as 0, 0∼7, 7, 7∼14, and ≥14 eggs/week. First of all, data were checked for normality using histograms and logarithmic transformation was applied whenever appropriate. For the normal distributed variables, we used Independent-Samples t test to assess the significant differences in continuous variables. If not, the Mann-Whitney test was required. The chi-squared test was used to evaluate the significant differences in categorical variables. Moreover, multicollinearity was examined via a correlation matrix and multicollinearity diagnostic statistics. After adjusting for potential confounders, multivariable logistic regression models were used to estimate the odds ratios (ORs) and their 95%CIs in quintiles of egg consumption, with the lowest category as the reference. Models were adjusted for age (continuous), gender (men/women), education level (<high school, high school, >high school), physical activity (continuous), smoking status (never, current, former), family history of diabetes and hypertension, alcohol intake, total energy intake (continuous) and BMI. Restricted cubic spline combined with logistic regression was used to explore the dose-response relationship between egg consumption and T2DM. Statistical analyses were performed with version 22.0 of the SPSS software package(SPSS Inc., Chicago, IL), and a 2-tailed P < .05 was considered statistically significant.
+
+
+## Results
+
+
+Of the 3298 participants, 49.9% (1645) were men. The overall prevalence of T2DM in our study population was 21.0%. Egg consumption was 0.58 ± 0.03 eggs/day in total population, with T2DM was 0.91 ± 0.02 eggs/day and without T2DM was 0.76 ± 0.01 eggs/day. Baseline and demographic characteristics of the study participants by T2DM status are shown in Table 1 . There were significant differences between participants with and without T2DM by age, smoking status, educational level, income, and the prevalence of obese ( P < .05).
+
+Table or figure caption: Baseline and demographic characteristics of the study participants by T2DM status.
+
+Baseline and demographic characteristics of the study participants by T2DM status.
+
+General characteristics of participants according to egg consumption frequencies are shown in Table 2 . Compared with those in the lowest quartile (0 egg/week), participants in the highest quartile of egg consumption (≥14 eggs/week) were more likely to be younger, men, smoker, and to have higher BMI income, physical activity level and total energy intake, and lower educational level ( P < .05).
+
+Table or figure caption: General characteristics of 3298 men and women of the Nutrition and Health Survey according to egg consumption frequency.
+
+General characteristics of 3298 men and women of the Nutrition and Health Survey according to egg consumption frequency.
+
+The relationship between egg consumption and T2DM risk by logistic regression analysis is shown in Table 3 . After adjustment for several confounding factors, compared with participants who did not consume egg per week, the multivariable-adjusted ORs were 0.89 (95%CI: 0.79–1.04), 0.98 (95%CI: 0.91–1.06), 1.06 (95%CI: 0.87–1.30) and 1.09 (95%CI:0.88–1.34) for egg consumption 0∼7, 7, 7∼14, and ≥14 eggs/week, respectively ( P > .05). Corresponding ORs (95%CI) in men were 0.97 (0.78–1.21), 1.08 (0.91–1.06), 1.20 (0.94–1.55) and 1.27 (0.99–1.68), respectively ( P > .05). Moreover, the ORs (95% CI) in women were 1.06 (0.81–1.37), 0.97 (0.78–1.21), 1.26 (0.99–1.59), and 1.19 (0.92–1.54), respectively ( P > .05). We selected 5 knots (0, 0.5, 1, 1.5, and 2 eggs/day) of egg consumption to explore the dose-response relationship between egg consumption and T2DM after adjustment. The dose-response curve of the relationship between egg consumption and T2DM was shown in Figure 1 . The results showed the association between egg consumption and T2DM was nonlinear. The dose-response curve also showed that, as a whole, with the increase of egg consumption, the risk of T2DM first increased and then decreased ( P = .027).
+
+Table or figure caption: Multivariable adjusted odds ratio (95%CI) for T2DM according to egg consumption frequencies.
+
+Multivariable adjusted odds ratio (95%CI) for T2DM according to egg consumption frequencies.
+
+Table or figure caption: The dose-response curve of the relationship between egg consumption and T2DM.
+
+The dose-response curve of the relationship between egg consumption and T2DM.
+
+
+## Discussion
+
+
+Limited data are available regarding the association of egg consumption and risk of T2DM in a Chinese population. To the best of our knowledge, no previous study has investigated the association between egg consumption and the risk of T2DM in a middle and elderly Chinese population. However, we observed no evidence of a significant association between higher egg consumption and the risk of T2DM in men and women, respectively.
+
+In our analyses, higher egg consumption was not associated with an increased risk of T2DM after adjusting for age, gender and some known and suspected potential confounders. Our findings are inconsistent with findings from 2 previous systematic review and meta-analyses [ 16 , 17 ] that have shown that higher egg consumption was associated with an elevated risk for T2DM. Data from the Physicians’ Health Study and Women's Health Study [ 21 ] also indicated that higher egg intake was associated with an increased risk of T2DM. Besides, in only a published epidemiological study in Chinese population, [ 15 ] an increased risk of diabetes was also shown for frequency of consumption ≥1 eggs/day compared to <2 eggs/week (OR = 2.28; 95%CI: 1.15, 4.54; P = .009). The inconsistency of this finding may be related to differences in study population. Compared with the study participants in a previous study by Shi et al [ 15 ] , our study participants were a group of Chinese adults aged between 45 years and above, who consumed less eggs. Meanwhile, the study participants attend a health checkup every year and may have higher health-conscious than those adults aged ≥20 years. However, similar to our findings, Kurotani et al reported no association between egg consumption and the risk of T2DM in the Japan Public Health Center-based Prospective Study. [ 13 ] In addition, in that prospective cohort of 3898 men and women, there was also no association between egg consumption or dietary cholesterol and incident diabetes. [ 10 ] The complex constituents of eggs may explain the null finding to some extent. On the one hand, eggs are the major source of dietary cholesterol, [ 22 ] with 1 medium egg containing approximately 200 mg cholesterol and 5.5 g fat. Some previous studies have reported a positive association between dietary cholesterol and risk of T2DM. [ 21 , 23 ] Besides, eggs contain large amounts of protein. Several studies have shown that higher protein intake, especially from animal sources, [ 24 , 25 ] was associated with higher risk of T2DM. On the other hand, some beneficial nutrients of eggs, such as minerals, folate, B vitamins and monounsaturated fats, could improve insulin sensitivity and counteract disturbances in glucose metabolism. [ 26 , 27 ] Cho et al, reported that egg is a good source of B vitamins, including choline, which may lower homocysteine concentrations. [ 28 ] In addition, the possibility that the observed differences across populations are the result of underlying biological mechanisms is still present. Intestinal microbiota may vary across populations and there is evidence that intestinal flora affects the production of trimethylamine-N-oxide from dietary phosphatidylcholine (egg yolks are important contributors). [ 29 ] In animal studies, this metabolite appears to play a key role in glucose metabolism. [ 30 ] As we all know, eggs are an important source of choline. Earlier studies have suggested that choline can be metabolized by gut bacteria to generate trimethylamine, that can further be transformed to trimethylamine-N-oxide (TMAO) in the liver. [ 31 ] Tang et al [ 32 ] have also reported a positive association of egg consumption and TMAO concentration. TMAO may increase LDL oxidation and promote inflammation, [ 33 ] a key component of the pathogenesis of DM. [ 34 ] Finally, most of published studies have been conducted in the Western populations [ 10 – 14 ] that traditionally have a relatively high-cholesterol diet. Thus, it is likely that the background cholesterol concentration among these participants was already high, so that changes in their cholesterol concentrations might not be sensitive to egg consumption. [ 35 ] In short, these possibilities could not be excluded in this study.
+
+
+## Strengths and limitations
+
+
+The present study holds several strengths. First, our study was designed to assess the association between egg consumption and T2DM risk in a large sample of middle and elderly Chinese population. Besides, to our knowledge, this is the first study examining the association between egg consumption and T2DM risk in a middle and elderly Chinese population. The findings of the present study provided valuable information for the primary prevention of T2DM through the dietary modifications. Second, the data on egg consumption was collected using a semi-quantitative FFQ. This tool enabled us to capture more reliable information on egg intake. Third, we also have adjusted for some known and suspected potential confounders in our analyses. However, there are several limitations which should be considered when interpreting the results of this study. First, this study was cross-sectional in design and therefore unable to a cause-and-effect relationship between egg consumption and the risk of T2DM. Thus, our findings need to be confirmed in future prospective study. Second, egg consumption and other dietary factors and covariates were assessed using a FFQ at a single time point, which inevitably led to a degree of misclassification. Besides, we also did not calculated detailed nutrients and energy intakes from dietary habits. Third, although we adjusted for multiple potential confounding variables in the multivariable-adjusted model, we were unable to control the effect of unmeasured confounders or residual confounding. Fourth, egg consumption might be underestimated since we only have considered the units of this food consumed, but not eggs or yolk contained in other products (eg, pastries). Finally, as our study sample only included middle-aged and elderly Chinese in Zhejiang Province, East China, our results may not be generalized to the general population in China.
+
+
+## Conclusions
+
+
+In conclusion, our results indicate that the association between egg consumption and T2DM was nonlinear, and higher egg consumption was not associated with an elevated risk for T2DM in middle-aged and elder Chinese. Our findings do not support the current dietary recommendations to limit egg consumption as an important preventive strategy against T2DM. Moreover, our results also provide further insight to better understand the association between egg consumption and the risk of T2DM. Nevertheless, further research is needed to clarify these findings.
+
+
+## Acknowledgments
+
+
+We thank all participants from Department of Nutrition and Digestion, Zhejiang Hospital for their assistance and support. We also acknowledge the Medical Center for Physical Examination, Zhejiang Hospital for their important contributions to collection of data in this study.
+
+
+## Author contributions
+
+
+Ni LP and Zhou JY conceived and designed the experiments. Ni LP, Du LY, and Huang YQ conducted research. Huang YQ and Zhou JY analyzed data and wrote the paper. All authors read and approved the final manuscript.

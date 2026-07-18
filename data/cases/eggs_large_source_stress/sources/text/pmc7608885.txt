@@ -1,0 +1,313 @@
+# Whole egg consumption increases gene expression within the glutathione pathway in the liver of Zucker Diabetic Fatty rats
+
+## Abstract
+
+Nutrigenomic evidence supports the idea that Type 2 Diabetes Mellitus (T2DM) arises due to the interactions between the transcriptome, individual genetic profiles, lifestyle, and diet. Since eggs are a nutrient dense food containing bioactive ingredients that modify gene expression, our goal was to examine the role of whole egg consumption on the transcriptome during T2DM. We analyzed whether whole egg consumption in Zucker Diabetic Fatty (ZDF) rats alters microRNA and mRNA expression across the adipose, liver, kidney, and prefrontal cortex tissue. Male ZDF (fa/fa) rats ( n = 12) and their lean controls (fa/+) ( n = 12) were obtained at 6 wk of age. Rats had ad libitum access to water and were randomly assigned to a modified semi-purified AIN93G casein-based diet or a whole egg-based diet, both providing 20% protein (w/w). TotalRNA libraries were prepared using QuantSeq 3' mRNA-Seq and Lexogen smallRNA library prep kits and were further sequenced on an Illumina HighSeq3000. Differential gene expression was conducted using DESeq2 in R and Benjamini-Hochberg adjusted P -values controlling for false discovery rate at 5%. We identified 9 microRNAs and 583 genes that were differentially expressed in response to 8 wk of consuming whole egg-based diets. Kyto Encyclopedia of Genes and Genomes/Gene ontology pathway analyses demonstrated that 12 genes in the glutathione metabolism pathway were upregulated in the liver and kidney of ZDF rats fed whole egg. Whole egg consumption primarily altered glutathione pathways such as conjugation, methylation, glucuronidation, and detoxification of reactive oxygen species. These pathways are often negatively affected during T2DM, therefore this data provides unique insight into the nutrigenomic response of dietary whole egg consumption during the progression of T2DM.
+
+
+## Introduction
+
+
+Type 2 Diabetes Mellitus (T2DM) is an insulin independent metabolic disease characterized by chronic hyperglycemia and concomitant insulin resistance and it is estimated that greater than 415 million adults worldwide have T2DM [ 1 ]. Oxidative stress is a potential key mediator in the pathogenesis of T2DM and may underlie the progressive development of hyperglycemia and insulin resistance [ 2 ]. More specifically, reports demonstrate that glutathione (a major intracellular antioxidant) enzymes are diminished in the liver and brain of T2DM animal models [ 3 ]. Sekhar and colleagues examined the ability of patients with uncontrolled and controlled T2DM to synthesize glutathione via measuring isotopically labelled glycine [ 4 ]. They reported that patients with uncontrolled T2DM were severely deficient in the ability to maintain glutathione metabolism in cardiac tissue [ 5 ], which may be, in part, due to hyperglycemia decreasing L-cysteine concentrations [ 6 ] and the reduced flux of methionine to cysteine [ 7 ]. Because of the deleterious effects of hyperglycemia on organ function, it is important to consider the global transcriptomic effects of T2DM. Similar to humans, the Zucker Diabetic Fatty (ZDF) rat model of T2DM also displays increased oxidative stress [ 8 ], whereby endogenous protective antioxidants like glutathione are similarly downregulated in ZDF rats [ 9 ]. The gene expression profiles in animal models of T2DM, such as the ZDF rat, is consistent with gene expression profiles of humans with T2DM [ 8 ], making this a suitable model to explore the global gene expression effects of diet in the ZDF rat.
+
+Dietary treatments with bioactive foods such as cocoa or Shenyuan granules [ 9 , 10 ] in ZDF rats have been shown to reduce oxidative stress or attenuate renal injury in the presence of T2DM-related nephropathy [ 11 ]. Consumption of eggs as a bioactive food during T2DM in humans remains controversial [ 12 – 15 ], but eggs have been shown to display antioxidative properties, which may be beneficial during the progression of T2DM [ 16 ]. Additionally, our laboratory has consistently reported that long-term whole egg (WE) consumption improves metabolic parameters during T2DM such as the maintenance of circulating vitamin D concentrations, decreased weight gain, and nephroprotection via reduced proteinuria in male ZDF rats [ 17 , 18 ]. These are important findings, as vitamin D deficiency, increased adiposity, and kidney failure have collectively been suggested to exacerbate oxidative stress during T2DM [ 19 ].
+
+While the literature surrounding the effects of dietary WE on insulin resistance during T2DM is inconclusive in both rodent [ 20 ] and human population studies [ 21 ], there are no studies to date examining the molecular mechanisms underlying how WE consumption affects the transcriptome across multiple tissues. Longitudinal, prospective, and comprehensive meta-analyses have been performed to assess the independent risk factors of increased dietary egg consumption on chronic diseases [ 22 , 23 ]. Because of the highly controversial science of whole egg consumption on increased cardiovascular disease in patients with T2DM, it is important to examine the possible underlying molecular targets and drivers of whole egg consumption on disease. Ultimately, analyzing the transcriptomic impact of egg consumption would provide us with a better understanding of the nutrigenomic actions that dietary egg consumption contributes to T2DM, and bridge the gap in our understanding of how whole eggs may affect the physiological progression of T2DM. Therefore, the objective of this study was to determine the influence of WE consumption on gene and microRNA expression profiles in a ZDF rat model of progressive T2DM. We examined the transcriptomes from the adipose, liver, kidney, and prefrontal cortex (PFC) tissues to determine how WE consumption alters gene expression and examined whether these changes correspond to altered microRNA expression profiles in T2DM.
+
+
+## Results and discussion
+
+
+Whole eggs have predominantly been criticized for their associated risk of developing chronic diseases [ 24 ], yet the benefits of WE consumption have also been reported [ 13 ]. For instance, several groups have suggested that WE provide antioxidant properties [ 13 , 25 ], either through antioxidant peptides in the egg yolk [ 11 ] or other reactive oxygen species-reducing nutrients [ 26 ]. Other studies examining the role of quail egg consumption in rat models of T2DM have demonstrated upregulation of glutathione metabolism in alloxan-induced T2DM in Wistar rats [ 25 ] and improved oxidative stress profiles in streptozotocin-injected rats [ 27 ]. Raza and colleagues [ 27 ] identified that in diabetic rat liver glutathione content and glutathione S-transferase (GST) activity were decreased 65% while also observing that brain glutathione and GST activity were increased two-fold as a result of a T2DM phenotype.
+
+
+## Total RNASeq differential expression
+
+
+When comparing the WE versus casein (CAS) in ZDF rats and their lean controls, differential expression analyses of the mRNAseq data resulted in 583 differentially expressed genes (DEGs) across four tissues in both genotypes ( Table 1 ) . S1 Table contains the results from DESeq2 with the results for each gene across all four tissues with data on individual genes. S2 Table contains raw mRNA read counts for each tissue and rat across both genotypes. Among the lean controls, 13 genes were differentially expressed in the adipose tissue, 32 in the liver, and 6 in the kidney. Notably, none of the genes were differentially expressed in the PFC between dietary treatments in the lean rats. In the ZDF rats, dietary WE consumption resulted in 532 total DEGs across all tissues where 50 genes were differentially expressed in adipose tissue, 474 in the liver, 6 in the kidney and 2 genes in the PFC following multiple testing correction using the false discovery rate (FDR) threshold of 5%. We demonstrated that consuming WE-based diets for 8 wk resulted in significant alterations in oxidative stress pathways, as well as glutathione metabolism pathways. While there were tissue-specific changes in gene expression, glutathione metabolism was altered in the kidney and liver among ZDF rats, and in the kidney of lean controls were significantly upregulated. Overall, these data highlight how consumption of WE-based diets can provide beneficial effects through modifying gene expression of oxidative reduction targets.
+
+Table or figure caption: Differentially expressed genes in the liver, kidney, adipose and PFC tissues stratified according to each genotype 1 - 3 .
+
+
+## Differentially expressed genes in the liver, kidney, adipose and PFC tissues stratified according to each genotype 1 - 3 .
+
+
+1 All genes were analyzed using DESeq2 for differential analysis.
+
+2 Abbreviations used: ZDF, Zucker Diabetic Fatty; L2FC, log2 fold change; PFC, prefrontal cortex.
+
+3 Benjamini-Hochberg adjusted P-values controlling for false discovery rate at 5%, where P< 0.05 was considered significant.
+
+We previously demonstrated that WE consumption for 8 wk is effective at improving serum vitamin D status and providing nephroprotective benefits [ 17 , 18 ]; however, despite our gene expression findings in this study we still have yet to elucidate the mechanism underlying how WE consumption leads to decreased weight gain [ 28 , 29 ]. We also identified that ZDF rats fed WE upregulated 11 genes involved in glutathione metabolism in the liver and kidney. In the PFC, WE consumption had differing effects whereby in the lean PFC, WE consumption did not change the transcriptome, whereas in the ZDF rats WE consumption strongly downregulated the expression of 2, AY172581 exon transcripts. These exon transcripts have yet to be characterized and future proteomic studies may reveal their biological importance. Across both genotypes, the most significantly altered genes were involved in the Kyoto Encyclopedia of Genes and Genomes (KEGG) pathways of: glutathione metabolism, metabolic pathways, steroid biosynthesis, and cholesterol metabolism. After controlling for the genetic background differences of our ZDF rats, a combined analysis indicated that 428 unique genes were differentially expressed across these tissues as a product of WE consumption. Moreover, 13 different glutathione metabolism genes were significantly upregulated across the liver and kidney in both genotypes suggesting that increased whole egg consumption, may increase glutathione metabolism independent of T2DM, and attenuate the decreased glutathione metabolism during diabetes.
+
+To visualize the global differences in the transcriptomes based on dietary treatment, we performed principal component analysis (PCA) and generated volcano plots for genes that exhibited ≥1.5-fold change, respectively. Fig 1 displays the samples in a three-dimensional principal component space, whereby samples are colored in red or black to distinguish either WE or CAS, respectively. In the mRNA samples, rats on the same dietary treatment (i.e. black or red) clustered together, while animals belonging to different dietary treatments separated, indicating distinctly different patterns across global mRNA expression. These results were further visualized using volcano plots for each tissue as presented in Fig 2 . These volcano plots demonstrate the degree to which genes were upregulated or downregulated across each tissue. For instance, volcano plots indicate a relatively equal number of upregulated and downregulated genes in the lean PFC following WE consumption, whereas WE consumption primarily resulted in downregulated gene expression in the ZDF PFC.
+
+Table or figure caption: Principle component analysis. Samples in the first three principle component space are colored in red or black for either WE or CAS, respectively. Each panel displays PCA results using microRNA data or mRNA data are colored by dietary treatment groups with A) ZDF microRNA, B) ZDF mRNA, C) lean microRNA, D) lean mRNA.
+
+
+## Principle component analysis.
+
+
+Samples in the first three principle component space are colored in red or black for either WE or CAS, respectively. Each panel displays PCA results using microRNA data or mRNA data are colored by dietary treatment groups with A) ZDF microRNA, B) ZDF mRNA, C) lean microRNA, D) lean mRNA.
+
+Table or figure caption: Volcano plots. Genes upregulated (green) or downregulated (red) by WE consumption, correspond to a 1.5 decrease or increase in log fold changes. Each panel corresponds to a tissue in a given genotype: A) lean adipose; B) lean PFC; C) lean kidney; D) lean liver; E) ZDF adipose; F) ZDF PFC; G) ZDF kidney; and H) ZDF liver.
+
+
+## Volcano plots.
+
+
+Genes upregulated (green) or downregulated (red) by WE consumption, correspond to a 1.5 decrease or increase in log fold changes. Each panel corresponds to a tissue in a given genotype: A) lean adipose; B) lean PFC; C) lean kidney; D) lean liver; E) ZDF adipose; F) ZDF PFC; G) ZDF kidney; and H) ZDF liver.
+
+During T2DM, reports indicate that genes within the oxidative stress-related pathways upregulated [ 26 ]. Evans et al. suggested that oxidative stress was driven by the hyperglycemic environment concomitant with increased concentrations of free fatty acids in the plasma [ 26 ]. Corbett et al. [ 30 ] reported that protective antioxidant genes such as glutathione peroxidase are downregulated during T2DM, and both glutathione s-transferases (GSTs) and glutathione-dependent enzymes are important in the regulation of pathophysiological alterations in numerous chronic diseases, especially T2DM [ 30 ]. Previous work has shown that dietary intervention with direct glutathione supplementation was protective against diabetic nephropathy in an insulin dependent streptozotocin-induced T1DM model [ 27 ]. This current study provides new transcriptomic evidence supporting our previous report demonstrating that WE consumption protects against diabetic nephropathy, where WE consumption leads to altered gene expression in the kidney. In this study, we noted that the strongest alterations in glutathione metabolism were in the liver, potentially because hepatic glutathione is produced at much higher concentrations (10 mM), whereas intracellular glutathione concentrations are approximately 1–2 mM [ 31 ]. This body of previous work is important in relation to our findings that several GSTs and glutathione-dependent enzymes are significantly altered during WE consumption in lean controls and during diabetes in the kidneys and livers across both genotypes. Future mechanistic studies identifying the beneficial impact of these two enzymes in chronic diseases like T2DM are warranted.
+
+Outside of the glutathione pathways, we also observed that there were significant differences in early growth response-1 ( Egr-1 ) gene expression following WE consumption. Egr-1 has been implicated in the onset of insulin-resistance, as previous studies in insulin-resistant T2DM mice identified that loss of function in Egr-1 restores insulin sensitivity via increased phosphorylation of the insulin receptor substrate-1 tyrosine kinase [ 32 ]. Notably, we observed a 30% decrease in hepatic Egr-1 expression in the ZDF rats fed WE. This is an interesting finding as research by Garnett et al. [ 33 ] determined that exposing beta cells to hyperglycemic conditions resulted in a temporal and dose-dependent increase in Egr-1 transcription and translation. Furthermore, Egr-1 null mice are known for their inability of displaying diabetic and obese phenotypes [ 34 ] owing to their increased energy expenditure. These data suggest that consumption of WE may lead to altered Egr-1 expression which may play a key role in regulating energy expenditure.
+
+We also demonstrated that WE consumption resulted in tissue-specific alterations in gene expression and that there were distinct transcriptomic differences between genotypes. WE consumption did not influence gene expression in the PFC of lean animals, while 2 genes were significantly altered in the ZDF PFC. There were more stark differences when comparing the liver tissues between the two genotypes, where more than 400 genes were altered in ZDF livers that were not altered in the liver of lean controls. It has been shown that T2DM impacts a variety of tissues [ 1 ] but previous studies have provided very little evidence of how T2DM alters the nutrigenomic responses to foods in specific tissues. It is still unknown which specific egg components lead to phenotypic differences in gene expression and future studies should focus on identifying the specific egg constituents that mediate these gene expression differences. These collective findings are likely mediated through the alteration of several genes; therefore, we aimed to further examine microRNA changes involved in the underlying progression of T2DM during WE consumption.
+
+
+## MicroRNA sequencing differential expression
+
+
+We examined if endogenously expressed microRNA profiles in the adipose, liver, kidney, and prefrontal cortex tissues would be altered following 8 wk consumption of dietary WE. Differential expression analyses of the ZDF microRNA data resulted in 1 differentially expressed microRNA in the adipose tissue, none in the liver, none in the kidney and 2 in the PFC that surpassed multiple testing correction. Among the lean rats, there were 2 marginally differentially expressed microRNAs in the adipose tissue, 4 in the liver, none in the kidney and none in the PFC that survived multiple testing correction. Table 2 presents the differentially expressed microRNAs in the adipose, liver, kidney, and PFC tissues across both genotypes. S3 Table contains results from DESeq2 with the results for each microRNA across all four tissues and raw microRNA read counts are contained in S4 Table .
+
+Table or figure caption: Differentially expressed microRNAs in WE vs CAS-based diets in ZDF rats and their lean controls 1 - 3 .
+
+
+## Differentially expressed microRNAs in WE vs CAS-based diets in ZDF rats and their lean controls 1 - 3 .
+
+
+1 All miRNAs were analyzed using DESeq2 for differential analysis.
+
+2 Abbreviations used: ZDF, Zucker Diabetic Fatty; WE, whole egg; CAS, casein; L2FC, log2 fold change; and PFC, prefrontal cortex.
+
+3 Benjamini-Hochberg adjusted P-values controlling for false discovery rate at 5%, where P< 0.05 was considered significant.
+
+Based on the microRNA sequencing analysis, 9 microRNAs were differentially expressed following multiple testing correction. Several of these microRNAs have been previously correlated with gestational diabetes or show to be altered in the plasma of individuals with diabetes. Very few studies to date have examined the tissue-specific changes of endogenous microRNA expression in response to dietary patterns and this is the first study to demonstrate that endogenous microRNA expression in the liver, adipose, and PFC can be altered following 8 wks of WE consumption. Future studies should focus on identifying if similar foods such as quail eggs alter microRNA expression in these tissues and determine the smallest effective dosage of egg required to recapitulate these changes in microRNAs.
+
+
+## Mapping between microRNAs and target genes
+
+
+Next, we sought to determine if these significantly altered microRNAs were responsible for the tissue-specific differential expression of their predicted target genes. MicroRNA mapping analyses of the differentially expressed microRNAs and their target genes demonstrates that in each of the tissues with differentially expressed microRNAs, key target genes of these microRNAs were altered. For instance, in the lean liver microRNA-181a-3p was upregulated and two of its mRNA target genes were differentially expressed, Cytochrome P450 Family 7 Subfamily A Member 1 ( Cyp7a1 ) and stearoyl-CoA desaturase ( Scd ). Similarly, in the lean adipose, microRNA-125b-5p was downregulated while its target gene phosphoglycolate phosphatase ( Pgp) was upregulated. The microRNAs in the PFC and kidney tissue did not map to any differentially expressed genes. Table 3 summarizes the mapping between microRNAs and their gene targets.
+
+Table or figure caption: Differentially expressed microRNAs and their corresponding target genes that were differentially regulated by dietary WE consumption 1 - 3 .
+
+
+## Differentially expressed microRNAs and their corresponding target genes that were differentially regulated by dietary WE consumption 1 - 3 .
+
+
+1 All miRNAs were analyzed using DESeq2 for differential analysis.
+
+2 Abbreviations used: miR, microRNAS; rno, rattus norvegicus; WE, whole egg; and L2FC, log2 fold change.
+
+3 Gene targets for Rattus Norvegicus and humans were determined by DRSC Integrative Ortholog Prediction Tool.
+
+While examining the relationship between significantly altered microRNAs and their target genes, we identified that in the livers of lean rats fed WE, the upregulated microRNA-181a-5p affected target genes involved in steroid hormone biosynthesis such as Cyp7a1 and Scd . Notably, only Cyp7a1 was upregulated in the liver of ZDF rats fed the WE-based diet while both Scd and Cyp7a1 were upregulated in the livers of lean control rats. In rodent models of diabetes, liver expression of Cyp7a1 has been shown to be decreased and thought to play a key role in regulating whole body energy homeostasis [ 35 ]. Similarly, transgenic mice overexpressing Cyp7a1 were shown to become resistant to weight gain and fatty liver disease [ 35 ]. Experiments examining the role of Scd in rat hepatocytes has demonstrated that Scd expression regulates hepatic insulin resistance during diabetes [ 36 ], but very few studies have determined the expression of Scd genes in the context of dietary consumption. Based on the data, WE consumption more strongly upregulated hepatic expression of Cyp7a1 in ZDF animals than in the lean controls and this might suggest that WE consumption can prevent or reverse the loss of hepatic Cyp7a1 expression due to diabetes.
+
+In our lean rats, we also identified that microRNA-125b-5p was downregulated in adipose tissue where its gene target Pgp was strongly upregulated. Pgp is known to hydrolyze glycerol-3-phosphate into glycerol, and overexpression experiments in rodents showed that upregulation of Pgp leads to a reduction in body weight gain and improves hepatic glucose regulation [ 37 ]. Additionally, we observed the upregulation of liver microRNA-9a-5p, which has been correlated with gestational diabetes in humans [ 38 ]. While the gene targets of microRNA-9a-5p were not differentially expressed in the liver, future studies should look into whether endogenous microRNA expression fluctuates in response to consuming other eggs, such as quail eggs, or egg yolk alone.
+
+
+## KEGG and GO functional enrichment analysis
+
+
+To further examine the molecular function of the identified DEGs, KEGG pathway analysis indicated that the most prevalent pathways influenced by dietary WE across multiple tissues in the ZDF rats were: glutathione metabolism; oxidation-reduction; metabolism of xenobiotics; steroid hormone biosynthesis; and fatty acid synthesis pathways. In the livers of lean control rats, the most significantly expressed pathways included metabolic pathways and retinol metabolism. All the differentially expressed genes that map to KEGG and gene ontology (GO) pathways analyses are presented in S5 Table .
+
+To further investigate the specific genes involved in the glutathione metabolism pathways, genes were categorized into the corresponding reactions identified by Reactome.org in Fig 3 . Glutathione metabolism functions in antioxidant defense, signal transduction, cytokine production, and other cellular processes such as detoxification. The role of GST, GSTK, GSTO dimers, and GPX1 which function in glutathione conjugation, glucuronidation, methylation, and detoxification of reactive oxygen species, respectively, are detailed within Fig 3 . These reactions within glutathione metabolism are essential for recycling of glutathione disulfide or the conjugation of GSH that can be utilized in redox reactions.
+
+Table or figure caption: Differentially expressed genes involved in glutathione metabolism. This figure was adapted from D’Eustachio, P., and Jassal, B. from the Reactome [ 39 ]. Glutathione metabolism reactions can be categorized into glutathione conjugation, glucuronidation, methylation, or detoxification of reactive oxygen species. All genes are listed within each reaction category followed by their corresponding log2fold change in parentheses for each given tissue. Abbreviations used: ZDF, Zucker Diabetic fatty rat; GSSG, glutathione disulfide; GSH, glutathione; AS3MT, arsenite 3-methyltransferase; AdoMet, S-adenosyl methionine; AdoHcy, S-adenosyl homocysteine; CDNB, 1-chloro-2, 4-dinitrobenzene; DNPSG, S-(2,4-dinitrophenyl)glutathione; glu, glutamate; cys, cysteine; gly, glycine; gGluCys, gamma-glutamyl-L-cysteine; GST, glutathione s-transferase; and GPX, glutathione peroxidase.
+
+
+## Differentially expressed genes involved in glutathione metabolism.
+
+
+This figure was adapted from D’Eustachio, P., and Jassal, B. from the Reactome [ 39 ]. Glutathione metabolism reactions can be categorized into glutathione conjugation, glucuronidation, methylation, or detoxification of reactive oxygen species. All genes are listed within each reaction category followed by their corresponding log2fold change in parentheses for each given tissue. Abbreviations used: ZDF, Zucker Diabetic fatty rat; GSSG, glutathione disulfide; GSH, glutathione; AS3MT, arsenite 3-methyltransferase; AdoMet, S-adenosyl methionine; AdoHcy, S-adenosyl homocysteine; CDNB, 1-chloro-2, 4-dinitrobenzene; DNPSG, S-(2,4-dinitrophenyl)glutathione; glu, glutamate; cys, cysteine; gly, glycine; gGluCys, gamma-glutamyl-L-cysteine; GST, glutathione s-transferase; and GPX, glutathione peroxidase.
+
+KEGG pathway analysis highlighted that in addition to an upregulation of glutathione metabolism pathways, several of the same gene products mediate metabolism of xenobiotics, a pathway upregulated in our rats fed WE-based diets. Xenobiotic metabolism has previously been shown to be downregulated during insulin dependent T1DM [ 27 ], where in this study these pathways were upregulated in response to feeding WE-based diets. These observed effects appear to be tissue specific, as these alterations were the most prominent in ZDF liver, whereas one gene, glutathione s-transferase p ( Gstp1 ), was differentially upregulated in the kidney of ZDF rats while glutathione s-transferase mu 1 ( Gstm1 ) was upregulated in the lean kidney. These findings support the previous observation that WE consumption affects obese phenotypes differently than a lean phenotype [ 17 ], in part, due to the different transcriptomic responses to dietary WE. We previously hypothesized that these differences in response to WE consumption were not due to satiety, because there was increased food intake in the WE group [ 18 ]; the present study identifies a potential molecular response to egg partially explaining these previous findings. Other suggested mechanisms that might explain differences between obese and lean genotypes include thermogenesis [ 40 ], altered methylation patterns [ 41 ], intestinal microbiome alterations [ 42 ], and changes in energy expenditure [ 43 ]. While there have been numerous studies highlighting differences in the microbiota between obese and lean phenotypes in rats [ 42 ] and humans [ 40 ], one recent study examining WE consumption concluded that it did not influence the intestinal microbiome in postmenopausal women [ 44 ]. Taken together, these observations support the idea that phenotypic alterations during T2DM may depend strongly on obesity status and energy expenditures on a molecular level, potentially in response to changes in the transcriptome.
+
+
+## qPCR analyses
+
+
+Finally, we examined the relationship between our qPCR data for several genes to validate the results from the Quantseq analysis. Confirmatory analysis with qPCR demonstrated that across the genes selected, the qPCR data highly correlates with the mRNA Quantseq results (R 2 = 0.72; S1 Fig ) indicating strong similarities between these two methods.
+
+
+## Strengths and limitations
+
+
+The strengths and limitations of this study should be addressed to better understand how these results fit into the larger context of the current literature. It is estimated that in 2019, people in the United States consumed on average, 5.6 eggs per week [ 45 ]. The dose of egg used in this study would equate to roughly 14 eggs per day for a human. While our study demonstrated that consuming a large dose of WE may alter gene expression of various metabolic pathways, particularly during T2DM, this quantity of egg would not be a standard dietary practice in humans. We do recognize that our whole egg dosage was high, but the goal was to examine whether there was a transcriptomic response from consuming dietary whole egg in a T2DM model. It is worth noting that our laboratory has previously reported in ZDF rats that even smaller dosages, such as the human equivalent of <2 eggs/day, significantly reduced weight gain in the ZDF rat and therefore may be effective in identifying oxidative stress outcomes from long-term dietary whole egg consumption [ 18 ]. After the examination of the transcriptome following our high WE-based diet, it is warranted to examine these specific genes in a follow-up intervention study. Future studies will focus on titrating down the egg dosages to discern the smallest dosage to elicit similar transcriptomic responses to egg consumption that will be more translatable to human consumption patterns. Overall, our findings are significant as we are the first to report that whole hen egg consumption promotes glutathione metabolism expression during T2DM and alters the transcriptome of multiple tissues using next-generation sequencing. Additionally, we provide evidence supporting the idea that egg consumption modifies endogenous microRNA expression in a tissue-specific manner.
+
+In summary, we examined whether feeding WE modifies expression of microRNAs or gene expression profiles across multiple tissues in a diabetic versus a lean rat model. Across all tissues examined with next generation sequencing, we identified that 9 microRNAs were differentially expressed in response to consuming WE. Additionally, we have shown that these microRNAs were related to tissue-specific changes in gene expression, and that 8 wk of consuming diets high in whole egg modified 583 genes across the PFC, kidney, liver, and adipose tissue. KEGG/GO analyses identified that glutathione metabolism was highly upregulated in response to feeding WE and qPCR results validated the sequencing results. These data suggest that high WE consumption may provide beneficial effects during T2DM by improving glutathione metabolism gene expression across multiple tissues and decreasing gene expression in oxidative stress pathways.
+
+
+## Materials and methods
+
+
+The data discussed in this publication have been deposited in NCBI's Gene Expression Omnibus [ 46 ] and are accessible through GEO Series accession number GSE157491 ( https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE157491 ). All protocols used within this study have been made publicly available at protocols.io. Protocols have been zipped into one file and can be accessed at dx.doi.org/10.17504/protocols.io.bjgakjse .
+
+
+## Animal housing and experimental design
+
+
+This animal study was approved by the Institutional Animal Care and Use Committee (IACUC) at Iowa State University. All animal care was performed according to Laboratory Animal Resources Guidelines at Iowa State University. Male ZDF ( fa/fa ) rats ( n = 12) and their lean controls ( fa /+; n = 12) were obtained at 6-wk of age (Charles River, Wilmington, MA). Rats were dual-caged and acclimated for 72 h in conventional cages in a temperature-controlled room (25°C) with a 12-h light-dark cycle. Rats were randomly assigned to an experimental diet ( Table 4 ) consisting of either a casein (CAS)-based diet, or a WE-based diet containing dried WE powder (Rose Acre Farms).
+
+Table or figure caption: Composition of the CAS and WE based diets fed to lean and ZDF rats for 8 wk 1 .
+
+
+## Composition of the CAS and WE based diets fed to lean and ZDF rats for 8 wk 1 .
+
+
+1 All ingredients were purchased from Envigo except for dried whole egg (Rose Acre Farms, Guthrie Center, IA), as well as l -methionine and choline bitartrate (Sigma-Aldrich). Abbreviations used: CAS, casein-based diet, WE, whole egg-based diet.
+
+2 Total protein and lipid content provided by 435 g of dried WE was 46% (200 g) and 42% (183 g), respectively.
+
+3 To formulate all diets such that protein was provided at 20% (w/w).
+
+Both diets provided 20% protein (w/w) from either vitamin-free CAS or WE powder. To match the diets for total lipid content (18.3%), corn oil was added to the control diet. Both diets were prepared in-house weekly by mixing all ingredients into a powdered form and administered daily in a standard amount for both lean and ZDF rats. For the remainder of the study, rats were fed ad libitum for 8 wk and at the end of the experimental period, rats were anesthetized with a dissociative agent combination of ketamine:xylaxine (90:10 mg/kg body weight) via an intraperitoneal injection of 1μL/g body weight. Two methods of animal euthanasia were performed according to the American Veterinary Medical Association guidelines for the Euthanasia of Animals: 2020 edition [ 47 ]. Cardiac exsanguination of whole blood on the anesthetized rat was performed and serum was subsequently stored at −80°C for downstream analysis. The second method of exsanguination was the procurement of organs. Following cardiac puncture, tissues were immediately excised, weighed, and snap frozen in liquid nitrogen for storage at −80°C in RNA Later .
+
+
+## RNA extraction and analysis
+
+
+Tissue samples (20 mg) were rapidly thawed on ice and largeRNA and smallRNA fractions were extracted from the same isolate using the RNA SPLIT Kit (Lexogen) according to the manufacturer’s instructions. Briefly, samples were homogenized in an isolation buffer and phase separated using a phenol/chloroform extraction followed by a spin column-based purification procedure. All samples were aliquoted and stored at −80°C for downstream analysis. Following extraction, sample concentrations for the largeRNA fraction were analyzed using a Qubit 2.0 fluorometer (Thermo Fisher) using the Qubit™ Broad Range RNA Assay Kit. RNA integrity was assessed using the Bioanalyzer 2100 (Agilent Technologies) and samples with low RNA integrity number (RIN) values <5 were discarded and re-extracted. SmallRNA concentrations were measured using a Qubit 2.0 fluorometer (Thermo Fisher) using the Qubit™ microRNA Assay Kit.
+
+
+## TotalRNA and smallRNA sequencing
+
+
+Libraries for totalRNA were prepared using an automated protocol according to the manufacturer’s instructions for half reactions on the QuantSeq 3' mRNA-Seq Library Prep Kit (Lexogen) using a MANTIS ® Liquid Handler pipetting robot (Formulatrix). All totalRNA samples were multiplexed together across two lanes on an Illumina High-Seq 3000. SmallRNA Libraries were prepared manually using the SmallRNA-Seq Library Prep Kit (Lexogen). Briefly, 100 ng of enriched smallRNA was used as input and 3’ and 5’ adapters were ligated followed by column purifications. Subsequently, the ligation products were reverse transcribed and double stranded cDNA libraries were generated. Finally, individual sample barcodes for multiplexing were introduced via 17 cycles of PCR. All libraries were assessed on the Bioanalyzer 2100 (Agilent) to examine if adapter dimers formed during PCR. All libraries were further prepared using a bead purification module (Lexogen) and pooled into a single sample at 2 nM (20 μL reaction) for sequencing.
+
+
+## Sequencing quality control and adapter trimming
+
+
+For both totalRNA and smallRNA samples, the resulting FASTQ files were analyzed using Fast-QC [ 48 ] and sequencing adapters were trimmed using on BBDUK [ 49 ] with an example of the trimming procedure: bbduk.sh in = reads.fq out = clean.fq maq = 10 ref = /bbmap/resources/adapters.fa. For smallRNA samples, reads were additionally trimmed using the literal flag to remove the Lexogen specific sequence “ 5’-TGGAATTCTCGGGTGC CAAGGAACTCCAGTCAC– 3 ’” following similar trimming procedures. Briefly, any read segments that matched Illumina Truseq or Nextera adapters, along with reads containing integrity scores <10 were trimmed out.
+
+
+## Alignment and read quantification
+
+
+For totalRNA, reads were mapped to the Ensembl release 94 of the Rattus Norvegicus RNO_6.0 genome using RNA STAR [ 50 ]. TotalRNA read counts were generated during the read alignment using the—genecounts function in STAR. For smallRNA samples, reference fasta files from www.RNACentral.org were downloaded for microRNA, piwiRNA, snRNA, nRNA, rRNA, and tRNA. Indexes were generated using Bowtie [ 50 ] and alignment was conducted using the smallrnaseq python tool [ 51 ]. Read counts for all reference indices and IsomiRs were generated using the smallrnaseq python tool.
+
+
+## Data filtering and normalization
+
+
+Following read count generation, Quantseq gene expression data was merged into a single data frame for analysis in R (version 3.6.0). Genes were discarded from the analysis if there were <3 samples without a single read for that given gene. TotalRNA data initially generated read counts for 32,883 genes and over 50% of the trimmed reads from each sample mapped to the RNO_6 version 94 genome. Prior to normalization, remaining gene counts across all four tissues contained between 8,700–12,000 genes for analysis. The microRNA data originally generated read counts for over 350 microRNAs and the formal analysis was conducted on 60–150 targets across each tissue. For totalRNA and smallRNA fractions, all samples were normalized using the Trimmed Mean of M values (TMM) method [ 52 ]. Briefly, TMM accounts for variable depth between samples by normalizing them according to the weighted trimmed mean of the log expression ratios across all samples prior to analysis.
+
+
+## Differential expression analysis
+
+
+All differential expression analyses were conducted using R (version 3.6.0). Differential expression was conducted using DESeq2 from Bioconductor. DESeq-DataSetFromMatrix generated p-values and Benjamini-Hochberg [ 53 ] adjusted P -values controlling false discovery rate (FDR) at 5%. Significance was determined at adj P <0.05.
+
+
+## Heatmaps, principal component analysis, and volcano plots
+
+
+Principal Component Analysis (PCA) was used to visualize sample relatedness across treatments and tissues. Subsequent hierarchical clustering grouped samples according to transcriptomic relatedness, while volcano plots were constructed to visualize samples with absolute log-fold changes >1.5. All figures were generated with MatplotLib in Python version 3.2.0rc1.
+
+
+## KEGG/GO pathway analysis
+
+
+Biological pathways for each DEG were generated using the KEGG pathway analysis and GO analysis conducted via the Database for Annotation, Visualization, and Integrated Discovery (DAVID) v6.7 software tool.
+
+
+## qPCR validation analyses
+
+
+TotalRNA from each tissue was aliquoted and frozen at -80 ○ C, and 2 μg of total RNA was reverse-transcribed into cDNA using the High-Capacity cDNA Reverse Transcription Kit (Applied Biosystems, Catalog # 4368813). cDNA was diluted to 250 ng/μL and qPCR reactions were performed using 250 ng of total cDNA with primers at 300 nM concentration in 10 μL FastStart Sybr Green Master (Roche) according to the manufacturer’s instructions. Briefly, the thermocycling protocol followed a pre-incubation at 95°C for 10 minutes, followed by 45 cycles of 3-Step amplification: 1) denature at 95°C for 20 seconds; 2) anneal and extend at 60°C for 20 seconds; and 3) elongate at 72°C for 20 seconds. All qPCR reactions were conducted in a Roche LightCycler 96 Real-Time PCR System. Primers sequences for qPCR are as follows: Fatty Acid Synthase FWD: GGCGAGTCTATGCCACTATTC , REV: GCTGATACAGAGAACGGATGAG ; Indolethylamine N-methyltransferase FWD: CTGGAGAAGGAGACGGTAGAA , REV: CGGGCAACCACGAAGTATAA ; Cytochrome P450, family 2, subfamily c, polypeptide 22 FWD: AGAGAGAGAGAGAGAGAGAGAGA , REV: GAGACCCTCTGCATCTCAATAC ; 18S Ribosomal Subunit FWD: AAGACGAACCAGAGCGAAAG , REV: TCGGAACTACGACGGTATCT ; Cytochrome P450, family 51 FWD: CCTTCCAGTGGTGCTCTTATT , REV: CTAAGCCACTACCCAAAGACTATAC . In all qPCR experiments, 18s RNA expression was used to normalize gene expression within each tissue sample that was processed in triplicate. All data were analyzed using the Livak Delta-Delta CT method [ 54 ].
+
+
+## MicroRNA bioinformatic analysis
+
+
+All microRNA fastq files were processed using the smallrnaseq [ 51 ] package in python. Smallrnaseq automates standard bioinformatic processes for quantification and analysis of small non-coding RNA species such as microRNA quantification and novel microRNA prediction. Briefly, smallrnaseq uses bowtie to align fastq files to user defined reference fasta sequences and all reference sequences were downloaded from www.RNAcentral.org (version 14). Following alignment to the Rattus Norvegicus genome and reference tRNA, rRNA, microRNA, lncRNA, and snRNA files, novel microRNA predictions are conducted using microRNADeep2. Additionally, differential expression was automated using the DEseq2 package in R.
+
+
+## Supporting information
+
+
+Table or figure caption: qPCR correlation with mRNA sequencing. Log fold change comparisons between qPCR and mRNA sequencing of several genes suggesting strong relationship between these two methods. (TIF)
+
+
+## qPCR correlation with mRNA sequencing.
+
+
+Log fold change comparisons between qPCR and mRNA sequencing of several genes suggesting strong relationship between these two methods.
+
+(TIF)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.
+
+Table or figure caption: mRNA raw read counts. Raw microRNA counts used in the analysis for comparing dietary treatment groups. (XLSX)
+
+
+## mRNA raw read counts.
+
+
+Raw microRNA counts used in the analysis for comparing dietary treatment groups.
+
+(XLSX)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.
+
+Table or figure caption: mRNA DeSEQ2 summary statistics. Summary statistics for the mRNA data from the DeSEQ2 analysis in R. (XLSX)
+
+
+## mRNA DeSEQ2 summary statistics.
+
+
+Summary statistics for the mRNA data from the DeSEQ2 analysis in R.
+
+(XLSX)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.
+
+Table or figure caption: MicroRNA DeSEQ2 summary statistics. Summary statistics for the microRNA data from the DeSEQ2 analysis in R. (XLSX)
+
+
+## MicroRNA DeSEQ2 summary statistics.
+
+
+Summary statistics for the microRNA data from the DeSEQ2 analysis in R.
+
+(XLSX)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.
+
+Table or figure caption: Raw microRNA read counts. Raw microRNA read counts used in the analyses. (XLSX)
+
+
+## Raw microRNA read counts.
+
+
+Raw microRNA read counts used in the analyses.
+
+(XLSX)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.
+
+Table or figure caption: KEGG/GO analysis. Gene ontology pathways that were upregulated/downregulated for each set of differentially expressed genes within each tissue using the DAVID database. (XLSX)
+
+
+## KEGG/GO analysis.
+
+
+Gene ontology pathways that were upregulated/downregulated for each set of differentially expressed genes within each tissue using the DAVID database.
+
+(XLSX)
+
+Table or figure caption: Click here for additional data file.
+
+Click here for additional data file.

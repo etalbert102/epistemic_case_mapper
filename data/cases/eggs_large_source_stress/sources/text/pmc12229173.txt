@@ -1,0 +1,161 @@
+# Association between egg consumption and major and minor ischemia changes on electrocardiogram: A population-based study
+
+## Abstract
+
+BACKGROUND: Eggs, while nutrient-rich, have high cholesterol content. The link between egg consumption and cardiovascular disease (CVD) remains debated. This study investigates how egg intake correlates with minor and major electrocardiogram (ECG) abnormalities, which serve as potential indicators of CVD. METHODS: In this cross-sectional study, a total of 5,928 participants without cardiovascular disease (CVD), aged between 35 and 65 years, were included. Dietary egg consumption was evaluated using a validated food frequency questionnaire. The Minnesota coding system was employed to identify minor and major ischemic abnormalities on ECG. Odds ratios (ORs) for major and minor ischemic patterns across different egg consumption categories were calculated using multivariable logistic regression. RESULTS: Using several statistical models, this study showed that higher egg consumption was associated with lower odds of isolated major ECG abnormalities in men, but not in women. In the fully adjusted model, consuming more than four eggs per week, compared to the lowest category (<1/week), was correlated with a 40% decrease in the odds of major ischemic changes on ECG in men (OR: 0.60, 95% CI: 0.39–0.93). Regarding minor ischemic abnormalities, there was no significant association with egg consumption in either women or men. CONCLUSION: Our findings suggest a gender-specific effect of egg consumption on the presence of major ischemic changes on ECG. Further research is warranted to explore the underlying mechanisms and to inform tailored dietary guidelines for different populations.
+
+
+## Introduction
+
+
+Cardiovascular disease (CVD) is responsible for an estimated one-third of all mortalities globally 1 - 3 .CVD claims approximately 17.9 million lives annually, with a rising trend in recent years 4 , 5 . While factors such as smoking, stress, physical inactivity, obesity, hypertension, and diabetes are well-established risk factors for cardiovascular disease, diet also plays a significant role 3 , 6 - 8 . Diet may protect against CVD or predispose to it 9 , 10 .
+
+Eggs are an available and affordable source of protein that meets the dietary needs of many people, becoming a prime source of food for humans 11 , 12 . An egg offers 5 g of fat, 6 g of protein, and 187 mg of cholesterol 11 . Moreover, it is a rich source of essential vitamins and minerals, including zinc, calcium, iron, and choline 11 - 13 . However, because of its high cholesterol content, there are contradictory viewpoints on the probabilistic association between cholesterol intake and its effects on CVD 12 . Some studies have concluded that eating eggs should be restricted due to their potential to elevate cholesterol levels in the blood, while others deny the effect of dietary cholesterol on the cardiovascular system (CVS) 14 - 18 .
+
+Besides cholesterol, eggs are a full-found source of sulfur amino acids 18 . All body cells contain compounds that have sulfur in their structure as a requisite substance. Sulfur participates in the structures of antioxidants such as cysteine, methionine, and glycine, as well as lipoic acid 19 , 20 .Studies have indicated that antioxidants can barricade the formation of oxidized low-density lipoprotein (LDL) cholesterol during the progression of atherosclerosis 21 . Considering the correlation between CVD and serum LDL cholesterol, there is great interest among scientists in studying the relationship between egg consumption and the risk of CVD 21 , 22 .
+
+Electrocardiography stands as a well-established, accessible, and cost-effective method for cardiovascular assessment 23 . An abnormal electrocardiogram (ECG) can signal significant cardiovascular disorders as well as cardiovascular risk factors 24 , 25 . Recent findings have increased the importance of using ECG in population-based research. The prognostic valence of the ECG for coronary heart disease incidence, mortality, and morbidity has been validated in various studies 26 - 28 . The Minnesota Coding (MC) system, utilized for ECG classification, includes three categories: major abnormalities, minor abnormalities, or the absence of abnormalities 29 . A prospective cohort study revealed that transitions in ECG abnormalities—from no abnormalities to minor ischemic changes, and from minor to major ischemic changes—were correlated with a higher risk of CVD 30 . One community-based investigation in 2022 also showed that minor and major ischemic ECG changes are correlated with known risk factors for CVD, including diabetes and HTN 29 .
+
+Amid extensive discussions on the effect of egg consumption on CVS concerning its nutritional components, we aimed to investigate the influence of egg intake on CVD by interpreting ECG according to the MC system, identifying major and minor ECG abnormalities to assess potential CVD in an adult community-based population.
+
+
+## Methods
+
+
+
+## Study population
+
+
+This study adhered to the STROBE (Strengthening the Reporting of Observational Studies in Epidemiology) guidelines for cross-sectional studies. This cross-sectional study was carried out with 5,928 out of 9,704 participants who were involved in the Mashhad Stroke and Heart Atherosclerotic Disorder (MASHAD) study 31 .The food frequency questionnaire (FFQ) was unavailable for 3,158 individuals, while an additional 618 were excluded for other specified reasons. All participants were aged between 35 and 65. Exclusion criteria encompassed individuals with CVD, breastfeeding or pregnant females, individuals with lost dietary data, and those who reported an energy intake of more than 4,200 kcal or less than 800 kcal. These extreme values are often indicative of under- or over-reporting, which can compromise the accuracy of dietary data and lead to biased results. Removing such outliers ensures a more reliable and valid dataset for analysis.
+
+
+## Data collection
+
+
+Dietary, demographic, laboratory, and anthropometric information were gathered from every participant, all of whom provided written consent (Ethical code: IR.MUMS.MEDICAL.REC.1399.783).
+
+Anthropometric measurements were assessed using the previously mentioned standard protocols 31 . The Body Mass Index (BMI) was calculated by dividing an individual’s weight (kg) by their height squared (m²). The lipid profile, including high-density lipoprotein (HDL) cholesterol, LDL cholesterol, triglycerides, total cholesterol (TC), and fasting serum glucose, was measured using an autoanalyzer (BT-3000, Biothecnica, Italy) and commercial kits supplied by Pars Azmoon Company (Tehran, Iran).
+
+Dietary intake was determined using a validated food frequency questionnaire (FFQ) 32 through oral interviews conducted by an experienced investigator. The dietary intake assessment was conducted utilizing Diet Plan 6 software, developed by Forestfield Software Ltd. (Horsham, West Sussex, UK). Egg consumption categories were defined as <1, 1-2, 2-4, and >4 eggs per week. Energy adjustments for all variables were made using the residual method 33 .
+
+A standard resting 12-lead ECG was obtained from participants. ECG records were coded according to the MC 34 . We presented a report on electrocardiographic abnormalities in stroke and heart atherosclerotic disorder in 2023 35 .
+
+In this study, based on the results of the reliable and available ECG, we divided the subjects into two groups: those with major ischemic changes and those with minor ischemic changes. The major ischemic changes encompassed major Q wave abnormalities (MC 1-1 and 1-2), minor Q wave abnormalities in addition to ST-T abnormalities (MC 1-3 plus 4-1, 4-2, 5-1, and 5-2), and major isolated ST-T abnormalities (MC 4-1, 4-2, 5-1, and 5-2). Minor ischemic changes were delineated as any of the following: minor isolated Q/QS waves (MC 1-3), minor ST/T abnormalities (MC 4-3, 4-4, 5-3, and 5-4), and ST-segment elevation (MC 9-2). The remaining population was categorized as the subjects without ischemic changes group 34 .
+
+
+## Statistical analysis
+
+
+Participants were categorized based on weekly egg consumption. The results were reported as means ± standard deviations for continuous variables and frequency counts (percentages) for categorical variables. Analysis of variance (ANOVA) and the chi-square test were used to evaluate differences among categories for continuous and categorical variables, respectively.
+
+A multivariable logistic regression method was used to calculate the odds ratios (OR) and 95% confidence intervals (CI) for major and minor ischemic changes on ECG across egg consumption categories in both raw and multivariable-adjusted models. The first model (Model 1) was adjusted for age, marital status, and education level. Model 2 included additional adjustments for BMI, waist circumference (WC), smoking status, physical activity level, and the presence of chronic conditions such as dyslipidemia, hypertension (HTN), or diabetes mellitus, along with the adjustments from Model 1.
+
+Model 3 incorporated further adjustments for total energy intake, carbohydrate (CHO) intake, cholesterol intake, and serum high-sensitivity C-reactive protein (hsCRP), in addition to the adjustments from Model 2. Statistical analysis was carried out using SPSS Statistics software version 25.0 (Chicago, IL), and P < 0.05 was considered indicative of statistical significance.
+
+
+## Results
+
+
+The final analysis included a total of 5,928 participants. Participants’ baseline characteristics and their lipid profile across categories of egg consumption are presented in Table 1 . In comparison to those who consumed less than one egg per week, individuals who consumed more than four eggs per week tended to be younger, had lower BMI and physical activity levels, and a higher proportion of them were male (p < 0.01). Moreover, there was a significant difference in smoking habits and educational level distribution across the four categories of egg consumption (p = 0.001 and p < 0.001, respectively).
+
+Regarding lipid profile, individuals who consumed the most eggs (top quintile) had significantly lower levels of TC, HDL cholesterol, and triglycerides, with a significant decreasing trend (p < 0.001, p = 0.004, and p = 0.001, respectively). There was no significant difference in LDL cholesterol (p = 0.302).
+
+As presented in Table 2 , the dietary intake of the study population is categorized based on weekly egg consumption. Participants in the highest quintile of egg consumption, compared to those in the lowest quintile, had a significantly higher intake of energy, saturated fat, total fat, carbohydrates (CHO), protein, polyunsaturated fatty acids (PUFA), monounsaturated fatty acids (MUFA), and trans fatty acids (p < 0.001).
+
+Table 3 presents the association between major ischemia on ECG and egg consumption. In the crude model, a significant inverse association was observed in the total population, with higher egg consumption linked to lower odds of major ischemic ECG changes (OR for >4 eggs/week: 0.78, 95% CI: 0.62–0.99). However, in the fully adjusted model, which accounted for demographic, lifestyle, and dietary factors, this association was no longer significant (OR: 0.84, 95% CI: 0.62–1.14).
+
+When stratified by gender, a significant inverse association was observed in men in the crude model, where higher egg consumption was associated with lower odds of major ischemic ECG changes (OR for >4 eggs/week: 0.61, 95% CI: 0.42–0.87). After adjusting for demographic variables, this association remained significant (OR: 0.64, 95% CI: 0.45–0.92). Further adjustments for lifestyle factors, including BMI, waist circumference, physical activity level, smoking status, and chronic diseases, did not alter the significance of the findings (OR: 0.68, 95% CI: 0.47–0.99). In the fully adjusted model, which also accounted for dietary factors, the association remained stable, with men consuming more than four eggs per week having 40% lower odds of major ischemic ECG changes compared to the lowest consumption category (OR: 0.60, 95% CI: 0.39–0.93). In contrast, no significant association was found in women across any of the models.
+
+However, as shown in Table 4 , the logistic regression analysis models indicate the relationship between minor ischemic patterns and egg consumption. The results reveal no significant correlation between minor ischemia on ECG and egg intake in both women (OR: 0.87, 95% CI: 0.55–1.37; p = 0.73) and men (OR: 0.81, 95% CI: 0.52–1.27; p = 0.46).
+
+
+## Discussion
+
+
+This study aimed to investigate the association between egg intake and major and minor ischemic changes, as assessed using the MC system on ECG. Our results revealed gender-specific patterns. Men consuming more than four eggs per week exhibited a significant 40% reduction in the odds of major ischemic changes on ECG. No meaningful correlation between egg consumption and major ischemic changes on ECG was observed in women. Egg consumption did not show a significant association with the presence of minor ischemic changes in either gender. Participants in the highest egg consumption category (>4 eggs/week) showed a significant decrease in the levels of TC, HDL cholesterol, and triglycerides, with a significant declining trend. However, LDL cholesterol remained unchanged.
+
+The connection between ECG abnormalities, such as major ischemic changes, and cardiovascular events is well documented 30 , 36 , 37 .
+
+ECG abnormalities often act as precursors or markers of underlying cardiovascular pathology, including ischemic heart disease and arrhythmias, which can significantly increase the risk of events like heart attacks or strokes 37 . For instance, major ischemic changes on ECG may indicate significant atherosclerotic burden or myocardial damage, directly linking these findings to elevated cardiovascular events 36 .
+
+While no study has specifically assessed the impact of egg intake on ECG alterations, several studies have explored the correlation between egg intake and CVD, yielding contradictory results 38 . Pan et al. showed that moderate egg consumption has a protective impact against CVD. This association may be explained by the relationship between egg intake and various metabolic markers related to CVD, including apolipoprotein A1, acetate, phospholipids, total lipids, TC, cholesterol esters, free cholesterol, and mean particle diameter of HDL 39 .
+
+An ecological study found a significant inverse correlation between egg consumption and both the incidence and mortality of ischemic heart disease 40 . Considering the predictive value of ECG abnormalities for CVD events and the associations between egg consumption and CVD morbidity and mortality 41 , we propose that egg consumption may indirectly influence CVD by improving ECG markers of heart health. However, this association varies by gender and specific biomarkers, underscoring the importance of individual risk factors in determining cardiovascular outcomes.
+
+Since no studies have previously addressed the connection between egg consumption and ECG changes, we contextualized our findings by comparing them to research exploring egg consumption and cardiovascular events.
+
+Although, as mentioned, some previous studies suggested a potential protective effect of consuming eggs against CVD, several other studies found a positive or no significant association between egg consumption and the risk of CVD 8,13,42 . In a study conducted by Larsson et al., it was found that while daily egg consumption did not correlate with the risk of myocardial infarction or stroke in both men and women, men who consumed ≥1 egg/day faced an elevated risk of heart failure (HF). Additionally, those who consumed ≥2 eggs/day had nearly twice the risk of HF. Daily egg consumers had an average daily dietary cholesterol intake 200–240 mg higher than those who rarely or never ate eggs 43 .
+
+A systematic review and meta-analysis revealed a linear relationship between consuming eggs and the risk of CVD-related death in individuals over 60 years, Americans, studies with a follow-up duration of at least 15 years, and studies with adjustments for hyperlipidemia, despite encountering significant limitations 44 . The discrepancies in the correlation between egg consumption and CVD may be attributable to several factors, such as geographical and cultural variances, individual health status, nutrient interactions, confounding factors, sample size, and follow-up duration. Future research should address these multifaceted aspects to provide clearer insights into this important topic.
+
+Our study’s results revealed that individuals in the highest egg intake category (4 or more eggs per week) displayed notably lower levels of TC, HDL cholesterol, and TG, with a significant decreasing trend. A meta-analysis of randomized clinical trials (RCTs) by Rouhani et al. showed that egg consumption increased levels of TC, LDL, and HDL cholesterol. However, there was no significant impact on the LDL cholesterol/HDL cholesterol ratio, triglyceride levels, or TC/HDL cholesterol ratio when compared to low-egg control diets 45 .
+
+Li et al. showed in their meta-analysis of RCTs that experimental groups who consumed eggs exhibited a higher LDL cholesterol/HDL cholesterol ratio as well as LDL cholesterol levels compared to controls. The sub-analysis for groups who consumed one or two eggs per day showed no significant difference compared to the controls regarding HDL cholesterol levels. However, in the subgroup of three or more eggs per day, the experimental groups had higher HDL cholesterol than the control group 46 . This discrepancy between these reviews may be attributable to different inclusion and exclusion criteria, as stated in their studies.
+
+According to our results, although egg consumption was significantly associated with major ischemic changes on ECG in men, there was no significant association in women (p = 0.88). Notably, the differences in the impact of egg consumption between sexes could be attributed to variations in cholesterol regulation and catabolism. Previous research has explored gender differences using both physiological and traditional criteria. These studies have suggested that women may be more vulnerable to the effects of cholesterol, and gender-related characteristics may be correlated with CVD in women 47 - 50 .
+
+Moreover, a potential explanation for this discrepancy is that gender differences may be influenced by sex steroid hormones. Dehydroepiandrosterone sulfate (DHEAS) has a significant association with lipid levels in both females and males, with notable sex-specific differences. Elevated DHEAS levels in males are linked to lower serum levels of TC, LDL-C, and apolipoprotein B. In women, DHEAS exhibits a weaker negative association with TC 51 , which may explain why our results showed a reduction of major ischemic changes on ECG only in males.
+
+The precise etiology of sexual dimorphism in lipid alterations induced by DHEAS has yet to be fully elucidated within the scientific community. It has been suggested that DHEA supplementation results in distinct sex-specific changes in various sex hormones, such as serum total testosterone, which in turn influences the level of sex hormone-binding globulin (SHBG) 52 .
+
+SHBG plays a critical role in the correlation between lipids and sex hormones, influencing lipid regulation 53 , 54 .
+
+Another reason for gender disparities could stem from sex-specific food preferences, dietary behaviors, and food interactions. Typically, men exhibit a preference for animal foods like fish and meat (rich sources of fat, including cholesterol) over dairy, fruit, or vegetables, leading to higher fat and cholesterol intake and lower fiber consumption compared to women. Additionally, men tend to eat a less diverse range of foods, resulting in diets of lower quality than those of women 55 , 56 .
+
+Our study, conducted on a large and diverse population, offers a robust analysis of the association between egg consumption and major and minor ischemic changes onECG. By employing the MC system for ECG, we ensured precise and standardized classification of ischemic changes. The meticulous adjustments for confounding factors further enhance the reliability and validity of our findings.
+
+A key strength of our study is its large sample size, which enhances statistical power and enables the reliable detection of associations. The population-based approach improves generalizability, making our findings applicable to a broader demographic. Additionally, adjusting for essential dietary variables, such as carbohydrate and cholesterol intake, strengthens the validity of our results. A novel aspect of this study is its focus on ischemic changes detected through ECG, an objective and clinically relevant marker of cardiovascular risk.
+
+However, several limitations must be considered. First, the observational nature of the study introduces the possibility of residual confounding. Second, reliance on self-reported dietary data may lead to inaccuracies due to misreporting bias and variability in food composition. Third, the lack of comprehensive drug history may affect the results, as medications can influence lipid metabolism. Fourth, isolating the effects of specific foods or nutrients remains challenging within complex dietary patterns. Furthermore, examining this association across diverse ethnicities and dietary habits is crucial, as variations in eating patterns and cardiovascular risk factors may influence the observed relationships. Acknowledging these limitations ensures a balanced and nuanced interpretation of our findings.
+
+Table or figure caption: Main characteristics of study population according to categories of egg consumption per week
+
+Main characteristics of study population according to categories of egg consumption per week
+
+* Presented as Mean±SD, # presented as Frequency (percentage)
+
+P-value; calculated using One-way ANOVA test; p-trend: calculated using with a linear trend analysis
+
+BMI: Body mass index, HDL: High-density lipoprotein, LDL: Low-density lipoprotein, PAL: Physical activity level
+
+Table or figure caption: Dietary intake of study population according to categories of egg consumption per week
+
+Dietary intake of study population according to categories of egg consumption per week
+
+P-value calculated using One-way ANOVA test and p-trend calculated using with a linear trend analysis
+
+PUFA: Poly-unsaturated fatty acids, MUFA: Mono-unsaturated fatty acids
+
+Table or figure caption: Logistic regression analysis models for the association between major ischemia patterns and egg consumption, Stratified by Gender
+
+Logistic regression analysis models for the association between major ischemia patterns and egg consumption, Stratified by Gender
+
+values are shown as OR (95% CI)
+
+p-trend calculated using with a Binary logistic regression
+
+Model 1: adjusted for age, marriage, education level
+
+Model 2: Model1+ BMI, waist circumference, physical activity level, smoking status, dyslipidemia, diabetes, HTN
+
+Model 3: model2+ total energy, Carbohydrate intake, cholesterol intake, hsCRP
+
+Table or figure caption: Logistic regression analysis models for the association between minor ischemia patterns and egg consumption, Stratified by Gender
+
+Logistic regression analysis models for the association between minor ischemia patterns and egg consumption, Stratified by Gender
+
+values are shown as OR (95% CI)
+
+p-trend calculated using with a Binary logistic regression
+
+Model 1: adjusted for age, marriage, education level
+
+Model 2: Model1+ BMI, waist circumference, physical activity level, smoking status, dyslipidemia, diabetes, HTN
+
+Model 3: model2+ total energy, Carbohydrate intake, cholesterol intake, hsCRP
+
+
+## Conclusion
+
+
+In summary, our findings emphasize the gender-specific impact of egg consumption on major ischemic changes in ECG. Notably, men who consumed more than four eggs per week exhibited a lower occurrence of major ischemic patterns on ECG. Further research is needed to uncover the biological mechanisms driving this association.
