@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.config_profiles import infer_profile_id_from_text, profile_vocabulary
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -17,6 +18,7 @@ def build_priority_quantity_contracts(packet: dict[str, Any]) -> dict[str, Any]:
     """Build compact decision-useful quantity contracts from the memo-ready packet."""
 
     rows = []
+    vocabulary = _quantity_vocabulary(packet)
     for item in _list(_dict(packet).get("evidence_items")):
         if not isinstance(item, dict):
             continue
@@ -25,12 +27,12 @@ def build_priority_quantity_contracts(packet: dict[str, Any]) -> dict[str, Any]:
             continue
         candidates = [
             *_quantity_rows(item),
-            *_numeric_must_preserve_rows(item),
+            *_numeric_must_preserve_rows(item, vocabulary=vocabulary),
         ]
         for candidate in candidates:
-            if not _quantity_contract_eligible(candidate, item):
+            if not _quantity_contract_eligible(candidate, item, vocabulary=vocabulary):
                 continue
-            rows.append(_contract_row(item, candidate))
+            rows.append(_contract_row(item, candidate, vocabulary=vocabulary))
     rows = _dedupe_contract_rows(rows)
     return {
         "schema_id": "priority_quantity_contracts_v1",
@@ -152,17 +154,17 @@ def _quantity_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _numeric_must_preserve_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
+def _numeric_must_preserve_rows(item: dict[str, Any], *, vocabulary: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
-    terms = _selected_numeric_must_preserve_terms(item)
+    terms = _selected_numeric_must_preserve_terms(item, vocabulary=vocabulary)
     for term in terms:
-        if not _term_has_decision_quantity(term):
+        if not _term_has_decision_quantity(term, vocabulary=vocabulary):
             continue
         rows.append(
             _drop_empty(
                 {
                     "quantity_text": term,
-                    "decision_role": _decision_role_from_text(term, item),
+                    "decision_role": _decision_role_from_text(term, item, vocabulary=vocabulary),
                     "memo_inclusion": "must_use" if _item_required(item) else "supporting_context",
                 }
             )
@@ -170,7 +172,7 @@ def _numeric_must_preserve_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _selected_numeric_must_preserve_terms(item: dict[str, Any]) -> list[str]:
+def _selected_numeric_must_preserve_terms(item: dict[str, Any], *, vocabulary: dict[str, Any]) -> list[str]:
     terms = _string_list(item.get("must_preserve_terms"))
     anchor_numbers = _analyst_quantity_numbers(item)
     if not anchor_numbers:
@@ -179,7 +181,7 @@ def _selected_numeric_must_preserve_terms(item: dict[str, Any]) -> list[str]:
     current_group: list[str] = []
     current_group_numbers: set[str] = set()
     for term in terms:
-        if _term_has_decision_quantity(term):
+        if _term_has_decision_quantity(term, vocabulary=vocabulary):
             current_group.append(term)
             current_group_numbers.update(_numbers(term))
             continue
@@ -228,12 +230,12 @@ def _quantity_text(quantity: dict[str, Any]) -> str:
     return ""
 
 
-def _contract_row(item: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+def _contract_row(item: dict[str, Any], candidate: dict[str, Any], *, vocabulary: dict[str, Any]) -> dict[str, Any]:
     evidence_id = str(item.get("item_id") or "").strip()
     quantity_text = str(candidate.get("quantity_text") or "").strip()
     claim = str(item.get("reader_claim") or item.get("natural_bottom_line") or item.get("claim") or "").strip()
     candidate_role = str(candidate.get("decision_role") or "").strip()
-    decision_role = candidate_role if candidate_role and candidate_role not in {"statistical_detail", "decision_anchor"} else _decision_role_from_text(quantity_text, item)
+    decision_role = candidate_role if candidate_role and candidate_role not in {"statistical_detail", "decision_anchor"} else _decision_role_from_text(quantity_text, item, vocabulary=vocabulary)
     return _drop_empty(
         {
             "contract_id": _contract_id(evidence_id, quantity_text),
@@ -250,18 +252,18 @@ def _contract_row(item: dict[str, Any], candidate: dict[str, Any]) -> dict[str, 
     )
 
 
-def _quantity_contract_eligible(candidate: dict[str, Any], item: dict[str, Any]) -> bool:
+def _quantity_contract_eligible(candidate: dict[str, Any], item: dict[str, Any], *, vocabulary: dict[str, Any]) -> bool:
     text = str(candidate.get("quantity_text") or "").strip()
-    if not text or not _term_has_decision_quantity(text):
+    if not text or not _term_has_decision_quantity(text, vocabulary=vocabulary):
         return False
     if _looks_like_background_context(item):
-        return _high_priority_quantity_text(text)
+        return _high_priority_quantity_text(text, vocabulary=vocabulary)
     if candidate.get("must_retain") is True:
         return True
     inclusion = str(candidate.get("memo_inclusion") or "").strip().lower()
     if inclusion in {"must_use", "yes"}:
         return True
-    return _high_priority_quantity_text(text) and _item_required(item)
+    return _high_priority_quantity_text(text, vocabulary=vocabulary) and _item_required(item)
 
 
 def _item_contract_eligible(item: dict[str, Any]) -> bool:
@@ -290,35 +292,35 @@ def _looks_like_background_context(item: dict[str, Any]) -> bool:
     return role == "background" or memo_function == "background" or (isinstance(rank, int) and rank > 12)
 
 
-def _term_has_decision_quantity(text: str) -> bool:
+def _term_has_decision_quantity(text: str, *, vocabulary: dict[str, Any]) -> bool:
     lowered = str(text or "").lower()
     if not re.search(r"\d", lowered):
         return False
     if re.fullmatch(r"(?:19|20)\d{2}(?:\s*[–-]\s*(?:19|20)\d{2})?", lowered.strip()):
         return False
-    return _high_priority_quantity_text(lowered) or bool(re.search(r"\b(?:per day|/day|daily|egg|serving|mg|%|percent)\b", lowered))
+    markers = _string_list(vocabulary.get("quantity_decision_markers"))
+    return _high_priority_quantity_text(lowered, vocabulary=vocabulary) or _has_marker(lowered, markers)
 
 
-def _high_priority_quantity_text(text: str) -> bool:
+def _high_priority_quantity_text(text: str, *, vocabulary: dict[str, Any] | None = None) -> bool:
     lowered = str(text or "").lower()
-    return any(
-        token in lowered
-        for token in (
-            "hazard ratio",
-            "relative risk",
-            "odds ratio",
-            "confidence interval",
-            "95% ci",
-            " ci:",
-            "md =",
-            "mean difference",
-            "i2",
-            "per day",
-            "/day",
-            "dose",
-            "subgroup",
-        )
-    )
+    markers = [
+        "hazard ratio",
+        "relative risk",
+        "odds ratio",
+        "confidence interval",
+        "95% ci",
+        " ci:",
+        "md =",
+        "mean difference",
+        "i2",
+        "per day",
+        "/day",
+        "dose",
+        "subgroup",
+        *_string_list(_dict(vocabulary).get("quantity_decision_markers")),
+    ]
+    return _has_marker(lowered, markers)
 
 
 def _looks_like_interval(text: str) -> bool:
@@ -326,19 +328,51 @@ def _looks_like_interval(text: str) -> bool:
     return "confidence interval" in lowered or "95% ci" in lowered or " ci:" in lowered
 
 
-def _decision_role_from_text(text: str, item: dict[str, Any]) -> str:
+def _decision_role_from_text(text: str, item: dict[str, Any], *, vocabulary: dict[str, Any]) -> str:
     combined = " ".join([str(text or ""), str(item.get("reader_claim") or ""), str(item.get("role") or ""), str(item.get("memo_function") or "")]).lower()
-    if any(token in combined for token in ("subgroup", "diabetes", "high ldl", "older", "boundary", "scope")):
-        return "scope_or_subgroup_boundary"
-    if any(token in combined for token in ("replace", "substitution", "comparator", "processed", "full fat")):
-        return "comparator_context"
-    if any(token in combined for token in ("hazard ratio", "relative risk", "odds ratio", "risk", "incident")):
-        return "risk_estimate"
-    if any(token in combined for token in ("ldl", "hdl", "biomarker", "ratio", "mean difference", "md =")):
-        return "biomarker_calibration"
-    if any(token in combined for token in ("per day", "/day", "egg")):
-        return "dose_boundary"
+    role_markers = _dict(vocabulary.get("quantity_role_markers"))
+    for role in [
+        "scope_or_subgroup_boundary",
+        "comparator_context",
+        "risk_estimate",
+        "biomarker_calibration",
+        "dose_boundary",
+    ]:
+        if _has_marker(combined, _string_list(role_markers.get(role))):
+            return role
     return "decision_relevant_quantity"
+
+
+def _quantity_vocabulary(packet: dict[str, Any]) -> dict[str, Any]:
+    profile_id = str(_dict(packet).get("profile_id") or _dict(_dict(packet).get("config_profile")).get("profile_id") or "").strip()
+    if not profile_id:
+        profile_id = infer_profile_id_from_text(_quantity_profile_detection_text(packet))
+    return profile_vocabulary(profile_id)
+
+
+def _quantity_profile_detection_text(packet: dict[str, Any]) -> str:
+    parts = [str(_dict(packet).get("decision_question") or "")]
+    for source in _list(_dict(packet).get("source_trail")):
+        if isinstance(source, dict):
+            parts.extend([str(source.get("source_label") or ""), str(source.get("citation_label") or "")])
+    for item in _list(_dict(packet).get("evidence_items"))[:24]:
+        if isinstance(item, dict):
+            parts.extend([str(item.get("reader_claim") or ""), str(item.get("natural_bottom_line") or "")])
+    return "\n".join(part for part in parts if part)
+
+
+def _has_marker(text: str, markers: list[str]) -> bool:
+    lowered = str(text or "").lower()
+    for marker in markers:
+        normalized = str(marker or "").strip().lower()
+        if not normalized:
+            continue
+        if re.search(r"[a-z0-9]$", normalized) and re.search(r"^[a-z0-9]", normalized):
+            if re.search(rf"\b{re.escape(normalized)}\b", lowered):
+                return True
+        elif normalized in lowered:
+            return True
+    return False
 
 
 def _dedupe_contract_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

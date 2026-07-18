@@ -42,6 +42,22 @@ _BASE_PROFILE_VOCABULARY: dict[str, Any] = {
         "per week",
         "unsafe",
     ],
+    "quantity_decision_markers": [
+        "per day",
+        "/day",
+        "daily",
+        "serving",
+        "mg",
+        "%",
+        "percent",
+    ],
+    "quantity_role_markers": {
+        "scope_or_subgroup_boundary": ["subgroup", "older", "boundary", "scope", "high-risk", "higher-risk"],
+        "comparator_context": ["replace", "substitution", "comparator", "processed", "full fat"],
+        "risk_estimate": ["hazard ratio", "relative risk", "odds ratio", "risk", "incident"],
+        "biomarker_calibration": ["biomarker", "ratio", "mean difference", "md ="],
+        "dose_boundary": ["per day", "/day", "daily", "dose", "serving"],
+    },
     "concern_negated_markers": [
         " not associated ",
         " no association ",
@@ -624,6 +640,12 @@ def _biomedical_nutrition_vocabulary() -> dict[str, Any]:
             "profile_detection_threshold": 2,
             "domain_leakage_terms": [" egg", " eggs", " dietary", " cholesterol", " apob", " saturated fat", " replacement foods"],
             "reader_quality_bonus_markers": ["cardiovascular", "ldl", "apob", "diabetes", "replace", "substitut", "per day", "per week"],
+            "quantity_decision_markers": ["egg", "eggs", "ldl", "hdl", "apob", "cholesterol"],
+            "quantity_role_markers": {
+                "scope_or_subgroup_boundary": ["diabetes", "high ldl", "high apob", "older", "type 2"],
+                "biomarker_calibration": ["ldl", "hdl", "apob", "cholesterol", "lipid"],
+                "dose_boundary": ["egg", "eggs"],
+            },
             "concern_negated_markers": [" lowers ldl ", " lowered ldl "],
             "concern_markers": [
                 " cvd mortality ",
@@ -794,4 +816,3 @@ def _biomedical_nutrition_concept_vocabulary() -> dict[str, Any]:
             "dietary_context": ["saturated fat", "dietary pattern", "diet quality"],
         },
     }
-

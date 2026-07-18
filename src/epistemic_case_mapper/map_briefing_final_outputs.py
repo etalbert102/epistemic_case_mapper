@@ -152,17 +152,10 @@ def _run_memo_ready_final_output_path(
         run_memo_ready_presentation_normalization,
         run_memo_ready_packet_synthesis,
     )
-    from epistemic_case_mapper.map_briefing_writer_decision_interface import (
-        build_writer_decision_interface,
-        build_writer_decision_interface_quality_report,
-    )
 
     packet = memo_package["scaffold"].get("memo_ready_packet")
     memo_ready_packet = packet if isinstance(packet, dict) else {}
-    writer_interface = build_writer_decision_interface(memo_ready_packet)
-    writer_interface_quality = build_writer_decision_interface_quality_report(writer_interface)
-    memo_package["scaffold"]["writer_decision_interface"] = writer_interface
-    memo_package["scaffold"]["writer_decision_interface_quality_report"] = writer_interface_quality
+    writer_interface_quality = _attach_writer_interface(memo_package["scaffold"], memo_ready_packet)
     record_memo_progress(
         artifacts,
         "memo_ready_synthesis",
@@ -283,6 +276,19 @@ def _run_memo_ready_final_output_path(
         "memo_ready_repair_result": repair,
         "memo_ready_final_polish_result": final_polish,
     }
+
+
+def _attach_writer_interface(scaffold: dict[str, Any], memo_ready_packet: dict[str, Any]) -> dict[str, Any]:
+    from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+        build_writer_decision_interface,
+        build_writer_decision_interface_quality_report,
+    )
+
+    writer_interface = build_writer_decision_interface(memo_ready_packet)
+    writer_interface_quality = build_writer_decision_interface_quality_report(writer_interface)
+    scaffold["writer_decision_interface"] = writer_interface
+    scaffold["writer_decision_interface_quality_report"] = writer_interface_quality
+    return writer_interface_quality
 
 
 def _attach_final_source_weighting_fidelity(rewrite_result: dict[str, Any], memo_ready_packet: dict[str, Any]) -> None:

@@ -1145,12 +1145,11 @@ def _deterministic_final_polish_cleanup(memo: str) -> str:
     replacements = [
         (r"\(JAM\)", "(JAMA 2019)"),
         (r"\b9/5\s*%\s+confidence interval\b", "95% confidence interval"),
-        (r"\bone egg per 1 day\b", "one egg per day"),
-        (r"\bup to one egg per 1 day\b", "up to one egg per day"),
         (r"\.;\s*", ". "),
     ]
     for pattern, replacement in replacements:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    text = re.sub(r"\bper\s+1\s+(day|week|month|year)\b", r"per \1", text, flags=re.IGNORECASE)
     return repair_markdown_structure(text).strip() + "\n"
 
 
