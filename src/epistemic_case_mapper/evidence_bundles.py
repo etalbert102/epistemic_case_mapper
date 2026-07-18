@@ -179,6 +179,38 @@ def semantic_realization_report(memo: str, bundles: Any) -> dict[str, Any]:
     }
 
 
+def collect_assertion_bundles(value: Any) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    _collect_assertion_bundles(value, rows=rows, seen=seen)
+    return rows
+
+
+def bundle_reconciliation_report(
+    *,
+    memo: str,
+    packet: dict[str, Any],
+    selected_bundle_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    bundles = collect_assertion_bundles(packet)
+    realization = semantic_realization_report(memo, bundles)
+    known_ids = {
+        str(bundle.get("evidence_bundle_id") or "").strip()
+        for bundle in bundles
+        if isinstance(bundle, dict) and str(bundle.get("evidence_bundle_id") or "").strip()
+    }
+    selected = {str(bundle_id).strip() for bundle_id in (selected_bundle_ids or []) if str(bundle_id).strip()}
+    return {
+        "schema_id": "evidence_bundle_reconciliation_report_v1",
+        "status": "pass" if realization.get("status") == "pass" and not (selected - known_ids) else "warning",
+        "known_bundle_count": len(known_ids),
+        "selected_bundle_count": len(selected),
+        "unknown_selected_bundle_ids": sorted(selected - known_ids),
+        "realization_report": realization,
+        "bundle_index": _bundle_index_rows(bundles),
+    }
+
+
 def _issue(code: str, bundle: dict[str, Any]) -> dict[str, Any]:
     return {
         "code": code,
@@ -187,6 +219,42 @@ def _issue(code: str, bundle: dict[str, Any]) -> dict[str, Any]:
         "statistic_type": bundle.get("statistic_type"),
         "endpoint": bundle.get("endpoint"),
     }
+
+
+def _collect_assertion_bundles(value: Any, *, rows: list[dict[str, Any]], seen: set[str]) -> None:
+    if isinstance(value, dict):
+        if value.get("schema_id") == ASSERTION_BUNDLE_SCHEMA_ID or value.get("evidence_bundle_id"):
+            bundle_id = str(value.get("evidence_bundle_id") or "").strip()
+            if bundle_id and bundle_id not in seen:
+                seen.add(bundle_id)
+                rows.append(value)
+                return
+        for child in value.values():
+            _collect_assertion_bundles(child, rows=rows, seen=seen)
+    elif isinstance(value, list):
+        for child in value:
+            _collect_assertion_bundles(child, rows=rows, seen=seen)
+
+
+def _bundle_index_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        _drop_empty(
+            {
+                "evidence_bundle_id": bundle.get("evidence_bundle_id"),
+                "claim_id": bundle.get("claim_id"),
+                "source_ids": bundle.get("source_ids"),
+                "value": bundle.get("value"),
+                "statistic_type": bundle.get("statistic_type"),
+                "endpoint": bundle.get("endpoint"),
+                "population": bundle.get("population"),
+                "interval": bundle.get("interval"),
+                "allowed_inference": bundle.get("allowed_inference"),
+                "forbidden_inference": bundle.get("forbidden_inference"),
+            }
+        )
+        for bundle in bundles
+        if isinstance(bundle, dict)
+    ]
 
 
 def _bundle_id(

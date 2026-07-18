@@ -571,6 +571,38 @@ def test_citation_trace_includes_sentence_role_and_source_id_matched_evidence() 
     assert "Use limits: Do not cite as broad direct support." in trace
 
 
+def test_citation_trace_includes_source_assertion_bundle_use_limits() -> None:
+    packet = {
+        "source_trail": [{"source_id": "cohort_2025", "source_label": "Cohort Study 2025"}],
+        "evidence_items": [
+            {
+                "item_id": "item_risk",
+                "role": "strongest_support",
+                "reader_claim": "Higher exposure was associated with higher risk.",
+                "source_ids": ["cohort_2025"],
+                "assertion_bundles": [
+                    {
+                        "evidence_bundle_id": "bundle_risk_001",
+                        "value": "RR 1.17 (95% CI 1.08 to 1.27)",
+                        "endpoint": "cardiovascular disease",
+                        "interval": "95% CI 1.08 to 1.27",
+                        "allowed_inference": "Use as an observational association.",
+                        "forbidden_inference": "Do not present as causal proof.",
+                    }
+                ],
+            }
+        ],
+    }
+    memo = "Higher exposure was associated with higher risk [cohort_2025]."
+
+    trace = build_citation_trace_markdown(memo, packet)
+
+    assert "Source assertion bundles:" in trace
+    assert "`bundle_risk_001`: RR 1.17" in trace
+    assert "Use as: Use as an observational association." in trace
+    assert "Do not use as: Do not present as causal proof." in trace
+
+
 def test_presentation_prefers_citation_label_over_long_display_label() -> None:
     long_title = (
         "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, "

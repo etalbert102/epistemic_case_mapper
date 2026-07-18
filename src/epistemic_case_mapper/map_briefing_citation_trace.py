@@ -191,6 +191,10 @@ def _trace_evidence_lines(item: dict[str, Any]) -> list[str]:
     quantities = _trace_quantity_strings(item)
     if quantities:
         lines.append(f"    - Quantities: {'; '.join(quantities)}")
+    bundles = _trace_assertion_bundle_lines(item)
+    if bundles:
+        lines.append("    - Source assertion bundles:")
+        lines.extend(bundles)
     return lines
 
 
@@ -229,3 +233,32 @@ def _trace_quantity_strings(item: dict[str, Any]) -> list[str]:
             if text:
                 values.append(text)
     return _dedupe(values)
+
+
+def _trace_assertion_bundle_lines(item: dict[str, Any]) -> list[str]:
+    rows = []
+    seen = set()
+    for bundle in _list(item.get("assertion_bundles")):
+        if not isinstance(bundle, dict):
+            continue
+        bundle_id = str(bundle.get("evidence_bundle_id") or "").strip()
+        if not bundle_id or bundle_id in seen:
+            continue
+        seen.add(bundle_id)
+        parts = [
+            str(bundle.get("value") or "").strip(),
+            str(bundle.get("endpoint") or "").strip(),
+            str(bundle.get("interval") or "").strip(),
+        ]
+        label = "; ".join(part for part in parts if part)
+        line = f"      - `{bundle_id}`"
+        if label:
+            line += f": {label}"
+        inference = str(bundle.get("allowed_inference") or "").strip()
+        if inference:
+            line += f" | Use as: {inference}"
+        forbidden = str(bundle.get("forbidden_inference") or "").strip()
+        if forbidden:
+            line += f" | Do not use as: {forbidden}"
+        rows.append(line)
+    return rows

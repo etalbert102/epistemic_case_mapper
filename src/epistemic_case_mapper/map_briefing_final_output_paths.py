@@ -31,6 +31,7 @@ class FinalReaderOutputPaths:
     adversarial_memo_qa: Path
     memo_mutation_eval: Path
     memo_semantic_acceptance: Path
+    evidence_bundle_reconciliation: Path
     section_rewrite_report: Path
     reader_memo_rewrite_prompt: Path
     reader_memo_rewrite_raw: Path
@@ -95,6 +96,7 @@ def final_reader_output_paths(artifacts: Path) -> FinalReaderOutputPaths:
         adversarial_memo_qa=artifacts / "adversarial_memo_qa_report.json",
         memo_mutation_eval=artifacts / "memo_mutation_eval.json",
         memo_semantic_acceptance=artifacts / "memo_semantic_acceptance_report.json",
+        evidence_bundle_reconciliation=artifacts / "evidence_bundle_reconciliation_report.json",
         section_rewrite_report=artifacts / "section_rewrite_report.json",
         reader_memo_rewrite_prompt=artifacts / "reader_memo_rewrite_prompt.txt",
         reader_memo_rewrite_raw=artifacts / "reader_memo_rewrite_raw.txt",

@@ -16,6 +16,7 @@ from epistemic_case_mapper.map_briefing_memo_progress import (
     record_memo_progress,
 )
 from epistemic_case_mapper.map_briefing_source_weighting_contract import build_source_weighting_fidelity_report
+from epistemic_case_mapper.evidence_bundles import bundle_reconciliation_report
 
 
 @dataclass(frozen=True)
@@ -489,7 +490,26 @@ def _build_final_reader_diagnostics(
         final_evaluation=final_eval,
         lineage_report=final_lineage,
     )
+    evidence_bundle_reconciliation = bundle_reconciliation_report(
+        memo=reader_memo,
+        packet=_dict(memo_package["scaffold"].get("memo_ready_packet")),
+        selected_bundle_ids=_selected_bundle_ids_from_synthesis(memo_ready_synthesis_result),
+    )
     semantic_acceptance = build_memo_semantic_acceptance_report(final_readiness_report=final_readiness, memo_quality_report=memo_quality, polish_report=polish_report, validation_report=validation, packet_retention_report=packet_retention, final_evaluation=final_eval)
+    semantic_acceptance.setdefault("source_signals", {})[
+        "evidence_bundle_reconciliation_status"
+    ] = evidence_bundle_reconciliation.get("status")
+    if evidence_bundle_reconciliation.get("status") != "pass":
+        semantic_acceptance.setdefault("issues", []).append(
+            {
+                "severity": "warning",
+                "issue_type": "evidence_bundle_reconciliation_warning",
+                "detail": {
+                    "unknown_selected_bundle_ids": evidence_bundle_reconciliation.get("unknown_selected_bundle_ids", []),
+                    "realization_issue_count": _dict(evidence_bundle_reconciliation.get("realization_report")).get("issue_count", 0),
+                },
+            }
+        )
     adversarial_qa = build_adversarial_memo_qa_report(memo_markdown=reader_memo, scaffold=memo_package["scaffold"])
     memo_mutation_eval = build_memo_mutation_eval(memo_markdown=reader_memo, scaffold=memo_package["scaffold"])
     packet_comparison = build_packet_first_comparison_report(
@@ -531,6 +551,7 @@ def _build_final_reader_diagnostics(
         "adversarial_qa": adversarial_qa,
         "memo_mutation_eval": memo_mutation_eval,
         "semantic_acceptance": semantic_acceptance,
+        "evidence_bundle_reconciliation": evidence_bundle_reconciliation,
         "packet_retention": packet_retention,
         "packet_comparison": packet_comparison,
         "source_lineage": source_lineage,
@@ -635,6 +656,7 @@ def _write_final_reader_artifacts(
     write_json(paths.adversarial_memo_qa, diagnostics["adversarial_qa"])
     write_json(paths.memo_mutation_eval, diagnostics["memo_mutation_eval"])
     write_json(paths.memo_semantic_acceptance, diagnostics["semantic_acceptance"])
+    write_json(paths.evidence_bundle_reconciliation, diagnostics["evidence_bundle_reconciliation"])
     write_json(paths.memo_packet_retention, diagnostics["packet_retention"])
     write_json(paths.packet_first_comparison, diagnostics["packet_comparison"])
     write_json(paths.reader_packet_repair_report, reader_packet_repair_result.get("report", {}))
@@ -699,6 +721,7 @@ def _final_reader_summary_paths(
         "adversarial_memo_qa_report": paths.adversarial_memo_qa,
         "memo_mutation_eval": paths.memo_mutation_eval,
         "memo_semantic_acceptance_report": paths.memo_semantic_acceptance,
+        "evidence_bundle_reconciliation_report": paths.evidence_bundle_reconciliation,
         "reader_memo_rewrite_report": paths.reader_memo_rewrite_report,
         "memo_packet_retention_report": paths.memo_packet_retention,
         "packet_first_comparison_report": paths.packet_first_comparison,
@@ -794,6 +817,12 @@ def _canonical_writer_prompt_context_audit(memo_ready_synthesis_result: dict[str
         "retired_context_surfaces_present": present,
         "prompt_character_count": len(prompt),
     }
+
+
+def _selected_bundle_ids_from_synthesis(memo_ready_synthesis_result: dict[str, Any]) -> list[str]:
+    report = _dict(memo_ready_synthesis_result.get("report"))
+    projection = _dict(report.get("prioritized_argument_projection_report"))
+    return _string_list(projection.get("selected_evidence_bundle_ids"))
 
 
 def _build_packet_retention_for_final_memo(reader_memo: str, scaffold: dict[str, Any]) -> dict[str, Any]:

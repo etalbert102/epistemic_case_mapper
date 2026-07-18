@@ -65,6 +65,7 @@ from epistemic_case_mapper.map_briefing_production_readiness import (
     live_synthesis_requires_production_readiness,
 )
 from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_binding_report
+from epistemic_case_mapper.evidence_bundles import bundle_reconciliation_report
 from epistemic_case_mapper.map_briefing_source_identity import compact_source_display, project_source_text_to_ids_for_model, project_sources_to_ids_for_model, replace_source_aliases_with_ids
 from epistemic_case_mapper.model_backends import run_model_backend
 
@@ -373,6 +374,7 @@ def _write_prioritized_argument_projection_artifacts(
     from epistemic_case_mapper.io import write_json
 
     write_json(artifacts / "prioritized_argument_section_synthesis_packets.json", projection.get("section_packets", []))
+    write_json(artifacts / "augmented_production_contract.json", _augmented_production_contract(projection))
     write_json(
         artifacts / "prioritized_argument_projection_evaluation_packet.json",
         projection.get("projection_evaluation_packet", {}),
@@ -381,6 +383,21 @@ def _write_prioritized_argument_projection_artifacts(
         artifacts / "prioritized_argument_section_contract_overlap_report.json",
         projection.get("section_contract_overlap_report", {}),
     )
+
+
+def _augmented_production_contract(projection: dict[str, Any]) -> dict[str, Any]:
+    report = _dict(projection.get("projection_evaluation_packet"))
+    return {
+        "schema_id": "augmented_production_contract_v1",
+        "projection_schema_id": projection.get("schema_id"),
+        "selected_evidence_bundle_ids": _string_list(report.get("selected_evidence_bundle_ids")),
+        "section_count": len(_list(projection.get("section_packets"))),
+        "section_packets_artifact": "prioritized_argument_section_synthesis_packets.json",
+        "bundle_policy": (
+            "Section packets carry source assertion bundles as source-bound quantity constraints. "
+            "Final diagnostics report whether selected bundles remain known and whether memo prose appears to distort statistic type or intervals."
+        ),
+    }
 
 
 def _source_weighted_outline_contracts_enabled(backend: str) -> bool:

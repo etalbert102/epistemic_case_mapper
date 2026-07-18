@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.evidence_bundles import normalize_assertion_bundles, semantic_realization_report
+from epistemic_case_mapper.evidence_bundles import (
+    bundle_reconciliation_report,
+    collect_assertion_bundles,
+    normalize_assertion_bundles,
+    semantic_realization_report,
+)
 
 
 def test_normalize_assertion_bundles_creates_stable_source_bound_identity() -> None:
@@ -58,3 +63,31 @@ def test_semantic_realization_report_flags_quantity_distortion() -> None:
     assert "statistic_swap_rr_as_hr" in codes
     assert "detached_or_missing_interval" in codes
     assert "null_crossing_interval_overstated" in codes
+
+
+def test_bundle_reconciliation_report_indexes_nested_bundles_and_selected_ids() -> None:
+    bundle = {
+        "schema_id": "source_assertion_bundle_v1",
+        "evidence_bundle_id": "bundle_demo_001",
+        "value": "RR 1.03 (95% CI 0.96 to 1.10)",
+        "estimate": "1.03",
+        "interval": "95% CI 0.96 to 1.10",
+        "statistic_type": "relative_risk",
+        "endpoint": "mortality",
+        "source_ids": ["src002"],
+    }
+    packet = {"evidence_items": [{"item_id": "E1", "assertion_bundles": [bundle]}]}
+
+    assert collect_assertion_bundles(packet)[0]["evidence_bundle_id"] == "bundle_demo_001"
+
+    report = bundle_reconciliation_report(
+        memo="The memo reports HR 1.03 and a clear increase in mortality.",
+        packet=packet,
+        selected_bundle_ids=["bundle_demo_001", "missing_bundle"],
+    )
+
+    assert report["status"] == "warning"
+    assert report["known_bundle_count"] == 1
+    assert report["unknown_selected_bundle_ids"] == ["missing_bundle"]
+    codes = {issue["code"] for issue in report["realization_report"]["issues"]}
+    assert "statistic_swap_rr_as_hr" in codes
