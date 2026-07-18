@@ -10,6 +10,27 @@ This submission is strongest as a methodology plus runnable reference prototype 
 
 The central claim is that AI-assisted workflows can lose reasoning structure during retrieval, claim normalization, mapping, and synthesis even when the final answer is broadly useful. That becomes decision-space erosion when a decision-relevant option, interpretation, evidence path, caveat, or review boundary becomes materially less visible or recoverable before accountable review. The prototype does not claim that all summaries fail. It claims that preservation is brittle and hard to audit unless the structure is made explicit.
 
+## Claim Boundary
+
+Demonstrated:
+
+- Source-grounded worked-region maps preserve dependencies, caveats, critique/response structure, and review handles that flat syntheses can compress.
+- The investigator challenge shows better deterministic recoverability for selected hidden-dependency tasks.
+- Local repair and held-out-source update can preserve stable IDs for unaffected map objects.
+- The package demonstrates artifact fidelity across Markdown, JSON, review packets, mutation repair, and update ledgers.
+
+Plausible but under-tested:
+
+- The same artifacts will improve multi-investigator handoff.
+- The same method will transfer to fresh cases without author selection.
+- More complete review logs will make expert disagreement easier to adjudicate.
+
+Not established:
+
+- The current prototype consistently beats strong models on final prose quality.
+- The artifacts are domain-correct without human review.
+- The challenge is a statistically powered benchmark.
+
 ## Evidence Ledger
 
 This table is organized around the submission's own evidence, not as a scoring guide.
@@ -28,26 +49,13 @@ This table is organized around the submission's own evidence, not as a scoring g
 
 ## Best Evidence To Inspect
 
-1. `docs/FLF_BEFORE_AFTER_COMPARISON.md`
-2. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-3. `examples/eggs/worked_region_observational_vs_rct_map.md`
-4. `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
-5. `docs/review/COVID_HUMAN_AUDIT_PACKET.md`
-6. `docs/GENERALIZABILITY_RED_TEAM.md`
-7. `docs/review/REVIEWER_START_HERE.md`
-8. `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
-9. `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`
-10. `docs/HUMAN_AUDIT_GUIDE.md`
-11. `docs/NEW_SOURCE_UPDATE_DEMO.md`
-12. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
-13. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`
-14. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
-15. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
-16. `examples/lhc_black_holes/full_case_flat_synthesis_baseline.md`
-17. `examples/eggs/full_case_flat_synthesis_baseline.md`
-18. `docs/review/LHC_HUMAN_AUDIT_PACKET.md`
-19. `docs/review/EGGS_HUMAN_AUDIT_PACKET.md`
-20. `ui/index.html`
+1. `docs/INVESTIGATOR_CHALLENGE.md`
+2. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
+3. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+4. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
+5. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`
+
+For the full artifact inventory, use `docs/SUBMISSION_ARTIFACT_SUMMARY.md`. For review rather than judge orientation, use `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.
 
 ## Failure Modes
 
@@ -88,7 +96,7 @@ Review packets can look rigorous while reviewers only skim. The method needs exp
 | Static UI is inspection-only | Judges can browse the artifact more easily, but cannot edit or review inside the UI. | The UI links back to canonical Markdown/CSV review packets. | Add reviewer decision editing only if persistence and provenance can be handled safely. |
 | Relation labels need domain review | Incorrect support/challenge/dependency labels can mislead reviewers. | Relation rationales and source excerpts are explicit. | Domain reviewers should assess relation correctness. |
 | Extraction is not fully automated | Manual curation limits scale. | Deterministic scripts and prompt inventory make the process repeatable. | Add LLM extraction passes with reproducible prompt/model logging. |
-| Decision-space framework may look like relabeling | Judges may see the project as ordinary provenance, argument mapping, or summarization faithfulness under new vocabulary. | `docs/REFERENCE_LINEAGE.md`, `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`, and `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md` connect the terms to concrete artifacts and intervention points. | Test whether a reviewer can explain the mechanism chain after the five-minute path without coaching. |
+| Decision-space framework may look like relabeling | Judges may see the project as ordinary provenance, argument mapping, or summarization faithfulness under new vocabulary. | `docs/REFERENCE_LINEAGE.md` and `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` connect the terms to concrete artifacts and intervention points. | Test whether a reviewer can explain the mechanism chain after the five-minute path without coaching. |
 | Evidence is not quantitative enough for a paper | The contest accepts prototypes, but a paper needs stronger evaluation. | Artifact counts, multi-model baselines, and audit packets provide a measurement scaffold. | Run human-reviewed evaluations across more tasks and models. |
 | Draft extension region is not canonical | The public-risk framing map strengthens realism but is not yet fully wired into the validated worked-region pipeline. | It is explicitly labeled as a draft extension and linked from the judge path. | Promote it into the canonical validator set after human/source review. |
 

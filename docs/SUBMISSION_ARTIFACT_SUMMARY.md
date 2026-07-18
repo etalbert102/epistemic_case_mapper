@@ -28,7 +28,6 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | Investigator challenge demonstration | Cross-case | `docs/INVESTIGATOR_CHALLENGE.md` | deterministic replay demo |
 | Decision-space framework integration | Submission | `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` | judge-facing framing |
 | Recover, repair, update judge packet | LHC black holes | `docs/RECOVER_REPAIR_UPDATE_DEMO.md` | deterministic replay demo |
-| Decision-space erosion differentiation | Submission | `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md` | judge-facing framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | single-run comparison |
 | Evidence and limitations | Submission | `docs/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
 | Human audit guide | Submission | `docs/HUMAN_AUDIT_GUIDE.md` | human-review-needed |

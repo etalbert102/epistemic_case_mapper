@@ -44,7 +44,6 @@ judge_paths:
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
-  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
@@ -116,7 +115,6 @@ required_docs:
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
-  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
@@ -162,7 +160,6 @@ reference_scan_paths:
   - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md
   - docs/RECOVER_REPAIR_UPDATE_DEMO.md
-  - docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_PROMPT.md
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_ANSWER.md
@@ -212,10 +209,6 @@ extension_artifacts:
     case: LHC black holes
     path: docs/RECOVER_REPAIR_UPDATE_DEMO.md
     status: deterministic replay demo
-  - artifact: Decision-space erosion differentiation
-    case: Submission
-    path: docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md
-    status: judge-facing framing
   - artifact: Matched strong-model LHC comparison
     case: LHC black holes
     path: docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md

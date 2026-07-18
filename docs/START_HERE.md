@@ -56,15 +56,12 @@ This is the submission's value proposition: the map keeps the part of the reason
 ## Five-Minute Path
 
 1. Read the one-minute demo above.
-2. Open `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` for the concept-to-artifact map.
-3. Open `docs/INVESTIGATOR_CHALLENGE.md` for the runnable challenge boundary.
-4. Open `docs/RECOVER_REPAIR_UPDATE_DEMO.md` and inspect the three-part recover, repair, and update result.
+2. Open `docs/INVESTIGATOR_CHALLENGE.md` for the runnable challenge boundary.
+3. Open `docs/RECOVER_REPAIR_UPDATE_DEMO.md` and inspect the three-part recover, repair, and update result.
+4. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
 5. Open `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` to see the honest comparison: a strong model can recover much of the LHC chain, but the map supplies stable handles for review and update.
-6. Open `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` and read only `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-7. Open `examples/lhc_black_holes/decision_space_erosion_audit.md` and inspect `lhc_loss_001`.
-8. Open `docs/FLF_BEFORE_AFTER_COMPARISON.md` and compare the LHC flat synthesis against the mapped dependency.
 
-That path should be enough to see whether the core mechanism is interesting. Then use eggs for transfer across evidence types and COVID as a narrow adversarial disagreement stress test.
+That path should be enough to see the concrete value. Then open `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md` for the conceptual frame, `docs/FLF_BEFORE_AFTER_COMPARISON.md` for broader before/after examples, and `examples/lhc_black_holes/decision_space_erosion_audit.md` if you want the full LHC loss audit.
 
 For runnable examples keyed to ingestion, structure, assessment, handoff, and reproducibility, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
 
@@ -94,22 +91,9 @@ Read these before giving the submission credit beyond the core mechanism:
 
 ## Claim Boundary
 
-Demonstrated:
+The short version: the prototype demonstrates recoverability, local repair, held-out-source update, and artifact fidelity on selected worked examples. It does not claim automatic truth, prose superiority over strong models, or domain correctness without review.
 
-- structured maps provide queryable judgment anchors for dependency tracing, local correction, and held-out-source update in deterministic replay,
-- the LHC velocity/trapping dependency is easier to recover from map artifacts than from the checked-in flat baseline under the frozen challenge,
-- the workflow records what changed and what stayed stable, preserving artifact fidelity across repair and update.
-
-Plausible but under-tested:
-
-- the same surface will improve multi-investigator handoff,
-- the same pattern will transfer cleanly to fresh cases outside the included examples.
-
-Not established:
-
-- the prototype consistently beats strong models on final prose quality,
-- the maps are domain-correct without human review,
-- the current metrics are a scientific benchmark.
+For the full demonstrated/plausible/not-established boundary, use `docs/EVIDENCE_AND_LIMITATIONS.md`.
 
 ## What To Ignore At First
 

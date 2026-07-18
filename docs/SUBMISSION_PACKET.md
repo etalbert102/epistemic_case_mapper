@@ -60,14 +60,12 @@ For the fastest orientation, use `docs/START_HERE.md`. It gives the shorter vers
 Read these in order if you want the fuller package boundary:
 
 1. `docs/INVESTIGATOR_CHALLENGE.md`: run or inspect the frozen flat-vs-map investigator challenge, local correction exercise, and held-out-source update.
-2. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`: see how the decision-space writing concepts map onto concrete artifacts.
-3. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`: read the compact recover, repair, and update packet.
+2. `docs/RECOVER_REPAIR_UPDATE_DEMO.md`: read the compact recover, repair, and update packet.
+3. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
 4. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`: inspect the matched strong-model comparison that clarifies the claim boundary.
-5. `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`: see how this differs from provenance, faithful summarization, argument mapping, and knowledge graphs.
-6. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`: read `What To Notice` plus claims `lhc_c001` through `lhc_c006`.
-7. `examples/lhc_black_holes/decision_space_erosion_audit.md`: inspect `lhc_loss_001`.
-8. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
-9. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
+5. `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`: see how the decision-space writing concepts map onto concrete artifacts and nearby work.
+6. `docs/FLF_BEFORE_AFTER_COMPARISON.md`: compare the flat LHC synthesis to the mapped dependency.
+7. `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`: run or inspect examples for intake, structure, assessment, resume, and reproducibility.
 
 Then check transfer and limits:
 
@@ -161,26 +159,9 @@ The submission is about compounding epistemic work. A flat synthesis can be usef
 
 The decision-space claim is stronger than "map good, summary bad." AI workflows exercise practical authority when they decide what evidence enters context, how claims are normalized, which distinctions remain visible, and which artifact a reviewer can contest. The useful comparison is: when a later reviewer needs to inspect or change a disputed distinction, which artifact still gives them operational authority to do it?
 
-## Claim Hierarchy
+## Claim Boundary
 
-Demonstrated:
-
-- Source-grounded worked-region maps preserve dependencies, caveats, critique/response structure, and review handles that flat syntheses can compress.
-- The investigator challenge shows better deterministic recoverability for selected hidden-dependency tasks.
-- Local repair and held-out-source update can preserve stable IDs for unaffected map objects.
-- The package demonstrates artifact fidelity across Markdown, JSON, review packets, mutation repair, and update ledgers.
-
-Plausible but under-tested:
-
-- The same artifacts will improve multi-investigator handoff.
-- The same method will transfer to more fresh cases without author selection.
-- More complete review logs will make expert disagreement easier to adjudicate.
-
-Not established:
-
-- The current prototype consistently beats strong models on final prose quality.
-- The artifacts are domain-correct without human review.
-- The challenge is a statistically powered benchmark.
+The current claim boundary is maintained in `docs/EVIDENCE_AND_LIMITATIONS.md`: what is demonstrated, what is plausible but under-tested, and what is explicitly not established. This packet avoids repeating that list so the judge path stays focused on the evidence.
 
 ## Current Boundary
 

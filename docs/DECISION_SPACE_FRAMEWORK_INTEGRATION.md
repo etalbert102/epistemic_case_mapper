@@ -93,6 +93,18 @@ Current surfaces:
 
 Reviewer question: can the reviewer change the case locally without regenerating the whole answer?
 
+## How This Differs From Nearby Work
+
+| Nearby approach | What it usually preserves | What this prototype adds |
+| --- | --- | --- |
+| Provenance | where a statement came from | source-grounded claims plus relation IDs, caveats, cruxes, review status, and update triggers |
+| Faithful summarization | whether prose reflects the sources | an inspectable record of which dependencies and distinctions survived or disappeared |
+| Argument mapping | claims, support, objections | source anchoring, erosion audits, mutation repair, held-out update ledgers, and reviewer handoff packets |
+| Knowledge graphs | entities and links | decision-relevant assumptions, contested relations, uncertainty, and local review tasks |
+| Literature review | synthesized bottom line | stable objects that can be corrected or extended without regenerating the whole synthesis |
+
+The useful comparison is not "map good, summary bad." A strong model can write a good answer from the same source universe. The prototype tries to preserve the structure that makes later investigation compound: source IDs, claim IDs, relation IDs, caveats, cruxes, and localized update records.
+
 ## LHC Example Through The Chain
 
 Flat synthesis can say that cosmic-ray exposure shows LHC black-hole risk is ruled out. The map preserves the decision-space chain:

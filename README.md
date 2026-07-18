@@ -2,15 +2,13 @@
 
 Lightweight FLF competition prototype for producing reusable, navigable epistemic case maps with AI assistance.
 
-Start with the polished judge path: `docs/START_HERE.md`.
+For judges: start with `docs/START_HERE.md`, then inspect `docs/INVESTIGATOR_CHALLENGE.md` and `docs/RECOVER_REPAIR_UPDATE_DEMO.md`.
 
-Then use the fuller judge packet: `docs/SUBMISSION_PACKET.md`.
+For running locally: use `PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
 
-For the fastest evidence of investigator value, use `docs/INVESTIGATOR_CHALLENGE.md` and `docs/RECOVER_REPAIR_UPDATE_DEMO.md`.
+For reuse on a new question: use the `ecm` CLI path below.
 
-For runnable examples keyed to the pipeline stages, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
-
-For a visual inspection surface, run the static UI at `ui/index.html`.
+For implementation details: use `docs/SUBMISSION_PACKET.md` and `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
 
 This repo is intentionally separate from `decision_space_harness`.
 
@@ -116,13 +114,17 @@ The resumable handoffs are `documents`, `map`, and `briefing`. More detail: `doc
 
 Start with `docs/START_HERE.md`. It now opens with the investigator challenge, a compact recover/repair/update packet, and a matched strong-model comparison before sending readers into the full LHC map.
 
-For the full submission boundary, read:
+For the shortest judge path, read:
+
+- `docs/INVESTIGATOR_CHALLENGE.md`
+- `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
+- `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+- `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
+
+For the full submission boundary, add:
 
 - `docs/SUBMISSION_PACKET.md`
 - `docs/DECISION_SPACE_FRAMEWORK_INTEGRATION.md`
-- `docs/RECOVER_REPAIR_UPDATE_DEMO.md`
-- `docs/DECISION_SPACE_EROSION_DIFFERENTIATION.md`
-- `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
 - `docs/FLF_BEFORE_AFTER_COMPARISON.md`
 - `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`
 - `docs/EVIDENCE_AND_LIMITATIONS.md`
