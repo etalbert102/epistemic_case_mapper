@@ -4,7 +4,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from epistemic_case_mapper.io import read_yaml, write_markdown
 from epistemic_case_mapper.map_briefing import run_map_briefing
@@ -359,6 +359,205 @@ def _run_staged_semantic_brief(
     print(f"Final review packet: {_display_path(repo_root, briefing_result.summary_path.parent / 'FINAL_REVIEW_PACKET.md')}")
     print(f"Map run summary: {_display_path(repo_root, result.artifact_dir / 'run_summary.json')}")
     return 0
+
+
+def _run_staged_semantic_resume(
+    *,
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    from_stage: str,
+    backend: str | None,
+    question: str | None,
+    run_dir: str | None,
+    map_path: str | None,
+    quality_report_path: str | None,
+    briefing_dir: str | None,
+    briefing_max_claims: int,
+    backend_timeout: int,
+    backend_retries: int,
+) -> int:
+    if briefing_max_claims < 0:
+        print("semantic_staged_resume_failed briefing_max_claims_must_be_nonnegative", file=sys.stderr)
+        return 1
+    if backend_timeout < 1:
+        print("semantic_staged_resume_failed backend_timeout_must_be_positive", file=sys.stderr)
+        return 1
+    if backend_retries < 0:
+        print("semantic_staged_resume_failed backend_retries_must_be_nonnegative", file=sys.stderr)
+        return 1
+    paths = _staged_resume_paths(
+        repo_root=repo_root,
+        region_id=region_id,
+        run_dir=run_dir,
+        map_path=map_path,
+        quality_report_path=quality_report_path,
+        briefing_dir=briefing_dir,
+    )
+    if from_stage == "documents":
+        print("Resuming from documents: running map construction and memo synthesis.")
+        return _run_staged_semantic_brief(
+            repo_root=repo_root,
+            package=package,
+            region_id=region_id,
+            backend=backend,
+            question=question,
+            output=str(paths["map_path"]),
+            artifact_dir=str(paths["map_artifact_dir"]),
+            briefing_dir=str(paths["briefing_dir"]),
+            chunk_lines=40,
+            chunk_overlap_lines=0,
+            max_chunks_per_source=0,
+            max_total_chunks=0,
+            max_claims_per_source=8,
+            claim_consolidation="deterministic",
+            max_relation_pairs=12,
+            relation_batch_size=4,
+            briefing_max_claims=briefing_max_claims,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            repair_quality=True,
+            no_validate=False,
+            reuse_claim_cache=True,
+        )
+    if from_stage == "map":
+        missing = _missing_paths([paths["map_path"], paths["quality_report_path"]])
+        if missing:
+            print(f"semantic_staged_resume_failed missing_map_artifacts={','.join(missing)}", file=sys.stderr)
+            return 1
+        print("Resuming from map artifacts: running memo synthesis only.")
+        return _run_map_briefing(
+            repo_root=repo_root,
+            package=package,
+            map_path=str(paths["map_path"]),
+            quality_report_path=str(paths["quality_report_path"]),
+            question=question,
+            backend=backend,
+            output_dir=str(paths["briefing_dir"]),
+            region_id=region_id,
+            baseline_path=None,
+            max_claims=briefing_max_claims,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+    if from_stage == "briefing":
+        return _report_existing_briefing(repo_root=repo_root, package=package, region_id=region_id, paths=paths)
+    print(f"semantic_staged_resume_failed unknown_from_stage={from_stage}", file=sys.stderr)
+    return 2
+
+
+def _run_staged_semantic_status(
+    *,
+    repo_root: Path,
+    package: str,
+    region_id: str,
+    run_dir: str | None,
+    map_path: str | None,
+    quality_report_path: str | None,
+    briefing_dir: str | None,
+) -> int:
+    paths = _staged_resume_paths(
+        repo_root=repo_root,
+        region_id=region_id,
+        run_dir=run_dir,
+        map_path=map_path,
+        quality_report_path=quality_report_path,
+        briefing_dir=briefing_dir,
+    )
+    try:
+        manifest = load_submission_manifest(repo_root, package)
+        region = manifest.region_for_id(region_id)
+        case_manifest = _case_manifest_for_region(repo_root, manifest, region)
+    except (KeyError, FileNotFoundError, ValueError) as exc:
+        print(f"semantic_staged_status_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+    source_paths = _case_source_paths(repo_root, case_manifest)
+    documents_ready = bool(case_manifest.sources) and all(path.exists() for path in source_paths)
+    rows = [
+        _stage_status_row(repo_root, "documents", documents_ready, [repo_root / manifest.case_for_key(region.case_key).case_path, *source_paths]),
+        _stage_status_row(repo_root, "map", paths["map_path"].exists() and paths["quality_report_path"].exists(), [paths["map_path"], paths["quality_report_path"], paths["run_summary_path"], paths["pipeline_progress_path"]]),
+        _stage_status_row(repo_root, "briefing", paths["briefing_path"].exists() and paths["briefing_summary_path"].exists() and paths["final_review_packet_path"].exists(), [paths["briefing_path"], paths["briefing_summary_path"], paths["final_review_packet_path"], paths["memo_progress_path"]]),
+    ]
+    print(f"Staged pipeline status region={region_id}")
+    print("Pipeline: documents -> map -> briefing")
+    for row in rows:
+        print(f"{row['stage']}: {row['status']}")
+        for artifact in row["artifacts"]:
+            marker = "ok" if artifact["exists"] else "missing"
+            print(f"  [{marker}] {artifact['path']}")
+    return 0
+
+
+def _report_existing_briefing(*, repo_root: Path, package: str, region_id: str, paths: dict[str, Path]) -> int:
+    try:
+        manifest = load_submission_manifest(repo_root, package)
+        manifest.region_for_id(region_id)
+    except (KeyError, FileNotFoundError, ValueError) as exc:
+        print(f"semantic_staged_resume_failed region={region_id} error={exc}", file=sys.stderr)
+        return 1
+    missing = _missing_paths([paths["briefing_path"], paths["briefing_summary_path"], paths["final_review_packet_path"]])
+    if missing:
+        print(f"semantic_staged_resume_failed missing_briefing_artifacts={','.join(missing)}", file=sys.stderr)
+        return 1
+    print("Existing briefing artifacts are ready.")
+    print(f"Briefing memo: {_display_path(repo_root, paths['briefing_path'])}")
+    print(f"Briefing summary: {_display_path(repo_root, paths['briefing_summary_path'])}")
+    print(f"Final review packet: {_display_path(repo_root, paths['final_review_packet_path'])}")
+    if paths["memo_progress_path"].exists():
+        print(f"Memo progress: {_display_path(repo_root, paths['memo_progress_path'])}")
+    return 0
+
+
+def _staged_resume_paths(
+    *,
+    repo_root: Path,
+    region_id: str,
+    run_dir: str | None,
+    map_path: str | None,
+    quality_report_path: str | None,
+    briefing_dir: str | None,
+) -> dict[str, Path]:
+    root = _resolve_repo_path(repo_root, run_dir or Path("artifacts") / "semantic" / region_id / "staged_brief")
+    map_file = _resolve_repo_path(repo_root, map_path) if map_path else root / "generated_map.json"
+    map_artifacts = root / "map"
+    quality_file = _resolve_repo_path(repo_root, quality_report_path) if quality_report_path else map_artifacts / "map_quality_report.json"
+    briefing = _resolve_repo_path(repo_root, briefing_dir) if briefing_dir else root / "briefing"
+    return {
+        "run_dir": root,
+        "map_path": map_file,
+        "map_artifact_dir": map_artifacts,
+        "quality_report_path": quality_file,
+        "run_summary_path": map_artifacts / "run_summary.json",
+        "pipeline_progress_path": map_artifacts / "pipeline_progress.json",
+        "briefing_dir": briefing,
+        "briefing_path": briefing / "BRIEFING.md",
+        "briefing_summary_path": briefing / "briefing_summary.json",
+        "final_review_packet_path": briefing / "FINAL_REVIEW_PACKET.md",
+        "memo_progress_path": briefing / "memo_progress.json",
+    }
+
+
+def _resolve_repo_path(repo_root: Path, value: str | Path) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _missing_paths(paths: list[Path]) -> list[str]:
+    return [str(path) for path in paths if not path.exists()]
+
+
+def _case_source_paths(repo_root: Path, case_manifest: CaseManifest) -> list[Path]:
+    return [repo_root / source.path for source in case_manifest.sources if source.path]
+
+
+def _stage_status_row(repo_root: Path, stage: str, ready: bool, artifacts: list[Path]) -> dict[str, Any]:
+    return {
+        "stage": stage,
+        "status": "ready" if ready else "incomplete",
+        "artifacts": [{"path": _display_path(repo_root, path), "exists": path.exists()} for path in artifacts],
+    }
+
+
 def _write_backend_result(
     repo_root: Path,
     region_id: str,

@@ -33,6 +33,55 @@ The command prints the briefing memo, summary JSON, map run summary, and `FINAL_
 3. Final review packet: traceability, warning, and quality review surface.
 4. Map run summary: extraction and relation-building diagnostics.
 
+## Pipeline And Resume Points
+
+The staged CLI has three high-level handoffs:
+
+1. `documents`: the case manifest and source files are available.
+2. `map`: `generated_map.json` and `map/map_quality_report.json` are available.
+3. `briefing`: `briefing/BRIEFING.md`, `briefing/briefing_summary.json`, and `briefing/FINAL_REVIEW_PACKET.md` are available.
+
+Check what can be resumed:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged status \
+  --region my_case_initial_region
+```
+
+Resume from the original documents and rebuild the full default staged run:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged resume \
+  --region my_case_initial_region \
+  --from-stage documents \
+  --backend ollama:gemma4:26b
+```
+
+Resume from an existing map artifact bundle and rebuild only the briefing:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged resume \
+  --region my_case_initial_region \
+  --from-stage map \
+  --backend ollama:gemma4:26b
+```
+
+Report the existing final briefing paths without rerunning model calls:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged resume \
+  --region my_case_initial_region \
+  --from-stage briefing
+```
+
+By default these commands use `artifacts/semantic/<region>/staged_brief/`:
+
+- map: `generated_map.json`
+- map diagnostics: `map/`
+- briefing: `briefing/`
+
+Use `--run-dir`, `--map`, `--quality-report`, or `--briefing-dir` when resuming from copied or renamed artifacts.
+
 ## Backend Selection
 
 The package manifest can set:

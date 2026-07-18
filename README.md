@@ -78,7 +78,19 @@ Use `--backend prompt` first to inspect prompts and generated scaffolding withou
 
 The staged brief command writes a generated map, a decision briefing, a summary JSON, progress logs, and `FINAL_REVIEW_PACKET.md`. Start with the printed briefing path, then use the final review packet to inspect map quality, traceability, and warnings.
 
-More detail: `docs/CASE_INIT_AND_MODEL_BACKENDS.md`.
+To inspect or resume a run from saved artifacts:
+
+```bash
+ecm --repo-root /path/to/package --package package.yaml semantic staged status \
+  --region my_case_initial_region
+
+ecm --repo-root /path/to/package --package package.yaml semantic staged resume \
+  --region my_case_initial_region \
+  --from-stage map \
+  --backend ollama:gemma4:26b
+```
+
+The resumable handoffs are `documents`, `map`, and `briefing`. More detail: `docs/CASE_INIT_AND_MODEL_BACKENDS.md`.
 
 ## Judge Path
 

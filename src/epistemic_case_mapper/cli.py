@@ -46,6 +46,8 @@ from epistemic_case_mapper.cli_semantic import (
     _run_map_briefing,
     _run_semantic_critique,
     _run_semantic_map,
+    _run_staged_semantic_resume,
+    _run_staged_semantic_status,
     _run_staged_semantic_brief,
     _run_staged_semantic_map,
     _validate_semantic_critique,
@@ -361,6 +363,32 @@ def _dispatch_semantic_command(repo_root: Path, args: argparse.Namespace) -> int
             args.repair_quality,
             args.no_validate,
             not args.no_claim_cache,
+        )
+    if args.command == "semantic" and args.semantic_target == "staged" and args.semantic_staged_target == "resume":
+        return _run_staged_semantic_resume(
+            repo_root=repo_root,
+            package=args.package,
+            region_id=args.region,
+            from_stage=args.from_stage,
+            backend=args.backend,
+            question=args.question,
+            run_dir=args.run_dir,
+            map_path=args.map,
+            quality_report_path=args.quality_report,
+            briefing_dir=args.briefing_dir,
+            briefing_max_claims=args.briefing_max_claims,
+            backend_timeout=args.backend_timeout,
+            backend_retries=args.backend_retries,
+        )
+    if args.command == "semantic" and args.semantic_target == "staged" and args.semantic_staged_target == "status":
+        return _run_staged_semantic_status(
+            repo_root=repo_root,
+            package=args.package,
+            region_id=args.region,
+            run_dir=args.run_dir,
+            map_path=args.map,
+            quality_report_path=args.quality_report,
+            briefing_dir=args.briefing_dir,
         )
     if args.command == "semantic" and args.semantic_target == "validate" and args.semantic_validate_target == "map":
         return _validate_semantic_map(repo_root, args.package, args.region, args.path)

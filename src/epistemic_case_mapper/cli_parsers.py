@@ -206,6 +206,9 @@ def _add_semantic_parsers(subparsers: Any) -> None:
             "  # Live local model run with reusable defaults:\n"
             "  ecm semantic staged brief --region my_case_initial_region --backend ollama:gemma4:26b --backend-timeout 120 --backend-retries 1\n"
             "\n"
+            "  # Resume memo creation from an existing generated map and quality report:\n"
+            "  ecm semantic staged resume --region my_case_initial_region --from-stage map --backend ollama:gemma4:26b\n"
+            "\n"
             "Outputs include a generated map, briefing memo, summary JSON, progress logs, and FINAL_REVIEW_PACKET.md."
         ),
     )
@@ -230,6 +233,52 @@ def _add_semantic_parsers(subparsers: Any) -> None:
     semantic_staged_brief.add_argument("--repair-quality", action="store_true", default=True, help="Run quality repair before briefing.")
     semantic_staged_brief.add_argument("--no-repair-quality", action="store_false", dest="repair_quality", help="Skip quality repair.")
     semantic_staged_brief.add_argument("--no-validate", action="store_true", help="Skip final semantic JSON validation.")
+    semantic_staged_resume = semantic_staged_subparsers.add_parser(
+        "resume",
+        help="Resume the staged document-to-briefing pipeline from saved artifacts.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Pipeline handoffs:\n"
+            "  documents -> generated map + map quality report -> briefing memo + final review packet\n"
+            "\n"
+            "Examples:\n"
+            "  # Show which default artifacts are present:\n"
+            "  ecm semantic staged status --region my_case_initial_region\n"
+            "\n"
+            "  # Rebuild only the memo from an existing map artifact bundle:\n"
+            "  ecm semantic staged resume --region my_case_initial_region --from-stage map --backend ollama:gemma4:26b\n"
+            "\n"
+            "  # Print the existing final memo/review paths without rerunning model calls:\n"
+            "  ecm semantic staged resume --region my_case_initial_region --from-stage briefing\n"
+        ),
+    )
+    semantic_staged_resume.add_argument("--region", required=True)
+    semantic_staged_resume.add_argument("--from-stage", choices=["documents", "map", "briefing"], required=True)
+    semantic_staged_resume.add_argument("--backend", help="Override manifest default backend.")
+    semantic_staged_resume.add_argument("--question", help="Decision question. Defaults to the case manifest question.")
+    semantic_staged_resume.add_argument("--run-dir", help="Root staged-brief artifact directory. Defaults to artifacts/semantic/<region>/staged_brief.")
+    semantic_staged_resume.add_argument("--map", help="Existing generated map path. Defaults to <run-dir>/generated_map.json.")
+    semantic_staged_resume.add_argument("--quality-report", help="Existing map quality report path. Defaults to <run-dir>/map/map_quality_report.json.")
+    semantic_staged_resume.add_argument("--briefing-dir", help="Briefing artifact directory. Defaults to <run-dir>/briefing.")
+    semantic_staged_resume.add_argument("--briefing-max-claims", type=int, default=0, help="Briefing map claim budget. Use 0 for adaptive.")
+    semantic_staged_resume.add_argument("--backend-timeout", type=int, default=90)
+    semantic_staged_resume.add_argument("--backend-retries", type=int, default=1)
+    semantic_staged_status = semantic_staged_subparsers.add_parser(
+        "status",
+        help="Show the staged pipeline artifact handoffs for one region.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Stages:\n"
+            "  documents: case manifest and required source files are available.\n"
+            "  map: generated_map.json and map/map_quality_report.json are available.\n"
+            "  briefing: briefing/BRIEFING.md, briefing_summary.json, and FINAL_REVIEW_PACKET.md are available."
+        ),
+    )
+    semantic_staged_status.add_argument("--region", required=True)
+    semantic_staged_status.add_argument("--run-dir", help="Root staged-brief artifact directory. Defaults to artifacts/semantic/<region>/staged_brief.")
+    semantic_staged_status.add_argument("--map", help="Generated map path. Defaults to <run-dir>/generated_map.json.")
+    semantic_staged_status.add_argument("--quality-report", help="Map quality report path. Defaults to <run-dir>/map/map_quality_report.json.")
+    semantic_staged_status.add_argument("--briefing-dir", help="Briefing artifact directory. Defaults to <run-dir>/briefing.")
     semantic_validate = semantic_subparsers.add_parser("validate", help="Validate model-produced semantic JSON.")
     semantic_validate_subparsers = semantic_validate.add_subparsers(dest="semantic_validate_target", required=True)
     semantic_map_validate = semantic_validate_subparsers.add_parser("map", help="Validate a candidate JSON worked map.")
