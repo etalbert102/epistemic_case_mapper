@@ -239,6 +239,10 @@ def _run_memo_ready_final_output_path(
     rewrite_result.setdefault("report", {})["active_memo_ready_packet_method"] = str(
         memo_ready_packet.get("method") or ""
     )
+    pre_polish_presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), memo_ready_packet)
+    rewrite_result["memo"] = pre_polish_presentation["memo"]
+    rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_status"] = pre_polish_presentation.get("report", {}).get("status")
+    rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_changes"] = pre_polish_presentation.get("report", {}).get("changes", [])
     record_memo_progress(artifacts, "memo_ready_final_polish", "started", backend=backend_config.backend)
     final_polish = run_memo_ready_final_polish(
         str(rewrite_result["memo"]),

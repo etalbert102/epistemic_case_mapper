@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_validated_final_polish_validation_report,
+    run_memo_ready_final_polish,
     run_memo_ready_hybrid_section_final_polish_experiment,
     run_memo_ready_section_final_polish_experiment,
 )
@@ -194,6 +196,84 @@ def test_hybrid_section_polish_adds_completion_only_for_unfinished_sections() ->
     assert practical["selected_mode_id"] == "completion_only"
     assert practical["accepted_candidate"] is True
     assert "monitoring remains feasible" in practical["replacement_markdown"]
+
+
+def test_validated_final_polish_uses_backend_override_and_accepts_safe_rewrite(monkeypatch) -> None:
+    memo = _memo()
+    packet = _packet()
+    captured: dict[str, str] = {}
+
+    def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
+        captured["backend"] = backend
+        assert "Priority quantity contracts" in prompt
+        return ModelBackendResult(
+            text=memo.replace("Option A may help [s1].", "Use option A when monitoring remains feasible and the 20% evidence applies [s1]."),
+            backend=backend,
+        )
+
+    monkeypatch.setenv("ECM_FINAL_POLISH_BACKEND", "ollama:strong-polish")
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="ollama:small", backend_timeout=30, backend_retries=0)
+
+    assert captured["backend"] == "ollama:strong-polish"
+    assert result["report"]["method"] == "validated_whole_memo_polish"
+    assert result["report"]["accepted"] is True
+    assert "Use option A when monitoring remains feasible" in result["memo"]
+
+
+def test_validated_final_polish_repairs_missing_priority_quantity(monkeypatch) -> None:
+    memo = _memo()
+    packet = _packet()
+    calls: list[str] = []
+
+    def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
+        calls.append(prompt)
+        if "Validation feedback" in prompt:
+            return ModelBackendResult(text=memo, backend=backend)
+        return ModelBackendResult(
+            text=memo.replace("20% with feasible monitoring", "feasible monitoring"),
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert len(calls) == 2
+    assert result["report"]["repair_report"]["status"] == "accepted"
+    assert result["report"]["accepted"] is True
+    assert "20%" in result["memo"]
+
+
+def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) -> None:
+    memo = _memo().replace("20% with feasible monitoring", "20% with feasible monitoring for one egg per day")
+    packet = _packet()
+    packet["evidence_items"][0]["reader_claim"] = "Outcome evidence supports option A by 20% with feasible monitoring for one egg per day."
+
+    def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=memo.replace("one egg per day", "one egg per 1 day"), backend=backend)
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["report"]["accepted"] is True
+    assert "one egg per 1 day" not in result["memo"]
+    assert "one egg per day" in result["memo"]
+
+
+def test_validated_final_polish_validation_detects_duplicate_source_sections() -> None:
+    memo = (
+        _memo().replace(
+            "## Why This Is the Best Current Read",
+            "## How to Weight the Evidence\n\nUse Source A for the main read [s1].\n\n## Source Weighting\n\nUse Source A as the driver [s1].\n\n## Why This Is the Best Current Read",
+        )
+    )
+
+    report = build_validated_final_polish_validation_report(memo, _packet(), original_memo=_memo())
+
+    assert "duplicate_section_structure" in report["issues"]
 
 
 def _memo() -> str:

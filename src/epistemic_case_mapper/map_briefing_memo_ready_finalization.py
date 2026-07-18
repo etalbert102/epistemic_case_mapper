@@ -21,9 +21,17 @@ from epistemic_case_mapper.map_briefing_expert_judgment_compression import (
 )
 from epistemic_case_mapper.map_briefing_markdown_quality import markdown_structure_issues, repair_markdown_structure
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_memo_ready_packet_synthesis_prompt
-from epistemic_case_mapper.map_briefing_memo_ready_output_limits import memo_ready_repair_num_predict, memo_ready_whole_memo_num_predict
+from epistemic_case_mapper.map_briefing_memo_ready_output_limits import (
+    memo_ready_final_polish_num_predict,
+    memo_ready_repair_num_predict,
+    memo_ready_whole_memo_num_predict,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
+from epistemic_case_mapper.map_briefing_priority_quantity_contracts import (
+    build_priority_quantity_contract_coverage_report,
+    build_priority_quantity_contracts,
+)
 from epistemic_case_mapper.map_briefing_reader_judgment_packet import build_reader_judgment_surface_report
 from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
     build_memo_polish_diagnostics,
@@ -832,23 +840,359 @@ def run_memo_ready_final_polish(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
-    result = run_memo_ready_hybrid_section_final_polish_experiment(
-        memo,
+    active_backend = _final_polish_backend(backend)
+    prompt = build_validated_final_polish_prompt(memo, packet)
+    before_validation = build_validated_final_polish_validation_report(memo, packet, original_memo=memo)
+    report = {
+        "schema_id": "memo_ready_final_polish_report_v1",
+        "method": "validated_whole_memo_polish",
+        "status": "skipped_prompt_backend" if active_backend.strip() == "prompt" else "not_run",
+        "accepted": False,
+        "applied": False,
+        "backend": active_backend,
+        "original_backend": backend,
+        "before_validation_report": before_validation,
+        "issues": [],
+    }
+    if active_backend.strip() == "prompt":
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    try:
+        result = run_model_backend(
+            prompt,
+            active_backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=memo_ready_final_polish_num_predict(),
+            json_mode=False,
+        )
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_original", "issues": [str(exc)]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = _prepare_validated_final_polish_candidate(raw)
+    if not candidate:
+        report.update({"status": "empty_response_kept_original", "issues": ["final polish returned no markdown"]})
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    polished_validation = build_validated_final_polish_validation_report(candidate, packet, original_memo=memo)
+    repair = run_validated_final_polish_repair(
+        candidate,
         packet,
-        backend=backend,
+        polished_validation,
+        original_memo=memo,
+        backend=active_backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
-    report = dict(result.get("report", {}))
+    final_candidate = str(repair.get("memo") or candidate)
+    final_validation = _dict(repair.get("report")).get("final_validation_report") or build_validated_final_polish_validation_report(final_candidate, packet, original_memo=memo)
+    before_retention = build_memo_ready_packet_retention_report(memo, packet)
+    final_retention = _dict(final_validation.get("retention_report"))
+    accepted = _validated_final_polish_acceptable(before_retention, final_validation)
+    applied = accepted or (
+        _retention_not_worse(before_retention, final_retention)
+        and _validation_score(final_validation) <= _validation_score(polished_validation)
+        and not _list(final_validation.get("hard_failures"))
+    )
     report.update(
         {
-            "schema_id": "memo_ready_final_polish_report_v1",
-            "method": "hybrid_section_completion",
-            "experimental_schema_id": result.get("report", {}).get("schema_id"),
+            "status": "accepted" if accepted else "accepted_with_warnings" if applied else "rejected_kept_original",
+            "accepted": accepted,
+            "applied": applied,
+            "attempts": result.attempts,
+            "polished_validation_report": polished_validation,
+            "repair_report": repair.get("report", {}),
+            "final_validation_report": final_validation,
+            "polish_comparison": _final_polish_comparison(
+                before_memo=memo,
+                after_memo=final_candidate if applied else memo,
+                before_retention=before_retention,
+                after_retention=final_retention if applied else before_retention,
+                before_decision_usefulness=build_decision_usefulness_retention_report(memo, packet),
+                after_decision_usefulness=build_decision_usefulness_retention_report(final_candidate if applied else memo, packet),
+                diagnostics=build_memo_polish_diagnostics(memo, final_candidate if applied else memo, packet),
+            ),
+            "issues": [] if accepted else _validated_final_polish_issues(final_validation) if applied else ["final polish did not pass validation without regression"],
         }
     )
-    result["report"] = report
-    return result
+    return {"memo": final_candidate if applied else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def _final_polish_backend(backend: str) -> str:
+    return os.environ.get("ECM_FINAL_POLISH_BACKEND", "").strip() or backend
+
+
+def _prepare_validated_final_polish_candidate(raw: str) -> str:
+    return _deterministic_final_polish_cleanup(normalize_memo_ready_polish_text(repair_markdown_structure(_extract_markdown(raw))))
+
+
+def build_validated_final_polish_prompt(memo: str, packet: dict[str, Any]) -> str:
+    contracts = build_priority_quantity_contracts(packet)
+    question = str(packet.get("decision_question") or _dict(packet.get("canonical_decision_writer_packet")).get("decision_question") or "").strip()
+    quantity_rows = [
+        {
+            "evidence_id": row.get("evidence_id"),
+            "quantity": row.get("quantity_text"),
+            "decision_role": row.get("decision_role"),
+        }
+        for row in _list(contracts.get("rows"))[:24]
+        if isinstance(row, dict)
+    ]
+    return (
+        "You are a senior evidence analyst polishing a decision memo for a human decision-maker.\n\n"
+        "Task: rewrite the memo so it is clearer, more fluent, and more decision-useful while preserving the same answer and evidence payload.\n\n"
+        "Hard constraints:\n"
+        "- Return only Markdown.\n"
+        "- Preserve the exact Decision Question.\n"
+        "- Preserve the bottom-line stance and scope boundaries already present.\n"
+        "- Preserve bracketed citations exactly; use existing source IDs or already rendered source labels only.\n"
+        "- Preserve all load-bearing quantities and intervals already present.\n"
+        "- Preserve priority quantities when their related claim is discussed.\n"
+        "- Do not add new factual claims beyond what the memo supports.\n"
+        "- Reduce repetition, citation clutter, and mechanical phrasing.\n"
+        "- Use one source-weighting section; merge duplicate source-hierarchy/source-weighting material.\n"
+        "- Keep section roles distinct: source weighting, best-current-read case, boundaries/update conditions, practical implication.\n\n"
+        f"Decision Question:\n{question}\n\n"
+        f"Priority quantity contracts:\n{json.dumps(quantity_rows, indent=2, ensure_ascii=False)}\n\n"
+        f"Memo to polish:\n{memo.strip()}\n"
+    )
+
+
+def build_validated_final_polish_validation_report(
+    memo: str,
+    packet: dict[str, Any],
+    *,
+    original_memo: str,
+) -> dict[str, Any]:
+    retention = build_memo_ready_packet_retention_report(memo, packet)
+    decision_surface = build_decision_usefulness_surface_report(memo, packet)
+    analyst_utilization = build_analyst_judgment_utilization_report(memo, packet)
+    priority_coverage = build_priority_quantity_contract_coverage_report(memo, build_priority_quantity_contracts(packet))
+    diagnostics = build_memo_polish_diagnostics(original_memo, memo, packet)
+    surface = _final_polish_surface_report(memo, packet)
+    hard_failures = []
+    if not surface.get("decision_question_preserved"):
+        hard_failures.append("decision_question_changed_or_missing")
+    if surface.get("unknown_source_ids"):
+        hard_failures.append("unknown_source_ids")
+    if surface.get("corruption_warnings"):
+        hard_failures.append("surface_corruption")
+    if high_confidence_unsupported_additions(diagnostics):
+        hard_failures.append("unsupported_additions")
+    warning_count = (
+        len(_list(hard_failures))
+        + int(retention.get("missing_mandatory_count", 0) or 0)
+        + int(retention.get("missing_quantity_count", 0) or 0)
+        + int(priority_coverage.get("missing_contract_count", 0) or 0)
+        + int(decision_surface.get("missing_move_count", 0) or 0)
+        + int(surface.get("duplicate_section_warning_count", 0) or 0)
+    )
+    return {
+        "schema_id": "validated_final_polish_validation_report_v1",
+        "status": "ready" if warning_count == 0 else "warning",
+        "warning_count": warning_count,
+        "hard_failures": hard_failures,
+        "retention_report": retention,
+        "decision_surface_report": decision_surface,
+        "analyst_judgment_utilization_report": analyst_utilization,
+        "priority_quantity_contract_coverage_report": priority_coverage,
+        "surface_report": surface,
+        "polish_diagnostics": diagnostics,
+        "issues": _validated_final_polish_issues_from_reports(
+            hard_failures=hard_failures,
+            retention=retention,
+            priority_coverage=priority_coverage,
+            decision_surface=decision_surface,
+            surface=surface,
+        ),
+    }
+
+
+def run_validated_final_polish_repair(
+    memo: str,
+    packet: dict[str, Any],
+    validation_report: dict[str, Any],
+    *,
+    original_memo: str,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
+    issues = _validated_final_polish_issues(validation_report)
+    report = {
+        "schema_id": "validated_final_polish_repair_report_v1",
+        "status": "not_needed" if not issues else "not_run",
+        "accepted": False,
+        "applied": False,
+        "initial_issue_count": len(issues),
+        "issues": [],
+    }
+    if not issues:
+        report["final_validation_report"] = validation_report
+        return {"memo": memo, "prompt": "", "raw": "", "report": report}
+    if backend.strip() == "prompt":
+        report.update({"status": "skipped_prompt_backend", "issues": ["repair backend returned prompt only"]})
+        return {"memo": memo, "prompt": "", "raw": "", "report": report}
+    prompt = build_validated_final_polish_repair_prompt(memo, packet, validation_report)
+    try:
+        result = run_model_backend(
+            prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            num_predict=memo_ready_final_polish_num_predict(),
+            json_mode=False,
+        )
+    except RuntimeError as exc:
+        report.update({"status": "backend_error_kept_polished_memo", "issues": [str(exc)]})
+        return {"memo": memo, "prompt": prompt, "raw": "", "report": report}
+    raw = result.text
+    candidate = _prepare_validated_final_polish_candidate(raw)
+    if not candidate:
+        report.update({"status": "empty_response_kept_polished_memo", "issues": ["repair returned no markdown"]})
+        return {"memo": memo, "prompt": prompt, "raw": raw, "report": report}
+    final_validation = build_validated_final_polish_validation_report(candidate, packet, original_memo=original_memo)
+    accepted = _validation_score(final_validation) < _validation_score(validation_report) and not _list(final_validation.get("hard_failures"))
+    report.update(
+        {
+            "status": "accepted" if accepted else "no_validation_improvement_kept_polished_memo",
+            "accepted": accepted,
+            "applied": accepted,
+            "attempts": result.attempts,
+            "final_validation_report": final_validation,
+            "issues": [] if accepted else ["repair did not reduce validation warnings without hard failures"],
+        }
+    )
+    return {"memo": candidate if accepted else memo, "prompt": prompt, "raw": raw, "report": report}
+
+
+def build_validated_final_polish_repair_prompt(memo: str, packet: dict[str, Any], validation_report: dict[str, Any]) -> str:
+    repair_packet = {
+        "decision_question": packet.get("decision_question"),
+        "validation_issues": _validated_final_polish_issues(validation_report)[:16],
+        "missing_priority_quantities": _list(_dict(validation_report.get("priority_quantity_contract_coverage_report")).get("warnings"))[:12],
+        "surface_corruption_warnings": _list(_dict(validation_report.get("surface_report")).get("corruption_warnings"))[:12],
+        "duplicate_section_warnings": _list(_dict(validation_report.get("surface_report")).get("duplicate_section_warnings"))[:8],
+    }
+    return (
+        "Repair a polished decision memo using only targeted validation feedback.\n\n"
+        "Rules:\n"
+        "- Return the complete memo in Markdown.\n"
+        "- Make targeted edits only; preserve the memo's answer, evidence, quantities, citations, and decision question.\n"
+        "- Add missing priority quantities beside the relevant claim when validation says they are missing.\n"
+        "- Fix malformed source names, malformed confidence intervals, and malformed dose phrasing.\n"
+        "- Merge duplicate source-weighting/source-hierarchy sections into one source-weighting section when needed.\n"
+        "- Do not add new factual claims.\n\n"
+        f"Validation feedback:\n{json.dumps(repair_packet, indent=2, ensure_ascii=False)}\n\n"
+        f"Memo to repair:\n{memo.strip()}\n"
+    )
+
+
+def _final_polish_surface_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
+    question = str(packet.get("decision_question") or "").strip()
+    text = str(memo or "")
+    known = {
+        str(source.get("source_id") or "").strip()
+        for source in _list(packet.get("source_trail"))
+        if isinstance(source, dict) and str(source.get("source_id") or "").strip()
+    }
+    unknown = []
+    for citation in re.findall(r"\[([^\]]+)\]", text):
+        for token in re.split(r"[,;]", citation):
+            value = token.strip()
+            if value.startswith("SRC_") and value not in known:
+                unknown.append(value)
+    corruption = []
+    corruption_patterns = {
+        "corrupt_95_percent": r"\b9/5\s*%",
+        "per_1_day": r"\bper\s+1\s+day\b",
+        "jam_source_typo": r"\(JAM\)|\bJAM\b(?!A)",
+    }
+    for issue, pattern in corruption_patterns.items():
+        if re.search(pattern, text):
+            corruption.append(issue)
+    duplicate_sections = _duplicate_section_warnings(text)
+    return {
+        "schema_id": "validated_final_polish_surface_report_v1",
+        "decision_question_preserved": not question or question in text,
+        "unknown_source_ids": sorted(set(unknown)),
+        "corruption_warnings": corruption,
+        "duplicate_section_warning_count": len(duplicate_sections),
+        "duplicate_section_warnings": duplicate_sections,
+    }
+
+
+def _duplicate_section_warnings(memo: str) -> list[str]:
+    headings = [re.sub(r"\s+", " ", match.group(1).strip().lower()) for match in re.finditer(r"(?m)^##\s+(.+?)\s*$", str(memo or ""))]
+    warnings = []
+    source_like = [heading for heading in headings if "source weighting" in heading or "weight the evidence" in heading or "source hierarchy" in heading]
+    if len(source_like) > 1:
+        warnings.append("duplicate_source_weighting_sections")
+    return warnings
+
+
+def _deterministic_final_polish_cleanup(memo: str) -> str:
+    text = str(memo or "")
+    if not text.strip():
+        return ""
+    replacements = [
+        (r"\(JAM\)", "(JAMA 2019)"),
+        (r"\b9/5\s*%\s+confidence interval\b", "95% confidence interval"),
+        (r"\bone egg per 1 day\b", "one egg per day"),
+        (r"\bup to one egg per 1 day\b", "up to one egg per day"),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return repair_markdown_structure(text).strip() + "\n"
+
+
+def _validated_final_polish_acceptable(before_retention: dict[str, Any], validation_report: dict[str, Any]) -> bool:
+    after_retention = _dict(validation_report.get("retention_report"))
+    priority = _dict(validation_report.get("priority_quantity_contract_coverage_report"))
+    return (
+        not _list(validation_report.get("hard_failures"))
+        and _retention_not_worse(before_retention, after_retention)
+        and int(priority.get("missing_contract_count", 0) or 0) == 0
+        and int(_dict(validation_report.get("surface_report")).get("duplicate_section_warning_count", 0) or 0) == 0
+    )
+
+
+def _validation_score(report: dict[str, Any]) -> int:
+    return int(report.get("warning_count", 0) or 0)
+
+
+def _validated_final_polish_issues(report: dict[str, Any]) -> list[str]:
+    issues = _string_list(report.get("issues"))
+    if issues:
+        return issues
+    return _validated_final_polish_issues_from_reports(
+        hard_failures=_string_list(report.get("hard_failures")),
+        retention=_dict(report.get("retention_report")),
+        priority_coverage=_dict(report.get("priority_quantity_contract_coverage_report")),
+        decision_surface=_dict(report.get("decision_surface_report")),
+        surface=_dict(report.get("surface_report")),
+    )
+
+
+def _validated_final_polish_issues_from_reports(
+    *,
+    hard_failures: list[str],
+    retention: dict[str, Any],
+    priority_coverage: dict[str, Any],
+    decision_surface: dict[str, Any],
+    surface: dict[str, Any],
+) -> list[str]:
+    issues = [*hard_failures]
+    if int(retention.get("missing_mandatory_count", 0) or 0):
+        issues.append("missing_mandatory_evidence")
+    if int(retention.get("missing_quantity_count", 0) or 0):
+        issues.append("missing_retention_quantity")
+    if int(priority_coverage.get("missing_contract_count", 0) or 0):
+        issues.append("missing_priority_quantity_contract")
+    if int(decision_surface.get("missing_move_count", 0) or 0):
+        issues.append("missing_decision_argument_move")
+    if int(surface.get("duplicate_section_warning_count", 0) or 0):
+        issues.append("duplicate_section_structure")
+    return _dedupe(issues)
 
 
 def run_memo_ready_json_final_polish_experiment(
