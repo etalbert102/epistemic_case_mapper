@@ -1,0 +1,396 @@
+{
+  "case_id": "eggs",
+  "condition_averages": {
+    "flat": 0.664,
+    "map": 0.805,
+    "map_plus_sources": 0.805
+  },
+  "label": "Eggs and health",
+  "tasks": {
+    "eggs_t001": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.784,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "rct_lipids_vs_observational_events",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.8,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t001_prompt.md",
+          "prompt_word_count": 47,
+          "required_distinction_recall": 0.8,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t001_response.md",
+          "response_word_count": 150,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "rct_lipids_vs_observational_events",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t001_prompt.md",
+          "prompt_word_count": 47,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t001_response.md",
+          "response_word_count": 202,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "rct_lipids_vs_observational_events",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t001_prompt.md",
+          "prompt_word_count": 47,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t001_response.md",
+          "response_word_count": 300,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Why can randomized lipid results and observational cardiovascular outcomes point in different directions without one simply invalidating the other?"
+    },
+    "eggs_t002": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "bmj_jama_tension_scope",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.333,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t002_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t002_response.md",
+          "response_word_count": 124,
+          "scope_boundary_retention": 0.333,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "bmj_jama_tension_scope",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t002_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t002_response.md",
+          "response_word_count": 220,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "bmj_jama_tension_scope",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t002_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t002_response.md",
+          "response_word_count": 367,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What explains the apparent BMJ/JAMA tension?"
+    },
+    "eggs_t003": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.771,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "population_intake_substitution_limits",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.333,
+              "source_trace_accuracy": 0.75
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t003_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t003_response.md",
+          "response_word_count": 159,
+          "scope_boundary_retention": 0.333,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 0.75,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "population_intake_substitution_limits",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t003_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t003_response.md",
+          "response_word_count": 199,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "population_intake_substitution_limits",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t003_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t003_response.md",
+          "response_word_count": 316,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What populations, intake ranges, and substitution contexts limit a general recommendation?"
+    },
+    "eggs_t004": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.375,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "findings_guidelines_policy_roles",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.0,
+              "source_trace_accuracy": 0.5
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t004_prompt.md",
+          "prompt_word_count": 42,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t004_response.md",
+          "response_word_count": 100,
+          "scope_boundary_retention": 0.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 0.5,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "findings_guidelines_policy_roles",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t004_prompt.md",
+          "prompt_word_count": 42,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t004_response.md",
+          "response_word_count": 223,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "findings_guidelines_policy_roles",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t004_prompt.md",
+          "prompt_word_count": 42,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t004_response.md",
+          "response_word_count": 364,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Which statements are evidence findings, which are guideline interpretations, and which are policy advice?"
+    },
+    "eggs_t005": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.642,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "decision_changing_new_result",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.4,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 0.667
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t005_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 0.4,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/flat/eggs_t005_response.md",
+          "response_word_count": 138,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 0.667,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.733,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "decision_changing_new_result",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.933,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t005_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 0.933,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map/eggs_t005_response.md",
+          "response_word_count": 196,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.733,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "decision_changing_new_result",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.933,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t005_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 0.933,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/eggs/map_plus_sources/eggs_t005_response.md",
+          "response_word_count": 281,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What new result would most change the practical answer?"
+    }
+  }
+}

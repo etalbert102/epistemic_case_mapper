@@ -1,0 +1,13 @@
+{
+  "acceptance_criteria": {
+    "held_out_source_update_has_ledger_and_stable_ids": true,
+    "judge_evidence_packet_exists": true,
+    "lhc_vertical_slice_runnable": true,
+    "raw_prompts_outputs_scores_token_counts_preserved": true,
+    "semantic_mutation_and_clean_control_evaluated": true,
+    "three_adversarial_questions_scored": true,
+    "writeup_reports_earned_claim_level": true
+  },
+  "all_plan_acceptance_criteria_met": true,
+  "claim_level": "narrow"
+}

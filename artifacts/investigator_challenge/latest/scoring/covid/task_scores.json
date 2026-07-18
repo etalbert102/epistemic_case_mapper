@@ -1,0 +1,396 @@
+{
+  "case_id": "covid",
+  "condition_averages": {
+    "flat": 0.771,
+    "map": 0.85,
+    "map_plus_sources": 0.867
+  },
+  "label": "COVID origins slice",
+  "tasks": {
+    "covid_t001": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "debate_result_vs_substantive_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t001_prompt.md",
+          "prompt_word_count": 38,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t001_response.md",
+          "response_word_count": 139,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "debate_result_vs_substantive_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t001_prompt.md",
+          "prompt_word_count": 38,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t001_response.md",
+          "response_word_count": 96,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "debate_result_vs_substantive_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t001_prompt.md",
+          "prompt_word_count": 38,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t001_response.md",
+          "response_word_count": 112,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Does conceding the judged debate imply conceding the substantive conclusion?"
+    },
+    "covid_t002": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "aggregate_forecast_vs_minority_distribution",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t002_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t002_response.md",
+          "response_word_count": 80,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "aggregate_forecast_vs_minority_distribution",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t002_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t002_response.md",
+          "response_word_count": 102,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "aggregate_forecast_vs_minority_distribution",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t002_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t002_response.md",
+          "response_word_count": 127,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "How do the aggregate forecast and minority distribution differ?"
+    },
+    "covid_t003": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "process_evidence_bayesian_disagreements",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t003_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t003_response.md",
+          "response_word_count": 122,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "process_evidence_bayesian_disagreements",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t003_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t003_response.md",
+          "response_word_count": 185,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "process_evidence_bayesian_disagreements",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t003_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t003_response.md",
+          "response_word_count": 226,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Which disagreement concerns process, which concerns evidence, and which concerns Bayesian structure?"
+    },
+    "covid_t004": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.688,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "update_trigger_evidence",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.75,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t004_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 0.75,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t004_response.md",
+          "response_word_count": 117,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "update_trigger_evidence",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t004_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t004_response.md",
+          "response_word_count": 141,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "update_trigger_evidence",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.5,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t004_prompt.md",
+          "prompt_word_count": 34,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t004_response.md",
+          "response_word_count": 173,
+          "scope_boundary_retention": 0.5,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What evidence would trigger an update?"
+    },
+    "covid_t005": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.75,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "later_result_subargument_boundary",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t005_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/flat/covid_t005_response.md",
+          "response_word_count": 97,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "later_result_subargument_boundary",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t005_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map/covid_t005_response.md",
+          "response_word_count": 118,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.875,
+          "crux_or_update_trigger_recall": 0.5,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.5,
+              "distinction_id": "later_result_subargument_boundary",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t005_prompt.md",
+          "prompt_word_count": 40,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/covid/map_plus_sources/covid_t005_response.md",
+          "response_word_count": 138,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Which later result is only a subargument rather than a whole-case resolution?"
+    }
+  }
+}

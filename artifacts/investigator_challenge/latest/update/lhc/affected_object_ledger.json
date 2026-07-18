@@ -1,0 +1,34 @@
+{
+  "added_claim_ids": [
+    "lhc_update_c001",
+    "lhc_update_c002"
+  ],
+  "added_relation_ids": [
+    "lhc_update_r001",
+    "lhc_update_r002"
+  ],
+  "all_unaffected_ids_stable": true,
+  "new_source_id": "cern_lhc_current_page",
+  "stable_unaffected_ids": [
+    "lhc_c002",
+    "lhc_c003",
+    "lhc_c004",
+    "lhc_c006",
+    "lhc_c007",
+    "lhc_c008",
+    "lhc_c009",
+    "lhc_c010",
+    "lhc_c011",
+    "lhc_c012",
+    "lhc_c013",
+    "lhc_c014",
+    "lhc_c015",
+    "lhc_c016"
+  ],
+  "touched_existing_claim_ids": [
+    "lhc_c001",
+    "lhc_c005"
+  ],
+  "unaffected_claim_count": 14,
+  "update_id": "lhc_public_faq_update"
+}

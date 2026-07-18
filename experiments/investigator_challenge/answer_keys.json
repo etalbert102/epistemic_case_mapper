@@ -1,0 +1,258 @@
+{
+  "schema_id": "investigator_challenge_answer_keys_v1",
+  "challenge_id": "investigator_challenge_v1",
+  "cases": {
+    "lhc": {
+      "tasks": {
+        "lhc_t001": {
+          "required_distinctions": [
+            {
+              "id": "earth_exposure_is_not_the_whole_argument",
+              "description": "Earth survival supports the natural-exposure argument but does not settle low-velocity trapping by itself.",
+              "claim_ids": ["lhc_c001", "lhc_c002", "lhc_c004"],
+              "relation_ids": ["lhc_r001", "lhc_r003"],
+              "source_ids": ["lsag_2008_safety_review", "giddings_mangano_2008_stable_black_holes"],
+              "key_terms": ["earth", "cosmic", "survival", "velocity", "trapping"],
+              "scope_terms": ["by itself", "incomplete", "not sufficient"],
+              "crux_terms": ["low-velocity", "trapped", "astronomical"],
+              "false_closure_terms": ["earth survival alone proves", "settles the risk by itself"]
+            }
+          ]
+        },
+        "lhc_t002": {
+          "required_distinctions": [
+            {
+              "id": "compact_bodies_test_trapping_accumulation",
+              "description": "Compact astronomical bodies matter because they test slow-product trapping and accumulation, not merely high-energy collisions.",
+              "claim_ids": ["lhc_c009", "lhc_c010", "lhc_c011", "lhc_c012"],
+              "relation_ids": ["lhc_r004"],
+              "source_ids": ["giddings_mangano_2008_stable_black_holes"],
+              "key_terms": ["white dwarfs", "neutron stars", "trapping", "accumulation", "dense"],
+              "scope_terms": ["compact", "astronomical", "not earth alone"],
+              "crux_terms": ["accretion", "survival", "capture"],
+              "false_closure_terms": ["only earth matters", "cosmic rays alone are enough"]
+            }
+          ]
+        },
+        "lhc_t003": {
+          "required_distinctions": [
+            {
+              "id": "velocity_to_trapping_transition",
+              "description": "The velocity/trapping transition is carried by the caveat that LHC products may be slower than cosmic-ray products and by the compact-star bounds that address that caveat.",
+              "claim_ids": ["lhc_c004", "lhc_c012"],
+              "relation_ids": ["lhc_r003", "lhc_r004"],
+              "source_ids": ["giddings_mangano_2008_stable_black_holes", "lsag_2008_safety_review"],
+              "key_terms": ["velocity", "slow", "trapping", "compact-star", "bounds"],
+              "scope_terms": ["transition", "caveat", "dependency"],
+              "crux_terms": ["lhc_c004", "lhc_c012", "lhc_r003", "lhc_r004"],
+              "false_closure_terms": ["same as cosmic rays", "no velocity distinction"]
+            }
+          ]
+        },
+        "lhc_t004": {
+          "required_distinctions": [
+            {
+              "id": "plaga_challenges_compact_star_safety",
+              "description": "Plaga's metastability critique is the direct challenge to the compact-star safety argument, with GM's response preserving the live disagreement boundary.",
+              "claim_ids": ["lhc_c013", "lhc_c014", "lhc_c015", "lhc_c016"],
+              "relation_ids": ["lhc_r005", "lhc_r006"],
+              "source_ids": ["plaga_2008_metastable_black_holes", "giddings_mangano_2008_comments_plaga"],
+              "key_terms": ["Plaga", "metastable", "critique", "Giddings", "Mangano"],
+              "scope_terms": ["challenges", "response", "disagreement"],
+              "crux_terms": ["metastability", "critical mass", "white dwarfs"],
+              "false_closure_terms": ["no criticism", "critique irrelevant"]
+            }
+          ]
+        },
+        "lhc_t005": {
+          "required_distinctions": [
+            {
+              "id": "material_update_requires_breaking_compact_star_bounds",
+              "description": "The risk assessment would move materially if slow-product trapping, Hawking-radiation assumptions, compact-star survival, or Plaga/GM response boundaries changed.",
+              "claim_ids": ["lhc_c005", "lhc_c012", "lhc_c013", "lhc_c016"],
+              "relation_ids": ["lhc_r004", "lhc_r006"],
+              "source_ids": ["giddings_mangano_2008_stable_black_holes", "plaga_2008_metastable_black_holes", "giddings_mangano_2008_comments_plaga"],
+              "key_terms": ["materially", "Hawking", "trapping", "compact-star", "Plaga"],
+              "scope_terms": ["would have to change", "bottom-line"],
+              "crux_terms": ["survival bound", "metastable", "accretion"],
+              "false_closure_terms": ["nothing could change", "settled regardless"]
+            }
+          ]
+        },
+        "lhc_control_easy": {
+          "required_distinctions": [
+            {
+              "id": "broad_lhc_safety_conclusion",
+              "description": "The broad reviewed conclusion is that LHC black-hole risk is constrained by natural exposure, Hawking-radiation expectations, and compact-object survival arguments.",
+              "claim_ids": ["lhc_c001", "lhc_c005", "lhc_c012"],
+              "relation_ids": ["lhc_r001", "lhc_r004"],
+              "source_ids": ["lsag_2008_safety_review", "giddings_mangano_2008_stable_black_holes"],
+              "key_terms": ["safety", "natural", "Hawking", "compact"],
+              "scope_terms": ["broad", "conclusion"],
+              "crux_terms": ["risk", "constrained"],
+              "false_closure_terms": []
+            }
+          ]
+        }
+      }
+    },
+    "eggs": {
+      "tasks": {
+        "eggs_t001": {
+          "required_distinctions": [
+            {
+              "id": "rct_lipids_vs_observational_events",
+              "description": "RCT lipid changes and observational cardiovascular outcomes answer different endpoint questions and can point in different directions.",
+              "claim_ids": ["eggs_c004", "eggs_c012", "eggs_c018"],
+              "relation_ids": ["eggs_r001", "eggs_r006"],
+              "source_ids": ["aha_2019_dietary_cholesterol_pubmed", "li_2020_egg_cholesterol_rct_meta", "nnr_2023_eggs_scoping_review"],
+              "key_terms": ["randomized", "lipid", "observational", "cardiovascular", "endpoint"],
+              "scope_terms": ["different", "without invalidating", "outcomes"],
+              "crux_terms": ["LDL", "events", "evidence roles"],
+              "false_closure_terms": ["RCTs invalidate observational studies", "observational studies invalidate RCTs"]
+            }
+          ]
+        },
+        "eggs_t002": {
+          "required_distinctions": [
+            {
+              "id": "bmj_jama_tension_scope",
+              "description": "BMJ's moderate-consumption null result and JAMA's higher-risk association differ in design, exposure framing, endpoints, and confounding concerns.",
+              "claim_ids": ["eggs_c008", "eggs_c009", "eggs_c010", "eggs_c011", "eggs_c015"],
+              "relation_ids": ["eggs_r003", "eggs_r005"],
+              "source_ids": ["bmj_2020_egg_consumption_cvd", "jama_2019_dietary_cholesterol_eggs"],
+              "key_terms": ["BMJ", "JAMA", "tension", "dose", "cohort"],
+              "scope_terms": ["moderate", "association", "confounding"],
+              "crux_terms": ["egg intake", "dietary cholesterol", "subgroup"],
+              "false_closure_terms": ["one study simply refutes the other", "same question"]
+            }
+          ]
+        },
+        "eggs_t003": {
+          "required_distinctions": [
+            {
+              "id": "population_intake_substitution_limits",
+              "description": "Population risk, intake range, replacement foods, and diabetes or high-risk subgroups limit a general recommendation.",
+              "claim_ids": ["eggs_c007", "eggs_c008", "eggs_c015", "eggs_c019"],
+              "relation_ids": ["eggs_r002", "eggs_r014"],
+              "source_ids": ["aha_2019_dietary_cholesterol_pubmed", "bmj_2020_egg_consumption_cvd", "jama_2019_dietary_cholesterol_eggs", "nnr_2023_eggs_scoping_review"],
+              "key_terms": ["population", "intake", "substitution", "diabetes", "general recommendation"],
+              "scope_terms": ["up to one", "subgroup", "replacement"],
+              "crux_terms": ["diet pattern", "risk"],
+              "false_closure_terms": ["same for everyone", "unlimited eggs"]
+            }
+          ]
+        },
+        "eggs_t004": {
+          "required_distinctions": [
+            {
+              "id": "findings_guidelines_policy_roles",
+              "description": "The map separates empirical findings, guideline interpretations, and policy-oriented advice.",
+              "claim_ids": ["eggs_c001", "eggs_c002", "eggs_c003", "eggs_c004", "eggs_c019"],
+              "relation_ids": ["eggs_r006", "eggs_r014"],
+              "source_ids": ["dga_2020_2025_pmc_summary", "aha_2019_dietary_cholesterol_pubmed", "aha_2023_dietary_cholesterol_news", "nnr_2023_eggs_scoping_review"],
+              "key_terms": ["guideline", "policy", "evidence finding", "interpretation", "advice"],
+              "scope_terms": ["role", "separate", "preponderance"],
+              "crux_terms": ["not a single study", "recommendation"],
+              "false_closure_terms": ["guideline is one causal study", "policy advice is direct evidence"]
+            }
+          ]
+        },
+        "eggs_t005": {
+          "required_distinctions": [
+            {
+              "id": "decision_changing_new_result",
+              "description": "A decision-changing result would connect egg intake to hard cardiovascular outcomes with clear population, dose, substitution, and confounding controls.",
+              "claim_ids": ["eggs_c012", "eggs_c015", "eggs_c019"],
+              "relation_ids": ["eggs_r005", "eggs_r006", "eggs_r014"],
+              "source_ids": ["li_2020_egg_cholesterol_rct_meta", "jama_2019_dietary_cholesterol_eggs", "nnr_2023_eggs_scoping_review"],
+              "key_terms": ["new result", "hard outcomes", "dose", "substitution", "confounding"],
+              "scope_terms": ["most change", "practical answer"],
+              "crux_terms": ["causal", "cardiovascular events"],
+              "false_closure_terms": ["LDL alone settles hard outcomes", "association alone settles causality"]
+            }
+          ]
+        }
+      }
+    },
+    "covid": {
+      "tasks": {
+        "covid_t001": {
+          "required_distinctions": [
+            {
+              "id": "debate_result_vs_substantive_conclusion",
+              "description": "Conceding that judges ruled against Rootclaim is different from conceding the substantive lab-origin conclusion.",
+              "claim_ids": ["covid_c005", "covid_c006"],
+              "relation_ids": ["covid_r002"],
+              "source_ids": ["rootclaim_debate_results"],
+              "key_terms": ["judged debate", "substantive", "conclusion", "conceding"],
+              "scope_terms": ["different", "does not imply"],
+              "crux_terms": ["debate result", "lab origin"],
+              "false_closure_terms": ["debate loss proves zoonosis", "concedes the conclusion"]
+            }
+          ]
+        },
+        "covid_t002": {
+          "required_distinctions": [
+            {
+              "id": "aggregate_forecast_vs_minority_distribution",
+              "description": "A community aggregate can favor zoonosis while a minority distribution remains strongly lab-origin leaning.",
+              "claim_ids": ["covid_c009", "covid_c010"],
+              "relation_ids": ["covid_r005"],
+              "source_ids": ["good_judgment_superforecasting"],
+              "key_terms": ["aggregate", "forecast", "minority", "distribution"],
+              "scope_terms": ["differ", "community", "minority"],
+              "crux_terms": ["probability", "forecast"],
+              "false_closure_terms": ["aggregate eliminates minority", "single probability settles"]
+            }
+          ]
+        },
+        "covid_t003": {
+          "required_distinctions": [
+            {
+              "id": "process_evidence_bayesian_disagreements",
+              "description": "The disagreement spans debate process, evidentiary interpretation, and Bayesian structural assumptions.",
+              "claim_ids": ["covid_c001", "covid_c005", "covid_c011", "covid_c017"],
+              "relation_ids": ["covid_r001", "covid_r011"],
+              "source_ids": ["flf_covid_case_brief", "rootclaim_debate_results", "levin_2025_bayesian_assessment"],
+              "key_terms": ["process", "evidence", "Bayesian", "disagreement"],
+              "scope_terms": ["which concerns", "structure"],
+              "crux_terms": ["priors", "likelihood", "evidence weight"],
+              "false_closure_terms": ["single disagreement", "all procedural"]
+            }
+          ]
+        },
+        "covid_t004": {
+          "required_distinctions": [
+            {
+              "id": "update_trigger_evidence",
+              "description": "Update triggers include new direct evidence, better-conditioned probabilistic modeling, or later evidence that actually changes the whole-case balance.",
+              "claim_ids": ["covid_c011", "covid_c017", "covid_c018"],
+              "relation_ids": ["covid_r011"],
+              "source_ids": ["levin_2025_bayesian_assessment", "debarre_worobey_reply"],
+              "key_terms": ["evidence", "trigger", "update", "whole-case"],
+              "scope_terms": ["would trigger", "later result"],
+              "crux_terms": ["probabilistic", "subargument"],
+              "false_closure_terms": ["any later result resolves", "no update possible"]
+            }
+          ]
+        },
+        "covid_t005": {
+          "required_distinctions": [
+            {
+              "id": "later_result_subargument_boundary",
+              "description": "A later result may resolve or weaken a subargument without resolving the whole origins question.",
+              "claim_ids": ["covid_c017", "covid_c018"],
+              "relation_ids": ["covid_r011"],
+              "source_ids": ["levin_2025_bayesian_assessment", "debarre_worobey_reply"],
+              "key_terms": ["later", "subargument", "whole-case", "resolution"],
+              "scope_terms": ["only", "rather than"],
+              "crux_terms": ["boundary", "not whole case"],
+              "false_closure_terms": ["subargument resolves whole case", "fully settled"]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

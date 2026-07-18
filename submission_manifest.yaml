@@ -40,6 +40,8 @@ judge_paths:
   - docs/ADDING_A_CASE.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
+  - docs/INVESTIGATOR_CHALLENGE.md
+  - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
@@ -104,6 +106,8 @@ required_docs:
   - docs/reference/flf_judging_rubric.md
   - docs/START_HERE.md
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
+  - docs/INVESTIGATOR_CHALLENGE.md
+  - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/SUBMISSION_ARTIFACT_SUMMARY.md
   - docs/SUBMISSION_PACKET.md
   - docs/VALIDATOR_FAILURE_GUIDE.md
@@ -142,6 +146,8 @@ reference_scan_paths:
   - docs/reference/flf_judging_rubric.md
   - docs/FLF_BEFORE_AFTER_COMPARISON.md
   - docs/PIPELINE_DEMONSTRATION_EXAMPLES.md
+  - docs/INVESTIGATOR_CHALLENGE.md
+  - docs/INVESTIGATOR_CHALLENGE_PROTOCOL.md
   - docs/EVIDENCE_AND_LIMITATIONS.md
   - docs/HUMAN_AUDIT_GUIDE.md
   - docs/NEW_SOURCE_UPDATE_DEMO.md
@@ -176,6 +182,10 @@ extension_artifacts:
     case: LHC black holes
     path: docs/NEW_SOURCE_UPDATE_DEMO.md
     status: demo from already acquired source
+  - artifact: Investigator challenge demonstration
+    case: Cross-case
+    path: docs/INVESTIGATOR_CHALLENGE.md
+    status: deterministic replay demo
   - artifact: Evidence and limitations
     case: Submission
     path: docs/EVIDENCE_AND_LIMITATIONS.md

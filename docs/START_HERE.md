@@ -54,6 +54,8 @@ That path should be enough to see whether the core mechanism is interesting. The
 
 For runnable examples keyed to ingestion, structure, assessment, handoff, and reproducibility, use `docs/PIPELINE_DEMONSTRATION_EXAMPLES.md`.
 
+For the strongest end-to-end demonstration of investigator value, run or inspect `docs/INVESTIGATOR_CHALLENGE.md`. It compares flat and map conditions on frozen follow-up tasks, then shows local relation repair and a held-out-source update.
+
 ## Fifteen-Minute Path
 
 After the LHC check:

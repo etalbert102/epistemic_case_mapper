@@ -1,0 +1,20 @@
+{
+  "flat": {
+    "char_count": 3635,
+    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/lhc/flat_packet.md",
+    "sha256": "9f34a4d99a1711586e72592bc9b777111da0c987af4a2dbf02dd36f872e0fca2",
+    "word_count": 475
+  },
+  "map": {
+    "char_count": 7502,
+    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/lhc/map_packet.md",
+    "sha256": "e554671da223b450f70af81fc90ae7d3d953ce701ac8f6a775ba83cf8ff3918a",
+    "word_count": 911
+  },
+  "map_plus_sources": {
+    "char_count": 10968,
+    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/lhc/map_plus_sources_packet.md",
+    "sha256": "fe96853262649a7e1c3952f9553a86b791b44cf305019585c469129fa603622d",
+    "word_count": 1414
+  }
+}

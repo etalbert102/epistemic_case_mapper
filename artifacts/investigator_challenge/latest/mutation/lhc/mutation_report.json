@@ -1,0 +1,26 @@
+{
+  "clean_control_relation_id": "lhc_r003",
+  "clean_control_triggered": false,
+  "corrupted_relation": {
+    "rationale": "GM's trapping analysis provides the technical version of the velocity caveat.",
+    "relation_id": "lhc_r004",
+    "relation_type": "supports",
+    "source_claim": "lhc_c004",
+    "synthetic_mutation": "reversed_relation_direction",
+    "target_claim": "lhc_c012"
+  },
+  "detected": true,
+  "localized_object_id": "lhc_r004",
+  "mutation_id": "lhc_mutation_reversed_trapping_relation",
+  "mutation_type": "reversed_relation_direction",
+  "original_relation": {
+    "rationale": "GM's trapping analysis provides the technical version of the velocity caveat.",
+    "relation_id": "lhc_r004",
+    "relation_type": "supports",
+    "source_claim": "lhc_c012",
+    "target_claim": "lhc_c004"
+  },
+  "repair_diff": "--- corrupted_relation\n\n+++ repaired_relation\n\n@@ -1 +1 @@\n\n-- `lhc_r004` (supports): `lhc_c004` -> `lhc_c012`. GM's trapping analysis provides the technical version of the velocity caveat.\n\n+- `lhc_r004` (supports): `lhc_c012` -> `lhc_c004`. GM's trapping analysis provides the technical version of the velocity caveat.\n",
+  "source_safe_repair_produced": true,
+  "unaffected_objects_changed": 0
+}

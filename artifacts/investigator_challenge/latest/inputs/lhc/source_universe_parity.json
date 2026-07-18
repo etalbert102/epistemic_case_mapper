@@ -1,0 +1,19 @@
+{
+  "case_id": "lhc",
+  "extra_in_map": [],
+  "map_sources": [
+    "lsag_2008_safety_review",
+    "spc_2008_lsag_review",
+    "giddings_mangano_2008_stable_black_holes",
+    "plaga_2008_metastable_black_holes",
+    "giddings_mangano_2008_comments_plaga"
+  ],
+  "missing_from_map": [],
+  "required_sources": [
+    "lsag_2008_safety_review",
+    "spc_2008_lsag_review",
+    "giddings_mangano_2008_stable_black_holes",
+    "plaga_2008_metastable_black_holes",
+    "giddings_mangano_2008_comments_plaga"
+  ]
+}

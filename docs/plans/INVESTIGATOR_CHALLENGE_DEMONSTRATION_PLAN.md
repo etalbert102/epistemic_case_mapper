@@ -1,6 +1,6 @@
 # Investigator Challenge Demonstration Plan
 
-Status: active plan
+Status: implemented deterministic replay
 
 ## Goal
 
@@ -505,15 +505,17 @@ git diff --check
 - [x] Best-use product position recorded.
 - [x] End-to-end challenge decomposed.
 - [x] Tasks, metrics, safeguards, and claim ladder specified.
-- [ ] LHC task manifest and answer keys frozen.
-- [ ] Comparable LHC condition packets built.
-- [ ] LHC adversarial follow-up challenge run.
-- [ ] LHC semantic mutation and clean control run.
-- [ ] Held-out-source update run.
-- [ ] Eggs and COVID transfer checks run.
-- [ ] Judge evidence packet assembled.
-- [ ] Competition write-up revised around observed results.
+- [x] LHC task manifest and answer keys frozen.
+- [x] Comparable LHC condition packets built.
+- [x] LHC adversarial follow-up challenge run.
+- [x] LHC semantic mutation and clean control run.
+- [x] Held-out-source update run.
+- [x] Eggs and COVID transfer checks run.
+- [x] Judge evidence packet assembled.
+- [x] Competition write-up revised around observed results.
 - [ ] Final release checks passed.
+
+Implementation note: `scripts/run_investigator_challenge.py --all` now produces a deterministic replay evidence packet under `artifacts/investigator_challenge/latest/`. The replay validates frozen IDs, builds flat/map/map-plus-source packets, preserves raw prompts and responses, scores task-level recoverability, runs the LHC local mutation and held-out-source update exercises, and writes `completion_audit.json`.
 
 ## Deferred Work Policy
 
@@ -526,4 +528,3 @@ Every incomplete item must be finished, removed, or recorded with:
 - next executable action.
 
 No vague placeholder counts as completion evidence.
-

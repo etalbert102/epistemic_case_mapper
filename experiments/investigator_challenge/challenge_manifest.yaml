@@ -1,0 +1,111 @@
+schema_id: investigator_challenge_manifest_v1
+challenge_id: investigator_challenge_v1
+default_mode: deterministic_retrieval_proxy
+description: >
+  Frozen investigator challenge for demonstrating whether structured case maps
+  help a downstream investigator recover distinctions, traces, corrections, and
+  update effects that flat synthesis can obscure.
+
+conditions:
+  - id: flat
+    label: Strong flat synthesis
+  - id: map
+    label: Structured map packet
+  - id: map_plus_sources
+    label: Structured map packet with claim excerpts
+
+metrics:
+  - required_distinction_recall
+  - source_trace_accuracy
+  - scope_boundary_retention
+  - unsupported_bridge_count
+  - false_closure_count
+  - crux_or_update_trigger_recall
+
+cases:
+  - case_id: lhc
+    label: LHC black holes
+    worked_map: examples/lhc_black_holes/worked_region_cosmic_ray_map.json
+    worked_map_markdown: examples/lhc_black_holes/worked_region_cosmic_ray_map.md
+    flat_baseline: examples/lhc_black_holes/flat_synthesis_baseline.md
+    erosion_audit: examples/lhc_black_holes/decision_space_erosion_audit.md
+    required_sources:
+      - lsag_2008_safety_review
+      - spc_2008_lsag_review
+      - giddings_mangano_2008_stable_black_holes
+      - plaga_2008_metastable_black_holes
+      - giddings_mangano_2008_comments_plaga
+    tasks:
+      - task_id: lhc_t001
+        question: Why is Earth survival under cosmic-ray collisions not sufficient by itself?
+      - task_id: lhc_t002
+        question: Why do compact astronomical bodies become relevant?
+      - task_id: lhc_t003
+        question: Which claims and sources carry the velocity/trapping transition?
+      - task_id: lhc_t004
+        question: Which criticism most directly challenges the compact-star safety argument?
+      - task_id: lhc_t005
+        question: What would have to change for the bottom-line risk assessment to move materially?
+      - task_id: lhc_control_easy
+        question: What is the broad bottom-line conclusion of the LHC safety review?
+        control: easy_flat_should_answer
+    mutations:
+      - mutation_id: lhc_mutation_reversed_trapping_relation
+        relation_id: lhc_r004
+        mutation_type: reversed_relation_direction
+        clean_control_relation_id: lhc_r003
+    held_out_update:
+      update_id: lhc_public_faq_update
+      source_id: cern_lhc_current_page
+      update_demo_path: docs/NEW_SOURCE_UPDATE_DEMO.md
+
+  - case_id: eggs
+    label: Eggs and health
+    worked_map: examples/eggs/worked_region_observational_vs_rct_map.json
+    worked_map_markdown: examples/eggs/worked_region_observational_vs_rct_map.md
+    flat_baseline: examples/eggs/flat_synthesis_baseline.md
+    erosion_audit: examples/eggs/decision_space_erosion_audit.md
+    required_sources:
+      - dga_2020_2025_pmc_summary
+      - aha_2019_dietary_cholesterol_pubmed
+      - aha_2023_dietary_cholesterol_news
+      - bmj_2020_egg_consumption_cvd
+      - jama_2019_dietary_cholesterol_eggs
+      - li_2020_egg_cholesterol_rct_meta
+      - nnr_2023_eggs_scoping_review
+    tasks:
+      - task_id: eggs_t001
+        question: Why can randomized lipid results and observational cardiovascular outcomes point in different directions without one simply invalidating the other?
+      - task_id: eggs_t002
+        question: What explains the apparent BMJ/JAMA tension?
+      - task_id: eggs_t003
+        question: What populations, intake ranges, and substitution contexts limit a general recommendation?
+      - task_id: eggs_t004
+        question: Which statements are evidence findings, which are guideline interpretations, and which are policy advice?
+      - task_id: eggs_t005
+        question: What new result would most change the practical answer?
+
+  - case_id: covid
+    label: COVID origins slice
+    worked_map: examples/covid_origins_slice/worked_region_bayesian_disagreement_map.json
+    worked_map_markdown: examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
+    flat_baseline: examples/covid_origins_slice/flat_synthesis_baseline.md
+    erosion_audit: examples/covid_origins_slice/decision_space_erosion_audit.md
+    required_sources:
+      - flf_covid_case_brief
+      - acx_rootclaim_review
+      - rootclaim_debate_results
+      - good_judgment_superforecasting
+      - levin_2025_bayesian_assessment
+      - debarre_worobey_reply
+    tasks:
+      - task_id: covid_t001
+        question: Does conceding the judged debate imply conceding the substantive conclusion?
+      - task_id: covid_t002
+        question: How do the aggregate forecast and minority distribution differ?
+      - task_id: covid_t003
+        question: Which disagreement concerns process, which concerns evidence, and which concerns Bayesian structure?
+      - task_id: covid_t004
+        question: What evidence would trigger an update?
+      - task_id: covid_t005
+        question: Which later result is only a subargument rather than a whole-case resolution?

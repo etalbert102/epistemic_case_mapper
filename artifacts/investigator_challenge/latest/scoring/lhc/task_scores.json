@@ -1,0 +1,473 @@
+{
+  "case_id": "lhc",
+  "condition_averages": {
+    "flat": 0.651,
+    "map": 0.872,
+    "map_plus_sources": 0.886
+  },
+  "label": "LHC black holes",
+  "tasks": {
+    "lhc_control_easy": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.562,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "broad_lhc_safety_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.25,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_control_easy_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 0.25,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_control_easy_response.md",
+          "response_word_count": 95,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 1.0,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "broad_lhc_safety_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_control_easy_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_control_easy_response.md",
+          "response_word_count": 167,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 1.0,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "broad_lhc_safety_conclusion",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_control_easy_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_control_easy_response.md",
+          "response_word_count": 289,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What is the broad bottom-line conclusion of the LHC safety review?"
+    },
+    "lhc_t001": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.734,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "earth_exposure_is_not_the_whole_argument",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.6,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t001_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 0.6,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t001_response.md",
+          "response_word_count": 169,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "earth_exposure_is_not_the_whole_argument",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t001_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t001_response.md",
+          "response_word_count": 149,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "earth_exposure_is_not_the_whole_argument",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t001_prompt.md",
+          "prompt_word_count": 39,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t001_response.md",
+          "response_word_count": 243,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Why is Earth survival under cosmic-ray collisions not sufficient by itself?"
+    },
+    "lhc_t002": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.683,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "compact_bodies_test_trapping_accumulation",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.4,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t002_prompt.md",
+          "prompt_word_count": 35,
+          "required_distinction_recall": 0.4,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t002_response.md",
+          "response_word_count": 157,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.733,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "compact_bodies_test_trapping_accumulation",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.933,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t002_prompt.md",
+          "prompt_word_count": 35,
+          "required_distinction_recall": 0.933,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t002_response.md",
+          "response_word_count": 177,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.733,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "compact_bodies_test_trapping_accumulation",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.933,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t002_prompt.md",
+          "prompt_word_count": 35,
+          "required_distinction_recall": 0.933,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t002_response.md",
+          "response_word_count": 311,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Why do compact astronomical bodies become relevant?"
+    },
+    "lhc_t003": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.442,
+          "crux_or_update_trigger_recall": 0.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.0,
+              "distinction_id": "velocity_to_trapping_transition",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.6,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 0.5
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t003_prompt.md",
+          "prompt_word_count": 36,
+          "required_distinction_recall": 0.6,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t003_response.md",
+          "response_word_count": 147,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 0.5,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "velocity_to_trapping_transition",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t003_prompt.md",
+          "prompt_word_count": 36,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t003_response.md",
+          "response_word_count": 147,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 1.0,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 1.0,
+              "distinction_id": "velocity_to_trapping_transition",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 0.667,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t003_prompt.md",
+          "prompt_word_count": 36,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t003_response.md",
+          "response_word_count": 227,
+          "scope_boundary_retention": 0.667,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Which claims and sources carry the velocity/trapping transition?"
+    },
+    "lhc_t004": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.617,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "plaga_challenges_compact_star_safety",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.8,
+              "scope_boundary_retention": 0.333,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t004_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 0.8,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t004_response.md",
+          "response_word_count": 152,
+          "scope_boundary_retention": 0.333,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.833,
+          "crux_or_update_trigger_recall": 0.333,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.333,
+              "distinction_id": "plaga_challenges_compact_star_safety",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t004_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t004_response.md",
+          "response_word_count": 187,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "plaga_challenges_compact_star_safety",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t004_prompt.md",
+          "prompt_word_count": 37,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t004_response.md",
+          "response_word_count": 302,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "Which criticism most directly challenges the compact-star safety argument?"
+    },
+    "lhc_t005": {
+      "conditions": {
+        "flat": {
+          "composite_score": 0.867,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "material_update_requires_breaking_compact_star_bounds",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 0.8,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t005_prompt.md",
+          "prompt_word_count": 41,
+          "required_distinction_recall": 0.8,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/flat/lhc_t005_response.md",
+          "response_word_count": 138,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "material_update_requires_breaking_compact_star_bounds",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t005_prompt.md",
+          "prompt_word_count": 41,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map/lhc_t005_response.md",
+          "response_word_count": 193,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        },
+        "map_plus_sources": {
+          "composite_score": 0.917,
+          "crux_or_update_trigger_recall": 0.667,
+          "distinctions": [
+            {
+              "crux_or_update_trigger_recall": 0.667,
+              "distinction_id": "material_update_requires_breaking_compact_star_bounds",
+              "false_closure_terms_found": [],
+              "required_distinction_recall": 1.0,
+              "scope_boundary_retention": 1.0,
+              "source_trace_accuracy": 1.0
+            }
+          ],
+          "false_closure_count": 0,
+          "prompt_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t005_prompt.md",
+          "prompt_word_count": 41,
+          "required_distinction_recall": 1.0,
+          "response_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/raw/lhc/map_plus_sources/lhc_t005_response.md",
+          "response_word_count": 329,
+          "scope_boundary_retention": 1.0,
+          "scoring_mode": "deterministic_retrieval_proxy",
+          "source_trace_accuracy": 1.0,
+          "unsupported_bridge_count": 0
+        }
+      },
+      "question": "What would have to change for the bottom-line risk assessment to move materially?"
+    }
+  }
+}
