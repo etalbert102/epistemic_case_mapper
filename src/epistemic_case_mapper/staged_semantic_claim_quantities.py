@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.evidence_bundles import normalize_assertion_bundles
+
 CLAIM_QUANTITY_SCHEMA_ID = "claim_bound_quantity_v1"
 
 CLAIM_QUANTITY_ROLES = {
@@ -42,10 +44,23 @@ def normalize_claim_quantity_rows(
     value: Any,
     *,
     supporting_quotes: list[dict[str, Any]] | None = None,
-) -> list[dict[str, str]]:
-    rows: list[dict[str, str]] = []
+    claim_id: str = "",
+    source_id: str = "",
+    source_span: str = "",
+    source_quote: str = "",
+    claim_text: str = "",
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for item in _list(value):
-        row = _quantity_row(item, supporting_quotes=supporting_quotes or [])
+        row = _quantity_row(
+            item,
+            supporting_quotes=supporting_quotes or [],
+            claim_id=claim_id,
+            source_id=source_id,
+            source_span=source_span,
+            source_quote=source_quote,
+            claim_text=claim_text,
+        )
         if row:
             rows.append(row)
     return _dedupe_rows(rows)
@@ -61,17 +76,23 @@ def claim_quantity_values(rows: Any) -> list[str]:
     )
 
 
-def merged_claim_quantities(claims: list[dict[str, Any]]) -> list[dict[str, str]]:
-    rows: list[Any] = []
+def merged_claim_quantities(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for claim in claims:
         source_card = claim.get("whole_doc_source_card") if isinstance(claim.get("whole_doc_source_card"), dict) else {}
         claim_rows = [*_list(claim.get("claim_quantities")), *_list(source_card.get("claim_quantities"))]
-        if claim_rows:
-            rows.extend(claim_rows)
-        else:
-            rows.extend(_list(claim.get("quantity_values")))
-            rows.extend(_list(source_card.get("quantities")))
-    return normalize_claim_quantity_rows(rows)
+        raw_rows = claim_rows if claim_rows else [*_list(claim.get("quantity_values")), *_list(source_card.get("quantities"))]
+        rows.extend(
+            normalize_claim_quantity_rows(
+                raw_rows,
+                claim_id=str(claim.get("claim_id") or ""),
+                source_id=str(claim.get("source_id") or ""),
+                source_span=str(claim.get("source_span") or ""),
+                source_quote=str(claim.get("source_quote") or claim.get("excerpt") or ""),
+                claim_text=str(claim.get("claim") or ""),
+            )
+        )
+    return _dedupe_rows(rows)
 
 
 def quantity_type(value: str) -> str:
@@ -93,7 +114,16 @@ def quantity_type(value: str) -> str:
     return "not_numeric"
 
 
-def _quantity_row(item: Any, *, supporting_quotes: list[dict[str, Any]]) -> dict[str, str]:
+def _quantity_row(
+    item: Any,
+    *,
+    supporting_quotes: list[dict[str, Any]],
+    claim_id: str = "",
+    source_id: str = "",
+    source_span: str = "",
+    source_quote: str = "",
+    claim_text: str = "",
+) -> dict[str, Any]:
     if isinstance(item, dict):
         value = _compact(
             str(item.get("value") or item.get("quantity") or item.get("quantity_text") or item.get("text") or ""),
@@ -101,6 +131,15 @@ def _quantity_row(item: Any, *, supporting_quotes: list[dict[str, Any]]) -> dict
         )
         if not value:
             return {}
+        bundles = normalize_assertion_bundles(
+            [item],
+            claim_id=claim_id,
+            source_id=source_id,
+            source_span=source_span,
+            source_quote=source_quote,
+            claim_text=claim_text,
+            supporting_quotes=supporting_quotes,
+        )
         return {
             "schema_id": CLAIM_QUANTITY_SCHEMA_ID,
             "value": value,
@@ -111,10 +150,21 @@ def _quantity_row(item: Any, *, supporting_quotes: list[dict[str, Any]]) -> dict
             "source_quote": _compact(str(item.get("source_quote") or _first_quote(supporting_quotes)), max_chars=300),
             "line_hint": _compact(str(item.get("line_hint") or _first_line_hint(supporting_quotes)), max_chars=80),
             "retention_hint": _normalize_retention_hint(item.get("retention_hint")),
+            "assertion_bundles": bundles,
+            "evidence_bundle_id": str(bundles[0].get("evidence_bundle_id") or "") if bundles else "",
         }
     value = _compact(str(item or ""), max_chars=160)
     if not value:
         return {}
+    bundles = normalize_assertion_bundles(
+        [{"value": value}],
+        claim_id=claim_id,
+        source_id=source_id,
+        source_span=source_span,
+        source_quote=source_quote,
+        claim_text=claim_text,
+        supporting_quotes=supporting_quotes,
+    )
     return {
         "schema_id": CLAIM_QUANTITY_SCHEMA_ID,
         "value": value,
@@ -125,6 +175,8 @@ def _quantity_row(item: Any, *, supporting_quotes: list[dict[str, Any]]) -> dict
         "source_quote": _compact(_first_quote(supporting_quotes), max_chars=300),
         "line_hint": _compact(_first_line_hint(supporting_quotes), max_chars=80),
         "retention_hint": "use_if_space",
+        "assertion_bundles": bundles,
+        "evidence_bundle_id": str(bundles[0].get("evidence_bundle_id") or "") if bundles else "",
     }
 
 
@@ -158,8 +210,8 @@ def _list(value: Any) -> list[Any]:
     return [value] if value else []
 
 
-def _dedupe_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
-    result: list[dict[str, str]] = []
+def _dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     for row in rows:
         key = (_norm(row.get("value", "")), _norm(row.get("quantity_role", "")), _norm(row.get("measures", "")))

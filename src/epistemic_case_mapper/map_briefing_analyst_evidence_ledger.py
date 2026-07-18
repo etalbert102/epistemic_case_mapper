@@ -17,6 +17,7 @@ from epistemic_case_mapper.map_briefing_residual_quantities import (
 )
 from epistemic_case_mapper.map_briefing_source_appraisal import appraisal_for_sources
 from epistemic_case_mapper.map_briefing_source_claim_context import source_context_fields as _source_context_fields
+from epistemic_case_mapper.evidence_bundles import normalize_assertion_bundles
 from epistemic_case_mapper.staged_semantic_claim_quantities import claim_quantity_values, normalize_claim_quantity_rows
 
 
@@ -106,6 +107,7 @@ def _claim_row(
     labels = [source_labels.get(source_id, source_id) for source_id in source_ids if source_id]
     source_appraisal = appraisal_for_sources(source_appraisal_report, [*source_ids, *labels])
     claim_quantities = _claim_bound_quantities(claim)
+    assertion_bundles = _claim_assertion_bundles(claim, claim_quantities=claim_quantities, source_ids=source_ids)
     claim_bound_values = _dedupe([*claim_quantity_values(claim_quantities), *_string_list(claim.get("quantity_values"))])
     residual_values = _residual_quantity_values(claim, claim_bound_values=claim_bound_values, quantity_lookup=quantity_lookup.get(claim_id, []))
     residual_candidates = _residual_quantity_candidates(claim, residual_values)
@@ -135,6 +137,12 @@ def _claim_row(
             "directionality": claim.get("question_relevance"),
             "quantity_values": quantity_values,
             "claim_quantities": claim_quantities,
+            "assertion_bundles": assertion_bundles,
+            "evidence_bundle_ids": [
+                str(row.get("evidence_bundle_id") or "")
+                for row in assertion_bundles
+                if isinstance(row, dict) and str(row.get("evidence_bundle_id") or "").strip()
+            ],
             "claim_bound_quantity_values": claim_bound_values,
             "residual_quantity_values": residual_values,
             "residual_quantity_candidate_values": residual_candidates,
@@ -146,15 +154,67 @@ def _claim_row(
     )
 
 
-def _claim_bound_quantities(claim: dict[str, Any]) -> list[dict[str, str]]:
+def _claim_bound_quantities(claim: dict[str, Any]) -> list[dict[str, Any]]:
     source_card = _dict(claim.get("whole_doc_source_card"))
     rows = [
         *_list(claim.get("claim_quantities")),
         *_list(source_card.get("claim_quantities")),
     ]
+    source_ids = _dedupe([str(claim.get("source_id") or ""), *_string_list(claim.get("supporting_sources"))])
     if rows:
-        return normalize_claim_quantity_rows(rows)
-    return normalize_claim_quantity_rows(_string_list(claim.get("quantity_values")))
+        return normalize_claim_quantity_rows(
+            rows,
+            claim_id=str(claim.get("claim_id") or ""),
+            source_id=source_ids[0] if source_ids else "",
+            source_span=str(claim.get("source_span") or ""),
+            source_quote=str(claim.get("source_quote") or claim.get("excerpt") or ""),
+            claim_text=str(claim.get("claim") or ""),
+        )
+    return normalize_claim_quantity_rows(
+        _string_list(claim.get("quantity_values")),
+        claim_id=str(claim.get("claim_id") or ""),
+        source_id=source_ids[0] if source_ids else "",
+        source_span=str(claim.get("source_span") or ""),
+        source_quote=str(claim.get("source_quote") or claim.get("excerpt") or ""),
+        claim_text=str(claim.get("claim") or ""),
+    )
+
+
+def _claim_assertion_bundles(
+    claim: dict[str, Any],
+    *,
+    claim_quantities: list[dict[str, Any]],
+    source_ids: list[str],
+) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    source_card = _dict(claim.get("whole_doc_source_card"))
+    for bundle in [
+        *_list(claim.get("assertion_bundles")),
+        *_list(source_card.get("assertion_bundles")),
+        *[
+            nested
+            for quantity in claim_quantities
+            if isinstance(quantity, dict)
+            for nested in _list(quantity.get("assertion_bundles"))
+        ],
+    ]:
+        if not isinstance(bundle, dict):
+            continue
+        bundle_id = str(bundle.get("evidence_bundle_id") or "").strip()
+        if bundle_id and bundle_id not in seen:
+            seen.add(bundle_id)
+            rows.append(bundle)
+    if rows:
+        return rows
+    return normalize_assertion_bundles(
+        claim_quantities,
+        claim_id=str(claim.get("claim_id") or ""),
+        source_id=source_ids[0] if source_ids else str(claim.get("source_id") or ""),
+        source_span=str(claim.get("source_span") or ""),
+        source_quote=str(claim.get("source_quote") or claim.get("excerpt") or ""),
+        claim_text=str(claim.get("claim") or ""),
+    )
 
 
 def _residual_quantity_values(

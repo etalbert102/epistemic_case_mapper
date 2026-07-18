@@ -587,8 +587,11 @@ def _candidate_row(
     warnings = _deterministic_warnings(value, group=group, ledger_row=ledger_row)
     memo_use = _deterministic_memo_use(value, group=group, ledger_row=ledger_row, warnings=warnings)
     interpretation = _deterministic_interpretation(value, group=group, ledger_row=ledger_row, memo_use=memo_use)
+    evidence_bundle = _matching_evidence_bundle(value, ledger_row=ledger_row, quantity_row=quantity_row)
     return {
         "candidate_id": _candidate_id(group_id, source_evidence_item_id, value),
+        "evidence_bundle_id": str(evidence_bundle.get("evidence_bundle_id") or ""),
+        "assertion_bundle": evidence_bundle,
         "candidate_origin": candidate_origin,
         "model_adjudication_required": model_adjudication_required,
         "group_id": group_id,
@@ -618,6 +621,24 @@ def _candidate_row(
         "deterministic_interpretation": interpretation,
         "deterministic_rationale": _deterministic_rationale(value, group=group, ledger_row=ledger_row, memo_use=memo_use, warnings=warnings),
     }
+
+
+def _matching_evidence_bundle(
+    value: str,
+    *,
+    ledger_row: dict[str, Any],
+    quantity_row: dict[str, Any] | None,
+) -> dict[str, Any]:
+    candidates = []
+    if isinstance(quantity_row, dict):
+        candidates.extend(row for row in _list(quantity_row.get("assertion_bundles")) if isinstance(row, dict))
+    candidates.extend(row for row in _list(ledger_row.get("assertion_bundles")) if isinstance(row, dict))
+    signature = quantity_signature(value)
+    for bundle in candidates:
+        bundle_value = str(bundle.get("value") or "").strip()
+        if bundle_value == value or quantity_signature(bundle_value) == signature:
+            return bundle
+    return {}
 
 
 def _binding_row(candidate: dict[str, Any], model_row: dict[str, Any] | None) -> dict[str, Any]:

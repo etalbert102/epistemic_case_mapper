@@ -286,9 +286,19 @@ def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> lis
 
 
 def _quantity_dedupe_key(quantity: dict[str, Any]) -> str:
+    bundle_id = str(quantity.get("evidence_bundle_id") or "").strip()
+    if bundle_id:
+        return f"bundle:{bundle_id}"
     value = str(quantity.get("value") or "").strip().lower()
-    numbers = re.findall(r"\d+(?:\.\d+)?", value)
-    return numbers[0] if numbers else re.sub(r"\s+", " ", value)
+    semantic_parts = [
+        value,
+        str(quantity.get("endpoint") or "").strip().lower(),
+        str(quantity.get("population") or "").strip().lower(),
+        str(quantity.get("exposure_or_comparator") or "").strip().lower(),
+        str(quantity.get("statistic_type") or "").strip().lower(),
+    ]
+    semantic_key = "|".join(re.sub(r"\s+", " ", part) for part in semantic_parts if part)
+    return semantic_key or re.sub(r"\s+", " ", value)
 
 
 def _quantity_owner_priority(contract: dict[str, Any]) -> int:

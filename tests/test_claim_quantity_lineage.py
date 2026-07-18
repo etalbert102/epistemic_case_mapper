@@ -43,3 +43,6 @@ def test_claim_consolidation_preserves_claim_bound_quantities() -> None:
     assert len(consolidated) == 1
     assert consolidated[0]["quantity_values"] == ["RR 0.98", "95% CI 0.90 to 1.05"]
     assert consolidated[0]["claim_quantities"][0]["quantity_role"] == "effect_estimate"
+    assert consolidated[0]["claim_quantities"][0]["evidence_bundle_id"].startswith("bundle_")
+    assert consolidated[0]["claim_quantities"][0]["assertion_bundles"][0]["source_ids"] == ["doc_a"]
+    assert consolidated[0]["claim_quantities"][1]["assertion_bundles"][0]["source_ids"] == ["doc_b"]

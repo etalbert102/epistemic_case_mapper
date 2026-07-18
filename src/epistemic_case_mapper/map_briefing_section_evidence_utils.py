@@ -5,6 +5,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
+    dict_value as _dict,
     list_value as _list,
     short_text as _short_text,
     string_list as _string_list,
@@ -51,12 +52,28 @@ def quantity_contracts(rows: list[Any]) -> list[dict[str, Any]]:
         quantity = drop_empty(
             {
                 "value": value,
+                "evidence_bundle_id": row.get("evidence_bundle_id"),
+                "assertion_bundle": row.get("assertion_bundle") if isinstance(row.get("assertion_bundle"), dict) else {},
                 "interpretation": row.get("interpretation"),
                 "quantity_role": row.get("quantity_role"),
+                "statistic_type": row.get("statistic_type") or _dict(row.get("assertion_bundle")).get("statistic_type"),
+                "endpoint": row.get("endpoint") or row.get("measures") or _dict(row.get("assertion_bundle")).get("endpoint"),
+                "population": row.get("population") or _dict(row.get("assertion_bundle")).get("population"),
+                "exposure_or_comparator": row.get("exposure_or_comparator") or _dict(row.get("assertion_bundle")).get("exposure_or_comparator"),
+                "interval": row.get("interval") or _dict(row.get("assertion_bundle")).get("interval"),
+                "uncertainty_interpretation": row.get("uncertainty_interpretation") or _dict(row.get("assertion_bundle")).get("uncertainty_interpretation"),
+                "allowed_inference": row.get("allowed_inference") or _dict(row.get("assertion_bundle")).get("allowed_inference"),
+                "forbidden_inference": row.get("forbidden_inference") or _dict(row.get("assertion_bundle")).get("forbidden_inference"),
                 "source_ids": row.get("source_ids"),
             }
         )
-        key = (re.sub(r"\s+", " ", value.lower()).strip(), str(quantity.get("interpretation") or "").lower())
+        key = (
+            re.sub(r"\s+", " ", value.lower()).strip(),
+            str(quantity.get("endpoint") or "").lower(),
+            str(quantity.get("population") or "").lower(),
+            str(quantity.get("exposure_or_comparator") or "").lower(),
+            str(quantity.get("statistic_type") or "").lower(),
+        )
         if key in seen:
             continue
         seen.add(key)

@@ -104,7 +104,15 @@ def _unit_from_claim(index: int, claim: dict[str, Any], *, source_id: str, sourc
     warnings = []
     if not _lexically_supported(proposition, source_quote):
         warnings.append("weak_quote_claim_overlap")
-    quantities = normalize_claim_quantity_rows(claim.get("claim_quantities") or claim.get("quantities"), supporting_quotes=quotes)
+    quantities = normalize_claim_quantity_rows(
+        claim.get("claim_quantities") or claim.get("quantities"),
+        supporting_quotes=quotes,
+        claim_id=str(claim.get("claim_id") or ""),
+        source_id=source_id,
+        source_span=str(quotes[0].get("line_hint") or ""),
+        source_quote=source_quote,
+        claim_text=proposition,
+    )
     typed = _typed_fields(proposition, quantities, claim)
     return {
         "schema_id": EVIDENCE_UNIT_SCHEMA_ID,
@@ -128,6 +136,7 @@ def _unit_from_claim(index: int, claim: dict[str, Any], *, source_id: str, sourc
         "source_span": str(quotes[0].get("line_hint") or ""),
         "quote_lineage": quotes,
         "quantities": quantities,
+        "assertion_bundles": _assertion_bundles_from_quantities(quantities),
         "scope_conditions": _string_list(claim.get("scope_conditions")),
         "question_relevance": str(claim.get("question_relevance") or ""),
         "decision_importance": str(claim.get("decision_importance") or ""),
@@ -398,6 +407,22 @@ def _first_quantity_of_type(quantities: list[dict[str, Any]], types: set[str]) -
         if str(quantity.get("quantity_type") or "") in types:
             return str(quantity.get("value") or "")
     return ""
+
+
+def _assertion_bundles_from_quantities(quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for quantity in quantities:
+        if not isinstance(quantity, dict):
+            continue
+        for bundle in quantity.get("assertion_bundles") or []:
+            if not isinstance(bundle, dict):
+                continue
+            bundle_id = str(bundle.get("evidence_bundle_id") or "")
+            if bundle_id and bundle_id not in seen:
+                seen.add(bundle_id)
+                rows.append(bundle)
+    return rows
 
 
 def _lexically_supported(proposition: str, quote: str) -> bool:

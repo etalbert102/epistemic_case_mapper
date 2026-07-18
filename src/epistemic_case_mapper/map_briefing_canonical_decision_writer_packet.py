@@ -800,8 +800,17 @@ def _brief_quantities(row: dict[str, Any]) -> list[dict[str, Any]]:
             _drop_empty(
                 {
                     "value": value,
+                    "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or "").strip(),
+                    "assertion_bundle": quantity.get("assertion_bundle") if isinstance(quantity.get("assertion_bundle"), dict) else {},
                     "interpretation": _calibrated_short(quantity.get("interpretation"), row, limit=220),
                     "quantity_role": quantity.get("quantity_role"),
+                    "statistic_type": quantity.get("statistic_type") or _dict(quantity.get("assertion_bundle")).get("statistic_type"),
+                    "endpoint": quantity.get("endpoint") or quantity.get("measures") or _dict(quantity.get("assertion_bundle")).get("endpoint"),
+                    "population": quantity.get("population") or _dict(quantity.get("assertion_bundle")).get("population"),
+                    "exposure_or_comparator": quantity.get("exposure_or_comparator") or _dict(quantity.get("assertion_bundle")).get("exposure_or_comparator"),
+                    "interval": quantity.get("interval") or _dict(quantity.get("assertion_bundle")).get("interval"),
+                    "allowed_inference": quantity.get("allowed_inference") or _dict(quantity.get("assertion_bundle")).get("allowed_inference"),
+                    "forbidden_inference": quantity.get("forbidden_inference") or _dict(quantity.get("assertion_bundle")).get("forbidden_inference"),
                     "source_labels": _string_list(quantity.get("source_labels")),
                     "quantity_id": str(quantity.get("quantity_id") or "").strip(),
                     "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),

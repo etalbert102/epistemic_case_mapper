@@ -580,8 +580,16 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
     for claim in source_card["canonical_claims"]:
         quotes = claim.get("supporting_quotes", [])
         quote = str(quotes[0].get("quote", "") if quotes else "").strip()
-        claim_quantities = normalize_claim_quantity_rows(claim.get("claim_quantities") or claim.get("quantities"), supporting_quotes=quotes)
+        claim_quantities = normalize_claim_quantity_rows(
+            claim.get("claim_quantities") or claim.get("quantities"),
+            supporting_quotes=quotes,
+            source_id=source_id,
+            source_span=str(quotes[0].get("line_hint", "") if quotes else ""),
+            source_quote=quote,
+            claim_text=str(claim.get("claim") or ""),
+        )
         quantity_values = claim_quantity_values(claim_quantities)
+        assertion_bundles = _assertion_bundles_from_quantities(claim_quantities)
         quote_count += len(quotes)
         exact_quote_count += sum(1 for row in quotes if _quote_matches_source(str(row.get("quote", "")), source_text))
         short_quote_count += sum(1 for row in quotes if len(str(row.get("quote", "")).strip()) < 25)
@@ -600,6 +608,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 "importance_rationale": claim.get("why_it_matters", ""),
                 "quantity_values": quantity_values,
                 "claim_quantities": claim_quantities,
+                "assertion_bundles": assertion_bundles,
                 "source_acronym_expansions": _used_acronym_expansions(
                     acronym_expansions,
                     text=" ".join([claim["claim"], quote]),
@@ -611,6 +620,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                     "claim_context": claim.get("claim_context", {}),
                     "quantities": quantity_values,
                     "claim_quantities": claim_quantities,
+                    "assertion_bundles": assertion_bundles,
                     "scope_conditions": claim.get("scope_conditions", []),
                     "supporting_quotes": quotes,
                 },
@@ -623,6 +633,22 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
         "source_card_acronym_expansion_count": len(acronym_expansions),
         **_rich_claim_context_report(source_card["canonical_claims"]),
     }
+
+
+def _assertion_bundles_from_quantities(quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for quantity in quantities:
+        if not isinstance(quantity, dict):
+            continue
+        for bundle in quantity.get("assertion_bundles") or []:
+            if not isinstance(bundle, dict):
+                continue
+            bundle_id = str(bundle.get("evidence_bundle_id") or "")
+            if bundle_id and bundle_id not in seen:
+                seen.add(bundle_id)
+                rows.append(bundle)
+    return rows
 
 
 def _normalize_claim_context(value: Any) -> dict[str, Any]:
