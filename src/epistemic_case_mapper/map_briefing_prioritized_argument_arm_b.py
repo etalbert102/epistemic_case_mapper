@@ -112,7 +112,7 @@ def build_arm_b_projection(inputs: dict[str, Any]) -> dict[str, Any]:
     decision_anchor = _decision_anchor(memo_ready_packet, analyst_model)
     contract_owner_candidates, resolver_issues = _owner_candidates(canonical, contracts_by_id, lineage_index)
     issues.extend(resolver_issues)
-    mandatory_ids = _mandatory_writer_ids(writer_items)
+    mandatory_ids = _mandatory_writer_ids(writer_items, override=inputs.get("mandatory_evidence_ids_override"))
     ownership, ownership_issues = _resolve_ownership(contracts, contract_owner_candidates, mandatory_ids)
     issues.extend(ownership_issues)
     section_packets = _section_packets(
@@ -509,7 +509,10 @@ def _lineage_index(
     return {key: _dedupe(values) for key, values in index.items()}
 
 
-def _mandatory_writer_ids(writer_items: list[dict[str, Any]]) -> set[str]:
+def _mandatory_writer_ids(writer_items: list[dict[str, Any]], *, override: Any = None) -> set[str]:
+    override_ids = set(_string_list(override))
+    if override_ids:
+        return override_ids
     ids = set()
     for item in writer_items:
         writer_id = str(item.get("item_id") or "").strip()

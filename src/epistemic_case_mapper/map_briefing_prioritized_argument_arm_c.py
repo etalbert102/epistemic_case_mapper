@@ -269,10 +269,14 @@ def run_arm_c_prioritization(
         )
         raw = result.text
         payload = _extract_json(raw)
-    report = verify_arm_c_prioritized_argument(inputs, payload)
+    normalized_payload, id_normalization_report = normalize_arm_c_prioritized_argument_ids(inputs, payload)
+    report = {
+        **verify_arm_c_prioritized_argument(inputs, normalized_payload),
+        "id_normalization_report": id_normalization_report,
+    }
     return {
         "accepted": report.get("status") == "pass",
-        "prioritized_argument": payload if isinstance(payload, dict) else {},
+        "prioritized_argument": normalized_payload if isinstance(normalized_payload, dict) else {},
         "prompt": prompt,
         "raw": raw,
         "report": report,
@@ -297,7 +301,8 @@ def build_arm_c_prioritization_prompt(inputs: dict[str, Any]) -> str:
         "source_hierarchy": analyst.get("source_hierarchy"),
         "source_weight_judgments": analyst.get("source_weight_judgments"),
         "evidence_items": _arm_c_evidence_records(packet),
-        "evidence_budget": _compact_evidence_budget(_dict(inputs.get("evidence_budget"))),
+        "must_account_writer_evidence_item_ids": _must_account_writer_evidence_ids(inputs),
+        "evidence_budget": _compact_evidence_budget(_dict(inputs.get("evidence_budget")), packet),
     }
     return (
         "You are creating a prioritized argument plan for a source-grounded decision memo.\n"
@@ -305,15 +310,59 @@ def build_arm_c_prioritization_prompt(inputs: dict[str, Any]) -> str:
         "Return JSON matching this schema:\n"
         f"{json.dumps(ArmCPrioritizedArgument.model_json_schema(), indent=2, ensure_ascii=False)}\n\n"
         "Planning rules:\n"
-        "- Use only evidence_item_ids listed in the input.\n"
+        "- Use only writer evidence item IDs from input evidence_items[].evidence_item_id in moves and evidence_accounting.\n"
+        "- Treat upstream claim/relation IDs as lineage only; do not return them as evidence_item_ids.\n"
         "- Keep the frozen_direct_answer exactly as provided.\n"
         "- Create a small set of ordered moves that would help a writer answer the decision question directly.\n"
         "- Each move should explain its proposition, warrant, and decision_effect.\n"
         "- Put primary support in answer_evidence, limits and contrary evidence in counterweights, and action guidance in practical_implication.\n"
-        "- Account for important foreground and counterweight evidence as owned, appendix, demoted, or background.\n\n"
+        "- Account for important foreground and counterweight evidence as owned, appendix, demoted, or background.\n"
+        "- Every ID in must_account_writer_evidence_item_ids should appear in a move or in evidence_accounting.\n\n"
         "### Input\n"
         f"{json.dumps(prompt_packet, indent=2, ensure_ascii=False)}\n"
     )
+
+
+def normalize_arm_c_prioritized_argument_ids(
+    inputs: dict[str, Any],
+    payload: Any,
+) -> tuple[Any, dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return payload, {
+            "schema_id": "arm_c_prioritized_argument_id_normalization_report_v1",
+            "rewrite_count": 0,
+            "rewrites": [],
+        }
+    upstream_to_writer = _upstream_to_writer_id_map(_dict(inputs.get("memo_ready_packet")))
+    rewritten = json.loads(json.dumps(payload))
+    rewrites: list[dict[str, Any]] = []
+
+    for move in _list(rewritten.get("moves")):
+        if not isinstance(move, dict):
+            continue
+        original = _string_list(move.get("evidence_item_ids"))
+        replacement = _normalize_evidence_id_list(original, upstream_to_writer, rewrites)
+        move["evidence_item_ids"] = replacement
+    for row in _list(rewritten.get("evidence_accounting")):
+        if not isinstance(row, dict):
+            continue
+        evidence_id = str(row.get("evidence_item_id") or "").strip()
+        replacements = upstream_to_writer.get(evidence_id, [])
+        if replacements and not (len(replacements) == 1 and replacements[0] == evidence_id):
+            row["evidence_item_id"] = replacements[0]
+            rewrites.append(
+                {
+                    "field": "evidence_accounting.evidence_item_id",
+                    "from": evidence_id,
+                    "to": replacements[0],
+                    "expanded_count": len(replacements),
+                }
+            )
+    return rewritten, {
+        "schema_id": "arm_c_prioritized_argument_id_normalization_report_v1",
+        "rewrite_count": len(rewrites),
+        "rewrites": rewrites,
+    }
 
 
 def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> dict[str, Any]:
@@ -398,7 +447,13 @@ def build_arm_c_projection(inputs: dict[str, Any], prioritized_argument: dict[st
             "argument_moves": moves,
         },
     }
-    projection = build_arm_b_projection({**inputs, "canonical_decision_writer_packet": canonical})
+    projection = build_arm_b_projection(
+        {
+            **inputs,
+            "canonical_decision_writer_packet": canonical,
+            "mandatory_evidence_ids_override": sorted(_arm_c_required_evidence_ids(prioritized_argument)),
+        }
+    )
     projection["schema_id"] = "arm_c_prioritized_argument_projection_v1"
     projection["prioritized_argument_id"] = prioritized_argument.get("schema_id")
     projection_report = _dict(projection.get("projection_evaluation_packet"))
@@ -443,15 +498,25 @@ def _arm_c_evidence_records(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _compact_evidence_budget(evidence_budget: dict[str, Any]) -> dict[str, Any]:
+def _compact_evidence_budget(evidence_budget: dict[str, Any], packet: dict[str, Any]) -> dict[str, Any]:
+    upstream_to_writer = _upstream_to_writer_id_map(packet)
     return {
-        "foreground_evidence_item_ids": _string_list(evidence_budget.get("foreground_evidence_item_ids")),
-        "counterweight_evidence_item_ids": _string_list(evidence_budget.get("counterweight_evidence_item_ids")),
-        "scope_or_crux_evidence_item_ids": _string_list(evidence_budget.get("scope_or_crux_evidence_item_ids")),
+        "foreground_writer_evidence_item_ids": _writer_ids_for_upstream_budget_ids(
+            _string_list(evidence_budget.get("foreground_evidence_item_ids")), upstream_to_writer
+        ),
+        "counterweight_writer_evidence_item_ids": _writer_ids_for_upstream_budget_ids(
+            _string_list(evidence_budget.get("counterweight_evidence_item_ids")), upstream_to_writer
+        ),
+        "scope_or_crux_writer_evidence_item_ids": _writer_ids_for_upstream_budget_ids(
+            _string_list(evidence_budget.get("scope_or_crux_evidence_item_ids")), upstream_to_writer
+        ),
         "rows": [
             _drop_empty(
                 {
-                    "evidence_item_id": row.get("evidence_item_id"),
+                    "writer_evidence_item_ids": _writer_ids_for_upstream_budget_ids(
+                        [str(row.get("evidence_item_id") or "").strip()], upstream_to_writer
+                    ),
+                    "upstream_lineage_id": row.get("evidence_item_id"),
                     "budget_class": row.get("budget_class"),
                     "memo_role": row.get("memo_role"),
                     "group_id": row.get("group_id"),
@@ -464,6 +529,74 @@ def _compact_evidence_budget(evidence_budget: dict[str, Any]) -> dict[str, Any]:
             if isinstance(row, dict)
         ],
     }
+
+
+def _normalize_evidence_id_list(
+    evidence_ids: list[str],
+    upstream_to_writer: dict[str, list[str]],
+    rewrites: list[dict[str, Any]],
+) -> list[str]:
+    normalized = []
+    for evidence_id in evidence_ids:
+        replacements = upstream_to_writer.get(evidence_id, [])
+        if replacements and not (len(replacements) == 1 and replacements[0] == evidence_id):
+            normalized.extend(replacements)
+            rewrites.append(
+                {
+                    "field": "moves.evidence_item_ids",
+                    "from": evidence_id,
+                    "to": replacements,
+                }
+            )
+            continue
+        normalized.append(evidence_id)
+    return _dedupe(normalized)
+
+
+def _writer_ids_for_upstream_budget_ids(upstream_ids: list[str], upstream_to_writer: dict[str, list[str]]) -> list[str]:
+    writer_ids = []
+    for evidence_id in upstream_ids:
+        writer_ids.extend(upstream_to_writer.get(evidence_id, [evidence_id]))
+    return _dedupe([evidence_id for evidence_id in writer_ids if evidence_id])
+
+
+def _must_account_writer_evidence_ids(inputs: dict[str, Any]) -> list[str]:
+    packet = _dict(inputs.get("memo_ready_packet"))
+    original_mandatory = {
+        str(item.get("item_id") or "").strip()
+        for item in _list(packet.get("evidence_items"))
+        if isinstance(item, dict)
+        and str(item.get("item_id") or "").strip()
+        and (bool(item.get("must_use")) or str(item.get("obligation_level") or "") == "must_include")
+    }
+    return sorted(original_mandatory.union(_foreground_and_counterweight_writer_ids(inputs)))
+
+
+def _arm_c_required_evidence_ids(prioritized_argument: dict[str, Any]) -> set[str]:
+    return {
+        evidence_id
+        for move in _list(prioritized_argument.get("moves"))
+        if isinstance(move, dict) and bool(move.get("required", True))
+        for evidence_id in _string_list(move.get("evidence_item_ids"))
+    }
+
+
+def _upstream_to_writer_id_map(packet: dict[str, Any]) -> dict[str, list[str]]:
+    mapping: dict[str, list[str]] = {}
+    for item in _list(packet.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        writer_id = str(item.get("item_id") or "").strip()
+        if not writer_id:
+            continue
+        mapping.setdefault(writer_id, [])
+        if writer_id not in mapping[writer_id]:
+            mapping[writer_id].append(writer_id)
+        for upstream_id in _string_list(_dict(item.get("lineage")).get("covered_evidence_item_ids")):
+            mapping.setdefault(upstream_id, [])
+            if writer_id not in mapping[upstream_id]:
+                mapping[upstream_id].append(writer_id)
+    return mapping
 
 
 def _arm_c_move_to_argument_move(move: dict[str, Any]) -> dict[str, Any]:

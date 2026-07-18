@@ -13,6 +13,11 @@ from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import (
     load_frozen_arm_b_inputs,
     run_arm_b_b0,
 )
+from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+    build_arm_c_projection,
+    normalize_arm_c_prioritized_argument_ids,
+    verify_arm_c_prioritized_argument,
+)
 
 
 FROZEN_EGGS = Path("artifacts/truth_boundary_verification_eggs_live/briefing")
@@ -108,6 +113,87 @@ def test_comparison_to_current_marks_missing_baseline_not_applicable(tmp_path) -
     assert baseline["status"] == "missing"
     assert comparison["status"] == "not_applicable"
     assert comparison["quality_assessment"]["semantic_flags"] == ["baseline_unavailable"]
+
+
+def test_arm_c_normalizes_upstream_lineage_ids_to_writer_evidence_ids() -> None:
+    inputs = {
+        "memo_ready_packet": {
+            "decision_question": "What follows?",
+            "evidence_items": [
+                {
+                    "item_id": "writer_item_001",
+                    "lineage": {"covered_evidence_item_ids": ["claim:c001", "relation:r001"]},
+                }
+            ],
+        },
+        "analyst_decision_model": {
+            "decision_question": "What follows?",
+            "direct_answer": "The answer is bounded.",
+            "confidence": "medium",
+        },
+        "evidence_budget": {"foreground_evidence_item_ids": ["relation:r001"], "counterweight_evidence_item_ids": []},
+    }
+    payload = {
+        "schema_id": "arm_c_prioritized_argument_v1",
+        "decision_question": "What follows?",
+        "frozen_direct_answer": "The answer is bounded.",
+        "confidence": "medium",
+        "argument_thesis": "The answer follows from the bounded relation.",
+        "moves": [
+            {
+                "move_id": "m1",
+                "primary_section": "answer_evidence",
+                "proposition": "A relation carries the answer.",
+                "warrant": "The relation is in the verified lineage.",
+                "decision_effect": "It supports the answer.",
+                "evidence_item_ids": ["relation:r001"],
+            }
+        ],
+        "evidence_accounting": [
+            {"evidence_item_id": "relation:r001", "disposition": "owned", "rationale": "Used in the move."}
+        ],
+    }
+
+    normalized, normalization_report = normalize_arm_c_prioritized_argument_ids(inputs, payload)
+    report = verify_arm_c_prioritized_argument(inputs, normalized)
+
+    assert normalization_report["rewrite_count"] == 2
+    assert normalized["moves"][0]["evidence_item_ids"] == ["writer_item_001"]
+    assert normalized["evidence_accounting"][0]["evidence_item_id"] == "writer_item_001"
+    assert report["status"] == "pass"
+
+
+def test_arm_c_projection_uses_prioritized_move_required_ids_not_legacy_must_use() -> None:
+    base_inputs = load_frozen_arm_b_inputs(FROZEN_EGGS)
+    packet = dict(base_inputs["memo_ready_packet"])
+    items = []
+    for item in packet["evidence_items"]:
+        copied = dict(item)
+        copied["must_use"] = copied["item_id"] in {"decision_writer_item_001", "decision_writer_item_004"}
+        copied["obligation_level"] = "must_include" if copied["must_use"] else copied.get("obligation_level", "")
+        items.append(copied)
+    packet["evidence_items"] = items
+    inputs = {**base_inputs, "memo_ready_packet": packet}
+    argument = {
+        "schema_id": "arm_c_prioritized_argument_v1",
+        "moves": [
+            {
+                "move_id": "m1",
+                "primary_section": "answer_evidence",
+                "proposition": "Use the selected support.",
+                "warrant": "It carries the answer.",
+                "decision_effect": "It supports the answer.",
+                "evidence_item_ids": ["decision_writer_item_001"],
+            }
+        ],
+    }
+
+    projection = build_arm_c_projection(inputs, argument)
+
+    assert projection["status"] == "pass"
+    required = projection["section_contract_overlap_report"]["required_by_section"]
+    assert required["answer_evidence"] == ["decision_writer_item_001"]
+    assert "decision_writer_item_004" not in projection["projection_evaluation_packet"]["mandatory_evidence_ids"]
 
 
 def test_arm_b_b0_captures_initial_and_retry_prompts(tmp_path) -> None:
