@@ -194,14 +194,36 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["answer_spine"]["default_read"] == "Adopt option A only where the narrower setting is not decisive."
     assert packet["writer_packet"]["schema_id"] == "decision_writer_packet_v1"
     assert packet["evidence_items"][0]["reader_claim"] == "Option A improves the main outcome."
+    assert packet["evidence_items"][0]["source_ids"] == ["s1"]
     assert packet["evidence_items"][0]["must_use"] is True
     assert packet["evidence_items"][0]["quantities"][0]["value"] == "20% improvement"
+    assert packet["evidence_items"][0]["key_source_facts"]
+    assert any("20%" in fact["text"] for fact in packet["evidence_items"][0]["key_source_facts"])
+    assert packet["source_fact_preservation_report"]["status"] == "ready"
     assert packet["memo_obligations"]["required_count"] == 2
     assert packet["decision_synthesis_contract"]["required_memo_obligations"]
     assert packet["decision_obligation_plan"]["schema_id"] == "decision_obligation_plan_v1"
     assert packet["writer_packet_writeability_report"]["schema_id"] == "writer_packet_writeability_report_v1"
     assert packet["decision_memo_contract"]["schema_id"] == "decision_memo_contract_v1"
     assert packet["writer_decision_interface"]["schema_id"] == "writer_decision_interface_v1"
+
+
+def test_memo_ready_adapter_maps_source_labels_to_stable_source_ids() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    writer_packet = bundle["decision_writer_packet"]
+    writer_packet["evidence_units"][0]["source_ids"] = []
+    writer_packet["evidence_units"][0]["quantities"][0]["source_ids"] = []
+    writer_packet["evidence_units"][0]["source_excerpts"][0]["source_ids"] = []
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        writer_packet,
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    support = packet["evidence_items"][0]
+    assert support["source_ids"] == ["s1"]
+    assert all(fact["source_ids"] == ["s1"] for fact in support["key_source_facts"] if fact.get("source_ids"))
+    assert packet["source_fact_preservation_report"]["must_use_item_ids_without_source_ids"] == []
 
 
 def test_memo_ready_packet_prefers_parallel_analyst_source_weight_judgments() -> None:
@@ -372,6 +394,8 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert interface["decision_evidence_table"][0]["answer_relation"] == "supports_answer"
     assert interface["decision_evidence_table"][0]["natural_bottom_line"] == "Option A improved the main outcome in the studied setting."
     assert interface["decision_evidence_table"][0]["must_preserve_terms"] == ["20% improvement", "studied setting"]
+    assert interface["decision_evidence_table"][0]["source_ids"] == ["s1"]
+    assert interface["decision_evidence_table"][0]["key_source_facts"]
     assert interface["decision_evidence_table"][0]["source_local_context"]["population"] == "studied setting"
     assert interface["decision_evidence_table"][0]["source_local_context"]["outcome_or_endpoint"] == "main outcome"
     assert interface["quantity_anchors"][0]["value"] == "20% improvement"
@@ -389,6 +413,7 @@ def test_writer_decision_interface_compiles_visible_decision_context() -> None:
     assert "source_appraisal_summary_uninformative" in quality["warnings"]
     assert quality["source_appraisal_row_count"] == 2
     assert quality["informative_source_appraisal_row_count"] == 0
+    assert quality["key_source_fact_count"] >= 1
 
 
 def test_writer_quality_ignores_internal_outline_writing_goals() -> None:

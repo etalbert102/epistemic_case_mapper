@@ -1286,7 +1286,7 @@ def run_memo_ready_final_polish(
     before_validation = build_validated_final_polish_validation_report(memo, packet, original_memo=memo)
     report = {
         "schema_id": "memo_ready_final_polish_report_v1",
-        "method": "validated_whole_memo_polish",
+        "method": "validated_decision_editor_rewrite",
         "status": "skipped_prompt_backend" if active_backend.strip() == "prompt" else "not_run",
         "accepted": False,
         "applied": False,
@@ -1385,24 +1385,46 @@ def build_validated_final_polish_prompt(memo: str, packet: dict[str, Any]) -> st
         for row in _list(contracts.get("rows"))[:24]
         if isinstance(row, dict)
     ]
+    quantity_lines = [
+        f"- {row.get('quantity')} ({row.get('decision_role') or 'decision-relevant quantity'}; evidence {row.get('evidence_id')})"
+        for row in quantity_rows
+        if row.get("quantity")
+    ]
+    quantity_context = "\n".join(quantity_lines) if quantity_lines else "- Use the important quantities already present in the memo body."
+    memo_body = _memo_body_for_decision_editor(memo)
     return (
-        "You are a senior evidence analyst polishing a decision memo for a human decision-maker.\n\n"
-        "Task: rewrite the memo so it is clearer, more fluent, and more decision-useful while preserving the same answer and evidence payload.\n\n"
-        "Hard constraints:\n"
-        "- Return only Markdown.\n"
-        "- Preserve the exact Decision Question.\n"
-        "- Preserve the bottom-line stance and scope boundaries already present.\n"
-        "- Preserve bracketed citations exactly; use existing source IDs or already rendered source labels only.\n"
-        "- Preserve all load-bearing quantities and intervals already present.\n"
-        "- Preserve priority quantities when their related claim is discussed.\n"
-        "- Do not add new factual claims beyond what the memo supports.\n"
-        "- Reduce repetition, citation clutter, and mechanical phrasing.\n"
-        "- Use one source-weighting section; merge duplicate source-hierarchy/source-weighting material.\n"
-        "- Keep section roles distinct: source weighting, best-current-read case, boundaries/update conditions, practical implication.\n\n"
+        "You are an expert decision analyst writing a decision-ready memo.\n\n"
+        "Rewrite the memo body below into a sharper decision memo for the decision question.\n"
+        "Optimize for decision usefulness and reader judgment, not preservation of the current section structure.\n\n"
+        "Required shape:\n"
+        "# Decision Memo: <short title>\n"
+        "**Decision Question:** <the exact decision question>\n"
+        "**Bottom Line:** <one crisp paragraph with the answer, confidence, and scope>\n\n"
+        "Then write three or four short sections with natural headings chosen for this case.\n\n"
+        "Writing goals:\n"
+        "- Make the answer feel argued, not merely summarized.\n"
+        "- Explain why the answer beats plausible alternatives or narrower scoped answers.\n"
+        "- Integrate source weighting into the argument instead of producing a separate checklist.\n"
+        "- Mention each major source role once, where it matters: answer driver, boundary, calibrator, crux, or context.\n"
+        "- Avoid repeating the same bottom-line conclusion across sections.\n"
+        "- Keep source attributions already present in the memo body, using the same bracket labels.\n"
+        "- Preserve uncertainty and scope limits from the memo body.\n"
+        "- Include what would change the answer, stated specifically and concisely.\n"
+        "- Include practical implication once.\n\n"
         f"Decision Question:\n{question}\n\n"
-        f"Priority quantity contracts:\n{json.dumps(quantity_rows, indent=2, ensure_ascii=False)}\n\n"
-        f"Memo to polish:\n{memo.strip()}\n"
+        f"Important quantities to keep when relevant:\n{quantity_context}\n\n"
+        "Return only the revised memo body in Markdown. Leave source lists, reference definitions, and citation trace formatting to deterministic presentation.\n\n"
+        f"Memo body:\n{memo_body.strip()}\n"
     )
+
+
+def _memo_body_for_decision_editor(memo: str) -> str:
+    text = str(memo or "").strip()
+    if not text:
+        return ""
+    text = re.split(r"(?m)^##\s+Sources\s*$", text, maxsplit=1)[0].strip()
+    text = re.sub(r"(?m)^\[[^\]\n]+\]:\s+\S+.*(?:\n|$)", "", text).strip()
+    return text
 
 
 def build_validated_final_polish_validation_report(
@@ -1416,6 +1438,8 @@ def build_validated_final_polish_validation_report(
     analyst_utilization = build_analyst_judgment_utilization_report(memo, packet)
     priority_coverage = build_priority_quantity_contract_coverage_report(memo, build_priority_quantity_contracts(packet))
     diagnostics = build_memo_polish_diagnostics(original_memo, memo, packet)
+    unsupported_warnings = _list(diagnostics.get("unsupported_addition_warnings"))
+    high_confidence_unsupported = high_confidence_unsupported_additions(diagnostics)
     surface = _final_polish_surface_report(memo, packet)
     hard_failures = []
     if not surface.get("decision_question_preserved"):
@@ -1424,10 +1448,9 @@ def build_validated_final_polish_validation_report(
         hard_failures.append("unknown_source_ids")
     if surface.get("corruption_warnings"):
         hard_failures.append("surface_corruption")
-    if high_confidence_unsupported_additions(diagnostics):
-        hard_failures.append("unsupported_additions")
     warning_count = (
         len(_list(hard_failures))
+        + len(unsupported_warnings)
         + int(retention.get("missing_mandatory_count", 0) or 0)
         + int(retention.get("missing_quantity_count", 0) or 0)
         + int(priority_coverage.get("missing_contract_count", 0) or 0)
@@ -1445,6 +1468,14 @@ def build_validated_final_polish_validation_report(
         "priority_quantity_contract_coverage_report": priority_coverage,
         "surface_report": surface,
         "polish_diagnostics": diagnostics,
+        "unsupported_additions_report": {
+            "schema_id": "unsupported_additions_advisory_report_v1",
+            "status": "warning" if unsupported_warnings else "ready",
+            "warning_count": len(unsupported_warnings),
+            "high_confidence_warning_count": len(high_confidence_unsupported),
+            "warnings": unsupported_warnings,
+            "policy": "advisory_for_final_editor_rewrite",
+        },
         "issues": _validated_final_polish_issues_from_reports(
             hard_failures=hard_failures,
             retention=retention,
@@ -1555,6 +1586,7 @@ def _final_polish_surface_report(memo: str, packet: dict[str, Any]) -> dict[str,
         "per_1_day": r"\bper\s+1\s+day\b",
         "jam_source_typo": r"\(JAM\)|\bJAM\b(?!A)",
         "stitched_sentence_punctuation": r"\.;",
+        "reader_memo_furniture": r"(?im)^\s*\*{0,2}(?:to|from|date|subject)\s*:",
     }
     for issue, pattern in corruption_patterns.items():
         if re.search(pattern, text):

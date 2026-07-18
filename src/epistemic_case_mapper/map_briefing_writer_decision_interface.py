@@ -124,6 +124,8 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         warnings.append("missing_counterweights")
     if not _list(interface.get("quantity_anchors")):
         warnings.append("missing_quantity_anchors")
+    if _list(interface.get("must_use_evidence")) and not any(_list(row.get("key_source_facts")) for row in _list(interface.get("must_use_evidence")) if isinstance(row, dict)):
+        warnings.append("missing_key_source_facts_for_visible_evidence")
     analyst_spine = _dict(interface.get("analyst_decision_spine"))
     if not _list(analyst_spine.get("decision_moves")):
         warnings.append("missing_analyst_decision_spine_moves")
@@ -165,6 +167,7 @@ def build_writer_decision_interface_quality_report(interface: dict[str, Any]) ->
         "warnings": warnings,
         "must_use_evidence_count": len(_list(interface.get("must_use_evidence"))),
         "quantity_anchor_count": len(_list(interface.get("quantity_anchors"))),
+        "key_source_fact_count": sum(len(_list(row.get("key_source_facts"))) for row in _list(interface.get("must_use_evidence")) if isinstance(row, dict)),
         "reasoning_move_count": len(_list(hierarchy.get("reasoning_moves"))),
         "analyst_decision_spine_move_count": len(_list(analyst_spine.get("decision_moves"))),
         "rescued_context_count": _reasoning_hierarchy_rescue_count(hierarchy),
@@ -592,6 +595,7 @@ def _writer_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
             key: calibrate_text_for_writer(value, item)
             for key, value in _writer_source_local_context(item).items()
         },
+        "key_source_facts": _key_source_facts_for_writer(item),
         "natural_bottom_line": _short_text(calibrate_text_for_writer(str(item.get("natural_bottom_line") or ""), item), 360),
         "must_preserve_terms": _string_list(item.get("must_preserve_terms"))[:10],
         "lineage": _dict(item.get("lineage")),
@@ -660,6 +664,26 @@ def _quantity_anchors(visible_items: list[dict[str, Any]]) -> list[dict[str, Any
                     "role": item.get("role"),
                 }
             )
+    return rows
+
+
+def _key_source_facts_for_writer(item: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for fact in _list(item.get("key_source_facts"))[:12]:
+        if not isinstance(fact, dict):
+            continue
+        rows.append(
+            _drop_empty(
+                {
+                    "fact_type": fact.get("fact_type"),
+                    "text": _short_text(calibrate_text_for_writer(str(fact.get("text") or ""), item), 420),
+                    "source_ids": _string_list(fact.get("source_ids")) or _string_list(item.get("source_ids")),
+                    "quantity_values": _string_list(fact.get("quantity_values"))[:6],
+                    "decision_use": _short_text(calibrate_text_for_writer(str(fact.get("decision_use") or ""), item), 280),
+                    "evidence_item_ids": _string_list(fact.get("evidence_item_ids"))[:8],
+                }
+            )
+        )
     return rows
 
 

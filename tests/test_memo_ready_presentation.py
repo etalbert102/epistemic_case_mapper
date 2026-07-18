@@ -65,6 +65,66 @@ def test_presentation_normalization_converts_parenthetical_source_ids_to_citatio
     assert "normalized_parenthetical_source_id_citations" in result["report"]["changes"]
 
 
+def test_presentation_normalization_removes_reader_internal_evidence_ids() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [{"source_id": "SRC_A", "source_label": "Study A 2025", "source_url": "https://example.test/a"}],
+        "evidence_items": [
+            {
+                "item_id": "decision_writer_item_001",
+                "reader_claim": "Study A supports option A.",
+                "source_ids": ["SRC_A"],
+            }
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\n"
+        "**Bottom Line:** Study A supports option A (decision_writer_item_001) [SRC_A]. "
+        "Do not alter ordinary parentheses (CVD)."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "decision_writer_item_001" not in result["memo"]
+    assert "[Study A 2025]" in result["memo"]
+    assert "(CVD)" in result["memo"]
+    assert "removed_reader_internal_evidence_ids" in result["report"]["changes"]
+
+
+def test_presentation_normalization_does_not_insert_source_weighting_when_embedded() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "SRC_A", "source_label": "Study A 2025", "source_url": "https://example.test/a"},
+            {"source_id": "SRC_B", "source_label": "Study B 2025", "source_url": "https://example.test/b"},
+            {"source_id": "SRC_C", "source_label": "Study C 2025", "source_url": "https://example.test/c"},
+        ],
+        "canonical_decision_writer_packet": {
+            "source_weighted_answer_frame": {
+                "lanes": {
+                    "primary_answer_drivers": [{"source_ids": ["SRC_A"]}],
+                    "scope_limiters": [{"source_ids": ["SRC_B"]}],
+                    "quantitative_or_interpretive_calibrators": [{"source_ids": ["SRC_C"]}],
+                }
+            }
+        },
+    }
+    memo = (
+        "# Decision Memo: Option A\n\n"
+        "**Decision Question:** Should option A be adopted?\n\n"
+        "**Bottom Line:** Adopt option A with a narrow scope [SRC_A].\n\n"
+        "## Evidence for the Decision\n\n"
+        "The answer is driven by Study A [SRC_A]. Study B bounds the scope [SRC_B]. "
+        "Study C calibrates the magnitude and identifies what would change the decision [SRC_C]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert result["memo"].count("How to Weight the Evidence") == 0
+    assert "inserted_source_weighting" not in result["report"]["changes"]
+
+
 def test_presentation_sources_use_active_source_trail_only() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

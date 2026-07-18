@@ -201,7 +201,6 @@ _SECTION_LOCAL_EVIDENCE_ROOTS = {
 
 _SECTION_REQUIRED_EVIDENCE_ROOTS = {
     "analyst_argument_moves",
-    "decision_argument_section",
     "evidence_context",
     "priority_quantity_contracts",
     "protected_quantity_sets",
@@ -313,16 +312,17 @@ def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> lis
 
 
 def _quantity_dedupe_key(quantity: dict[str, Any]) -> str:
-    bundle_id = str(quantity.get("evidence_bundle_id") or "").strip()
+    bundle = _dict(quantity.get("assertion_bundle"))
+    bundle_id = str(quantity.get("evidence_bundle_id") or bundle.get("evidence_bundle_id") or "").strip()
     if bundle_id:
         return f"bundle:{bundle_id}"
-    value = str(quantity.get("value") or "").strip().lower()
+    value = str(quantity.get("value") or bundle.get("value") or bundle.get("estimate") or "").strip().lower()
     semantic_parts = [
         value,
-        str(quantity.get("endpoint") or "").strip().lower(),
-        str(quantity.get("population") or "").strip().lower(),
-        str(quantity.get("exposure_or_comparator") or "").strip().lower(),
-        str(quantity.get("statistic_type") or "").strip().lower(),
+        str(quantity.get("endpoint") or bundle.get("endpoint") or "").strip().lower(),
+        str(quantity.get("population") or bundle.get("population") or "").strip().lower(),
+        str(quantity.get("exposure_or_comparator") or bundle.get("exposure_or_comparator") or "").strip().lower(),
+        str(quantity.get("statistic_type") or bundle.get("statistic_type") or "").strip().lower(),
     ]
     semantic_key = "|".join(re.sub(r"\s+", " ", part) for part in semantic_parts if part)
     return semantic_key or re.sub(r"\s+", " ", value)
@@ -1172,7 +1172,8 @@ def _adjacent_source_mismatch_warnings(
             contract = contracts_by_id.get(evidence_id, {})
             tag_sources.update(_string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids")))
         adjacent_sources = _adjacent_bracket_source_ids(text, match, all_known_source_ids)
-        if adjacent_sources and tag_sources and not set(adjacent_sources).issubset(tag_sources):
+        adjacent_set = set(adjacent_sources)
+        if adjacent_set and tag_sources and not adjacent_set.intersection(tag_sources):
             warnings.append(
                 {
                     "evidence_ids": evidence_ids,

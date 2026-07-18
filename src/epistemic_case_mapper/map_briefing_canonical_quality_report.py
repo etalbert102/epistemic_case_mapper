@@ -28,6 +28,7 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
     informative_source_notes = sum(1 for row in source_notes if _informative_source_weight_note(row))
     checklist = _list(packet.get("mandatory_retention_checklist"))
     inventory_items = _inventory_items(_dict(packet.get("organized_evidence_inventory")))
+    key_source_fact_count = sum(len(_list(row.get("key_source_facts"))) for row in inventory_items if isinstance(row, dict))
     warnings = _canonical_packet_warnings(
         skeleton=skeleton,
         classification=classification,
@@ -43,6 +44,7 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         argument_spine=argument_spine,
         argument_spine_report=argument_spine_report,
         inventory_items=inventory_items,
+        key_source_fact_count=key_source_fact_count,
         language_contracts=language_contracts,
     )
     return {
@@ -55,6 +57,7 @@ def build_canonical_decision_writer_packet_quality_report(canonical_packet: dict
         "source_weighted_lane_count": len(weighted_lanes),
         "source_weighted_item_count": sum(len(_list(rows)) for rows in weighted_lanes.values()),
         "organized_evidence_count": len(inventory_items),
+        "key_source_fact_count": key_source_fact_count,
         "counterweight_disposition_count": len(counterweights),
         "source_weight_note_count": len(source_notes),
         "source_weight_judgment_count": len(source_judgments),
@@ -94,6 +97,8 @@ def _canonical_packet_warnings(**parts: Any) -> list[str]:
         warnings.append("argument_spine_warning")
     if _rows_missing_source_ids(parts):
         warnings.append("source_id_missing_from_canonical_rows")
+    if parts.get("inventory_items") and not parts.get("key_source_fact_count"):
+        warnings.append("key_source_facts_missing_from_canonical_inventory")
     return warnings
 
 

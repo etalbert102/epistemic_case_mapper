@@ -35,6 +35,31 @@ def test_polish_diagnostics_allows_rephrased_existing_comparison() -> None:
     assert diagnostics["unsupported_addition_count"] == 0
 
 
+def test_polish_diagnostics_allows_packet_supported_editorial_paraphrase() -> None:
+    before = "## Decision Brief\n\nDietary cholesterol is not a significant CVD driver for most people [s1]."
+    after = (
+        "## Decision Brief\n\nDietary cholesterol is not a significant CVD driver for most people, "
+        "supporting heart-healthy patterns rather than strict cholesterol-based restrictions [s1]."
+    )
+    packet = {
+        "answer_spine": {
+            "scope": "supporting a shift toward heart-healthy patterns",
+            "boundary": "a shift in official guidelines back to strict individual cholesterol limits would change the answer",
+        },
+        "evidence_items": [
+            {
+                "claim": "People with high LDL-c may still require restriction of saturated fats and dietary cholesterol.",
+                "source_ids": ["s1"],
+            }
+        ],
+    }
+
+    diagnostics = build_memo_polish_diagnostics(before, after, packet)
+
+    assert diagnostics["unsupported_addition_count"] == 0
+    assert not high_confidence_unsupported_additions(diagnostics)
+
+
 def test_prose_quality_diagnostics_flags_repeated_starts_and_dense_citations() -> None:
     memo = (
         "## Decision Brief\n\n"

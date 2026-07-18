@@ -49,7 +49,7 @@ def run_parallel_memo_ready_section_generation(
         evidence_contracts = _section_owned_evidence_contracts(sections)
     known_source_ids = set(_string_list(section_plan.get("known_source_ids")))
     known_source_aliases = _source_alias_map(section_plan.get("known_source_aliases"))
-    known_evidence_ids = {str(row.get("evidence_id") or "") for row in evidence_contracts}
+    known_evidence_ids = _known_evidence_id_aliases(evidence_contracts)
     num_predict = memo_ready_section_num_predict()
     report = {
         "schema_id": "memo_ready_section_generation_report_v1",
@@ -77,12 +77,12 @@ def run_parallel_memo_ready_section_generation(
         )
 
     section_reports = run_parallel(sections, run_section, max_workers=model_parallelism(backend))
-    failed = [row for row in section_reports if not row.get("accepted")]
+    blocking_failed = [row for row in section_reports if _section_has_blocking_failure(row)]
     combined_prompt = _combined_section_prompts(sections, whole_prompt=whole_prompt)
     combined_raw = "\n\n".join(
         f"<!-- {row.get('heading')} raw -->\n{row.get('raw', '')}" for row in section_reports
     )
-    if failed:
+    if blocking_failed:
         report.update(
             {
                 "status": "section_synthesis_failed",
@@ -92,11 +92,13 @@ def run_parallel_memo_ready_section_generation(
             }
         )
         return {"memo": "", "prompt": combined_prompt, "raw": combined_raw, "report": report}
+    section_warning_issues = _section_warning_issues(section_reports)
     report.update(
         {
-            "status": "accepted",
-            "accepted": True,
+            "status": "accepted_with_section_warnings" if section_warning_issues else "accepted",
+            "accepted": not section_warning_issues,
             "section_reports": [_public_section_report(row) for row in section_reports],
+            "issues": section_warning_issues,
         }
     )
     tagged_memo = _assemble_section_synthesis_memo(section_plan, section_reports)
@@ -205,6 +207,8 @@ def _run_section(
             used_evidence = evidence_ids_in_text(markdown, contracts)
             unknown_evidence = unknown_evidence_ids_in_text(markdown, contracts, known_source_ids=known_source_ids)
             reconciliation = build_evidence_reconciliation_report(markdown, markdown, contracts, known_source_ids=known_source_ids)
+            unknown_evidence = [evidence_id for evidence_id in unknown_evidence if evidence_id not in known_evidence_ids]
+            reconciliation = _reconciliation_without_global_known_unknowns(reconciliation, known_evidence_ids)
         else:
             markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
             markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
@@ -351,6 +355,79 @@ def _section_reconciliation_issues(reconciliation: dict[str, Any]) -> list[str]:
         if quantities:
             issues.append(f"unsupported_untagged_quantity:{quantities}")
     return issues
+
+
+def _known_evidence_id_aliases(contracts: list[dict[str, Any]]) -> set[str]:
+    aliases: set[str] = set()
+    for row in contracts:
+        if not isinstance(row, dict):
+            continue
+        evidence_id = str(row.get("evidence_id") or "").strip()
+        if not evidence_id:
+            continue
+        aliases.add(evidence_id)
+        match = re.match(r"^(.*?)(\d+)$", evidence_id)
+        if match:
+            prefix, digits = match.groups()
+            unpadded = str(int(digits)) if digits.strip("0") else "0"
+            aliases.add(f"{prefix}{unpadded}")
+    return aliases
+
+
+def _reconciliation_without_global_known_unknowns(
+    reconciliation: dict[str, Any],
+    known_evidence_ids: set[str],
+) -> dict[str, Any]:
+    if not reconciliation:
+        return reconciliation
+    unknown = [
+        evidence_id
+        for evidence_id in _string_list(reconciliation.get("unknown_evidence_ids"))
+        if evidence_id not in known_evidence_ids
+    ]
+    if len(unknown) == len(_string_list(reconciliation.get("unknown_evidence_ids"))):
+        return reconciliation
+    updated = dict(reconciliation)
+    updated["unknown_evidence_ids"] = unknown
+    if not unknown and updated.get("status") == "warning":
+        residual = [
+            *_string_list(updated.get("missing_required_evidence_ids")),
+            *_list(updated.get("quantity_warnings")),
+            *_list(updated.get("source_mismatch_warnings")),
+            *_list(updated.get("unsupported_quantity_warnings")),
+            *_list(updated.get("untagged_unsupported_quantity_warnings")),
+        ]
+        updated["status"] = "warning" if residual else "ready"
+    return updated
+
+
+def _section_has_blocking_failure(section_report: dict[str, Any]) -> bool:
+    if section_report.get("accepted"):
+        return False
+    issues = [str(issue or "") for issue in _list(section_report.get("issues"))]
+    if not str(section_report.get("markdown") or "").strip():
+        return True
+    return any(
+        issue == "backend_error"
+        or issue == "missing_exact_heading"
+        or issue.startswith("unknown_source_ids:")
+        or issue.startswith("unknown_evidence_ids:")
+        or issue.startswith("unknown_evidence_id:")
+        for issue in issues
+    )
+
+
+def _section_warning_issues(section_reports: list[dict[str, Any]]) -> list[str]:
+    warnings = []
+    for row in section_reports:
+        if row.get("accepted"):
+            continue
+        section_id = str(row.get("section_id") or row.get("heading") or "section").strip()
+        for issue in _list(row.get("issues")):
+            issue_text = str(issue or "").strip()
+            if issue_text:
+                warnings.append(f"{section_id}:{issue_text}")
+    return _dedupe(warnings)
 
 
 def _section_retry_prompt(

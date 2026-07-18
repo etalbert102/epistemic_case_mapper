@@ -591,7 +591,9 @@ def _memo_ready_item(
         "reader_claim": claim,
         "source_label": source_label,
         "source_labels": _string_list(cluster.get("source_labels")),
+        "source_ids": _string_list(cluster.get("source_ids")),
         "quantities": quantities,
+        "key_source_facts": _cluster_key_source_facts(cluster, quantities),
         "quantity_slots": build_quantity_slots(quantities),
         "quantity_tuples": quantity_tuples,
         "quantity_warnings": quantity_warnings,
@@ -625,6 +627,67 @@ def _memo_ready_item(
         },
         "must_use": must_use,
     }
+
+
+def _cluster_key_source_facts(cluster: dict[str, Any], quantities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    facts = []
+    source_ids = _string_list(cluster.get("source_ids"))
+    if bottom_line := str(cluster.get("natural_bottom_line") or "").strip():
+        facts.append(
+            _drop_empty(
+                {
+                    "fact_type": "source_bottom_line",
+                    "text": _short_text(bottom_line, 520),
+                    "source_ids": source_ids,
+                    "decision_use": _short_text(cluster.get("why_it_matters"), 360),
+                }
+            )
+        )
+    if excerpt := str(cluster.get("source_excerpt") or "").strip():
+        facts.append(
+            _drop_empty(
+                {
+                    "fact_type": "source_excerpt_anchor",
+                    "text": _short_text(excerpt, 520),
+                    "source_ids": source_ids,
+                    "decision_use": "Use as local source-grounding when it supplies study scale, endpoint, estimate, comparator, scope, or limitation detail.",
+                }
+            )
+        )
+    for quantity in _list(quantities):
+        if not isinstance(quantity, dict):
+            continue
+        value = str(quantity.get("value") or "").strip()
+        if not value:
+            continue
+        facts.append(
+            _drop_empty(
+                {
+                    "fact_type": "quantity_context",
+                    "text": _short_text("; ".join(part for part in (value, str(quantity.get("interpretation") or "")) if part), 420),
+                    "source_ids": _string_list(quantity.get("source_ids")) or source_ids,
+                    "quantity_values": [value],
+                    "decision_use": _short_text(quantity.get("interpretation"), 280),
+                }
+            )
+        )
+    return _dedupe_key_source_facts(facts)[:10]
+
+
+def _dedupe_key_source_facts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    seen = set()
+    for row in rows:
+        key = (str(row.get("fact_type") or ""), _norm(str(row.get("text") or "")))
+        if not row.get("text") or key in seen:
+            continue
+        seen.add(key)
+        result.append(row)
+    return result
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in ("", None, [], {})}
 
 
 def _answer_spine(packet: dict[str, Any], diagnosticity: dict[str, Any], mandatory: list[dict[str, Any]]) -> dict[str, Any]:

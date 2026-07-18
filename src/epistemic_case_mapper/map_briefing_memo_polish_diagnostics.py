@@ -40,6 +40,7 @@ def build_memo_polish_diagnostics(before: str, after: str, packet: dict[str, Any
 def unsupported_addition_warnings(before: str, after: str, packet: dict[str, Any]) -> list[dict[str, Any]]:
     before_text = _norm(before)
     allowed_text = _norm(" ".join([before, _packet_text_surface(packet)]))
+    allowed_terms = set(_content_terms(allowed_text))
     warnings = []
     for sentence in _sentences(after):
         sentence_norm = _norm(sentence)
@@ -51,7 +52,8 @@ def unsupported_addition_warnings(before: str, after: str, packet: dict[str, Any
         new_terms = [
             term
             for term in _content_terms(sentence)
-            if term not in allowed_text and not _allowed_new_term(term)
+            if not _term_supported_by_allowed_surface(term, allowed_text, allowed_terms)
+            and not _allowed_new_term(term)
         ]
         if new_terms:
             warnings.append(
@@ -117,10 +119,25 @@ def high_confidence_unsupported_additions(diagnostics: dict[str, Any]) -> list[d
 
 
 def _packet_text_surface(packet: dict[str, Any]) -> str:
-    parts: list[str] = []
-    for key in ("decision_question", "answer_spine", "memo_obligations", "evidence_items", "source_trail"):
-        parts.append(str(packet.get(key) or ""))
-    return " ".join(parts)
+    return " ".join(_text_leaves(packet))
+
+
+def _text_leaves(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (int, float, bool)):
+        return [str(value)]
+    if isinstance(value, dict):
+        parts: list[str] = []
+        for item in value.values():
+            parts.extend(_text_leaves(item))
+        return parts
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            parts.extend(_text_leaves(item))
+        return parts
+    return []
 
 
 def _sentences(text: str) -> list[str]:
@@ -145,7 +162,59 @@ def _content_terms(text: str) -> list[str]:
 def _allowed_new_term(term: str) -> bool:
     if term.startswith(("source", "section", "memo")):
         return True
-    return term in {"decision", "evidence", "analysis", "reader", "prose"}
+    return term in {
+        "analysis",
+        "decision",
+        "evidence",
+        "interpretation",
+        "pattern",
+        "patterns",
+        "prose",
+        "reader",
+        "reinforce",
+        "reinforced",
+        "reinforces",
+        "reinforcing",
+        "relationship",
+        "relationships",
+        "valid",
+    }
+
+
+def _term_supported_by_allowed_surface(term: str, allowed_text: str, allowed_terms: set[str]) -> bool:
+    value = str(term or "").strip().lower()
+    if not value:
+        return True
+    if value in allowed_text or value in allowed_terms:
+        return True
+    if _term_variants(value).intersection(allowed_terms):
+        return True
+    if "-" in value:
+        parts = [part for part in value.split("-") if part]
+        substantive_parts = [part for part in parts if part not in {"based", "level", "levels", "specific"}]
+        if substantive_parts and all(_term_supported_by_allowed_surface(part, allowed_text, allowed_terms) for part in substantive_parts):
+            return True
+    return False
+
+
+def _term_variants(term: str) -> set[str]:
+    variants = {term}
+    suffixes = (
+        ("ies", "y"),
+        ("ions", "e"),
+        ("ion", "e"),
+        ("tions", "t"),
+        ("tion", "t"),
+        ("ing", ""),
+        ("ed", ""),
+        ("es", ""),
+        ("s", ""),
+    )
+    for suffix, replacement in suffixes:
+        if term.endswith(suffix) and len(term) > len(suffix) + 3:
+            variants.add(term[: -len(suffix)] + replacement)
+            variants.add(term[: -len(suffix)])
+    return {variant for variant in variants if len(variant) >= 4}
 
 
 def _repeated_sentence_starts(sentences: list[str]) -> list[dict[str, Any]]:
@@ -191,7 +260,9 @@ _STOPWORDS = {
     "have",
     "into",
     "more",
+    "rather",
     "should",
+    "stays",
     "than",
     "that",
     "their",

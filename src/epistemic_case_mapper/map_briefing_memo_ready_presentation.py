@@ -64,6 +64,10 @@ def run_memo_ready_presentation_normalization(
     if next_memo != normalized:
         changes.append("normalized_parenthetical_source_id_citations")
         normalized = next_memo
+    next_memo = _strip_reader_internal_evidence_ids(normalized, packet)
+    if next_memo != normalized:
+        changes.append("removed_reader_internal_evidence_ids")
+        normalized = next_memo
     next_memo = _replace_source_aliases(normalized, source_aliases)
     if next_memo != normalized:
         changes.append("normalized_source_labels")
@@ -143,6 +147,61 @@ def _source_weight_judgments_by_source(packet: dict[str, Any]) -> dict[str, dict
     return by_source
 
 
+def _strip_reader_internal_evidence_ids(memo: str, packet: dict[str, Any]) -> str:
+    evidence_ids = _reader_internal_evidence_ids(packet)
+    if not evidence_ids:
+        return str(memo or "")
+    id_pattern = "|".join(re.escape(evidence_id) for evidence_id in sorted(evidence_ids, key=len, reverse=True))
+    text = str(memo or "")
+    text = re.sub(rf"\s*\((?:{id_pattern})(?:\s*,\s*(?:{id_pattern}))*\)", "", text)
+    text = re.sub(rf"\s*\b(?:{id_pattern})\b", "", text)
+    text = re.sub(r"\s+([,.;:])", r"\1", text)
+    text = re.sub(r"\(\s*\)", "", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text
+
+
+def _reader_internal_evidence_ids(packet: dict[str, Any]) -> set[str]:
+    ids: set[str] = set()
+    for row in _list(packet.get("evidence_items")):
+        if not isinstance(row, dict):
+            continue
+        item_id = str(row.get("item_id") or "").strip()
+        if _is_reader_internal_evidence_id(item_id):
+            ids.add(item_id)
+    canonical = _dict(packet.get("canonical_decision_writer_packet"))
+    for key in (
+        "mandatory_retention_checklist",
+        "evidence_language_contracts",
+        "source_weighted_answer_frame",
+    ):
+        _collect_internal_evidence_ids(canonical.get(key), ids)
+    return ids
+
+
+def _collect_internal_evidence_ids(value: Any, ids: set[str]) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in {"item_id", "evidence_id"}:
+                item_id = str(child or "").strip()
+                if _is_reader_internal_evidence_id(item_id):
+                    ids.add(item_id)
+            elif key in {"item_ids", "evidence_ids", "evidence_item_ids"}:
+                for item_id in _string_list(child):
+                    if _is_reader_internal_evidence_id(item_id):
+                        ids.add(item_id)
+            else:
+                _collect_internal_evidence_ids(child, ids)
+        return
+    if isinstance(value, list):
+        for child in value:
+            _collect_internal_evidence_ids(child, ids)
+
+
+def _is_reader_internal_evidence_id(value: str) -> bool:
+    return bool(re.fullmatch(r"(?:decision_writer_item|evidence_item|claim|bundle)_[A-Za-z0-9_-]+", str(value or "").strip()))
+
+
 def _readable_main_use(value: Any) -> str:
     return str(value or "unspecified").replace("_", " ")
 
@@ -156,12 +215,28 @@ def _replace_sources_section(memo: str, packet: dict[str, Any]) -> str:
 
 
 def _ensure_source_weighting_section(memo: str, packet: dict[str, Any]) -> str:
-    if _has_heading(memo, "how to weight the evidence"):
+    if _has_heading(memo, "how to weight the evidence") or _has_embedded_source_weighting(memo):
         return memo
     section = _source_weighting_section(packet)
     if not section:
         return memo
     return _insert_after_bottom_line(memo, section)
+
+
+def _has_embedded_source_weighting(memo: str) -> bool:
+    body = re.split(r"(?m)^##\s+Sources\s*$", str(memo or ""), maxsplit=1)[0]
+    if len(re.findall(r"\[[^\]\n]+\]", body)) < 3:
+        return False
+    normalized = re.sub(r"\s+", " ", body.lower())
+    role_groups = [
+        ("driven by", "anchored by", "primary", "foundational", "load-bearing", "main support"),
+        ("bound", "bounded", "limit", "scope", "exclude", "does not extend"),
+        ("calibrat", "size", "magnitude", "dose-response", "mean difference", "hazard ratio"),
+        ("crux", "would change", "alter the decision", "counter", "tension"),
+        ("context", "confound", "total diet", "interpret"),
+    ]
+    matched = sum(1 for group in role_groups if any(term in normalized for term in group))
+    return matched >= 3
 
 
 def _source_weighting_section(packet: dict[str, Any]) -> str:

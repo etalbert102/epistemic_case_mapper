@@ -142,6 +142,44 @@ def test_priority_quantity_contract_coverage_accepts_equivalent_interval_wording
     assert report["missing_contract_count"] == 0
 
 
+def test_priority_quantity_contract_coverage_skips_quantity_when_related_claim_unused() -> None:
+    contracts = {
+        "rows": [
+            {
+                "evidence_id": "e1",
+                "quantity_text": "MD = 1.27",
+                "claim": "Egg consumption has a negligible or inconsistent effect on HDL-c levels.",
+                "required_if_claim_used": True,
+            }
+        ]
+    }
+    memo = "The decision turns on cardiovascular event risk in generally healthy adults, not HDL biomarker details."
+
+    report = build_priority_quantity_contract_coverage_report(memo, contracts)
+
+    assert report["status"] == "ready"
+    assert report["missing_contract_count"] == 0
+
+
+def test_priority_quantity_contract_coverage_requires_quantity_when_related_claim_used() -> None:
+    contracts = {
+        "rows": [
+            {
+                "evidence_id": "e1",
+                "quantity_text": "MD = 1.27",
+                "claim": "Egg consumption has a negligible or inconsistent effect on HDL-c levels.",
+                "required_if_claim_used": True,
+            }
+        ]
+    }
+    memo = "Egg consumption has a negligible or inconsistent effect on HDL-c levels, which limits any beneficial classification."
+
+    report = build_priority_quantity_contract_coverage_report(memo, contracts)
+
+    assert report["status"] == "warning"
+    assert report["missing_contract_count"] == 1
+
+
 def test_priority_quantity_contracts_are_routed_to_section_packets() -> None:
     packet = {
         "evidence_items": [

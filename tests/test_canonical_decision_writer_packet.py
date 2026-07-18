@@ -6,16 +6,22 @@ from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import 
     build_canonical_decision_writer_packet,
     build_canonical_decision_writer_packet_quality_report,
 )
+from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+    build_decision_writer_packet_bundle,
+    decision_writer_packet_to_memo_ready_packet,
+)
 from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.map_briefing_production_readiness import build_memo_ready_production_readiness_report
 from epistemic_case_mapper.map_briefing_source_appraisal import build_source_appraisal_report
 from epistemic_case_mapper.map_briefing_source_weight_judgments import build_source_weight_judgment_report
 
 from test_decision_briefing_packet import _scaffold
+from tests.test_decision_writer_packet import _global_model, _ledger
 
 
 def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
@@ -64,6 +70,7 @@ def test_memo_ready_packet_includes_canonical_decision_writer_packet() -> None:
         if row.get("role") in {"strongest_support", "strongest_counterweight", "scope_boundary", "decision_crux"}
     )
     assert canonical["quality_report"]["organized_evidence_count"] == len(packet["evidence_items"])
+    assert canonical["quality_report"]["key_source_fact_count"] >= 1
 
 
 def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
@@ -80,6 +87,67 @@ def test_canonical_packet_front_loads_source_weighted_answer_frame() -> None:
     assert all(row.get("reader_evidence_role") for rows in lanes.values() for row in rows)
     assert "source_labels" not in str(frame)
     assert any("main answer" in move for move in frame["required_weighting_moves"])
+
+
+def test_canonical_source_weighting_matches_analyst_hierarchy_after_source_id_projection() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    packet = decision_writer_packet_to_memo_ready_packet(
+        bundle["decision_writer_packet"],
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+    packet["source_trail"] = [
+        {"source_id": "s1", "source_label": "Outcome Review"},
+        {"source_id": "s2", "source_label": "Scope Review"},
+    ]
+    for item in packet["evidence_items"]:
+        if item.get("item_id") == "decision_writer_item_001":
+            item["source_ids"] = []
+            item["source_labels"] = ["Outcome Review"]
+    packet["analyst_source_hierarchy"] = {
+        "schema_id": "source_weight_hierarchy_v1",
+        "lanes": {
+            "primary_answer_drivers": [
+                {
+                    "source_ids": ["s1"],
+                    "evidence_item_ids": ["item:support"],
+                    "role": "Carry the main answer.",
+                    "rationale": "Outcome Review is the analyst-selected source for the main answer.",
+                }
+            ]
+        },
+        "source_accounting": [
+            {"source_id": "s1", "primary_lane": "primary_answer_drivers", "rationale": "Main answer source."},
+            {"source_id": "s2", "primary_lane": "scope_boundary_sources", "rationale": "Scope source."},
+        ],
+    }
+    packet["analyst_source_hierarchy_report"] = {
+        "schema_id": "source_weight_hierarchy_report_v1",
+        "status": "ready",
+        "primary_driver_source_count": 1,
+    }
+    packet["analyst_source_weight_judgments"] = [
+        {
+            "judgment_id": "j1",
+            "source_ids": ["s1"],
+            "main_use": "drives_answer",
+            "memo_weight_sentence": "Outcome Review carries the answer.",
+            "why_weight_this_way": "It contains the main outcome evidence.",
+        }
+    ]
+    packet["analyst_source_weight_judgment_report"] = {
+        "schema_id": "source_weight_judgment_report_v1",
+        "status": "ready",
+    }
+
+    canonical = build_canonical_decision_writer_packet(packet)
+    packet["canonical_decision_writer_packet"] = canonical
+    primary_rows = canonical["source_weighted_answer_frame"]["lanes"]["primary_answer_drivers"]
+    support_row = next(row for row in primary_rows if row["item_id"] == "decision_writer_item_001")
+
+    assert support_row["source_ids"] == ["s1"]
+    assert support_row["key_source_facts"]
+    assert support_row["source_weight_basis"] == "analyst_source_hierarchy"
+    assert build_memo_ready_production_readiness_report(packet)["status"] != "blocked"
 
 
 def test_section_packets_receive_reader_judgments_to_surface() -> None:

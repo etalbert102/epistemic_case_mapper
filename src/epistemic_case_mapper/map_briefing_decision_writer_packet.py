@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+import re
 from typing import Any
 
 from epistemic_case_mapper.map_briefing_balanced_answer_frame import split_bluf_answer_hierarchy
@@ -96,8 +97,9 @@ def decision_writer_packet_to_memo_ready_packet(
         analyst_quantity_binding_report=analyst_quantity_binding_report,
         global_decision_model=global_decision_model,
     )
+    source_id_lookup = _source_id_lookup(_list(packet.get("source_trail")))
     evidence_items = [
-        _memo_ready_item_from_unit(index, unit, semantic_context=semantic_context)
+        _memo_ready_item_from_unit(index, unit, semantic_context=semantic_context, source_id_lookup=source_id_lookup)
         for index, unit in enumerate(_list(packet.get("evidence_units")), start=1)
         if isinstance(unit, dict)
     ]
@@ -152,6 +154,7 @@ def decision_writer_packet_to_memo_ready_packet(
         "writer_packet_writeability_report": writeability,
         "writer_packet_fallback_requests": writeability.get("fallback_requests", []),
         "quantity_obligation_plan": semantic_context.get("quantity_obligation_plan", {}),
+        "source_fact_preservation_report": build_source_fact_preservation_report(evidence_items),
         "decision_writer_packet_quality_report": quality_report or packet.get("decision_writer_packet_quality_report", {}),
         "evidence_items": evidence_items,
         "writer_packet": packet,
@@ -211,8 +214,15 @@ def build_decision_writer_packet(*, global_decision_model: dict[str, Any], ledge
     }
 
 
-def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_context: dict[str, Any] | None = None) -> dict[str, Any]:
+def _memo_ready_item_from_unit(
+    index: int,
+    unit: dict[str, Any],
+    *,
+    semantic_context: dict[str, Any] | None = None,
+    source_id_lookup: dict[str, str] | None = None,
+) -> dict[str, Any]:
     semantic_context = semantic_context if isinstance(semantic_context, dict) else {}
+    source_id_lookup = source_id_lookup if isinstance(source_id_lookup, dict) else {}
     source_labels = _string_list(unit.get("source_labels"))
     relation = answer_relation_for_unit(unit, semantic_context=semantic_context)
     source_role = str(unit.get("role") or "context_only").strip()
@@ -221,6 +231,7 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
     obligation = _obligation_for_unit(obligation_unit, semantic_context=semantic_context)
     quantity_plan = quantity_plan_for_unit(unit, semantic_context=semantic_context)
     quantities = _memo_ready_quantities(unit, quantity_plan=quantity_plan)
+    source_ids = _source_ids_from_unit(unit, source_id_lookup=source_id_lookup)
     diagnosticity = decision_unit_diagnosticity(
         obligation_unit,
         adjudication_by_id=_dict(semantic_context.get("adjudication_by_evidence_id")),
@@ -236,10 +247,11 @@ def _memo_ready_item_from_unit(index: int, unit: dict[str, Any], *, semantic_con
         "reader_claim": str(unit.get("claim") or "").strip(),
         "source_label": source_labels[0] if source_labels else "",
         "source_labels": source_labels,
-        "source_ids": [],
+        "source_ids": source_ids,
         "quantities": quantities,
         "assertion_bundles": _assertion_bundles_from_quantities(quantities),
         "excluded_quantity_values": _excluded_quantity_values(unit, quantity_plan=quantity_plan),
+        "key_source_facts": _key_source_facts(unit, source_ids=source_ids, retained_quantities=quantities, quantity_plan=quantity_plan),
         "lineage": _dict(unit.get("lineage")),
         "decision_relevance": str(unit.get("decision_relevance") or "").strip(),
         "caveat": str(unit.get("caveat") or "").strip(),
@@ -290,6 +302,7 @@ def _memo_ready_quantities(unit: dict[str, Any], *, quantity_plan: dict[str, dic
                 "assertion_bundle": assertion_bundle,
                 "interpretation": str((plan or {}).get("retention_phrase") or (plan or {}).get("interpretation") or quantity.get("interpretation") or "").strip(),
                 "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
+                "source_ids": _dedupe([*_string_list(quantity.get("source_ids")), *_string_list(assertion_bundle.get("source_ids"))]),
                 "source_labels": _string_list(quantity.get("source_label")) or _string_list(quantity.get("source_labels")),
                 "quantity_role": str((plan or {}).get("quantity_role") or "").strip(),
                 "quantity_id": str((plan or {}).get("quantity_id") or (plan or {}).get("candidate_id") or "").strip(),
@@ -346,6 +359,279 @@ def _excluded_quantity_values(unit: dict[str, Any], *, quantity_plan: dict[str, 
         if quantity_plan and (not plan or not quantity_must_retain(plan)):
             excluded.append(value)
     return _dedupe(excluded)
+
+
+def _source_ids_from_unit(unit: dict[str, Any], *, source_id_lookup: dict[str, str] | None = None) -> list[str]:
+    source_id_lookup = source_id_lookup if isinstance(source_id_lookup, dict) else {}
+    source_ids = [*_string_list(unit.get("source_ids"))]
+    source_ids.extend(_mapped_source_ids(_string_list(unit.get("source_labels")), source_id_lookup))
+    for quantity in _list(unit.get("quantities")):
+        if isinstance(quantity, dict):
+            source_ids.extend(_string_list(quantity.get("source_ids")))
+            source_ids.extend(_string_list(_dict(quantity.get("assertion_bundle")).get("source_ids")))
+            source_ids.extend(_mapped_source_ids(_string_list(quantity.get("source_label")), source_id_lookup))
+            source_ids.extend(_mapped_source_ids(_string_list(quantity.get("source_labels")), source_id_lookup))
+    for excerpt in _list(unit.get("source_excerpts")):
+        if isinstance(excerpt, dict):
+            source_ids.extend(_string_list(excerpt.get("source_ids")))
+            source_ids.extend(_mapped_source_ids(_string_list(excerpt.get("source_labels")), source_id_lookup))
+    return _dedupe(source_ids)
+
+
+def _source_id_lookup(source_trail: list[Any]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for row in source_trail:
+        if not isinstance(row, dict):
+            continue
+        source_id = str(row.get("source_id") or row.get("citation_key") or "").strip()
+        if not source_id:
+            continue
+        aliases = _dedupe(
+            [
+                source_id,
+                str(row.get("citation_key") or "").strip(),
+                str(row.get("source_label") or "").strip(),
+                str(row.get("display_label") or "").strip(),
+                str(row.get("source_slug") or "").strip(),
+                str(row.get("original_source_id") or "").strip(),
+                *_string_list(row.get("source_aliases")),
+            ]
+        )
+        for alias in aliases:
+            key = _source_lookup_key(alias)
+            if key:
+                lookup.setdefault(key, source_id)
+    return lookup
+
+
+def _mapped_source_ids(labels: list[str], source_id_lookup: dict[str, str]) -> list[str]:
+    return _dedupe(
+        source_id
+        for label in labels
+        if (source_id := source_id_lookup.get(_source_lookup_key(label)))
+    )
+
+
+def _source_lookup_key(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _key_source_facts(
+    unit: dict[str, Any],
+    *,
+    source_ids: list[str],
+    retained_quantities: list[dict[str, Any]],
+    quantity_plan: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    quantity_plan = quantity_plan if isinstance(quantity_plan, dict) else {}
+    facts: list[dict[str, Any]] = []
+    if bottom_line := str(unit.get("natural_bottom_line") or "").strip():
+        facts.append(
+            _source_fact(
+                fact_type="source_bottom_line",
+                text=bottom_line,
+                source_ids=source_ids,
+                decision_use=unit.get("decision_relevance"),
+            )
+        )
+    context_text = _source_context_fact_text(unit)
+    if context_text:
+        facts.append(_source_fact(fact_type="source_context", text=context_text, source_ids=source_ids))
+    retained_values = {str(row.get("value") or "").strip() for row in retained_quantities if isinstance(row, dict)}
+    for quantity in _list(unit.get("quantities")):
+        if not isinstance(quantity, dict):
+            continue
+        fact = _quantity_source_fact(quantity, quantity_plan=quantity_plan, retained_values=retained_values)
+        if fact:
+            facts.append(fact)
+    for excerpt in _list(unit.get("source_excerpts")):
+        if not isinstance(excerpt, dict):
+            continue
+        text = str(excerpt.get("source_excerpt") or "").strip()
+        if not _excerpt_has_source_fact_value(text):
+            continue
+        facts.append(
+            _source_fact(
+                fact_type="source_excerpt_anchor",
+                text=text,
+                source_ids=_string_list(excerpt.get("source_ids")) or source_ids,
+                decision_use="Use as local source-grounding when it supplies study scale, endpoint, estimate, comparator, scope, or limitation detail.",
+                evidence_item_ids=_string_list(excerpt.get("evidence_item_id")),
+            )
+        )
+    return _dedupe_fact_rows(facts)[:12]
+
+
+def build_source_fact_preservation_report(evidence_items: list[dict[str, Any]]) -> dict[str, Any]:
+    items = [item for item in evidence_items if isinstance(item, dict)]
+    must_use = [item for item in items if item.get("must_use")]
+    facts = [fact for item in items for fact in _list(item.get("key_source_facts")) if isinstance(fact, dict)]
+    missing_source_ids = [str(item.get("item_id") or "") for item in must_use if not _string_list(item.get("source_ids"))]
+    missing_facts = [str(item.get("item_id") or "") for item in must_use if not _list(item.get("key_source_facts"))]
+    type_counts = Counter(str(fact.get("fact_type") or "unknown") for fact in facts)
+    warnings = []
+    if missing_source_ids:
+        warnings.append("must_use_item_without_source_ids")
+    if missing_facts:
+        warnings.append("must_use_item_without_key_source_facts")
+    return {
+        "schema_id": "source_fact_preservation_report_v1",
+        "status": "ready" if not warnings else "warning",
+        "evidence_item_count": len(items),
+        "must_use_item_count": len(must_use),
+        "key_source_fact_count": len(facts),
+        "fact_type_counts": dict(type_counts),
+        "must_use_item_ids_without_source_ids": missing_source_ids,
+        "must_use_item_ids_without_key_source_facts": missing_facts,
+        "warnings": warnings,
+    }
+
+
+def _quantity_source_fact(
+    quantity: dict[str, Any],
+    *,
+    quantity_plan: dict[str, dict[str, Any]],
+    retained_values: set[str],
+) -> dict[str, Any]:
+    value = str(quantity.get("value") or "").strip()
+    if not value:
+        return {}
+    plan = quantity_plan_match(quantity, quantity_plan)
+    role = str((plan or {}).get("quantity_role") or quantity.get("quantity_role") or quantity.get("quantity_type") or quantity.get("statistic_type") or "").strip()
+    memo_use = str((plan or {}).get("memo_use") or "").strip()
+    retained = value in retained_values or bool(plan and quantity_must_retain(plan))
+    if not retained and memo_use == "no" and role == "audit_only":
+        return {}
+    if not retained and _quantity_looks_like_noise(value, role):
+        return {}
+    text = _quantity_fact_text(quantity, plan)
+    if not text:
+        return {}
+    source_ids = _dedupe([*_string_list(quantity.get("source_ids")), *_string_list(_dict(quantity.get("assertion_bundle")).get("source_ids"))])
+    return _source_fact(
+        fact_type=_quantity_fact_type(quantity, role=role, text=text),
+        text=text,
+        source_ids=source_ids,
+        quantity_values=[value],
+        decision_use=str((plan or {}).get("why_quantity_matters") or (plan or {}).get("retention_phrase") or quantity.get("interpretation") or "").strip(),
+        evidence_item_ids=_string_list(quantity.get("source_evidence_item_id")),
+    )
+
+
+def _quantity_fact_text(quantity: dict[str, Any], plan: dict[str, Any]) -> str:
+    value = str(quantity.get("value") or "").strip()
+    interpretation = str((plan or {}).get("retention_phrase") or (plan or {}).get("why_quantity_matters") or quantity.get("interpretation") or quantity.get("measures") or "").strip()
+    endpoint = str(quantity.get("endpoint") or "").strip()
+    population = str(quantity.get("population") or "").strip()
+    comparator = str(quantity.get("exposure_or_comparator") or "").strip()
+    interval = str(quantity.get("interval") or "").strip()
+    parts = [value]
+    if interval and interval not in value:
+        parts.append(f"interval: {interval}")
+    if endpoint and endpoint.lower() not in " ".join(parts).lower():
+        parts.append(f"endpoint: {endpoint}")
+    if population:
+        parts.append(f"population: {population}")
+    if comparator:
+        parts.append(f"comparison: {comparator}")
+    if interpretation and interpretation.lower() not in " ".join(parts).lower():
+        parts.append(interpretation)
+    return _short_text("; ".join(parts), 420)
+
+
+def _quantity_fact_type(quantity: dict[str, Any], *, role: str, text: str) -> str:
+    haystack = " ".join([role, text, str(quantity.get("quantity_type") or ""), str(quantity.get("statistic_type") or "")]).lower()
+    if re.search(r"\b(participants?|events?|cohorts?|studies|trials|risk estimates?|person[- ]years?|follow[- ]up|sample)\b", haystack):
+        return "study_scale"
+    if re.search(r"\b(hr|hazard ratio|rr|relative risk|odds ratio|or\b|mean difference|md\b|risk difference|absolute risk|95% ci|confidence interval)\b", haystack):
+        return "effect_estimate"
+    if re.search(r"\b(threshold|guideline|limit|per day|daily|dose|intake)\b", haystack):
+        return "boundary_or_threshold"
+    if re.search(r"\b(substitut|replac|comparator|versus| vs )\b", haystack):
+        return "substitution_or_comparator"
+    if "statistical" in haystack:
+        return "statistical_detail"
+    return "quantity_context"
+
+
+def _source_context_fact_text(unit: dict[str, Any]) -> str:
+    context = _dict(unit.get("claim_context"))
+    rows = []
+    for key, label in (
+        ("population", "population"),
+        ("exposure_or_option", "exposure"),
+        ("outcome_or_endpoint", "endpoint"),
+        ("evidence_design", "design"),
+        ("stated_dose_or_threshold", "dose or threshold"),
+        ("stated_scope", "scope"),
+        ("stated_limitations", "limitations"),
+        ("applicability_limits", "applicability limits"),
+    ):
+        value = str(context.get(key) or "").strip()
+        if value:
+            rows.append(f"{label}: {value}")
+    for key, label in (
+        ("population", "population"),
+        ("exposure_or_intervention", "exposure"),
+        ("outcome_or_endpoint", "endpoint"),
+        ("evidence_type", "design"),
+    ):
+        value = str(unit.get(key) or "").strip()
+        if value and not any(value in row for row in rows):
+            rows.append(f"{label}: {value}")
+    return _short_text("; ".join(rows), 420)
+
+
+def _source_fact(
+    *,
+    fact_type: str,
+    text: Any,
+    source_ids: list[str],
+    quantity_values: list[str] | None = None,
+    decision_use: Any = "",
+    evidence_item_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "fact_type": fact_type,
+            "text": _short_text(str(text or "").strip(), 520),
+            "source_ids": _dedupe(source_ids),
+            "quantity_values": _dedupe(quantity_values or []),
+            "decision_use": _short_text(str(decision_use or "").strip(), 360),
+            "evidence_item_ids": _dedupe(evidence_item_ids or []),
+        }
+    )
+
+
+def _excerpt_has_source_fact_value(text: str) -> bool:
+    lowered = str(text or "").lower()
+    return bool(
+        lowered.strip()
+        or re.search(r"\d", lowered)
+        or re.search(r"\b(endpoint|population|cohort|trial|meta-analysis|review|guideline|limitation|scope|substitut|replac|comparator|confidence interval|relative risk|hazard ratio)\b", lowered)
+    )
+
+
+def _quantity_looks_like_noise(value: str, role: str) -> bool:
+    lowered = f"{role} {value}".lower()
+    return bool(re.search(r"\bp\s*[<=>]", lowered) or "heterogeneity" in lowered or "i2" in lowered or "i^2" in lowered)
+
+
+def _dedupe_fact_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped = []
+    seen = set()
+    for row in rows:
+        text = str(row.get("text") or "").strip()
+        key = (str(row.get("fact_type") or ""), " ".join(text.lower().split()), tuple(_string_list(row.get("source_ids"))))
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in ("", None, [], {})}
 
 
 def build_decision_obligation_plan(
@@ -669,8 +955,10 @@ def _contract_must_preserve(evidence_items: list[dict[str, Any]]) -> list[dict[s
             "item_id": item.get("item_id"),
             "role": item.get("role"),
             "claim": item.get("reader_claim"),
+            "source_ids": item.get("source_ids", []),
             "source_labels": item.get("source_labels", []),
             "quantities": item.get("quantities", []),
+            "key_source_facts": item.get("key_source_facts", []),
         }
         for item in evidence_items
         if item.get("must_use")
@@ -758,6 +1046,7 @@ def _evidence_units(global_model: dict[str, Any], ledger_by_id: dict[str, dict[s
 def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
     evidence_ids = _string_list(group.get("covered_evidence_item_ids"))
     source_labels = _source_labels(evidence_ids, ledger_by_id)
+    source_ids = _source_ids(evidence_ids, ledger_by_id)
     source_appraisal = merged_source_appraisal(evidence_ids, ledger_by_id)
     source_context = _source_context_fields({}, [ledger_by_id.get(evidence_id, {}) for evidence_id in evidence_ids])
     return {
@@ -771,6 +1060,7 @@ def _unit_from_group(index: int, group: dict[str, Any], *, role: str, ledger_by_
         "importance_rank": group.get("importance_rank"),
         "source_memo_role": str(group.get("memo_role") or "").strip(),
         "source_labels": source_labels,
+        "source_ids": source_ids,
         "primary_source_label": source_labels[0] if source_labels else "",
         "source_appraisal": source_appraisal,
         "source_use_warnings": _string_list(source_appraisal.get("source_use_warnings")),
@@ -853,6 +1143,7 @@ def _quantities(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]
                     "evidence_bundle_id": str(quantity.get("evidence_bundle_id") or assertion_bundle.get("evidence_bundle_id") or "").strip(),
                     "assertion_bundle": assertion_bundle,
                     "source_evidence_item_id": evidence_id,
+                    "source_ids": _dedupe([*_string_list(ledger_row.get("source_ids")), *_string_list(assertion_bundle.get("source_ids"))]),
                     "source_label": labels[0] if labels else "",
                     "quantity_role": str(quantity.get("quantity_role") or ""),
                     "quantity_type": str(quantity.get("quantity_type") or ""),
@@ -875,6 +1166,7 @@ def _quantities(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]
                 {
                     "value": value,
                     "source_evidence_item_id": evidence_id,
+                    "source_ids": _string_list(ledger_row.get("source_ids")),
                     "source_label": labels[0] if labels else "",
                     "interpretation": _short_text(str(ledger_row.get("why_it_matters") or ledger_row.get("claim") or ""), 360),
                 }
@@ -888,8 +1180,22 @@ def _source_excerpts(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, 
         ledger_row = ledger_by_id.get(evidence_id, {})
         excerpt = str(ledger_row.get("source_excerpt") or "").strip()
         if excerpt:
-            rows.append({"evidence_item_id": evidence_id, "source_excerpt": _short_text(excerpt, 420)})
+            rows.append(
+                {
+                    "evidence_item_id": evidence_id,
+                    "source_ids": _string_list(ledger_row.get("source_ids")),
+                    "source_labels": _string_list(ledger_row.get("source_labels")),
+                    "source_excerpt": _short_text(excerpt, 420),
+                }
+            )
     return rows
+
+
+def _source_ids(evidence_ids: list[str], ledger_by_id: dict[str, dict[str, Any]]) -> list[str]:
+    source_ids = []
+    for evidence_id in evidence_ids:
+        source_ids.extend(_string_list(ledger_by_id.get(evidence_id, {}).get("source_ids")))
+    return _dedupe(source_ids)
 
 
 def _source_rows(ledger_row: dict[str, Any]) -> list[dict[str, str]]:

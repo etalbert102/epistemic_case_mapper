@@ -62,6 +62,8 @@ def build_priority_quantity_contract_coverage_report(memo: str, contracts: dict[
         quantity = str(row.get("quantity_text") or "").strip()
         if not quantity:
             continue
+        if row.get("required_if_claim_used") is True and not _related_claim_used(memo, row):
+            continue
         if not quantity_retained(memo, {"value": quantity, "retention_phrase": quantity, "interpretation": row.get("decision_role", "")}):
             warnings.append(
                 {
@@ -78,6 +80,35 @@ def build_priority_quantity_contract_coverage_report(memo: str, contracts: dict[
         "missing_contract_count": len(warnings),
         "warnings": warnings,
     }
+
+
+def _related_claim_used(memo: str, row: dict[str, Any]) -> bool:
+    claim = str(row.get("claim") or "").strip()
+    if not claim:
+        return True
+    memo_terms = set(_content_terms(str(memo or "")))
+    claim_terms = _content_terms(claim)
+    if not claim_terms:
+        return True
+    distinctive_terms = [
+        term
+        for term in claim_terms
+        if term not in _GENERIC_CLAIM_TERMS and not re.fullmatch(r"\d+(?:\.\d+)?", term)
+    ]
+    if not distinctive_terms:
+        distinctive_terms = claim_terms
+    matched = [term for term in distinctive_terms if term in memo_terms]
+    threshold = min(5, max(2, (len(distinctive_terms) + 2) // 3))
+    return len(matched) >= threshold
+
+
+def _content_terms(text: str) -> list[str]:
+    terms = [
+        term
+        for term in re.findall(r"[a-z][a-z0-9-]{3,}", str(text or "").lower())
+        if term not in _GENERIC_CLAIM_TERMS
+    ]
+    return _dedupe(terms)
 
 
 def compact_priority_quantity_contracts_for_prompt(rows: list[dict[str, Any]], *, limit: int = 10) -> list[dict[str, Any]]:
@@ -407,6 +438,34 @@ def _contract_rows(contracts: dict[str, Any] | list[dict[str, Any]]) -> list[dic
     if isinstance(contracts, dict):
         return [row for row in _list(contracts.get("rows")) if isinstance(row, dict)]
     return [row for row in _list(contracts) if isinstance(row, dict)]
+
+
+_GENERIC_CLAIM_TERMS = {
+    "about",
+    "against",
+    "answer",
+    "associated",
+    "association",
+    "claim",
+    "claims",
+    "conclusion",
+    "decision",
+    "evidence",
+    "identifies",
+    "increased",
+    "levels",
+    "memo",
+    "rather",
+    "relevant",
+    "significant",
+    "source",
+    "specific",
+    "supports",
+    "tension",
+    "that",
+    "this",
+    "with",
+}
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:

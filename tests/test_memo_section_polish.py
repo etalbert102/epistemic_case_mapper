@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+    build_validated_final_polish_prompt,
     build_validated_final_polish_validation_report,
     run_memo_ready_final_polish,
     run_memo_ready_hybrid_section_final_polish_experiment,
@@ -205,7 +206,7 @@ def test_validated_final_polish_uses_backend_override_and_accepts_safe_rewrite(m
 
     def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
         captured["backend"] = backend
-        assert "Priority quantity contracts" in prompt
+        assert "Important quantities to keep when relevant" in prompt
         return ModelBackendResult(
             text=memo.replace("Option A may help [s1].", "Use option A when monitoring remains feasible and the 20% evidence applies [s1]."),
             backend=backend,
@@ -217,9 +218,19 @@ def test_validated_final_polish_uses_backend_override_and_accepts_safe_rewrite(m
     result = run_memo_ready_final_polish(memo, packet, backend="ollama:small", backend_timeout=30, backend_retries=0)
 
     assert captured["backend"] == "ollama:strong-polish"
-    assert result["report"]["method"] == "validated_whole_memo_polish"
+    assert result["report"]["method"] == "validated_decision_editor_rewrite"
     assert result["report"]["accepted"] is True
     assert "Use option A when monitoring remains feasible" in result["memo"]
+
+
+def test_validated_final_polish_prompt_asks_for_decision_editor_rewrite() -> None:
+    prompt = build_validated_final_polish_prompt(_memo(), _packet())
+
+    assert "expert decision analyst" in prompt
+    assert "Optimize for decision usefulness" in prompt
+    assert "Integrate source weighting into the argument" in prompt
+    assert "Leave source lists, reference definitions, and citation trace formatting to deterministic presentation" in prompt
+    assert "## Sources" not in prompt.split("Memo body:", 1)[-1]
 
 
 def test_validated_final_polish_repairs_missing_priority_quantity(monkeypatch) -> None:
@@ -264,6 +275,32 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     assert "one egg per 1 day" not in result["memo"]
     assert "one egg per day" in result["memo"]
     assert ".; This" not in result["memo"]
+
+
+def test_validated_final_polish_surfaces_unsupported_additions_as_advisory_warning(monkeypatch) -> None:
+    memo = _memo()
+    packet = _packet()
+
+    def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(
+            text=memo.replace(
+                "Option A may help [s1].",
+                "Option A may help [s1]. It is also a better replacement for high-risk legacy systems [s1].",
+            ),
+            backend=backend,
+        )
+
+    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+
+    result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
+    warning_report = result["report"]["final_validation_report"]["unsupported_additions_report"]
+
+    assert result["report"]["accepted"] is True
+    assert result["report"]["applied"] is True
+    assert "unsupported_additions" not in result["report"]["final_validation_report"]["hard_failures"]
+    assert warning_report["status"] == "warning"
+    assert warning_report["warnings"][0]["sentence"].startswith("It is also a better replacement")
+    assert "legacy" in warning_report["warnings"][0]["new_terms"]
 
 
 def test_validated_final_polish_validation_detects_duplicate_source_sections() -> None:

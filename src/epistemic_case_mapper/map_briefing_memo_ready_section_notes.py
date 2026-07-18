@@ -338,7 +338,21 @@ def _evidence_context_lines(value: Any) -> list[str]:
         )
         if line:
             rows.append(_bullet(line))
+        for fact in _dict_rows(item.get("key_source_facts"))[:6]:
+            if fact_line := _key_source_fact_line(fact):
+                rows.append(f"  - Source fact: {fact_line}")
     return rows
+
+
+def _key_source_fact_line(fact: dict[str, Any]) -> str:
+    parts = [
+        _text(fact.get("fact_type")).replace("_", " "),
+        _text(fact.get("text")),
+        f"Decision use: {_text(fact.get('decision_use'))}" if _text(fact.get("decision_use")) else "",
+        f"Quantities: {', '.join(_string_list(fact.get('quantity_values'))[:6])}" if _string_list(fact.get("quantity_values")) else "",
+        _citations(fact),
+    ]
+    return "; ".join(part for part in parts if part)
 
 
 def _source_weighting_lines(value: Any) -> list[str]:

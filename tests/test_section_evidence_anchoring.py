@@ -168,6 +168,44 @@ def test_evidence_expression_contracts_do_not_hard_require_soft_quantity_obligat
     assert not any(row["value"] == "8.14" for row in quantities)
 
 
+def test_evidence_expression_contracts_dedupe_quantity_obligations_by_assertion_bundle() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "reader_claim": "Subgroup risk bounds the answer.",
+                "source_ids": ["s1"],
+                "quantities": [
+                    {
+                        "value": "1.40",
+                        "evidence_bundle_id": "bundle_a",
+                        "assertion_bundle": {
+                            "evidence_bundle_id": "bundle_a",
+                            "endpoint": "relative risk",
+                            "value": "1.40",
+                        },
+                    }
+                ],
+            }
+        ],
+        "quantity_obligation_plan": {
+            "quantity_obligations": [
+                {
+                    "target_item_ids": ["e1"],
+                    "value": "1.40",
+                    "source_ids": ["s1"],
+                    "analyst_quantity_relevance": {"quantity_value": "1.40"},
+                }
+            ]
+        },
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+    quantities = contracts[0]["required_quantity_atoms"]
+
+    assert [row.get("value") for row in quantities] == ["1.40"]
+
+
 def test_evidence_expression_contracts_resolve_source_ids_from_labels() -> None:
     packet = {
         "evidence_items": [
@@ -225,6 +263,54 @@ def test_contracts_for_section_uses_nested_section_local_evidence_ids() -> None:
     by_id = {row["evidence_id"]: row for row in contracts}
     assert by_id["decision_writer_item_001"]["required"] is False
     assert by_id["decision_writer_item_011"]["required"] is True
+
+
+def test_contracts_for_section_treats_decision_argument_section_as_allowed_context() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "support",
+                "reader_claim": "Primary answer support.",
+                "role": "strongest_support",
+                "source_ids": ["s1"],
+                "must_use": True,
+            },
+            {
+                "item_id": "counterweight",
+                "reader_claim": "Biomarker evidence bounds the answer.",
+                "role": "strongest_counterweight",
+                "source_ids": ["s2"],
+                "must_use": True,
+            },
+        ],
+        "source_trail": [
+            {"source_id": "s1", "source_label": "Outcome Study"},
+            {"source_id": "s2", "source_label": "Biomarker Trial"},
+        ],
+        "canonical_decision_writer_packet": {},
+    }
+    section_packet = {
+        "section_id": "answer_evidence",
+        "heading": "Why This Is the Best Current Read",
+        "evidence_context": [{"item_id": "support"}],
+        "decision_argument_section": {
+            "required_evidence_item_ids": ["support", "counterweight"],
+            "owned_moves": [
+                {"move_id": "primary_support", "evidence_item_ids": ["support"]},
+                {"move_id": "quantity_calibration", "evidence_item_ids": ["counterweight"]},
+            ],
+        },
+    }
+
+    contracts = contracts_for_section(
+        section_packet,
+        "Why This Is the Best Current Read",
+        build_evidence_expression_contracts(packet),
+    )
+    by_id = {row["evidence_id"]: row for row in contracts}
+
+    assert by_id["support"]["required"] is True
+    assert by_id["counterweight"]["required"] is False
 
 
 def test_render_evidence_tags_to_source_citations_and_trace() -> None:
@@ -287,6 +373,22 @@ def test_reconciliation_flags_adjacent_source_evidence_mismatch() -> None:
     assert report["status"] == "warning"
     assert report["source_mismatch_warning_count"] == 1
     assert report["source_mismatch_warnings"][0]["evidence_ids"] == ["e_support"]
+
+
+def test_reconciliation_allows_adjacent_source_lists_that_overlap_the_evidence_contract() -> None:
+    contracts = [
+        {"evidence_id": "e_support", "source_ids": ["s_support"], "claim": "Support claim.", "required": True},
+        {"evidence_id": "e_boundary", "source_ids": ["s_boundary"], "claim": "Boundary claim.", "required": True},
+    ]
+    tagged = (
+        "## Why\n\n"
+        "The support claim is discussed with nearby context {E:e_support} [s_support, s_boundary]. "
+        "Boundary claim {E:e_boundary}."
+    )
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["source_mismatch_warning_count"] == 0
 
 
 def test_reconciliation_flags_unsupported_quantity_near_evidence_tag() -> None:

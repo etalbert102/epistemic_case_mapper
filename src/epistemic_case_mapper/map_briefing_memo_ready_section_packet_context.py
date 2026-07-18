@@ -88,6 +88,7 @@ def compact_memo_ready_row(row: dict[str, Any]) -> dict[str, Any]:
             "claim": row.get("claim") or row.get("statement"),
             "source_ids": row.get("source_ids") or ([row.get("source_id")] if row.get("source_id") else None),
             "quantities": row.get("quantities"),
+            "key_source_facts": row.get("key_source_facts"),
             "source_excerpt": row.get("source_excerpt"),
             "decision_relevance": row.get("decision_relevance"),
             "caveat": row.get("caveat"),

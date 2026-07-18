@@ -209,6 +209,7 @@ def _priority_evidence(interface: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _source_weighted_answer_frame(packet: dict[str, Any], interface: dict[str, Any]) -> dict[str, Any]:
     hierarchy_index = source_hierarchy_lane_index(_dict(packet.get("analyst_source_hierarchy")))
+    source_identity_trail = _list(interface.get("_source_identity_trail")) or _list(packet.get("source_trail")) or _list(interface.get("source_trail"))
     rows = [
         row
         for row in sorted(
@@ -218,7 +219,8 @@ def _source_weighted_answer_frame(packet: dict[str, Any], interface: dict[str, A
         if isinstance(row, dict)
     ]
     lanes: dict[str, list[dict[str, Any]]] = {}
-    for row in rows:
+    for raw_row in rows:
+        row = project_sources_to_ids_for_model(raw_row, source_identity_trail) if source_identity_trail else raw_row
         hierarchy_match = source_hierarchy_match_for_row(row, hierarchy_index)
         lane = str(hierarchy_match.get("canonical_lane") or "") or source_weight_lane(row)
         lanes.setdefault(lane, []).append(_source_weighted_evidence_row(row, lane=lane, hierarchy_match=hierarchy_match))
@@ -269,6 +271,7 @@ def _source_weighted_evidence_row(
             "source_ids": _string_list(row.get("source_ids")),
             "source_labels": _string_list(row.get("source_labels")),
             "quantities": _brief_quantities(row),
+            "key_source_facts": _key_source_facts(row),
             "why_this_weight": _source_weight_reason(row, lane, hierarchy_match=hierarchy_match),
             "decision_relevance": _calibrated_short(row.get("decision_relevance") or row.get("include_reason"), row, limit=520),
             "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 360),
@@ -416,7 +419,9 @@ def _inventory_row(row: dict[str, Any]) -> dict[str, Any]:
             "claim_calibration_notes": _dedupe([*_string_list(row.get("claim_calibration_notes")), *_string_list(calibrated.get("calibration_notes"))]),
             "not_allowed_terms": _dedupe([*_string_list(row.get("not_allowed_terms")), *_string_list(calibrated.get("not_allowed_terms"))]),
             "source_labels": _string_list(row.get("source_labels")) or _string_list(row.get("source_label")),
+            "source_ids": _string_list(row.get("source_ids")),
             "quantities": _brief_quantities(row),
+            "key_source_facts": _key_source_facts(row),
             "decision_relevance": _calibrated_short(row.get("decision_relevance") or row.get("include_reason"), row, limit=760),
             "caveat": _calibrated_short(row.get("caveat"), row, limit=420),
             "source_appraisal_note": _short_text(row.get("source_appraisal_note") or _source_appraisal_note(row), 420),
@@ -469,12 +474,33 @@ def _source_excerpt_rows(row: dict[str, Any]) -> list[dict[str, Any]]:
         excerpts.append(
             _drop_empty(
                 {
+                    "source_ids": _string_list(excerpt.get("source_ids")) or _string_list(row.get("source_ids")),
                     "source_labels": _string_list(excerpt.get("source_labels")) or _string_list(row.get("source_labels")),
                     "excerpt": _short_text(text, 900),
                 }
             )
         )
     return excerpts[:3]
+
+
+def _key_source_facts(row: dict[str, Any]) -> list[dict[str, Any]]:
+    facts = []
+    for fact in _list(row.get("key_source_facts"))[:10]:
+        if not isinstance(fact, dict):
+            continue
+        facts.append(
+            _drop_empty(
+                {
+                    "fact_type": fact.get("fact_type"),
+                    "text": _short_text(fact.get("text"), 420),
+                    "source_ids": _string_list(fact.get("source_ids")) or _string_list(row.get("source_ids")),
+                    "quantity_values": _string_list(fact.get("quantity_values"))[:6],
+                    "decision_use": _short_text(fact.get("decision_use"), 280),
+                    "evidence_item_ids": _string_list(fact.get("evidence_item_ids"))[:8],
+                }
+            )
+        )
+    return facts
 
 
 def _source_appraisal_note(row: dict[str, Any]) -> str:
