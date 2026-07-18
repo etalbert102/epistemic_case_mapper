@@ -12,6 +12,10 @@ from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_claim_cache import write_claim_progress
 from epistemic_case_mapper.staged_semantic_decision_questions import attach_decision_relevance_validation, region_decision_question
 from epistemic_case_mapper.staged_semantic_evidence_routing import build_evidence_unit_routing
+from epistemic_case_mapper.staged_semantic_evidence_units import (
+    build_quantity_tuple_binding_report,
+    build_quantity_tuple_mutation_eval,
+)
 from epistemic_case_mapper.staged_semantic_label_audit import attach_label_audit
 from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.staged_semantic_sources import (
@@ -323,8 +327,16 @@ def _write_evidence_unit_artifacts(
     )
     write_json(
         artifact_dir / "source_quantity_tuples.json",
-        {"schema_id": "source_quantity_tuples_aggregate_v1", "decision_question": selected_question, "tuple_count": len(quantity_tuples), "tuples": quantity_tuples},
+        {
+            "schema_id": "source_quantity_tuples_aggregate_v1",
+            "decision_question": selected_question,
+            "canonical_record_type": "source_result_quantity_tuple_v1",
+            "tuple_count": len(quantity_tuples),
+            "tuples": quantity_tuples,
+        },
     )
+    write_json(artifact_dir / "quantity_tuple_binding_report.json", build_quantity_tuple_binding_report(quantity_tuples))
+    write_json(artifact_dir / "quantity_tuple_mutation_eval.json", build_quantity_tuple_mutation_eval(quantity_tuples))
     write_json(
         artifact_dir / "source_evidence_unit_quality_report.json",
         _aggregate_evidence_unit_quality_report(evidence_unit_reports, unit_count=len(evidence_units), quantity_tuple_count=len(quantity_tuples)),

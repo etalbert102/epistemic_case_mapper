@@ -8,6 +8,7 @@ from epistemic_case_mapper.staged_semantic_claim_quantities import normalize_cla
 EVIDENCE_UNIT_SCHEMA_ID = "source_evidence_unit_v1"
 EVIDENCE_UNIT_REPORT_SCHEMA_ID = "source_evidence_unit_quality_report_v1"
 SOURCE_QUANTITY_TUPLES_SCHEMA_ID = "source_quantity_tuples_v1"
+SOURCE_RESULT_QUANTITY_SCHEMA_ID = "source_result_quantity_tuple_v1"
 
 
 def source_evidence_unit_json_schema() -> dict[str, Any]:
@@ -85,6 +86,7 @@ def build_source_evidence_units(
         "source_quantity_tuples": {
             "schema_id": SOURCE_QUANTITY_TUPLES_SCHEMA_ID,
             "source_id": source_id,
+            "canonical_record_type": SOURCE_RESULT_QUANTITY_SCHEMA_ID,
             "tuples": quantity_tuples,
         },
         "source_evidence_unit_quality_report": report,
@@ -187,30 +189,202 @@ def _claim_context(claim: dict[str, Any]) -> dict[str, str]:
 
 def _quantity_tuples_for_unit(unit: dict[str, Any]) -> list[dict[str, str]]:
     tuples = []
+    claim_context = _claim_context(unit)
     for index, quantity in enumerate(_list(unit.get("quantities")), start=1):
         if not isinstance(quantity, dict):
             continue
         value = str(quantity.get("value") or "").strip()
         if not value:
             continue
+        estimate_type = _estimate_type(quantity)
+        interval_low, interval_high, interval_type = _interval_parts(value)
+        tuple_id = f"{unit['unit_id']}_q{index:03d}"
         tuples.append(
             {
-                "tuple_id": f"{unit['unit_id']}_q{index:03d}",
+                "schema_id": SOURCE_RESULT_QUANTITY_SCHEMA_ID,
+                "result_tuple_id": tuple_id,
+                "tuple_id": tuple_id,
                 "unit_id": str(unit.get("unit_id") or ""),
+                "claim_id": str(unit.get("unit_id") or ""),
                 "source_id": str(unit.get("source_id") or ""),
                 "value": value,
                 "quantity_type": str(quantity.get("quantity_type") or "unknown"),
                 "quantity_role": str(quantity.get("quantity_role") or ""),
                 "measures": str(quantity.get("measures") or ""),
                 "local_interpretation": str(quantity.get("local_interpretation") or ""),
-                "endpoint": str(unit.get("endpoint") or ""),
+                "population": str(unit.get("population") or claim_context.get("population") or ""),
+                "exposure_or_intervention": str(unit.get("exposure_or_intervention") or claim_context.get("exposure_or_option") or ""),
                 "comparator": str(unit.get("comparator") or ""),
-                "population": str(unit.get("population") or ""),
+                "endpoint": str(unit.get("endpoint") or ""),
+                "design": str(unit.get("method") or unit.get("evidence_type") or claim_context.get("evidence_design") or ""),
+                "estimate_type": estimate_type,
+                "estimate": value if estimate_type != "interval" else "",
+                "interval_type": interval_type,
+                "interval_low": interval_low,
+                "interval_high": interval_high,
+                "units": str(quantity.get("units") or ""),
+                "time_horizon": str(unit.get("time_horizon") or ""),
                 "source_span": str(unit.get("source_span") or ""),
                 "source_quote": str(unit.get("source_quote") or ""),
+                "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
             }
         )
     return tuples
+
+
+def build_quantity_tuple_binding_report(quantity_tuples: list[dict[str, Any]]) -> dict[str, Any]:
+    ids = [str(row.get("result_tuple_id") or row.get("tuple_id") or "").strip() for row in quantity_tuples if isinstance(row, dict)]
+    missing_ids = [index for index, value in enumerate(ids) if not value]
+    duplicate_ids = sorted({value for value in ids if value and ids.count(value) > 1})
+    missing_source_identity = [
+        str(row.get("result_tuple_id") or row.get("tuple_id") or f"row_{index}")
+        for index, row in enumerate(quantity_tuples, start=1)
+        if isinstance(row, dict) and not str(row.get("source_id") or "").strip()
+    ]
+    missing_quote_or_span = [
+        str(row.get("result_tuple_id") or row.get("tuple_id") or f"row_{index}")
+        for index, row in enumerate(quantity_tuples, start=1)
+        if isinstance(row, dict) and (not str(row.get("source_quote") or "").strip() or not str(row.get("source_span") or "").strip())
+    ]
+    interval_without_estimate_context = [
+        str(row.get("result_tuple_id") or row.get("tuple_id") or f"row_{index}")
+        for index, row in enumerate(quantity_tuples, start=1)
+        if isinstance(row, dict)
+        and str(row.get("estimate_type") or "") == "interval"
+        and not str(row.get("local_interpretation") or row.get("measures") or row.get("endpoint") or "").strip()
+    ]
+    issues = [
+        *(["missing_result_tuple_id"] if missing_ids else []),
+        *(["duplicate_result_tuple_id"] if duplicate_ids else []),
+        *(["missing_source_identity"] if missing_source_identity else []),
+        *(["missing_quote_or_span"] if missing_quote_or_span else []),
+        *(["interval_without_result_context"] if interval_without_estimate_context else []),
+    ]
+    return {
+        "schema_id": "quantity_tuple_binding_report_v1",
+        "status": "ready" if not issues else "warning",
+        "tuple_count": len(quantity_tuples),
+        "result_tuple_id_count": len([value for value in ids if value]),
+        "duplicate_result_tuple_ids": duplicate_ids,
+        "missing_result_tuple_id_rows": missing_ids,
+        "missing_source_identity_ids": missing_source_identity,
+        "missing_quote_or_span_ids": missing_quote_or_span,
+        "interval_without_result_context_ids": interval_without_estimate_context,
+        "issues": issues,
+    }
+
+
+def build_quantity_tuple_mutation_eval(quantity_tuples: list[dict[str, Any]]) -> dict[str, Any]:
+    baseline = build_quantity_tuple_binding_report(quantity_tuples)
+    mutations: list[dict[str, Any]] = []
+    if len(quantity_tuples) >= 2:
+        swap_index = len(quantity_tuples) - 1
+        swapped = [dict(row) for row in quantity_tuples]
+        swapped[0]["source_quote"], swapped[swap_index]["source_quote"] = (
+            swapped[swap_index].get("source_quote", ""),
+            swapped[0].get("source_quote", ""),
+        )
+        mutations.append(_mutation_result("swapped_source_quote", swapped, original=quantity_tuples))
+        swapped_population = [dict(row) for row in quantity_tuples]
+        swapped_population[0]["population"], swapped_population[swap_index]["population"] = (
+            swapped_population[swap_index].get("population", ""),
+            swapped_population[0].get("population", ""),
+        )
+        mutations.append(_mutation_result("swapped_population", swapped_population, original=quantity_tuples))
+    if quantity_tuples:
+        missing_id = [dict(row) for row in quantity_tuples]
+        missing_id[0]["result_tuple_id"] = ""
+        missing_id[0]["tuple_id"] = ""
+        mutations.append(_mutation_result("missing_tuple_id", missing_id, original=quantity_tuples))
+    caught = [row for row in mutations if row.get("detected")]
+    return {
+        "schema_id": "quantity_tuple_mutation_eval_v1",
+        "status": "ready" if len(caught) == len(mutations) else "warning",
+        "baseline_status": baseline["status"],
+        "mutation_count": len(mutations),
+        "detected_mutation_count": len(caught),
+        "mutations": mutations,
+        "issues": [] if len(caught) == len(mutations) else ["undetected_quantity_tuple_mutation"],
+    }
+
+
+def _mutation_result(name: str, mutated: list[dict[str, Any]], *, original: list[dict[str, Any]]) -> dict[str, Any]:
+    report = build_quantity_tuple_binding_report(mutated)
+    changed_bindings = _changed_tuple_bindings(original, mutated)
+    detected = bool(report["issues"] or changed_bindings)
+    return {
+        "mutation": name,
+        "detected": detected,
+        "binding_changes": changed_bindings,
+        "report_issues": report["issues"],
+    }
+
+
+def _changed_tuple_bindings(original: list[dict[str, Any]], mutated: list[dict[str, Any]]) -> list[dict[str, str]]:
+    baseline = {
+        str(row.get("result_tuple_id") or row.get("tuple_id") or ""): _binding_fingerprint(row)
+        for row in original
+        if isinstance(row, dict) and str(row.get("result_tuple_id") or row.get("tuple_id") or "").strip()
+    }
+    changes = []
+    for row in mutated:
+        if not isinstance(row, dict):
+            continue
+        tuple_id = str(row.get("result_tuple_id") or row.get("tuple_id") or "").strip()
+        if not tuple_id or tuple_id not in baseline:
+            continue
+        mutated_fingerprint = _binding_fingerprint(row)
+        if mutated_fingerprint != baseline[tuple_id]:
+            changes.append({"result_tuple_id": tuple_id, "warning": "result_tuple_binding_changed"})
+    return changes
+
+
+def _binding_fingerprint(row: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        str(row.get(field) or "").strip()
+        for field in (
+            "source_id",
+            "claim_id",
+            "population",
+            "exposure_or_intervention",
+            "comparator",
+            "endpoint",
+            "design",
+            "estimate_type",
+            "estimate",
+            "interval_type",
+            "interval_low",
+            "interval_high",
+            "units",
+            "time_horizon",
+            "source_quote",
+            "source_span",
+        )
+    )
+
+
+def _estimate_type(quantity: dict[str, Any]) -> str:
+    role = str(quantity.get("quantity_role") or "").lower()
+    value = str(quantity.get("value") or "").lower()
+    if "interval" in role or re.search(r"\b(ci|confidence interval|credible interval)\b", value):
+        return "interval"
+    if "ratio" in value or re.search(r"\b(hr|rr|or)\b", value):
+        return "ratio"
+    if "%" in value or "percent" in value:
+        return "percentage"
+    if any(char.isdigit() for char in value):
+        return "numeric"
+    return "stated_quantity"
+
+
+def _interval_parts(value: str) -> tuple[str, str, str]:
+    text = str(value or "").replace("−", "-").replace("–", "-")
+    if not re.search(r"\b(ci|confidence interval|credible interval)\b", text, flags=re.IGNORECASE):
+        return "", "", ""
+    bounds = re.findall(r"-?\d+(?:\.\d+)?", text)
+    if len(bounds) < 2:
+        return "", "", "confidence_interval"
+    return bounds[-2], bounds[-1], "confidence_interval"
 
 
 def _evidence_type(text: str) -> str:

@@ -5,7 +5,11 @@ import sys
 from pathlib import Path
 
 import epistemic_case_mapper.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
-from epistemic_case_mapper.staged_semantic_evidence_units import build_source_evidence_units
+from epistemic_case_mapper.staged_semantic_evidence_units import (
+    build_quantity_tuple_binding_report,
+    build_quantity_tuple_mutation_eval,
+    build_source_evidence_units,
+)
 from epistemic_case_mapper.staged_semantic_pipeline import _extract_claims, _load_context
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -75,12 +79,66 @@ def test_source_evidence_units_preserve_exact_quote_and_quantity_tuple() -> None
     assert units[0]["must_preserve_terms"] == ["20 percent", "12 months"]
     assert units[0]["claim_context"]["stated_limitations"] == "single source-local population"
     assert tuples[0]["unit_id"] == "demo_source_eu001"
+    assert tuples[0]["schema_id"] == "source_result_quantity_tuple_v1"
+    assert tuples[0]["result_tuple_id"] == "demo_source_eu001_q001"
+    assert tuples[0]["claim_id"] == "demo_source_eu001"
     assert tuples[0]["value"] == "20 percent"
+    assert tuples[0]["estimate"] == "20 percent"
+    assert tuples[0]["estimate_type"] == "percentage"
     assert tuples[0]["quantity_role"] == "effect_estimate"
     assert tuples[0]["measures"] == "hospital admission reduction"
     assert tuples[0]["endpoint"] == "hospital admissions"
+    assert tuples[0]["population"] == "adult participants"
+    assert tuples[0]["exposure_or_intervention"] == "program receipt"
+    assert tuples[0]["design"] == "source-described outcome evidence"
     assert report["unit_count"] == 1
     assert report["quantity_tuple_count"] == 2
+
+
+def test_result_quantity_tuple_reports_detect_identity_and_binding_mutations() -> None:
+    source_text = (
+        "Adults receiving the program had 20 percent lower hospital admissions over 12 months. "
+        "Older adults receiving the program had RR 0.86 (95% CI 0.74 to 0.99) for admissions."
+    )
+    source_card = {
+        "canonical_claims": [
+            {
+                "claim": "Adults receiving the program had 20 percent lower hospital admissions over 12 months.",
+                "supporting_quotes": [
+                    {
+                        "quote": "Adults receiving the program had 20 percent lower hospital admissions over 12 months.",
+                        "line_hint": "line 1",
+                    }
+                ],
+                "quantities": ["20 percent", "12 months"],
+                "claim_context": {"population": "adults", "outcome_or_endpoint": "hospital admissions"},
+            },
+            {
+                "claim": "Older adults receiving the program had RR 0.86 (95% CI 0.74 to 0.99) for admissions.",
+                "supporting_quotes": [
+                    {
+                        "quote": "Older adults receiving the program had RR 0.86 (95% CI 0.74 to 0.99) for admissions.",
+                        "line_hint": "line 2",
+                    }
+                ],
+                "quantities": ["RR 0.86", "95% CI 0.74 to 0.99"],
+                "claim_context": {"population": "older adults", "outcome_or_endpoint": "hospital admissions"},
+            },
+        ]
+    }
+    bundle = build_source_evidence_units(source_card, source_id="demo_source", source_text=source_text)
+    tuples = bundle["source_quantity_tuples"]["tuples"]
+
+    binding = build_quantity_tuple_binding_report(tuples)
+    mutation = build_quantity_tuple_mutation_eval(tuples)
+
+    assert binding["status"] == "ready"
+    assert binding["result_tuple_id_count"] == len(tuples)
+    assert mutation["status"] == "ready"
+    assert mutation["detected_mutation_count"] == mutation["mutation_count"]
+    interval = next(row for row in tuples if row["estimate_type"] == "interval")
+    assert interval["interval_low"] == "0.74"
+    assert interval["interval_high"] == "0.99"
 
 
 def test_source_evidence_units_warn_when_exact_quote_does_not_support_claim() -> None:
@@ -188,6 +246,8 @@ def test_whole_doc_extraction_writes_aggregate_evidence_unit_artifacts(monkeypat
     aggregate = json.loads((tmp_path / "artifacts" / "source_evidence_units.json").read_text(encoding="utf-8"))
     quality = json.loads((tmp_path / "artifacts" / "source_evidence_unit_quality_report.json").read_text(encoding="utf-8"))
     quantities = json.loads((tmp_path / "artifacts" / "source_quantity_tuples.json").read_text(encoding="utf-8"))
+    binding = json.loads((tmp_path / "artifacts" / "quantity_tuple_binding_report.json").read_text(encoding="utf-8"))
+    mutation = json.loads((tmp_path / "artifacts" / "quantity_tuple_mutation_eval.json").read_text(encoding="utf-8"))
     assert len(claims) == 2
     assert rejected == []
     assert aggregate["unit_count"] == 2
@@ -195,3 +255,6 @@ def test_whole_doc_extraction_writes_aggregate_evidence_unit_artifacts(monkeypat
     assert quality["status"] == "ready"
     assert quality["exact_quote_count"] == 2
     assert quantities["tuple_count"] == 0
+    assert quantities["canonical_record_type"] == "source_result_quantity_tuple_v1"
+    assert binding["tuple_count"] == 0
+    assert mutation["mutation_count"] == 0
