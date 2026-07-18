@@ -28,10 +28,11 @@ Before deleting local generated artifacts, check what is tracked:
 git ls-files artifacts
 ```
 
-To remove only untracked generated runs:
+To preview and then remove only ignored generated runs:
 
 ```bash
-git clean -fd artifacts
+git clean -ndX artifacts
+git clean -fdX artifacts
 ```
 
 Do not delete tracked artifacts unless the submission package intentionally changes what evidence is checked in.

@@ -37,7 +37,7 @@ The repo has strong internal instrumentation, but usability is hurt by three thi
 ## Inventory And Dependency Map
 
 - Tracked artifacts are identified with `git ls-files artifacts`.
-- Untracked artifacts are generated run clutter and may be removed with `git clean -fd artifacts`.
+- Ignored generated artifacts may be previewed with `git clean -ndX artifacts` and removed with `git clean -fdX artifacts`.
 - `ui/data.json` is generated from `submission_manifest.yaml`; if stale, regenerate it with `scripts/build_ui_data.py`.
 - `semantic staged brief` is the current end-to-end reusable path.
 - `run_flf_demo.py --skip-build` is the advertised package check and should pass after generated assets are refreshed.
