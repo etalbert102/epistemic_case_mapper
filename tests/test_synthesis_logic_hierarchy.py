@@ -89,3 +89,11 @@ def test_reader_abbreviations_expand_on_first_use() -> None:
         "cardiovascular disease (CVD) incidence changed. LDL cholesterol (LDL-c) concentration changed. "
         "mean difference (MD) = 8.14. CVD remained bounded."
     )
+
+
+def test_reader_abbreviations_expand_statistical_terms() -> None:
+    expanded = expand_reader_abbreviations("Thirteen RCTs reported HR 1.19 with a 95% CI.")
+
+    assert expanded == (
+        "Thirteen randomized controlled trials (RCTs) reported hazard ratio (HR) 1.19 with a 95% confidence interval (CI)."
+    )

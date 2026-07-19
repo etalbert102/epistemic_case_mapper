@@ -5,6 +5,9 @@ from typing import Any
 
 
 READER_ABBREVIATION_EXPANSIONS = {
+    "RCTs": "randomized controlled trials",
+    "HR": "hazard ratio",
+    "CI": "confidence interval",
     "CVD": "cardiovascular disease",
     "LDL-c": "LDL cholesterol",
 }
