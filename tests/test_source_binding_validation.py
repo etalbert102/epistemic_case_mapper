@@ -270,6 +270,31 @@ def test_source_binding_report_uses_section_heading_for_boundary_role() -> None:
     assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
 
 
+def test_source_binding_report_preserves_heading_role_for_later_paragraph_sentences() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_boundary", "source_label": "Boundary Study"}],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [{"source_ids": ["s_boundary"], "main_use": "bounds_answer"}],
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Positive markers were observed in one population.",
+                    "source_ids": ["s_boundary"],
+                    "main_use": "bounds_answer",
+                }
+            ],
+        },
+    }
+    memo = (
+        "## What Could Change or Bound the Answer\n\n"
+        "The recommendation depends on the population. "
+        "Positive markers were observed in one population [s_boundary]."
+    )
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
+
+
 def test_prioritized_source_role_overrides_stale_canonical_role() -> None:
     packet = {
         "source_trail": [{"source_id": "s1", "source_label": "Study One"}],

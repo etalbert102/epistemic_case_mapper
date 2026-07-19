@@ -22,7 +22,9 @@ def build_citation_care_report(
     roles_by_source = _citation_roles_by_source(atoms, override=source_roles_override or {})
     warnings: list[dict[str, Any]] = []
     cited_sentence_count = 0
-    for sentence in _memo_sentences(memo):
+    for sentence_context in _memo_sentence_contexts(memo):
+        sentence = str(sentence_context.get("sentence") or "")
+        role_context = str(sentence_context.get("role_context") or sentence)
         citation_groups = _sentence_citation_groups(sentence, alias_to_source)
         cited_source_ids = _dedupe(
             source_id
@@ -37,7 +39,7 @@ def build_citation_care_report(
             if not group_source_ids:
                 continue
             clause = str(group.get("clause") or sentence)
-            sentence_roles = _sentence_citation_roles(f"{sentence} {clause}")
+            sentence_roles = _sentence_citation_roles(f"{role_context} {clause}")
             source_roles = {source_id: sorted(roles_by_source.get(source_id, set())) for source_id in group_source_ids}
             if len(group_source_ids) > 2 or _mixed_citation_roles(source_roles):
                 warnings.append(
@@ -240,16 +242,16 @@ def _role_mismatch_guidance(sentence_roles: set[str], source_roles: set[str]) ->
     return "Check whether this source supports the exact sentence claim in the cited role."
 
 
-def _memo_sentences(memo: str) -> list[str]:
+def _memo_sentence_contexts(memo: str) -> list[dict[str, str]]:
     body = re.sub(r"\n## Sources\b.*", "", str(memo or ""), flags=re.IGNORECASE | re.DOTALL)
     body = re.sub(r"\[[^\]\n]+\]:\s+\S+", "", body)
-    blocks: list[str] = []
+    blocks: list[tuple[str, str]] = []
     paragraph_lines: list[str] = []
     current_heading = ""
 
     def flush_paragraph() -> None:
         if paragraph_lines:
-            blocks.append(" ".join(paragraph_lines))
+            blocks.append((current_heading, " ".join(paragraph_lines)))
             paragraph_lines.clear()
 
     for raw_line in body.splitlines():
@@ -265,17 +267,24 @@ def _memo_sentences(memo: str) -> list[str]:
         if list_item:
             flush_paragraph()
             item = list_item.group(1).strip()
-            blocks.append(f"{current_heading}: {item}" if current_heading else item)
+            blocks.append((current_heading, item))
             continue
-        if not paragraph_lines and current_heading:
-            paragraph_lines.append(f"{current_heading}:")
         paragraph_lines.append(line)
     flush_paragraph()
 
-    sentences = []
-    for block in blocks:
+    sentences: list[dict[str, str]] = []
+    for heading, block in blocks:
         parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", re.sub(r"\s+", " ", block))
-        sentences.extend(part.strip() for part in parts if part.strip())
+        for part in parts:
+            sentence = part.strip()
+            if not sentence:
+                continue
+            sentences.append(
+                {
+                    "sentence": sentence,
+                    "role_context": f"{heading}: {sentence}" if heading else sentence,
+                }
+            )
     return sentences
 
 
