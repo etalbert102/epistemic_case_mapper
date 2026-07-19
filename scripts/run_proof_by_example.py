@@ -100,7 +100,7 @@ def _run_invalid_source_probe(repo_root: Path) -> dict[str, Any]:
         case_dir = artifact_root / "lhc_black_holes"
         case_dir.mkdir(parents=True)
         for name in ("case_map.json", "report.md", "audit.md"):
-            shutil.copy2(repo_root / "examples" / "lhc_black_holes" / name, case_dir / name)
+            shutil.copy2(repo_root / "examples" / "starter_snapshots" / "lhc_black_holes" / name, case_dir / name)
 
         case_map_path = case_dir / "case_map.json"
         payload = json.loads(case_map_path.read_text(encoding="utf-8"))

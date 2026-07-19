@@ -11,7 +11,7 @@ from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 
 
-OUTPUT_PATH = "docs/SUBMISSION_ARTIFACT_SUMMARY.md"
+OUTPUT_PATH = "docs/submission/ARTIFACT_INDEX.md"
 
 
 def main() -> int:

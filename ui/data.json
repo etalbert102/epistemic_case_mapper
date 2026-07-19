@@ -2,7 +2,7 @@
   "cases": [
     {
       "artifacts": {
-        "bestRegions": "examples/lhc_black_holes/BEST_REGIONS.md",
+        "bestRegions": "examples/lhc_black_holes/README.md",
         "erosionAudit": "examples/lhc_black_holes/decision_space_erosion_audit.md",
         "fullCaseBaseline": "examples/lhc_black_holes/full_case_flat_synthesis_baseline.md",
         "fullIndex": "examples/lhc_black_holes/full_case_index.md",
@@ -663,7 +663,7 @@
       "workedRegions": [
         {
           "artifacts": {
-            "bestRegions": "examples/lhc_black_holes/BEST_REGIONS.md",
+            "bestRegions": "examples/lhc_black_holes/README.md",
             "definition": "docs/worked_regions/lhc_cosmic_ray_argument.md",
             "erosionAudit": "examples/lhc_black_holes/decision_space_erosion_audit.md",
             "workedBaseline": "examples/lhc_black_holes/flat_synthesis_baseline.md",
@@ -1019,7 +1019,7 @@
     },
     {
       "artifacts": {
-        "bestRegions": "examples/eggs/BEST_REGIONS.md",
+        "bestRegions": "examples/eggs/README.md",
         "erosionAudit": "examples/eggs/decision_space_erosion_audit.md",
         "fullCaseBaseline": "examples/eggs/full_case_flat_synthesis_baseline.md",
         "fullIndex": "examples/eggs/full_case_index.md",
@@ -1746,7 +1746,7 @@
       "workedRegions": [
         {
           "artifacts": {
-            "bestRegions": "examples/eggs/BEST_REGIONS.md",
+            "bestRegions": "examples/eggs/README.md",
             "definition": "docs/worked_regions/eggs_observational_vs_rct.md",
             "erosionAudit": "examples/eggs/decision_space_erosion_audit.md",
             "workedBaseline": "examples/eggs/flat_synthesis_baseline.md",

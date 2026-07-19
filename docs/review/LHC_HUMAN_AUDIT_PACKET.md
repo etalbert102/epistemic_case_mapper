@@ -33,7 +33,7 @@ prompt_versions:
 - Self-contained Tier 1 checklist: `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - Worked map: `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
 - Region definition: `docs/worked_regions/lhc_cosmic_ray_argument.md`
-- Best-region pointer: `examples/lhc_black_holes/BEST_REGIONS.md`
+- Best-region pointer: `examples/lhc_black_holes/README.md`
 - Illustrative baseline: `examples/lhc_black_holes/flat_synthesis_baseline.md`
 - Blinded local-model baselines: `examples/lhc_black_holes/blinded_flat_synthesis_baseline_*.md`
 - Erosion audit: `examples/lhc_black_holes/decision_space_erosion_audit.md`

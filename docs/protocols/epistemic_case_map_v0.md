@@ -8,7 +8,11 @@ A source is a document, transcript, dataset, expert statement, or investigator n
 
 ### Claim
 
-A claim is an atomic or near-atomic proposition that matters to the case. It should be narrower than a paragraph summary but may remain more natural-language than a formal logic statement.
+A claim is an atomic or near-atomic proposition that matters to the case. It
+should be narrower than a paragraph summary but may remain more
+natural-language than a formal logic statement. The current schema preserves a
+source ID, source span or offsets when available, excerpt hashes, extraction
+method, entailment status, review state, and categorical confidence.
 
 Useful claim types include:
 
@@ -47,4 +51,9 @@ A map is not judged by whether it has a fluent summary. It is judged by whether 
 
 ## Known Limits
 
-The current schema is intentionally small. It does not yet encode detailed source spans, confidence calibration, author stance, evidence independence, temporal evolution, or user-specific belief updates.
+The current schema is intentionally small. It encodes source spans/offsets and
+categorical confidence, while source-independence and method metadata can be
+attached through case metadata files and propagated into appraisal. It does
+not yet provide formally calibrated probabilities, a first-class author-stance
+model, first-class independence edges in the core schema, temporal version
+history, multi-reviewer conflict resolution, or user-specific belief updates.

@@ -40,5 +40,5 @@ This region is a compact stress test for decision-space preservation. A normal s
 - [x] Curated map exists at `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`.
 - [x] Flat baseline exists at `examples/lhc_black_holes/flat_synthesis_baseline.md`.
 - [x] Erosion audit exists at `examples/lhc_black_holes/decision_space_erosion_audit.md`.
-- [x] Best-region index exists at `examples/lhc_black_holes/BEST_REGIONS.md`.
+- [x] Best-region guidance is consolidated in `examples/lhc_black_holes/README.md`.
 - [ ] Region validator passes.

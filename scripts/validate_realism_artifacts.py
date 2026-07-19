@@ -20,7 +20,7 @@ def main() -> int:
     manifest = load_submission_manifest(repo_root, args.manifest)
     failures: list[str] = []
 
-    realism_docs = ["docs/OPERATIONAL_WORKFLOW_AND_REALISM.md"] + [
+    realism_docs = ["docs/methodology/OPERATIONAL_WORKFLOW.md"] + [
         queue.path for _case, queue in manifest.iter_task_queues()
     ]
     for relative_path in realism_docs:
@@ -48,14 +48,14 @@ def main() -> int:
 
 
 def _validate_playbook(repo_root: Path, failures: list[str]) -> None:
-    text = (repo_root / "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md").read_text(encoding="utf-8")
+    text = (repo_root / "docs/methodology/OPERATIONAL_WORKFLOW.md").read_text(encoding="utf-8")
     for required in ("Roles", "Realistic Workflow", "Full-Case Scaffold Design", "Realism Verdict"):
         if required not in text:
             failures.append(f"playbook_missing_section section={required}")
 
 
 def _validate_realism_audit(repo_root: Path, failures: list[str]) -> None:
-    text = (repo_root / "docs/OPERATIONAL_WORKFLOW_AND_REALISM.md").read_text(encoding="utf-8")
+    text = (repo_root / "docs/methodology/OPERATIONAL_WORKFLOW.md").read_text(encoding="utf-8")
     for required in ("What Is Realistic Now", "Remaining Gaps", "Realism Verdict"):
         if required not in text:
             failures.append(f"realism_audit_missing_section section={required}")

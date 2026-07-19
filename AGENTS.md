@@ -16,9 +16,15 @@ Do not optimize for fluent summaries at the expense of provenance or disagreemen
 - `src/epistemic_case_mapper/pipeline/map/`: semantic extraction, normalization, relation, quality, and map-output stage.
 - `src/epistemic_case_mapper/pipeline/briefing/`: decision-model, packet, synthesis, and briefing-output stage.
 - `scripts/`: runnable CLI tools.
-- `docs/`: workflow, criteria, plans, and protocols.
+- `docs/START_HERE.md`: stable contest-review entry point.
+- `docs/submission/`: formal entry, proof, limitations, and reproduction guide.
+- `docs/methodology/`: workflow and architecture documentation.
+- `docs/evaluations/`: checked-in comparison and challenge evidence.
+- `docs/guides/`, `docs/validation/`, `docs/review/`, `docs/reference/`: operator, validation, audit, and source-reference material.
+- `docs/archive/internal/`: development history and plans; not a judge-facing surface.
 - `examples/`: checked-in judge-facing snapshots.
 - `artifacts/`: generated local outputs; gitignored.
+- `for_deletion/`: recoverable quarantine for stale/superseded files pending human deletion approval.
 - `tests/`: pytest coverage.
 
 ## Required Reading Before Substantial Edits
@@ -26,10 +32,10 @@ Do not optimize for fluent summaries at the expense of provenance or disagreemen
 Before a multi-file change or Codex `/goal` run, read:
 
 - `README.md`
-- `docs/archive/internal/WORKFLOW_SPEC.md`
+- `docs/methodology/WORKFLOW.md`
 - `docs/protocols/epistemic_case_map_v0.md`
 - `docs/archive/internal/CODEX_GOAL_FLF_PROTOTYPE_CRITERIA.md`
-- the relevant `docs/archive/internal/plans/*.md`
+- the relevant plan under `docs/archive/internal/plans/`
 - the relevant `data/cases/*/case.yaml`
 
 Record at least one concrete implication from each required input in the active plan before broad implementation edits.
@@ -49,16 +55,18 @@ Use web search only when the active plan explicitly authorizes source acquisitio
 
 ## Artifact Policy
 
-Generated working artifacts go under `artifacts/` and are ignored by git.
+Generated working artifacts go under `artifacts/` and are ignored by git. Do
+not check in generated runs there; curate only the evidence needed for review
+under `examples/`.
 
-Curated judge-facing snapshots go under `examples/<case_id>/` and must be checked in:
+Curated judge-facing maps, comparisons, and case guidance go under
+`examples/<case_id>/`. Reproducibility-only heuristic builder outputs belong
+under `examples/starter_snapshots/<case_id>/` so they cannot be mistaken for
+the curated evidence. Every curated case needs a README that names its reviewer
+order, strongest region, source mode, review boundary, and known limitations.
 
-- `case_map.json`
-- `report.md`
-- `audit.md`
-- `README.md`
-
-Snapshots must be reproducible by documented commands and validated against regenerated artifacts.
+Checked-in snapshots must be reproducible by documented commands and validated
+against regenerated artifacts.
 
 ## Agent Work Roles
 

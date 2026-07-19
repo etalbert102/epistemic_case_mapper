@@ -1,20 +1,16 @@
 # Examples
 
-This directory stores checked-in snapshots of judge-facing demo outputs.
+This directory contains stable, judge-facing evidence rather than transient run
+output.
 
-Generated working artifacts belong under `artifacts/`, which is gitignored. Curated examples belong here so reviewers and future Codex goal runs can inspect stable outputs without relying on local untracked files.
+- [`lhc_black_holes/`](lhc_black_holes/) is the primary dependency example.
+- [`eggs/`](eggs/) is the evidence-role and population transfer example.
+- [`covid_origins_slice/`](covid_origins_slice/) is a bounded disagreement test.
+- [`investigator_challenge/`](investigator_challenge/) demonstrates recovery,
+  local repair, and held-out-source update.
+- [`starter_snapshots/`](starter_snapshots/) contains reproducibility-only
+  heuristic outputs, kept separate from curated maps.
 
-Each case example should contain:
-
-- `case_map.json`
-- `report.md`
-- `audit.md`
-- `README.md`
-
-Each case `README.md` must state:
-
-- evidence mode: `seed` or `source-grounded`,
-- review status,
-- generation command,
-- source manifest path,
-- known limitations.
+Generated working artifacts belong under the ignored `artifacts/` directory.
+Each curated case README states its reviewer order, strongest region, evidence
+boundary, and review status.

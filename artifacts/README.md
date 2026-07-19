@@ -2,7 +2,10 @@
 
 This directory is for generated run outputs.
 
-Checked-in artifacts are intentionally limited to small, reviewable evidence of current prototype behavior. Large exploratory runs, prompt experiments, and local backend scratch outputs should remain untracked.
+No generated run is part of the active checked-in `artifacts/` surface. Local
+runs, prompt experiments, and backend scratch outputs remain ignored here.
+Curated competition evidence belongs under `examples/`; historical tracked
+runs awaiting deletion review are quarantined under `for_deletion/`.
 
 ## Current Reader Path
 
@@ -35,4 +38,4 @@ git clean -ndX artifacts
 git clean -fdX artifacts
 ```
 
-Do not delete tracked artifacts unless the submission package intentionally changes what evidence is checked in.
+The only tracked file expected under `artifacts/` is this policy README.

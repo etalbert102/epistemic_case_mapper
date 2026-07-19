@@ -35,7 +35,7 @@ prompt_versions:
 - Self-contained Tier 1 checklist: `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`
 - Worked map: `examples/eggs/worked_region_observational_vs_rct_map.md`
 - Region definition: `docs/worked_regions/eggs_observational_vs_rct.md`
-- Best-region pointer: `examples/eggs/BEST_REGIONS.md`
+- Best-region pointer: `examples/eggs/README.md`
 - Illustrative baseline: `examples/eggs/flat_synthesis_baseline.md`
 - Blinded local-model baselines: `examples/eggs/blinded_flat_synthesis_baseline_*.md`
 - Erosion audit: `examples/eggs/decision_space_erosion_audit.md`

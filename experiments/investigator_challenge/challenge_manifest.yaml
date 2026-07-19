@@ -57,7 +57,7 @@ cases:
     held_out_update:
       update_id: lhc_public_faq_update
       source_id: cern_lhc_current_page
-      update_demo_path: docs/NEW_SOURCE_UPDATE_DEMO.md
+      update_demo_path: docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md
 
   - case_id: eggs
     label: Eggs and health

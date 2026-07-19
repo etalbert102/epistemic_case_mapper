@@ -15,7 +15,7 @@ Core files:
 - `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md`
 - `examples/covid_origins_slice/flat_synthesis_baseline.md`
 - `examples/covid_origins_slice/decision_space_erosion_audit.md`
-- `examples/covid_origins_slice/BEST_REGIONS.md`
+- `examples/covid_origins_slice/README.md`
 
 ## Priority Claims
 

@@ -44,5 +44,5 @@ This region demonstrates why ordinary synthesis can be plausible and still erosi
 - [x] Curated map exists at `examples/eggs/worked_region_observational_vs_rct_map.md`.
 - [x] Flat baseline exists at `examples/eggs/flat_synthesis_baseline.md`.
 - [x] Erosion audit exists at `examples/eggs/decision_space_erosion_audit.md`.
-- [x] Best-region index exists at `examples/eggs/BEST_REGIONS.md`.
+- [x] Best-region guidance is consolidated in `examples/eggs/README.md`.
 - [ ] Region validator passes.
