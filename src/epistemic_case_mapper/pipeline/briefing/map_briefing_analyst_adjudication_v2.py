@@ -604,8 +604,14 @@ def _extract_json(raw: str) -> Any:
 def _normalize_compact_payload(payload: Any) -> Any:
     if isinstance(payload, list):
         return {"rows": payload}
-    if isinstance(payload, dict) and set(payload) == {"results"} and isinstance(payload["results"], list):
-        return {"rows": payload["results"]}
+    if isinstance(payload, dict) and len(payload) == 1:
+        wrapper = next(iter(payload))
+        wrapped_rows = payload[wrapper]
+        if isinstance(wrapped_rows, list) and all(
+            isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+            for row in wrapped_rows
+        ):
+            return {"rows": wrapped_rows}
     return payload
 
 

@@ -27,7 +27,7 @@ The migration applies the repository guidance as follows:
 ## Verification evidence
 
 - The frozen fixture prompt fell from 6,610 to 3,632 characters, a 45.1% reduction.
-- Focused schema/runtime/quality verification passed after adding bounded compatibility for Gemma root lists, a `results` wrapper, and known enum aliases. Unknown wrappers and unknown enum values remain invalid.
+- Focused schema/runtime/quality verification passed after adding bounded compatibility for Gemma root lists, structurally valid single-key row-list wrappers, and known enum aliases. Multi-key, non-list, non-row wrappers and unknown enum values remain invalid.
 - `ollama:gemma4:12b-mlx` completed the full 20-row eggs ledger with 20 canonical rows, zero initial failures, zero failed chunks, zero repair calls, and a valid parse in 44.423 seconds.
 - An earlier full Gemma run exposed transport-shape variance and failed at 8/20 rows. That failure was retained as the reason for the narrowly tested response normalization; the rollout gate was not weakened.
 - A Qwen canary also completed 20/20 rows after target-option validation was aligned with canonical `candidate_answer_id` values. Qwen is supporting evidence only; Gemma MLX 12B is the exemplar acceptance backend.

@@ -142,7 +142,10 @@ def test_schema_comparison_flags_high_impact_role_changes() -> None:
     assert report["differences"][0]["changed_fields"] == ["memo_use", "answer_relation"]
 
 
-@pytest.mark.parametrize("wrapper", [None, "results"])
+@pytest.mark.parametrize(
+    "wrapper",
+    [None, "results", "evidence_items", "evidence_evaluations", "triaged_evidence"],
+)
 def test_v2_runtime_repairs_known_gemma_response_shapes(monkeypatch, wrapper) -> None:
     ledger = _ledger()
     ledger["rows"] = ledger["rows"][:1]
@@ -177,9 +180,16 @@ def test_v2_runtime_repairs_known_gemma_response_shapes(monkeypatch, wrapper) ->
     assert row["importance_rank"] == 1
 
 
-def test_v2_runtime_rejects_unknown_response_wrapper(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"items": ["not-a-row"]},
+        {"items": [_compact_row("support:one")], "metadata": {}},
+    ],
+)
+def test_v2_runtime_rejects_non_row_response_wrappers(monkeypatch, response) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=json.dumps({"items": [_compact_row("support:one")]}), backend="fake")
+        return ModelBackendResult(text=json.dumps(response), backend="fake")
 
     monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_SCHEMA", "v2")
     monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "1")
