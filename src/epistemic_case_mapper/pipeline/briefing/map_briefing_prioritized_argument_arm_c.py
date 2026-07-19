@@ -284,9 +284,39 @@ def run_arm_c_prioritization(
         raw = result.text
         payload = _extract_json(raw)
     normalized_payload, id_normalization_report = normalize_arm_c_prioritized_argument_ids(inputs, payload)
+    verification = verify_arm_c_prioritized_argument(inputs, normalized_payload)
+    initial_verification = verification
+    semantic_repair_attempted = False
+    if backend.strip() != "prompt" and verification.get("status") != "pass":
+        semantic_repair_attempted = True
+        repair_prompt = build_arm_c_prioritization_repair_prompt(
+            prompt,
+            candidate=normalized_payload,
+            verification_report=verification,
+        )
+        repair_result = run_model_backend(
+            repair_prompt,
+            backend,
+            timeout_seconds=backend_timeout,
+            max_retries=backend_retries,
+            response_schema=ArmCPrioritizedArgument.model_json_schema(),
+            num_predict=4096,
+            json_mode=True,
+        )
+        repaired_payload = _extract_json(repair_result.text)
+        normalized_payload, repair_normalization_report = normalize_arm_c_prioritized_argument_ids(inputs, repaired_payload)
+        verification = verify_arm_c_prioritized_argument(inputs, normalized_payload)
+        id_normalization_report = {
+            **repair_normalization_report,
+            "initial_rewrite_count": id_normalization_report.get("rewrite_count", 0),
+        }
+        prompt = repair_prompt
+        raw = repair_result.text
     report = {
-        **verify_arm_c_prioritized_argument(inputs, normalized_payload),
+        **verification,
         "id_normalization_report": id_normalization_report,
+        "semantic_repair_attempted": semantic_repair_attempted,
+        "initial_verification_report": initial_verification if semantic_repair_attempted else {},
     }
     return {
         "accepted": report.get("status") == "pass",
@@ -295,6 +325,25 @@ def run_arm_c_prioritization(
         "raw": raw,
         "report": report,
     }
+
+
+def build_arm_c_prioritization_repair_prompt(
+    original_prompt: str,
+    *,
+    candidate: Any,
+    verification_report: dict[str, Any],
+) -> str:
+    return (
+        f"{original_prompt}\n\n"
+        "The prior JSON candidate failed deterministic verification. Return a complete corrected JSON object.\n"
+        "Do not change the frozen decision question, direct answer, or confidence.\n"
+        "Every evidence_accounting row with disposition=owned must name an evidence item used by a required move. "
+        "For each reported owned_evidence_not_in_required_move ID, either add it to an appropriate required move "
+        "or change its disposition to appendix, demoted, or background.\n"
+        "Resolve every verification issue; do not merely explain the correction.\n\n"
+        f"Verification report:\n{json.dumps(verification_report, indent=2, ensure_ascii=False)}\n\n"
+        f"Prior candidate:\n{json.dumps(candidate, indent=2, ensure_ascii=False)}\n"
+    )
 
 
 def build_arm_c_prioritization_prompt(inputs: dict[str, Any]) -> str:

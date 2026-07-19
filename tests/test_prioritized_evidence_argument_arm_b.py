@@ -22,6 +22,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_a
     build_arm_c_prioritization_prompt,
     build_arm_c_projection,
     normalize_arm_c_prioritized_argument_ids,
+    run_arm_c_prioritization,
     verify_arm_c_prioritized_argument,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import build_evidence_expression_contracts
@@ -284,6 +285,56 @@ def test_prioritized_retention_packet_limits_mandatory_scope_without_dropping_co
     ]
     assert projected["prioritized_retention_scope"]["required_evidence_item_ids"] == ["e1"]
     assert packet["evidence_items"][1]["must_use"] is True
+
+
+def test_arm_c_prioritization_repairs_owned_evidence_without_required_move(monkeypatch) -> None:
+    inputs = load_frozen_arm_b_inputs(FROZEN_EGGS)
+    analyst = inputs["analyst_decision_model"]
+    base = {
+        "schema_id": "arm_c_prioritized_argument_v1",
+        "decision_question": analyst["decision_question"],
+        "frozen_direct_answer": analyst["direct_answer"],
+        "confidence": analyst["confidence"],
+        "argument_thesis": "Use a bounded prioritized argument.",
+        "moves": [
+            {
+                "move_id": "m1",
+                "primary_section": "answer_evidence",
+                "proposition": "The selected evidence supports the answer.",
+                "warrant": "It is the primary support.",
+                "decision_effect": "It supports the current read.",
+                "evidence_item_ids": ["decision_writer_item_001"],
+                "required": True,
+            }
+        ],
+        "evidence_accounting": [
+            {"evidence_item_id": "decision_writer_item_001", "disposition": "owned", "rationale": "Used."},
+            {"evidence_item_id": "decision_writer_item_004", "disposition": "owned", "rationale": "Initially unused."},
+        ],
+    }
+    repaired = json.loads(json.dumps(base))
+    repaired["evidence_accounting"][1]["disposition"] = "demoted"
+    responses = iter([base, repaired])
+
+    def fake_backend(prompt: str, backend: str, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text=json.dumps(next(responses)), backend=backend)
+
+    monkeypatch.setattr(
+        "epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c.run_model_backend",
+        fake_backend,
+    )
+
+    result = run_arm_c_prioritization(
+        inputs,
+        backend="ollama:test",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["accepted"] is True
+    assert result["report"]["semantic_repair_attempted"] is True
+    assert result["report"]["initial_verification_report"]["status"] == "fail"
+    assert result["prioritized_argument"]["evidence_accounting"][1]["disposition"] == "demoted"
 
 
 def test_arm_c_prompt_validation_and_projection_are_bundle_native() -> None:
