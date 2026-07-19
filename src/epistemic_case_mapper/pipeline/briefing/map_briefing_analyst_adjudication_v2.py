@@ -232,7 +232,7 @@ def build_analyst_adjudication_schema_comparison(
         changed = [
             field
             for field in ("memo_use", "answer_relation", "target_answer_option")
-            if old.get(field) != new.get(field)
+            if str(old.get(field) or "").strip() != str(new.get(field) or "").strip()
         ]
         if changed or not old or not new:
             differences.append(
@@ -245,7 +245,7 @@ def build_analyst_adjudication_schema_comparison(
                     "candidate_memo_use": new.get("memo_use"),
                     "baseline_answer_relation": old.get("answer_relation"),
                     "candidate_answer_relation": new.get("answer_relation"),
-                    "high_impact": _high_impact_difference(old, new),
+                    "high_impact": _high_impact_difference(old, new, changed),
                 }
             )
     return {
@@ -270,6 +270,7 @@ def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
             "Use source_bottom_lines and source_bottom_line_signals over support-shaped claim wording when they conflict.",
             "Treat candidate relation labels as provisional and judge their endpoint evidence before assigning a role.",
             "Use guardrail only for a qualifier or unsafe inference that must travel with the row.",
+            "When live_answer_options are supplied, copy the relevant target option exactly or leave target_answer_option empty.",
             "Do not copy sources, quantities, claims, or provenance into the response.",
             "Return strict JSON only.",
         ],
@@ -323,6 +324,10 @@ def _run_v2_chunk(
             raw = result.text
             payload = _extract_json(raw)
             parsed = AnalystAdjudicationResponseV2.model_validate(payload)
+            invalid_targets = _invalid_target_options(parsed.rows, chunk_ledger)
+            if invalid_targets:
+                last_issue = f"unsupported_target_answer_options={invalid_targets}"
+                continue
             returned_ids = {row.evidence_item_id for row in parsed.rows}
             unknown = sorted(returned_ids - expected_ids)
             missing = sorted(expected_ids - returned_ids)
@@ -492,6 +497,38 @@ def _accepted_compact_rows(results: list[dict[str, Any]], allowed_ids: set[str])
     return accepted
 
 
+def _invalid_target_options(
+    rows: list[EvidenceAdjudicationResponseRowV2],
+    ledger: dict[str, Any],
+) -> list[dict[str, str]]:
+    frame = ledger.get("stable_final_answer_frame") if isinstance(ledger.get("stable_final_answer_frame"), dict) else {}
+    options = frame.get("live_answer_options")
+    allowed = _answer_option_values(options)
+    if not allowed:
+        return []
+    return [
+        {"evidence_item_id": row.evidence_item_id, "target_answer_option": row.target_answer_option}
+        for row in rows
+        if row.target_answer_option and _normalized(row.target_answer_option) not in allowed
+    ]
+
+
+def _answer_option_values(value: Any) -> set[str]:
+    values: set[str] = set()
+    for option in value if isinstance(value, list) else []:
+        if isinstance(option, dict):
+            for key in ("option_id", "id", "label", "answer", "stance"):
+                if option.get(key):
+                    values.add(_normalized(option[key]))
+        elif str(option or "").strip():
+            values.add(_normalized(option))
+    return values
+
+
+def _normalized(value: Any) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
 def _extract_json(raw: str) -> Any:
     text = str(raw or "").strip()
     if text.startswith("```"):
@@ -517,7 +554,7 @@ def _canonical_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
-def _high_impact_difference(old: dict[str, Any], new: dict[str, Any]) -> bool:
+def _high_impact_difference(old: dict[str, Any], new: dict[str, Any], changed_fields: list[str]) -> bool:
     high_impact_roles = {
         "load_bearing_primary_support",
         "load_bearing_counterweight",
@@ -527,8 +564,10 @@ def _high_impact_difference(old: dict[str, Any], new: dict[str, Any]) -> bool:
         "not_decision_relevant",
     }
     return bool(
-        {str(old.get("memo_use") or ""), str(new.get("memo_use") or "")} & high_impact_roles
-        or old.get("answer_relation") != new.get("answer_relation")
+        "memo_use" in changed_fields
+        and {str(old.get("memo_use") or ""), str(new.get("memo_use") or "")} & high_impact_roles
+        or "answer_relation" in changed_fields
+        or "target_answer_option" in changed_fields
     )
 
 
