@@ -6,6 +6,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_lightweight_guidance i
     compact_lightweight_guidance_for_prompt,
     evidence_quality_caveat_text,
     normalize_lightweight_writer_guidance,
+    run_lightweight_writer_guidance,
 )
 
 
@@ -88,3 +89,43 @@ def test_attach_lightweight_guidance_updates_top_level_and_canonical_packet() ->
     assert updated["lightweight_writer_guidance"]["schema_id"] == "lightweight_writer_guidance_v1"
     assert updated["canonical_decision_writer_packet"]["lightweight_writer_guidance"]["schema_id"] == "lightweight_writer_guidance_v1"
     assert updated["canonical_decision_writer_packet"]["lightweight_writer_guidance_report"]["status"] == "parsed"
+
+
+def test_lightweight_guidance_reuses_writer_packet_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("ECM_LIGHTWEIGHT_GUIDANCE_MODE", raising=False)
+    canonical = {
+        "balanced_answer_frame": {"default_answer": "Use option A with monitoring."},
+        "source_weight_judgments": [
+            {
+                "source_ids": ["s1"],
+                "reader_facing_limit": "Treat this source as associative, not causal.",
+            }
+        ],
+        "do_not_overstate": ["Do not claim causality."],
+    }
+    scaffold = {
+        "writer_guidance_packet": {
+            "guidance": [
+                {
+                    "instruction": "Surface the monitoring boundary.",
+                    "why_it_matters": "It bounds implementation.",
+                    "target_ids": ["item_1"],
+                    "validation_terms": ["monitoring"],
+                    "model_instruction_ready": True,
+                }
+            ]
+        }
+    }
+
+    result = run_lightweight_writer_guidance(
+        canonical_packet=canonical,
+        scaffold=scaffold,
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["lightweight_writer_guidance_report"]["status"] == "reused_writer_packet"
+    assert result["lightweight_writer_guidance_report"]["method"] == "deterministic_writer_packet_reuse"
+    assert result["lightweight_writer_guidance"]["reader_guidance"][0]["instruction"] == "Surface the monitoring boundary."
+    assert result["lightweight_writer_guidance"]["evidence_quality_caveats"][0]["source_ids"] == ["s1"]

@@ -32,10 +32,12 @@ def run_lightweight_writer_guidance(
     """
 
     prompt = build_lightweight_writer_guidance_prompt(canonical_packet=canonical_packet, scaffold=scaffold)
-    mode = os.environ.get("ECM_LIGHTWEIGHT_GUIDANCE_MODE", "auto").strip().lower()
-    if mode in {"off", "skip", "false", "0"}:
-        guidance = _empty_guidance("disabled_by_ecm_lightweight_guidance_mode")
-        return _bundle(guidance, prompt="", raw="", status="skipped", reason="disabled_by_ecm_lightweight_guidance_mode")
+    mode = os.environ.get("ECM_LIGHTWEIGHT_GUIDANCE_MODE", "off").strip().lower()
+    if mode not in {"always", "full", "on", "true", "1"}:
+        guidance = _deterministic_lightweight_guidance(canonical_packet, scaffold)
+        report = _report(guidance, status="reused_writer_packet", prompt="", raw="", issues=[])
+        report["method"] = "deterministic_writer_packet_reuse"
+        return _bundle(guidance, prompt="", raw="", report=report)
     if backend.strip() == "prompt":
         guidance = _empty_guidance("prompt_backend")
         return _bundle(guidance, prompt=prompt, raw="", status="skipped", reason="prompt_backend")
@@ -223,6 +225,63 @@ def _empty_guidance(reason: str) -> dict[str, Any]:
         "suggested_reader_flow": [],
         "summary": {"status": "empty", "reason": reason},
     }
+
+
+def _deterministic_lightweight_guidance(
+    canonical_packet: dict[str, Any],
+    scaffold: dict[str, Any],
+) -> dict[str, Any]:
+    writer_guidance = _dict(scaffold.get("writer_guidance_packet"))
+    reader_guidance = [
+        {
+            "instruction": _short_text(row.get("instruction"), 360),
+            "why_it_matters": _short_text(row.get("why_it_matters"), 300),
+            "source_ids": _string_list(row.get("source_ids"))[:6],
+            "evidence_item_ids": _string_list(row.get("target_ids"))[:8],
+            "validation_terms": _string_list(row.get("validation_terms"))[:10],
+        }
+        for row in _list(writer_guidance.get("guidance"))
+        if isinstance(row, dict) and row.get("model_instruction_ready") is not False
+    ][:6]
+    evidence_caveats = []
+    for row in _list(canonical_packet.get("source_weight_judgments")):
+        if not isinstance(row, dict):
+            continue
+        caveat = _short_text(row.get("reader_facing_limit") or row.get("what_not_to_use_it_for"), 360)
+        if caveat:
+            evidence_caveats.append(
+                {
+                    "caveat": caveat,
+                    "applies_to": "source weighting limit",
+                    "source_ids": _string_list(row.get("source_ids"))[:6],
+                    "severity": "medium",
+                }
+            )
+    guidance = {
+        "schema_id": "lightweight_writer_guidance_v1",
+        "overall_judgment": _short_text(
+            _dict(canonical_packet.get("balanced_answer_frame")).get("default_answer")
+            or _dict(canonical_packet.get("bluf_contract")).get("bottom_line"),
+            360,
+        ),
+        "reader_guidance": reader_guidance,
+        "evidence_quality_caveats": _dedupe_dicts(evidence_caveats)[:6],
+        "quantity_wording_risks": [],
+        "do_not_overstate": _string_list(canonical_packet.get("do_not_overstate"))[:6],
+        "suggested_reader_flow": [],
+    }
+    return {**guidance, "summary": _guidance_summary(guidance)}
+
+
+def _dedupe_dicts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen = set()
+    result = []
+    for row in rows:
+        key = (str(row.get("caveat") or ""), tuple(_string_list(row.get("source_ids"))))
+        if key not in seen:
+            seen.add(key)
+            result.append(row)
+    return result
 
 
 def _guidance_schema() -> dict[str, Any]:
