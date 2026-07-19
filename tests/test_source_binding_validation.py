@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import build_memo_ready_packet_retention_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
+    _repair_missing_bound_source_citations,
+    build_memo_ready_packet_retention_report,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_notes import render_memo_ready_section_markdown_notes
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_bound_evidence import (
     build_source_bound_evidence_atoms,
@@ -36,6 +39,27 @@ def test_source_bound_atoms_exclude_quantities_not_found_in_local_excerpt() -> N
     assert atoms[0]["quantity_tuples"][0]["value"] == "0.14"
     assert atoms[0]["excluded_quantity_tuples"][0]["value"] == "MD = 8.14"
     assert atoms[0]["excluded_quantity_tuples"][0]["warning_type"] == "quantity_not_found_in_source_excerpt"
+
+
+def test_deterministic_source_citation_repair_only_anchors_retained_claim() -> None:
+    memo = "## Why This Is the Best Current Read\n\nA single dose did not impair endothelial function [s_other].\n"
+    retention = {
+        "issues": [
+            {
+                "claim_retained": True,
+                "source_retained": False,
+                "source_ids": ["s_expected"],
+                "statement": "A single dose did not impair endothelial function.",
+                "validation_terms": ["single", "dose", "impair", "endothelial", "function"],
+                "missing_quantities": [],
+            }
+        ]
+    }
+
+    repaired, report = _repair_missing_bound_source_citations(memo, retention)
+
+    assert "function [s_other] [s_expected]." in repaired
+    assert report["repair_count"] == 1
 
 
 def test_source_bound_atoms_preserve_applicability_scope_for_subgroup_quantities() -> None:

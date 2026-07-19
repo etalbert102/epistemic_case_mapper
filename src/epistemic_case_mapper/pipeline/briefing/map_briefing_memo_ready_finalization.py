@@ -1351,6 +1351,138 @@ def run_memo_ready_packet_repair(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
+    first = _run_memo_ready_packet_repair_once(
+        memo,
+        packet,
+        retention_report,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    first_report = _dict(first.get("report"))
+    if first_report.get("accepted") is True or backend.strip() == "prompt" or not retention_report.get("issues"):
+        first_report["semantic_attempt_count"] = 1
+        first["report"] = first_report
+        return first
+
+    retry_memo = str(first.get("memo") or memo)
+    retry_retention = build_memo_ready_packet_retention_report(retry_memo, packet)
+    second = _run_memo_ready_packet_repair_once(
+        retry_memo,
+        packet,
+        retry_retention,
+        backend=backend,
+        backend_timeout=backend_timeout,
+        backend_retries=backend_retries,
+    )
+    second_report = _dict(second.get("report"))
+    first_missing = int(first_report.get("final_missing_mandatory_count", retention_report.get("missing_mandatory_count", 0)) or 0)
+    second_missing = int(second_report.get("final_missing_mandatory_count", retry_retention.get("missing_mandatory_count", 0)) or 0)
+    chosen = second if second_report.get("accepted") is True or second_missing < first_missing else first
+    chosen_report = _dict(chosen.get("report"))
+    chosen_report.update(
+        {
+            "semantic_attempt_count": 2,
+            "semantic_attempt_statuses": [first_report.get("status"), second_report.get("status")],
+            "semantic_attempt_missing_mandatory_counts": [first_missing, second_missing],
+        }
+    )
+    if chosen_report.get("accepted") is not True:
+        citation_repaired_memo, citation_repair_report = _repair_missing_bound_source_citations(
+            str(chosen.get("memo") or memo),
+            build_memo_ready_packet_retention_report(str(chosen.get("memo") or memo), packet),
+        )
+        citation_retention = build_memo_ready_packet_retention_report(citation_repaired_memo, packet)
+        if citation_repair_report.get("repair_count") and _retention_complete(citation_retention):
+            chosen["memo"] = citation_repaired_memo
+            chosen_report.update(
+                {
+                    "status": "accepted",
+                    "accepted": True,
+                    "applied": True,
+                    "final_missing_mandatory_count": 0,
+                    "final_retained_mandatory_count": citation_retention.get("retained_mandatory_count", 0),
+                    "final_unresolved_warning_count": 0,
+                    "final_retention_report": citation_retention,
+                    "deterministic_source_citation_repair_report": citation_repair_report,
+                    "issues": [],
+                }
+            )
+    chosen["report"] = chosen_report
+    return chosen
+
+
+def _repair_missing_bound_source_citations(
+    memo: str,
+    retention_report: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    body_end = re.search(r"(?im)^## Sources\b", memo)
+    searchable_end = body_end.start() if body_end else len(memo)
+    repaired = memo
+    repairs = []
+    seen = set()
+    issues = [issue for issue in _list(retention_report.get("issues")) if isinstance(issue, dict)]
+    for issue in issues:
+        source_ids = _string_list(issue.get("source_ids"))
+        if issue.get("claim_retained") is not True or issue.get("source_retained") is not False or not source_ids:
+            continue
+        if _list(issue.get("missing_quantities")):
+            continue
+        statement = str(issue.get("statement") or issue.get("claim") or "").strip()
+        key = (_norm(statement), tuple(source_ids))
+        if not statement or key in seen:
+            continue
+        seen.add(key)
+        match = _best_source_citation_repair_sentence(repaired[:searchable_end], issue)
+        if not match:
+            continue
+        start, end = match
+        sentence = repaired[start:end]
+        missing_ids = [source_id for source_id in source_ids if f"[{source_id}]" not in sentence]
+        if not missing_ids:
+            continue
+        stripped = sentence.rstrip()
+        trailing = sentence[len(stripped) :]
+        punctuation = stripped[-1] if stripped and stripped[-1] in ".!?" else ""
+        stem = stripped[:-1] if punctuation else stripped
+        replacement = f"{stem} [{', '.join(missing_ids)}]{punctuation}{trailing}"
+        repaired = f"{repaired[:start]}{replacement}{repaired[end:]}"
+        delta = len(replacement) - len(sentence)
+        searchable_end += delta
+        repairs.append({"source_ids": missing_ids, "statement": statement[:360]})
+    return repaired, {
+        "schema_id": "deterministic_bound_source_citation_repair_report_v1",
+        "repair_count": len(repairs),
+        "repairs": repairs,
+    }
+
+
+def _best_source_citation_repair_sentence(memo: str, issue: dict[str, Any]) -> tuple[int, int] | None:
+    terms = set(_string_list(issue.get("validation_terms")))
+    if not terms:
+        terms = set(re.findall(r"[a-z0-9]+", _norm(str(issue.get("statement") or ""))))
+    terms -= {"the", "and", "for", "this", "that", "with", "from", "use", "supports", "directly"}
+    best: tuple[int, int, int] | None = None
+    for match in re.finditer(r"[^.!?\n]+(?:[.!?](?=\s|$)|$)", memo):
+        sentence = match.group(0)
+        if not sentence.strip() or sentence.lstrip().startswith("#"):
+            continue
+        sentence_terms = set(re.findall(r"[a-z0-9]+", _norm(sentence)))
+        score = len(terms.intersection(sentence_terms))
+        if score >= 3 and (best is None or score > best[0]):
+            best = (score, match.start(), match.end())
+    return (best[1], best[2]) if best else None
+
+
+def _run_memo_ready_packet_repair_once(
+    memo: str,
+    packet: dict[str, Any],
+    retention_report: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+) -> dict[str, Any]:
     prompt = build_memo_ready_packet_repair_prompt(memo, packet, retention_report)
     report = {
         "schema_id": "memo_ready_packet_repair_report_v1",
