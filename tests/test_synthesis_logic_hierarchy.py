@@ -1,4 +1,6 @@
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
+    build_synthesis_constraints,
+    expand_reader_abbreviations,
     repair_section_synthesis_logic,
     strip_redundant_post_tag_quantities,
 )
@@ -55,3 +57,35 @@ def test_redundant_post_tag_quantity_is_removed_when_labeled_form_is_present() -
     repaired = strip_redundant_post_tag_quantities(markdown, contracts)
 
     assert repaired == "The outcome was 19% higher (HR 1.19; 95% CI 1.16–1.22) {E:e1}."
+
+
+def test_counterweight_thesis_marks_related_exposure_as_indirect() -> None:
+    constraints = build_synthesis_constraints(
+        [
+            {"evidence_id": "e1", "claim": "A randomized review found no effect for option A."},
+            {
+                "evidence_id": "e2",
+                "claim": "A related exposure was associated with mortality.",
+                "must_qualify_with": ["observational evidence"],
+            },
+        ],
+        {"decision_question": "Should option A be treated as neutral?", "confidence": "medium"},
+        section_id="counterweights",
+    )
+
+    assert constraints["indirect_exposure_evidence_ids"] == ["e2"]
+    assert "randomized syntheses and observational outcome studies support medium confidence" in constraints[
+        "required_decision_effect_sentence"
+    ]
+    assert "related exposures is treated as indirect" in constraints["required_decision_effect_sentence"]
+
+
+def test_reader_abbreviations_expand_on_first_use() -> None:
+    memo = "CVD incidence changed. LDL-c concentration changed. MD = 8.14. CVD remained bounded."
+
+    expanded = expand_reader_abbreviations(memo)
+
+    assert expanded == (
+        "cardiovascular disease (CVD) incidence changed. LDL cholesterol (LDL-c) concentration changed. "
+        "mean difference (MD) = 8.14. CVD remained bounded."
+    )

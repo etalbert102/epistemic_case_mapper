@@ -271,6 +271,18 @@ def test_arm_b_contract_repairs_source_excerpt_surface_grammar() -> None:
     assert contract["claim"] == "The odds of disease were 20% lower"
 
 
+def test_arm_b_contract_restores_exposure_for_fragmentary_excerpt() -> None:
+    contract = _contract_for_arm_b(
+        {
+            "claim_context": {"exposure_or_option": "Frequent option use"},
+            "source_evidence": [{"source_id": "s1", "excerpts": ["the odds of disease was 20% lower"]}],
+        },
+        required=True,
+    )
+
+    assert contract["claim"] == "With frequent option use, the odds of disease were 20% lower"
+
+
 def test_arm_b_contract_expands_source_defined_acronym_and_statistical_symbol() -> None:
     contract = _contract_for_arm_b(
         {
@@ -283,6 +295,20 @@ def test_arm_b_contract_expands_source_defined_acronym_and_statistical_symbol() 
     )
 
     assert contract["claim"] == "The higher intervention-consumption group had a higher marker (I² = 18%)."
+
+
+def test_arm_b_contract_removes_source_author_first_person() -> None:
+    contract = _contract_for_arm_b(
+        {
+            "claim_context": {"evidence_design": "Meta-analysis of Randomized Controlled Trials"},
+            "source_evidence": [
+                {"source_id": "s1", "excerpts": ["The 13 RCTs we included in this study showed that the marker increased."]}
+            ],
+        },
+        required=True,
+    )
+
+    assert contract["claim"] == "A meta-analysis of 13 RCTs found that the marker increased."
 
 
 def test_arm_b_title_truncation_does_not_split_word() -> None:

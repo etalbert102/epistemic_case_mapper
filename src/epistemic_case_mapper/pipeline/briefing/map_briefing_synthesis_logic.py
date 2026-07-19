@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from epistemic_case_mapper.config_profile_vocabularies import READER_ABBREVIATION_EXPANSIONS
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
     dict_value as _dict,
@@ -84,7 +85,16 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
         if excerpt
     ]
     selected = next((excerpt for excerpt in excerpts if not excerpt.rstrip().endswith("...")), excerpts[0] if excerpts else "")
-    for value in _dict(contract.get("claim_context")).values():
+    context = _dict(contract.get("claim_context"))
+    design = str(context.get("evidence_design") or "")
+    if "meta-analysis" in design.lower():
+        selected = re.sub(
+            r"^The\s+(\d+)\s+RCTs\s+we included in this study showed that\s+",
+            r"A meta-analysis of \1 RCTs found that ",
+            selected,
+            flags=re.IGNORECASE,
+        )
+    for value in context.values():
         match = re.search(r"\b([^();]{3,80}?)\s*\(([A-Z]{2,8})\)", str(value or ""))
         if match:
             expansion = match.group(1).strip().lower()
@@ -96,8 +106,11 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
                 f"{expansion} group",
                 selected,
             )
+    exposure = str(context.get("exposure_or_option") or "").strip()
+    if selected[:1].islower() and exposure:
+        selected = f"With {exposure.lower()}, {selected}"
     selected = selected[:1].upper() + selected[1:]
-    selected = re.sub(r"^(The odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
+    selected = re.sub(r"\b(the odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
     return re.sub(r"\bI\s*2\s*=", "I² =", selected)
 
 
@@ -186,17 +199,16 @@ def build_synthesis_constraints(
             re.IGNORECASE,
         )
     ]
-    decision_effect = ""
-    if section_id == "answer_evidence" and (observational_ids or intermediate_ids):
-        decision_effect = (
-            "Because the supporting evidence is observational or focused on intermediate markers, it supports the bounded default but does not justify a stronger favorable classification."
-        )
-    elif section_id == "counterweights" and contracts:
-        confidence = str(decision_anchor.get("confidence") or "bounded").lower()
-        decision_effect = (
-            "Because the counterevidence varies by design, exposure, and endpoint and does not point in one consistent direction, "
-            f"it bounds the default and supports {confidence} confidence without establishing one uniform adverse effect."
-        )
+    indirect_ids = _indirect_exposure_ids(contracts, decision_anchor)
+    decision_effect = _decision_effect_sentence(
+        section_id,
+        contracts=contracts,
+        decision_anchor=decision_anchor,
+        observational_ids=observational_ids,
+        randomized_ids=randomized_ids,
+        intermediate_ids=intermediate_ids,
+        indirect_ids=indirect_ids,
+    )
     return _drop_empty(
         {
             "confidence_to_show": decision_anchor.get("confidence"),
@@ -212,6 +224,7 @@ def build_synthesis_constraints(
             "observational_evidence_ids": _dedupe(observational_ids),
             "randomized_or_synthesis_evidence_ids": _dedupe(randomized_ids),
             "intermediate_endpoint_evidence_ids": _dedupe(intermediate_ids),
+            "indirect_exposure_evidence_ids": _dedupe(indirect_ids),
             "required_decision_effect_sentence": decision_effect,
             "surrogate_rule": (
                 "These items may calibrate or explain the answer but cannot carry a broader clinical or long-term conclusion by themselves."
@@ -220,6 +233,68 @@ def build_synthesis_constraints(
             ),
         }
     )
+
+
+def _indirect_exposure_ids(contracts: list[dict[str, Any]], decision_anchor: dict[str, Any]) -> list[str]:
+    subject = re.search(
+        r"\bshould\s+(.+?)\s+be treated as\b",
+        str(decision_anchor.get("decision_question") or ""),
+        re.IGNORECASE,
+    )
+    subject_terms = {_term_stem(term) for term in re.findall(r"[a-z]{3,}", subject.group(1).lower())} if subject else set()
+    return [
+        str(contract.get("evidence_id") or "")
+        for contract in contracts
+        if isinstance(contract, dict)
+        and subject_terms
+        and not subject_terms.intersection(
+            _term_stem(term) for term in re.findall(r"[a-z]{3,}", str(contract.get("claim") or "").lower())
+        )
+    ]
+
+
+def _decision_effect_sentence(
+    section_id: str,
+    *,
+    contracts: list[dict[str, Any]],
+    decision_anchor: dict[str, Any],
+    observational_ids: list[str],
+    randomized_ids: list[str],
+    intermediate_ids: list[str],
+    indirect_ids: list[str],
+) -> str:
+    if section_id == "answer_evidence" and (observational_ids or intermediate_ids):
+        return (
+            "Because the supporting evidence is observational or focused on intermediate markers, it supports the bounded default but does not justify a stronger favorable classification."
+        )
+    if section_id != "counterweights" or not contracts:
+        return ""
+    confidence = str(decision_anchor.get("confidence") or "bounded").lower()
+    mixed_designs = bool(randomized_ids and observational_ids)
+    evidence_mix = "randomized syntheses and observational outcome studies" if mixed_designs else "the available evidence mix"
+    support_verb = "support" if mixed_designs else "supports"
+    indirect_clause = ", and evidence about related exposures is treated as indirect" if indirect_ids else ""
+    return (
+        f"Taken together, {evidence_mix} {support_verb} {confidence} confidence, but differences in exposure and endpoint prevent a stronger adverse conclusion{indirect_clause}."
+    )
+
+
+def _term_stem(term: str) -> str:
+    return term[:-1] if term.endswith("s") else term
+
+
+def expand_reader_abbreviations(memo: str) -> str:
+    text = str(memo or "")
+    for abbreviation, expansion in READER_ABBREVIATION_EXPANSIONS.items():
+        if f"{expansion} ({abbreviation})".lower() in text.lower():
+            continue
+        text = re.sub(
+            rf"(?<![\w-]){re.escape(abbreviation)}(?![\w-])",
+            f"{expansion} ({abbreviation})",
+            text,
+            count=1,
+        )
+    return re.sub(r"\bMD\s*=", "mean difference (MD) =", text, count=1)
 
 
 def section_synthesis_logic_issues(

@@ -36,6 +36,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import
     repair_section_synthesis_logic as _repair_section_synthesis_logic,
     section_synthesis_logic_issues as _section_synthesis_logic_issues,
     strip_redundant_post_tag_quantities as _strip_redundant_post_tag_quantities,
+    expand_reader_abbreviations as _expand_reader_abbreviations,
 )
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
@@ -868,7 +869,8 @@ def _assemble_section_synthesis_memo(section_plan: dict[str, Any], section_repor
         section = str(row.get("markdown") or "").strip()
         if section:
             lines.extend([section, ""])
-    return repair_markdown_structure("\n".join(lines).strip() + "\n")
+    memo = repair_markdown_structure("\n".join(lines).strip() + "\n")
+    return _expand_reader_abbreviations(memo)
 
 
 def _public_section_report(row: dict[str, Any]) -> dict[str, Any]:

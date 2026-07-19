@@ -4,6 +4,12 @@ import json
 from typing import Any
 
 
+READER_ABBREVIATION_EXPANSIONS = {
+    "CVD": "cardiovascular disease",
+    "LDL-c": "LDL cholesterol",
+}
+
+
 _BASE_PROFILE_VOCABULARY: dict[str, Any] = {
     "rewrite_rank_markers": ["unsafe", "not safe", "risk", "hazard", "cost", "maintenance", "capacity", "implementation", "randomized", "confounding"],
     "secondary_alternative_markers": [],
