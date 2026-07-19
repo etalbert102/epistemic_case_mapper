@@ -129,6 +129,43 @@ def test_source_excerpt_restores_observational_population_scope() -> None:
     assert excerpt == "Among Chinese adults, daily use was associated with lower risk."
 
 
+def test_source_excerpt_restores_distinctive_population_without_preserve_term() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "claim_context": {
+                "evidence_design": "Cross-sectional study",
+                "population": "Greek national representative adult sample",
+            },
+            "source_evidence": [{"source_id": "s1", "excerpts": ["Frequent use was associated with lower odds."]}],
+        }
+    )
+
+    assert excerpt == (
+        "Among Greek national representative adult sample, frequent use was associated with lower odds."
+    )
+
+
+def test_source_excerpt_restores_trial_population_and_duration() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "claim_context": {
+                "evidence_design": "Meta-analysis of randomized controlled trials",
+                "population": "Healthy subjects without metabolic disease",
+                "stated_dose_or_threshold": "> 2 months",
+            },
+            "must_preserve_terms": ["healthy subjects", "> 2 months"],
+            "source_evidence": [
+                {"source_id": "s1", "excerpts": ["A meta-analysis of 13 RCTs found that the marker increased."]}
+            ],
+        }
+    )
+
+    assert excerpt == (
+        "A meta-analysis of 13 RCTs, conducted in healthy subjects over more than 2 months, "
+        "found that the marker increased."
+    )
+
+
 def test_source_excerpt_restores_mean_difference_unit() -> None:
     excerpt = controlling_source_excerpt(
         {

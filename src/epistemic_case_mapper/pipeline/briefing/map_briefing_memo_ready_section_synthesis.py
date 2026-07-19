@@ -391,6 +391,13 @@ def _section_reconciliation_issues(reconciliation: dict[str, Any]) -> list[str]:
         value = str(warning.get("missing_quantity_near_tag") or "").strip()
         if evidence_id and value:
             issues.append(f"missing_required_quantity:{evidence_id}:{value}")
+    for warning in _list(reconciliation.get("scope_warnings")):
+        if not isinstance(warning, dict):
+            continue
+        evidence_id = str(warning.get("evidence_id") or "").strip()
+        value = str(warning.get("missing_scope_near_tag") or "").strip()
+        if evidence_id and value:
+            issues.append(f"missing_required_scope:{evidence_id}:{value}")
     for warning in _list(reconciliation.get("source_mismatch_warnings")):
         if not isinstance(warning, dict):
             continue

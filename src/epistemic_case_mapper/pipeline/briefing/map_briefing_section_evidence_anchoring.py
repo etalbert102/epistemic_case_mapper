@@ -30,6 +30,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_utils
     quantity_source_ids as _quantity_source_ids,
     quantity_surface_present as _quantity_surface_present,
     quantity_warnings as _quantity_warnings,
+    scope_warnings as _scope_warnings,
     source_ids_from_brace_content as _source_ids_from_brace_content,
     untagged_high_risk_sentences as _untagged_high_risk_sentences,
 )
@@ -1003,6 +1004,7 @@ def render_evidence_tagged_memo(
                             else "contract_fallback"
                         ),
                         "claim": contract.get("claim"),
+                        "evidence_design": _dict(contract.get("claim_context")).get("evidence_design"),
                         "required_quantity_atoms": contract.get("required_quantity_atoms", []),
                         "tag": match.group(0),
                     }
@@ -1035,11 +1037,21 @@ def _append_cited_source_registry(memo: str, trace: list[dict[str, Any]], source
         for row in source_trail
         if isinstance(row, dict) and str(row.get("source_id") or row.get("citation_key") or "").strip()
     }
+    designs_by_source = {
+        source_id: _dedupe(
+            str(row.get("evidence_design") or "").strip()
+            for row in trace
+            if source_id in _string_list(row.get("source_ids")) and str(row.get("evidence_design") or "").strip()
+        )
+        for source_id in cited_ids
+    }
     lines = []
     for source_id in cited_ids:
         source = sources_by_id.get(source_id, {})
+        title = str(source.get("source_title") or source.get("article_title") or source.get("title") or "").strip()
         display = str(
-            source.get("display_label")
+            title
+            or source.get("display_label")
             or source.get("source_label")
             or source.get("original_source_id")
             or source.get("source_slug")
@@ -1047,7 +1059,10 @@ def _append_cited_source_registry(memo: str, trace: list[dict[str, Any]], source
         ).strip()
         url = str(source.get("source_url") or "").strip() or _stable_source_url(source)
         reference = f"[{display}]({url})" if url else display
-        lines.append(f"- {source_id}: {reference}")
+        year = str(source.get("publication_year") or source.get("source_year") or source.get("year") or "").strip()
+        metadata = _dedupe([year, *designs_by_source.get(source_id, [])])
+        suffix = f" — {'; '.join(metadata)}" if metadata else ""
+        lines.append(f"- {source_id}: {reference}{suffix}")
     if not lines:
         return memo
     return memo.rstrip() + "\n\n## Sources\n\n" + "\n".join(lines) + "\n"
@@ -1139,6 +1154,7 @@ def build_evidence_reconciliation_report(
     missing_required = [row.get("evidence_id") for row in required if row.get("evidence_id") not in used_ids]
     unknown = sorted(used_ids - known_ids)
     quantity_warnings = _quantity_warnings(tagged_memo, contracts)
+    scope_warnings = _scope_warnings(tagged_memo, contracts)
     source_mismatch_warnings = _adjacent_source_mismatch_warnings(tagged_memo, contracts, known_source_ids=known_source_ids)
     unsupported_quantity_warnings = _tagged_sentence_unsupported_quantity_warnings(tagged_memo, contracts)
     untagged_unsupported_quantity_warnings = _untagged_sentence_unsupported_quantity_warnings(tagged_memo, contracts)
@@ -1148,6 +1164,7 @@ def build_evidence_reconciliation_report(
         missing_required
         or unknown
         or quantity_warnings
+        or scope_warnings
         or source_mismatch_warnings
         or unsupported_quantity_warnings
         or untagged_unsupported_quantity_warnings
@@ -1163,6 +1180,8 @@ def build_evidence_reconciliation_report(
         "unknown_evidence_ids": unknown,
         "quantity_warning_count": len(quantity_warnings),
         "quantity_warnings": quantity_warnings,
+        "scope_warning_count": len(scope_warnings),
+        "scope_warnings": scope_warnings,
         "source_mismatch_warning_count": len(source_mismatch_warnings),
         "source_mismatch_warnings": source_mismatch_warnings,
         "unsupported_quantity_warning_count": len(unsupported_quantity_warnings),

@@ -172,6 +172,34 @@ def test_reconciliation_accepts_reader_expanded_measurement_with_unit() -> None:
     assert report["quantity_warning_count"] == 0
 
 
+def test_reconciliation_requires_controlled_population_and_duration_scope() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "source_ids": ["s1"],
+            "claim": "Among Greek adults over more than 2 months, the marker changed.",
+            "claim_context": {
+                "population": "Greek adults",
+                "stated_dose_or_threshold": "> 2 months",
+            },
+            "must_preserve_terms": ["Greek adults", "> 2 months"],
+            "required": True,
+        }
+    ]
+
+    missing = build_evidence_reconciliation_report("The marker changed {E:e1}.", "rendered", contracts)
+    complete = build_evidence_reconciliation_report(
+        "Among Greek adults over more than 2 months, the marker changed {E:e1}.",
+        "rendered",
+        contracts,
+    )
+
+    assert missing["status"] == "warning"
+    assert missing["scope_warning_count"] == 2
+    assert complete["status"] == "ready"
+    assert complete["scope_warning_count"] == 0
+
+
 def test_evidence_reconciliation_accepts_quantity_on_one_repeated_tag_expression() -> None:
     contracts = [
         {
@@ -530,20 +558,34 @@ def test_renderer_keeps_contract_fallback_without_source_specific_evidence() -> 
 
 def test_renderer_appends_resolvable_registry_for_cited_sources_only() -> None:
     contracts = [
-        {"evidence_id": "e1", "source_ids": ["SRC_A"], "claim": "Supported claim."},
+        {
+            "evidence_id": "e1",
+            "source_ids": ["SRC_A"],
+            "claim": "Supported claim.",
+            "claim_context": {"evidence_design": "Prospective cohort study"},
+        },
     ]
 
     rendered = render_evidence_tagged_memo(
         "Supported claim {E:e1}.",
         contracts,
         source_trail=[
-            {"source_id": "SRC_A", "source_label": "Pmc12345", "source_slug": "pmc12345"},
+            {
+                "source_id": "SRC_A",
+                "source_label": "Pmc12345",
+                "source_slug": "pmc12345",
+                "source_title": "Readable Study Title",
+                "publication_year": "2024",
+            },
             {"source_id": "SRC_UNUSED", "source_label": "Unused Study"},
         ],
     )
 
     assert "## Sources" in rendered["memo"]
-    assert "SRC_A: [Pmc12345](https://pmc.ncbi.nlm.nih.gov/articles/PMC12345/)" in rendered["memo"]
+    assert (
+        "SRC_A: [Readable Study Title](https://pmc.ncbi.nlm.nih.gov/articles/PMC12345/) "
+        "— 2024; Prospective cohort study"
+    ) in rendered["memo"]
     assert "SRC_UNUSED" not in rendered["memo"]
 
 

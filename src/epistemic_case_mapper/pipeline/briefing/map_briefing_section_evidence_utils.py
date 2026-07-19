@@ -113,6 +113,44 @@ def quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list
     return warnings
 
 
+def scope_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    warnings = []
+    for contract in contracts:
+        if not contract.get("required"):
+            continue
+        spans = spans_for_evidence_id(tagged_memo, str(contract.get("evidence_id") or ""))
+        if not spans:
+            continue
+        for surface in _required_scope_surfaces(contract):
+            if surface.lower() not in " ".join(spans).lower():
+                warnings.append(
+                    {
+                        "evidence_id": contract.get("evidence_id"),
+                        "missing_scope_near_tag": surface,
+                        "span": _short_text(spans[0], 240),
+                    }
+                )
+    return warnings
+
+
+def _required_scope_surfaces(contract: dict[str, Any]) -> list[str]:
+    context = _dict(contract.get("claim_context"))
+    claim = str(contract.get("claim") or "")
+    population = str(context.get("population") or "").strip()
+    surfaces = [
+        term
+        for term in _string_list(contract.get("must_preserve_terms"))
+        if len(term) > 3 and term.lower() in population.lower() and term.lower() in claim.lower()
+    ]
+    if population and population.lower() in claim.lower():
+        surfaces.append(population)
+    threshold = str(context.get("stated_dose_or_threshold") or "")
+    duration = re.search(r"\b\d+(?:\.\d+)?\s+(?:months?|years?)\b", threshold, re.IGNORECASE)
+    if duration and duration.group(0).lower() in claim.lower():
+        surfaces.append(duration.group(0))
+    return _dedupe(surfaces)
+
+
 def _required_measurement_surfaces(text: str) -> list[str]:
     pattern = re.compile(
         r"\b(?:MD|mean difference(?:\s*\(MD\))?)\s*=\s*\d+(?:\.\d+)?\s+[A-Za-zµμ]+(?:/[A-Za-zµμ]+)?",

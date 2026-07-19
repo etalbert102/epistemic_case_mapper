@@ -112,6 +112,7 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
     selected = selected[:1].upper() + selected[1:]
     selected = re.sub(r"\b(the odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
     selected = _restore_observational_population(selected, contract)
+    selected = _restore_trial_scope(selected, contract)
     selected = _restore_statistic_unit(selected, contract)
     selected = _normalize_source_excerpt_surface(selected)
     return _calibrate_observational_causality(selected, contract)
@@ -121,7 +122,11 @@ def _restore_observational_population(text: str, contract: dict[str, Any]) -> st
     context = _dict(contract.get("claim_context"))
     design = str(context.get("evidence_design") or "")
     population = str(context.get("population") or "")
-    if not re.search(r"\b(?:cohort|observational)\b", design, re.IGNORECASE) or not population:
+    if not re.search(
+        r"\b(?:cohort|cross-sectional|longitudinal|observational|population-based)\b",
+        design,
+        re.IGNORECASE,
+    ) or not population:
         return text
     population_term = next(
         (
@@ -131,9 +136,40 @@ def _restore_observational_population(text: str, contract: dict[str, Any]) -> st
         ),
         "",
     )
+    if not population_term and re.search(r"\b(?:national|participants?|sample|in the [A-Z]{2})\b", population):
+        population_term = population
     if not population_term or population_term.lower() in text.lower():
         return text
     return f"Among {population_term}, {text[:1].lower()}{text[1:]}"
+
+
+def _restore_trial_scope(text: str, contract: dict[str, Any]) -> str:
+    context = _dict(contract.get("claim_context"))
+    design = str(context.get("evidence_design") or "")
+    if not re.search(r"\b(?:meta-analysis|systematic review)\b", design, re.IGNORECASE):
+        return text
+    population = str(context.get("population") or "")
+    preserve_terms = _string_list(contract.get("must_preserve_terms"))
+    population_term = next(
+        (term for term in preserve_terms if len(term) > 3 and term.lower() in population.lower()),
+        "",
+    )
+    threshold = str(context.get("stated_dose_or_threshold") or "").strip()
+    duration = _reader_duration(threshold) if threshold in preserve_terms else ""
+    scope = " ".join(part for part in (f"in {population_term}" if population_term else "", f"over {duration}" if duration else "") if part)
+    if not scope or scope.lower() in text.lower():
+        return text
+    return re.sub(
+        r"^(A (?:meta-analysis|systematic review) of .+?) found\b",
+        rf"\1, conducted {scope}, found",
+        text,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+
+def _reader_duration(value: str) -> str:
+    return re.sub(r"^>\s*", "more than ", str(value or "").strip())
 
 
 def _restore_statistic_unit(text: str, contract: dict[str, Any]) -> str:
