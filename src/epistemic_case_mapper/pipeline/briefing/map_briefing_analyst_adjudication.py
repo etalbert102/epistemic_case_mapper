@@ -34,6 +34,23 @@ def run_analyst_adjudication(
     backend_retries: int,
     progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
+    schema_version = os.environ.get("ECM_ANALYST_ADJUDICATION_SCHEMA", "v1").strip().lower()
+    if schema_version not in {"v1", "v2"}:
+        raise ValueError("ECM_ANALYST_ADJUDICATION_SCHEMA must be v1 or v2")
+    if schema_version == "v2":
+        from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication_v2 import (
+            run_analyst_adjudication_v2,
+        )
+
+        return run_analyst_adjudication_v2(
+            ledger,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            chunk_size=_chunk_size(),
+            scaffold_builder=deterministic_adjudication_scaffold,
+            progress=progress,
+        )
     prompt = build_analyst_adjudication_prompt(ledger)
     scaffold = deterministic_adjudication_scaffold(ledger)
     if backend.strip() == "prompt":

@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
+from epistemic_case_mapper.model_stage_retry import model_stage_attempts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_schemas import (
+    build_analyst_adjudication_parse_report,
+)
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_faithfulness import (
+    repair_adjudication_source_faithfulness,
+)
 
 
 CompactMemoUse = Literal[
@@ -94,6 +104,160 @@ def adapt_analyst_adjudication_v2(response: Any, ledger: dict[str, Any]) -> dict
     }
 
 
+def run_analyst_adjudication_v2(
+    ledger: dict[str, Any],
+    *,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    chunk_size: int,
+    scaffold_builder: Any,
+    progress: Any = None,
+) -> dict[str, Any]:
+    started = time.monotonic()
+    ledger_rows = _dict_rows(ledger.get("rows"))
+    chunks = [ledger_rows[offset : offset + max(1, chunk_size)] for offset in range(0, len(ledger_rows), max(1, chunk_size))]
+    full_prompt = build_analyst_adjudication_prompt_v2(ledger)
+    if backend.strip() == "prompt":
+        canonical = scaffold_builder(ledger)
+        canonical, repair_report = repair_adjudication_source_faithfulness(ledger, canonical)
+        parse_report = build_analyst_adjudication_parse_report(canonical, ledger)
+        return _result_bundle(
+            canonical=canonical,
+            prompt=full_prompt,
+            raw="",
+            parse_report=parse_report,
+            chunk_reports=[_chunk_report(1, len(ledger_rows), "prompt_backend_scaffold", 0, 0)],
+            repair_report=repair_report,
+            status="prompt_backend_scaffold",
+            compact_row_count=0,
+            first_pass_missing_count=0,
+            recovery_rounds=0,
+            initial_chunk_count=1,
+            parallelism=1,
+            started=started,
+        )
+
+    indexed_chunks = list(enumerate(chunks, start=1))
+    initial = run_parallel(
+        indexed_chunks,
+        lambda item: _run_v2_chunk(
+            item,
+            ledger=ledger,
+            total=len(chunks),
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+            phase="initial",
+            progress=progress,
+        ),
+        max_workers=model_parallelism(backend),
+    )
+    expected_ids = [str(row.get("evidence_item_id") or "") for row in ledger_rows if str(row.get("evidence_item_id") or "")]
+    compact_by_id = _accepted_compact_rows(initial, set(expected_ids))
+    first_pass_missing = [evidence_id for evidence_id in expected_ids if evidence_id not in compact_by_id]
+    recovery_results: list[dict[str, Any]] = []
+    recovery_rounds = 0
+    missing = first_pass_missing
+    while missing and recovery_rounds < model_stage_attempts():
+        missing_set = set(missing)
+        missing_rows = [row for row in ledger_rows if str(row.get("evidence_item_id") or "") in missing_set]
+        repair_chunks = [
+            missing_rows[offset : offset + max(1, chunk_size)]
+            for offset in range(0, len(missing_rows), max(1, chunk_size))
+        ]
+        round_results = run_parallel(
+            list(enumerate(repair_chunks, start=1)),
+            lambda item: _run_v2_chunk(
+                item,
+                ledger=ledger,
+                total=len(repair_chunks),
+                backend=backend,
+                backend_timeout=backend_timeout,
+                backend_retries=backend_retries,
+                phase="missing_row_repair",
+                progress=progress,
+            ),
+            max_workers=model_parallelism(backend),
+        )
+        recovery_results.extend(round_results)
+        compact_by_id.update(_accepted_compact_rows(round_results, set(missing)))
+        missing = [evidence_id for evidence_id in expected_ids if evidence_id not in compact_by_id]
+        recovery_rounds += 1
+
+    compact_payload = {"rows": [compact_by_id[evidence_id] for evidence_id in expected_ids if evidence_id in compact_by_id]}
+    canonical = _adapt_available_rows(compact_payload, ledger)
+    canonical, repair_report = repair_adjudication_source_faithfulness(ledger, canonical)
+    parse_report = build_analyst_adjudication_parse_report(canonical, ledger)
+    failed_chunks = sum(1 for row in [*initial, *recovery_results] if row["status"] != "accepted")
+    status = (
+        "accepted_after_missing_row_repair"
+        if parse_report.get("valid") and recovery_results
+        else "accepted"
+        if parse_report.get("valid") and not failed_chunks
+        else "accepted_with_chunk_warnings"
+        if parse_report.get("valid")
+        else "model_output_invalid"
+    )
+    prompts = [str(row.get("prompt") or "") for row in [*initial, *recovery_results]]
+    raws = [str(row.get("raw") or "") for row in [*initial, *recovery_results]]
+    return _result_bundle(
+        canonical=canonical,
+        prompt="\n\n".join(prompts),
+        raw="\n\n".join(raws),
+        parse_report=parse_report,
+        chunk_reports=[row["report"] for row in [*initial, *recovery_results]],
+        repair_report=repair_report,
+        status=status,
+        compact_row_count=len(compact_by_id),
+        first_pass_missing_count=len(first_pass_missing),
+        recovery_rounds=recovery_rounds,
+        initial_chunk_count=len(initial),
+        parallelism=model_parallelism(backend),
+        started=started,
+    )
+
+
+def build_analyst_adjudication_schema_comparison(
+    baseline: dict[str, Any],
+    candidate: dict[str, Any],
+) -> dict[str, Any]:
+    baseline_by_id = _canonical_by_id(baseline)
+    candidate_by_id = _canonical_by_id(candidate)
+    all_ids = sorted(set(baseline_by_id) | set(candidate_by_id))
+    differences = []
+    for evidence_id in all_ids:
+        old = baseline_by_id.get(evidence_id, {})
+        new = candidate_by_id.get(evidence_id, {})
+        changed = [
+            field
+            for field in ("memo_use", "answer_relation", "target_answer_option")
+            if old.get(field) != new.get(field)
+        ]
+        if changed or not old or not new:
+            differences.append(
+                {
+                    "evidence_item_id": evidence_id,
+                    "changed_fields": changed,
+                    "baseline_present": bool(old),
+                    "candidate_present": bool(new),
+                    "baseline_memo_use": old.get("memo_use"),
+                    "candidate_memo_use": new.get("memo_use"),
+                    "baseline_answer_relation": old.get("answer_relation"),
+                    "candidate_answer_relation": new.get("answer_relation"),
+                    "high_impact": _high_impact_difference(old, new),
+                }
+            )
+    return {
+        "schema_id": "analyst_adjudication_schema_comparison_v1",
+        "baseline_row_count": len(baseline_by_id),
+        "candidate_row_count": len(candidate_by_id),
+        "difference_count": len(differences),
+        "high_impact_difference_count": sum(1 for row in differences if row["high_impact"]),
+        "differences": differences,
+    }
+
+
 def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
     rows = [_prompt_row(row) for row in _dict_rows(ledger.get("rows"))]
     packet = {
@@ -122,6 +286,249 @@ def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
         "You are an analyst triaging evidence before global decision modeling.\n"
         "Return a strict JSON object only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
+    )
+
+
+def _run_v2_chunk(
+    item: tuple[int, list[dict[str, Any]]],
+    *,
+    ledger: dict[str, Any],
+    total: int,
+    backend: str,
+    backend_timeout: int | None,
+    backend_retries: int,
+    phase: str,
+    progress: Any,
+) -> dict[str, Any]:
+    index, rows = item
+    chunk_ledger = {**ledger, "rows": rows}
+    prompt = build_analyst_adjudication_prompt_v2(chunk_ledger)
+    expected_ids = {
+        str(row.get("evidence_item_id") or "")
+        for row in rows
+        if str(row.get("evidence_item_id") or "")
+    }
+    _progress(progress, "started", index=index, total=total, phase=phase, row_count=len(rows))
+    raw = ""
+    last_issue = ""
+    for attempt in range(1, model_stage_attempts() + 1):
+        try:
+            result = run_model_backend(
+                prompt,
+                backend,
+                timeout_seconds=backend_timeout,
+                max_retries=backend_retries,
+                response_schema=analyst_adjudication_response_schema_v2(),
+            )
+            raw = result.text
+            payload = _extract_json(raw)
+            parsed = AnalystAdjudicationResponseV2.model_validate(payload)
+            returned_ids = {row.evidence_item_id for row in parsed.rows}
+            unknown = sorted(returned_ids - expected_ids)
+            missing = sorted(expected_ids - returned_ids)
+            if unknown:
+                last_issue = f"missing={missing} unknown={unknown}"
+                continue
+            compact_rows = [row.model_dump() for row in parsed.rows]
+            if missing:
+                _progress(progress, "partial", index=index, total=total, phase=phase, row_count=len(rows), attempt=attempt)
+                return {
+                    "status": "partial",
+                    "rows": compact_rows,
+                    "prompt": prompt,
+                    "raw": raw,
+                    "report": _chunk_report(
+                        index,
+                        len(rows),
+                        "model_output_partial",
+                        attempt,
+                        len(raw),
+                        issues=[f"missing={missing}"],
+                    ),
+                }
+            _progress(progress, "completed", index=index, total=total, phase=phase, row_count=len(rows), attempt=attempt)
+            return {
+                "status": "accepted",
+                "rows": compact_rows,
+                "prompt": prompt,
+                "raw": raw,
+                "report": _chunk_report(index, len(rows), "accepted", attempt, len(raw)),
+            }
+        except (RuntimeError, ValueError) as exc:
+            last_issue = f"{type(exc).__name__}: {exc}"
+    _progress(progress, "failed", index=index, total=total, phase=phase, row_count=len(rows))
+    return {
+        "status": "model_output_invalid",
+        "rows": [],
+        "prompt": prompt,
+        "raw": raw,
+        "report": _chunk_report(
+            index,
+            len(rows),
+            "model_output_invalid",
+            model_stage_attempts(),
+            len(raw),
+            issues=[last_issue] if last_issue else [],
+        ),
+    }
+
+
+def _adapt_available_rows(compact_payload: dict[str, Any], ledger: dict[str, Any]) -> dict[str, Any]:
+    available_ids = {
+        str(row.get("evidence_item_id") or "")
+        for row in _dict_rows(compact_payload.get("rows"))
+        if str(row.get("evidence_item_id") or "")
+    }
+    subset_ledger = {
+        **ledger,
+        "rows": [
+            row
+            for row in _dict_rows(ledger.get("rows"))
+            if str(row.get("evidence_item_id") or "") in available_ids
+        ],
+    }
+    if not available_ids:
+        return {
+            "schema_id": "analyst_adjudication_v1",
+            "decision_question": str(ledger.get("decision_question") or ""),
+            "rows": [],
+            "overall_rationale": "Compact analyst adjudication did not return valid rows.",
+        }
+    return adapt_analyst_adjudication_v2(compact_payload, subset_ledger)
+
+
+def _result_bundle(
+    *,
+    canonical: dict[str, Any],
+    prompt: str,
+    raw: str,
+    parse_report: dict[str, Any],
+    chunk_reports: list[dict[str, Any]],
+    repair_report: dict[str, Any],
+    status: str,
+    compact_row_count: int,
+    first_pass_missing_count: int,
+    recovery_rounds: int,
+    initial_chunk_count: int,
+    parallelism: int,
+    started: float,
+) -> dict[str, Any]:
+    failed_count = sum(1 for row in chunk_reports if row.get("status") not in {"accepted", "prompt_backend_scaffold"})
+    initial_failed_count = sum(
+        1
+        for row in chunk_reports[:initial_chunk_count]
+        if row.get("status") not in {"accepted", "prompt_backend_scaffold"}
+    )
+    report = {
+        "schema_id": "analyst_adjudication_report_v1",
+        "status": status,
+        "accepted": bool(parse_report.get("valid")),
+        "parse_status": parse_report.get("status"),
+        "issues": list(parse_report.get("issues") or []),
+        "source_faithfulness_repair": repair_report,
+    }
+    return {
+        "analyst_adjudication": canonical,
+        "analyst_adjudication_prompt": prompt,
+        "analyst_adjudication_raw": raw,
+        "analyst_adjudication_parse_report": parse_report,
+        "analyst_adjudication_chunk_reports": {
+            "schema_id": "analyst_adjudication_chunk_reports_v1",
+            "chunk_count": len(chunk_reports),
+            "scaffold_chunk_count": sum(1 for row in chunk_reports if row.get("status") == "prompt_backend_scaffold"),
+            "failed_chunk_count": failed_count,
+            "initial_failed_chunk_count": initial_failed_count,
+            "missing_row_repair_chunk_count": max(0, len(chunk_reports) - initial_chunk_count),
+            "missing_row_repair_round_count": recovery_rounds,
+            "parallelism": parallelism,
+            "chunks": chunk_reports,
+        },
+        "analyst_source_faithfulness_repair_report": repair_report,
+        "analyst_adjudication_report": report,
+        "analyst_adjudication_schema_report": {
+            "schema_id": "analyst_adjudication_schema_report_v1",
+            "schema_version": "v2",
+            "response_schema_supplied": True,
+            "model_row_field_count": len(EvidenceAdjudicationResponseRowV2.model_fields),
+            "canonical_row_field_count": 19,
+            "compact_row_count": compact_row_count,
+            "first_pass_missing_row_count": first_pass_missing_count,
+            "missing_row_repair_round_count": recovery_rounds,
+            "prompt_chars": len(prompt),
+            "raw_chars": len(raw),
+            "wall_seconds": round(time.monotonic() - started, 3),
+        },
+    }
+
+
+def _chunk_report(
+    index: int,
+    row_count: int,
+    status: str,
+    attempt: int,
+    raw_chars: int,
+    *,
+    issues: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "chunk_index": index,
+        "row_count": row_count,
+        "status": status,
+        "attempt": attempt,
+        "raw_chars": raw_chars,
+        "issues": issues or [],
+    }
+
+
+def _accepted_compact_rows(results: list[dict[str, Any]], allowed_ids: set[str]) -> dict[str, dict[str, Any]]:
+    accepted: dict[str, dict[str, Any]] = {}
+    for result in results:
+        if result.get("status") not in {"accepted", "partial"}:
+            continue
+        for row in _dict_rows(result.get("rows")):
+            evidence_id = str(row.get("evidence_item_id") or "")
+            if evidence_id in allowed_ids and evidence_id not in accepted:
+                accepted[evidence_id] = row
+    return accepted
+
+
+def _extract_json(raw: str) -> Any:
+    text = str(raw or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return json.loads(text)
+
+
+def _progress(progress: Any, status: str, **details: Any) -> None:
+    if progress is not None:
+        progress("analyst_adjudication_chunk", status, {"substage": "analyst_adjudication_chunk", **details})
+
+
+def _canonical_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(row.get("evidence_item_id") or ""): row
+        for row in _dict_rows(payload.get("rows"))
+        if str(row.get("evidence_item_id") or "")
+    }
+
+
+def _high_impact_difference(old: dict[str, Any], new: dict[str, Any]) -> bool:
+    high_impact_roles = {
+        "load_bearing_primary_support",
+        "load_bearing_counterweight",
+        "quantitative_anchor",
+        "scope_or_applicability",
+        "decision_crux",
+        "not_decision_relevant",
+    }
+    return bool(
+        {str(old.get("memo_use") or ""), str(new.get("memo_use") or "")} & high_impact_roles
+        or old.get("answer_relation") != new.get("answer_relation")
     )
 
 
