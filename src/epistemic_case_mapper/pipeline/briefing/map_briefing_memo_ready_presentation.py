@@ -28,6 +28,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_source_identity import
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_hierarchy import render_source_hierarchy_section
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_use_notes import source_use_note_for_entry
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_entailment import (
+    collect_packet_source_evidence_by_source,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_weighting_caveats import render_source_weighting_caveat_note
 
 DEFAULT_CITATION_TRACE_HREF = "CITATION_TRACE.md"
@@ -78,6 +81,7 @@ def run_memo_ready_presentation_normalization(
         entries=_canonical_source_entries(packet),
         display_lookup=_citation_display_lookup(_canonical_source_entries(packet)),
         citation_parts=_citation_parts,
+        source_evidence_by_source=collect_packet_source_evidence_by_source(packet),
     )
     if next_memo != normalized:
         changes.append("aligned_inline_citations")

@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_argument_contract import build_decision_argument_contract, argument_move_ids_for_evidence
+from epistemic_case_mapper.pipeline.briefing.map_briefing_citation_care import source_ids_supported_by_claim
 from epistemic_case_mapper.pipeline.briefing.map_briefing_markdown_quality import repair_markdown_structure
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
@@ -898,7 +899,12 @@ def _contract_job_text(contract: dict[str, Any]) -> str:
     return " ".join(str(part or "") for part in parts).lower()
 
 
-def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]]) -> dict[str, Any]:
+def render_evidence_tagged_memo(
+    tagged_memo: str,
+    contracts: list[dict[str, Any]],
+    *,
+    source_evidence_by_source: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     contracts_by_id = _contracts_by_evidence_alias(contracts)
     known_source_ids = {
         source_id
@@ -906,6 +912,7 @@ def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]
         for source_id in _string_list(contract.get("source_ids")) + _string_list(contract.get("citation_source_ids"))
     }
     trace = []
+    source_evidence = source_evidence_by_source or {}
     tagged_memo = _strip_source_citations_adjacent_to_evidence_tags(tagged_memo, known_source_ids)
 
     def replace(match: re.Match[str]) -> str:
@@ -915,12 +922,24 @@ def render_evidence_tagged_memo(tagged_memo: str, contracts: list[dict[str, Any]
             source_ids = []
             for evidence_id in evidence_ids:
                 contract = contracts_by_id.get(evidence_id, {})
-                row_source_ids = _string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids"))
+                fallback_source_ids = _string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids"))
+                candidate_source_ids = _string_list(contract.get("source_ids")) or fallback_source_ids
+                sentence = _sentence_around_index(tagged_memo, match.start())
+                supported_source_ids = source_ids_supported_by_claim(
+                    sentence,
+                    candidate_source_ids,
+                    source_evidence_by_source=source_evidence,
+                )
+                row_source_ids = supported_source_ids[:3] or fallback_source_ids
                 source_ids.extend(row_source_ids)
                 trace.append(
                     {
                         "evidence_id": evidence_id,
                         "source_ids": row_source_ids,
+                        "candidate_source_ids": candidate_source_ids,
+                        "citation_selection_basis": "source_specific_claim_support"
+                        if supported_source_ids
+                        else "contract_fallback",
                         "claim": contract.get("claim"),
                         "required_quantity_atoms": contract.get("required_quantity_atoms", []),
                         "tag": match.group(0),
@@ -1105,11 +1124,30 @@ def _contract_quantity_support_text(contract: dict[str, Any]) -> str:
 
 def _sentence_around_index(text: str, index: int) -> str:
     text = str(text or "")
-    start_candidates = [text.rfind(mark, 0, max(index, 0)) for mark in (". ", "? ", "! ", "\n")]
-    start = max(start_candidates)
-    end_candidates = [pos for mark in (".", "?", "!", "\n") if (pos := text.find(mark, index)) >= 0]
-    end = min(end_candidates) + 1 if end_candidates else len(text)
-    return text[start + 1 : end].strip()
+    boundaries = [-1]
+    for position, char in enumerate(text):
+        if char == "\n":
+            boundaries.append(position)
+            continue
+        if char not in ".!?":
+            continue
+        if char == "." and (_decimal_period(text, position) or _abbreviation_period(text, position)):
+            continue
+        if position + 1 == len(text) or text[position + 1].isspace():
+            boundaries.append(position)
+    boundaries.append(len(text))
+    for start, end in zip(boundaries, boundaries[1:]):
+        if start < index <= end:
+            return text[start + 1 : end + (end < len(text))].strip()
+    return text.strip()
+
+
+def _decimal_period(text: str, index: int) -> bool:
+    return index > 0 and index + 1 < len(text) and text[index - 1].isdigit() and text[index + 1].isdigit()
+
+
+def _abbreviation_period(text: str, index: int) -> bool:
+    return bool(re.search(r"(?:\bvs|\be\.g|\bi\.e|\bet\s+al)\.$", text[: index + 1], flags=re.IGNORECASE))
 
 
 def _quantity_surfaces(text: str) -> list[str]:

@@ -11,6 +11,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     string_list as _string_list,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_identity import source_label_variants
+from epistemic_case_mapper.pipeline.briefing.map_briefing_citation_care import source_ids_supported_by_claim
 
 
 def align_inline_citations(
@@ -20,6 +21,7 @@ def align_inline_citations(
     entries: list[dict[str, str]],
     display_lookup: dict[str, str],
     citation_parts: Any,
+    source_evidence_by_source: dict[str, list[str]] | None = None,
 ) -> str:
     if not entries:
         return str(memo or "")
@@ -44,7 +46,16 @@ def align_inline_citations(
         ):
             aligned_lines.append(line)
             continue
-        aligned_lines.append(_align_citation_line(line, display_lookup, source_by_display, role_by_source, citation_parts))
+        aligned_lines.append(
+            _align_citation_line(
+                line,
+                display_lookup,
+                source_by_display,
+                role_by_source,
+                citation_parts,
+                source_evidence_by_source=source_evidence_by_source or {},
+            )
+        )
     return "\n".join(aligned_lines)
 
 
@@ -54,6 +65,8 @@ def _align_citation_line(
     source_by_display: dict[str, str],
     role_by_source: dict[str, str],
     citation_parts: Any,
+    *,
+    source_evidence_by_source: dict[str, list[str]],
 ) -> str:
     def replace(match: re.Match[str]) -> str:
         content = match.group(1)
@@ -69,6 +82,17 @@ def _align_citation_line(
         if not mapped:
             return match.group(0)
         clause = _presentation_citation_clause(line, match.start(), match.end())
+        support_claim = _presentation_citation_sentence(line, match.start(), match.end())
+        supported_source_ids = source_ids_supported_by_claim(
+            support_claim,
+            [source_id for _, source_id in mapped],
+            source_evidence_by_source=source_evidence_by_source,
+        )
+        if supported_source_ids:
+            selected = [row for row in mapped if row[1] in supported_source_ids]
+            if [source_id for _, source_id in selected] == [source_id for _, source_id in mapped]:
+                return match.group(0)
+            return "[" + ", ".join(display for display, _ in selected) + "]"
         desired_roles = _presentation_clause_roles(clause)
         selected = _aligned_citation_sources(mapped, desired_roles, role_by_source)
         if not selected:
@@ -152,6 +176,18 @@ def _presentation_citation_clause(line: str, start: int, end: int) -> str:
     left = max(_clause_boundary_indexes(text, 0, start), default=-1)
     right_candidates = _clause_boundary_indexes(text, end, len(text))
     right = min(right_candidates) if right_candidates else len(text)
+    return " ".join(text[left + 1 : right].split())
+
+
+def _presentation_citation_sentence(line: str, start: int, end: int) -> str:
+    text = str(line or "")
+    boundaries = [
+        index
+        for index, char in enumerate(text)
+        if char == "." and not _is_decimal_period(text, index)
+    ]
+    left = max((index for index in boundaries if index < start), default=-1)
+    right = min((index for index in boundaries if index >= end), default=len(text))
     return " ".join(text[left + 1 : right].split())
 
 

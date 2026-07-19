@@ -36,6 +36,13 @@ def build_citation_care_report(
         if not cited_source_ids:
             continue
         cited_sentence_count += 1
+        sentence_supported_source_ids = set(
+            source_ids_supported_by_claim(
+                sentence,
+                cited_source_ids,
+                source_evidence_by_source=evidence_by_source,
+            )
+        )
         for group in citation_groups:
             group_source_ids = _string_list(group.get("source_ids"))
             if not group_source_ids:
@@ -80,12 +87,14 @@ def build_citation_care_report(
                             "guidance": _role_mismatch_guidance(sentence_roles, roles),
                         }
                     )
-                entailment_warning = _citation_entailment_warning(
-                    clause,
-                    source_id=source_id,
-                    source_evidence=evidence_by_source.get(source_id, []),
-                    evidence_by_source=evidence_by_source,
-                )
+                entailment_warning = None
+                if source_id not in sentence_supported_source_ids:
+                    entailment_warning = _citation_entailment_warning(
+                        clause,
+                        source_id=source_id,
+                        source_evidence=evidence_by_source.get(source_id, []),
+                        evidence_by_source=evidence_by_source,
+                    )
                 if entailment_warning:
                     warnings.append({**entailment_warning, "sentence": sentence[:360]})
     deduped = _dedupe_warning_rows(warnings)
@@ -106,12 +115,15 @@ _ENTAILMENT_STOPWORDS = {
     "adults",
     "associated",
     "association",
+    "been",
     "cardiovascular",
     "compared",
     "consumption",
     "dietary",
+    "development",
     "effect",
     "effects",
+    "even",
     "evidence",
     "finding",
     "findings",
@@ -124,6 +136,7 @@ _ENTAILMENT_STOPWORDS = {
     "moderate",
     "outcome",
     "outcomes",
+    "overall",
     "people",
     "population",
     "research",
@@ -160,29 +173,30 @@ def _citation_entailment_warning(
         return None
     claim = _clean_citation_clause(clause)
     evidence_text = " ".join(source_evidence)
-    claim_terms = _entailment_terms(claim)
-    evidence_terms = _entailment_terms(evidence_text)
-    distinctive_terms = _distinctive_claim_terms(claim_terms, evidence_by_source)
-    matched_distinctive = sorted(set(distinctive_terms).intersection(evidence_terms))
-    matched_terms = sorted(set(claim_terms).intersection(evidence_terms))
     quantities = _specific_quantity_surfaces(claim)
+    if _source_matches_any_quantity(evidence_text, quantities):
+        return None
+    if any(_quantity_period_conflicts(evidence_text, quantity) for quantity in quantities):
+        return _entailment_warning(
+            source_id,
+            claim,
+            source_evidence,
+            reason="cited source evidence uses an incompatible quantity period",
+            unmatched_quantities=quantities,
+        )
+    if _semantic_claim_support_score(claim, evidence_text, evidence_by_source) > 0:
+        return None
+    claim_terms = _entailment_terms(claim)
+    distinctive_terms = _distinctive_claim_terms(claim_terms, evidence_by_source)
     if quantities:
-        matched_quantities = [quantity for quantity in quantities if _quantity_surface_matches(evidence_text, quantity)]
-        strong_qualitative_match = bool(matched_distinctive) and len(matched_terms) >= 2
-        if not matched_quantities and not strong_qualitative_match:
-            return _entailment_warning(
-                source_id,
-                claim,
-                source_evidence,
-                reason="cited source evidence does not contain the clause's specific quantity",
-                unmatched_quantities=quantities,
-            )
-        return None
-
+        return _entailment_warning(
+            source_id,
+            claim,
+            source_evidence,
+            reason="cited source evidence does not contain the clause's specific quantity",
+            unmatched_quantities=quantities,
+        )
     if len(claim_terms) < 2:
-        return None
-    minimum_overlap = 2 if len(claim_terms) >= 5 else 1
-    if matched_distinctive or len(matched_terms) >= minimum_overlap:
         return None
     return _entailment_warning(
         source_id,
@@ -191,6 +205,53 @@ def _citation_entailment_warning(
         reason="cited source evidence does not match the clause's distinctive claim terms",
         unmatched_terms=distinctive_terms[:8] or claim_terms[:8],
     )
+
+
+def source_ids_supported_by_claim(
+    claim: str,
+    source_ids: list[str],
+    *,
+    source_evidence_by_source: dict[str, list[str]],
+) -> list[str]:
+    """Return the strongest source-specific support for each rendered clause."""
+    clean_claim = re.sub(r"\{[^{}\n]{1,240}\}", "", str(claim or ""))
+    candidate_source_ids = _dedupe(source_ids)
+    selected: list[str] = []
+    for clause in _claim_support_clauses(clean_claim):
+        quantities = _specific_quantity_surfaces(clause)
+        candidates: list[tuple[str, bool, int]] = []
+        for source_id in candidate_source_ids:
+            source_evidence = source_evidence_by_source.get(source_id, [])
+            if not source_evidence:
+                continue
+            evidence_text = " ".join(source_evidence)
+            exact_quantity = _source_matches_any_quantity(evidence_text, quantities)
+            if quantities and any(_quantity_period_conflicts(evidence_text, value) for value in quantities):
+                exact_quantity = False
+            semantic_score = _semantic_claim_support_score(
+                clause,
+                evidence_text,
+                source_evidence_by_source,
+            )
+            candidates.append((source_id, exact_quantity, semantic_score))
+
+        exact_candidates = [row for row in candidates if row[1]]
+        if exact_candidates:
+            endpoint_matched = [row for row in exact_candidates if row[2] > 0]
+            ranked = endpoint_matched or exact_candidates
+            best_score = max(score for _, _, score in ranked)
+            selected.extend(source_id for source_id, _, score in ranked if score == best_score)
+            continue
+
+        semantic_candidates = [row for row in candidates if row[2] > 0]
+        if semantic_candidates:
+            best_score = max(score for _, _, score in semantic_candidates)
+            selected.extend(
+                source_id
+                for source_id, _, score in semantic_candidates
+                if score == best_score
+            )
+    return _dedupe(selected)
 
 
 def _entailment_warning(
@@ -241,12 +302,88 @@ def _quantity_surface_matches(text: str, quantity: str) -> bool:
     if not numbers:
         return True
     normalized = str(text or "").replace("−", "-").replace("–", "-").replace("—", "-")
-    return all(re.search(rf"(?<![\d.]){re.escape(number)}(?![\d.])", normalized) for number in numbers)
+    if not all(re.search(rf"(?<![\d.]){re.escape(number)}(?![\d.])", normalized) for number in numbers):
+        return False
+    quantity_lower = str(quantity or "").lower()
+    normalized_lower = normalized.lower()
+    if "%" in quantity and not all(
+        re.search(rf"(?<![\d.]){re.escape(number)}\s*(?:%|percent\b)", normalized_lower)
+        for number in numbers
+    ):
+        return False
+    if re.search(r"/(?:day|week)\b", quantity_lower):
+        period = "day" if "/day" in quantity_lower else "week"
+        period_pattern = rf"(?:/\s*{period}\b|per\s+{period}\b|\b{'daily' if period == 'day' else 'weekly'}\b)"
+        if not re.search(period_pattern, normalized_lower):
+            return False
+    statistic = re.match(r"\s*(HR|RR|OR|MD)\b", str(quantity or ""), flags=re.IGNORECASE)
+    if statistic and not re.search(rf"\b{statistic.group(1)}\b", normalized, flags=re.IGNORECASE):
+        return False
+    return True
+
+
+def _source_matches_any_quantity(evidence_text: str, quantities: list[str]) -> bool:
+    return any(_quantity_surface_matches(evidence_text, quantity) for quantity in quantities)
+
+
+def _quantity_period_conflicts(evidence_text: str, quantity: str) -> bool:
+    quantity_lower = str(quantity or "").lower()
+    evidence_lower = str(evidence_text or "").lower()
+    if "/day" in quantity_lower:
+        return bool(re.search(r"(?:/\s*week\b|per\s+week\b|\bweekly\b)", evidence_lower)) and not bool(
+            re.search(r"(?:/\s*day\b|per\s+day\b|\bdaily\b)", evidence_lower)
+        )
+    if "/week" in quantity_lower:
+        return bool(re.search(r"(?:/\s*day\b|per\s+day\b|\bdaily\b)", evidence_lower)) and not bool(
+            re.search(r"(?:/\s*week\b|per\s+week\b|\bweekly\b)", evidence_lower)
+        )
+    return False
+
+
+def _claim_support_clauses(claim: str) -> list[str]:
+    clauses = re.split(r"\s*;\s*|\bhowever\b|\bwhereas\b", str(claim or ""), flags=re.IGNORECASE)
+    return [clause.strip(" ,") for clause in clauses if clause.strip(" ,")]
+
+
+def _semantic_claim_support_score(
+    claim: str,
+    evidence_text: str,
+    evidence_by_source: dict[str, list[str]],
+) -> int:
+    evidence_terms = _entailment_terms(evidence_text)
+    evidence_keys = {_term_match_key(term) for term in evidence_terms}
+    best = 0
+    for segment in _claim_support_clauses(claim):
+        claim_terms = _entailment_terms(segment)
+        if len(claim_terms) < 2:
+            continue
+        distinctive = _distinctive_claim_terms(claim_terms, evidence_by_source)
+        matched = [term for term in claim_terms if _term_match_key(term) in evidence_keys]
+        anchor_keys = {
+            _term_match_key(term)
+            for term in distinctive
+            if len(term) >= 6
+        }
+        anchor_keys.update(
+            _term_match_key(term)
+            for term in re.findall(r"\b[A-Z][A-Z0-9-]{1,}\b", segment)
+        )
+        matched_anchor_keys = anchor_keys.intersection(evidence_keys)
+        if matched_anchor_keys:
+            best = max(best, len(matched) + 3 * len(matched_anchor_keys))
+    return best
+
+
+def _term_match_key(term: str) -> str:
+    normalized = _norm(term)
+    if re.match(r"^[a-z]{3}-", normalized):
+        return normalized[:3]
+    return normalized[:6] if len(normalized) >= 8 else normalized
 
 
 def _entailment_terms(text: str) -> list[str]:
     terms = []
-    for raw in re.findall(r"[a-z][a-z0-9-]{3,}", _norm(text)):
+    for raw in re.findall(r"[a-z][a-z0-9-]{2,}", _norm(text)):
         term = raw.rstrip(".,;:")
         if term in _ENTAILMENT_STOPWORDS:
             continue

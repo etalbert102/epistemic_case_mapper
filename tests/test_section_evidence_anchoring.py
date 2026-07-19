@@ -375,6 +375,98 @@ def test_reconciliation_flags_adjacent_source_evidence_mismatch() -> None:
     assert report["source_mismatch_warnings"][0]["evidence_ids"] == ["e_support"]
 
 
+def test_renderer_selects_source_specific_support_for_composite_evidence_tag() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_composite",
+            "source_ids": ["s_cohort", "s_trial"],
+            "citation_source_ids": ["s_cohort"],
+            "claim": "The evidence includes both cohort outcomes and an endothelial trial.",
+        }
+    ]
+    tagged = (
+        "A single dose did not change endothelial function "
+        "(0.4 ± 1.9 vs. 0.4 ± 2.4%, p = 0.99) {E:e_composite}."
+    )
+
+    rendered = render_evidence_tagged_memo(
+        tagged,
+        contracts,
+        source_evidence_by_source={
+            "s_cohort": ["Daily exposure was associated with an HR of 0.89 for cardiovascular disease."],
+            "s_trial": ["A single dose did not change endothelial function compared with control (p = 0.99)."],
+        },
+    )
+
+    assert "[s_trial]" in rendered["memo"]
+    assert "[s_cohort]" not in rendered["memo"]
+    assert rendered["trace"][0]["citation_selection_basis"] == "source_specific_claim_support"
+
+
+def test_renderer_prefers_exact_quantity_source_over_broad_endpoint_overlap() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_composite",
+            "source_ids": ["s_exact", "s_broad"],
+            "citation_source_ids": ["s_broad"],
+            "claim": "Composite cardiovascular evidence.",
+        }
+    ]
+    tagged = "Daily exposure was associated with lower cardiovascular risk (HR 0.89) {E:e_composite}."
+
+    rendered = render_evidence_tagged_memo(
+        tagged,
+        contracts,
+        source_evidence_by_source={
+            "s_exact": ["Daily exposure was associated with lower CVD risk (HR 0.89)."],
+            "s_broad": ["Overall cardiovascular markers did not worsen in the intervention group."],
+        },
+    )
+
+    assert "[s_exact]" in rendered["memo"]
+    assert "[s_broad]" not in rendered["memo"]
+
+
+def test_renderer_prefers_distinctive_endpoint_over_generic_word_overlap() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_composite",
+            "source_ids": ["s_plaque", "s_development"],
+            "citation_source_ids": ["s_development"],
+            "claim": "Composite observational evidence.",
+        }
+    ]
+    tagged = "Moderate exposure was associated with an 11% reduction in plaque development {E:e_composite}."
+
+    rendered = render_evidence_tagged_memo(
+        tagged,
+        contracts,
+        source_evidence_by_source={
+            "s_plaque": ["Increasing exposure was inversely associated with plaque presence and area."],
+            "s_development": ["The intervention supported healthy development in the overall cohort."],
+        },
+    )
+
+    assert "[s_plaque]" in rendered["memo"]
+    assert "[s_development]" not in rendered["memo"]
+
+
+def test_renderer_keeps_contract_fallback_without_source_specific_evidence() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "source_ids": ["s1", "s2"],
+            "citation_source_ids": ["s2"],
+            "claim": "A supported claim.",
+        }
+    ]
+
+    rendered = render_evidence_tagged_memo("A supported claim {E:e1}.", contracts)
+
+    assert "[s2]" in rendered["memo"]
+    assert rendered["trace"][0]["citation_selection_basis"] == "contract_fallback"
+
+
 def test_reconciliation_allows_adjacent_source_lists_that_overlap_the_evidence_contract() -> None:
     contracts = [
         {"evidence_id": "e_support", "source_ids": ["s_support"], "claim": "Support claim.", "required": True},

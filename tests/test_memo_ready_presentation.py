@@ -65,6 +65,38 @@ def test_presentation_normalization_converts_parenthetical_source_ids_to_citatio
     assert "normalized_parenthetical_source_id_citations" in result["report"]["changes"]
 
 
+def test_presentation_preserves_sources_for_each_clause_in_compound_sentence() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "s_cohort", "source_label": "Cohort 2025", "source_url": "https://example.test/cohort"},
+            {"source_id": "s_response", "source_label": "Response 2025", "source_url": "https://example.test/response"},
+        ],
+        "evidence_items": [
+            {
+                "item_id": "cohort",
+                "source_ids": ["s_cohort"],
+                "source_excerpt": "A 27% lower mortality risk was observed among weekly users.",
+            },
+            {
+                "item_id": "response",
+                "source_ids": ["s_response"],
+                "source_excerpt": "High responders experienced increased serum cholesterol.",
+            },
+        ],
+        "memo_warning_packet": {"warnings": []},
+    }
+    memo = (
+        "# Decision Memo\n\nWeekly use was associated with 27% lower mortality; however, "
+        "high responders experienced increased serum cholesterol [s_cohort, s_response]."
+    )
+
+    result = run_memo_ready_presentation_normalization(memo, packet)
+
+    assert "[Cohort 2025]" in result["memo"]
+    assert "[Response 2025]" in result["memo"]
+
+
 def test_presentation_normalization_removes_reader_internal_evidence_ids() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

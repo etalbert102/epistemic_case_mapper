@@ -381,6 +381,53 @@ def test_source_binding_skips_entailment_when_source_specific_evidence_is_unavai
     assert not any(row["warning_type"] == "citation_claim_entailment_mismatch" for row in warnings)
 
 
+def test_source_binding_does_not_match_same_number_with_different_unit() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_weekly", "source_label": "Weekly Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Use below one unit per day was associated with lower risk.",
+                    "source_ids": ["s_weekly"],
+                    "source_excerpts": [
+                        {"source_ids": ["s_weekly"], "source_excerpt": "Participants used up to 1 unit per week."}
+                    ],
+                }
+            ]
+        },
+    }
+
+    report = build_memo_ready_packet_retention_report(
+        "Use below <1 unit/day was associated with lower risk [s_weekly].",
+        packet,
+    )
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    assert any(row["warning_type"] == "citation_claim_entailment_mismatch" for row in warnings)
+
+
+def test_source_binding_does_not_match_plain_count_to_percentage() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_count", "source_label": "Count Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "The odds were 13% lower.",
+                    "source_ids": ["s_count"],
+                    "source_excerpts": [
+                        {"source_ids": ["s_count"], "source_excerpt": "The review included 13 randomized trials."}
+                    ],
+                }
+            ]
+        },
+    }
+
+    report = build_memo_ready_packet_retention_report("The odds were 13% lower [s_count].", packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    assert any(row["warning_type"] == "citation_claim_entailment_mismatch" for row in warnings)
+
+
 def test_prioritized_source_role_overrides_stale_canonical_role() -> None:
     packet = {
         "source_trail": [{"source_id": "s1", "source_label": "Study One"}],

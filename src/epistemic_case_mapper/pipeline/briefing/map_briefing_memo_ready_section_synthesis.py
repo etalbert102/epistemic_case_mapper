@@ -17,6 +17,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_priority_quantity_cont
     build_priority_quantity_contract_coverage_report,
     build_priority_quantity_contracts,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_entailment import (
+    collect_packet_source_evidence_by_source,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
     build_evidence_reconciliation_report,
@@ -102,7 +105,15 @@ def run_parallel_memo_ready_section_generation(
         }
     )
     tagged_memo = _assemble_section_synthesis_memo(section_plan, section_reports)
-    rendered = render_evidence_tagged_memo(tagged_memo, evidence_contracts) if evidence_contracts else {"memo": tagged_memo, "trace": []}
+    rendered = (
+        render_evidence_tagged_memo(
+            tagged_memo,
+            evidence_contracts,
+            source_evidence_by_source=collect_packet_source_evidence_by_source(memo_ready_packet or {}),
+        )
+        if evidence_contracts
+        else {"memo": tagged_memo, "trace": []}
+    )
     reconciliation = (
         build_evidence_reconciliation_report(tagged_memo, rendered["memo"], evidence_contracts)
         if evidence_contracts
