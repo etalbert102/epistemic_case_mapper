@@ -600,6 +600,32 @@ def test_source_evidence_collector_accepts_verbatim_assertion_bundle_quote() -> 
     assert evidence == {"s1": ["Each additional 300 mg/day was associated with HR 1.19."]}
 
 
+def test_renderer_selects_quantity_bound_source_within_composite_contract() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_composite",
+            "source_ids": ["s_mortality", "s_stroke"],
+            "citation_source_ids": ["s_mortality", "s_stroke"],
+            "required_quantity_atoms": [
+                {"value": "HR 1.19", "source_ids": ["s_mortality"]},
+                {"value": "OR 1.007", "source_ids": ["s_stroke"]},
+            ],
+        }
+    ]
+    tagged = (
+        "Mortality was higher (HR 1.19) {E:e_composite}, and stroke risk was higher "
+        "(OR 1.007) {E:e_composite}."
+    )
+
+    rendered = render_evidence_tagged_memo(tagged, contracts)
+
+    assert rendered["memo"] == "Mortality was higher (HR 1.19) [s_mortality], and stroke risk was higher (OR 1.007) [s_stroke].\n"
+    assert [row["citation_selection_basis"] for row in rendered["trace"]] == [
+        "quantity_source_binding",
+        "quantity_source_binding",
+    ]
+
+
 def test_reconciliation_does_not_parse_type_2_diabetes_as_quantity() -> None:
     contracts = [
         {

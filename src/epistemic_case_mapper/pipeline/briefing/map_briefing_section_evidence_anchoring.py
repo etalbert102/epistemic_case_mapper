@@ -28,6 +28,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_utils
     primary_section_for_role as _primary_section_for_role,
     quantity_contracts as _quantity_contracts,
     quantity_source_ids as _quantity_source_ids,
+    quantity_surface_present as _quantity_surface_present,
     quantity_warnings as _quantity_warnings,
     source_ids_from_brace_content as _source_ids_from_brace_content,
     untagged_high_risk_sentences as _untagged_high_risk_sentences,
@@ -978,22 +979,27 @@ def render_evidence_tagged_memo(
                 contract = contracts_by_id.get(evidence_id, {})
                 fallback_source_ids = _string_list(contract.get("citation_source_ids")) or _string_list(contract.get("source_ids"))
                 candidate_source_ids = _string_list(contract.get("source_ids")) or fallback_source_ids
-                sentence = _sentence_around_index(tagged_memo, match.start())
+                sentence = _clause_around_index(tagged_memo, match.start())
+                quantity_source_ids = _quantity_bound_source_ids(sentence, contract, candidate_source_ids)
                 supported_source_ids = source_ids_supported_by_claim(
                     sentence,
                     candidate_source_ids,
                     source_evidence_by_source=source_evidence,
                 )
-                row_source_ids = supported_source_ids[:3] or fallback_source_ids
+                row_source_ids = quantity_source_ids[:3] or supported_source_ids[:3] or fallback_source_ids
                 source_ids.extend(row_source_ids)
                 trace.append(
                     {
                         "evidence_id": evidence_id,
                         "source_ids": row_source_ids,
                         "candidate_source_ids": candidate_source_ids,
-                        "citation_selection_basis": "source_specific_claim_support"
-                        if supported_source_ids
-                        else "contract_fallback",
+                        "citation_selection_basis": (
+                            "quantity_source_binding"
+                            if quantity_source_ids
+                            else "source_specific_claim_support"
+                            if supported_source_ids
+                            else "contract_fallback"
+                        ),
                         "claim": contract.get("claim"),
                         "required_quantity_atoms": contract.get("required_quantity_atoms", []),
                         "tag": match.group(0),
@@ -1010,6 +1016,35 @@ def render_evidence_tagged_memo(
     memo = re.sub(r"[ \t]+(\n)", r"\1", memo)
     memo = re.sub(r"\s+\.", ".", memo)
     return {"memo": repair_markdown_structure(memo), "trace": trace}
+
+
+def _quantity_bound_source_ids(
+    text: str,
+    contract: dict[str, Any],
+    candidate_source_ids: list[str],
+) -> list[str]:
+    bound = _dedupe(
+        source_id
+        for quantity in _list(contract.get("required_quantity_atoms"))
+        if isinstance(quantity, dict)
+        and _quantity_surface_present(str(quantity.get("value") or ""), text)
+        for source_id in _string_list(quantity.get("source_ids"))
+        if source_id in candidate_source_ids
+    )
+    preferred = _string_list(contract.get("citation_source_ids"))
+    return [source_id for source_id in preferred if source_id in bound] or bound
+
+
+def _clause_around_index(text: str, index: int) -> str:
+    text = str(text or "")
+    sentence = _sentence_around_index(text, index)
+    sentence_start = text.find(sentence, max(0, index - len(sentence)))
+    relative_index = index - sentence_start if sentence_start >= 0 else min(index, len(sentence))
+    boundaries = [0, len(sentence)]
+    boundaries.extend(match.end() for match in re.finditer(r"(?:;\s+|,\s+(?:and|but|while)\s+)", sentence))
+    left = max(boundary for boundary in boundaries if boundary <= relative_index)
+    right = min(boundary for boundary in boundaries if boundary > relative_index)
+    return sentence[left:right].strip(" ,;\n")
 
 
 def _strip_source_citations_adjacent_to_evidence_tags(text: str, known_source_ids: set[str]) -> str:
