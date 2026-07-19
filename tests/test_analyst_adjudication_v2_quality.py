@@ -202,3 +202,34 @@ def test_v2_runtime_rejects_target_option_not_in_answer_frame(monkeypatch) -> No
     assert result["analyst_adjudication_parse_report"]["valid"] is False
     issues = result["analyst_adjudication_chunk_reports"]["chunks"][0]["issues"]
     assert "unsupported_target_answer_options" in issues[0]
+
+
+def test_v2_runtime_accepts_canonical_candidate_answer_id(monkeypatch) -> None:
+    ledger, _ = _fixture()
+    ledger["rows"] = ledger["rows"][:1]
+    ledger["stable_final_answer_frame"]["live_answer_options"] = [
+        {
+            "candidate_answer_id": "subgroup_or_scope_dependent",
+            "answer": "depends on subgroup, dose, endpoint, or scope",
+            "stance": "conditional",
+        }
+    ]
+
+    def fake_backend(*args, **kwargs) -> ModelBackendResult:
+        row = {
+            **_compact_row("bundle:support"),
+            "target_answer_option": "subgroup_or_scope_dependent",
+        }
+        return ModelBackendResult(text=json.dumps({"rows": [row]}), backend="fake")
+
+    monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_SCHEMA", "v2")
+    monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "1")
+    monkeypatch.setattr(
+        "epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication_v2.run_model_backend",
+        fake_backend,
+    )
+
+    result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
+
+    assert result["analyst_adjudication_report"]["status"] == "accepted"
+    assert result["analyst_adjudication"]["rows"][0]["target_answer_option"] == "subgroup_or_scope_dependent"

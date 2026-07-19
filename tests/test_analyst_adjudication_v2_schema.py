@@ -84,6 +84,8 @@ def test_v2_prompt_is_compact_but_preserves_decision_and_source_context() -> Non
 
     assert "bundle:one" in prompt
     assert "current_best_answer" in prompt
+    assert "primary support/supports only when the row strengthens" in prompt
+    assert "scope_or_applicability/bounds_scope" in prompt
     assert "Option A reduced downstream losses" in prompt
     assert "benefit_signal" in prompt
     assert '"priority"' in prompt

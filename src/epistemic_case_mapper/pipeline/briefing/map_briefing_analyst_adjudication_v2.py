@@ -55,6 +55,57 @@ class EvidenceAdjudicationResponseRowV2(BaseModel):
     def _strip_text(cls, value: Any) -> str:
         return str(value or "").strip()
 
+    @field_validator("memo_use", mode="before")
+    @classmethod
+    def _normalize_memo_use(cls, value: Any) -> str:
+        normalized = _enum_text(value)
+        return {
+            "primary_support": "load_bearing_primary_support",
+            "support": "load_bearing_primary_support",
+            "counterweight": "load_bearing_counterweight",
+            "challenges_answer": "load_bearing_counterweight",
+            "scope": "scope_or_applicability",
+            "bounds_scope": "scope_or_applicability",
+            "crux": "decision_crux",
+            "identifies_crux": "decision_crux",
+            "context": "mechanism_or_context",
+            "contextualizes_answer": "mechanism_or_context",
+            "background": "background_only",
+            "trace_only": "background_only",
+            "exclude": "not_decision_relevant",
+            "uncertain_relation": "needs_human_or_model_review",
+        }.get(normalized, normalized)
+
+    @field_validator("answer_relation", mode="before")
+    @classmethod
+    def _normalize_answer_relation(cls, value: Any) -> str:
+        normalized = _enum_text(value)
+        return {
+            "support": "supports_answer",
+            "supports": "supports_answer",
+            "counterweight": "challenges_answer",
+            "challenge": "challenges_answer",
+            "scope": "bounds_scope",
+            "bounds_answer": "bounds_scope",
+            "crux": "identifies_crux",
+            "context": "contextualizes_answer",
+            "background": "contextualizes_answer",
+            "irrelevant": "not_decision_relevant",
+            "uncertain": "uncertain_relation",
+        }.get(normalized, normalized)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _normalize_priority(cls, value: Any) -> str:
+        normalized = _enum_text(value)
+        return {
+            "critical": "core",
+            "high": "core",
+            "medium": "supporting",
+            "low": "context",
+            "background": "context",
+        }.get(normalized, normalized)
+
 
 class AnalystAdjudicationResponseV2(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -135,6 +186,7 @@ def run_analyst_adjudication_v2(
             recovery_rounds=0,
             initial_chunk_count=1,
             parallelism=1,
+            response_schema_supplied=False,
             started=started,
         )
 
@@ -214,6 +266,7 @@ def run_analyst_adjudication_v2(
         recovery_rounds=recovery_rounds,
         initial_chunk_count=len(initial),
         parallelism=model_parallelism(backend),
+        response_schema_supplied=True,
         started=started,
     )
 
@@ -267,6 +320,8 @@ def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
         "instructions": [
             "Return exactly one row for every supplied evidence_item_id.",
             "Classify relative to current_best_answer when one is supplied; otherwise use the relevant live answer option.",
+            "Use primary support/supports only when the row strengthens that answer; use counterweight/challenges when it weakens the answer or confidence in it.",
+            "Use scope_or_applicability/bounds_scope for dose, subgroup, population, endpoint, or applicability limits that bound rather than directly weaken the answer.",
             "Use source_bottom_lines and source_bottom_line_signals over support-shaped claim wording when they conflict.",
             "Treat candidate relation labels as provisional and judge their endpoint evidence before assigning a role.",
             "Use guardrail only for a qualifier or unsafe inference that must travel with the row.",
@@ -322,7 +377,7 @@ def _run_v2_chunk(
                 response_schema=analyst_adjudication_response_schema_v2(),
             )
             raw = result.text
-            payload = _extract_json(raw)
+            payload = _normalize_compact_payload(_extract_json(raw))
             parsed = AnalystAdjudicationResponseV2.model_validate(payload)
             invalid_targets = _invalid_target_options(parsed.rows, chunk_ledger)
             if invalid_targets:
@@ -416,6 +471,7 @@ def _result_bundle(
     recovery_rounds: int,
     initial_chunk_count: int,
     parallelism: int,
+    response_schema_supplied: bool,
     started: float,
 ) -> dict[str, Any]:
     failed_count = sum(1 for row in chunk_reports if row.get("status") not in {"accepted", "prompt_backend_scaffold"})
@@ -453,7 +509,7 @@ def _result_bundle(
         "analyst_adjudication_schema_report": {
             "schema_id": "analyst_adjudication_schema_report_v1",
             "schema_version": "v2",
-            "response_schema_supplied": True,
+            "response_schema_supplied": response_schema_supplied,
             "model_row_field_count": len(EvidenceAdjudicationResponseRowV2.model_fields),
             "canonical_row_field_count": 19,
             "compact_row_count": compact_row_count,
@@ -517,7 +573,7 @@ def _answer_option_values(value: Any) -> set[str]:
     values: set[str] = set()
     for option in value if isinstance(value, list) else []:
         if isinstance(option, dict):
-            for key in ("option_id", "id", "label", "answer", "stance"):
+            for key in ("candidate_answer_id", "option_id", "id", "label", "answer", "stance"):
                 if option.get(key):
                     values.add(_normalized(option[key]))
         elif str(option or "").strip():
@@ -527,6 +583,10 @@ def _answer_option_values(value: Any) -> set[str]:
 
 def _normalized(value: Any) -> str:
     return " ".join(str(value or "").strip().lower().split())
+
+
+def _enum_text(value: Any) -> str:
+    return _normalized(value).replace("-", "_").replace(" ", "_")
 
 
 def _extract_json(raw: str) -> Any:
@@ -539,6 +599,14 @@ def _extract_json(raw: str) -> Any:
             lines = lines[:-1]
         text = "\n".join(lines).strip()
     return json.loads(text)
+
+
+def _normalize_compact_payload(payload: Any) -> Any:
+    if isinstance(payload, list):
+        return {"rows": payload}
+    if isinstance(payload, dict) and set(payload) == {"results"} and isinstance(payload["results"], list):
+        return {"rows": payload["results"]}
+    return payload
 
 
 def _progress(progress: Any, status: str, **details: Any) -> None:

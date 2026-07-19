@@ -34,7 +34,7 @@ def run_analyst_adjudication(
     backend_retries: int,
     progress: Callable[[str, str, dict[str, Any] | None], None] | None = None,
 ) -> dict[str, Any]:
-    schema_version = os.environ.get("ECM_ANALYST_ADJUDICATION_SCHEMA", "v1").strip().lower()
+    schema_version = os.environ.get("ECM_ANALYST_ADJUDICATION_SCHEMA", "v2").strip().lower()
     if schema_version not in {"v1", "v2"}:
         raise ValueError("ECM_ANALYST_ADJUDICATION_SCHEMA must be v1 or v2")
     if schema_version == "v2":

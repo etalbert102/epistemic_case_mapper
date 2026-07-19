@@ -213,7 +213,8 @@ def test_expand_reader_map_references_removes_short_claim_ids() -> None:
     assert "health benefit of the small PM reduction remains unclear" in expanded
 
 
-def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_path: Path) -> None:
+def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_SCHEMA", "v1")
     map_path = tmp_path / "generated_map.json"
     quality_path = tmp_path / "map_quality_report.json"
     map_path.write_text(
@@ -445,6 +446,7 @@ def test_synthesize_map_briefing_cli_fails_closed_for_unready_map(monkeypatch, t
 
 
 def test_semantic_staged_brief_cli_runs_full_path_and_fails_closed_when_not_published(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_SCHEMA", "v1")
     _init_demo_case(monkeypatch, tmp_path)
     decision_question = "Should this demo decision rely on Alpha or Gamma?"
     fake_model = tmp_path / "fake_staged_brief_model.py"

@@ -14,6 +14,11 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet_stage 
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
+@pytest.fixture(autouse=True)
+def _use_legacy_adjudication_schema(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_SCHEMA", "v1")
+
+
 def _ledger() -> dict:
     return {
         "schema_id": "analyst_evidence_ledger_v1",
