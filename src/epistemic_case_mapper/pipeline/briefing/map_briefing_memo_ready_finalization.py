@@ -1351,21 +1351,64 @@ def run_memo_ready_packet_repair(
     backend_timeout: int | None,
     backend_retries: int,
 ) -> dict[str, Any]:
+    if not retention_report.get("issues"):
+        result = _run_memo_ready_packet_repair_once(
+            memo,
+            packet,
+            retention_report,
+            backend=backend,
+            backend_timeout=backend_timeout,
+            backend_retries=backend_retries,
+        )
+        result["report"]["semantic_attempt_count"] = 0
+        return result
+
+    deterministic_memo, deterministic_report = _repair_missing_bound_source_citations(memo, retention_report)
+    deterministic_retention = build_memo_ready_packet_retention_report(deterministic_memo, packet)
+    if deterministic_report.get("repair_count") and _retention_complete(deterministic_retention):
+        return {
+            "memo": deterministic_memo,
+            "prompt": "",
+            "raw": "",
+            "report": {
+                "schema_id": "memo_ready_packet_repair_report_v1",
+                "status": "accepted",
+                "accepted": True,
+                "applied": True,
+                "acceptance_basis": "deterministic_source_citation_repair",
+                "contract_mode": "strict_writer_packet" if _strict_packet_contract(packet) else "standard_packet",
+                "initial_missing_mandatory_count": retention_report.get("missing_mandatory_count", 0),
+                "final_missing_mandatory_count": 0,
+                "final_retained_mandatory_count": deterministic_retention.get("retained_mandatory_count", 0),
+                "final_unresolved_warning_count": 0,
+                "final_retention_report": deterministic_retention,
+                "deterministic_source_citation_repair_report": deterministic_report,
+                "semantic_attempt_count": 0,
+                "semantic_attempt_statuses": [],
+                "semantic_attempt_missing_mandatory_counts": [],
+                "issues": [],
+            },
+        }
+
+    repair_memo = deterministic_memo if deterministic_report.get("repair_count") else memo
+    repair_retention = deterministic_retention if deterministic_report.get("repair_count") else retention_report
     first = _run_memo_ready_packet_repair_once(
-        memo,
+        repair_memo,
         packet,
-        retention_report,
+        repair_retention,
         backend=backend,
         backend_timeout=backend_timeout,
         backend_retries=backend_retries,
     )
     first_report = _dict(first.get("report"))
-    if first_report.get("accepted") is True or backend.strip() == "prompt" or not retention_report.get("issues"):
+    if deterministic_report.get("repair_count"):
+        first_report["deterministic_source_citation_repair_report"] = deterministic_report
+    if first_report.get("accepted") is True or backend.strip() == "prompt":
         first_report["semantic_attempt_count"] = 1
         first["report"] = first_report
         return first
 
-    retry_memo = str(first.get("memo") or memo)
+    retry_memo = str(first.get("memo") or repair_memo)
     retry_retention = build_memo_ready_packet_retention_report(retry_memo, packet)
     second = _run_memo_ready_packet_repair_once(
         retry_memo,
@@ -1376,7 +1419,7 @@ def run_memo_ready_packet_repair(
         backend_retries=backend_retries,
     )
     second_report = _dict(second.get("report"))
-    first_missing = int(first_report.get("final_missing_mandatory_count", retention_report.get("missing_mandatory_count", 0)) or 0)
+    first_missing = int(first_report.get("final_missing_mandatory_count", repair_retention.get("missing_mandatory_count", 0)) or 0)
     second_missing = int(second_report.get("final_missing_mandatory_count", retry_retention.get("missing_mandatory_count", 0)) or 0)
     chosen = second if second_report.get("accepted") is True or second_missing < first_missing else first
     chosen_report = _dict(chosen.get("report"))
@@ -1389,8 +1432,8 @@ def run_memo_ready_packet_repair(
     )
     if chosen_report.get("accepted") is not True:
         citation_repaired_memo, citation_repair_report = _repair_missing_bound_source_citations(
-            str(chosen.get("memo") or memo),
-            build_memo_ready_packet_retention_report(str(chosen.get("memo") or memo), packet),
+            str(chosen.get("memo") or repair_memo),
+            build_memo_ready_packet_retention_report(str(chosen.get("memo") or repair_memo), packet),
         )
         citation_retention = build_memo_ready_packet_retention_report(citation_repaired_memo, packet)
         if citation_repair_report.get("repair_count") and _retention_complete(citation_retention):
