@@ -108,6 +108,7 @@ def test_arm_b_prompt_exposes_source_evidence_and_synthesis_constraints() -> Non
     prompt = projection["section_plan"]["sections"][0]["prompt"]
 
     assert '"synthesis_constraints"' in prompt
+    assert prompt.startswith("Section task: answer_evidence | Why This Is the Best Current Read\n")
     assert "source_evidence excerpts as the controlling factual surface" in prompt
     assert "must not be presented as sufficient by itself" in prompt
 

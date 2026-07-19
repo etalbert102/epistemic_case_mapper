@@ -207,6 +207,7 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         "- Translate only the bounded decision anchor into practical guidance and an update condition.\n"
     )
     return (
+        f"Section task: {section_packet.get('section_id')} | {heading}\n"
         "You are writing one section of a source-grounded decision memo from a slim argument packet.\n"
         "The packet contains the section's argument route, decision anchor, and section-owned evidence contracts.\n\n"
         "Output rules:\n"
