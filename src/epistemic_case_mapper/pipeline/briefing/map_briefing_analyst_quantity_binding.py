@@ -13,6 +13,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     string_list as _string_list,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_quantity_prompt import quantity_prompt_candidate
+from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_candidate_budget import prefilter_model_quantity_candidates
 from epistemic_case_mapper.pipeline.briefing.map_briefing_residual_quantities import (
     likely_residual_quantity,
     quantity_covered_by_text,
@@ -26,7 +27,6 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_binding_heuri
     quantity_binding_confidence as _binding_confidence,
 )
 from epistemic_case_mapper.model_backends import run_model_backend
-
 
 MemoQuantityUse = Literal["yes", "context_only", "no"]
 QuantityRole = Literal["decision_anchor", "supporting_detail", "study_descriptor", "statistical_detail", "audit_only"]
@@ -149,6 +149,7 @@ def _run_model_quantity_binding_batches(
     backend_retries: int,
     batch_size: int = 8,
 ) -> tuple[dict[str, Any], str, str, dict[str, Any]]:
+    deterministic, prefilter_report = prefilter_model_quantity_candidates(deterministic)
     candidates = [
         row
         for row in _list(deterministic.get("candidate_bindings"))
@@ -198,7 +199,10 @@ def _run_model_quantity_binding_batches(
             if isinstance(row, dict) and row.get("binding_source") == "model"
         )
     merged = _merge_model_rows_with_missing_context(deterministic, model_rows)
-    parse_report = _combined_parse_report(deterministic, model_rows=model_rows, parse_reports=parse_reports)
+    parse_report = {
+        **_combined_parse_report(deterministic, model_rows=model_rows, parse_reports=parse_reports),
+        "model_candidate_prefilter_report": prefilter_report,
+    }
     return merged, "\n\n".join(raws), "\n\n".join(prompts), parse_report
 
 
@@ -676,6 +680,8 @@ def _binding_row(candidate: dict[str, Any], model_row: dict[str, Any] | None) ->
 
 
 def _fallback_memo_use(candidate: dict[str, Any]) -> str:
+    if candidate.get("model_prefilter_disposition") == "context_only":
+        return "context_only"
     if str(candidate.get("candidate_origin") or "") == "claim_map_bound":
         return "yes" if str(candidate.get("claim_quantity_retention_hint") or "") != "audit_only" else "context_only"
     deterministic = str(candidate.get("deterministic_memo_use") or "context_only")

@@ -428,7 +428,10 @@ def test_analyst_quantity_binding_batches_large_candidate_sets(monkeypatch) -> N
 
     report = result["analyst_quantity_binding_report"]
     parse = result["analyst_quantity_binding_parse_report"]
-    assert len(calls) == 5
+    assert len(calls) == 1
     assert parse["missing_candidate_ids"] == []
+    assert parse["model_candidate_prefilter_report"]["selected_candidate_count"] == 4
+    assert parse["model_candidate_prefilter_report"]["prefiltered_context_only_count"] == 36
     assert report["candidate_count"] == 40
     assert report["must_retain_count"] == 1
+    assert sum(row["memo_use"] == "context_only" for row in report["candidate_bindings"]) == 39
