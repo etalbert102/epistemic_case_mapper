@@ -295,14 +295,16 @@ def test_validated_final_polish_rejects_unsupported_additions(monkeypatch) -> No
     monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
-    warning_report = result["report"]["final_validation_report"]["unsupported_additions_report"]
+    warning_report = result["report"]["rejected_candidate_validation_report"]["unsupported_additions_report"]
 
-    assert result["report"]["status"] == "rejected_kept_original"
-    assert result["report"]["accepted"] is False
+    assert result["report"]["status"] == "validated_input_kept"
+    assert result["report"]["accepted"] is True
     assert result["report"]["applied"] is False
+    assert result["report"]["acceptance_basis"] == "validated_input_kept_after_rejected_polish"
     assert result["memo"] == memo
     assert "legacy systems" not in result["memo"]
-    assert "unsupported_additions" in result["report"]["final_validation_report"]["hard_failures"]
+    assert result["report"]["final_validation_report"]["hard_failures"] == []
+    assert "unsupported_additions" in result["report"]["rejected_candidate_validation_report"]["hard_failures"]
     assert warning_report["status"] == "warning"
     assert warning_report["policy"] == "blocking_for_final_editor_acceptance"
     assert warning_report["warnings"][0]["sentence"].startswith("It is also a better replacement")

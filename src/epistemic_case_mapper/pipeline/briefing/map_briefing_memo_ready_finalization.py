@@ -1655,15 +1655,32 @@ def run_memo_ready_final_polish(
         and _validation_score(final_validation) <= _validation_score(polished_validation)
         and not _list(final_validation.get("hard_failures"))
     )
+    validated_input_kept = (
+        not applied
+        and not _list(before_validation.get("hard_failures"))
+        and _retention_complete(before_retention)
+    )
+    stage_accepted = accepted or validated_input_kept
+    effective_validation = before_validation if validated_input_kept else final_validation
     report.update(
         {
-            "status": "accepted" if accepted else "accepted_with_warnings" if applied else "rejected_kept_original",
-            "accepted": accepted,
+            "status": (
+                "accepted"
+                if accepted
+                else "validated_input_kept"
+                if validated_input_kept
+                else "accepted_with_warnings"
+                if applied
+                else "rejected_kept_original"
+            ),
+            "accepted": stage_accepted,
             "applied": applied,
+            "acceptance_basis": "validated_input_kept_after_rejected_polish" if validated_input_kept else "candidate_validation",
             "attempts": result.attempts,
             "polished_validation_report": polished_validation,
             "repair_report": repair.get("report", {}),
-            "final_validation_report": final_validation,
+            "rejected_candidate_validation_report": final_validation if validated_input_kept else {},
+            "final_validation_report": effective_validation,
             "polish_comparison": _final_polish_comparison(
                 before_memo=memo,
                 after_memo=final_candidate if applied else memo,
@@ -1673,7 +1690,7 @@ def run_memo_ready_final_polish(
                 after_decision_usefulness=build_decision_usefulness_retention_report(final_candidate if applied else memo, packet),
                 diagnostics=build_memo_polish_diagnostics(memo, final_candidate if applied else memo, packet),
             ),
-            "issues": [] if accepted else _validated_final_polish_issues(final_validation) if applied else ["final polish did not pass validation without regression"],
+            "issues": [] if stage_accepted else _validated_final_polish_issues(final_validation) if applied else ["final polish did not pass validation without regression"],
         }
     )
     return {
