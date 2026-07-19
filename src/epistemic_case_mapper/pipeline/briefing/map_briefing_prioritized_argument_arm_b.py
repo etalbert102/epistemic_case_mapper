@@ -26,6 +26,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import
     bounded_answer_required as _bounded_answer_required,
     build_synthesis_constraints as _synthesis_constraints,
     calibrated_bottom_line as _calibrated_bottom_line,
+    source_grounded_quantity_atoms as _source_grounded_quantity_atoms,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b_audit import (
     ARM_B_READER_QUESTIONS,
@@ -432,8 +433,9 @@ def _section_packets(
             ]
         )
         synthesis_constraints = _synthesis_constraints(contracts, prompt_anchor)
+        contract_ids = {str(row.get("evidence_id") or "") for row in contracts}
         owned_moves = [
-            _compact_practical_move(row) if section_id == "practical_implication" else _compact_move(row)
+            _compact_practical_move(row) if section_id == "practical_implication" else _compact_move(row, contract_ids)
             for row in moves_by_section.get(section_id, [])
         ]
         packets.append(
@@ -581,10 +583,8 @@ def _bounded_mandatory_ids(
     direct_rank = {evidence_id: index for index, evidence_id in enumerate(direct_order)}
     contracts_by_id = contracts_by_id or {}
     compressed = len(mandatory_ids) > 12
-    limits = {
-        "answer_evidence": 3 if compressed else 6, "counterweights": 4 if compressed else 8,
-        "practical_implication": 0,
-    }
+    limits = {"answer_evidence": 3 if compressed else 6, "counterweights": 4 if compressed else 8,
+              "practical_implication": 0}
     for section_id, limit in limits.items():
         candidates = [evidence_id for evidence_id in mandatory_ids if ownership.get(evidence_id) == section_id]
         ordered = sorted(
@@ -649,18 +649,16 @@ def _section_local_jobs(moves: list[dict[str, Any]], contracts: list[dict[str, A
     return jobs
 
 
-def _compact_move(move: dict[str, Any]) -> dict[str, Any]:
+def _compact_move(move: dict[str, Any], allowed_evidence_ids: set[str]) -> dict[str, Any]:
     return _drop_empty(
         {
             "move_id": move.get("move_id"),
             "move_type": move.get("move_type"),
-            "point": _short_text(move.get("point"), 900),
             "writing_job": _short_text(move.get("writing_job"), 420),
             "section_id": move.get("section_id"),
-            "evidence_item_ids": _string_list(move.get("evidence_item_ids")),
-            "quantities": _string_list(move.get("quantities")),
-            "disposition": _short_text(move.get("disposition"), 420),
-            "would_change_if": _short_text(move.get("would_change_if"), 420),
+            "evidence_item_ids": [
+                item for item in _string_list(move.get("evidence_item_ids")) if item in allowed_evidence_ids
+            ],
         }
     )
 
@@ -687,7 +685,8 @@ def _contract_for_arm_b(contract: dict[str, Any], *, required: bool) -> dict[str
         ),
         "",
     )
-    return _drop_empty({**contract, "claim": source_claim or contract.get("claim"), "required": required})
+    return _drop_empty({**contract, "claim": source_claim or contract.get("claim"),
+                        "required_quantity_atoms": _source_grounded_quantity_atoms(contract), "required": required})
 
 
 def _overlap_report(section_packets: list[dict[str, Any]]) -> dict[str, Any]:

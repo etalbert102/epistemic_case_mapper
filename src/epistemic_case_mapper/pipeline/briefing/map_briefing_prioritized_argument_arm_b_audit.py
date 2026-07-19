@@ -198,6 +198,8 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
         "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
         "- Treat contracts marked required as the coverage checklist for this section.\n"
+        "- Write one separate evidence sentence for every required contract; do not omit or combine required contracts.\n"
+        "- Keep each evidence sentence to the contract claim and its evidence tag; paraphrase minimally.\n"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         if contracts
         else

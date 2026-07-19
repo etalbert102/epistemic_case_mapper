@@ -55,6 +55,26 @@ def bounded_answer_required(decision_anchor: dict[str, Any]) -> bool:
     )
 
 
+def source_grounded_quantity_atoms(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    atoms = []
+    for atom in _list(contract.get("required_quantity_atoms")):
+        if not isinstance(atom, dict):
+            continue
+        bundle = _dict(atom.get("assertion_bundle"))
+        atoms.append(
+            _drop_empty(
+                {
+                    "value": atom.get("value"),
+                    "interpretation": atom.get("allowed_inference")
+                    or bundle.get("allowed_inference")
+                    or bundle.get("source_quote"),
+                    "source_ids": atom.get("source_ids") or bundle.get("source_ids"),
+                }
+            )
+        )
+    return atoms
+
+
 def build_synthesis_constraints(
     contracts: list[dict[str, Any]],
     decision_anchor: dict[str, Any],

@@ -99,6 +99,8 @@ def test_arm_b_projection_keeps_synthesis_constraints_section_local() -> None:
     assert set(answer["synthesis_constraints"].get("surrogate_or_mechanistic_evidence_ids", [])).issubset(
         answer_contract_ids
     )
+    assert all(set(move.get("evidence_item_ids", [])).issubset(answer_contract_ids) for move in answer["owned_moves"])
+    assert all("point" not in move and "quantities" not in move for move in answer["owned_moves"])
 
 
 def test_arm_b_prompt_exposes_source_evidence_and_synthesis_constraints() -> None:
@@ -229,11 +231,19 @@ def test_arm_b_contract_uses_controlling_source_excerpt_as_claim() -> None:
             "source_evidence": [
                 {"source_id": "s1", "excerpts": ["The trial found no significant change in the measured outcome."]}
             ],
+            "required_quantity_atoms": [
+                {
+                    "value": "1.19",
+                    "interpretation": "Legacy interpretation adds the wrong endpoint.",
+                    "assertion_bundle": {"allowed_inference": "Associated with all-cause mortality.", "source_ids": ["s1"]},
+                }
+            ],
         },
         required=True,
     )
 
     assert contract["claim"] == "The trial found no significant change in the measured outcome."
+    assert contract["required_quantity_atoms"][0]["interpretation"] == "Associated with all-cause mortality."
     assert contract["required"] is True
 
 
