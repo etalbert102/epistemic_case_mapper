@@ -108,3 +108,11 @@ def test_reader_abbreviations_expand_statistical_terms() -> None:
     assert expanded == (
         "Thirteen randomized controlled trials (RCTs) reported hazard ratio (HR) 1.19 with a 95% confidence interval (CI)."
     )
+
+
+def test_reader_abbreviations_define_the_first_use_when_a_later_definition_exists() -> None:
+    expanded = expand_reader_abbreviations(
+        "The estimate was HR 0.89. A later result reported hazard ratio (HR) 1.50."
+    )
+
+    assert expanded == "The estimate was hazard ratio (HR) 0.89. A later result reported HR 1.50."

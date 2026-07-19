@@ -330,14 +330,20 @@ def _term_stem(term: str) -> str:
 def expand_reader_abbreviations(memo: str) -> str:
     text = str(memo or "")
     for abbreviation, expansion in READER_ABBREVIATION_EXPANSIONS.items():
-        if f"{expansion} ({abbreviation})".lower() in text.lower():
+        pattern = re.compile(rf"(?<![\w-]){re.escape(abbreviation)}(?![\w-])")
+        first = pattern.search(text)
+        if not first:
+            continue
+        prefix = text[: first.start()]
+        if re.search(rf"{re.escape(expansion)}\s*\($", prefix, re.IGNORECASE) and text[first.end() :].startswith(")"):
             continue
         text = re.sub(
-            rf"(?<![\w-]){re.escape(abbreviation)}(?![\w-])",
-            f"{expansion} ({abbreviation})",
+            rf"{re.escape(expansion)}\s*\({re.escape(abbreviation)}\)",
+            abbreviation,
             text,
-            count=1,
+            flags=re.IGNORECASE,
         )
+        text = pattern.sub(f"{expansion} ({abbreviation})", text, count=1)
     return re.sub(r"\bMD\s*=", "mean difference (MD) =", text, count=1)
 
 
