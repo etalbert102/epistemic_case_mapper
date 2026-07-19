@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import time
 
-from epistemic_case_mapper.map_briefing_packet_critique_index import build_packet_critique_index, build_packet_critique_shards
-from epistemic_case_mapper.map_briefing_packet_parallel_critique import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_critique_index import build_packet_critique_index, build_packet_critique_shards
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_parallel_critique import (
     _merge_critique_payloads,
     build_global_critique_prompt,
     build_local_critique_prompt,
     run_parallel_packet_critique,
 )
-from epistemic_case_mapper.map_briefing_packet_refinement import PacketCritiqueOutput, _adjudication_report, run_packet_critique
-from epistemic_case_mapper.map_briefing_packet_refinement import build_packet_critique_prompt, build_packet_refinement_prompt
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import PacketCritiqueOutput, _adjudication_report, run_packet_critique
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import build_packet_critique_prompt, build_packet_refinement_prompt
 
 
 class FakeResult:
@@ -280,7 +280,7 @@ def test_run_packet_critique_selects_parallel_path_for_large_packets(monkeypatch
             )
         return FakeResult(_critique_json())
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement.run_model_backend", fake_backend)
 
     result = run_packet_critique(
         _packet(10),

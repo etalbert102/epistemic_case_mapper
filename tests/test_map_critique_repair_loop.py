@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_map_repair_loop import build_map_critique, build_map_repair_plan
+from epistemic_case_mapper.pipeline.map.staged_semantic_map_repair_loop import build_map_critique, build_map_repair_plan
 
 
 def test_map_critique_surfaces_label_warnings_and_missing_relation_candidates() -> None:

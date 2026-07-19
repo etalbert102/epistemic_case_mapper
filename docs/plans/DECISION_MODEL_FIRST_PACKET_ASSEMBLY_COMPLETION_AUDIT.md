@@ -33,12 +33,12 @@ decision question
 
 ## Files Changed By The Final Execution Slices
 
-- `src/epistemic_case_mapper/map_briefing_packet_coverage.py`
-- `src/epistemic_case_mapper/map_briefing_decision_packet.py`
-- `src/epistemic_case_mapper/map_briefing_artifacts.py`
-- `src/epistemic_case_mapper/map_briefing_packet_views.py`
-- `src/epistemic_case_mapper/map_briefing_direct_synthesis_comparison.py`
-- `src/epistemic_case_mapper/map_briefing_telemetry.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_packet_coverage.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_packet_views.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_direct_synthesis_comparison.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_telemetry.py`
 - `tests/test_packet_omission_accounting.py`
 - `tests/test_packet_views.py`
 - `tests/test_direct_synthesis_comparison.py`

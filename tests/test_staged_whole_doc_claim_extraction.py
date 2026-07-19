@@ -4,11 +4,11 @@ import json
 import sys
 from pathlib import Path
 
-import epistemic_case_mapper.staged_semantic_whole_doc as whole_doc_adapter
-import epistemic_case_mapper.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
+import epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc as whole_doc_adapter
+import epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
 from epistemic_case_mapper.staged_semantic_pipeline import _extract_claims, _load_context
-from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
-from epistemic_case_mapper.staged_semantic_whole_doc import effective_whole_doc_claim_cap, whole_doc_num_predict
+from epistemic_case_mapper.pipeline.map.staged_semantic_progress import PipelineProgress
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import effective_whole_doc_claim_cap, whole_doc_num_predict
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "scripts"))
 from test_submission_manifest_generalization import _write_transfer_fixture

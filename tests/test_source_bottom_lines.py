@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_source_bottom_lines import source_bottom_line_candidates
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_bottom_lines import source_bottom_line_candidates
 
 
 def test_source_bottom_line_role_uses_explicit_labels_not_keyword_fallback() -> None:

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_final_memo_diagnosis import build_memo_final_diagnosis, diagnosis_improved
-from epistemic_case_mapper.map_briefing_markdown_quality import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_final_memo_diagnosis import build_memo_final_diagnosis, diagnosis_improved
+from epistemic_case_mapper.pipeline.briefing.map_briefing_markdown_quality import (
     extraction_debris_issues,
     markdown_structure_issues,
     repair_markdown_structure,
 )
-from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_polish import briefing_reader_polish_report
 
 
 def test_repair_markdown_structure_splits_collapsed_headings_and_bullets() -> None:

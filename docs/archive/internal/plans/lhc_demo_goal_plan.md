@@ -42,7 +42,7 @@ Record at least one implication from each input before editing implementation fi
 - [ ] `docs/reference/codex_goal_ability_research.md`
 - [ ] `data/cases/lhc_black_holes/case.yaml`
 - [ ] `src/epistemic_case_mapper/schema.py`
-- [ ] `src/epistemic_case_mapper/starter_mapper.py`
+- [ ] `src/epistemic_case_mapper/pipeline/map/starter_mapper.py`
 - [ ] `scripts/build_case_map.py`
 - [ ] `tests/`
 
@@ -58,7 +58,7 @@ Fill in one concrete implication from each required input before editing impleme
 - `docs/reference/codex_goal_ability_research.md`:
 - `data/cases/lhc_black_holes/case.yaml`:
 - `src/epistemic_case_mapper/schema.py`:
-- `src/epistemic_case_mapper/starter_mapper.py`:
+- `src/epistemic_case_mapper/pipeline/map/starter_mapper.py`:
 - `scripts/build_case_map.py`:
 - `tests/`:
 

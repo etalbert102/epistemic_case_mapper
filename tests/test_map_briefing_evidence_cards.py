@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_evidence_cards import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_evidence_cards import (
     apply_evidence_cards_to_map,
     build_atomic_evidence_cards,
 )

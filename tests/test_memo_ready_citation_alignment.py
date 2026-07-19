@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_presentation_normalization
 
 
 def test_presentation_preserves_single_citation_when_role_alignment_is_uncertain() -> None:

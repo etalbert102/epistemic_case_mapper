@@ -110,6 +110,25 @@ ecm --repo-root /path/to/package --package package.yaml semantic staged resume \
 
 The resumable handoffs are `documents`, `map`, and `briefing`. More detail: `docs/CASE_INIT_AND_MODEL_BACKENDS.md`.
 
+## Pipeline Code Layout
+
+The implementation mirrors those resumable handoffs under
+`src/epistemic_case_mapper/pipeline/`:
+
+```text
+pipeline/
+├── documents/  # source intake, case initialization, evidence preparation
+├── map/        # claim extraction/normalization, relations, map quality and repair
+└── briefing/   # decision context/model, packet assembly, memo synthesis and outputs
+```
+
+Schemas, I/O, configuration, model backends, and CLI plumbing remain at the
+package root because every stage consumes them. The root `map_briefing.py`,
+`staged_semantic_pipeline.py`, `semantic_pipeline.py`, `starter_mapper.py`,
+`case_initializer.py`, `source_intake_filter.py`, and `evidence_bundles.py`
+modules are compatibility facades; new internal code should import the owning
+stage module directly.
+
 ## Judge Path
 
 Start with `docs/START_HERE.md`. It now opens with the investigator challenge, a compact recover/repair/update packet, and a matched strong-model comparison before sending readers into the full LHC map.

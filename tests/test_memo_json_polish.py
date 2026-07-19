@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_json_polish import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_json_polish import (
     collect_parallel_memo_ready_json_polish_proposals,
     candidate_for_json_polish_edit,
     memo_ready_json_polish_lenses,

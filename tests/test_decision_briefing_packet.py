@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_plan, section_obligations_for_title
-from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_packet_comparison import build_packet_first_comparison_report
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
-from epistemic_case_mapper.map_briefing_packet_refinement import run_packet_critique_and_refinement
-from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
-from epistemic_case_mapper.map_briefing_decision_packet_stage import _parallel_analyst_source_weighting_ready
+from epistemic_case_mapper.pipeline.briefing.main_memo_obligations import build_main_memo_obligation_plan, section_obligations_for_title
+from epistemic_case_mapper.pipeline.briefing.map_briefing_artifacts import write_scaffold_artifacts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_comparison import build_packet_first_comparison_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import run_packet_critique_and_refinement
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_retention import build_memo_packet_retention_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet_stage import _parallel_analyst_source_weighting_ready
 
 
 def _scaffold() -> dict:
@@ -409,7 +409,7 @@ def test_packet_refinement_applies_only_known_id_updates(monkeypatch) -> None:
             % known_bundle_id
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement.run_model_backend", fake_backend)
 
     result = run_packet_critique_and_refinement(
         built["decision_briefing_packet"],
@@ -503,7 +503,7 @@ def test_packet_critique_role_checks_become_relabel_recommendations(monkeypatch)
             % target_id
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement.run_model_backend", fake_backend)
 
     result = run_packet_critique_and_refinement(
         packet,
@@ -613,7 +613,7 @@ def test_packet_critique_preserves_synthesis_risks_and_packet_quality_issues(mon
             """
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement.run_model_backend", fake_backend)
 
     result = run_packet_critique_and_refinement(
         packet,
@@ -699,7 +699,7 @@ def test_packet_critique_warning_only_outputs_become_writer_guidance(monkeypatch
             """
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_packet_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement.run_model_backend", fake_backend)
 
     result = run_packet_critique_and_refinement(
         packet,

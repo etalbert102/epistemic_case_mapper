@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
+from epistemic_case_mapper.pipeline.briefing.map_briefing_crux_reconstruction import reconstruct_decision_crux_items
 
 
 def test_crux_reconstruction_reports_topical_tension_without_rewriting() -> None:

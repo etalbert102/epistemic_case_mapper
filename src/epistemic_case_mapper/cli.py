@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from epistemic_case_mapper.blinded_baselines import _configs_from_manifest, build_prompt
-from epistemic_case_mapper.case_initializer import init_case_package
+from epistemic_case_mapper.pipeline.documents.case_initializer import init_case_package
 from epistemic_case_mapper.config_profiles import (
     profile_for_id,
     profile_manifest_payload,
@@ -22,14 +22,14 @@ from epistemic_case_mapper.map_briefing import run_map_briefing
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest
-from epistemic_case_mapper.semantic_pipeline import (
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
     build_critique_prompt,
     build_map_prompt,
     validate_critique_candidate,
     validate_map_candidate,
 )
 from epistemic_case_mapper.staged_semantic_pipeline import run_staged_map
-from epistemic_case_mapper.source_intake_filter import run_source_intake_filter
+from epistemic_case_mapper.pipeline.documents.source_intake_filter import run_source_intake_filter
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_submission_manifest
 from epistemic_case_mapper.unseen_quality import (
     quality_signals,

@@ -75,7 +75,7 @@ Record at least one concrete implication from each input before implementation e
 - `examples/eggs/`: Existing generated artifacts are heuristic drafts; the goal must create curated worked-region files instead of treating the generated report as final.
 - `docs/reference/codex_goal_ability_research.md`: Keep this as a bounded goal with a living plan, exact verification commands, and artifact evidence rather than broad improvement work.
 - `src/epistemic_case_mapper/schema.py`: The checked-in JSON schema supports stable source IDs, claim IDs, relation IDs, entailment checks, review states, and relation types; curated worked-region Markdown should mirror these concepts without claiming human review.
-- `src/epistemic_case_mapper/starter_mapper.py`: The deterministic mapper is intentionally heuristic; worked-region maps must be hand-curated from source excerpts rather than copied from marker-sentence extraction.
+- `src/epistemic_case_mapper/pipeline/map/starter_mapper.py`: The deterministic mapper is intentionally heuristic; worked-region maps must be hand-curated from source excerpts rather than copied from marker-sentence extraction.
 - `scripts/build_case_map.py`: Generated reports and audits are useful scaffold outputs, but they still label relations as seed/draft and are not substitutes for judge-facing worked-region artifacts.
 - `scripts/validate_worked_regions.py`: The mandatory gate checks concrete Markdown fields, source IDs against manifests, claim counts, relation types, crux mentions, prompt/isolation notes, erosion losses, and FLF score rows.
 - `tests/`: Existing tests cover starter-map behavior, case-artifact metadata/open questions, and basic worked-region validator behavior; the final run must include the full pytest suite.

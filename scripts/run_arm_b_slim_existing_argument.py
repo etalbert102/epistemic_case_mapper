@@ -5,8 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import run_arm_b_b0, run_arm_b_b1
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import run_arm_c
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import run_arm_b_b0, run_arm_b_b1
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c import run_arm_c
 
 
 def main() -> int:

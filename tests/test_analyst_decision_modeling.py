@@ -2,23 +2,23 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_analyst_decision_modeling import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling import (
     DEFAULT_DECISION_MODEL_NUM_PREDICT,
     analyst_decision_model_num_predict,
     build_analyst_decision_context,
     build_analyst_decision_model_prompt,
     run_analyst_decision_model,
 )
-from epistemic_case_mapper.map_briefing_analyst_evidence_routing import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_evidence_routing import (
     apply_routed_away_accounting,
     build_analyst_evidence_routing_bundle,
 )
-from epistemic_case_mapper.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
-from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_model_parallel import (
     _decision_logic,
     build_decision_model_tasks,
 )
-from epistemic_case_mapper.map_briefing_analyst_decision_repair import build_analyst_decision_model_repair_prompt
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair import build_analyst_decision_model_repair_prompt
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from tests.fake_global_task_backend import fake_global_task_payload
 
@@ -413,9 +413,9 @@ def test_decision_model_uses_larger_stage_specific_output_budget(monkeypatch) ->
         seen["num_predict"] = kwargs.get("num_predict")
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     run_analyst_decision_model(
         ledger=_ledger(),
@@ -476,8 +476,8 @@ def test_run_analyst_decision_model_accepts_valid_backend(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_ledger(),
@@ -565,8 +565,8 @@ def test_decision_model_ranking_guard_promotes_quantified_decision_anchor(monkey
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=ledger,
@@ -598,8 +598,8 @@ def test_run_analyst_decision_model_parallelizes_large_context(monkeypatch) -> N
             return ModelBackendResult(text=json.dumps({"assignments": []}), backend="fake")
         return ModelBackendResult(text=json.dumps(fake_global_task_payload(prompt)), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     def progress(stage: str, status: str, details: dict | None = None) -> None:
         progress_events.append((stage, status, details or {}))
@@ -737,8 +737,8 @@ def test_run_analyst_decision_model_parallel_partial_failure_uses_valid_tasks(mo
             return ModelBackendResult(text=json.dumps({"assignments": []}), backend="fake")
         return ModelBackendResult(text=json.dumps(fake_global_task_payload(prompt)), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_large_ledger(14),
@@ -808,8 +808,8 @@ def test_run_analyst_decision_model_repairs_omitted_obligations(monkeypatch) -> 
             return ModelBackendResult(text=json.dumps(assignment_payload), backend="fake")
         return ModelBackendResult(text=json.dumps(initial_payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_repair.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_ledger(),
@@ -832,7 +832,7 @@ def test_run_analyst_decision_model_invalid_backend_stays_invalid(monkeypatch) -
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text='{"schema_id": "analyst_decision_model_v1", "evidence_groups": []}', backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_modeling.run_model_backend", fake_backend)
 
     result = run_analyst_decision_model(
         ledger=_ledger(),

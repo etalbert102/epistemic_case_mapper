@@ -62,51 +62,51 @@ The core problem is therefore not final prose polish. It is that model-selected 
 
 Primary code paths:
 
-- `src/epistemic_case_mapper/staged_semantic_claim_quantities.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_claim_quantities.py`
   - source-extraction quantity schema and normalization;
   - canonical assertion-bundle field ownership.
-- `src/epistemic_case_mapper/staged_semantic_whole_doc.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_whole_doc.py`
   - whole-document extraction prompt/schema surfaces that must emit bundle-owned fields.
-- `src/epistemic_case_mapper/staged_semantic_evidence_units.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_evidence_units.py`
   - evidence-unit bundle formation and source-span ownership.
-- `src/epistemic_case_mapper/map_briefing_analyst_evidence_ledger.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_evidence_ledger.py`
   - analyst evidence ledger rows and quantity lineage;
   - must become bundle-native instead of mixing structured quantities with flat recovered values.
-- `src/epistemic_case_mapper/map_briefing_analyst_quantity_binding.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_quantity_binding.py`
   - analyst quantity/bundle adjudication;
   - must approve bundle composition and inference bounds, not only memo use.
-- `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py`
   - canonical packet compilation;
   - `_brief_quantities` and related compaction must not discard bundle meaning.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py`
   - production Arm C invocation in `_prepare_prioritized_argument_synthesis`;
   - production context assembly in `_prioritized_argument_inputs`.
-- `src/epistemic_case_mapper/map_briefing_prioritized_argument_arm_c.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_prioritized_argument_arm_c.py`
   - `build_arm_c_prioritization_prompt`;
   - `run_arm_c_prioritization`;
   - `build_arm_c_projection`;
   - `_arm_c_move_to_argument_move`.
-- `src/epistemic_case_mapper/map_briefing_prioritized_argument_arm_b.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_prioritized_argument_arm_b.py`
   - `build_arm_b_projection`;
   - `_section_packets`;
   - `_section_local_jobs`;
   - `_contract_for_arm_b`;
   - `_compact_move`.
-- `src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_section_evidence_anchoring.py`
   - `build_evidence_expression_contracts`;
   - `contracts_for_section`;
   - quantity contract representation.
-- `src/epistemic_case_mapper/map_briefing_priority_quantity_contracts.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_priority_quantity_contracts.py`
   - priority quantity coverage reporting.
-- `src/epistemic_case_mapper/map_briefing_artifacts.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py`
   - availability of `quantity_obligation_plan`, `evidence_budget`, and related artifacts.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_presentation.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_presentation.py`
   - deterministic presentation normalization;
   - must consume final selected-bundle contract and not broaden citations.
-- `src/epistemic_case_mapper/map_briefing_final_outputs.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py`
   - final repair/polish/presentation/output orchestration;
   - must write and validate bundle-aware final artifacts.
-- `src/epistemic_case_mapper/map_briefing_citation_trace.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_citation_trace.py`
   - reader-facing citation trace;
   - must map final sentences to bundle IDs and source spans, not only source IDs.
 

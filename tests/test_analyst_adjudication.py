@@ -4,13 +4,13 @@ import json
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_analyst_adjudication import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication import (
     build_analyst_adjudication_prompt,
     build_missing_row_adjudication_prompt,
     run_analyst_adjudication_single_call_for_test,
     run_analyst_adjudication,
 )
-from epistemic_case_mapper.map_briefing_decision_packet_stage import _assert_analyst_adjudication_complete
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet_stage import _assert_analyst_adjudication_complete
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -227,7 +227,7 @@ def test_analyst_adjudication_repairs_source_faithfulness_conflicted_relation(mo
     def fake_backend(prompt, *args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
     monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", "1")
 
     result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
@@ -288,7 +288,7 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
         rows = [row for row in payload["rows"] if row["evidence_item_id"] in prompt]
         return ModelBackendResult(text=json.dumps({**payload, "rows": rows}), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
     monkeypatch.setenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", "1")
     monkeypatch.setenv("ECM_MODEL_PARALLELISM", "2")
 
@@ -357,7 +357,7 @@ def test_analyst_adjudication_default_chunk_size_is_eight(monkeypatch) -> None:
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
     monkeypatch.delenv("ECM_ANALYST_ADJUDICATION_CHUNK_SIZE", raising=False)
 
     result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
@@ -371,7 +371,7 @@ def test_analyst_adjudication_invalid_live_backend_reports_failure_without_fallb
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text='{"rows": [{"evidence_item_id": "bundle:one", "memo_use": "bad"}]}', backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -411,7 +411,7 @@ def test_analyst_adjudication_salvages_valid_rows_from_invalid_chunk(monkeypatch
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -475,7 +475,7 @@ def test_analyst_adjudication_repairs_missing_salvaged_rows_with_focused_call(mo
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -548,7 +548,7 @@ def test_analyst_adjudication_retries_missing_row_repair_rounds(monkeypatch) -> 
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -607,7 +607,7 @@ def test_single_call_accepts_repairable_model_json(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=raw, backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication_single_call_for_test(_ledger(), backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -647,7 +647,7 @@ def test_analyst_adjudication_repairs_unambiguous_covered_by_id_alias(monkeypatc
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_adjudication.run_model_backend", fake_backend)
 
     result = run_analyst_adjudication_single_call_for_test(ledger, backend="fake", backend_timeout=30, backend_retries=0)
 

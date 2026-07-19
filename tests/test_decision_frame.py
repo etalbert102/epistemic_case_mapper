@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.decision_frame import build_decision_frame, question_quality_report, refine_crux_contract
-from epistemic_case_mapper.map_briefing_pipeline import briefing_scaffold, build_map_briefing_prompt
+from epistemic_case_mapper.pipeline.briefing.decision_frame import build_decision_frame, question_quality_report, refine_crux_contract
+from epistemic_case_mapper.pipeline.briefing.map_briefing_pipeline import briefing_scaffold, build_map_briefing_prompt
 
 
 def test_question_quality_blocks_missing_and_placeholder_questions() -> None:

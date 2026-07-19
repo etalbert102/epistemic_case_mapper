@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_packet_model_view import packet_summary_for_model
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_model_view import packet_summary_for_model
 
 
 def test_packet_summary_for_model_compacts_sections_and_coverage() -> None:

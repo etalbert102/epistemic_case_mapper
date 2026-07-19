@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_measurement_audit import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_measurement_audit import (
     build_final_source_lineage_report,
     build_pipeline_measurement_audit,
     build_scoped_metric_report,
 )
-from epistemic_case_mapper.map_briefing_packet_retention import build_memo_packet_retention_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_retention import build_memo_packet_retention_report
 
 
 def test_packet_retention_normalizes_numeric_terms_and_reports_match_method() -> None:

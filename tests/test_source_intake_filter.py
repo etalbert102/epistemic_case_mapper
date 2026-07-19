@@ -5,7 +5,7 @@ from urllib import error
 from pathlib import Path
 
 from epistemic_case_mapper import cli
-from epistemic_case_mapper.source_intake_filter import run_source_intake_filter
+from epistemic_case_mapper.pipeline.documents.source_intake_filter import run_source_intake_filter
 
 
 def test_source_intake_filter_is_report_only_by_default(tmp_path: Path) -> None:
@@ -184,7 +184,7 @@ def test_source_intake_filter_can_check_broken_outbound_links(monkeypatch, tmp_p
         "[2] Missing page https://example.com/missing\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr("epistemic_case_mapper.source_intake_filter.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.documents.source_intake_filter.request.urlopen", fake_urlopen)
 
     result = run_source_intake_filter(
         question="What explains egg prices?",

@@ -11,7 +11,10 @@ Do not optimize for fluent summaries at the expense of provenance or disagreemen
 ## Repo Layout
 
 - `data/cases/*/case.yaml`: case manifests and seed/source material.
-- `src/epistemic_case_mapper/`: package code and schema.
+- `src/epistemic_case_mapper/`: shared contracts, infrastructure, CLI code, and stable compatibility facades.
+- `src/epistemic_case_mapper/pipeline/documents/`: document intake and case-boundary stage.
+- `src/epistemic_case_mapper/pipeline/map/`: semantic extraction, normalization, relation, quality, and map-output stage.
+- `src/epistemic_case_mapper/pipeline/briefing/`: decision-model, packet, synthesis, and briefing-output stage.
 - `scripts/`: runnable CLI tools.
 - `docs/`: workflow, criteria, plans, and protocols.
 - `examples/`: checked-in judge-facing snapshots.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_ready_selection import select_memo_ready_items
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_selection import select_memo_ready_items
 
 
 def test_memo_ready_selection_caps_role_dominance_and_reports_overflow() -> None:

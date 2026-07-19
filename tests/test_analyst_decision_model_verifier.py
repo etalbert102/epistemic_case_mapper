@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_analyst_schemas import AnalystDecisionModel
-from epistemic_case_mapper.map_briefing_analyst_verifier import build_analyst_decision_model_verification_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_schemas import AnalystDecisionModel
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_verifier import build_analyst_decision_model_verification_report
 
 
 def _ledger() -> dict:

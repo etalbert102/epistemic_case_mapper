@@ -8,7 +8,7 @@ import pytest
 from epistemic_case_mapper import cli
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.schema import CaseManifest
-from epistemic_case_mapper.semantic_pipeline import MAP_PROMPT_VERSION
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import MAP_PROMPT_VERSION
 from epistemic_case_mapper.staged_semantic_pipeline import (
     RELATION_BATCH_PROMPT_VERSION,
     RELATION_PROMPT_VERSION,
@@ -19,7 +19,7 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     _coverage_backfill_claims,
     _sharpen_relations,
 )
-from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 from scripts import validate_submission_manifest, validate_submission_references, validate_worked_regions
 
 def test_case_init_creates_runnable_package(monkeypatch, tmp_path: Path) -> None:

@@ -26,7 +26,7 @@ These are not primarily final-prose failures. They are handoff-consistency failu
 - Presentation must use the same active source trail that synthesis used.
 
 ## Inventory And Dependency Map
-- Owner module: `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`
+- Owner module: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py`
 - Supporting modules:
   - `map_briefing_decision_writer_packet.py`: creates memo-ready quantities from analyst quantity plans.
   - `map_briefing_memo_ready_presentation.py`: renders citation trace and final source list.

@@ -77,12 +77,12 @@ Therefore the first fix is not “add another planner.” It is to convert the e
 
 Primary current code paths:
 
-- Active writer packet adapter: `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`
-- Memo obligations: `src/epistemic_case_mapper/map_briefing_memo_obligations.py`
-- Synthesis prompt: `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
-- Synthesis, retention, and repair: `src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py`
-- Decision packet stage wiring: `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`
-- Full final-output orchestration: `src/epistemic_case_mapper/map_briefing_final_outputs.py`
+- Active writer packet adapter: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`
+- Memo obligations: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_obligations.py`
+- Synthesis prompt: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
+- Synthesis, retention, and repair: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py`
+- Decision packet stage wiring: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`
+- Full final-output orchestration: `src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py`
 
 Key artifacts to inspect before and after each implementation slice:
 

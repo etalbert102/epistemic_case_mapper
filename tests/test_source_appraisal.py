@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_context_curation import build_candidate_evidence_cards
-from epistemic_case_mapper.map_briefing_source_appraisal import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_curation import build_candidate_evidence_cards
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal import (
     appraisal_for_sources,
     build_source_appraisal_decision_grade_report,
     build_source_appraisal_report,
     run_source_caveat_appraisal,
 )
-from epistemic_case_mapper.map_briefing_writer_packet import build_writer_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_writer_packet import build_writer_packet
 
 
 def test_source_appraisal_calibrates_generic_source_use() -> None:

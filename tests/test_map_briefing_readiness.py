@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_readiness import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_readiness import (
     build_final_decision_readiness_report,
     build_final_lineage_report,
     build_memo_semantic_acceptance_report,
     build_packet_quality_gate_report,
 )
-from epistemic_case_mapper.map_briefing_final_outputs import _memo_ready_synthesis_failed
+from epistemic_case_mapper.pipeline.briefing.map_briefing_final_outputs import _memo_ready_synthesis_failed
 
 
 def test_packet_quality_gate_blocks_unparsed_critique_and_missing_packet() -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from epistemic_case_mapper.deterministic_semantic_audit import (
+from epistemic_case_mapper.pipeline.map.deterministic_semantic_audit import (
     render_semantic_audit_markdown,
     scan_deterministic_semantic_decisions,
 )

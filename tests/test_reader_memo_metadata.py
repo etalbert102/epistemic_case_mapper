@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_metadata import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_metadata import (
     ensure_decision_question_line,
     ensure_reader_memo_metadata,
     normalize_reader_memo_metadata_layout,

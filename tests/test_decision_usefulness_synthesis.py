@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_writer_packet import _decision_usefulness_packet
@@ -48,7 +48,7 @@ def test_memo_synthesis_runs_decision_usefulness_repair_when_needed(monkeypatch:
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 

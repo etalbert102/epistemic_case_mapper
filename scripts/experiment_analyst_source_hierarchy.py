@@ -6,8 +6,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe, dict_value, list_value, short_text, string_list
-from epistemic_case_mapper.map_briefing_source_identity import source_id_alias_map
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_helpers import dedupe, dict_value, list_value, short_text, string_list
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_identity import source_id_alias_map
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 

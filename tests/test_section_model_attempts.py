@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_section_attempts import run_section_model_attempts
-from epistemic_case_mapper.map_briefing_section_parse import parse_section_payload
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_attempts import run_section_model_attempts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_parse import parse_section_payload
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper import map_briefing_model_source_weighting as source_weighting
+from epistemic_case_mapper.pipeline.briefing import map_briefing_model_source_weighting as source_weighting
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 

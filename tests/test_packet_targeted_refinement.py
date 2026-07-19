@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_packet_refinement import PacketRefinementOutput, apply_adjudicated_relabel_cleanup, apply_packet_refinement
-from epistemic_case_mapper.map_briefing_packet_quality_repair import repair_packet_for_synthesis
-from epistemic_case_mapper.map_briefing_packet_targeted_refinement import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import PacketRefinementOutput, apply_adjudicated_relabel_cleanup, apply_packet_refinement
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_quality_repair import repair_packet_for_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_targeted_refinement import (
     build_targeted_refinement_tasks,
     run_targeted_packet_refinement,
 )

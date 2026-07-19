@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_decision_slots import build_decision_slot_inventory
-from epistemic_case_mapper.map_briefing_packet_budget import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_slots import build_decision_slot_inventory
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_budget import (
     build_packet_budget_allocation_report,
     build_packet_compression_report,
 )

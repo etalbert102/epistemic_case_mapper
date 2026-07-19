@@ -217,18 +217,18 @@ Append-only lineage/readiness
 Primary owned integration points:
 
 - `src/epistemic_case_mapper/cli_semantic.py`
-- `src/epistemic_case_mapper/staged_semantic_pipeline_runner.py`
-- `src/epistemic_case_mapper/staged_semantic_whole_doc.py`
-- `src/epistemic_case_mapper/staged_semantic_evidence_units.py`
-- `src/epistemic_case_mapper/map_briefing_analyst_decision_modeling.py`
-- `src/epistemic_case_mapper/map_briefing_analyst_schemas.py`
-- `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`
-- `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`
-- `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
-- `src/epistemic_case_mapper/map_briefing_memo_ready_section_synthesis.py`
-- `src/epistemic_case_mapper/map_briefing_final_outputs.py`
-- `src/epistemic_case_mapper/map_briefing_readiness.py`
-- `src/epistemic_case_mapper/map_briefing_memo_metadata.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_pipeline_runner.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_whole_doc.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_evidence_units.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_modeling.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_schemas.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_section_synthesis.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_readiness.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_metadata.py`
 
 ## Workstreams
 

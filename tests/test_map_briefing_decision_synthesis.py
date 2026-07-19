@@ -10,9 +10,9 @@ from epistemic_case_mapper.map_briefing import (
     build_map_briefing_prompt,
     polish_briefing_for_reader,
 )
-from epistemic_case_mapper.map_briefing_decision_support_model import build_decision_support_model
-from epistemic_case_mapper.map_briefing_decision_cruxes import build_decision_cruxes
-from epistemic_case_mapper.map_briefing_reader_polish import clean_reader_memo_text
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_support_model import build_decision_support_model
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_cruxes import build_decision_cruxes
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_polish import clean_reader_memo_text
 
 
 def test_generic_decision_synthesis_model_shapes_non_egg_brief() -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_relation_claim_cards import relation_routing_context_lines
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_claim_cards import relation_routing_context_lines
 
 
 def test_relation_routing_context_includes_whole_doc_source_local_fields() -> None:

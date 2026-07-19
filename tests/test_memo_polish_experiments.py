@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_polish_experiments import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_polish_experiments import (
     deterministic_reader_quality_report,
     render_memo_polish_experiment_matrix_markdown,
     run_memo_polish_experiment_matrix,

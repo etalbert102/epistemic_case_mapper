@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_pipeline_runner import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_pipeline_runner import (
     CLAIM_EXTRACTION_METHOD,
     CONSOLIDATION_OVERLAP_THRESHOLD,
     CONSOLIDATION_SIMILARITY_THRESHOLD,
@@ -22,9 +22,9 @@ from epistemic_case_mapper.staged_semantic_pipeline_runner import (
     run_staged_map,
 )
 
-from epistemic_case_mapper.staged_semantic_whole_doc_pipeline import _whole_doc_source_chunks
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc_pipeline import _whole_doc_source_chunks
 
-from epistemic_case_mapper.staged_semantic_claims_relations import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_claims_relations import (
     _CONCEPT_FAMILY_PRIORITY,
     _canonical_claim_for_group,
     _claim_duplicate_components,
@@ -58,7 +58,7 @@ from epistemic_case_mapper.staged_semantic_claims_relations import (
     consolidate_claims_for_map,
 )
 
-from epistemic_case_mapper.staged_semantic_quality import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_quality import (
     _assemble_map,
     _case_config_profile,
     _claim_source_coverage_ids,
@@ -82,16 +82,16 @@ from epistemic_case_mapper.staged_semantic_quality import (
     _weak_relation_rationale_ids,
     evaluate_staged_map_quality,
 )
-from epistemic_case_mapper.staged_semantic_duplicate_quality import near_duplicate_claim_pairs as _near_duplicate_claim_pairs
+from epistemic_case_mapper.pipeline.map.staged_semantic_duplicate_quality import near_duplicate_claim_pairs as _near_duplicate_claim_pairs
 
-from epistemic_case_mapper.staged_semantic_relation_candidates import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_candidates import (
     _candidate_relation_pairs,
     _pair_score,
     _relation_batch_count,
     _relation_candidate_pool_report,
     _relation_pair_budget,
 )
-from epistemic_case_mapper.staged_semantic_sources import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_sources import (
     _artifact_dir,
     _batches,
     _best_fallback_span,

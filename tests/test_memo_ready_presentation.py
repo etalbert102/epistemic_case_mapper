@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_citation_trace_markdown,
     build_memo_ready_packet_retention_report,
     run_memo_ready_presentation_normalization,

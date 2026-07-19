@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_priority_quantity_contracts import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_priority_quantity_contracts import (
     build_priority_quantity_contract_coverage_report,
     build_priority_quantity_contracts,
     contracts_for_evidence_ids,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 
 
 def test_priority_quantity_contracts_use_analyst_relevance_and_numeric_terms() -> None:

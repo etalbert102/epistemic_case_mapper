@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_label_audit import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_label_audit import (
     attach_label_audit,
     claim_label_audit,
     label_audit_bucket_counts,
     label_audit_warning_counts,
 )
-from epistemic_case_mapper.staged_semantic_relation_candidates import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_candidates import (
     _candidate_endpoint_telemetry,
     _default_use,
     _decision_importance_level,

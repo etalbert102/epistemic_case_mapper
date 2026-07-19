@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
 )

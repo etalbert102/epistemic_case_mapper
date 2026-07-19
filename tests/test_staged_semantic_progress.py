@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from epistemic_case_mapper.staged_semantic_progress import PipelineProgress
+from epistemic_case_mapper.pipeline.map.staged_semantic_progress import PipelineProgress
 
 
 def test_pipeline_progress_tracks_multiple_active_backend_calls(tmp_path: Path) -> None:

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_context_schemas import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_schemas import (
     CandidateEvidenceCardsReport,
     SOURCE_EVIDENCE_CARD_OWNERSHIP,
     SourceEvidenceCardReport,
     SourceMapReconciliationReport,
     validate_artifact_ownership,
 )
-from epistemic_case_mapper.map_briefing_context_curation import build_decision_ready_context_bundle
-from epistemic_case_mapper.map_briefing_context_curation import build_source_coverage_report
-from epistemic_case_mapper.map_briefing_context_reports import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_curation import build_decision_ready_context_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_curation import build_source_coverage_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_reports import (
     build_evidence_quality_report,
     build_final_brief_evaluation,
     build_memo_coherence_report,
@@ -18,8 +18,8 @@ from epistemic_case_mapper.map_briefing_context_reports import (
     build_source_evidence_cards,
     build_source_sufficiency_report,
 )
-from epistemic_case_mapper.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
-from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_input_compiler import compile_model_section_packet
 
 
 def test_source_evidence_card_schema_accepts_exact_anchored_card() -> None:

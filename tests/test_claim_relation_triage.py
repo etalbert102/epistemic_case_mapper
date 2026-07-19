@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_claim_triage import triage_claims_for_relation_building
+from epistemic_case_mapper.pipeline.map.staged_semantic_claim_triage import triage_claims_for_relation_building
 
 
 def _claim(

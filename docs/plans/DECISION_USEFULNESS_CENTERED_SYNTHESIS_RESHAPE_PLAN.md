@@ -72,13 +72,13 @@ The recurring failure is therefore not missing evidence. It is weak argument own
 
 ### Primary Files
 
-- `src/epistemic_case_mapper/map_briefing_analyst_decision_spine.py`
-- `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`
-- `src/epistemic_case_mapper/map_briefing_argument_spine.py`
-- `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
-- `src/epistemic_case_mapper/map_briefing_memo_ready_section_notes.py`
-- `src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py`
-- `src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_spine.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_argument_spine.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_section_notes.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_section_evidence_anchoring.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py`
 
 ### Primary Tests To Extend
 
@@ -388,8 +388,8 @@ Suggested slices:
 
 1. Contract builder and canonical attachment
    - Files changed:
-     - `src/epistemic_case_mapper/map_briefing_decision_argument_contract.py`
-     - `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_argument_contract.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py`
      - `tests/test_analyst_decision_spine.py`
    - Verification:
      - `PYTHONPATH=src python3 -m pytest -q tests/test_canonical_decision_writer_packet.py tests/test_parallel_section_synthesis.py tests/test_analyst_decision_spine.py tests/test_decision_usefulness_synthesis.py`
@@ -400,8 +400,8 @@ Suggested slices:
 
 2. Section packet integration and prompt ordering
    - Files changed:
-     - `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
-     - `src/epistemic_case_mapper/map_briefing_memo_ready_section_notes.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_section_notes.py`
      - `tests/test_parallel_section_synthesis.py`
    - Verification:
      - Same focused test command above.
@@ -410,7 +410,7 @@ Suggested slices:
 
 3. Evidence-contract argument linkage
    - Files changed:
-     - `src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_section_evidence_anchoring.py`
      - `tests/test_parallel_section_synthesis.py`
    - Verification:
      - Same focused test command above.
@@ -419,7 +419,7 @@ Suggested slices:
 
 4. Decision-usefulness and analyst-utilization telemetry
    - Files changed:
-     - `src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py`
+     - `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py`
      - `tests/test_decision_usefulness_synthesis.py`
      - `tests/test_parallel_section_synthesis.py`
    - Verification:

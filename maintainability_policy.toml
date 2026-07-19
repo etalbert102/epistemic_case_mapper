@@ -10,17 +10,17 @@ max_branch_nodes = 30
 [allowlist]
 long_files = [
   "scripts/run_investigator_challenge.py",
-  "src/epistemic_case_mapper/map_briefing_analyst_adjudication.py",
-  "src/epistemic_case_mapper/map_briefing_analyst_decision_model_parallel.py",
-  "src/epistemic_case_mapper/map_briefing_analyst_decision_modeling.py",
-  "src/epistemic_case_mapper/map_briefing_analyst_evidence_ledger.py",
-  "src/epistemic_case_mapper/map_briefing_analyst_packet.py",
-  "src/epistemic_case_mapper/map_briefing_decision_usefulness.py",
-  "src/epistemic_case_mapper/map_briefing_memo_ready_finalization.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_adjudication.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_model_parallel.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_modeling.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_evidence_ledger.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_packet.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_usefulness.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py",
   "tests/test_analyst_packet.py",
 ]
 long_functions = [
-  "src/epistemic_case_mapper/map_briefing_artifacts.py::_scaffold_artifact_specs",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py::_scaffold_artifact_specs",
 ]
 branchy_functions = []
 

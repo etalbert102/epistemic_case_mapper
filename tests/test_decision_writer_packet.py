@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
-from epistemic_case_mapper.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract
-from epistemic_case_mapper.map_briefing_adaptive_outline import build_adaptive_memo_outline
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_boundary_source_contract import build_decision_boundary_source_contract
+from epistemic_case_mapper.pipeline.briefing.map_briefing_adaptive_outline import build_adaptive_memo_outline
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_decision_usefulness_retention_report,
     build_memo_ready_packet_retention_report,
     run_decision_usefulness_memo_repair,
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
 )
-from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_obligations import build_memo_obligation_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import (
     build_memo_ready_packet_synthesis_prompt,
     build_writer_packet_synthesis_prompt,
 )
-from epistemic_case_mapper.map_briefing_quantity_retention import retention_quantity_rows
-from epistemic_case_mapper.map_briefing_writer_decision_interface import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_retention import retention_quantity_rows
+from epistemic_case_mapper.pipeline.briefing.map_briefing_writer_decision_interface import (
     build_writer_decision_interface,
     build_writer_decision_interface_quality_report,
     build_writer_model_context,
@@ -877,7 +877,7 @@ def test_decision_usefulness_memo_repair_applies_targeted_improvement(monkeypatc
                 backend="fake",
             )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_decision_usefulness_memo_repair(memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -906,7 +906,7 @@ def test_decision_writer_packet_repair_partial_improvement_is_visible(monkeypatc
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -946,7 +946,7 @@ def test_strict_writer_repair_does_not_apply_quantity_only_improvement(monkeypat
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 

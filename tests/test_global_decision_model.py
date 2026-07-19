@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_global_decision_model import build_global_decision_model_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_global_decision_model import build_global_decision_model_bundle
 
 
 def _ledger() -> dict:

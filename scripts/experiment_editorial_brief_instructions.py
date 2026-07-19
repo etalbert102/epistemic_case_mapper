@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_editorial_brief_experiment import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_editorial_brief_experiment import (
     run_editorial_brief_memo_generation,
     run_editorial_brief_instruction_experiment,
     run_source_weighted_pipeline_fit_experiment,

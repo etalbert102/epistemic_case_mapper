@@ -1,4 +1,4 @@
-from epistemic_case_mapper.map_briefing_evidence_role_matrix import build_evidence_role_matrix_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_evidence_role_matrix import build_evidence_role_matrix_bundle
 
 
 def test_evidence_role_matrix_allows_distinct_section_reuse() -> None:

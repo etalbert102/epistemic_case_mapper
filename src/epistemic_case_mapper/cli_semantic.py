@@ -11,7 +11,7 @@ from epistemic_case_mapper.map_briefing import run_map_briefing
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest
-from epistemic_case_mapper.semantic_pipeline import (
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
     build_critique_prompt,
     build_map_prompt,
     validate_critique_candidate,

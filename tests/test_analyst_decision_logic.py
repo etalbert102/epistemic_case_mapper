@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_analyst_decision_logic import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_logic import (
     analyst_decision_logic,
     naturalize_decision_logic_payload,
 )

@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_memo_polish_experiments import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_polish_experiments import (
     DEFAULT_POLISH_EXPERIMENT_VARIANTS,
     run_memo_polish_experiment_matrix,
 )
