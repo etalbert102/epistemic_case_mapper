@@ -11,6 +11,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     dict_value as _dict,
     list_value as _list,
     short_text as _short_text,
+    string_list as _string_list,
 )
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
@@ -58,6 +59,7 @@ ARM_B_ALLOWED_PACKET_KEYS = {
     "reader_question",
     "decision_anchor",
     "calibration_limits",
+    "synthesis_constraints",
     "owned_moves",
     "reference_moves",
     "evidence_expression_contracts",
@@ -183,6 +185,7 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
             "reader_question",
             "decision_anchor",
             "calibration_limits",
+            "synthesis_constraints",
             "owned_moves",
             "reference_moves",
             "section_local_evidence_jobs",
@@ -200,6 +203,12 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         "- Treat contracts marked required as the coverage checklist for this section.\n"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
+        "- Treat contract claims as proposed wording and source_evidence excerpts as the controlling factual surface. Do not repeat a population, duration, endpoint, or causal qualifier that the excerpts do not support.\n"
+        "- Acute, mechanistic, biomarker, and other surrogate evidence may calibrate or explain a clinical answer, but must not be presented as sufficient by itself for a broader population or long-term outcome.\n"
+        "- Preserve visible confidence and boundedness from the decision anchor. Do not use phrases such as robust body or established unless the source hierarchy explicitly warrants them.\n"
+        "- When findings differ by population, endpoint, design, or exposure definition, explain that distinction before stating the decision effect. Do not merely list both findings.\n"
+        "- Treat every dose or frequency range as study-specific unless the packet explicitly establishes a shared scale. Never merge ranges from different units or populations into a universal threshold.\n"
+        "- Mechanistic evidence explains plausibility or variability; it does not establish a clinical outcome.\n"
         "- Write natural decision-ready prose.\n\n"
         "### Slim argument packet\n"
         f"{json.dumps(prompt_packet, indent=2, ensure_ascii=False)}\n\n"
@@ -266,8 +275,23 @@ def _compact_contract(contract: dict[str, Any]) -> dict[str, Any]:
             "caveat": contract.get("required_caveat"),
             "must_qualify_with": contract.get("must_qualify_with"),
             "must_not_imply": contract.get("must_not_imply"),
+            "source_evidence": _compact_source_evidence(contract),
         }
     )
+
+
+def _compact_source_evidence(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    preferred = set(_string_list(contract.get("citation_source_ids")))
+    rows = [row for row in _list(contract.get("source_evidence")) if isinstance(row, dict)]
+    selected = [row for row in rows if str(row.get("source_id") or "") in preferred] or rows
+    return [
+        {
+            "source_id": row.get("source_id"),
+            "excerpt": _short_text(_string_list(row.get("excerpts"))[0] if _string_list(row.get("excerpts")) else "", 320),
+        }
+        for row in selected[:3]
+        if _string_list(row.get("excerpts"))
+    ]
 
 
 def _fake_section_body(section_id: str, tag_text: str, quantity_text: str) -> str:

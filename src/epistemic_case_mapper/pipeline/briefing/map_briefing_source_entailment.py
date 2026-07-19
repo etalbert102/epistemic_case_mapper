@@ -32,8 +32,6 @@ def collect_packet_source_evidence_by_source(
             add(
                 _source_ids(excerpt),
                 _source_excerpt(excerpt),
-                excerpt.get("claim"),
-                excerpt.get("statement"),
             )
         source_ids = _source_ids(value)
         source_excerpt = _source_excerpt(value)
@@ -41,9 +39,6 @@ def collect_packet_source_evidence_by_source(
             add(
                 source_ids,
                 source_excerpt,
-                value.get("claim"),
-                value.get("statement"),
-                value.get("reader_claim"),
             )
         for nested in value.values():
             visit(nested)

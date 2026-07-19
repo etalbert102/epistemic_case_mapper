@@ -21,6 +21,11 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_syn
 from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
+    bounded_answer_required as _bounded_answer_required,
+    build_synthesis_constraints as _synthesis_constraints,
+    calibrated_bottom_line as _calibrated_bottom_line,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b_audit import (
     ARM_B_READER_QUESTIONS,
     ARM_B_SECTION_HEADINGS,
@@ -365,7 +370,9 @@ def _section_plan(section_packets: list[dict[str, Any]], decision_anchor: dict[s
         "status": "ready",
         "title": _short_decision_title(decision_anchor.get("decision_question")),
         "decision_question": decision_anchor.get("decision_question"),
-        "bottom_line": decision_anchor.get("bounded_answer") or decision_anchor.get("compact_answer"),
+        "bottom_line": _calibrated_bottom_line(decision_anchor),
+        "confidence": decision_anchor.get("confidence"),
+        "bounded_answer_required": _bounded_answer_required(decision_anchor),
         "evidence_contract_scope": "section_owned",
         "known_source_ids": _dedupe(
             source_id
@@ -399,6 +406,7 @@ def _section_packets(
     known_source_aliases: dict[str, str],
 ) -> list[dict[str, Any]]:
     moves_by_section = _moves_by_section(canonical)
+    synthesis_constraints = _synthesis_constraints(list(contracts_by_id.values()), decision_anchor)
     packets = []
     for section_id in ARM_B_SECTION_IDS:
         owned_contract_ids = [evidence_id for evidence_id, owner in ownership.items() if owner == section_id]
@@ -418,6 +426,7 @@ def _section_packets(
                     "reader_question": ARM_B_READER_QUESTIONS[section_id],
                     "decision_anchor": decision_anchor,
                     "calibration_limits": decision_anchor.get("do_not_overstate"),
+                    "synthesis_constraints": synthesis_constraints,
                     "owned_moves": owned_moves,
                     "reference_moves": _reference_moves(section_id, moves_by_section),
                     "evidence_expression_contracts": contracts,

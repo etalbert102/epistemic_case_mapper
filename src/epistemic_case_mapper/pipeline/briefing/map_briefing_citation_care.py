@@ -25,6 +25,8 @@ def build_citation_care_report(
     warnings: list[dict[str, Any]] = []
     cited_sentence_count = 0
     for sentence_context in _memo_sentence_contexts(memo):
+        if _norm(sentence_context.get("heading")) == "how to weight the evidence":
+            continue
         sentence = str(sentence_context.get("sentence") or "")
         role_context = str(sentence_context.get("role_context") or sentence)
         citation_groups = _sentence_citation_groups(sentence, alias_to_source)
@@ -605,6 +607,7 @@ def _memo_sentence_contexts(memo: str) -> list[dict[str, str]]:
                 continue
             sentences.append(
                 {
+                    "heading": heading,
                     "sentence": sentence,
                     "role_context": f"{heading}: {sentence}" if heading else sentence,
                 }

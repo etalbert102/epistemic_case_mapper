@@ -29,6 +29,10 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_ancho
     render_evidence_tagged_memo,
     unknown_evidence_ids_in_text,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
+    repair_section_synthesis_logic as _repair_section_synthesis_logic,
+    section_synthesis_logic_issues as _section_synthesis_logic_issues,
+)
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
 
@@ -210,6 +214,13 @@ def _run_section(
         raw = result.text
         markdown = _extract_section_markdown(raw, heading)
         markdown = _normalize_statistical_brackets(markdown)
+        packet = section.get("packet") if isinstance(section.get("packet"), dict) else {}
+        markdown = _repair_section_synthesis_logic(
+            markdown,
+            section_id=str(section.get("section_id") or ""),
+            contracts=contracts,
+            packet=packet,
+        )
         unknown = []
         unknown_evidence = []
         used_evidence = []
@@ -231,6 +242,7 @@ def _run_section(
             *([f"unknown_source_ids:{', '.join(unknown)}"] if unknown else []),
             *([f"unknown_evidence_ids:{', '.join(unknown_evidence)}"] if unknown_evidence else []),
             *_section_reconciliation_issues(reconciliation),
+            *_section_synthesis_logic_issues(markdown, section_id=str(section.get("section_id") or ""), contracts=contracts, packet=packet),
             *structure_issues,
         ]
         validation_attempt_reports.append(
@@ -424,6 +436,10 @@ def _section_has_blocking_failure(section_report: dict[str, Any]) -> bool:
         or issue.startswith("unknown_source_ids:")
         or issue.startswith("unknown_evidence_ids:")
         or issue.startswith("unknown_evidence_id:")
+        or issue == "missing_conflict_reconciliation"
+        or issue == "unreconciled_dose_thresholds"
+        or issue == "unsupported_strength_from_indirect_evidence"
+        or issue.startswith("unsupported_temporal_qualifier:")
         for issue in issues
     )
 
@@ -502,6 +518,10 @@ def _section_retry_prompt(
             "For each source-evidence mismatch, attach the claim to the evidence tag whose source IDs match the sentence.",
             "For each unsupported quantity near a tag, either remove that quantity from the sentence or use the evidence tag whose contract supports it.",
             "For each unsupported untagged quantity, remove it unless the original contracts list that quantity.",
+            "For missing conflict reconciliation, explain why opposing findings differ by population, endpoint, design, or exposure instead of merely listing both.",
+            "For unreconciled dose thresholds, state that ranges are study-specific and do not create one universal cutoff unless the contracts explicitly do so.",
+            "Remove unsupported duration, population, endpoint, or causal qualifiers when they do not appear in the source_evidence excerpts.",
+            "Do not let acute, mechanistic, biomarker, or surrogate evidence carry a broader clinical conclusion by itself.",
             "Use only evidence tags and source IDs already listed in the original prompt.",
         ],
     }

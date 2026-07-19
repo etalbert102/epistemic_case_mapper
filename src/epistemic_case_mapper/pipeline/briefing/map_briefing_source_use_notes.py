@@ -67,6 +67,8 @@ def _readable_main_use(value: Any) -> str:
 
 def _readable_warning(warning: str) -> str:
     warning = str(warning or "").strip()
+    if warning.lower() in {"none", "n/a", "not applicable", "unspecified"}:
+        return ""
     if warning == "quality_limit":
         return "weak, indirect, or unknown evidence-quality status"
     return warning.replace("_", " ")

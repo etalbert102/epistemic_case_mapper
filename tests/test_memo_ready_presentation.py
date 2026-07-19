@@ -44,6 +44,26 @@ def test_presentation_normalization_uses_compact_inline_citations_with_full_sour
     assert retention["missing_mandatory_count"] == 0
 
 
+def test_presentation_omits_placeholder_source_limits() -> None:
+    packet = {
+        "decision_question": "Should option A be adopted?",
+        "source_trail": [
+            {"source_id": "s1", "source_label": "Study 2025", "source_url": "https://example.test/study"}
+        ],
+        "evidence_items": [],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [
+                {"source_ids": ["s1"], "main_use": "drives_answer", "reader_facing_limit": "None"}
+            ]
+        },
+    }
+
+    result = run_memo_ready_presentation_normalization("# Decision Memo\n", packet)
+
+    assert "use: drives answer" in result["memo"]
+    assert "limit: None" not in result["memo"]
+
+
 def test_presentation_normalization_converts_parenthetical_source_ids_to_citations() -> None:
     packet = {
         "decision_question": "Should option A be adopted?",

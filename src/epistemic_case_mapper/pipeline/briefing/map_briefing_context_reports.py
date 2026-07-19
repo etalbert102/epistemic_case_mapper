@@ -228,7 +228,7 @@ def build_memo_coherence_report(
     if source_lookup and "## Sources" not in memo_markdown:
         issues.append({"kind": "missing_sources_section", "message": "Memo has sources in scaffold but no final Sources section."})
     sufficiency = scaffold.get("source_sufficiency_report", {}) if isinstance(scaffold.get("source_sufficiency_report"), dict) else {}
-    if sufficiency.get("bounded_answer_required") and "provided document" not in memo_markdown.lower() and "current map" not in memo_markdown.lower():
+    if sufficiency.get("bounded_answer_required") and not _bounded_answer_visible(memo_markdown):
         issues.append({"kind": "bounded_answer_not_visible", "message": "Source sufficiency requires a bounded answer, but the memo does not visibly bound the claim."})
     status = "fail" if any(issue["kind"] in {"decision_question_missing", "missing_opening_answer"} for issue in issues) else "warning" if issues else "pass"
     return MemoCoherenceReport(status=status, issue_count=len(issues), issues=issues).model_dump()
@@ -278,7 +278,9 @@ def build_final_brief_evaluation(
         "clear_uncertainty": 1 if "**Confidence:**" in memo_markdown or "confidence" in memo_markdown.lower() else 0,
         "source_grounded": 1 if "## Sources" in memo_markdown else 0,
         "coherent_memo": 1 if coherence_report.get("status") == "pass" else 0,
-        "bounded_when_sources_insufficient": 1 if not sufficiency.get("bounded_answer_required") or ("provided document" in memo_markdown.lower() or "current map" in memo_markdown.lower()) else 0,
+        "bounded_when_sources_insufficient": 1
+        if not sufficiency.get("bounded_answer_required") or _bounded_answer_visible(memo_markdown)
+        else 0,
         "evidence_quality_visible": 1 if not evidence_quality.get("weak_or_indirect_count") or _has_visible_evidence_quality_caveat(memo_markdown) else 0,
     }
     issues = _final_eval_issues(scores, coherence_report)
@@ -356,6 +358,22 @@ def _has_visible_evidence_quality_caveat(memo_markdown: str) -> bool:
             "confidence interval",
             "interval crosses",
             "not statistically significant",
+        )
+    )
+
+
+def _bounded_answer_visible(memo_markdown: str) -> bool:
+    text = _normalize(memo_markdown)
+    return any(
+        term in text
+        for term in (
+            "bounded read",
+            "current evidence",
+            "current map",
+            "provided document",
+            "within the stated scope",
+            "does not establish",
+            "cannot establish",
         )
     )
 

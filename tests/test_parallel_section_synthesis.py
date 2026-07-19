@@ -14,6 +14,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet impo
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan, build_memo_ready_section_synthesis_prompt
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import (
     _repair_near_miss_source_ids,
+    _repair_section_synthesis_logic,
+    _section_has_blocking_failure,
+    _section_synthesis_logic_issues,
     _unknown_section_source_ids,
     run_parallel_memo_ready_section_generation,
 )
@@ -28,6 +31,120 @@ from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
 from test_decision_writer_packet import _global_model, _ledger
+
+
+def test_synthesis_logic_rejects_unreconciled_opposing_signals_and_thresholds() -> None:
+    packet = {
+        "synthesis_constraints": {
+            "opposing_signals_require_reconciliation": True,
+            "study_specific_exposure_surfaces": ["<1/day", ">4/week"],
+        }
+    }
+    markdown = (
+        "## What Could Change or Bound the Answer\n\n"
+        "One study found lower risk; however, another found higher risk at high-consumption thresholds."
+    )
+
+    issues = _section_synthesis_logic_issues(
+        markdown,
+        section_id="counterweights",
+        contracts=[],
+        packet=packet,
+    )
+
+    assert "missing_conflict_reconciliation" in issues
+    assert "unreconciled_dose_thresholds" in issues
+
+
+def test_synthesis_logic_accepts_explicit_study_specific_reconciliation() -> None:
+    packet = {
+        "synthesis_constraints": {
+            "opposing_signals_require_reconciliation": True,
+            "study_specific_exposure_surfaces": ["<1/day", ">4/week"],
+        }
+    }
+    markdown = (
+        "## What Could Change or Bound the Answer\n\n"
+        "The findings differ by population and endpoint, and the study-specific exposure ranges are not directly comparable; "
+        "they do not establish one consumption threshold."
+    )
+
+    issues = _section_synthesis_logic_issues(
+        markdown,
+        section_id="counterweights",
+        contracts=[],
+        packet=packet,
+    )
+
+    assert issues == []
+
+
+def test_synthesis_logic_rejects_duration_missing_from_source_excerpt() -> None:
+    issues = _section_synthesis_logic_issues(
+        "## Limits\n\nThe intervention increased the marker over longer periods {E:e1}.",
+        section_id="counterweights",
+        contracts=[
+            {
+                "evidence_id": "e1",
+                "source_evidence": [
+                    {"source_id": "s1", "excerpts": ["The intervention group had a higher marker concentration."]}
+                ],
+            }
+        ],
+        packet={},
+    )
+
+    assert issues == ["unsupported_temporal_qualifier:e1:long_term"]
+
+
+def test_synthesis_logic_repair_removes_unsupported_rationale_and_reconciles_ranges() -> None:
+    packet = {
+        "synthesis_constraints": {
+            "opposing_signals_require_reconciliation": True,
+            "study_specific_exposure_surfaces": ["<1/day", ">4/week"],
+            "surrogate_or_mechanistic_evidence_ids": ["e1"],
+        }
+    }
+    markdown = (
+        "## What Could Change or Bound the Answer\n\n"
+        "The broad answer is neutral because a single dose did not change a marker. "
+        "Other evidence identifies high-dose thresholds and a higher marker over longer periods {E:e1}."
+    )
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "source_evidence": [{"source_id": "s1", "excerpts": ["The intervention group had a higher marker."]}],
+        }
+    ]
+
+    repaired = _repair_section_synthesis_logic(
+        markdown,
+        section_id="counterweights",
+        contracts=contracts,
+        packet=packet,
+    )
+
+    assert "because a single dose" not in repaired
+    assert "over longer periods" not in repaired
+    assert "study-specific higher-exposure findings" in repaired
+    assert "differ by population, endpoint, and study design" in repaired
+    assert "not directly comparable" in repaired
+    assert _section_synthesis_logic_issues(
+        repaired,
+        section_id="counterweights",
+        contracts=contracts,
+        packet=packet,
+    ) == []
+
+
+def test_synthesis_logic_failures_are_blocking_after_retries() -> None:
+    assert _section_has_blocking_failure(
+        {
+            "accepted": False,
+            "markdown": "## Limits\n\nUnreconciled prose.",
+            "issues": ["missing_conflict_reconciliation"],
+        }
+    ) is True
 
 
 def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: pytest.MonkeyPatch) -> None:

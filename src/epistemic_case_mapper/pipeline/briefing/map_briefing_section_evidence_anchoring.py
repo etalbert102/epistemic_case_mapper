@@ -32,6 +32,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_utils
     source_ids_from_brace_content as _source_ids_from_brace_content,
     untagged_high_risk_sentences as _untagged_high_risk_sentences,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_entailment import collect_packet_source_evidence_by_source
 
 
 BRACE_TAG_RE = re.compile(r"\{([^{}\n]{1,240})\}")
@@ -47,6 +48,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
     source_ids_by_label = _source_ids_by_label(packet)
     source_match_keys_by_id = _source_match_keys_by_id(packet)
     source_weights = _source_weight_judgments_by_source(canonical)
+    source_evidence = collect_packet_source_evidence_by_source(packet)
     language_by_item = {
         str(row.get("item_id") or ""): row
         for row in _list(canonical.get("evidence_language_contracts"))
@@ -100,6 +102,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "claim": item.get("reader_claim") or item.get("claim") or obligation.get("statement"),
                     "role": role,
                     "source_ids": sources,
+                    "source_evidence": _source_evidence_for_contract(sources, source_evidence),
                     "citation_source_ids": citation_sources,
                     "source_match_keys": _source_match_keys_for_sources(sources, source_match_keys_by_id),
                     "source_labels": item.get("source_labels")
@@ -125,6 +128,20 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
             )
         )
     return contracts
+
+
+def _source_evidence_for_contract(
+    source_ids: list[str],
+    evidence_by_source: dict[str, list[str]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "source_id": source_id,
+            "excerpts": [_short_text(excerpt, 320) for excerpt in evidence_by_source.get(source_id, [])[:2]],
+        }
+        for source_id in source_ids
+        if evidence_by_source.get(source_id)
+    ][:8]
 
 
 def _evidence_bundle_ids(quantities: list[dict[str, Any]]) -> list[str]:

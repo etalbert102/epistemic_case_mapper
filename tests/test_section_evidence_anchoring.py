@@ -63,6 +63,28 @@ def test_evidence_expression_contracts_derive_required_slots() -> None:
     assert contracts[0]["must_not_imply"] == ["proves"]
 
 
+def test_evidence_expression_contracts_include_source_specific_excerpt_controls() -> None:
+    packet = {
+        "evidence_items": [
+            {
+                "item_id": "e1",
+                "reader_claim": "The intervention changed the measured marker.",
+                "source_ids": ["s1"],
+                "source_excerpt": "The intervention group had a higher marker concentration after two months.",
+            }
+        ]
+    }
+
+    contracts = build_evidence_expression_contracts(packet)
+
+    assert contracts[0]["source_evidence"] == [
+        {
+            "source_id": "s1",
+            "excerpts": ["The intervention group had a higher marker concentration after two months."],
+        }
+    ]
+
+
 def test_evidence_expression_contracts_include_numeric_must_preserve_terms() -> None:
     packet = {
         "evidence_items": [

@@ -226,6 +226,38 @@ def test_source_binding_report_flags_role_mismatched_overbundled_citations() -> 
     )
 
 
+def test_source_weighting_role_lists_are_not_audited_as_claim_entailment() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_support", "source_label": "Support Study"},
+            {"source_id": "s_boundary", "source_label": "Boundary Study"},
+        ],
+        "evidence_items": [
+            {
+                "item_id": "support",
+                "source_ids": ["s_support"],
+                "source_excerpt": "Option A reduced the primary outcome.",
+                "role": "strongest_support",
+            },
+            {
+                "item_id": "boundary",
+                "source_ids": ["s_boundary"],
+                "source_excerpt": "The effect was smaller in high-risk sites.",
+                "role": "scope_boundary",
+            },
+        ],
+    }
+    memo = (
+        "## How to Weight the Evidence\n\n"
+        "* **Start with:** [s_support], [s_boundary] — These sources carry and bound different parts of the answer."
+    )
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+    care = report["source_binding_report"]["citation_care_report"]
+
+    assert care["warning_count"] == 0
+
+
 def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() -> None:
     packet = {
         "source_trail": [{"source_id": "s_boundary", "source_label": "Boundary Study"}],

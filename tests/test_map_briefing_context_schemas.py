@@ -604,6 +604,23 @@ The practical implication is to move, while tracking implementation risk [Outcom
     assert not any(issue["kind"] == "repetition" for issue in report["issues"])
 
 
+def test_memo_coherence_recognizes_current_evidence_as_visible_bound() -> None:
+    memo = """# Decision Memo
+
+**Decision Question:** Should option A be adopted?
+
+**Bottom Line:** Option A is reasonable. This is a bounded read of the current evidence.
+"""
+
+    report = build_memo_coherence_report(
+        memo_markdown=memo,
+        decision_question="Should option A be adopted?",
+        scaffold={"source_sufficiency_report": {"bounded_answer_required": True}},
+    )
+
+    assert not any(issue["kind"] == "bounded_answer_not_visible" for issue in report["issues"])
+
+
 def test_final_brief_evaluation_accepts_specific_quality_caveats() -> None:
     memo = """# Decision Memo
 

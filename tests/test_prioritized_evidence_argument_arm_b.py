@@ -13,6 +13,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_e
     resolve_current_baseline,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import (
+    _calibrated_bottom_line,
     audit_prompt_submissions,
     build_arm_b_projection,
     load_frozen_arm_b_inputs,
@@ -31,6 +32,33 @@ from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 FROZEN_EGGS = Path(__file__).resolve().parent / "fixtures" / "prioritized_evidence_argument_arm_b"
+
+
+def test_arm_b_bottom_line_does_not_let_single_surrogate_carry_broad_answer() -> None:
+    bottom_line = _calibrated_bottom_line(
+        {
+            "bounded_answer": (
+                "Option A should be treated as neutral because a single dose did not change endothelial function. "
+                "However, the answer is bounded by high-dose thresholds in narrower populations."
+            ),
+            "confidence": "medium",
+            "scope_boundaries": ["Narrower populations require separate treatment."],
+        }
+    )
+
+    assert "because a single dose" not in bottom_line
+    assert "study-specific higher-exposure findings" in bottom_line
+    assert "Confidence: medium" in bottom_line
+    assert "bounded read of the current evidence" in bottom_line
+
+
+def test_arm_b_prompt_exposes_source_evidence_and_synthesis_constraints() -> None:
+    projection = build_arm_b_projection(load_frozen_arm_b_inputs(FROZEN_EGGS))
+    prompt = projection["section_plan"]["sections"][0]["prompt"]
+
+    assert '"synthesis_constraints"' in prompt
+    assert "source_evidence excerpts as the controlling factual surface" in prompt
+    assert "must not be presented as sufficient by itself" in prompt
 
 
 def test_arm_b_projection_resolves_eggs_writer_ownership() -> None:
