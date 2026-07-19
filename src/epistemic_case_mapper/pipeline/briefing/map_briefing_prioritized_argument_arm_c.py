@@ -305,6 +305,7 @@ def run_arm_c_prioritization(
         )
         repaired_payload = _extract_json(repair_result.text)
         normalized_payload, repair_normalization_report = normalize_arm_c_prioritized_argument_ids(inputs, repaired_payload)
+        normalized_payload, ownership_reconciliation_report = reconcile_arm_c_owned_dispositions(normalized_payload)
         verification = verify_arm_c_prioritized_argument(inputs, normalized_payload)
         id_normalization_report = {
             **repair_normalization_report,
@@ -317,6 +318,7 @@ def run_arm_c_prioritization(
         "id_normalization_report": id_normalization_report,
         "semantic_repair_attempted": semantic_repair_attempted,
         "initial_verification_report": initial_verification if semantic_repair_attempted else {},
+        "ownership_reconciliation_report": ownership_reconciliation_report if semantic_repair_attempted else {},
     }
     return {
         "accepted": report.get("status") == "pass",
@@ -327,6 +329,33 @@ def run_arm_c_prioritization(
     }
 
 
+def reconcile_arm_c_owned_dispositions(payload: Any) -> tuple[Any, dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return payload, {
+            "schema_id": "arm_c_owned_disposition_reconciliation_report_v1",
+            "rewrite_count": 0,
+            "rewritten_evidence_item_ids": [],
+        }
+    reconciled = json.loads(json.dumps(payload))
+    required_ids = {
+        evidence_id
+        for move in _list(reconciled.get("moves"))
+        if isinstance(move, dict) and move.get("required", True) is not False
+        for evidence_id in _string_list(move.get("evidence_item_ids"))
+    }
+    rewritten_ids = []
+    for row in _list(reconciled.get("evidence_accounting")):
+        if not isinstance(row, dict) or str(row.get("disposition") or "").strip() != "owned":
+            continue
+        evidence_id = str(row.get("evidence_item_id") or "").strip()
+        if evidence_id and evidence_id not in required_ids:
+            row["disposition"] = "demoted"
+            rewritten_ids.append(evidence_id)
+    return reconciled, {
+        "schema_id": "arm_c_owned_disposition_reconciliation_report_v1",
+        "rewrite_count": len(rewritten_ids),
+        "rewritten_evidence_item_ids": sorted(rewritten_ids),
+    }
 def build_arm_c_prioritization_repair_prompt(
     original_prompt: str,
     *,

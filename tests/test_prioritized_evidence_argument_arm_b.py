@@ -22,6 +22,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_a
     build_arm_c_prioritization_prompt,
     build_arm_c_projection,
     normalize_arm_c_prioritized_argument_ids,
+    reconcile_arm_c_owned_dispositions,
     run_arm_c_prioritization,
     verify_arm_c_prioritized_argument,
 )
@@ -335,6 +336,28 @@ def test_arm_c_prioritization_repairs_owned_evidence_without_required_move(monke
     assert result["report"]["semantic_repair_attempted"] is True
     assert result["report"]["initial_verification_report"]["status"] == "fail"
     assert result["prioritized_argument"]["evidence_accounting"][1]["disposition"] == "demoted"
+
+
+def test_arm_c_owned_disposition_reconciliation_demotes_residual_unassigned_items() -> None:
+    payload = {
+        "moves": [
+            {"move_id": "m1", "required": True, "evidence_item_ids": ["e1"]},
+            {"move_id": "m2", "required": False, "evidence_item_ids": ["e2"]},
+        ],
+        "evidence_accounting": [
+            {"evidence_item_id": "e1", "disposition": "owned"},
+            {"evidence_item_id": "e2", "disposition": "owned"},
+            {"evidence_item_id": "e3", "disposition": "background"},
+        ],
+    }
+
+    reconciled, report = reconcile_arm_c_owned_dispositions(payload)
+
+    assert reconciled["evidence_accounting"][0]["disposition"] == "owned"
+    assert reconciled["evidence_accounting"][1]["disposition"] == "demoted"
+    assert reconciled["evidence_accounting"][2]["disposition"] == "background"
+    assert report["rewritten_evidence_item_ids"] == ["e2"]
+    assert payload["evidence_accounting"][1]["disposition"] == "owned"
 
 
 def test_arm_c_prompt_validation_and_projection_are_bundle_native() -> None:
