@@ -140,7 +140,12 @@ def _restore_observational_population(text: str, contract: dict[str, Any]) -> st
         population_term = population
     if not population_term or population_term.lower() in text.lower():
         return text
-    return f"Among {population_term}, {text[:1].lower()}{text[1:]}"
+    prefix = (
+        f"Among participants in the {population_term}"
+        if "sample" in population_term.lower()
+        else f"Among {population_term}"
+    )
+    return f"{prefix}, {text[:1].lower()}{text[1:]}"
 
 
 def _restore_trial_scope(text: str, contract: dict[str, Any]) -> str:

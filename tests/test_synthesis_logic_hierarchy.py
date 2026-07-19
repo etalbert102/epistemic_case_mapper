@@ -141,7 +141,8 @@ def test_source_excerpt_restores_distinctive_population_without_preserve_term() 
     )
 
     assert excerpt == (
-        "Among Greek national representative adult sample, frequent use was associated with lower odds."
+        "Among participants in the Greek national representative adult sample, "
+        "frequent use was associated with lower odds."
     )
 
 
