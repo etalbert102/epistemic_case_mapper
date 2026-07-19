@@ -20,6 +20,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_syn
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
+    dedupe_section_quantity_obligations,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
     bounded_answer_required as _bounded_answer_required,
@@ -117,9 +118,12 @@ def build_arm_b_projection(inputs: dict[str, Any]) -> dict[str, Any]:
     decision_anchor = _decision_anchor(memo_ready_packet, analyst_model)
     contract_owner_candidates, resolver_issues = _owner_candidates(canonical, contracts_by_id, lineage_index)
     issues.extend(resolver_issues)
-    mandatory_ids = _mandatory_writer_ids(writer_items, override=inputs.get("mandatory_evidence_ids_override"))
+    mandatory_override = inputs.get("mandatory_evidence_ids_override")
+    mandatory_ids = _mandatory_writer_ids(writer_items, override=mandatory_override)
     ownership, ownership_issues = _resolve_ownership(contracts, contract_owner_candidates, mandatory_ids)
     issues.extend(ownership_issues)
+    if not _string_list(mandatory_override):
+        mandatory_ids = _bounded_mandatory_ids(mandatory_ids, ownership=ownership, canonical=canonical)
     section_packets = _section_packets(
         ownership,
         contracts_by_id,
@@ -410,12 +414,17 @@ def _section_packets(
     packets = []
     for section_id in ARM_B_SECTION_IDS:
         owned_contract_ids = [evidence_id for evidence_id, owner in ownership.items() if owner == section_id]
-        contracts = [
-            _contract_for_arm_b(contracts_by_id[evidence_id], required=evidence_id in mandatory_ids)
-            for evidence_id in sorted(owned_contract_ids)
-            if evidence_id in contracts_by_id
+        contracts = dedupe_section_quantity_obligations(
+            [
+                _contract_for_arm_b(contracts_by_id[evidence_id], required=evidence_id in mandatory_ids)
+                for evidence_id in sorted(owned_contract_ids)
+                if evidence_id in contracts_by_id
+            ]
+        )
+        owned_moves = [
+            _compact_practical_move(row) if section_id == "practical_implication" else _compact_move(row)
+            for row in moves_by_section.get(section_id, [])
         ]
-        owned_moves = [_compact_move(row) for row in moves_by_section.get(section_id, [])]
         packets.append(
             _drop_empty(
                 {
@@ -428,12 +437,11 @@ def _section_packets(
                     "calibration_limits": decision_anchor.get("do_not_overstate"),
                     "synthesis_constraints": synthesis_constraints,
                     "owned_moves": owned_moves,
-                    "reference_moves": _reference_moves(section_id, moves_by_section),
                     "evidence_expression_contracts": contracts,
                     "section_local_evidence_jobs": _section_local_jobs(owned_moves, contracts),
                     "known_source_ids": known_source_ids,
                     "known_source_aliases": known_source_aliases,
-                    "citation_mode": "evidence_tags" if contracts else "source_ids",
+                    "citation_mode": "evidence_tags" if contracts else "none",
                 }
             )
         )
@@ -467,6 +475,8 @@ def _resolve_reference(
     lineage_index: dict[str, list[str]],
 ) -> tuple[list[str], list[str]]:
     reference = str(reference or "").strip()
+    if reference.startswith("warning:"):
+        return [], []
     if reference in contracts_by_id:
         return [reference], []
     if reference.startswith(("claim:", "relation:")):
@@ -518,7 +528,11 @@ def _lineage_index(
     return {key: _dedupe(values) for key, values in index.items()}
 
 
-def _mandatory_writer_ids(writer_items: list[dict[str, Any]], *, override: Any = None) -> set[str]:
+def _mandatory_writer_ids(
+    writer_items: list[dict[str, Any]],
+    *,
+    override: Any = None,
+) -> set[str]:
     override_ids = set(_string_list(override))
     if override_ids:
         return override_ids
@@ -535,6 +549,29 @@ def _mandatory_writer_ids(writer_items: list[dict[str, Any]], *, override: Any =
     return ids
 
 
+def _bounded_mandatory_ids(
+    mandatory_ids: set[str],
+    *,
+    ownership: dict[str, str],
+    canonical: dict[str, Any],
+) -> set[str]:
+    direct_order = _dedupe(
+        reference
+        for move in _list(_dict(canonical.get("decision_argument_contract")).get("argument_moves"))
+        if isinstance(move, dict)
+        for reference in _string_list(move.get("evidence_item_ids"))
+        if reference in mandatory_ids
+    )
+    selected: set[str] = set()
+    limits = {"answer_evidence": 6, "counterweights": 8, "practical_implication": 0}
+    for section_id, limit in limits.items():
+        candidates = [evidence_id for evidence_id in mandatory_ids if ownership.get(evidence_id) == section_id]
+        ordered = [evidence_id for evidence_id in direct_order if evidence_id in candidates]
+        ordered.extend(sorted(evidence_id for evidence_id in candidates if evidence_id not in ordered))
+        selected.update(ordered[:limit])
+    return selected
+
+
 def _moves_by_section(canonical: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     rows: dict[str, list[dict[str, Any]]] = {}
     for move in _list(_dict(canonical.get("decision_argument_contract")).get("argument_moves")):
@@ -544,21 +581,6 @@ def _moves_by_section(canonical: dict[str, Any]) -> dict[str, list[dict[str, Any
         if section_id in ARM_B_SECTION_IDS:
             rows.setdefault(section_id, []).append(move)
     return rows
-
-
-def _reference_moves(section_id: str, moves_by_section: dict[str, list[dict[str, Any]]]) -> list[dict[str, str]]:
-    if section_id != "practical_implication":
-        return []
-    rows = []
-    for other_section, moves in moves_by_section.items():
-        if other_section == section_id:
-            continue
-        for move in moves[:2]:
-            point = _short_text(move.get("point"), 260)
-            move_id = str(move.get("move_id") or "").strip()
-            if move_id and point:
-                rows.append({"move_id": move_id, "point": point})
-    return rows[:4]
 
 
 def _section_local_jobs(moves: list[dict[str, Any]], contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -597,6 +619,17 @@ def _compact_move(move: dict[str, Any]) -> dict[str, Any]:
             "quantities": _string_list(move.get("quantities")),
             "disposition": _short_text(move.get("disposition"), 420),
             "would_change_if": _short_text(move.get("would_change_if"), 420),
+        }
+    )
+
+
+def _compact_practical_move(move: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "move_id": move.get("move_id"),
+            "move_type": move.get("move_type"),
+            "writing_job": _short_text(move.get("writing_job"), 420),
+            "section_id": move.get("section_id"),
         }
     )
 

@@ -193,15 +193,22 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         if section_packet.get(key) not in (None, "", [], {})
     }
     heading = str(section_packet.get("heading") or "").strip()
+    citation_rules = (
+        "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
+        "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
+        "- Treat contracts marked required as the coverage checklist for this section.\n"
+        "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
+        if contracts
+        else
+        "- This section has no evidence contracts. Do not add evidence tags, source citations, study details, or quantities.\n"
+        "- Translate only the bounded decision anchor into practical guidance and an update condition.\n"
+    )
     return (
         "You are writing one section of a source-grounded decision memo from a slim argument packet.\n"
         "The packet contains the section's argument route, decision anchor, and section-owned evidence contracts.\n\n"
         "Output rules:\n"
         f"- Output starts exactly with: ## {heading}\n"
-        "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
-        "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
-        "- Treat contracts marked required as the coverage checklist for this section.\n"
-        "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
+        f"{citation_rules}"
         "- Square-bracket source citations are reserved for the deterministic renderer.\n"
         "- Treat contract claims as proposed wording and source_evidence excerpts as the controlling factual surface. Do not repeat a population, duration, endpoint, or causal qualifier that the excerpts do not support.\n"
         "- Acute, mechanistic, biomarker, and other surrogate evidence may calibrate or explain a clinical answer, but must not be presented as sufficient by itself for a broader population or long-term outcome.\n"

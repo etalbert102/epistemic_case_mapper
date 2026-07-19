@@ -567,6 +567,41 @@ def test_reconciliation_allows_quantity_supported_by_another_tag_in_sentence() -
     assert report["unsupported_quantity_warning_count"] == 0
 
 
+def test_reconciliation_allows_quantity_from_controlling_source_excerpt() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_profile",
+            "source_ids": ["s_profile"],
+            "claim": "Higher intake was associated with a better lipid profile.",
+            "source_evidence": [
+                {"source_id": "s_profile", "excerpts": ["Participants consumed up to 1 egg per week."]}
+            ],
+            "required": True,
+        }
+    ]
+    tagged = "## Evidence\n\nParticipants consuming up to 1 egg per week had a better lipid profile {E:e_profile}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["unsupported_quantity_warning_count"] == 0
+
+
+def test_reconciliation_does_not_parse_type_2_diabetes_as_quantity() -> None:
+    contracts = [
+        {
+            "evidence_id": "e_subgroup",
+            "source_ids": ["s_subgroup"],
+            "claim": "Risk differed in people with type 2 diabetes.",
+            "required": True,
+        }
+    ]
+    tagged = "## Bounds\n\nRisk differed in people with type 2 diabetes {E:e_subgroup}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["unsupported_quantity_warning_count"] == 0
+
+
 def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest.MonkeyPatch) -> None:
     built = build_decision_briefing_packet_bundle(_scaffold(), question="Should the city adopt option A for flood protection?")
     packet = build_quality_synthesis_packet_bundle(built["decision_briefing_packet"])["memo_ready_packet"]

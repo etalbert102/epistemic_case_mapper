@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
 
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
@@ -13,6 +14,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_e
     resolve_current_baseline,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import (
+    _bounded_mandatory_ids,
     _calibrated_bottom_line,
     audit_prompt_submissions,
     build_arm_b_projection,
@@ -107,6 +109,42 @@ def test_arm_b_projection_marks_section_owned_contract_scope() -> None:
 
     assert section_plan["evidence_contract_scope"] == "section_owned"
     assert all(section["prompt_mode"] == "arm_b_slim" for section in section_plan["sections"])
+
+
+def test_arm_b_projection_treats_warning_references_as_annotations() -> None:
+    inputs = deepcopy(load_frozen_arm_b_inputs(FROZEN_EGGS))
+    moves = inputs["memo_ready_packet"]["canonical_decision_writer_packet"]["decision_argument_contract"]["argument_moves"]
+    moves[0].setdefault("evidence_item_ids", []).append("warning:memo_warning_999")
+
+    projection = build_arm_b_projection(inputs)
+
+    assert projection["status"] == "pass"
+    assert "unknown_evidence_id:warning:memo_warning_999" not in projection["projection_evaluation_packet"]["issues"]
+
+
+def test_arm_b_mandatory_cap_prefers_explicit_canonical_items() -> None:
+    mandatory = {f"e{i}" for i in range(1, 10)}
+    ownership = {evidence_id: "answer_evidence" for evidence_id in mandatory}
+    canonical = {
+        "decision_argument_contract": {
+            "argument_moves": [{"evidence_item_ids": ["e9", "e8"]}],
+        }
+    }
+
+    selected = _bounded_mandatory_ids(mandatory, ownership=ownership, canonical=canonical)
+
+    assert len(selected) == 6
+    assert {"e8", "e9"}.issubset(selected)
+
+
+def test_arm_b_practical_section_has_no_uncontracted_evidence_channel() -> None:
+    projection = build_arm_b_projection(load_frozen_arm_b_inputs(FROZEN_EGGS))
+    practical = next(row for row in projection["section_packets"] if row["section_id"] == "practical_implication")
+    prompt = next(row["prompt"] for row in projection["section_plan"]["sections"] if row["section_id"] == "practical_implication")
+
+    assert practical["citation_mode"] == "none"
+    assert "reference_moves" not in practical
+    assert "Do not add evidence tags, source citations, study details, or quantities" in prompt
 
 
 def test_load_frozen_inputs_uses_analyst_packet_when_canonical_packet_is_not_usable(tmp_path) -> None:

@@ -311,12 +311,17 @@ def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> lis
             continue
         evidence_id = str(row.get("evidence_id") or "").strip()
         kept_quantities = []
+        seen_keys: set[str] = set()
+        seen_values: set[str] = set()
         for quantity in _list(row.get("required_quantity_atoms")):
             if not isinstance(quantity, dict):
                 continue
             key = _quantity_dedupe_key(quantity)
-            if key and owners.get(key) == evidence_id:
+            value_key = re.sub(r"\s+", " ", str(quantity.get("value") or "").strip().lower())
+            if key and owners.get(key) == evidence_id and key not in seen_keys and value_key not in seen_values:
                 kept_quantities.append(quantity)
+                seen_keys.add(key)
+                seen_values.add(value_key)
         if kept_quantities == _list(row.get("required_quantity_atoms")):
             cleaned.append(row)
         else:
@@ -327,6 +332,10 @@ def _dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> lis
                 updated.pop("required_quantity_atoms", None)
             cleaned.append(updated)
     return cleaned
+
+
+def dedupe_section_quantity_obligations(contracts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return _dedupe_section_quantity_obligations(contracts)
 
 
 def _quantity_dedupe_key(quantity: dict[str, Any]) -> str:
@@ -1136,6 +1145,9 @@ def _contract_quantity_support_text(contract: dict[str, Any]) -> str:
         if isinstance(quantity, dict):
             parts.append(str(quantity.get("value") or ""))
             parts.append(str(quantity.get("interpretation") or ""))
+    for source_row in _list(contract.get("source_evidence")):
+        if isinstance(source_row, dict):
+            parts.extend(_string_list(source_row.get("excerpts")))
     return " ".join(str(part or "") for part in parts)
 
 
@@ -1172,7 +1184,12 @@ def _quantity_surfaces(text: str) -> list[str]:
         r"\b\d+(?:\.\d+)?\s*(?:%|percent|[a-z][a-z.-]*(?:/[a-z]+)?(?:\s+per\s+[a-z]+)?)\b",
         flags=re.IGNORECASE,
     )
-    return _dedupe(match.group(0).strip() for match in pattern.finditer(str(text or "")))
+    source = str(text or "")
+    return _dedupe(
+        match.group(0).strip()
+        for match in pattern.finditer(source)
+        if not re.search(r"\btype\s*$", source[max(0, match.start() - 12) : match.start()], flags=re.IGNORECASE)
+    )
 
 
 def _quantity_supported_by_text(quantity: str, allowed_text: str) -> bool:

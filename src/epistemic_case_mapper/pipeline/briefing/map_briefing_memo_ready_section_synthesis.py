@@ -231,6 +231,8 @@ def _run_section(
             reconciliation = build_evidence_reconciliation_report(markdown, markdown, contracts, known_source_ids=known_source_ids)
             unknown_evidence = [evidence_id for evidence_id in unknown_evidence if evidence_id not in known_evidence_ids]
             reconciliation = _reconciliation_without_global_known_unknowns(reconciliation, known_evidence_ids)
+        elif citation_mode == "none":
+            markdown = _strip_uncontracted_citations(markdown)
         else:
             markdown = _normalize_known_source_alias_citations(markdown, known_source_aliases)
             markdown = _repair_near_miss_source_ids(markdown, known_source_ids)
@@ -569,7 +571,7 @@ def _prepare_sections(
         if section.get("prompt_mode") == "arm_b_slim" or packet.get("schema_id") == "arm_b_slim_section_packet_v1":
             local_contracts = [row for row in _list(section.get("contracts")) if isinstance(row, dict)]
             prepared["contracts"] = local_contracts
-            prepared["citation_mode"] = "evidence_tags" if local_contracts else "source_ids"
+            prepared["citation_mode"] = "evidence_tags" if local_contracts else str(packet.get("citation_mode") or "none")
             if not str(prepared.get("prompt") or "").strip():
                 prepared["prompt"] = str(section.get("prompt") or "")
         elif memo_ready_packet and evidence_contracts and section_id != "source_weighting":
@@ -689,6 +691,11 @@ def _normalize_statistical_brackets(markdown: str) -> str:
         lambda match: f"({match.group(1)})" if _statistical_bracket_content(match.group(1)) else match.group(0),
         str(markdown or ""),
     )
+
+
+def _strip_uncontracted_citations(markdown: str) -> str:
+    text = re.sub(r"\s*\[(?:SRC_[A-Z0-9_]+(?:\s*[,;]\s*SRC_[A-Z0-9_]+)*)\]", "", str(markdown or ""))
+    return re.sub(r"\s*\{(?:E:)?[^{}\n]{1,120}\}", "", text)
 
 
 def _statistical_bracket_content(content: str) -> bool:
