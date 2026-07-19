@@ -63,6 +63,37 @@ def analyst_adjudication_response_schema_v2() -> dict[str, Any]:
     return AnalystAdjudicationResponseV2.model_json_schema()
 
 
+def adapt_analyst_adjudication_v2(response: Any, ledger: dict[str, Any]) -> dict[str, Any]:
+    parsed = AnalystAdjudicationResponseV2.model_validate(response)
+    ledger_rows = _dict_rows(ledger.get("rows"))
+    ledger_by_id = {
+        str(row.get("evidence_item_id") or "").strip(): row
+        for row in ledger_rows
+        if str(row.get("evidence_item_id") or "").strip()
+    }
+    expected_ids = list(ledger_by_id)
+    response_by_id = {row.evidence_item_id: row for row in parsed.rows}
+    unknown_ids = sorted(set(response_by_id) - set(ledger_by_id))
+    missing_ids = sorted(set(ledger_by_id) - set(response_by_id))
+    if unknown_ids or missing_ids:
+        raise ValueError(
+            "compact adjudication must cover the ledger exactly: "
+            f"missing_evidence_item_ids={missing_ids} unknown_evidence_item_ids={unknown_ids}"
+        )
+
+    rank_by_id = _global_rank_by_id(parsed.rows, ledger_by_id, expected_ids)
+    rows = [
+        _canonical_row(response_by_id[evidence_id], ledger_by_id[evidence_id], rank_by_id[evidence_id], ledger)
+        for evidence_id in expected_ids
+    ]
+    return {
+        "schema_id": "analyst_adjudication_v1",
+        "decision_question": str(ledger.get("decision_question") or "").strip(),
+        "rows": rows,
+        "overall_rationale": "Compact analyst adjudication projected deterministically onto the canonical v1 artifact.",
+    }
+
+
 def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
     rows = [_prompt_row(row) for row in _dict_rows(ledger.get("rows"))]
     packet = {
@@ -92,6 +123,85 @@ def build_analyst_adjudication_prompt_v2(ledger: dict[str, Any]) -> str:
         "Return a strict JSON object only.\n\n"
         f"{json.dumps(packet, indent=2, ensure_ascii=False)}\n"
     )
+
+
+def _global_rank_by_id(
+    rows: list[EvidenceAdjudicationResponseRowV2],
+    ledger_by_id: dict[str, dict[str, Any]],
+    ledger_order: list[str],
+) -> dict[str, int]:
+    tier_order = {"core": 0, "supporting": 1, "context": 2}
+    position = {evidence_id: index for index, evidence_id in enumerate(ledger_order)}
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            tier_order[row.priority],
+            _integer(ledger_by_id[row.evidence_item_id].get("current_priority"), 100),
+            position[row.evidence_item_id],
+        ),
+    )
+    return {row.evidence_item_id: min(index, 100) for index, row in enumerate(ordered, start=1)}
+
+
+def _canonical_row(
+    row: EvidenceAdjudicationResponseRowV2,
+    ledger_row: dict[str, Any],
+    importance_rank: int,
+    ledger: dict[str, Any],
+) -> dict[str, Any]:
+    guardrail = row.guardrail
+    return {
+        "evidence_item_id": row.evidence_item_id,
+        "memo_use": row.memo_use,
+        "importance_rank": importance_rank,
+        "rationale": row.reason,
+        "answer_relation": row.answer_relation,
+        "covered_by": [],
+        "source_ids": _strings(ledger_row.get("source_ids")),
+        "quantity_values": _strings(ledger_row.get("quantity_values")),
+        "target_answer_option": row.target_answer_option,
+        "effect_on_final_answer": _effect_on_answer(row.answer_relation, row.target_answer_option, ledger),
+        "tension_type": "",
+        "downgrade_reason": row.reason
+        if row.memo_use in {"background_only", "not_decision_relevant"}
+        else "",
+        "decision_contribution": row.reason,
+        "use_in_reasoning": _reasoning_use(row.memo_use),
+        "key_qualifier": guardrail,
+        "quantity_takeaway": "",
+        "source_weight_note": "",
+        "misuse_warning": guardrail,
+        "if_omitted": "",
+    }
+
+
+def _effect_on_answer(answer_relation: str, target_answer_option: str, ledger: dict[str, Any]) -> str:
+    frame = ledger.get("stable_final_answer_frame") if isinstance(ledger.get("stable_final_answer_frame"), dict) else {}
+    has_current_answer = bool(str(frame.get("current_best_answer") or "").strip())
+    target = "current_best_answer" if has_current_answer else "target answer" if target_answer_option else "answer"
+    return {
+        "supports_answer": f"supports {target}",
+        "challenges_answer": f"weakens {target}",
+        "bounds_scope": f"bounds {target}",
+        "identifies_crux": "distinguishes live options",
+        "contextualizes_answer": f"contextualizes {target}",
+        "not_decision_relevant": "background",
+        "uncertain_relation": "explains tension",
+    }[answer_relation]
+
+
+def _reasoning_use(memo_use: str) -> str:
+    return {
+        "load_bearing_primary_support": "answer anchor",
+        "load_bearing_counterweight": "counterweight",
+        "quantitative_anchor": "quantity calibrator",
+        "scope_or_applicability": "scope limiter",
+        "decision_crux": "decision crux",
+        "mechanism_or_context": "mechanism/context",
+        "background_only": "trace only",
+        "not_decision_relevant": "trace only",
+        "needs_human_or_model_review": "review",
+    }[memo_use]
 
 
 def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -209,6 +319,13 @@ def _strings(value: Any) -> list[str]:
 def _short_text(value: Any, limit: int) -> str:
     text = " ".join(str(value or "").split())
     return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
+
+
+def _integer(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
