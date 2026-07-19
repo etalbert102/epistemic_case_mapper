@@ -22,6 +22,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_progress import (
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_weighting_contract import build_source_weighting_fidelity_report
 from epistemic_case_mapper.pipeline.documents.evidence_bundles import bundle_reconciliation_report
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_helpers import string_list as _string_list
+from epistemic_case_mapper.pipeline.briefing.map_briefing_final_polish_policy import run_optional_final_polish
 
 
 @dataclass(frozen=True)
@@ -171,7 +172,6 @@ def _run_memo_ready_final_output_path(
 ) -> dict[str, Any]:
     from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
         build_memo_ready_packet_retention_report,
-        run_memo_ready_final_polish,
         run_memo_ready_packet_repair,
         run_memo_ready_presentation_normalization,
         run_memo_ready_packet_synthesis,
@@ -274,7 +274,7 @@ def _run_memo_ready_final_output_path(
     rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_status"] = pre_polish_presentation.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_changes"] = pre_polish_presentation.get("report", {}).get("changes", [])
     record_memo_progress(artifacts, "memo_ready_final_polish", "started", backend=backend_config.backend)
-    final_polish = run_memo_ready_final_polish(
+    final_polish = run_optional_final_polish(
         str(rewrite_result["memo"]),
         active_memo_ready_packet,
         backend=backend_config.backend,
