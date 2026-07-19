@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_interpretation_plan import build_decision_interpretation_plan
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_interpretation_plan import build_decision_interpretation_plan
 
 
 def test_decision_interpretation_plan_projects_roles_into_reader_use() -> None:

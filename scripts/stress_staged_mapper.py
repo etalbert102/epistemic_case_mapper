@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from epistemic_case_mapper.case_initializer import init_case_package
+from epistemic_case_mapper.pipeline.documents.case_initializer import init_case_package
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest
 from epistemic_case_mapper.staged_semantic_pipeline import run_staged_map

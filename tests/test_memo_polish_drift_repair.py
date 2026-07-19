@@ -4,13 +4,13 @@ import json
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     run_memo_ready_final_polish,
     run_memo_ready_json_final_polish_experiment,
     run_memo_ready_packet_synthesis,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -33,7 +33,7 @@ def test_final_polish_skips_json_edit_that_adds_unsupported_side_point(monkeypat
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -62,7 +62,7 @@ def test_final_polish_accepts_json_edit_that_removes_existing_unsupported_side_p
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_json_final_polish_experiment(memo_with_drift, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -105,7 +105,7 @@ def test_final_polish_rejects_decision_usefulness_regression(monkeypatch: pytest
     def fake_backend(prompt: str, *args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -132,7 +132,7 @@ def test_production_final_polish_uses_validated_whole_memo_polish(monkeypatch: p
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     memo_with_truncation = memo.replace("## Practical Implication", "## Practical Implication").rstrip() + "\n"
     if "..." not in memo_with_truncation:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_decision_usefulness import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_usefulness import (
     attach_decision_usefulness_to_packet,
     build_decision_usefulness_context,
     build_decision_usefulness_inventory_report,
@@ -11,7 +11,7 @@ from epistemic_case_mapper.map_briefing_decision_usefulness import (
     normalize_decision_usefulness_packet,
     run_decision_usefulness_builder,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 
 from test_decision_briefing_packet import _scaffold
 
@@ -258,7 +258,7 @@ def test_run_decision_usefulness_builder_parses_fake_backend(monkeypatch) -> Non
         }}
         """
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_decision_usefulness.run_model_backend", lambda *args, **kwargs: FakeResult())
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_decision_usefulness.run_model_backend", lambda *args, **kwargs: FakeResult())
 
     result = run_decision_usefulness_builder(
         canonical_packet=canonical,
@@ -314,7 +314,7 @@ def test_run_decision_usefulness_builder_repairs_bad_references(monkeypatch) -> 
             """
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_decision_usefulness.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_decision_usefulness.run_model_backend", fake_backend)
 
     result = run_decision_usefulness_builder(
         canonical_packet=canonical,

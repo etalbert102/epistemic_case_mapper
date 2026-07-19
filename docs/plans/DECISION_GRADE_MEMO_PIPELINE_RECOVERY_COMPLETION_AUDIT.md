@@ -22,35 +22,35 @@ Baseline plan commit:
 
 ### Slice 1: Evidence-Unit Substrate
 
-- `src/epistemic_case_mapper/staged_semantic_evidence_units.py`
-- `src/epistemic_case_mapper/staged_semantic_whole_doc.py`
-- `src/epistemic_case_mapper/staged_semantic_whole_doc_pipeline.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_evidence_units.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_whole_doc.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_whole_doc_pipeline.py`
 - `tests/test_source_evidence_units.py`
 
 ### Slice 2: Relevance And Routing
 
-- `src/epistemic_case_mapper/staged_semantic_evidence_routing.py`
-- `src/epistemic_case_mapper/staged_semantic_whole_doc_pipeline.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_evidence_routing.py`
+- `src/epistemic_case_mapper/pipeline/map/staged_semantic_whole_doc_pipeline.py`
 - `tests/test_evidence_unit_routing.py`
 
 ### Slice 3: Global Decision Model Side-By-Side
 
-- `src/epistemic_case_mapper/map_briefing_global_decision_model.py`
-- `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`
-- `src/epistemic_case_mapper/map_briefing_artifacts.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_global_decision_model.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py`
 - `tests/test_global_decision_model.py`
 
 ### Slice 4: Writer Packet Projection
 
-- `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`
-- `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`
-- `src/epistemic_case_mapper/map_briefing_artifacts.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py`
 - `tests/test_decision_writer_packet.py`
 
 ### Slice 5: Semantic Memo Acceptance
 
-- `src/epistemic_case_mapper/map_briefing_readiness.py`
-- `src/epistemic_case_mapper/map_briefing_final_outputs.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_readiness.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py`
 - `tests/test_map_briefing_readiness.py`
 
 ## Verification

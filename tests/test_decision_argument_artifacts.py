@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.decision_argument_artifacts import (
+from epistemic_case_mapper.pipeline.briefing.decision_argument_artifacts import (
     build_structured_decision_cruxes,
     compact_decision_argument_artifacts,
     evaluate_traceability_against_memo,
 )
-from epistemic_case_mapper.main_memo_obligations import build_unified_requirement_ledger
+from epistemic_case_mapper.pipeline.briefing.main_memo_obligations import build_unified_requirement_ledger
 from epistemic_case_mapper.map_briefing import briefing_scaffold
-from epistemic_case_mapper.map_briefing_artifacts import write_scaffold_artifacts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_artifacts import write_scaffold_artifacts
 
 
 def test_decision_argument_artifacts_build_decision_structures() -> None:

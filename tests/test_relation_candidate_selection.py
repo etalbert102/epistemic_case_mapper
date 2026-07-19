@@ -17,8 +17,8 @@ from epistemic_case_mapper.staged_semantic_pipeline import (
     _relation_pair_block,
     _relation_pair_budget,
 )
-from epistemic_case_mapper.staged_semantic_relation_candidates import _relation_endpoint_rejection_reason
-from epistemic_case_mapper.staged_semantic_relation_quality import relation_pair_intent
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_candidates import _relation_endpoint_rejection_reason
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_quality import relation_pair_intent
 
 
 def test_candidate_relation_pairs_prioritize_decision_role_templates_without_shared_terms() -> None:

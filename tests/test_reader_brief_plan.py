@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_reader_brief_plan import build_reader_brief_plan
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_brief_plan import build_reader_brief_plan
 
 
 def test_reader_brief_plan_builds_rhetorical_jobs_from_writer_context() -> None:

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from epistemic_case_mapper.schema import CaseManifest
-from epistemic_case_mapper.starter_mapper import build_starter_case_map
+from epistemic_case_mapper.pipeline.map.starter_mapper import build_starter_case_map
 
 
 def test_starter_mapper_extracts_claims_and_relations() -> None:

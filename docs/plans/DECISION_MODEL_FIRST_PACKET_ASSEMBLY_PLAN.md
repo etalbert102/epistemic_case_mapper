@@ -20,7 +20,7 @@ decision question
 
 ## Current Gap
 
-The current path in `src/epistemic_case_mapper/map_briefing_decision_packet.py` builds:
+The current path in `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet.py` builds:
 
 ```text
 candidate rows -> role labels -> trim -> bundles -> must-retain ledger

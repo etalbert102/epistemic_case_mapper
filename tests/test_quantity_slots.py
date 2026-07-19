@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
+from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_slots import build_quantity_slot_report, build_quantity_slots
 
 
 def test_quantity_slots_separate_effect_interval_sample_followup_and_dose() -> None:

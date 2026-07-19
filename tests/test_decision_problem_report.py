@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_decision_problem import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_problem import (
     build_candidate_answer_set,
     build_decision_problem_report,
 )

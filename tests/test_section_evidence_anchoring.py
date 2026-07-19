@@ -4,10 +4,10 @@ import re
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
-from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import (
     build_evidence_expression_contracts,
     build_evidence_reconciliation_report,
     contracts_for_section,
@@ -469,7 +469,7 @@ def test_memo_ready_synthesis_uses_unified_evidence_tag_path(monkeypatch: pytest
             body = "Weight Outcome Study most while using Counter Study and Boundary Report to bound the answer [s1, s2, s3]."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
-    import epistemic_case_mapper.map_briefing_memo_ready_finalization as finalization
+    import epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization as finalization
 
     monkeypatch.setattr(finalization, "run_model_backend", fake_backend)
 

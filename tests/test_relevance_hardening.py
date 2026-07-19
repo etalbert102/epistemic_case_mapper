@@ -6,8 +6,8 @@ from epistemic_case_mapper.map_briefing import (
     partition_map_evidence,
     validate_briefing_against_scaffold,
 )
-from epistemic_case_mapper.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason
-from epistemic_case_mapper.staged_semantic_whole_doc import _source_acronym_expansions
+from epistemic_case_mapper.pipeline.map.staged_semantic_decision_questions import claim_decision_relevance_rejection_reason
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import _source_acronym_expansions
 
 
 def test_claim_relevance_keeps_population_mismatch_when_it_bounds_decision_question() -> None:

@@ -22,7 +22,7 @@ The latest eggs briefing reaches the right broad answer, but it still trails the
 Existing vertical-slice artifacts:
 
 - `src/epistemic_case_mapper/model_schemas.py`
-- `src/epistemic_case_mapper/decision_model_slice.py`
+- `src/epistemic_case_mapper/pipeline/briefing/decision_model_slice.py`
 - `tests/test_decision_model_vertical_slice.py`
 
 The vertical slice proves that Pydantic schemas and a compact decision model can work. The remaining task is to integrate that approach into the full map-briefing pipeline and make the generated memo better than the current map briefing on real and unseen cases.

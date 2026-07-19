@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_reader_language import project_reader_language_for_model
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_language import project_reader_language_for_model
 
 
 def test_reader_language_projection_translates_internal_prose_without_mutating_canonical_fields() -> None:

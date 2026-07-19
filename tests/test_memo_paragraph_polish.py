@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_memo_paragraph_polish import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_paragraph_polish import (
     collect_parallel_paragraph_memo_polish_proposals,
     split_memo_into_polishable_paragraphs,
 )
-from epistemic_case_mapper.map_briefing_memo_polish_experiments import run_memo_ready_paragraph_final_polish_experiment
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_polish_experiments import run_memo_ready_paragraph_final_polish_experiment
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -131,7 +131,7 @@ def test_paragraph_final_polish_applies_safe_replacement(monkeypatch) -> None:
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_polish_experiments.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_polish_experiments.run_model_backend", fake_backend)
 
     result = run_memo_ready_paragraph_final_polish_experiment(
         memo,

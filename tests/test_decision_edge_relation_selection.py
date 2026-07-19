@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
 from epistemic_case_mapper.model_backends import ModelBackendResult
-from epistemic_case_mapper.staged_semantic_claim_metadata import claims_with_relation_role_metadata
-from epistemic_case_mapper.staged_semantic_decision_edges import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_claim_metadata import claims_with_relation_role_metadata
+from epistemic_case_mapper.pipeline.map.staged_semantic_decision_edges import (
     ROLE_BACKGROUND,
     ROLE_COMPARATOR,
     ROLE_MECHANISM,
@@ -16,7 +16,7 @@ from epistemic_case_mapper.staged_semantic_decision_edges import (
     low_confidence_decision_edge_reason,
     propose_decision_edge_candidates,
 )
-from epistemic_case_mapper.staged_semantic_relation_backfill import finalize_sparse_relation_graph
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_backfill import finalize_sparse_relation_graph
 from types import SimpleNamespace
 
 

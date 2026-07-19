@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_role_adjudication import adjudicate_packet_roles
+from epistemic_case_mapper.pipeline.briefing.map_briefing_role_adjudication import adjudicate_packet_roles
 
 
 def test_role_adjudication_does_not_infer_role_from_claim_text() -> None:

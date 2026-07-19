@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.staged_semantic_relation_quality import (
+from epistemic_case_mapper.pipeline.map.staged_semantic_relation_quality import (
     relation_pair_intent,
     relation_quality_issue_rows,
     relation_semantic_rejection_reason,

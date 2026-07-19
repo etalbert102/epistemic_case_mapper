@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_decision_usefulness import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_usefulness import (
     attach_decision_usefulness_to_packet,
     normalize_decision_usefulness_packet,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )

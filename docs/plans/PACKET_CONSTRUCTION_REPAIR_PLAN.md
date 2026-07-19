@@ -56,12 +56,12 @@ source_bottom_line_cards
 
 Primary files:
 
-- `src/epistemic_case_mapper/map_briefing_pipeline.py`: orchestration.
-- `src/epistemic_case_mapper/map_briefing_decision_packet.py`: candidate pool, roles, trimming, answer frame, must-retain ledger.
-- `src/epistemic_case_mapper/map_briefing_packet_refinement.py`: model critique and refinement.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_packet.py`: clustering, role projection, diagnosticity, evidence profile, memo-ready selection.
-- `src/epistemic_case_mapper/map_briefing_quantity_binding.py`: quantity object construction and unsafe-pair warnings.
-- `src/epistemic_case_mapper/map_briefing_reader_packet_contract.py`: synthesis contract attached to model-facing packets.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_pipeline.py`: orchestration.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet.py`: candidate pool, roles, trimming, answer frame, must-retain ledger.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_packet_refinement.py`: model critique and refinement.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_packet.py`: clustering, role projection, diagnosticity, evidence profile, memo-ready selection.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_quantity_binding.py`: quantity object construction and unsafe-pair warnings.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_reader_packet_contract.py`: synthesis contract attached to model-facing packets.
 
 Dependency order:
 

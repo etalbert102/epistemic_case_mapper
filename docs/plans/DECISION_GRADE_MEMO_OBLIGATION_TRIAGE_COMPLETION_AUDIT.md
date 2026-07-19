@@ -43,8 +43,8 @@ PYTHONPATH=src python3 -m pytest -q tests/test_analyst_packet.py tests/test_deci
 
 Implemented in:
 
-- `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`
-- `src/epistemic_case_mapper/map_briefing_decision_writer_contract.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_contract.py`
 
 Artifacts now emitted:
 
@@ -62,7 +62,7 @@ Result on saved eggs artifacts:
 
 Implemented in:
 
-- `src/epistemic_case_mapper/map_briefing_analyst_quantity_binding.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_quantity_binding.py`
 
 Changes:
 
@@ -98,7 +98,7 @@ The current gate remains report-only, consistent with the plan.
 
 Implemented in:
 
-- `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
 
 The model now receives a clean source-bound writing interface for the active decision-writer path instead of raw packet internals. The prompt asks for:
 

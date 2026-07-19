@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from epistemic_case_mapper.map_briefing_analyst_schemas import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_schemas import (
     AnalystAdjudication,
     AnalystAnswerFrame,
     AnalystDecisionModel,

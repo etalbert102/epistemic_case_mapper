@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_analyst_decision_model_parallel import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_model_parallel import (
     build_decision_model_task_prompt,
     merge_decision_model_payloads,
 )

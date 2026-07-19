@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from epistemic_case_mapper.main_memo_obligations import build_main_memo_obligation_ledger, section_obligations_for_title
+from epistemic_case_mapper.pipeline.briefing.main_memo_obligations import build_main_memo_obligation_ledger, section_obligations_for_title
 from epistemic_case_mapper.map_briefing import build_gap_diagnosis, canonicalize_claims_for_briefing
-from epistemic_case_mapper.map_briefing_map_utils import _expand_payload_reader_references
+from epistemic_case_mapper.pipeline.briefing.map_briefing_map_utils import _expand_payload_reader_references
 from epistemic_case_mapper.model_schemas import DecisionCrux
 
 

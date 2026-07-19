@@ -4,26 +4,26 @@ import re
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
-from epistemic_case_mapper.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan, build_memo_ready_section_synthesis_prompt
-from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan, build_memo_ready_section_synthesis_prompt
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import (
     _repair_near_miss_source_ids,
     _unknown_section_source_ids,
     run_parallel_memo_ready_section_generation,
 )
-from epistemic_case_mapper.map_briefing_section_evidence_anchoring import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import (
     build_evidence_tagged_section_prompt,
     build_evidence_expression_contracts,
     build_section_local_evidence_jobs,
     render_evidence_tagged_memo,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import _quantity_collision_warnings
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import _quantity_collision_warnings
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -55,7 +55,7 @@ def test_live_memo_ready_synthesis_runs_sections_in_parallel_shape(monkeypatch: 
             body = f"Use Option A where the 25% loss-reduction evidence applies and maintenance protection is credible {tag}."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -597,7 +597,7 @@ def test_section_synthesis_num_predict_can_be_overridden(
         tag_or_citation = f"{{E:{ids[0]}}}" if ids else "[s1]"
         return ModelBackendResult(text=f"## {heading}\n\nOutcome evidence supports the section {tag_or_citation}.\n", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -662,7 +662,7 @@ def test_live_memo_ready_section_synthesis_rejects_unknown_source_ids(monkeypatc
             return ModelBackendResult(text=f"## {heading}\n\nA claim with anchored evidence {{E:{ids[0]}}}.\n", backend="fake")
         return ModelBackendResult(text=f"## {heading}\n\nA claim with a made-up source [not_a_source].\n", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -687,7 +687,7 @@ def test_live_memo_ready_section_synthesis_normalizes_statistical_brackets(monke
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -745,7 +745,7 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="fake", backend_timeout=30, backend_retries=0)
 

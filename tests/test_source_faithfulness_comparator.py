@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
-from epistemic_case_mapper.map_briefing_source_faithfulness import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_packet import build_analyst_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_faithfulness import (
     repair_adjudication_source_faithfulness,
     source_faithfulness_warnings,
 )

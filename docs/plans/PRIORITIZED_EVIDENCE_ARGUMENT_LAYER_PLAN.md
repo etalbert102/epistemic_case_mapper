@@ -39,19 +39,19 @@ The plan therefore starts with an ablation. First test whether a slim, disjoint 
 
 Before implementation, inspect these code paths and artifacts:
 
-- `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`
   - current transition from analyst verification and evidence budgeting into `global_decision_model` and `decision_writer_packet`.
-- `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`
   - current `global_decision_model_projection` adapter and memo-ready packet construction.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`
   - current section plan construction and broad prompt context.
-- `src/epistemic_case_mapper/map_briefing_section_evidence_anchoring.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_section_evidence_anchoring.py`
   - current evidence contract routing, especially roots that union required evidence across multiple semantic views.
-- `src/epistemic_case_mapper/map_briefing_analyst_decision_modeling.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_modeling.py`
   - existing analyst-owned answer, source, quantity, counterweight, crux, and relevance judgments.
-- `src/epistemic_case_mapper/map_briefing_analyst_schemas.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_schemas.py`
   - schema and Pydantic validation style.
-- `src/epistemic_case_mapper/map_briefing_evidence_budget.py`
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_evidence_budget.py`
   - verified accounting and foreground/background evidence partitioning.
 - Latest eggs memo and report artifacts:
   - `artifacts/truth_boundary_verification_eggs_live/replay_after_section_contract_fix_v3/memo.md`

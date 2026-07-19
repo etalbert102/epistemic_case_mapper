@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from scripts import stress_staged_mapper
-from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 
 
 def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> None:

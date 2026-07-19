@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_packet_refinement import _packet_critique_skip_reason
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import _packet_critique_skip_reason
 
 
 def test_packet_critique_auto_skips_ready_packet(monkeypatch) -> None:

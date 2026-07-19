@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_classical_selection import build_classical_evidence_selection_report
-from epistemic_case_mapper.map_briefing_context_reconciliation import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_classical_selection import build_classical_evidence_selection_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_reconciliation import (
     build_section_context_decision_packets,
     build_section_context_quality_report,
     build_slot_reconciliation_report,
 )
-from epistemic_case_mapper.map_briefing_section_input_compiler import compile_model_section_packet
-from epistemic_case_mapper.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
-from epistemic_case_mapper.map_briefing_spine_projection import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_input_compiler import compile_model_section_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_spine_arbitration import arbitrate_canonical_decision_spine
+from epistemic_case_mapper.pipeline.briefing.map_briefing_spine_projection import (
     build_section_projection_packets,
     build_section_projection_readiness_report,
 )
-from epistemic_case_mapper.map_briefing_validation import validate_briefing_against_scaffold
-from epistemic_case_mapper.map_briefing_spine_bundle import build_decision_spine_bundle
-from epistemic_case_mapper.map_briefing_spine_validation import validate_canonical_decision_spine
+from epistemic_case_mapper.pipeline.briefing.map_briefing_validation import validate_briefing_against_scaffold
+from epistemic_case_mapper.pipeline.briefing.map_briefing_spine_bundle import build_decision_spine_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_spine_validation import validate_canonical_decision_spine
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -490,7 +490,7 @@ def test_model_spine_arbitration_accepts_only_existing_field_ids(monkeypatch) ->
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_spine_arbitration.run_model_backend", fake_backend)
 
     result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -514,7 +514,7 @@ def test_model_spine_arbitration_accepts_grounded_default_answer_claim(monkeypat
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_spine_arbitration.run_model_backend", fake_backend)
 
     result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -541,7 +541,7 @@ def test_model_spine_arbitration_rejects_default_answer_that_omits_countereviden
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_spine_arbitration.run_model_backend", fake_backend)
 
     result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -560,7 +560,7 @@ def test_model_spine_arbitration_rejects_invented_field_ids(monkeypatch) -> None
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_spine_arbitration.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_spine_arbitration.run_model_backend", fake_backend)
 
     result = arbitrate_canonical_decision_spine(spine, backend="fake", backend_timeout=30, backend_retries=0)
 

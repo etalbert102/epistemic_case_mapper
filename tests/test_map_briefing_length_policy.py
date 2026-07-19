@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_length_policy import executive_length_policy
-from epistemic_case_mapper.map_briefing_reader_polish import briefing_reader_polish_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_length_policy import executive_length_policy
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_polish import briefing_reader_polish_report
 
 
 def test_complex_cases_get_larger_executive_word_budget() -> None:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_context_curation import _source_appraisal_timeout
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_context_curation import _source_appraisal_timeout
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     _prepare_source_weighted_outline_contract_path,
     build_memo_ready_packet_retention_report,
     run_memo_ready_packet_synthesis,
 )
-from epistemic_case_mapper.map_briefing_production_readiness import build_memo_ready_production_readiness_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_production_readiness import build_memo_ready_production_readiness_report
 
 
 def test_live_synthesis_backend_failure_is_visible_not_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -22,7 +22,7 @@ def test_live_synthesis_backend_failure_is_visible_not_accepted(monkeypatch: pyt
     def fail_backend(*args, **kwargs):
         raise RuntimeError("backend timed out")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fail_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fail_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 
@@ -46,7 +46,7 @@ def test_live_synthesis_unparseable_output_is_visible_without_fallback(monkeypat
 
         return ModelBackendResult(text='{"unexpected": "shape"}', backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 
@@ -82,7 +82,7 @@ def test_live_synthesis_requests_plain_text_backend(monkeypatch: pytest.MonkeyPa
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 
@@ -143,7 +143,7 @@ def test_live_synthesis_blocks_scaffolded_canonical_packet_before_model_call(mon
         called = True
         raise AssertionError("backend should not be called for a blocked production packet")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 
@@ -352,7 +352,7 @@ def test_source_weighted_outline_contract_path_rebuilds_active_packet_from_outli
         )
 
     monkeypatch.setenv("ECM_SOURCE_WEIGHTED_OUTLINE_CONTRACTS", "1")
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = _prepare_source_weighted_outline_contract_path(
         packet,
@@ -384,7 +384,7 @@ def test_whole_memo_synthesis_uses_larger_output_budget(monkeypatch: pytest.Monk
 
         return ModelBackendResult(text="# Decision Memo\n\nOption A is plausible but bounded.", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 

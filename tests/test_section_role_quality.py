@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_section_role_quality import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_role_quality import (
     section_role_quality_issues,
     section_role_quality_report,
 )
-from epistemic_case_mapper.map_briefing_section_structure import section_structure_issues
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_structure import section_structure_issues
 
 
 def test_practical_read_flags_unsupported_advice_drift() -> None:

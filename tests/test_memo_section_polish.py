@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_validated_final_polish_prompt,
     build_validated_final_polish_validation_report,
     run_memo_ready_final_polish,
     run_memo_ready_hybrid_section_final_polish_experiment,
     run_memo_ready_section_final_polish_experiment,
 )
-from epistemic_case_mapper.map_briefing_memo_section_polish import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_section_polish import (
     collect_parallel_hybrid_section_memo_polish_proposals,
     collect_parallel_section_memo_polish_proposals,
     score_section_polish_candidate,
@@ -75,7 +75,7 @@ def test_section_final_polish_experiment_accepts_section_replacement(monkeypatch
             markdown = _section_markdown_for_heading(memo, heading)
         return ModelBackendResult(text=json.dumps({"section_markdown": markdown, "reason": "section polish"}), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_section_final_polish_experiment(
         memo,
@@ -124,7 +124,7 @@ def test_hybrid_section_polish_falls_through_to_next_candidate(monkeypatch) -> N
             markdown = "## Practical Implication\n\nUse option A when monitoring remains feasible [s1]."
         return ModelBackendResult(text=json.dumps({"section_markdown": markdown, "reason": mode}), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_hybrid_section_final_polish_experiment(
         memo,
@@ -213,7 +213,7 @@ def test_validated_final_polish_uses_backend_override_and_accepts_safe_rewrite(m
         )
 
     monkeypatch.setenv("ECM_FINAL_POLISH_BACKEND", "ollama:strong-polish")
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_final_polish(memo, packet, backend="ollama:small", backend_timeout=30, backend_retries=0)
 
@@ -247,7 +247,7 @@ def test_validated_final_polish_repairs_missing_priority_quantity(monkeypatch) -
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -267,7 +267,7 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=memo.replace("one egg per day", "one egg per 1 day.; This remains bounded"), backend=backend)
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -290,7 +290,7 @@ def test_validated_final_polish_surfaces_unsupported_additions_as_advisory_warni
             backend=backend,
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
     warning_report = result["report"]["final_validation_report"]["unsupported_additions_report"]

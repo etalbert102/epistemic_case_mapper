@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_plan_qa_reports import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_plan_qa_reports import (
     build_adversarial_memo_qa_report,
     build_compact_review_packet,
     build_memo_mutation_eval,

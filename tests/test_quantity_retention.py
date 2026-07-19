@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_quantity_retention import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_retention import (
     contains_quantity,
     quantity_required_for_retention,
     quantity_retained,

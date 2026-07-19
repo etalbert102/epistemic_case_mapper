@@ -7,7 +7,7 @@ from pathlib import Path
 
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest, CaseMap
-from epistemic_case_mapper.starter_mapper import build_starter_case_map
+from epistemic_case_mapper.pipeline.map.starter_mapper import build_starter_case_map
 
 
 def main() -> int:

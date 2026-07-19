@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_relation_value import build_relation_value_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_relation_value import build_relation_value_report
 
 
 def test_relation_value_report_accepts_grounded_decision_relevant_relations() -> None:

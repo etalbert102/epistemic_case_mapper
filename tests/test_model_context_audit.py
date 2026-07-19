@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.io import write_json
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_decision_usefulness_memo_repair_prompt,
     build_memo_ready_packet_repair_prompt,
 )
-from epistemic_case_mapper.map_briefing_model_context import build_model_call_context_inventory, build_model_context_audit
+from epistemic_case_mapper.pipeline.briefing.map_briefing_model_context import build_model_call_context_inventory, build_model_context_audit
 
 
 def test_model_context_audit_separates_record_only_and_model_context(tmp_path) -> None:

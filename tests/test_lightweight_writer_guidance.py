@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_lightweight_guidance import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_lightweight_guidance import (
     attach_lightweight_guidance_to_packet,
     build_lightweight_writer_guidance_prompt,
     compact_lightweight_guidance_for_prompt,

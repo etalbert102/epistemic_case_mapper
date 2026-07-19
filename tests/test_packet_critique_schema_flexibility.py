@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_packet_refinement import PacketCritiqueOutput
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_refinement import PacketCritiqueOutput
 from epistemic_case_mapper.model_schemas import parse_model_output_report
 
 

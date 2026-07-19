@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from epistemic_case_mapper import cli
-from epistemic_case_mapper.semantic_pipeline import (
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
     CRITIQUE_PROMPT_VERSION,
     MAP_PROMPT_VERSION,
     build_critique_prompt,

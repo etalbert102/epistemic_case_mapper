@@ -8,15 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from epistemic_case_mapper.io import write_json
-from epistemic_case_mapper.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import load_frozen_arm_b_inputs
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import run_parallel_memo_ready_section_generation
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import load_frozen_arm_b_inputs
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c import (
     ArmCPrioritizedArgument,
     build_arm_c_projection,
     normalize_arm_c_prioritized_argument_ids,
     verify_arm_c_prioritized_argument,
 )
-from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_evaluation import (
     build_arm_comparison_to_current,
     resolve_current_baseline,
 )
@@ -145,7 +145,7 @@ def main() -> None:
 
 
 def build_richer_prioritized_argument_prompt(inputs: dict[str, Any]) -> str:
-    from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+    from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c import (
         _arm_c_evidence_records,
         _compact_evidence_budget,
         _dict,

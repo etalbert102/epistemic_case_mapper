@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import re
 
-from epistemic_case_mapper.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
-from epistemic_case_mapper.map_briefing_analyst_packet import build_analyst_packet_bundle
-from epistemic_case_mapper.map_briefing_analyst_quantity_binding import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_evidence_ledger import build_analyst_map_evidence_ledger
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_packet import build_analyst_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_quantity_binding import (
     build_analyst_quantity_binding_report,
     merge_quantity_adjudication,
     run_analyst_quantity_binding,
@@ -183,7 +183,7 @@ def test_analyst_quantity_binding_prompt_only_sends_residual_claim_relevant_quan
             backend="fake",
         )
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_quantity_binding.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_quantity_binding.run_model_backend", fake_backend)
 
     result = run_analyst_quantity_binding(
         synthesis_packet=packet,
@@ -416,7 +416,7 @@ def test_analyst_quantity_binding_batches_large_candidate_sets(monkeypatch) -> N
         ]
         return ModelBackendResult(text=json.dumps({"schema_id": "analyst_quantity_binding_adjudication_v1", "bindings": bindings}), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_quantity_binding.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_quantity_binding.run_model_backend", fake_backend)
 
     result = run_analyst_quantity_binding(
         synthesis_packet=packet,

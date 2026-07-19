@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from epistemic_case_mapper.map_briefing_analyst_refinement import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_refinement import (
     build_analyst_packet_refinement_parse_report,
     build_analyst_packet_refinement_prompt,
     run_analyst_packet_refinement,
@@ -109,7 +109,7 @@ def test_refinement_accepts_valid_live_backend(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_analyst_refinement.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_refinement.run_model_backend", fake_backend)
 
     result = run_analyst_packet_refinement(
         synthesis_packet=_synthesis_packet(),

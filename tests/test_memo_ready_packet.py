@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
-from epistemic_case_mapper.map_briefing_decision_packet import build_decision_briefing_packet_bundle
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_final_outputs import ModelBackendConfig, write_final_reader_outputs
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_packet import build_decision_briefing_packet_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
     build_memo_ready_final_polish_prompt,
     build_memo_ready_packet_repair_prompt,
     build_memo_ready_packet_retention_report,
@@ -17,12 +17,12 @@ from epistemic_case_mapper.map_briefing_memo_ready_finalization import (
     run_memo_ready_packet_repair,
     run_memo_ready_packet_synthesis,
 )
-from epistemic_case_mapper.map_briefing_memo_warning_packet import build_warning_resolution_report
-from epistemic_case_mapper.map_briefing_memo_ready_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_warning_packet import build_warning_resolution_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import (
     build_quality_synthesis_packet_bundle,
 )
-from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
-from epistemic_case_mapper.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_obligations import build_memo_obligation_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_simplification_comparison import build_pipeline_simplification_comparison
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -639,7 +639,7 @@ def test_memo_ready_repair_accepts_retention_improvement(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=repaired, backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -672,7 +672,7 @@ def test_memo_ready_repair_accepts_warning_resolution(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=repaired, backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_repair(weak_memo, packet, before, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -691,7 +691,7 @@ def test_memo_ready_final_polish_rejects_evidence_loss(monkeypatch) -> None:
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text="## Decision Brief\n\nOption A may help.\n", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
@@ -746,7 +746,7 @@ def test_memo_ready_final_polish_normalizes_safe_citation_and_phrase_defects(mon
     def fake_backend(*args, **kwargs) -> ModelBackendResult:
         return ModelBackendResult(text=json.dumps(payload), backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_json_final_polish_experiment(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
 

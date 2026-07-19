@@ -30,13 +30,13 @@ Make the pipeline produce decision memos that explain why the evidence hierarchy
 
 ## Inventory And Dependency Map
 
-- `src/epistemic_case_mapper/map_briefing_decision_packet_stage.py`: active memo-ready packet promotion.
-- `src/epistemic_case_mapper/map_briefing_analyst_packet.py`: analyst memo-ready packet construction.
-- `src/epistemic_case_mapper/map_briefing_decision_writer_packet.py`: global writer packet adapter.
-- `src/epistemic_case_mapper/map_briefing_canonical_decision_writer_packet.py`: canonical synthesis handoff.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_prompt.py`: final synthesis prompt.
-- `src/epistemic_case_mapper/map_briefing_memo_ready_presentation.py`: deterministic reader presentation.
-- `src/epistemic_case_mapper/map_briefing_context_reports.py` and telemetry modules: coherence and repetition diagnostics.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_packet_stage.py`: active memo-ready packet promotion.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_packet.py`: analyst memo-ready packet construction.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py`: global writer packet adapter.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py`: canonical synthesis handoff.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py`: final synthesis prompt.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_presentation.py`: deterministic reader presentation.
+- `src/epistemic_case_mapper/pipeline/briefing/map_briefing_context_reports.py` and telemetry modules: coherence and repetition diagnostics.
 - Tests to extend: `tests/test_analyst_packet.py`, `tests/test_canonical_decision_writer_packet.py`, `tests/test_memo_ready_packet.py`, `tests/test_memo_ready_presentation.py`.
 
 ## Workstreams

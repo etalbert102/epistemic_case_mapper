@@ -5,18 +5,18 @@ import re
 
 import pytest
 
-from epistemic_case_mapper.map_briefing_decision_writer_packet import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
 )
-from epistemic_case_mapper.map_briefing_expert_judgment_compression import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_expert_judgment_compression import (
     build_expert_judgment_compression_input,
     build_expert_judgment_compression_report,
     expert_judgment_section,
     parse_expert_judgment_compression,
 )
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 from epistemic_case_mapper.model_backends import ModelBackendResult
 from test_decision_writer_packet import _global_model, _ledger
 
@@ -210,7 +210,7 @@ def test_live_synthesis_runs_expert_judgment_compression_before_sections(monkeyp
             body = f"Adopt Option A only where the 20% improvement evidence applies and the scope boundary is acceptable {tags}."
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(packet, backend="ollama:test", backend_timeout=30, backend_retries=0)
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 
 from epistemic_case_mapper.map_briefing import briefing_scaffold, compose_final_reader_memo_package
-from epistemic_case_mapper.map_briefing_artifacts import write_final_review_packet, write_scaffold_artifacts
-from epistemic_case_mapper.map_briefing_quantities import build_quantity_ledger, quantity_ledger_markdown, top_quantity_anchors
+from epistemic_case_mapper.pipeline.briefing.map_briefing_artifacts import write_final_review_packet, write_scaffold_artifacts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_quantities import build_quantity_ledger, quantity_ledger_markdown, top_quantity_anchors
 
 
 def test_quantity_ledger_extracts_effect_sizes_intervals_and_thresholds() -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_section_ownership import repeated_owned_evidence_issues
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_ownership import repeated_owned_evidence_issues
 
 
 def test_section_ownership_allows_repeated_evidence_with_section_value() -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
-from epistemic_case_mapper.map_briefing_source_weighting_contract import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_weighting_contract import (
     build_source_weighting_contract,
     build_source_weighting_fidelity_report,
     build_source_weighting_section_packet,

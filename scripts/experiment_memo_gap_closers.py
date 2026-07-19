@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_gap_closer_experiment import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_gap_closer_experiment import (
     VARIANT_IDS,
     run_gap_closer_live_experiment,
     write_gap_closer_experiment_inputs,

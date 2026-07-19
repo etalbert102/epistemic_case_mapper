@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_pipeline import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_pipeline import (
     CONFIDENCE_ORDER,
     MapBriefingResult,
     ROLE_PRIORITY,
@@ -15,16 +15,16 @@ from epistemic_case_mapper.map_briefing_pipeline import (
     deterministic_briefing_payload,
     run_map_briefing,
 )
-from epistemic_case_mapper.map_briefing_prompt_scaffold import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prompt_scaffold import (
     _compact_top_evidence_sections,
     _model_concept_evidence_packets,
     model_briefing_scaffold as _model_briefing_scaffold,
 )
-from epistemic_case_mapper.map_briefing_model_render import render_model_briefing_output as _render_model_briefing_output
+from epistemic_case_mapper.pipeline.briefing.map_briefing_model_render import render_model_briefing_output as _render_model_briefing_output
 
-from epistemic_case_mapper.map_briefing_artifacts import map_briefing_summary_payload as _map_briefing_summary_payload
+from epistemic_case_mapper.pipeline.briefing.map_briefing_artifacts import map_briefing_summary_payload as _map_briefing_summary_payload
 
-from epistemic_case_mapper.decision_model_slice import (
+from epistemic_case_mapper.pipeline.briefing.decision_model_slice import (
     DecisionModelSliceResult,
     build_compact_decision_model,
     evaluate_decision_model_brief,
@@ -32,13 +32,13 @@ from epistemic_case_mapper.decision_model_slice import (
     run_decision_model_slice,
 )
 
-from epistemic_case_mapper.map_briefing_decision_synthesis import build_decision_synthesis_model
-from epistemic_case_mapper.map_briefing_argument_model import build_argument_model
-from epistemic_case_mapper.map_briefing_graph_synthesis import build_graph_synthesis_packet
-from epistemic_case_mapper.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
-from epistemic_case_mapper.map_briefing_telemetry import build_gap_diagnosis, render_gap_diagnosis_markdown
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_synthesis import build_decision_synthesis_model
+from epistemic_case_mapper.pipeline.briefing.map_briefing_argument_model import build_argument_model
+from epistemic_case_mapper.pipeline.briefing.map_briefing_graph_synthesis import build_graph_synthesis_packet
+from epistemic_case_mapper.pipeline.briefing.map_briefing_claim_canonicalization import canonicalize_claims_for_briefing
+from epistemic_case_mapper.pipeline.briefing.map_briefing_telemetry import build_gap_diagnosis, render_gap_diagnosis_markdown
 
-from epistemic_case_mapper.map_briefing_reader_contracts import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_contracts import (
     _human_current_read_for_crux,
     _human_would_change_if_for_crux,
     _map_profile_detection_text,
@@ -64,9 +64,9 @@ from epistemic_case_mapper.map_briefing_reader_contracts import (
     polish_briefing_for_reader,
 )
 
-from epistemic_case_mapper.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
+from epistemic_case_mapper.pipeline.briefing.map_briefing_rewrite_edits import apply_reader_memo_edit_suggestions
 
-from epistemic_case_mapper.map_briefing_memo_slots import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_slots import (
     _banned_editorial_phrases,
     _candidate_rows_for_memo_slot,
     _comparison_side_terms,
@@ -105,7 +105,7 @@ from epistemic_case_mapper.map_briefing_memo_slots import (
     build_decision_memo_slots,
 )
 
-from epistemic_case_mapper.map_briefing_reader_polish import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_polish import (
     _build_final_evidence_appendix,
     _build_final_reader_memo,
     _build_polished_evidence_appendix,
@@ -144,9 +144,9 @@ from epistemic_case_mapper.map_briefing_reader_polish import (
     clean_reader_briefing_text,
     clean_reader_memo_text,
 )
-from epistemic_case_mapper.map_briefing_memo_metadata import ensure_reader_memo_metadata
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_metadata import ensure_reader_memo_metadata
 
-from epistemic_case_mapper.map_briefing_evidence_tables import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_evidence_tables import (
     _COVERAGE_CONCEPT_PRIORITY,
     _COVERAGE_CONCEPT_SLOT,
     _NON_OBLIGATORY_COVERAGE_CONCEPTS,
@@ -201,7 +201,7 @@ from epistemic_case_mapper.map_briefing_evidence_tables import (
     build_evidence_weighting_ledger,
 )
 
-from epistemic_case_mapper.map_briefing_decision_model import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_model import (
     _claim_concepts,
     _claim_evidence_weight_score,
     _claim_noise_profile,
@@ -237,13 +237,13 @@ from epistemic_case_mapper.map_briefing_decision_model import (
     build_map_sufficiency_report,
     build_proposition_clusters,
 )
-from epistemic_case_mapper.map_briefing_claim_eligibility import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_claim_eligibility import (
     _looks_like_boilerplate_disclosure,
     _looks_like_publisher_or_license_boilerplate,
     _looks_like_statistical_method_trivia,
 )
 
-from epistemic_case_mapper.map_briefing_evidence_partition import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_evidence_partition import (
     _active_overstatement_lints,
     _any_text_contains,
     _attach_cluster_tensions,
@@ -299,7 +299,7 @@ from epistemic_case_mapper.map_briefing_evidence_partition import (
     repair_briefing_payload,
 )
 
-from epistemic_case_mapper.map_briefing_map_utils import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_map_utils import (
     _apply_briefing_contract_lint,
     _apply_decision_model_lint,
     _claim_alias_lookup,
@@ -351,7 +351,7 @@ from epistemic_case_mapper.map_briefing_map_utils import (
     replace_source_ids,
 )
 
-from epistemic_case_mapper.map_briefing_validation import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_validation import (
     _briefing_overclaims_against_scaffold,
     _clean_reader_relation_placeholders,
     _confidence_label,

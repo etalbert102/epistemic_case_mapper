@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_presentation import run_memo_ready_presentation_normalization
 
 
 def test_presentation_removes_model_authored_sources_before_deterministic_sources() -> None:

@@ -4,8 +4,8 @@ import json
 import sys
 from pathlib import Path
 
-import epistemic_case_mapper.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
-from epistemic_case_mapper.staged_semantic_evidence_units import (
+import epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc_pipeline as whole_doc_pipeline
+from epistemic_case_mapper.pipeline.map.staged_semantic_evidence_units import (
     build_quantity_tuple_binding_report,
     build_quantity_tuple_mutation_eval,
     build_source_evidence_units,

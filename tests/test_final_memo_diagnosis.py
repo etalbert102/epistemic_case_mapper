@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_final_memo_diagnosis import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_final_memo_diagnosis import (
     build_memo_final_diagnosis,
     build_memo_protected_spans,
     diagnosis_improved,

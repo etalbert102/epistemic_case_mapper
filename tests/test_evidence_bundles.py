@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.evidence_bundles import (
+from epistemic_case_mapper.pipeline.documents.evidence_bundles import (
     bundle_reconciliation_report,
     collect_assertion_bundles,
     normalize_assertion_bundles,

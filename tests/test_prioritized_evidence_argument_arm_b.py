@@ -4,24 +4,24 @@ import json
 import re
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
-from epistemic_case_mapper.map_briefing_prioritized_argument_evaluation import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_evaluation import (
     build_arm_comparison_to_current,
     resolve_current_baseline,
 )
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_b import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import (
     audit_prompt_submissions,
     build_arm_b_projection,
     load_frozen_arm_b_inputs,
     run_arm_b_b0,
 )
-from epistemic_case_mapper.map_briefing_prioritized_argument_arm_c import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c import (
     build_arm_c_prioritization_prompt,
     build_arm_c_projection,
     normalize_arm_c_prioritized_argument_ids,
     verify_arm_c_prioritized_argument,
 )
-from epistemic_case_mapper.map_briefing_section_evidence_anchoring import build_evidence_expression_contracts
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_anchoring import build_evidence_expression_contracts
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
@@ -364,8 +364,8 @@ def test_production_synthesis_uses_prioritized_argument_path(monkeypatch, tmp_pa
         )
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend=backend)
 
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_prioritized_argument_arm_c.run_model_backend", fake_backend)
-    monkeypatch.setattr("epistemic_case_mapper.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_c.run_model_backend", fake_backend)
+    monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
     result = run_memo_ready_packet_synthesis(
         packet,

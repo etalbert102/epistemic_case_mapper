@@ -40,7 +40,7 @@ from epistemic_case_mapper.map_briefing import (
     _rewrite_mentions_anchor_row,
 )
 from epistemic_case_mapper.staged_semantic_pipeline import RELATION_PROMPT_VERSION
-from epistemic_case_mapper.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import WHOLE_DOC_CLAIM_PROMPT_VERSION
 
 
 def test_decision_model_clusters_claims_into_neutral_default_with_subgroup_caution() -> None:

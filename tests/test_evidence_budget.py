@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_evidence_budget import build_evidence_budget_bundle
+from epistemic_case_mapper.pipeline.briefing.map_briefing_evidence_budget import build_evidence_budget_bundle
 
 
 def test_evidence_budget_accounts_for_foreground_background_and_sources() -> None:

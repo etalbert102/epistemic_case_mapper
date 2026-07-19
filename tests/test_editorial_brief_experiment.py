@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from epistemic_case_mapper.map_briefing_editorial_brief_experiment import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_editorial_brief_experiment import (
     VARIANTS,
     build_source_weighted_outline_integrated_section_plan,
     build_outline_contract_integration_report,
@@ -97,7 +97,7 @@ def test_source_weighted_narrative_outline_experiment_writes_outputs(tmp_path: P
 def test_source_weighted_outline_integrates_with_section_plan() -> None:
     packet = _memo_ready_packet()
 
-    from epistemic_case_mapper.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
+    from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan
 
     section_plan = build_memo_ready_section_synthesis_plan(packet)
     variant = next(variant for variant in VARIANTS if variant.variant_id == "source_weighted")

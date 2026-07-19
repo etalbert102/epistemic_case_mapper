@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_memo_polish_diagnostics import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_polish_diagnostics import (
     build_memo_polish_diagnostics,
     high_confidence_unsupported_additions,
     prose_quality_diagnostics,

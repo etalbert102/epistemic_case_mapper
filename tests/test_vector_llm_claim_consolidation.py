@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from epistemic_case_mapper.model_backends import ModelBackendResult
-from epistemic_case_mapper.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
+from epistemic_case_mapper.pipeline.map.staged_semantic_claim_consolidation import consolidate_claims_with_vector_llm
 
 
 def test_vector_llm_consolidation_merges_model_adjudicated_duplicates(tmp_path: Path) -> None:

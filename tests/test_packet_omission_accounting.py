@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_packet_coverage import build_packet_coverage_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_packet_coverage import build_packet_coverage_report
 
 
 def test_high_priority_omission_accounting_distinguishes_represented_from_lost() -> None:

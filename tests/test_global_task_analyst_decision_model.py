@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from epistemic_case_mapper.map_briefing_analyst_decision_model_global_tasks import (
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_model_global_tasks import (
     build_analyst_decision_model_from_global_tasks,
     build_global_analyst_task_prompt,
     build_global_analyst_tasks,
 )
-from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_runner import run_global_analyst_task_calls
-from epistemic_case_mapper.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_decision_model_global_task_runner import run_global_analyst_task_calls
+from epistemic_case_mapper.pipeline.briefing.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
