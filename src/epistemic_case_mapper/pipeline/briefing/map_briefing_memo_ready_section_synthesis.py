@@ -119,6 +119,7 @@ def run_parallel_memo_ready_section_generation(
             tagged_memo,
             evidence_contracts,
             source_evidence_by_source=collect_packet_source_evidence_by_source(memo_ready_packet or {}),
+            source_trail=_list(_dict(memo_ready_packet).get("source_trail")),
         )
         if evidence_contracts
         else {"memo": tagged_memo, "trace": []}

@@ -134,6 +134,27 @@ def test_evidence_reconciliation_warns_when_required_quantity_missing_near_tag()
     assert report["quantity_warnings"][0]["missing_quantity_near_tag"] == "25%"
 
 
+def test_reconciliation_warns_when_measurement_unit_is_missing_near_tag() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "source_ids": ["s1"],
+            "claim": "The marker was higher (MD = 8.14 mg/dL).",
+            "required": True,
+        }
+    ]
+
+    report = build_evidence_reconciliation_report(
+        "The marker was higher (MD = 8.14) {E:e1}.",
+        "The marker was higher (MD = 8.14) [s1].",
+        contracts,
+    )
+
+    assert report["status"] == "warning"
+    assert report["quantity_warning_count"] == 1
+    assert report["quantity_warnings"][0]["missing_quantity_near_tag"] == "MD = 8.14 mg/dL"
+
+
 def test_evidence_reconciliation_accepts_quantity_on_one_repeated_tag_expression() -> None:
     contracts = [
         {
@@ -488,6 +509,25 @@ def test_renderer_keeps_contract_fallback_without_source_specific_evidence() -> 
 
     assert "[s2]" in rendered["memo"]
     assert rendered["trace"][0]["citation_selection_basis"] == "contract_fallback"
+
+
+def test_renderer_appends_resolvable_registry_for_cited_sources_only() -> None:
+    contracts = [
+        {"evidence_id": "e1", "source_ids": ["SRC_A"], "claim": "Supported claim."},
+    ]
+
+    rendered = render_evidence_tagged_memo(
+        "Supported claim {E:e1}.",
+        contracts,
+        source_trail=[
+            {"source_id": "SRC_A", "source_label": "Pmc12345", "source_slug": "pmc12345"},
+            {"source_id": "SRC_UNUSED", "source_label": "Unused Study"},
+        ],
+    )
+
+    assert "## Sources" in rendered["memo"]
+    assert "SRC_A: [Pmc12345](https://pmc.ncbi.nlm.nih.gov/articles/PMC12345/)" in rendered["memo"]
+    assert "SRC_UNUSED" not in rendered["memo"]
 
 
 def test_reconciliation_allows_adjacent_source_lists_that_overlap_the_evidence_contract() -> None:

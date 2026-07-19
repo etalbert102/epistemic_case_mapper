@@ -960,6 +960,7 @@ def render_evidence_tagged_memo(
     contracts: list[dict[str, Any]],
     *,
     source_evidence_by_source: dict[str, list[str]] | None = None,
+    source_trail: list[Any] | None = None,
 ) -> dict[str, Any]:
     contracts_by_id = _contracts_by_evidence_alias(contracts)
     known_source_ids = {
@@ -1016,7 +1017,48 @@ def render_evidence_tagged_memo(
     memo = BRACE_TAG_RE.sub(replace, tagged_memo)
     memo = re.sub(r"[ \t]+(\n)", r"\1", memo)
     memo = re.sub(r"\s+\.", ".", memo)
-    return {"memo": repair_markdown_structure(memo), "trace": trace}
+    memo = repair_markdown_structure(memo)
+    memo = _append_cited_source_registry(memo, trace, source_trail or [])
+    return {"memo": memo, "trace": trace}
+
+
+def _append_cited_source_registry(memo: str, trace: list[dict[str, Any]], source_trail: list[Any]) -> str:
+    if not source_trail or re.search(r"(?m)^## Sources\s*$", memo):
+        return memo
+    cited_ids = _dedupe(
+        source_id
+        for row in trace
+        for source_id in _string_list(row.get("source_ids"))
+    )
+    sources_by_id = {
+        str(row.get("source_id") or row.get("citation_key") or "").strip(): row
+        for row in source_trail
+        if isinstance(row, dict) and str(row.get("source_id") or row.get("citation_key") or "").strip()
+    }
+    lines = []
+    for source_id in cited_ids:
+        source = sources_by_id.get(source_id, {})
+        display = str(
+            source.get("display_label")
+            or source.get("source_label")
+            or source.get("original_source_id")
+            or source.get("source_slug")
+            or source_id
+        ).strip()
+        url = str(source.get("source_url") or "").strip() or _stable_source_url(source)
+        reference = f"[{display}]({url})" if url else display
+        lines.append(f"- {source_id}: {reference}")
+    if not lines:
+        return memo
+    return memo.rstrip() + "\n\n## Sources\n\n" + "\n".join(lines) + "\n"
+
+
+def _stable_source_url(source: dict[str, Any]) -> str:
+    for key in ("original_source_id", "source_slug", "source_label", "display_label"):
+        match = re.fullmatch(r"pmc(\d+)", str(source.get(key) or "").strip(), re.IGNORECASE)
+        if match:
+            return f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{match.group(1)}/"
+    return ""
 
 
 def _quantity_bound_source_ids(

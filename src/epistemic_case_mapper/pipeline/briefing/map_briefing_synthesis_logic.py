@@ -111,8 +111,51 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
         selected = f"With {exposure.lower()}, {selected}"
     selected = selected[:1].upper() + selected[1:]
     selected = re.sub(r"\b(the odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
+    selected = _restore_observational_population(selected, contract)
+    selected = _restore_statistic_unit(selected, contract)
     selected = _normalize_source_excerpt_surface(selected)
     return _calibrate_observational_causality(selected, contract)
+
+
+def _restore_observational_population(text: str, contract: dict[str, Any]) -> str:
+    context = _dict(contract.get("claim_context"))
+    design = str(context.get("evidence_design") or "")
+    population = str(context.get("population") or "")
+    if not re.search(r"\b(?:cohort|observational)\b", design, re.IGNORECASE) or not population:
+        return text
+    population_term = next(
+        (
+            term
+            for term in _string_list(contract.get("must_preserve_terms"))
+            if len(term) > 3 and term.lower() in population.lower()
+        ),
+        "",
+    )
+    if not population_term or population_term.lower() in text.lower():
+        return text
+    return f"Among {population_term}, {text[:1].lower()}{text[1:]}"
+
+
+def _restore_statistic_unit(text: str, contract: dict[str, Any]) -> str:
+    unit = ""
+    for term in _string_list(contract.get("must_preserve_terms")):
+        match = re.search(
+            r"\b(?:MD|mean difference)\s*=\s*\d+(?:\.\d+)?\s+([A-Za-zµμ]+(?:/[A-Za-zµμ]+)?)",
+            term,
+            re.IGNORECASE,
+        )
+        if match:
+            unit = match.group(1)
+            break
+    if not unit:
+        return text
+    return re.sub(
+        r"\b(MD\s*=\s*\d+(?:\.\d+)?)(?!\s*[A-Za-zµμ])",
+        rf"\1 {unit}",
+        text,
+        count=1,
+        flags=re.IGNORECASE,
+    )
 
 
 def _normalize_source_excerpt_surface(text: str) -> str:
@@ -125,6 +168,12 @@ def _normalize_source_excerpt_surface(text: str) -> str:
         r"\(HR\s+(\d+(?:\.\d+)?);\s*(\d+(?:\.\d+)?[–-]\d+(?:\.\d+)?)\)",
         r"(HR \1; 95% CI \2)",
         normalized,
+    )
+    normalized = re.sub(
+        r"\bfound (?:non-significant|nonsignificant) effects of (.+?) on ([^.]+)(\.)?$",
+        r"did not detect statistically significant changes in \2 from \1\3",
+        normalized,
+        flags=re.IGNORECASE,
     )
     return re.sub(
         r">\s*0\s*≤\s*(\d+(?:\.\d+)?)\s*([^,;)]+)",

@@ -1,5 +1,6 @@
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
     build_synthesis_constraints,
+    controlling_source_excerpt,
     expand_reader_abbreviations,
     repair_section_synthesis_logic,
     strip_redundant_post_tag_quantities,
@@ -89,6 +90,71 @@ def test_synthesis_logic_qualifies_indirect_evidence_at_the_claim() -> None:
     )
 
     assert "Indirectly, dietary exposure was associated with mortality {E:e2}." in repaired
+
+
+def test_source_excerpt_calibrates_observational_causality_and_formatting() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "claim_context": {"evidence_design": "Prospective cohort"},
+            "source_evidence": [
+                {
+                    "source_id": "s1",
+                    "excerpts": [
+                        "In multivariable-adjusted analysis, intake > 4/week led to an increased risk "
+                        "(Hazard ratio [HR] = 1.50; 95%CI 1.13–1.99)."
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert excerpt == (
+        "In multivariable-adjusted analysis, intake > 4/week was associated with increased risk "
+        "(hazard ratio (HR) 1.50; 95% CI 1.13–1.99)."
+    )
+
+
+def test_source_excerpt_restores_observational_population_scope() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "claim_context": {
+                "evidence_design": "Prospective cohort study",
+                "population": "461,213 Chinese adults aged 30–79 years",
+            },
+            "must_preserve_terms": ["Chinese adults"],
+            "source_evidence": [{"source_id": "s1", "excerpts": ["Daily use was associated with lower risk."]}],
+        }
+    )
+
+    assert excerpt == "Among Chinese adults, daily use was associated with lower risk."
+
+
+def test_source_excerpt_restores_mean_difference_unit() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "must_preserve_terms": ["MD = 8.48 mg/dL"],
+            "source_evidence": [
+                {"source_id": "s1", "excerpts": ["The marker was higher (MD = 8.14; 95% CI 4.46 to 11.82)."]}
+            ],
+        }
+    )
+
+    assert excerpt == "The marker was higher (MD = 8.14 mg/dL; 95% CI 4.46 to 11.82)."
+
+
+def test_source_excerpt_calibrates_nonsignificant_effect_wording() -> None:
+    excerpt = controlling_source_excerpt(
+        {
+            "source_evidence": [
+                {
+                    "source_id": "s1",
+                    "excerpts": ["A review found nonsignificant effects of increased use on clinical markers."],
+                }
+            ]
+        }
+    )
+
+    assert excerpt == "A review did not detect statistically significant changes in clinical markers from increased use."
 
 
 def test_reader_abbreviations_expand_on_first_use() -> None:

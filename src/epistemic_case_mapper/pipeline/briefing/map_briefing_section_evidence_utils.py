@@ -101,7 +101,41 @@ def quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list
                         "span": _short_text(spans[0], 240),
                     }
                 )
+        for surface in _required_measurement_surfaces(str(contract.get("claim") or "")):
+            if not any(_measurement_surface_present(surface, span) for span in spans):
+                warnings.append(
+                    {
+                        "evidence_id": contract.get("evidence_id"),
+                        "missing_quantity_near_tag": surface,
+                        "span": _short_text(spans[0], 240),
+                    }
+                )
     return warnings
+
+
+def _required_measurement_surfaces(text: str) -> list[str]:
+    pattern = re.compile(
+        r"\b(?:MD|mean difference)\s*=\s*\d+(?:\.\d+)?\s+[A-Za-zµμ]+(?:/[A-Za-zµμ]+)?",
+        re.IGNORECASE,
+    )
+    return _dedupe(match.group(0) for match in pattern.finditer(str(text or "")))
+
+
+def _measurement_surface_present(surface: str, text: str) -> bool:
+    parts = re.search(
+        r"\b(?:MD|mean difference)\s*=\s*(\d+(?:\.\d+)?)\s+([A-Za-zµμ]+(?:/[A-Za-zµμ]+)?)",
+        surface,
+        re.IGNORECASE,
+    )
+    if not parts:
+        return False
+    return bool(
+        re.search(
+            rf"\b(?:MD|mean difference)\s*=\s*{re.escape(parts.group(1))}\s+{re.escape(parts.group(2))}\b",
+            str(text or ""),
+            re.IGNORECASE,
+        )
+    )
 
 
 def span_for_evidence_id(text: str, evidence_id: str) -> str:
