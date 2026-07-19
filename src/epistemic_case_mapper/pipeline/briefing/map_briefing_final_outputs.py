@@ -204,6 +204,8 @@ def _run_memo_ready_final_output_path(
         production_context=memo_package["scaffold"],
         artifacts=artifacts,
     )
+    retention_packet = synthesis.get("retention_packet") if isinstance(synthesis, dict) else None
+    active_memo_ready_packet = retention_packet if isinstance(retention_packet, dict) else memo_ready_packet
     record_memo_progress(
         artifacts,
         "memo_ready_synthesis",
@@ -233,7 +235,7 @@ def _run_memo_ready_final_output_path(
     memo_package["scaffold"]["section_context_acceptance_status"] = "ready"
     rewrite_result = _memo_ready_rewrite_result(synthesis)
     record_memo_progress(artifacts, "memo_ready_retention_check", "started", backend=backend_config.backend)
-    retention = build_memo_ready_packet_retention_report(str(rewrite_result["memo"]), memo_ready_packet)
+    retention = build_memo_ready_packet_retention_report(str(rewrite_result["memo"]), active_memo_ready_packet)
     record_memo_progress(
         artifacts,
         "memo_ready_retention_check",
@@ -244,7 +246,7 @@ def _run_memo_ready_final_output_path(
     record_memo_progress(artifacts, "memo_ready_repair", "started", backend=backend_config.backend)
     repair = run_memo_ready_packet_repair(
         str(rewrite_result["memo"]),
-        memo_ready_packet,
+        active_memo_ready_packet,
         retention,
         backend=backend_config.backend,
         backend_timeout=backend_config.timeout,
@@ -260,16 +262,21 @@ def _run_memo_ready_final_output_path(
     rewrite_result["memo"] = repair["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_repair_status"] = repair.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["active_memo_ready_packet_method"] = str(
-        memo_ready_packet.get("method") or ""
+        active_memo_ready_packet.get("method") or ""
     )
-    pre_polish_presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), memo_ready_packet)
+    rewrite_result.setdefault("report", {})["prioritized_retention_scope"] = active_memo_ready_packet.get(
+        "prioritized_retention_scope", {}
+    )
+    pre_polish_presentation = run_memo_ready_presentation_normalization(
+        str(rewrite_result["memo"]), active_memo_ready_packet
+    )
     rewrite_result["memo"] = pre_polish_presentation["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_status"] = pre_polish_presentation.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["memo_ready_pre_polish_presentation_normalization_changes"] = pre_polish_presentation.get("report", {}).get("changes", [])
     record_memo_progress(artifacts, "memo_ready_final_polish", "started", backend=backend_config.backend)
     final_polish = run_memo_ready_final_polish(
         str(rewrite_result["memo"]),
-        memo_ready_packet,
+        active_memo_ready_packet,
         backend=backend_config.backend,
         backend_timeout=backend_config.timeout,
         backend_retries=backend_config.retries,
@@ -283,7 +290,7 @@ def _run_memo_ready_final_output_path(
     )
     rewrite_result["memo"] = final_polish["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_final_polish_status"] = final_polish.get("report", {}).get("status")
-    presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), memo_ready_packet)
+    presentation = run_memo_ready_presentation_normalization(str(rewrite_result["memo"]), active_memo_ready_packet)
     record_memo_progress(
         artifacts,
         "memo_ready_presentation_normalization",
@@ -294,7 +301,7 @@ def _run_memo_ready_final_output_path(
     rewrite_result["memo"] = presentation["memo"]
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_status"] = presentation.get("report", {}).get("status")
     rewrite_result.setdefault("report", {})["memo_ready_presentation_normalization_changes"] = presentation.get("report", {}).get("changes", [])
-    _attach_final_source_weighting_fidelity(rewrite_result, memo_ready_packet)
+    _attach_final_source_weighting_fidelity(rewrite_result, active_memo_ready_packet)
     return {
         "section_rewrite_result": section_rewrite_result,
         "rewrite_result": rewrite_result,
@@ -375,7 +382,9 @@ def _memo_ready_synthesis_failed(synthesis_result: dict[str, Any]) -> bool:
     report = synthesis_result.get("report") if isinstance(synthesis_result, dict) else {}
     if not isinstance(report, dict):
         return True
-    return report.get("accepted") is not True
+    if report.get("accepted") is True:
+        return False
+    return not (report.get("repairable_candidate") is True and bool(str(synthesis_result.get("memo") or "").strip()))
 
 
 def _memo_ready_failure_result(rewrite_result: dict[str, Any]) -> dict[str, Any]:

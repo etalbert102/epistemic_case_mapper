@@ -446,6 +446,16 @@ def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> d
         for row in _list(parsed.get("evidence_accounting"))
         if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
     }
+    owned_ids = {
+        str(row.get("evidence_item_id") or "").strip()
+        for row in _list(parsed.get("evidence_accounting"))
+        if isinstance(row, dict)
+        and str(row.get("disposition") or "").strip() == "owned"
+        and str(row.get("evidence_item_id") or "").strip()
+    }
+    unassigned_owned_ids = sorted(owned_ids - required_ids)
+    if unassigned_owned_ids:
+        issues.append(f"owned_evidence_not_in_required_move:{', '.join(unassigned_owned_ids)}")
     foreground_ids = _foreground_and_counterweight_writer_ids(inputs)
     missing_accounting = sorted(foreground_ids - accounted_ids - required_ids)
     return {
@@ -457,6 +467,7 @@ def verify_arm_c_prioritized_argument(inputs: dict[str, Any], payload: Any) -> d
         "required_evidence_count": len(required_ids),
         "unknown_evidence_ids": unknown_evidence,
         "unknown_evidence_bundle_ids": unknown_bundles,
+        "owned_evidence_not_in_required_move_ids": unassigned_owned_ids,
         "missing_foreground_accounting_ids": missing_accounting,
         "warnings": [f"missing_foreground_accounting:{', '.join(missing_accounting)}"] if missing_accounting else [],
         "issues": _dedupe(issues),

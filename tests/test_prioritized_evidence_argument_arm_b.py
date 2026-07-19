@@ -4,7 +4,10 @@ import json
 import re
 from pathlib import Path
 
-from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import run_memo_ready_packet_synthesis
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization import (
+    _project_prioritized_retention_packet,
+    run_memo_ready_packet_synthesis,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_evaluation import (
     build_arm_comparison_to_current,
     resolve_current_baseline,
@@ -199,6 +202,88 @@ def test_arm_c_projection_uses_prioritized_move_required_ids_not_legacy_must_use
     required = projection["section_contract_overlap_report"]["required_by_section"]
     assert required["answer_evidence"] == ["decision_writer_item_001"]
     assert "decision_writer_item_004" not in projection["projection_evaluation_packet"]["mandatory_evidence_ids"]
+
+
+def test_arm_c_verification_rejects_owned_evidence_without_required_move() -> None:
+    inputs = load_frozen_arm_b_inputs(FROZEN_EGGS)
+    analyst = inputs["analyst_decision_model"]
+    argument = {
+        "schema_id": "arm_c_prioritized_argument_v1",
+        "decision_question": analyst["decision_question"],
+        "frozen_direct_answer": analyst["direct_answer"],
+        "confidence": analyst["confidence"],
+        "argument_thesis": "Use the owned evidence assigned to required moves.",
+        "moves": [
+            {
+                "move_id": "m1",
+                "primary_section": "answer_evidence",
+                "proposition": "The selected evidence supports the answer.",
+                "warrant": "It is the prioritized support item.",
+                "decision_effect": "It supports the current read.",
+                "required": True,
+                "evidence_item_ids": ["decision_writer_item_001"],
+            }
+        ],
+        "evidence_accounting": [
+            {"evidence_item_id": "decision_writer_item_001", "disposition": "owned", "rationale": "Used."},
+            {"evidence_item_id": "decision_writer_item_004", "disposition": "owned", "rationale": "Not used."},
+        ],
+    }
+
+    report = verify_arm_c_prioritized_argument(inputs, argument)
+
+    assert report["status"] == "fail"
+    assert report["owned_evidence_not_in_required_move_ids"] == ["decision_writer_item_004"]
+    assert "owned_evidence_not_in_required_move:decision_writer_item_004" in report["issues"]
+
+
+def test_prioritized_retention_packet_limits_mandatory_scope_without_dropping_context() -> None:
+    packet = {
+        "evidence_items": [
+            {"item_id": "e1", "must_use": True, "obligation_level": "must_include"},
+            {"item_id": "e2", "must_use": True, "obligation_level": "must_include"},
+        ],
+        "memo_obligations": {
+            "obligations": [
+                {"obligation_id": "o1", "evidence_item_ids": ["e1", "e2"]},
+                {"obligation_id": "o2", "evidence_item_ids": ["e2"]},
+                {"obligation_id": "o3", "statement": "Retain this packet-level warning."},
+            ]
+        },
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {"check_id": "c1", "evidence_item_ids": ["e1"]},
+                {"check_id": "c2", "evidence_item_ids": ["e2"]},
+            ]
+        },
+    }
+    argument = {
+        "evidence_accounting": [
+            {"evidence_item_id": "e1", "disposition": "owned"},
+            {"evidence_item_id": "e2", "disposition": "demoted"},
+        ]
+    }
+    projection = {"projection_evaluation_packet": {"mandatory_evidence_ids": ["e1"]}}
+
+    projected = _project_prioritized_retention_packet(
+        packet,
+        prioritized_argument=argument,
+        projection=projection,
+    )
+
+    assert len(projected["evidence_items"]) == 2
+    assert projected["evidence_items"][0]["must_use"] is True
+    assert projected["evidence_items"][1]["must_use"] is False
+    assert projected["evidence_items"][1]["obligation_level"] == "supporting"
+    assert projected["memo_obligations"]["obligations"] == [
+        {"obligation_id": "o1", "evidence_item_ids": ["e1"]},
+        {"obligation_id": "o3", "statement": "Retain this packet-level warning."},
+    ]
+    assert projected["canonical_decision_writer_packet"]["mandatory_retention_checklist"] == [
+        {"check_id": "c1", "evidence_item_ids": ["e1"]}
+    ]
+    assert projected["prioritized_retention_scope"]["required_evidence_item_ids"] == ["e1"]
+    assert packet["evidence_items"][1]["must_use"] is True
 
 
 def test_arm_c_prompt_validation_and_projection_are_bundle_native() -> None:

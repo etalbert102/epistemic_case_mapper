@@ -15,10 +15,19 @@ def build_final_lineage_report(
 ) -> dict[str, Any]:
     """Build append-only final-stage lineage without inferring success from prose."""
 
+    repair_stage = _lineage_stage("repair", repair_report, not_applicable_statuses={"not_needed"})
+    synthesis_stage = _lineage_stage("synthesis", synthesis_report)
+    if synthesis_report.get("repairable_candidate") is True and repair_stage.get("accepted"):
+        synthesis_stage.update(
+            {
+                "accepted": True,
+                "acceptance_basis": "repairable_candidate_with_accepted_repair",
+            }
+        )
     stages = [
         _packet_lineage_stage(_dict(scaffold.get("packet_quality_gate_report"))),
-        _lineage_stage("synthesis", synthesis_report),
-        _lineage_stage("repair", repair_report, not_applicable_statuses={"not_needed"}),
+        synthesis_stage,
+        repair_stage,
         _lineage_stage("polish", polish_report),
         _lineage_stage("presentation", presentation_report),
     ]

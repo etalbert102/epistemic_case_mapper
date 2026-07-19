@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import json
 import os
 import re
@@ -146,7 +147,7 @@ def run_memo_ready_packet_synthesis(
         source_weighted_outline_contract_run=outline_contract_run,
     )
     if prioritized_argument_synthesis.get("enabled"):
-        if prioritized_argument_synthesis.get("accepted"):
+        if prioritized_argument_synthesis.get("accepted") or prioritized_argument_synthesis.get("repairable_candidate"):
             return _dict(prioritized_argument_synthesis.get("synthesis_result"))
         report = {
             "schema_id": "memo_ready_packet_synthesis_report_v1",
@@ -287,8 +288,13 @@ def _prepare_prioritized_argument_synthesis(
             "raw": argument_run.get("raw", ""),
             "report": report,
         }
-    synthesis = _run_parallel_memo_ready_section_synthesis(
+    retention_packet = _project_prioritized_retention_packet(
         packet,
+        prioritized_argument=_dict(argument_run.get("prioritized_argument")),
+        projection=projection,
+    )
+    synthesis = _run_parallel_memo_ready_section_synthesis(
+        retention_packet,
         section_plan=_dict(projection.get("section_plan")),
         backend=backend,
         backend_timeout=backend_timeout,
@@ -298,10 +304,18 @@ def _prepare_prioritized_argument_synthesis(
         source_weighted_outline_contract_run=source_weighted_outline_contract_run,
     )
     synthesis_report = _dict(synthesis.get("report"))
+    repairable_candidate = bool(synthesis.get("memo")) and synthesis_report.get("repairable_candidate") is True
     report = {
         "schema_id": "prioritized_argument_synthesis_run_report_v1",
-        "status": "accepted" if synthesis_report.get("accepted") is True else "section_synthesis_failed",
+        "status": (
+            "accepted"
+            if synthesis_report.get("accepted") is True
+            else "retention_repair_required"
+            if repairable_candidate
+            else "section_synthesis_failed"
+        ),
         "accepted": synthesis_report.get("accepted") is True,
+        "repairable_candidate": repairable_candidate,
         "argument_report": _dict(argument_run.get("report")),
         "projection_report": _dict(projection.get("projection_evaluation_packet")),
         "section_generation_status": synthesis_report.get("status"),
@@ -316,16 +330,83 @@ def _prepare_prioritized_argument_synthesis(
         }
     )
     synthesis["report"] = synthesis_report
+    synthesis["retention_packet"] = retention_packet
     if artifacts:
         write_json(artifacts / "prioritized_argument_synthesis_report.json", report)
     return {
         "enabled": True,
         "accepted": synthesis_report.get("accepted") is True,
+        "repairable_candidate": repairable_candidate,
         "synthesis_result": synthesis,
         "prompt": synthesis.get("prompt", argument_run.get("prompt", "")),
         "raw": synthesis.get("raw", argument_run.get("raw", "")),
         "report": report,
     }
+
+
+def _project_prioritized_retention_packet(
+    packet: dict[str, Any],
+    *,
+    prioritized_argument: dict[str, Any],
+    projection: dict[str, Any],
+) -> dict[str, Any]:
+    projected = copy.deepcopy(packet)
+    projection_report = _dict(projection.get("projection_evaluation_packet"))
+    required_ids = set(_string_list(projection_report.get("mandatory_evidence_ids")))
+
+    for item in _list(projected.get("evidence_items")):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("item_id") or "").strip()
+        if item_id not in required_ids:
+            item["must_use"] = False
+            if item.get("obligation_level") == "must_include":
+                item["obligation_level"] = "supporting"
+
+    memo_obligations = _dict(projected.get("memo_obligations"))
+    if memo_obligations:
+        memo_obligations["obligations"] = _filter_retention_rows(
+            _list(memo_obligations.get("obligations")), required_ids
+        )
+        projected["memo_obligations"] = memo_obligations
+
+    canonical = _dict(projected.get("canonical_decision_writer_packet"))
+    if canonical:
+        canonical["mandatory_retention_checklist"] = _filter_retention_rows(
+            _list(canonical.get("mandatory_retention_checklist")), required_ids
+        )
+        projected["canonical_decision_writer_packet"] = canonical
+
+    accounting = [
+        {
+            "evidence_item_id": str(row.get("evidence_item_id") or "").strip(),
+            "disposition": str(row.get("disposition") or "").strip(),
+        }
+        for row in _list(prioritized_argument.get("evidence_accounting"))
+        if isinstance(row, dict) and str(row.get("evidence_item_id") or "").strip()
+    ]
+    projected["prioritized_retention_scope"] = {
+        "schema_id": "prioritized_retention_scope_v1",
+        "required_evidence_item_ids": sorted(required_ids),
+        "required_evidence_item_count": len(required_ids),
+        "evidence_accounting": accounting,
+    }
+    return projected
+
+
+def _filter_retention_rows(rows: list[Any], required_ids: set[str]) -> list[dict[str, Any]]:
+    filtered: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        evidence_ids = _string_list(row.get("evidence_item_ids"))
+        if not evidence_ids:
+            filtered.append(row)
+            continue
+        retained_ids = [evidence_id for evidence_id in evidence_ids if evidence_id in required_ids]
+        if retained_ids:
+            filtered.append({**row, "evidence_item_ids": retained_ids})
+    return filtered
 
 
 def _prioritized_argument_inputs(packet: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
@@ -804,6 +885,7 @@ def _run_parallel_memo_ready_section_synthesis(
         {
             "status": status,
             "accepted": accepted,
+            "repairable_candidate": not accepted and bool(candidate),
             "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "retention_status": retention.get("status"),
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),

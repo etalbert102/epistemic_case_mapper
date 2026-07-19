@@ -322,6 +322,39 @@ def test_synthesis_path_stops_on_any_report_without_explicit_acceptance() -> Non
     assert _memo_ready_synthesis_failed({"report": {"status": "production_readiness_blocked", "accepted": False}}) is True
     assert _memo_ready_synthesis_failed({"report": {"status": "unknown_future_status"}}) is True
     assert _memo_ready_synthesis_failed({"report": {"status": "accepted_with_warnings", "accepted": True}}) is False
+    assert _memo_ready_synthesis_failed(
+        {"memo": "## Decision Brief\n\nRepairable draft.", "report": {"accepted": False, "repairable_candidate": True}}
+    ) is False
+    assert _memo_ready_synthesis_failed({"memo": "", "report": {"accepted": False, "repairable_candidate": True}}) is True
+
+
+def test_final_lineage_accepts_repairable_synthesis_only_after_accepted_repair() -> None:
+    common = {
+        "scaffold": {"packet_quality_gate_report": {"status": "ready", "packet_ready_for_synthesis": True}},
+        "synthesis_report": {
+            "status": "accepted_with_retention_warnings",
+            "accepted": False,
+            "repairable_candidate": True,
+        },
+        "polish_report": {"status": "accepted", "accepted": True},
+        "presentation_report": {"status": "accepted", "accepted": True},
+        "reader_output_available": True,
+    }
+
+    accepted = build_final_lineage_report(
+        **common,
+        repair_report={"status": "accepted", "accepted": True},
+    )
+    blocked = build_final_lineage_report(
+        **common,
+        repair_report={"status": "partial_retention_improvement_applied_with_warnings", "accepted": False},
+    )
+
+    assert accepted["accepted"] is True
+    assert accepted["stages"][1]["acceptance_basis"] == "repairable_candidate_with_accepted_repair"
+    assert blocked["accepted"] is False
+    assert "synthesis_not_accepted" in blocked["fatal_issues"]
+    assert "repair_not_accepted" in blocked["fatal_issues"]
 
 
 def test_memo_semantic_acceptance_flags_polished_but_not_decision_ready() -> None:

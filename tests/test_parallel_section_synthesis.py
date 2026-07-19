@@ -753,6 +753,7 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
     assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
     assert result["report"]["status"] == "accepted_with_retention_warnings"
     assert result["report"]["accepted"] is False
+    assert result["report"]["repairable_candidate"] is True
     assert result["report"]["missing_mandatory_count"] >= 1
     assert len(result["report"]["section_reports"]) == 4
     assert all(row["accepted"] for row in result["report"]["section_reports"])
