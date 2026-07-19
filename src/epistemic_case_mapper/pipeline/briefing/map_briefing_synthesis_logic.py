@@ -75,6 +75,17 @@ def source_grounded_quantity_atoms(contract: dict[str, Any]) -> list[dict[str, A
     return atoms
 
 
+def controlling_source_excerpt(contract: dict[str, Any]) -> str:
+    excerpts = [
+        excerpt
+        for row in _list(contract.get("source_evidence"))
+        if isinstance(row, dict)
+        for excerpt in _string_list(row.get("excerpts"))
+        if excerpt
+    ]
+    return next((excerpt for excerpt in excerpts if not excerpt.rstrip().endswith("...")), excerpts[0] if excerpts else "")
+
+
 def build_synthesis_constraints(
     contracts: list[dict[str, Any]],
     decision_anchor: dict[str, Any],

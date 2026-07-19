@@ -248,6 +248,20 @@ def test_arm_b_contract_uses_controlling_source_excerpt_as_claim() -> None:
     assert contract["required"] is True
 
 
+def test_arm_b_contract_skips_truncated_source_excerpt() -> None:
+    contract = _contract_for_arm_b(
+        {
+            "claim": "Legacy aggregate claim.",
+            "source_evidence": [
+                {"source_id": "s1", "excerpts": ["A truncated source excerpt...", "A complete source excerpt."]}
+            ],
+        },
+        required=True,
+    )
+
+    assert contract["claim"] == "A complete source excerpt."
+
+
 def test_arm_b_title_truncation_does_not_split_word() -> None:
     title = _short_decision_title(
         "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial?"

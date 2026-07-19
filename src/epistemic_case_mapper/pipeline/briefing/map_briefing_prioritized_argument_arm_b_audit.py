@@ -176,6 +176,7 @@ def build_warning_adjudication_report(*, baseline_report_path: Path, arm_b_repor
 
 def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> str:
     compact_contracts = [_compact_contract(row) for row in contracts]
+    required_count = sum(bool(row.get("required")) for row in contracts)
     prompt_packet = {
         key: section_packet.get(key)
         for key in (
@@ -198,8 +199,10 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         "- After each load-bearing evidence sentence, add one or more evidence tags like {E:evidence_id}.\n"
         "- Evidence tags use only evidence IDs listed in Evidence expression contracts.\n"
         "- Treat contracts marked required as the coverage checklist for this section.\n"
-        "- Write one separate evidence sentence for every required contract; do not omit or combine required contracts.\n"
-        "- Keep each evidence sentence to the contract claim and its evidence tag; paraphrase minimally.\n"
+        f"- Write one evidence paragraph containing exactly {required_count} sentences: one separate sentence for every required contract.\n"
+        "- Start each evidence sentence directly with that contract's claim, paraphrase minimally, and end it with its evidence tag.\n"
+        "- Do not add decision framing, populations, quantities, endpoints, or qualifiers around a tagged contract claim.\n"
+        "- After the evidence paragraph, add at most one generic decision-effect sentence with no quantities, populations, or endpoints.\n"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         if contracts
         else

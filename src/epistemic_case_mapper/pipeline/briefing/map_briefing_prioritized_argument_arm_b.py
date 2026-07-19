@@ -26,6 +26,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import
     bounded_answer_required as _bounded_answer_required,
     build_synthesis_constraints as _synthesis_constraints,
     calibrated_bottom_line as _calibrated_bottom_line,
+    controlling_source_excerpt as _controlling_source_excerpt,
     source_grounded_quantity_atoms as _source_grounded_quantity_atoms,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b_audit import (
@@ -675,16 +676,7 @@ def _compact_practical_move(move: dict[str, Any]) -> dict[str, Any]:
 
 
 def _contract_for_arm_b(contract: dict[str, Any], *, required: bool) -> dict[str, Any]:
-    source_claim = next(
-        (
-            excerpt
-            for row in _list(contract.get("source_evidence"))
-            if isinstance(row, dict)
-            for excerpt in _string_list(row.get("excerpts"))
-            if excerpt
-        ),
-        "",
-    )
+    source_claim = _controlling_source_excerpt(contract)
     return _drop_empty({**contract, "claim": source_claim or contract.get("claim"),
                         "required_quantity_atoms": _source_grounded_quantity_atoms(contract), "required": required})
 
