@@ -15,10 +15,9 @@ from epistemic_case_mapper.map_briefing_source_hierarchy import source_hierarchy
 
 GLOBAL_ANALYST_TASKS: tuple[str, ...] = (
     "answer_frame",
-    "evidence_roles",
+    "evidence_reconciliation",
     "quantity_plan",
     "source_hierarchy",
-    "source_weighting_guidance",
     "argument_blueprint",
 )
 
@@ -33,7 +32,7 @@ def build_global_analyst_task_prompt(task: dict[str, Any]) -> str:
         "decision_question": task["context"].get("decision_question"),
         "instructions": [
             "Answer the assigned global question using the supplied task-specific context.",
-            "Use only supplied evidence_item_ids, source_ids, quantities, and source labels.",
+            "Use only supplied evidence_item_ids, source_ids, and quantities.",
             "Make source weighting explicit: distinguish answer drivers, calibrators, counterweights, boundaries, and context.",
             "Return strict JSON only in the required schema.",
         ],
@@ -55,9 +54,9 @@ def _global_task_packet(task_id: str, context: dict[str, Any]) -> dict[str, Any]
 def _task_instruction(task_id: str) -> str:
     return {
         "answer_frame": "Create the global answer frame: primary answer, full bounded answer, confidence, main answer drivers, main counterweights, scope, and practical implication.",
-        "evidence_roles": "Classify every evidence row's whole-case decision role and memo inclusion.",
+        "evidence_reconciliation": "Group the adjudicated evidence into decision propositions and return sparse corrections only where the baseline role is wrong.",
         "quantity_plan": "Decide which quantities must survive in the memo and how to word them safely.",
-        "source_hierarchy": "Create a global comparative source hierarchy by marginal decision role.",
+        "source_hierarchy": "Create a global comparative source hierarchy and reader-facing source-weighting guidance by marginal decision role.",
         "source_weighting_guidance": "Create compact reader-facing source-weight judgments for memo synthesis.",
         "argument_blueprint": "Create the reader-facing argument blueprint that should control memo synthesis.",
     }[task_id]
@@ -96,6 +95,31 @@ def _task_schema(task_id: str) -> dict[str, Any]:
                     "rationale": "why this role is correct in the whole evidence set",
                 }
             ],
+        },
+        "evidence_reconciliation": {
+            "schema_id": "global_evidence_reconciliation_v1",
+            "groups": [
+                {
+                    "group_id": "stable short group id",
+                    "proposition": "decision-relevant proposition the grouped evidence establishes or bounds",
+                    "role": "answer_driver | calibrator | counterweight | scope_boundary | crux | context",
+                    "answer_relation": "supports_answer | challenges_answer | bounds_scope | identifies_crux | contextualizes_answer",
+                    "priority_band": "high | medium | low",
+                    "evidence_item_ids": ["evidence_id from roster"],
+                    "qualifier": "required boundary or caveat, or empty string",
+                    "rationale": "why this grouping matters for the decision",
+                }
+            ],
+            "overrides": [
+                {
+                    "evidence_item_id": "only when baseline adjudication should change",
+                    "decision_role": "answer_driver | calibrator | counterweight | scope_boundary | crux | context",
+                    "memo_inclusion": "memo_spine | supporting_context | trace_only | exclude",
+                    "answer_relation": "supports_answer | challenges_answer | bounds_scope | identifies_crux | contextualizes_answer | not_decision_relevant | uncertain_relation",
+                    "rationale": "short reason for overriding the baseline",
+                }
+            ],
+            "unresolved_evidence_item_ids": ["evidence_id needing review"],
         },
         "quantity_plan": {
             "schema_id": "global_quantity_plan_v1",
@@ -166,19 +190,27 @@ def _task_context(task_id: str, context: dict[str, Any]) -> dict[str, Any]:
         }
     if task_id == "evidence_roles":
         return {**common, "evidence_rows": [_role_row(row) for row in rows], "source_lane_hints": _source_lane_hints(rows)}
+    if task_id == "evidence_reconciliation":
+        detail_rows = _select_detail_rows(rows, limit=20)
+        return {
+            **common,
+            "baseline_policy": "The roster already contains row-level adjudication. Preserve those roles unless whole-case comparison shows a specific correction is needed.",
+            "all_evidence_roster": [_roster_row(row) for row in rows],
+            "detail_cards": [_detail_card(row) for row in detail_rows],
+            "source_cards": _source_cards(detail_rows),
+            "retention_obligations": _compact_obligations(context.get("retention_obligations"), detail_rows),
+        }
     if task_id == "quantity_plan":
         quantity_rows = [row for row in rows if _string_list(row.get("quantity_values"))]
         return {
             **common,
             "quantity_bearing_evidence_rows": [_quantity_row(row) for row in quantity_rows],
-            "source_lane_hints": _source_lane_hints(quantity_rows),
             "decision_diagnostic_evidence_summary": [_summary_row(row) for row in _select_decision_rows(rows, limit=12)],
         }
     if task_id == "source_hierarchy":
         return {
             **common,
             "source_inventory": _source_inventory(rows),
-            "source_lane_hints": _source_lane_hints(rows),
             "top_decision_evidence": [_summary_row(row) for row in _select_decision_rows(rows, limit=18)],
         }
     if task_id == "source_weighting_guidance":
@@ -222,7 +254,6 @@ def _compact_row(row: dict[str, Any]) -> dict[str, Any]:
         "misuse_warning": _short_text(row.get("misuse_warning"), 180),
         "if_omitted": _short_text(row.get("if_omitted"), 180),
         "source_ids": _string_list(row.get("source_ids"))[:4],
-        "source_labels": _string_list(row.get("source_labels"))[:4],
         "source_quality": row.get("source_quality") if isinstance(row.get("source_quality"), dict) else {},
         "claim": _short_text(row.get("claim"), 320),
         "source_bottom_lines": _source_bottom_lines(row.get("source_bottom_lines")),
@@ -239,8 +270,7 @@ def _source_inventory(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_source: dict[str, dict[str, Any]] = {}
     for row in rows:
         for source_id in _string_list(row.get("source_ids")):
-            entry = by_source.setdefault(source_id, {"source_id": source_id, "source_labels": [], "evidence_item_ids": [], "claims": [], "qualities": [], "quantities": []})
-            entry["source_labels"].extend(_string_list(row.get("source_labels")))
+            entry = by_source.setdefault(source_id, {"source_id": source_id, "evidence_item_ids": [], "claims": [], "qualities": [], "quantities": []})
             entry["evidence_item_ids"].append(str(row.get("evidence_item_id") or ""))
             entry["claims"].append(_short_text(row.get("claim"), 220))
             if isinstance(row.get("source_quality"), dict):
@@ -249,11 +279,10 @@ def _source_inventory(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
             "source_id": source_id,
-            "source_labels": _dedupe(entry["source_labels"])[:4],
-            "evidence_item_ids": _dedupe(entry["evidence_item_ids"])[:20],
+            "evidence_item_ids": _dedupe(entry["evidence_item_ids"])[:12],
             "claim_count": len(_dedupe(entry["claims"])),
-            "representative_claims": _dedupe(entry["claims"])[:8],
-            "quantities": _dedupe(entry["quantities"])[:12],
+            "representative_claims": _dedupe(entry["claims"])[:3],
+            "quantities": _dedupe(entry["quantities"])[:6],
             "source_quality": entry["qualities"][0] if entry["qualities"] else {},
         }
         for source_id, entry in sorted(by_source.items())
@@ -305,6 +334,107 @@ def _source_lane_hints(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _role_row(row: dict[str, Any]) -> dict[str, Any]:
     return _keep(row, ["evidence_item_id", "claim", "source_ids", "adjudicated_memo_use", "adjudicated_answer_relation", "effect_on_final_answer", "target_answer_option", "decision_contribution", "use_in_reasoning", "key_qualifier", "if_omitted", "misuse_warning", "quantity_values", "tension_type", "source_weight_note"])
+
+
+def _roster_row(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "evidence_item_id": row.get("evidence_item_id"),
+            "role": _decision_role_from_memo_use(row.get("adjudicated_memo_use") or row.get("current_role")),
+            "memo_inclusion": _memo_tier_from_use(row.get("adjudicated_memo_use") or row.get("current_role")),
+            "answer_relation": row.get("adjudicated_answer_relation"),
+            "source_ids": _string_list(row.get("source_ids"))[:4],
+            "note": _short_text(row.get("decision_contribution") or row.get("claim"), 140),
+            "has_quantities": bool(_string_list(row.get("quantity_values"))),
+            "flags": _dedupe(
+                [
+                    str(row.get("tension_type") or ""),
+                    *(_string_list(row.get("existing_warning_codes"))[:3]),
+                ]
+            ),
+        }
+    )
+
+
+def _detail_card(row: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "evidence_item_id": row.get("evidence_item_id"),
+            "claim": _short_text(row.get("claim"), 320),
+            "decision_contribution": _short_text(row.get("decision_contribution"), 220),
+            "key_qualifier": _short_text(row.get("key_qualifier"), 160),
+            "misuse_warning": _short_text(row.get("misuse_warning"), 160),
+            "if_omitted": _short_text(row.get("if_omitted"), 160),
+            "source_ids": _string_list(row.get("source_ids"))[:4],
+            "source_quality": row.get("source_quality") if isinstance(row.get("source_quality"), dict) else {},
+            "source_bottom_lines": _source_bottom_lines(row.get("source_bottom_lines"))[:1],
+            "quantity_values": _string_list(row.get("quantity_values"))[:4],
+        }
+    )
+
+
+def _select_detail_rows(rows: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    important = _select_decision_rows(rows, limit=limit)
+    flagged = [
+        row
+        for row in rows
+        if str(row.get("adjudicated_answer_relation") or "") in {"challenges_answer", "bounds_scope", "identifies_crux", "uncertain_relation"}
+        or _string_list(row.get("existing_warning_codes"))
+    ]
+    by_id: dict[str, dict[str, Any]] = {}
+    for row in [*important, *flagged]:
+        evidence_id = str(row.get("evidence_item_id") or "")
+        if evidence_id and evidence_id not in by_id:
+            by_id[evidence_id] = row
+    return list(by_id.values())[:limit]
+
+
+def _source_cards(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    cards: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        for source_id in _string_list(row.get("source_ids")):
+            card = cards.setdefault(source_id, {"source_id": source_id, "evidence_item_ids": [], "source_quality": {}, "bottom_lines": []})
+            card["evidence_item_ids"].append(str(row.get("evidence_item_id") or ""))
+            if isinstance(row.get("source_quality"), dict) and row.get("source_quality") and not card["source_quality"]:
+                card["source_quality"] = row.get("source_quality")
+            card["bottom_lines"].extend(_source_bottom_lines(row.get("source_bottom_lines")))
+    return [
+        _drop_empty(
+            {
+                "source_id": source_id,
+                "evidence_item_ids": _dedupe(_string_list(card.get("evidence_item_ids")))[:8],
+                "source_quality": card.get("source_quality"),
+                "bottom_lines": _list(card.get("bottom_lines"))[:1],
+            }
+        )
+        for source_id, card in sorted(cards.items())
+    ]
+
+
+def _decision_role_from_memo_use(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if "counter" in text or "challenge" in text:
+        return "counterweight"
+    if "quant" in text or "calibrator" in text:
+        return "calibrator"
+    if "scope" in text or "applicability" in text or "boundary" in text:
+        return "scope_boundary"
+    if "crux" in text:
+        return "crux"
+    if "support" in text or "primary" in text or "driver" in text:
+        return "answer_driver"
+    return "context"
+
+
+def _memo_tier_from_use(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if any(token in text for token in ("primary", "counter", "quantitative", "scope", "crux", "spine", "load_bearing")):
+        return "memo_spine"
+    if "not_decision_relevant" in text:
+        return "exclude"
+    if "background" in text or "covered" in text:
+        return "trace_only"
+    return "supporting_context"
 
 
 def _quantity_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -378,6 +508,10 @@ def _source_bottom_lines(value: Any) -> list[dict[str, str]]:
 
 def _keep(row: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     return {key: row.get(key) for key in keys if row.get(key) not in (None, "", [], {})}
+
+
+def _drop_empty(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if value not in (None, "", [], {})}
 
 
 def _rows(context: dict[str, Any]) -> list[dict[str, Any]]:

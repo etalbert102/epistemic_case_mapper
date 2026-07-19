@@ -126,7 +126,7 @@ def test_analyst_adjudication_prompt_contains_all_ledger_rows() -> None:
     assert "warning:two" in prompt
     assert "allowed_memo_use" in prompt
     assert "allowed_answer_relation" in prompt
-    assert "stable_final_answer_frame" in prompt
+    assert '"answer_frame"' in prompt
     assert "current_best_answer" in prompt
     assert "classification_target_policy" in prompt
     assert "multi_option or unresolved" in prompt
@@ -312,7 +312,7 @@ def test_analyst_adjudication_accepts_valid_live_backend(monkeypatch) -> None:
     assert {event[2]["chunk_index"] for event in chunk_events if event[1] == "completed"} == {1, 2}
 
 
-def test_analyst_adjudication_default_chunk_size_is_two(monkeypatch) -> None:
+def test_analyst_adjudication_default_chunk_size_is_eight(monkeypatch) -> None:
     ledger = _ledger()
     ledger["rows"] = [
         *ledger["rows"],
@@ -363,8 +363,8 @@ def test_analyst_adjudication_default_chunk_size_is_two(monkeypatch) -> None:
     result = run_analyst_adjudication(ledger, backend="fake", backend_timeout=30, backend_retries=0)
 
     assert result["analyst_adjudication_report"]["status"] == "accepted"
-    assert result["analyst_adjudication_chunk_reports"]["chunk_count"] == 2
-    assert [chunk["row_count"] for chunk in result["analyst_adjudication_chunk_reports"]["chunks"]] == [2, 1]
+    assert result["analyst_adjudication_chunk_reports"]["chunk_count"] == 1
+    assert [chunk["row_count"] for chunk in result["analyst_adjudication_chunk_reports"]["chunks"]] == [3]
 
 
 def test_analyst_adjudication_invalid_live_backend_reports_failure_without_fallback(monkeypatch) -> None:

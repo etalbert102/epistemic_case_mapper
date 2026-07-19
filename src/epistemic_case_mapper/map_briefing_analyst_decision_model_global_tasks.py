@@ -112,7 +112,12 @@ def build_analyst_decision_model_from_global_tasks(
         if result.get("status") == "parsed"
     }
     answer_frame = _dict(payloads.get("answer_frame"))
-    evidence_roles = _valid_evidence_roles(context, _list(_dict(payloads.get("evidence_roles")).get("evidence_roles")))
+    reconciliation = _dict(payloads.get("evidence_reconciliation"))
+    evidence_roles = _roles_from_reconciliation(context, reconciliation)
+    if not evidence_roles:
+        evidence_roles = _valid_evidence_roles(context, _list(_dict(payloads.get("evidence_roles")).get("evidence_roles")))
+    if not evidence_roles:
+        evidence_roles = _baseline_evidence_roles(context)
     quantity_decisions = _valid_quantity_decisions(context, _list(_dict(payloads.get("quantity_plan")).get("quantity_decisions")))
     source_hierarchy, source_report = normalize_source_hierarchy(
         _dict(payloads.get("source_hierarchy")),
@@ -122,8 +127,10 @@ def build_analyst_decision_model_from_global_tasks(
         context,
         _list(_dict(payloads.get("source_weighting_guidance")).get("source_weight_judgments")),
     )
+    if not source_weight_judgments:
+        source_weight_judgments = _source_weight_judgments_from_hierarchy(context, source_hierarchy)
     blueprint = _dict(payloads.get("argument_blueprint"))
-    groups = _groups_from_global_tasks(context, answer_frame, evidence_roles, blueprint)
+    groups = _groups_from_global_tasks(context, answer_frame, evidence_roles, blueprint, reconciliation)
     groups, _ranking_guard = apply_decision_diagnostic_ranking(groups, _rows(context))
     groups = [schema_safe_decision_group(group) for group in groups]
     covered = {
@@ -182,12 +189,39 @@ def _groups_from_global_tasks(
     answer_frame: dict[str, Any],
     evidence_roles: list[dict[str, Any]],
     blueprint: dict[str, Any],
+    reconciliation: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     groups: list[dict[str, Any]] = []
+    groups.extend(_reconciliation_groups(context, _dict(reconciliation)))
     groups.extend(_answer_frame_groups(context, answer_frame))
     groups.extend(_blueprint_groups(context, blueprint, evidence_roles))
     groups.extend(_role_groups_for_uncovered(context, evidence_roles, groups))
     return _dedupe_groups(groups)
+
+
+def _reconciliation_groups(context: dict[str, Any], reconciliation: dict[str, Any]) -> list[dict[str, Any]]:
+    groups = []
+    for index, row in enumerate(_list(reconciliation.get("groups")), start=1):
+        if not isinstance(row, dict):
+            continue
+        evidence_ids = _valid_ids(context, _string_list(row.get("evidence_item_ids") or row.get("covered_evidence_item_ids")))
+        if not evidence_ids:
+            continue
+        role = _memo_role_from_decision_role(_decision_role(row.get("role") or row.get("decision_role")), "memo_spine")
+        relation = _answer_relation(row.get("answer_relation"))
+        groups.append(
+            _group(
+                group_id=f"reconcile_{_safe_id(row.get('group_id') or index)}",
+                proposition=str(row.get("proposition") or ""),
+                role=role,
+                relation=relation,
+                evidence_ids=evidence_ids,
+                rationale=str(row.get("rationale") or row.get("qualifier") or "Global reconciliation group."),
+                rank=_priority_band_rank(row.get("priority_band"), index),
+                applicability_limits=_string_list(row.get("qualifier")),
+            )
+        )
+    return groups
 
 
 def _answer_frame_groups(context: dict[str, Any], answer_frame: dict[str, Any]) -> list[dict[str, Any]]:
@@ -435,6 +469,99 @@ def _valid_evidence_roles(context: dict[str, Any], rows: list[Any]) -> list[dict
     return result
 
 
+def _roles_from_reconciliation(context: dict[str, Any], reconciliation: dict[str, Any]) -> list[dict[str, Any]]:
+    baseline = {row["evidence_item_id"]: row for row in _baseline_evidence_roles(context)}
+    if not reconciliation:
+        return list(baseline.values())
+    known = set(baseline)
+    for group in _list(reconciliation.get("groups")):
+        if not isinstance(group, dict):
+            continue
+        role = _decision_role(group.get("role") or group.get("decision_role"))
+        relation = _answer_relation(group.get("answer_relation"))
+        inclusion = "memo_spine" if str(group.get("priority_band") or "").strip().lower() == "high" else "supporting_context"
+        rationale = _short_text(group.get("rationale") or group.get("proposition"), 420)
+        for evidence_id in _valid_ids(context, _string_list(group.get("evidence_item_ids") or group.get("covered_evidence_item_ids"))):
+            current = dict(baseline.get(evidence_id, {}))
+            current.update(
+                {
+                    "evidence_item_id": evidence_id,
+                    "memo_inclusion": _stronger_inclusion(current.get("memo_inclusion"), inclusion),
+                    "decision_role": role,
+                    "answer_relation": relation,
+                    "priority_rank": min(_rank(current.get("priority_rank")), _priority_band_rank(group.get("priority_band"), 50)),
+                    "rationale": rationale or current.get("rationale") or "Global reconciliation grouping.",
+                }
+            )
+            baseline[evidence_id] = current
+    for override in _list(reconciliation.get("overrides")):
+        if not isinstance(override, dict):
+            continue
+        evidence_id = str(override.get("evidence_item_id") or "").strip()
+        if evidence_id not in known:
+            continue
+        current = dict(baseline.get(evidence_id, {}))
+        current.update(
+            {
+                "memo_inclusion": _memo_inclusion(override.get("memo_inclusion") or current.get("memo_inclusion")),
+                "decision_role": _decision_role(override.get("decision_role") or current.get("decision_role")),
+                "answer_relation": _answer_relation(override.get("answer_relation") or current.get("answer_relation")),
+                "rationale": _short_text(override.get("rationale") or current.get("rationale"), 420),
+            }
+        )
+        baseline[evidence_id] = current
+    for evidence_id in _string_list(reconciliation.get("unresolved_evidence_item_ids")):
+        if evidence_id in baseline:
+            current = dict(baseline[evidence_id])
+            current["memo_inclusion"] = _stronger_inclusion(current.get("memo_inclusion"), "supporting_context")
+            current["decision_role"] = "crux"
+            current["answer_relation"] = "uncertain_relation"
+            current["rationale"] = _short_text(current.get("rationale") or "Global reconciliation flagged this evidence as unresolved.", 420)
+            baseline[evidence_id] = current
+    return list(baseline.values())
+
+
+def _baseline_evidence_roles(context: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "evidence_item_id": str(row.get("evidence_item_id") or ""),
+            "memo_inclusion": _memo_inclusion_from_memo_use(row.get("adjudicated_memo_use") or row.get("current_role")),
+            "decision_role": _decision_role_from_memo_use(row.get("adjudicated_memo_use") or row.get("current_role")),
+            "answer_relation": _answer_relation(row.get("adjudicated_answer_relation")),
+            "priority_rank": _rank(row.get("adjudicated_importance_rank") or row.get("importance_rank") or row.get("current_priority")),
+            "rationale": _short_text(row.get("decision_contribution") or row.get("rationale") or row.get("claim") or "Baseline role from analyst adjudication.", 420),
+        }
+        for row in _rows(context)
+    ]
+
+
+def _source_weight_judgments_from_hierarchy(context: dict[str, Any], hierarchy: dict[str, Any]) -> list[dict[str, Any]]:
+    known_sources = set(_context_source_ids(context))
+    rows = []
+    for index, row in enumerate(_list(hierarchy.get("source_accounting")), start=1):
+        if not isinstance(row, dict):
+            continue
+        source_id = str(row.get("source_id") or "").strip()
+        if source_id not in known_sources:
+            continue
+        lane = str(row.get("primary_lane") or "").strip()
+        rows.append(
+            _drop_empty(
+                {
+                    "judgment_id": f"source_hierarchy_weight_{index:03d}",
+                    "source_ids": [source_id],
+                    "main_use": _main_use_from_lane(lane),
+                    "why_weight_this_way": _short_text(row.get("rationale"), 700),
+                    "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
+                    "memo_weight_sentence": _short_text(row.get("memo_weight_sentence") or row.get("rationale"), 520),
+                    "confidence_effect": _confidence_effect_from_lane(lane),
+                    "method": "source_hierarchy_accounting",
+                }
+            )
+        )
+    return rows
+
+
 def _valid_quantity_decisions(context: dict[str, Any], rows: list[Any]) -> list[dict[str, Any]]:
     known = {
         str(row.get("evidence_item_id") or ""): set(_string_list(row.get("quantity_values")))
@@ -656,6 +783,76 @@ def _memo_role_from_decision_role(role: str, inclusion: str) -> str:
     if inclusion == "memo_spine":
         return "mechanism_or_context"
     return "background_only"
+
+
+def _decision_role_from_memo_use(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if "counter" in text or "challenge" in text:
+        return "counterweight"
+    if "quant" in text or "calibrator" in text:
+        return "calibrator"
+    if "scope" in text or "applicability" in text or "boundary" in text:
+        return "scope_boundary"
+    if "crux" in text:
+        return "crux"
+    if "support" in text or "primary" in text or "driver" in text:
+        return "answer_driver"
+    return "context"
+
+
+def _memo_inclusion_from_memo_use(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if any(token in text for token in ("primary", "counter", "quantitative", "scope", "crux", "spine", "load_bearing")):
+        return "memo_spine"
+    if "not_decision_relevant" in text:
+        return "exclude"
+    if "background" in text or "covered" in text:
+        return "trace_only"
+    return "supporting_context"
+
+
+def _stronger_inclusion(left: Any, right: Any) -> str:
+    order = {"exclude": 0, "trace_only": 1, "supporting_context": 2, "memo_spine": 3}
+    left_value = _memo_inclusion(left)
+    right_value = _memo_inclusion(right)
+    return left_value if order[left_value] >= order[right_value] else right_value
+
+
+def _priority_band_rank(value: Any, fallback: int) -> int:
+    text = str(value or "").strip().lower()
+    if text == "high":
+        return 10
+    if text == "medium":
+        return 35
+    if text == "low":
+        return 70
+    return fallback
+
+
+def _main_use_from_lane(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if "primary" in text or "driver" in text:
+        return "drives_answer"
+    if "quant" in text or "calibrator" in text:
+        return "calibrates_magnitude"
+    if "counter" in text:
+        return "bounds_answer"
+    if "scope" in text or "boundary" in text:
+        return "defines_scope"
+    if "crux" in text:
+        return "identifies_crux"
+    return "contextualizes"
+
+
+def _confidence_effect_from_lane(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if "primary" in text or "driver" in text:
+        return "raises_confidence"
+    if "counter" in text:
+        return "lowers_confidence"
+    if "scope" in text or "boundary" in text:
+        return "narrows_scope"
+    return "neutral"
 
 
 def _decision_role(value: Any) -> str:

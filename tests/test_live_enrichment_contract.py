@@ -191,6 +191,43 @@ def test_canonical_packet_quality_warnings_do_not_block_live_synthesis() -> None
     assert "canonical_quality_warning:source_hierarchy_warning" in readiness["warnings"]
 
 
+def test_writer_projection_source_weighting_warns_when_analyst_weighting_is_available() -> None:
+    packet = {
+        "schema_id": "memo_ready_packet_v1",
+        "decision_question": "Should option A be adopted?",
+        "answer_spine": {"default_read": "Option A is plausible with bounded uncertainty."},
+        "analyst_source_hierarchy": {
+            "schema_id": "source_weight_hierarchy_v1",
+            "lanes": {"primary_answer_drivers": [{"source_id": "study_a"}]},
+        },
+        "analyst_source_hierarchy_report": {"status": "ready", "primary_driver_source_count": 1},
+        "analyst_source_weight_judgments": [{"source_id": "study_a", "weight": "drives_answer"}],
+        "analyst_source_weight_judgment_report": {"status": "ready"},
+        "canonical_decision_writer_packet": {
+            "schema_id": "canonical_decision_writer_packet_v1",
+            "source_weighted_answer_frame": {
+                "lanes": {
+                    "primary_answer_drivers": [
+                        {
+                            "item_id": "i1",
+                            "source_id": "study_a",
+                            "source_weight_basis": "writer_role_projection",
+                        }
+                    ]
+                }
+            },
+        },
+        "evidence_items": [{"item_id": "i1", "claim": "Option A reduced losses.", "source_ids": ["study_a"]}],
+        "source_trail": [{"source_id": "study_a", "source_label": "Study A"}],
+    }
+
+    readiness = build_memo_ready_production_readiness_report(packet)
+
+    assert readiness["status"] == "warning"
+    assert "writer_role_projection_source_weight_fallback_used" not in readiness["fatal_issues"]
+    assert "writer_role_projection_source_weight_fallback_present" in readiness["warnings"]
+
+
 def test_prompt_synthesis_reports_blocked_production_readiness_but_stays_inspectable() -> None:
     packet = {
         "schema_id": "memo_ready_packet_v1",

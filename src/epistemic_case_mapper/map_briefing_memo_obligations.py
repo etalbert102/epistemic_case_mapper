@@ -5,6 +5,7 @@ from typing import Any
 
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
     dedupe as _dedupe,
+    dict_value as _dict,
     list_value as _list,
     string_list as _string_list,
 )
@@ -64,6 +65,7 @@ def _memo_obligations(packet: dict[str, Any]) -> list[dict[str, Any]]:
 def _obligation_from_evidence_item(index: int, item: dict[str, Any]) -> dict[str, Any]:
     role = str(item.get("role") or "").strip()
     source_labels = _source_labels(item)
+    source_ids = _source_ids(item)
     claim = _sanitize_claim(str(item.get("reader_claim") or "").strip())
     if not claim:
         return {}
@@ -77,6 +79,7 @@ def _obligation_from_evidence_item(index: int, item: dict[str, Any]) -> dict[str
     quantities = _load_bearing_quantities(item)
     statement = _obligation_statement(role, claim)
     validation_terms = _validation_terms(role, claim, statement)
+    evidence_item_ids = _dedupe([str(item.get("item_id") or "").strip()])
     return {
         "obligation_id": f"memo_obligation_{index:03d}",
         "obligation_type": obligation_type,
@@ -84,10 +87,19 @@ def _obligation_from_evidence_item(index: int, item: dict[str, Any]) -> dict[str
         "role": role,
         "statement": statement,
         "prose_instruction": _prose_instruction(role),
+        "why_it_matters": _why_it_matters(role, item),
         "source_labels": source_labels,
         "source_label": source_labels[0] if source_labels else "",
+        "source_ids": source_ids,
         "quantities": quantities,
-        "evidence_item_ids": [str(item.get("item_id") or "")],
+        "evidence_item_ids": evidence_item_ids,
+        "acceptable_expression": _acceptable_expression(
+            role,
+            claim,
+            source_ids=source_ids,
+            quantities=quantities,
+            validation_terms=validation_terms,
+        ),
         "validation_mode": "scope_signal" if role == "scope_boundary" else "claim_terms",
         "validation_terms": validation_terms,
         "audit_claim": claim,
@@ -115,10 +127,19 @@ def _obligation_from_warning(index: int, warning: dict[str, Any]) -> dict[str, A
             if required
             else "Use this only when it improves the decision read."
         ),
+        "why_it_matters": str(warning.get("why_it_matters") or warning.get("decision_relevance") or "").strip(),
         "source_labels": _string_list(warning.get("source_labels")),
         "source_label": _first(_string_list(warning.get("source_labels"))),
+        "source_ids": _string_list(warning.get("source_ids")),
         "quantities": quantities,
         "warning_ids": [str(warning.get("warning_id") or "")],
+        "acceptable_expression": _acceptable_expression(
+            "source_warning",
+            claim,
+            source_ids=_string_list(warning.get("source_ids")),
+            quantities=quantities,
+            validation_terms=_dedupe([*_string_list(warning.get("anchor_terms")), *_content_terms(claim)[:6]])[:10],
+        ),
         "validation_mode": "claim_terms",
         "validation_terms": _dedupe([*_string_list(warning.get("anchor_terms")), *_content_terms(claim)[:6]])[:10],
         "audit_claim": claim,
@@ -153,6 +174,41 @@ def _prose_instruction(role: str) -> str:
     return "Use only if it improves the reader's decision."
 
 
+def _why_it_matters(role: str, item: dict[str, Any]) -> str:
+    explicit = str(item.get("decision_relevance") or item.get("memo_inclusion_rationale") or item.get("include_reason") or "").strip()
+    if explicit:
+        return explicit
+    if role == "scope_boundary":
+        return "Prevents the memo from applying the answer outside the supported population, dose, endpoint, or evidence type."
+    if role == "strongest_counterweight":
+        return "Keeps the memo from sounding stronger than the evidence supports."
+    if role == "quantitative_anchor":
+        return "Calibrates the strength, magnitude, or uncertainty of the answer."
+    if role == "decision_crux":
+        return "Identifies what could change the decision."
+    if role == "strongest_support":
+        return "Supplies load-bearing support for the best current answer."
+    return "Adds context only if it changes interpretation, confidence, or practical use."
+
+
+def _acceptable_expression(
+    role: str,
+    claim: str,
+    *,
+    source_ids: list[str],
+    quantities: list[dict[str, Any]],
+    validation_terms: list[str],
+) -> dict[str, Any]:
+    return {
+        "must_attach_to_claim": True,
+        "required_terms_or_equivalents": validation_terms[:8],
+        "required_source_ids": source_ids,
+        "required_quantity_values": [str(quantity.get("value") or "").strip() for quantity in quantities if str(quantity.get("value") or "").strip()],
+        "semantic_job": _prose_instruction(role),
+        "claim_to_preserve": claim,
+    }
+
+
 def _sanitize_claim(claim: str) -> str:
     cleaned = re.sub(r"\s+", " ", str(claim or "")).strip()
     cleaned = re.sub(r"\bcrux\s+for\b", "as it relates to", cleaned, flags=re.IGNORECASE)
@@ -184,6 +240,13 @@ def _load_bearing_quantities(item: dict[str, Any]) -> list[dict[str, Any]]:
                     "value": value,
                     "interpretation": str(quantity.get("interpretation") or "").strip(),
                     "retention_phrase": str(quantity.get("retention_phrase") or "").strip(),
+                    "source_ids": _dedupe(
+                        [
+                            *_string_list(quantity.get("source_ids")),
+                            *_string_list(_dict(quantity.get("assertion_bundle")).get("source_ids")),
+                        ]
+                    ),
+                    "source_labels": _string_list(quantity.get("source_labels")) or _string_list(quantity.get("source_label")),
                     "quantity_role": str(quantity.get("quantity_role") or "").strip(),
                     "quantity_id": str(quantity.get("quantity_id") or "").strip(),
                     "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
@@ -197,6 +260,26 @@ def _load_bearing_quantities(item: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _source_labels(item: dict[str, Any]) -> list[str]:
     return _dedupe([*_string_list(item.get("source_labels")), str(item.get("source_label") or "").strip()])
+
+
+def _source_ids(item: dict[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            *_string_list(item.get("source_ids")),
+            *[
+                source_id
+                for quantity in _list(item.get("quantities"))
+                if isinstance(quantity, dict)
+                for source_id in _string_list(quantity.get("source_ids"))
+            ],
+            *[
+                source_id
+                for quantity in _list(item.get("quantities"))
+                if isinstance(quantity, dict)
+                for source_id in _string_list(_dict(quantity.get("assertion_bundle")).get("source_ids"))
+            ],
+        ]
+    )
 
 
 def _content_terms(text: str) -> list[str]:

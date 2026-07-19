@@ -12,6 +12,7 @@ from epistemic_case_mapper.map_briefing_analyst_schemas import (
     build_analyst_adjudication_parse_report,
 )
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import (
+    dedupe as _dedupe,
     dict_value as _dict,
     list_value as _list,
     short_text as _short_text,
@@ -22,7 +23,7 @@ from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 from epistemic_case_mapper.map_briefing_source_faithfulness import repair_adjudication_source_faithfulness
 
-DEFAULT_CHUNK_SIZE = 2
+DEFAULT_CHUNK_SIZE = 8
 
 
 def run_analyst_adjudication(
@@ -739,6 +740,13 @@ def _adjudication_row_candidate(row: dict[str, Any], scaffold: dict[str, Any], *
         "effect_on_final_answer",
         "tension_type",
         "downgrade_reason",
+        "decision_contribution",
+        "use_in_reasoning",
+        "key_qualifier",
+        "quantity_takeaway",
+        "source_weight_note",
+        "misuse_warning",
+        "if_omitted",
     }
     candidate = {key: scaffold.get(key) for key in allowed_keys if key in scaffold}
     candidate.update({key: row.get(key) for key in allowed_keys if key in row})
@@ -809,58 +817,30 @@ def run_analyst_adjudication_single_call_for_test(
 
 
 def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
+    prompt_rows = [_prompt_row(row) for row in _list(ledger.get("rows")) if isinstance(row, dict)]
     packet = {
-        "decision_question": ledger.get("decision_question"),
-        "stable_final_answer_frame": _dict(ledger.get("stable_final_answer_frame")),
+        "task": "Adjudicate each row's decision role for the memo.",
+        "decision": {
+            "question": ledger.get("decision_question"),
+            "answer_frame": _compact_answer_frame(ledger.get("stable_final_answer_frame")),
+            "effect_rule": "Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in the selected/provisional current_best_answer or the named target_answer_option.",
+        },
         "instructions": [
             "Classify every evidence row for its actual use in a decision memo.",
-            "Use semantic judgment: decide whether the item is load-bearing, background, covered by another item, or not decision-relevant.",
-            "Use stable_final_answer_frame.classification_target_policy to decide the target for answer_relation and effect_on_final_answer labels.",
-            "When answer_status is selected or provisional and current_best_answer is present, classify relative to current_best_answer while preserving the affected live option in target_answer_option.",
+            "Use answer_frame.classification_target_policy to decide answer_relation and effect_on_final_answer.",
             "When answer_status is multi_option or unresolved, classify relative to the live answer option, condition, or crux the row bears on.",
-            "Use challenges_answer only when the row weakens, overturns, or materially lowers confidence in the selected/provisional current_best_answer or the named target_answer_option.",
             "When a row rebuts an alternative answer but supports the selected/provisional current_best_answer, use supports_answer or contextualizes_answer and explain that in effect_on_final_answer.",
-            "Create a compact decision contribution card for each row so later stages can use the evidence without reinterpreting it from scratch.",
-            "Write decision_contribution as the exact analytic contribution this row makes to answering the decision question.",
-            "Write use_in_reasoning as a short natural-language role such as answer anchor, counterweight, scope limiter, quantity calibrator, mechanism/context, or trace only.",
-            "Write key_qualifier as the caveat that must travel with this evidence if used.",
-            "Write quantity_takeaway only for numbers that are decision-facing; say what each number measures rather than listing numbers without interpretation.",
-            "Write source_weight_note as how strongly this source should move the answer and why, using source_quality when available.",
-            "Write misuse_warning as the unsafe inference a downstream model or reader might otherwise draw from this row.",
-            "Write if_omitted as the analytical damage if this row is left out of the global decision model or final memo.",
-            "Use source_bottom_lines and source_bottom_line_signals as source-level polarity context when assigning memo_use, answer_relation, source_weight_note, and misuse_warning.",
+            "Create compact decision contribution cards: decision_contribution, use_in_reasoning, key_qualifier, quantity_takeaway, source_weight_note, misuse_warning, and if_omitted.",
+            "Use source_cards and source_bottom_line_signals as source-level polarity context when assigning memo_use, answer_relation, source_weight_note, and misuse_warning.",
             "When a row's claim wording and source_bottom_lines point in different directions, preserve the tension in key_qualifier or misuse_warning and choose the row's memo role from the source-level bottom line.",
-            "For candidate_decision_edge rows, treat relation labels as provisional model proposals; audit the rationale, anchors, confidence, and failure condition before assigning memo_use.",
-            "For candidate_decision_edge rows, classify endpoint source bottom lines first, then classify the relation as a reasoning move; do not use a relation as answer support unless the endpoint/source bottom lines support that use or the conflict is explicitly resolved.",
+            "For candidate_decision_edge rows, treat relation labels as provisional model proposals; classify endpoint source bottom lines first, then classify the relation as a reasoning move.",
             "Downgrade, background, or mark a candidate_decision_edge for review when its relation label, rationale, anchors, or endpoint claims undercut its proposed decision use.",
             "Return one row for every evidence_item_id.",
-            "Use covered_by only when another evidence item or future group explicitly covers the item.",
-            "Use only source IDs, quantities, and claims supplied in the ledger.",
-            "Use [] for empty covered_by, source_ids, and quantity_values.",
-            "Return valid JSON with comma placement accepted by a standard JSON parser.",
+            "Use only the enum values in field_axes; memo_use is the memo role, answer_relation is the relation to the answer.",
+            "Return strict JSON only.",
         ],
         "chunk": ledger.get("adjudication_chunk", {}),
-        "allowed_memo_use": [
-            "load_bearing_primary_support",
-            "load_bearing_counterweight",
-            "quantitative_anchor",
-            "scope_or_applicability",
-            "decision_crux",
-            "mechanism_or_context",
-            "background_only",
-            "covered_by_group",
-            "not_decision_relevant",
-            "needs_human_or_model_review",
-        ],
-        "allowed_answer_relation": [
-            "supports_answer",
-            "challenges_answer",
-            "bounds_scope",
-            "identifies_crux",
-            "contextualizes_answer",
-            "not_decision_relevant",
-            "uncertain_relation",
-        ],
+        "field_axes": _adjudication_field_axes(),
         "required_output_schema": {
             "schema_id": "analyst_adjudication_v1",
             "decision_question": ledger.get("decision_question"),
@@ -887,9 +867,10 @@ def build_analyst_adjudication_prompt(ledger: dict[str, Any]) -> str:
                     "downgrade_reason": "required when memo_use is background_only or not_decision_relevant",
                 }
             ],
-            "overall_rationale": "brief explanation of the adjudication strategy",
+            "overall_rationale": "one sentence",
         },
-        "evidence_ledger_rows": [_prompt_row(row) for row in _list(ledger.get("rows")) if isinstance(row, dict)],
+        "source_cards": _source_cards_for_prompt([row for row in _list(ledger.get("rows")) if isinstance(row, dict)]),
+        "evidence_ledger_rows": prompt_rows,
     }
     return (
         "You are an analyst adjudicating evidence for a decision-support memo.\n"
@@ -912,27 +893,7 @@ def build_missing_row_adjudication_prompt(ledger: dict[str, Any]) -> str:
             "Use only source_ids and quantity_values supplied in each evidence row.",
         ],
         "expected_evidence_item_ids": expected_ids,
-        "allowed_memo_use": [
-            "load_bearing_primary_support",
-            "load_bearing_counterweight",
-            "quantitative_anchor",
-            "scope_or_applicability",
-            "decision_crux",
-            "mechanism_or_context",
-            "background_only",
-            "covered_by_group",
-            "not_decision_relevant",
-            "needs_human_or_model_review",
-        ],
-        "allowed_answer_relation": [
-            "supports_answer",
-            "challenges_answer",
-            "bounds_scope",
-            "identifies_crux",
-            "contextualizes_answer",
-            "not_decision_relevant",
-            "uncertain_relation",
-        ],
+        "field_axes": _adjudication_field_axes(),
         "required_output_schema": {
             "schema_id": "analyst_adjudication_v1",
             "decision_question": ledger.get("decision_question"),
@@ -1028,7 +989,6 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
         "source_quality": _source_quality_summary(row),
         "quantity_values": row.get("quantity_values", []),
         "claim": _short_text(str(row.get("claim") or ""), 360),
-        "source_bottom_lines": _source_bottom_lines_for_prompt(row.get("source_bottom_lines")),
         "source_bottom_line_signals": _string_list(row.get("source_bottom_line_signals"))[:4],
         "why_it_matters": _short_text(str(row.get("why_it_matters") or ""), 180),
         "failure_condition": _short_text(str(row.get("failure_condition") or ""), 180),
@@ -1048,6 +1008,82 @@ def _prompt_row(row: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {key: value for key, value in prompt.items() if value not in (None, "", [], {})}
+
+
+def _adjudication_field_axes() -> dict[str, list[str]]:
+    return {
+        "allowed_memo_use": [
+            "load_bearing_primary_support",
+            "load_bearing_counterweight",
+            "quantitative_anchor",
+            "scope_or_applicability",
+            "decision_crux",
+            "mechanism_or_context",
+            "background_only",
+            "covered_by_group",
+            "not_decision_relevant",
+            "needs_human_or_model_review",
+        ],
+        "allowed_answer_relation": [
+            "supports_answer",
+            "challenges_answer",
+            "bounds_scope",
+            "identifies_crux",
+            "contextualizes_answer",
+            "not_decision_relevant",
+            "uncertain_relation",
+        ],
+    }
+
+
+def _compact_answer_frame(value: Any) -> dict[str, Any]:
+    frame = _dict(value)
+    return {
+        key: frame.get(key)
+        for key in (
+            "answer_status",
+            "current_best_answer",
+            "confidence",
+            "classification_rule",
+            "classification_target_policy",
+            "live_answer_options",
+        )
+        if frame.get(key) not in (None, "", [], {})
+    }
+
+
+def _source_cards_for_prompt(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    cards: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        quality = _dict(row.get("source_quality"))
+        for source_id in _string_list(row.get("source_ids")):
+            card = cards.setdefault(
+                source_id,
+                {
+                    "source_id": source_id,
+                    "source_quality": quality,
+                    "source_bottom_lines": [],
+                    "source_bottom_line_signals": [],
+                },
+            )
+            if quality and not card.get("source_quality"):
+                card["source_quality"] = quality
+            for bottom_line in _source_bottom_lines_for_prompt(row.get("source_bottom_lines")):
+                if isinstance(bottom_line, dict) and str(bottom_line.get("source_id") or "") == source_id:
+                    card["source_bottom_lines"].append(bottom_line)
+            card["source_bottom_line_signals"].extend(_string_list(row.get("source_bottom_line_signals")))
+    compact_cards = {}
+    for source_id, card in cards.items():
+        compact_cards[source_id] = {
+            key: value
+            for key, value in {
+                "source_quality": card.get("source_quality"),
+                "source_bottom_lines": _list(card.get("source_bottom_lines"))[:3],
+                "source_bottom_line_signals": _dedupe(_string_list(card.get("source_bottom_line_signals")))[:4],
+            }.items()
+            if value not in (None, "", [], {})
+        }
+    return compact_cards
 
 
 def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:

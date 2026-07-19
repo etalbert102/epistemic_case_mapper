@@ -90,7 +90,7 @@ def _run_task(
                 _emit_progress(progress, "analyst_decision_model_global_task", "retry_needed", _task_progress_details(task, prompt, attempt=attempt, status="backend_error", error=error, wall_seconds=round(time.monotonic() - started, 3)))
                 continue
             break
-        status = "parsed" if isinstance(payload, dict) and payload.get("schema_id") else "parse_failed"
+        status = "parsed" if _payload_matches_task_schema(task, payload) else "parse_failed"
         retry_reports.append({"attempt": attempt, "status": status})
         if status == "parsed":
             _emit_progress(progress, "analyst_decision_model_global_task", "completed", _task_progress_details(task, prompt, attempt=attempt, status=status, raw_chars=len(raw), wall_seconds=round(time.monotonic() - started, 3)))
@@ -159,7 +159,7 @@ def _task_progress_details(
     details: dict[str, Any] = {
         "substage": "analyst_decision_model_global_task",
         "task_id": task.get("task_id"),
-        "row_count": len(_list(context.get("evidence_rows") or context.get("decision_diagnostic_evidence_rows") or context.get("quantity_bearing_evidence_rows"))),
+        "row_count": _task_row_count(context),
         "attempt": attempt,
         "prompt_chars": len(prompt),
     }
@@ -188,10 +188,46 @@ def _emit_progress(
         return
 
 
+def _payload_matches_task_schema(task: dict[str, Any], payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    expected = str(_dict(task.get("schema")).get("schema_id") or "").strip()
+    actual = str(payload.get("schema_id") or "").strip()
+    if not expected or actual != expected:
+        return False
+    task_id = str(task.get("task_id") or "")
+    if task_id == "evidence_reconciliation":
+        return isinstance(payload.get("groups"), list) or isinstance(payload.get("overrides"), list)
+    if task_id == "quantity_plan":
+        return isinstance(payload.get("quantity_decisions"), list)
+    if task_id == "source_hierarchy":
+        return isinstance(payload.get("lanes"), dict) or isinstance(payload.get("source_accounting"), list)
+    if task_id == "argument_blueprint":
+        return isinstance(payload.get("section_plan"), list)
+    if task_id == "answer_frame":
+        return bool(str(payload.get("best_answer") or "").strip())
+    return True
+
+
+def _task_row_count(context: dict[str, Any]) -> int:
+    for key in (
+        "all_evidence_roster",
+        "evidence_rows",
+        "decision_diagnostic_evidence_rows",
+        "quantity_bearing_evidence_rows",
+        "top_decision_evidence",
+    ):
+        rows = _list(context.get(key))
+        if rows:
+            return len(rows)
+    return 0
+
+
 def _task_num_predict(task_id: str) -> int:
     return {
         "answer_frame": 4096,
         "evidence_roles": 8192,
+        "evidence_reconciliation": 6144,
         "quantity_plan": 6144,
         "source_hierarchy": 4096,
         "source_weighting_guidance": 4096,

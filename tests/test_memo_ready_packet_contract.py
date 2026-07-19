@@ -7,6 +7,7 @@ from epistemic_case_mapper.map_briefing_memo_ready_packet import (
     build_memo_ready_packet_synthesis_prompt,
     build_quality_synthesis_packet_bundle,
 )
+from epistemic_case_mapper.map_briefing_memo_obligations import build_memo_obligation_packet
 
 from test_decision_briefing_packet import _scaffold
 
@@ -44,6 +45,7 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "primary_section" in prompt
     assert "section_writing_packets" in prompt
     assert "section_retention_requirements" in prompt
+    assert "memo_obligation_contract" in prompt
     assert "evidence_context" in prompt
     assert "retention_requirements" in prompt
     assert "priority_evidence" in prompt
@@ -60,6 +62,63 @@ def test_memo_ready_synthesis_prompt_uses_contract_as_flexible_guidance() -> Non
     assert "quantity_anchors" not in prompt
     assert prompt.find("source_weighting") < prompt.find("argument_spine")
     assert prompt.find("argument_spine") < prompt.find("supplemental_evidence")
+
+
+def test_memo_obligation_contract_preserves_source_ids_and_quantities() -> None:
+    memo_obligations = build_memo_obligation_packet(
+        [
+            {
+                "item_id": "support",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": "Option A improved the main outcome.",
+                "source_ids": ["support_study"],
+                "source_labels": ["Support Study"],
+                "quantities": [
+                    {
+                        "value": "20%",
+                        "interpretation": "main outcome improvement",
+                        "source_ids": ["support_study"],
+                    }
+                ],
+            }
+        ]
+    )
+
+    obligation = memo_obligations["obligations"][0]
+
+    assert obligation["source_ids"] == ["support_study"]
+    assert obligation["quantities"][0]["source_ids"] == ["support_study"]
+    assert obligation["acceptable_expression"]["required_source_ids"] == ["support_study"]
+    assert obligation["acceptable_expression"]["required_quantity_values"] == ["20%"]
+
+
+def test_retention_accepts_obligation_source_id_citation() -> None:
+    packet = {
+        "source_trail": [{"source_id": "support_study", "source_label": "Support Study"}],
+        "memo_obligations": build_memo_obligation_packet(
+            [
+                {
+                    "item_id": "support",
+                    "must_use": True,
+                    "role": "strongest_support",
+                    "reader_claim": "Option A improved the main outcome.",
+                    "source_ids": ["support_study"],
+                    "source_labels": ["Support Study"],
+                    "quantities": [{"value": "20%", "interpretation": "main outcome improvement"}],
+                }
+            ]
+        ),
+        "evidence_items": [],
+    }
+
+    report = build_memo_ready_packet_retention_report(
+        "Option A improved the main outcome by 20% [support_study].",
+        packet,
+    )
+
+    assert report["status"] == "ready"
+    assert report["missing_mandatory_count"] == 0
 
 
 def test_memo_ready_prompt_without_evidence_items_does_not_dump_raw_packet() -> None:
@@ -115,6 +174,7 @@ def test_synthesis_prompt_exposes_analytical_balance_contract_as_source_ids() ->
     assert "section_writing_packets" in prompt
     assert "source_weighted_answer_frame" not in prompt
     assert "section_retention_requirements" in prompt
+    assert "memo_obligation_contract" in prompt
     assert "priority_evidence" in prompt
     assert "supplemental_evidence" in prompt
     assert "organized_evidence_inventory" not in prompt

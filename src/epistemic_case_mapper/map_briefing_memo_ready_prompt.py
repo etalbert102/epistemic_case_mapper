@@ -20,6 +20,7 @@ from epistemic_case_mapper.map_briefing_canonical_decision_writer_packet import 
 from epistemic_case_mapper.map_briefing_analyst_decision_spine import compact_analyst_decision_spine_for_prompt, section_spine_for_prompt
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import dedupe as _dedupe
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import norm as _norm
+from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import short_text as _short_text
 from epistemic_case_mapper.map_briefing_memo_ready_packet_helpers import string_list as _string_list
 from epistemic_case_mapper.map_briefing_source_bound_evidence import build_source_bound_evidence_atoms, source_bound_quantity_tuples
 from epistemic_case_mapper.map_briefing_memo_ready_guidance_application import build_section_reader_guidance_application
@@ -150,6 +151,7 @@ def build_canonical_decision_writer_packet_synthesis_prompt(canonical_packet: di
         "- Use decision_usefulness tradeoffs and cruxes as prose scaffolding; include a matrix only when the decision question genuinely needs one.\n"
         "- Lead with the key distinction that resolves the decision when the packet supplies one; make it feel like analyst judgment, not a list of findings.\n"
         "- Use bluf_contract for the opening bottom line: answer first, then scope, confidence, and the main exception or boundary.\n"
+        "- Use memo_obligation_contract as the coverage contract: each obligation should appear as natural analysis with its source IDs and protected quantities attached to the relevant claim.\n"
         "- Treat balanced_answer_frame as the controlling answer frame. The bottom line and every section should preserve its best_current_read, main_support, main_counterweight, scope, practical_read, must_not_overstate, and underused_balance_evidence.\n"
         "- Use balanced_answer_frame.must_not_overstate to calibrate causal language and confidence; keep observational and guidance evidence at the strength the packet supports.\n"
         "- Use evidence_language_contracts to choose verbs: observational evidence should stay associational, guidance should stay contextual, and indirect endpoints should stay tied to the measured endpoint.\n"
@@ -200,6 +202,7 @@ def _reader_synthesis_packet(canonical_packet: dict[str, Any]) -> dict[str, Any]
         "balanced_answer_frame": packet.get("balanced_answer_frame"),
         "bluf_contract": packet.get("bluf_contract"),
         "analyst_decision_spine": compact_analyst_decision_spine_for_prompt(_dict(packet.get("analyst_decision_spine"))),
+        "memo_obligation_contract": _compact_memo_obligation_contract(_dict(packet.get("memo_obligation_contract"))),
         "decision_argument_contract": compact_decision_argument_contract_for_prompt(_dict(packet.get("decision_argument_contract"))),
         "expert_judgment_compression": compact_expert_judgment_for_prompt(_dict(packet.get("expert_judgment_compression"))),
         "evidence_language_contracts": _compact_language_contracts(_list(packet.get("evidence_language_contracts"))),
@@ -635,6 +638,60 @@ def _section_priority_quantity_contracts(reader_packet: dict[str, Any], evidence
         if isinstance(row, dict) and str(row.get("decision_role") or "") in section_roles
     ]
     return compact_priority_quantity_contracts_for_prompt(_dedupe_rows([*exact, *role_rows], "contract_id"), limit=10)
+
+
+def _compact_memo_obligation_contract(contract: dict[str, Any]) -> dict[str, Any]:
+    if not contract:
+        return {}
+    return _drop_empty(
+        {
+            "schema_id": contract.get("schema_id"),
+            "required_count": contract.get("required_count"),
+            "writer_use": contract.get("writer_use"),
+            "obligations": [
+                _compact_memo_obligation(row)
+                for row in _list(contract.get("obligations"))
+                if isinstance(row, dict)
+            ][:16],
+        }
+    )
+
+
+def _compact_memo_obligation(row: dict[str, Any]) -> dict[str, Any]:
+    acceptable = _dict(row.get("acceptable_expression"))
+    return _drop_empty(
+        {
+            "obligation_id": row.get("obligation_id"),
+            "role": row.get("role"),
+            "claim": _short_text(row.get("claim_to_preserve") or row.get("statement"), 520),
+            "writing_job": _short_text(row.get("writing_job") or row.get("prose_instruction"), 260),
+            "why_it_matters": _short_text(row.get("why_it_matters"), 260),
+            "source_ids": _string_list(row.get("source_ids")),
+            "quantities": [_compact_obligation_quantity(quantity) for quantity in _list(row.get("quantities")) if isinstance(quantity, dict)][:6],
+            "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+            "acceptable_expression": _drop_empty(
+                {
+                    "required_terms_or_equivalents": _string_list(acceptable.get("required_terms_or_equivalents"))[:8],
+                    "required_source_ids": _string_list(acceptable.get("required_source_ids"))[:8],
+                    "required_quantity_values": _string_list(acceptable.get("required_quantity_values"))[:8],
+                    "semantic_job": acceptable.get("semantic_job"),
+                }
+            ),
+        }
+    )
+
+
+def _compact_obligation_quantity(quantity: dict[str, Any]) -> dict[str, Any]:
+    return _drop_empty(
+        {
+            "value": quantity.get("value"),
+            "interpretation": _short_text(quantity.get("interpretation"), 220),
+            "endpoint": quantity.get("endpoint"),
+            "population": quantity.get("population"),
+            "source_ids": _string_list(quantity.get("source_ids")),
+            "memo_use": quantity.get("memo_use"),
+        }
+    )
 
 
 def _priority_quantity_roles_for_section(section_id: str) -> set[str]:

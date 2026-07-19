@@ -46,8 +46,15 @@ def build_memo_ready_production_readiness_report(packet: dict[str, Any]) -> dict
         fatal_issues.append("missing_analyst_source_weight_judgments")
     if _report_has_warning(source_judgment_report):
         warnings.append("analyst_source_weight_judgment_report_warning")
-    if _source_weight_projection_fallback_used(canonical):
+    if _source_weight_projection_fallback_used(canonical) and not _source_weight_judgment_sufficient(
+        source_judgments,
+        source_judgment_report,
+        hierarchy,
+        hierarchy_report,
+    ):
         fatal_issues.append("writer_role_projection_source_weight_fallback_used")
+    elif _source_weight_projection_fallback_used(canonical):
+        warnings.append("writer_role_projection_source_weight_fallback_present")
     if _scaffolded_answer_spine(answer_spine):
         fatal_issues.append("scaffolded_or_truncated_answer_spine")
     canonical_quality_warnings = _canonical_quality_blocking_warnings(canonical_quality)
@@ -111,6 +118,22 @@ def _report_has_warning(report: dict[str, Any]) -> bool:
 
 def _source_weight_projection_fallback_used(canonical: dict[str, Any]) -> bool:
     return _writer_projection_row_count(canonical) > 0
+
+
+def _source_weight_judgment_sufficient(
+    source_judgments: list[Any],
+    source_judgment_report: dict[str, Any],
+    hierarchy: dict[str, Any],
+    hierarchy_report: dict[str, Any],
+) -> bool:
+    if _missing_source_hierarchy(hierarchy, hierarchy_report):
+        return False
+    if not source_judgments:
+        return False
+    status = str(source_judgment_report.get("status") or "").strip().lower()
+    if status in {"", "empty", "missing", "failed", "blocked"}:
+        return False
+    return True
 
 
 def _writer_projection_row_count(canonical: dict[str, Any]) -> int:

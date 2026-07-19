@@ -2959,15 +2959,17 @@ def _obligation_retention_status(
 ) -> dict[str, Any]:
     statement = str(obligation.get("statement") or "").strip()
     source_labels = _string_list(obligation.get("source_labels"))
+    source_ids = _string_list(obligation.get("source_ids"))
+    source_refs = _exact_dedupe([*source_ids, *source_labels])
     quantities = retention_quantity_rows(obligation)
     missing_quantities = [quantity["value"] for quantity in quantities if not quantity_retained(memo, quantity)]
-    source_retained = not source_labels or any(
+    source_retained = not source_refs or any(
         _contains_text(memo, alias)
-        for source in source_labels
+        for source in source_refs
         for alias in _source_aliases_for_label(source, source_aliases or {})
     )
-    if not source_retained and source_labels:
-        source_retained = any(_contains_text(memo, source) for source in source_labels)
+    if not source_retained and source_refs:
+        source_retained = any(_contains_text(memo, source) for source in source_refs)
     mode = str(obligation.get("validation_mode") or "claim_terms")
     if mode == "scope_signal":
         source_retained = True
@@ -2989,6 +2991,7 @@ def _obligation_retention_status(
         "missing_quantities": missing_quantities,
         "statement": statement,
         "source_labels": source_labels,
+        "source_ids": source_ids,
         "validation_terms": terms,
     }
 
@@ -3072,6 +3075,7 @@ def _repair_obligation(packet: dict[str, Any], issue: dict[str, Any]) -> dict[st
         "statement": obligation.get("statement") or issue.get("statement"),
         "prose_instruction": obligation.get("prose_instruction"),
         "source_labels": obligation.get("source_labels", issue.get("source_labels", [])),
+        "source_ids": obligation.get("source_ids", issue.get("source_ids", [])),
         "quantities": obligation.get("quantities", []),
         "missing_quantities": issue.get("missing_quantities", []),
         "decision_relevance": evidence_item.get("decision_relevance"),

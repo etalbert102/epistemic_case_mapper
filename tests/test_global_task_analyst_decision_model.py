@@ -5,7 +5,9 @@ from epistemic_case_mapper.map_briefing_analyst_decision_model_global_tasks impo
     build_global_analyst_task_prompt,
     build_global_analyst_tasks,
 )
+from epistemic_case_mapper.map_briefing_analyst_decision_model_global_task_runner import run_global_analyst_task_calls
 from epistemic_case_mapper.map_briefing_analyst_schemas import build_analyst_decision_model_parse_report
+from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 def test_global_analyst_tasks_use_task_specific_contexts() -> None:
@@ -14,19 +16,40 @@ def test_global_analyst_tasks_use_task_specific_contexts() -> None:
 
     assert set(by_id) == {
         "answer_frame",
-        "evidence_roles",
+        "evidence_reconciliation",
         "quantity_plan",
         "source_hierarchy",
-        "source_weighting_guidance",
         "argument_blueprint",
     }
     assert "quantity_bearing_evidence_rows" in by_id["quantity_plan"]["context"]
     assert "evidence_rows" not in by_id["quantity_plan"]["context"]
     assert "source_inventory" in by_id["source_hierarchy"]["context"]
-    assert "source_inventory" in by_id["source_weighting_guidance"]["context"]
-    assert "top_decision_evidence" in by_id["source_weighting_guidance"]["context"]
+    assert "all_evidence_roster" in by_id["evidence_reconciliation"]["context"]
+    assert "detail_cards" in by_id["evidence_reconciliation"]["context"]
     assert "decision_diagnostic_evidence_rows" in by_id["answer_frame"]["context"]
-    assert len(build_global_analyst_task_prompt(by_id["quantity_plan"])) < len(build_global_analyst_task_prompt(by_id["evidence_roles"]))
+    assert len(build_global_analyst_task_prompt(by_id["quantity_plan"])) <= len(build_global_analyst_task_prompt(by_id["evidence_reconciliation"]))
+    assert "source_labels" not in "\n".join(build_global_analyst_task_prompt(task) for task in tasks)
+
+
+def test_global_task_runner_rejects_wrong_task_schema(monkeypatch) -> None:
+    task = {task["task_id"]: task for task in build_global_analyst_tasks(_context())}["answer_frame"]
+
+    def wrong_schema_backend(*args, **kwargs) -> ModelBackendResult:
+        return ModelBackendResult(text='{"schema_id":"global_quantity_plan_v1","quantity_decisions":[]}', backend="fake")
+
+    monkeypatch.setenv("ECM_MODEL_STAGE_ATTEMPTS", "1")
+
+    [result] = run_global_analyst_task_calls(
+        [task],
+        backend="fake",
+        backend_timeout=30,
+        backend_retries=0,
+        num_predict=4096,
+        run_backend=wrong_schema_backend,
+    )
+
+    assert result["status"] == "failed"
+    assert result["retry_reports"][0]["status"] == "parse_failed"
 
 
 def test_global_task_payload_assembles_valid_analyst_decision_model() -> None:
@@ -63,28 +86,34 @@ def test_global_task_payload_assembles_valid_analyst_decision_model() -> None:
             },
         },
         {
-            "task_id": "evidence_roles",
+            "task_id": "evidence_reconciliation",
             "status": "parsed",
             "payload": {
-                "schema_id": "global_evidence_roles_v1",
-                "evidence_roles": [
+                "schema_id": "global_evidence_reconciliation_v1",
+                "groups": [
                     {
-                        "evidence_item_id": "item:support",
-                        "memo_inclusion": "memo_spine",
-                        "decision_role": "answer_driver",
+                        "group_id": "support",
+                        "proposition": "Outcome evidence supports option A.",
+                        "role": "answer_driver",
                         "answer_relation": "supports_answer",
-                        "priority_rank": 1,
+                        "priority_band": "high",
+                        "evidence_item_ids": ["item:support"],
+                        "qualifier": "",
                         "rationale": "Load-bearing support.",
                     },
                     {
-                        "evidence_item_id": "item:risk",
-                        "memo_inclusion": "memo_spine",
-                        "decision_role": "counterweight",
+                        "group_id": "risk",
+                        "proposition": "Budget risk bounds implementation.",
+                        "role": "counterweight",
                         "answer_relation": "challenges_answer",
-                        "priority_rank": 2,
+                        "priority_band": "high",
+                        "evidence_item_ids": ["item:risk"],
+                        "qualifier": "",
                         "rationale": "Load-bearing counterweight.",
                     },
                 ],
+                "overrides": [],
+                "unresolved_evidence_item_ids": [],
             },
         },
         {

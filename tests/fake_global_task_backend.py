@@ -52,6 +52,24 @@ def fake_global_task_payload(prompt: str) -> dict:
                 for index, row in enumerate(rows, start=1)
             ],
         }
+    if schema == "global_evidence_reconciliation_v1":
+        return {
+            "schema_id": schema,
+            "groups": [
+                {
+                    "group_id": "primary_group",
+                    "proposition": "Primary selected rows support the answer.",
+                    "role": "answer_driver",
+                    "answer_relation": "supports_answer",
+                    "priority_band": "high",
+                    "evidence_item_ids": evidence_ids[:6],
+                    "qualifier": "",
+                    "rationale": "Global reconciliation grouped the selected evidence.",
+                }
+            ],
+            "overrides": [],
+            "unresolved_evidence_item_ids": [],
+        }
     if schema == "global_quantity_plan_v1":
         return {
             "schema_id": schema,

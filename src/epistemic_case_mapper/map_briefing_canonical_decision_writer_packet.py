@@ -121,6 +121,7 @@ def build_canonical_decision_writer_packet(
         "source_weight_notes": _source_weight_notes(interface),
         "evidence_language_contracts": language_contracts,
         "mandatory_retention_checklist": mandatory_checklist,
+        "memo_obligation_contract": _memo_obligation_contract(packet, mandatory_checklist),
         "citation_registry": _citation_registry(source_trail),
     }
     canonical["reader_judgment_packet"] = build_reader_judgment_packet(canonical)
@@ -756,8 +757,11 @@ def _mandatory_obligation_row(row: dict[str, Any], *, evidence_by_id: dict[str, 
             "claim_calibration_notes": _string_list(calibrated.get("calibration_notes")),
             "prose_instruction": _short_text(row.get("prose_instruction"), 360),
             "source_labels": _string_list(row.get("source_labels")),
+            "source_ids": _dedupe([*_string_list(row.get("source_ids")), *_string_list(evidence.get("source_ids"))]),
             "quantities": _brief_quantities(evidence or row),
             "evidence_item_ids": evidence_ids,
+            "why_it_matters": _short_text(row.get("why_it_matters"), 360),
+            "acceptable_expression": row.get("acceptable_expression") if isinstance(row.get("acceptable_expression"), dict) else {},
         }
     )
 
@@ -777,7 +781,60 @@ def _mandatory_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
             "role": row.get("role"),
             "statement": _short_text(_calibrated_claim_row(row).get("claim"), 520),
             "source_labels": _string_list(row.get("source_labels")),
+            "source_ids": _string_list(row.get("source_ids")),
             "quantities": _brief_quantities(row),
+        }
+    )
+
+
+def _memo_obligation_contract(packet: dict[str, Any], mandatory_checklist: list[dict[str, Any]]) -> dict[str, Any]:
+    raw_obligations = required_memo_obligations(packet)
+    source_rows = raw_obligations if raw_obligations else mandatory_checklist
+    obligations = []
+    for index, row in enumerate(source_rows[:24], start=1):
+        if not isinstance(row, dict):
+            continue
+        obligations.append(
+            _drop_empty(
+                {
+                    "obligation_id": row.get("obligation_id") or row.get("item_id") or f"memo_obligation_{index:03d}",
+                    "role": row.get("role") or row.get("obligation_type"),
+                    "required": True,
+                    "claim_to_preserve": _short_text(row.get("audit_claim") or row.get("statement") or row.get("claim"), 620),
+                    "writing_job": _short_text(row.get("prose_instruction"), 360),
+                    "why_it_matters": _short_text(row.get("why_it_matters"), 360),
+                    "source_ids": _string_list(row.get("source_ids")),
+                    "source_labels": _string_list(row.get("source_labels")),
+                    "quantities": _brief_quantities(row),
+                    "evidence_item_ids": _string_list(row.get("evidence_item_ids")),
+                    "acceptable_expression": row.get("acceptable_expression")
+                    if isinstance(row.get("acceptable_expression"), dict)
+                    else _acceptable_expression_from_checklist(row),
+                }
+            )
+        )
+    return {
+        "schema_id": "memo_obligation_contract_v1",
+        "method": "canonical_required_obligations_from_memo_obligation_packet",
+        "required_count": len(obligations),
+        "obligations": obligations,
+        "writer_use": [
+            "Represent each required obligation as natural analysis in the section where it belongs.",
+            "Keep listed source IDs and quantities attached to the claim they support.",
+            "Use the acceptable_expression fields as the validation contract for faithful compression.",
+        ],
+    }
+
+
+def _acceptable_expression_from_checklist(row: dict[str, Any]) -> dict[str, Any]:
+    quantities = _brief_quantities(row)
+    return _drop_empty(
+        {
+            "must_attach_to_claim": True,
+            "required_source_ids": _string_list(row.get("source_ids")),
+            "required_quantity_values": [str(quantity.get("value") or "").strip() for quantity in quantities if str(quantity.get("value") or "").strip()],
+            "semantic_job": row.get("prose_instruction"),
+            "claim_to_preserve": row.get("statement") or row.get("claim"),
         }
     )
 
@@ -838,6 +895,7 @@ def _brief_quantities(row: dict[str, Any]) -> list[dict[str, Any]]:
                     "allowed_inference": quantity.get("allowed_inference") or _dict(quantity.get("assertion_bundle")).get("allowed_inference"),
                     "forbidden_inference": quantity.get("forbidden_inference") or _dict(quantity.get("assertion_bundle")).get("forbidden_inference"),
                     "source_labels": _string_list(quantity.get("source_labels")),
+                    "source_ids": _string_list(quantity.get("source_ids")) or _string_list(_dict(quantity.get("assertion_bundle")).get("source_ids")),
                     "quantity_id": str(quantity.get("quantity_id") or "").strip(),
                     "source_evidence_item_id": str(quantity.get("source_evidence_item_id") or "").strip(),
                     "memo_use": str(quantity.get("memo_use") or "").strip(),
