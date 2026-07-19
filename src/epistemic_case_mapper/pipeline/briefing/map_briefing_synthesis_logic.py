@@ -87,9 +87,13 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
     for value in _dict(contract.get("claim_context")).values():
         match = re.search(r"\b([^();]{3,80}?)\s*\(([A-Z]{2,8})\)", str(value or ""))
         if match:
+            expansion = match.group(1).strip().lower()
+            consumption = re.fullmatch(r"more\s+(.+?)\s+consumption", expansion)
+            if consumption:
+                expansion = f"higher {consumption.group(1)}-consumption"
             selected = re.sub(
                 rf"\b{re.escape(match.group(2))}\s+group\b",
-                f"{match.group(1).strip().lower()} group",
+                f"{expansion} group",
                 selected,
             )
     selected = selected[:1].upper() + selected[1:]
@@ -188,8 +192,10 @@ def build_synthesis_constraints(
             "Because the supporting evidence is observational or focused on intermediate markers, it supports the bounded default but does not justify a stronger favorable classification."
         )
     elif section_id == "counterweights" and contracts:
+        confidence = str(decision_anchor.get("confidence") or "bounded").lower()
         decision_effect = (
-            "Because the counterevidence varies by design, exposure, and endpoint and does not point in one consistent direction, it lowers confidence without establishing one uniform adverse effect."
+            "Because the counterevidence varies by design, exposure, and endpoint and does not point in one consistent direction, "
+            f"it bounds the default and supports {confidence} confidence without establishing one uniform adverse effect."
         )
     return _drop_empty(
         {

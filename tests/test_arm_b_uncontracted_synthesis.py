@@ -49,6 +49,7 @@ def test_uncontracted_practical_section_operationalizes_neutral_classification()
     markdown = _deterministic_uncontracted_section("Practical Implication", section)
 
     assert "Treat option A as neutral" in markdown
+    assert "for the target population" in markdown
     assert "do not make a specifically favorable or unfavorable recommendation" in markdown
 
 

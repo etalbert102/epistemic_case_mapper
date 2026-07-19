@@ -219,6 +219,7 @@ def _run_section(
         raw = result.text
         markdown = _extract_section_markdown(raw, heading)
         markdown = _normalize_statistical_brackets(markdown)
+        markdown = _normalize_relative_risk_surface(markdown)
         packet = section.get("packet") if isinstance(section.get("packet"), dict) else {}
         markdown = _repair_section_synthesis_logic(
             markdown,
@@ -737,9 +738,13 @@ def _deterministic_uncontracted_section(heading: str, section: dict[str, Any]) -
     question = str(anchor.get("decision_question") or "")
     classification = re.search(r"\btreated as\s+([a-z-]+)", answer, flags=re.IGNORECASE)
     subject = re.search(r"\bshould\s+(.+?)\s+be treated as\b", question, flags=re.IGNORECASE)
+    population = re.match(r"\s*For\s+(.+?),\s*should\b", question, flags=re.IGNORECASE)
+    outcome = re.search(r"\bregarding\s+(.+?)(?:\.|$)", answer, flags=re.IGNORECASE)
     if classification and subject:
+        scope = f" for {population.group(1)}" if population else " for the target population"
+        outcome_scope = f" with respect to {outcome.group(1)}" if outcome else " and outcome"
         lines.append(
-            f"Treat {subject.group(1)} as {classification.group(1).lower()} for the target population and outcome; "
+            f"Treat {subject.group(1)} as {classification.group(1).lower()}{scope}{outcome_scope}; "
             "do not make a specifically favorable or unfavorable recommendation on the current evidence."
         )
     else:
@@ -766,6 +771,15 @@ def _statistical_bracket_content(content: str) -> bool:
     if re.search(r"\d+(?:\.\d+)?\s*(?:to|[-–—])\s*\d+(?:\.\d+)?", text, flags=re.IGNORECASE):
         return not re.search(r"[A-Za-z_]", re.sub(r"\bto\b", "", text, flags=re.IGNORECASE))
     return False
+
+
+def _normalize_relative_risk_surface(markdown: str) -> str:
+    return re.sub(
+        r"associated with a\s+(\d+(?:\.\d+)?)\s+\((\d+(?:\.\d+)?)[-–](\d+(?:\.\d+)?)\)\s+higher risk",
+        r"associated with higher risk (HR \1; 95% CI \2–\3)",
+        str(markdown or ""),
+        flags=re.IGNORECASE,
+    )
 
 
 def _repair_near_miss_source_ids(markdown: str, known_source_ids: set[str]) -> str:

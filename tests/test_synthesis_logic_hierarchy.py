@@ -1,6 +1,9 @@
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
     repair_section_synthesis_logic,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import (
+    _normalize_relative_risk_surface,
+)
 
 
 def test_synthesis_logic_does_not_repeat_exposure_reconciliation_in_support_section() -> None:
@@ -31,3 +34,11 @@ def test_synthesis_logic_adds_required_evidence_hierarchy_thesis() -> None:
     )
 
     assert "Because the support is observational" in repaired
+
+
+def test_relative_risk_surface_labels_hazard_ratio_and_interval() -> None:
+    repaired = _normalize_relative_risk_surface(
+        "Exposure was associated with a 1.19 (1.16–1.22) higher risk of the outcome."
+    )
+
+    assert repaired == "Exposure was associated with higher risk (HR 1.19; 95% CI 1.16–1.22) of the outcome."

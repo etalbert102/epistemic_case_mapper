@@ -274,15 +274,15 @@ def test_arm_b_contract_repairs_source_excerpt_surface_grammar() -> None:
 def test_arm_b_contract_expands_source_defined_acronym_and_statistical_symbol() -> None:
     contract = _contract_for_arm_b(
         {
-            "claim_context": {"exposure_or_option": "More exposure (MEC) group"},
+            "claim_context": {"exposure_or_option": "More intervention consumption (MIC) group"},
             "source_evidence": [
-                {"source_id": "s1", "excerpts": ["The MEC group had a higher marker (I 2 = 18%)."]}
+                {"source_id": "s1", "excerpts": ["The MIC group had a higher marker (I 2 = 18%)."]}
             ],
         },
         required=True,
     )
 
-    assert contract["claim"] == "The more exposure group had a higher marker (I² = 18%)."
+    assert contract["claim"] == "The higher intervention-consumption group had a higher marker (I² = 18%)."
 
 
 def test_arm_b_title_truncation_does_not_split_word() -> None:

@@ -293,7 +293,6 @@ def _compact_contract(contract: dict[str, Any]) -> dict[str, Any]:
             "quantities": contract.get("required_quantity_atoms"),
             "scope": contract.get("population_scope"),
             "caveat": contract.get("required_caveat"),
-            "evidence_context": contract.get("claim_context"),
             "must_qualify_with": contract.get("must_qualify_with"),
             "must_not_imply": contract.get("must_not_imply"),
             "source_evidence": _compact_source_evidence(contract),
