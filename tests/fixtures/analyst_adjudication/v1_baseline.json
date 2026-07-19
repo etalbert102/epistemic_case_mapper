@@ -1,0 +1,81 @@
+{
+  "ledger": {
+    "schema_id": "analyst_evidence_ledger_v1",
+    "decision_question": "Should option A be treated as neutral?",
+    "stable_final_answer_frame": {
+      "schema_id": "stable_final_answer_frame_v1",
+      "answer_status": "provisional",
+      "current_best_answer": "Treat option A as neutral when downstream risk is bounded."
+    },
+    "rows": [
+      {
+        "evidence_item_id": "bundle:support",
+        "input_kind": "retained_bundle",
+        "current_role": "strongest_support",
+        "current_priority": 4,
+        "source_ids": ["source:support"],
+        "claim": "Option A reduced losses in the outcome study.",
+        "source_bottom_line_signals": ["benefit_signal"]
+      },
+      {
+        "evidence_item_id": "warning:risk",
+        "input_kind": "memo_warning",
+        "current_role": "counterweight",
+        "current_priority": 2,
+        "source_ids": ["source:risk"],
+        "claim": "Higher exposure was associated with increased downstream risk.",
+        "source_bottom_lines": [
+          {
+            "source_id": "source:risk",
+            "source_bottom_line": "Higher exposure was associated with increased downstream risk.",
+            "polarity_signal": "increased_harm_or_risk_signal"
+          }
+        ],
+        "source_bottom_line_signals": ["increased_harm_or_risk_signal"]
+      },
+      {
+        "evidence_item_id": "context:mechanism",
+        "input_kind": "retained_bundle",
+        "current_role": "mechanism_or_context",
+        "current_priority": 8,
+        "source_ids": ["source:mechanism"],
+        "claim": "A plausible mechanism explains part of the observed effect."
+      }
+    ]
+  },
+  "adjudication": {
+    "schema_id": "analyst_adjudication_v1",
+    "decision_question": "Should option A be treated as neutral?",
+    "rows": [
+      {
+        "evidence_item_id": "bundle:support",
+        "memo_use": "load_bearing_primary_support",
+        "importance_rank": 1,
+        "rationale": "Direct outcome evidence supports the provisional answer.",
+        "answer_relation": "supports_answer",
+        "source_ids": ["source:support"],
+        "decision_contribution": "Provides the main observed benefit signal.",
+        "use_in_reasoning": "answer anchor"
+      },
+      {
+        "evidence_item_id": "warning:risk",
+        "memo_use": "load_bearing_primary_support",
+        "importance_rank": 2,
+        "rationale": "Incorrectly treats increased risk as support for neutrality.",
+        "answer_relation": "supports_answer",
+        "source_ids": ["source:risk"],
+        "target_answer_option": "neutral",
+        "effect_on_final_answer": "supports current_best_answer"
+      },
+      {
+        "evidence_item_id": "context:mechanism",
+        "memo_use": "mechanism_or_context",
+        "importance_rank": 3,
+        "rationale": "Useful explanatory context that should not drive the answer.",
+        "answer_relation": "contextualizes_answer",
+        "source_ids": ["source:mechanism"]
+      }
+    ],
+    "overall_rationale": "Baseline fixture exercises routing and source-faithfulness repair."
+  }
+}
