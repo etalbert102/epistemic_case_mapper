@@ -23,7 +23,7 @@ from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_faithfulness import repair_adjudication_source_faithfulness
 
-DEFAULT_CHUNK_SIZE = 8
+DEFAULT_CHUNK_SIZE = 2
 
 
 def run_analyst_adjudication(
