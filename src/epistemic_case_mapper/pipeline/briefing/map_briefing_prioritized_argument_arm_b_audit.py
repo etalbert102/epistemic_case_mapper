@@ -73,6 +73,7 @@ ARM_B_ALLOWED_DECISION_ANCHOR_KEYS = {
     "bounded_answer",
     "compact_answer",
     "confidence",
+    "scope_rule",
     "scope_boundaries",
     "do_not_overstate",
 }

@@ -374,12 +374,13 @@ def build_arm_b_b1_aggregate_report(
 
 
 def _section_plan(section_packets: list[dict[str, Any]], decision_anchor: dict[str, Any]) -> dict[str, Any]:
+    prompt_anchor = _dict(section_packets[0].get("decision_anchor")) if section_packets else decision_anchor
     return {
         "schema_id": "arm_b_slim_section_synthesis_plan_v1",
         "status": "ready",
         "title": _short_decision_title(decision_anchor.get("decision_question")),
         "decision_question": decision_anchor.get("decision_question"),
-        "bottom_line": _calibrated_bottom_line(decision_anchor),
+        "bottom_line": _calibrated_bottom_line(prompt_anchor),
         "confidence": decision_anchor.get("confidence"),
         "bounded_answer_required": _bounded_answer_required(decision_anchor),
         "evidence_contract_scope": "section_owned",
@@ -415,7 +416,7 @@ def _section_packets(
     known_source_aliases: dict[str, str],
 ) -> list[dict[str, Any]]:
     moves_by_section = _moves_by_section(canonical)
-    synthesis_constraints = _synthesis_constraints(list(contracts_by_id.values()), decision_anchor)
+    prompt_anchor = _prompt_decision_anchor(decision_anchor)
     packets = []
     for section_id in ARM_B_SECTION_IDS:
         owned_contract_ids = [
@@ -430,6 +431,7 @@ def _section_packets(
                 if evidence_id in contracts_by_id
             ]
         )
+        synthesis_constraints = _synthesis_constraints(contracts, prompt_anchor)
         owned_moves = [
             _compact_practical_move(row) if section_id == "practical_implication" else _compact_move(row)
             for row in moves_by_section.get(section_id, [])
@@ -442,8 +444,11 @@ def _section_packets(
                     "heading": ARM_B_SECTION_HEADINGS[section_id],
                     "section_job": ARM_B_SECTION_JOBS[section_id],
                     "reader_question": ARM_B_READER_QUESTIONS[section_id],
-                    "decision_anchor": decision_anchor,
-                    "calibration_limits": decision_anchor.get("do_not_overstate"),
+                    "decision_anchor": prompt_anchor,
+                    "calibration_limits": [
+                        "Do not state causal, beneficial, protective, or harmful conclusions beyond the section evidence contracts.",
+                        "Do not add populations, thresholds, endpoints, or timeframes absent from the section evidence contracts.",
+                    ],
                     "synthesis_constraints": synthesis_constraints,
                     "owned_moves": owned_moves,
                     "evidence_expression_contracts": contracts,
@@ -575,7 +580,11 @@ def _bounded_mandatory_ids(
     selected: set[str] = set()
     direct_rank = {evidence_id: index for index, evidence_id in enumerate(direct_order)}
     contracts_by_id = contracts_by_id or {}
-    limits = {"answer_evidence": 4, "counterweights": 4, "practical_implication": 0}
+    compressed = len(mandatory_ids) > 12
+    limits = {
+        "answer_evidence": 3 if compressed else 6, "counterweights": 4 if compressed else 8,
+        "practical_implication": 0,
+    }
     for section_id, limit in limits.items():
         candidates = [evidence_id for evidence_id in mandatory_ids if ownership.get(evidence_id) == section_id]
         ordered = sorted(
@@ -668,12 +677,17 @@ def _compact_practical_move(move: dict[str, Any]) -> dict[str, Any]:
 
 
 def _contract_for_arm_b(contract: dict[str, Any], *, required: bool) -> dict[str, Any]:
-    return _drop_empty(
-        {
-            **contract,
-            "required": required,
-        }
+    source_claim = next(
+        (
+            excerpt
+            for row in _list(contract.get("source_evidence"))
+            if isinstance(row, dict)
+            for excerpt in _string_list(row.get("excerpts"))
+            if excerpt
+        ),
+        "",
     )
+    return _drop_empty({**contract, "claim": source_claim or contract.get("claim"), "required": required})
 
 
 def _overlap_report(section_packets: list[dict[str, Any]]) -> dict[str, Any]:
@@ -739,6 +753,28 @@ def _decision_anchor(memo_ready_packet: dict[str, Any], analyst_model: dict[str,
             "confidence": analyst_model.get("confidence"),
             "scope_boundaries": _string_list(logic.get("scope_boundaries")),
             "do_not_overstate": _string_list(logic.get("do_not_overstate")),
+        }
+    )
+
+
+def _prompt_decision_anchor(decision_anchor: dict[str, Any]) -> dict[str, Any]:
+    raw_answer = str(decision_anchor.get("bounded_answer") or decision_anchor.get("compact_answer") or "").strip()
+    primary_answer = raw_answer.partition(". However")[0].rstrip(". ")
+    bounded_answer = _calibrated_bottom_line(
+        {
+            "bounded_answer": primary_answer,
+            "confidence": decision_anchor.get("confidence"),
+            "scope_boundaries": ["Keep the answer bounded to the selected evidence contracts."],
+        }
+    )
+    return _drop_empty(
+        {
+            "decision_question": decision_anchor.get("decision_question"),
+            "bounded_answer": bounded_answer,
+            "confidence": decision_anchor.get("confidence"),
+            "scope_rule": (
+                "State a specific population, threshold, or endpoint only when a section evidence contract supports it."
+            ),
         }
     )
 

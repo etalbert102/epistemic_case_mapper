@@ -38,6 +38,7 @@ def calibrated_bottom_line(decision_anchor: dict[str, Any]) -> str:
         answer,
         flags=re.IGNORECASE,
     )
+    answer = re.sub(r"\s*\(e\.g\.,[^)]*\)", "", answer, flags=re.IGNORECASE)
     parts = [answer.rstrip(". ")]
     confidence = str(decision_anchor.get("confidence") or "").strip()
     if confidence and "confidence" not in answer.lower():

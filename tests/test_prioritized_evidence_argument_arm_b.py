@@ -16,6 +16,8 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_e
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import (
     _bounded_mandatory_ids,
     _calibrated_bottom_line,
+    _contract_for_arm_b,
+    _prompt_decision_anchor,
     _short_decision_title,
     audit_prompt_submissions,
     build_arm_b_projection,
@@ -53,6 +55,50 @@ def test_arm_b_bottom_line_does_not_let_single_surrogate_carry_broad_answer() ->
     assert "study-specific higher-exposure findings" in bottom_line
     assert "Confidence: medium" in bottom_line
     assert "bounded read of the current evidence" in bottom_line
+
+
+def test_arm_b_bottom_line_removes_unsupported_scope_examples() -> None:
+    bottom_line = _calibrated_bottom_line(
+        {
+            "bounded_answer": "Treat the exposure as neutral except in narrower groups (e.g., older adults with type 2 diabetes).",
+            "confidence": "medium",
+        }
+    )
+
+    assert "older adults" not in bottom_line
+    assert "type 2 diabetes" not in bottom_line
+    assert "narrower groups" in bottom_line
+
+
+def test_arm_b_prompt_anchor_exposes_scope_rule_not_uncontracted_scope_details() -> None:
+    anchor = _prompt_decision_anchor(
+        {
+            "decision_question": "What follows?",
+            "bounded_answer": "Use the default except in narrower groups (e.g., older adults).",
+            "confidence": "medium",
+            "scope_boundaries": ["Older adults require separate treatment."],
+            "do_not_overstate": ["Do not generalize."],
+        }
+    )
+
+    assert "scope_boundaries" not in anchor
+    assert "do_not_overstate" not in anchor
+    assert "older adults" not in anchor["bounded_answer"]
+    assert "However" not in anchor["bounded_answer"]
+    assert "bounded read" in anchor["bounded_answer"]
+    assert "only when a section evidence contract supports it" in anchor["scope_rule"]
+
+
+def test_arm_b_projection_keeps_synthesis_constraints_section_local() -> None:
+    projection = build_arm_b_projection(load_frozen_arm_b_inputs(FROZEN_EGGS))
+    answer = next(row for row in projection["section_packets"] if row["section_id"] == "answer_evidence")
+    answer_contract_ids = {
+        row["evidence_id"] for row in answer["evidence_expression_contracts"]
+    }
+
+    assert set(answer["synthesis_constraints"].get("surrogate_or_mechanistic_evidence_ids", [])).issubset(
+        answer_contract_ids
+    )
 
 
 def test_arm_b_prompt_exposes_source_evidence_and_synthesis_constraints() -> None:
@@ -134,21 +180,21 @@ def test_arm_b_mandatory_cap_prefers_explicit_canonical_items() -> None:
 
     selected = _bounded_mandatory_ids(mandatory, ownership=ownership, canonical=canonical)
 
-    assert len(selected) == 4
+    assert len(selected) == 6
     assert {"e8", "e9"}.issubset(selected)
 
 
 def test_arm_b_mandatory_cap_prefers_source_specific_contracts() -> None:
-    mandatory = {f"e{i}" for i in range(1, 6)}
+    mandatory = {f"e{i}" for i in range(1, 8)}
     ownership = {evidence_id: "answer_evidence" for evidence_id in mandatory}
     canonical = {
         "decision_argument_contract": {
-            "argument_moves": [{"evidence_item_ids": ["e1", "e2", "e3", "e4", "e5"]}],
+            "argument_moves": [{"evidence_item_ids": [f"e{i}" for i in range(1, 8)]}],
         }
     }
     contracts = {
-        "e1": {"source_ids": ["s1", "s2"]},
         **{f"e{i}": {"source_ids": [f"s{i}"]} for i in range(2, 6)},
+        **{f"e{i}": {"source_ids": ["s1", "s2"]} for i in (1, 6, 7)},
     }
 
     selected = _bounded_mandatory_ids(
@@ -158,7 +204,37 @@ def test_arm_b_mandatory_cap_prefers_source_specific_contracts() -> None:
         contracts_by_id=contracts,
     )
 
-    assert selected == {"e2", "e3", "e4", "e5"}
+    assert {"e2", "e3", "e4", "e5"}.issubset(selected)
+    assert "e7" not in selected
+
+
+def test_arm_b_mandatory_cap_compresses_oversized_packets() -> None:
+    mandatory = {f"a{i}" for i in range(1, 9)} | {f"c{i}" for i in range(1, 7)}
+    ownership = {
+        **{f"a{i}": "answer_evidence" for i in range(1, 9)},
+        **{f"c{i}": "counterweights" for i in range(1, 7)},
+    }
+
+    selected = _bounded_mandatory_ids(mandatory, ownership=ownership, canonical={})
+
+    assert len([item for item in selected if item.startswith("a")]) == 3
+    assert len([item for item in selected if item.startswith("c")]) == 4
+
+
+def test_arm_b_contract_uses_controlling_source_excerpt_as_claim() -> None:
+    contract = _contract_for_arm_b(
+        {
+            "evidence_id": "e1",
+            "claim": "Aggregate claim adds an unsupported population and endpoint.",
+            "source_evidence": [
+                {"source_id": "s1", "excerpts": ["The trial found no significant change in the measured outcome."]}
+            ],
+        },
+        required=True,
+    )
+
+    assert contract["claim"] == "The trial found no significant change in the measured outcome."
+    assert contract["required"] is True
 
 
 def test_arm_b_title_truncation_does_not_split_word() -> None:
