@@ -12,6 +12,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_quantity_retention import contains_quantity
 from epistemic_case_mapper.pipeline.briefing.map_briefing_citation_care import build_citation_care_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_entailment import (
+    collect_packet_source_evidence_by_source,
+)
 
 
 def build_source_bound_evidence_atoms(rows: list[dict[str, Any]], *, limit: int = 16) -> list[dict[str, Any]]:
@@ -49,6 +52,7 @@ def build_source_binding_report(
         atoms,
         source_aliases=aliases,
         source_roles_override=_source_weight_roles_by_source(packet),
+        source_evidence_by_source=collect_packet_source_evidence_by_source(packet),
     )
     ambiguous = _ambiguous_quantity_surfaces(atoms)
     warnings = [*invalid_tuples, *sentence_warnings, *ambiguous, *_list(citation_care.get("warnings"))]

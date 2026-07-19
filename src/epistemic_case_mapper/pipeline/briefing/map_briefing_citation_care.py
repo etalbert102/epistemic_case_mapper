@@ -17,9 +17,11 @@ def build_citation_care_report(
     *,
     source_aliases: dict[str, list[str]] | None = None,
     source_roles_override: dict[str, set[str]] | None = None,
+    source_evidence_by_source: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     alias_to_source = _citation_alias_to_source(atoms, source_aliases or {})
     roles_by_source = _citation_roles_by_source(atoms, override=source_roles_override or {})
+    evidence_by_source = source_evidence_by_source or {}
     warnings: list[dict[str, Any]] = []
     cited_sentence_count = 0
     for sentence_context in _memo_sentence_contexts(memo):
@@ -78,6 +80,14 @@ def build_citation_care_report(
                             "guidance": _role_mismatch_guidance(sentence_roles, roles),
                         }
                     )
+                entailment_warning = _citation_entailment_warning(
+                    clause,
+                    source_id=source_id,
+                    source_evidence=evidence_by_source.get(source_id, []),
+                    evidence_by_source=evidence_by_source,
+                )
+                if entailment_warning:
+                    warnings.append({**entailment_warning, "sentence": sentence[:360]})
     deduped = _dedupe_warning_rows(warnings)
     return {
         "schema_id": "citation_care_report_v1",
@@ -85,9 +95,175 @@ def build_citation_care_report(
         "method": "deterministic_sentence_citation_role_audit",
         "cited_sentence_count": cited_sentence_count,
         "known_citation_source_count": len(roles_by_source),
+        "source_evidence_count": sum(len(rows) for rows in evidence_by_source.values()),
         "warning_count": len(deduped),
         "warnings": deduped[:48],
     }
+
+
+_ENTAILMENT_STOPWORDS = {
+    "adult",
+    "adults",
+    "associated",
+    "association",
+    "cardiovascular",
+    "compared",
+    "consumption",
+    "dietary",
+    "effect",
+    "effects",
+    "evidence",
+    "finding",
+    "findings",
+    "from",
+    "health",
+    "higher",
+    "including",
+    "increased",
+    "lower",
+    "moderate",
+    "outcome",
+    "outcomes",
+    "people",
+    "population",
+    "research",
+    "result",
+    "results",
+    "risk",
+    "showed",
+    "shows",
+    "significant",
+    "significantly",
+    "study",
+    "subjects",
+    "their",
+    "than",
+    "that",
+    "where",
+    "which",
+    "while",
+    "these",
+    "those",
+    "versus",
+    "with",
+}
+
+
+def _citation_entailment_warning(
+    clause: str,
+    *,
+    source_id: str,
+    source_evidence: list[str],
+    evidence_by_source: dict[str, list[str]],
+) -> dict[str, Any] | None:
+    if not source_evidence:
+        return None
+    claim = _clean_citation_clause(clause)
+    evidence_text = " ".join(source_evidence)
+    claim_terms = _entailment_terms(claim)
+    evidence_terms = _entailment_terms(evidence_text)
+    distinctive_terms = _distinctive_claim_terms(claim_terms, evidence_by_source)
+    matched_distinctive = sorted(set(distinctive_terms).intersection(evidence_terms))
+    matched_terms = sorted(set(claim_terms).intersection(evidence_terms))
+    quantities = _specific_quantity_surfaces(claim)
+    if quantities:
+        matched_quantities = [quantity for quantity in quantities if _quantity_surface_matches(evidence_text, quantity)]
+        strong_qualitative_match = bool(matched_distinctive) and len(matched_terms) >= 2
+        if not matched_quantities and not strong_qualitative_match:
+            return _entailment_warning(
+                source_id,
+                claim,
+                source_evidence,
+                reason="cited source evidence does not contain the clause's specific quantity",
+                unmatched_quantities=quantities,
+            )
+        return None
+
+    if len(claim_terms) < 2:
+        return None
+    minimum_overlap = 2 if len(claim_terms) >= 5 else 1
+    if matched_distinctive or len(matched_terms) >= minimum_overlap:
+        return None
+    return _entailment_warning(
+        source_id,
+        claim,
+        source_evidence,
+        reason="cited source evidence does not match the clause's distinctive claim terms",
+        unmatched_terms=distinctive_terms[:8] or claim_terms[:8],
+    )
+
+
+def _entailment_warning(
+    source_id: str,
+    claim: str,
+    source_evidence: list[str],
+    *,
+    reason: str,
+    unmatched_quantities: list[str] | None = None,
+    unmatched_terms: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "warning_type": "citation_claim_entailment_mismatch",
+        "source_id": source_id,
+        "citation_clause": " ".join(claim.split())[:260],
+        "reason": reason,
+        "unmatched_quantities": unmatched_quantities or [],
+        "unmatched_terms": unmatched_terms or [],
+        "source_evidence_samples": [" ".join(text.split())[:220] for text in source_evidence[:3]],
+        "guidance": "Keep this citation only if its source-specific evidence supports the exact adjacent claim; otherwise remove or replace it.",
+    }
+
+
+def _specific_quantity_surfaces(text: str) -> list[str]:
+    patterns = (
+        r"(?:HR|RR|OR|MD)\s*(?:=|:)?\s*\d+(?:\.\d+)?",
+        r"\d+(?:\.\d+)?\s*(?:±|\+/-)\s*\d+(?:\.\d+)?\s*%?",
+        r"(?:[<>≤≥]\s*)?\d+(?:\.\d+)?\s*%",
+        r"[<>≤≥]\s*\d+(?:\.\d+)?\s*(?:times?/week|/week|[a-z]+s?/(?:week|day))",
+        r"\d+(?:\.\d+)?\s*(?:times?/week|[a-z]+s?/(?:week|day))",
+        r"\d+(?:\.\d+)?\s*[–-]\s*\d+(?:\.\d+)?",
+    )
+    values: list[str] = []
+    for pattern in patterns:
+        values.extend(match.group(0) for match in re.finditer(pattern, str(text or ""), flags=re.IGNORECASE))
+    deduped = sorted(_dedupe(" ".join(value.split()) for value in values), key=len, reverse=True)
+    retained: list[str] = []
+    for value in deduped:
+        normalized = _norm(value)
+        if any(normalized in _norm(existing) for existing in retained):
+            continue
+        retained.append(value)
+    return retained
+
+
+def _quantity_surface_matches(text: str, quantity: str) -> bool:
+    numbers = re.findall(r"\d+(?:\.\d+)?", quantity)
+    if not numbers:
+        return True
+    normalized = str(text or "").replace("−", "-").replace("–", "-").replace("—", "-")
+    return all(re.search(rf"(?<![\d.]){re.escape(number)}(?![\d.])", normalized) for number in numbers)
+
+
+def _entailment_terms(text: str) -> list[str]:
+    terms = []
+    for raw in re.findall(r"[a-z][a-z0-9-]{3,}", _norm(text)):
+        term = raw.rstrip(".,;:")
+        if term in _ENTAILMENT_STOPWORDS:
+            continue
+        terms.append(term)
+    return _dedupe(terms)
+
+
+def _distinctive_claim_terms(claim_terms: list[str], evidence_by_source: dict[str, list[str]]) -> list[str]:
+    source_count = max(len(evidence_by_source), 1)
+    maximum_frequency = max(2, source_count // 5)
+    frequencies: dict[str, int] = {}
+    for evidence_rows in evidence_by_source.values():
+        source_terms = set(_entailment_terms(" ".join(evidence_rows)))
+        for term in claim_terms:
+            if term in source_terms:
+                frequencies[term] = frequencies.get(term, 0) + 1
+    return [term for term in claim_terms if frequencies.get(term, 0) <= maximum_frequency]
 
 
 def _citation_alias_to_source(atoms: list[dict[str, Any]], source_aliases: dict[str, list[str]]) -> dict[str, str]:
@@ -177,13 +353,18 @@ def _clause_boundary_indexes(text: str, start: int, end: int) -> list[int]:
         char = text[index]
         if char in ";:":
             boundaries.append(index)
-        elif char == "." and not _is_decimal_period(text, index):
+        elif char == "." and not _is_decimal_period(text, index) and not _is_abbreviation_period(text, index):
             boundaries.append(index)
     return boundaries
 
 
 def _is_decimal_period(text: str, index: int) -> bool:
     return index > 0 and index + 1 < len(text) and text[index - 1].isdigit() and text[index + 1].isdigit()
+
+
+def _is_abbreviation_period(text: str, index: int) -> bool:
+    prefix = str(text or "")[: index + 1].lower()
+    return bool(re.search(r"(?:\bvs|\be\.g|\bi\.e|\bet\s+al)\.$", prefix))
 
 
 def _sentence_citation_roles(sentence: str) -> set[str]:
@@ -215,6 +396,12 @@ def _sentence_citation_roles(sentence: str) -> set[str]:
 
 def _strip_bracket_citations(sentence: str) -> str:
     return re.sub(r"\[[^\[\]\n]{1,180}\]", "", str(sentence or ""))
+
+
+def _clean_citation_clause(clause: str) -> str:
+    text = _strip_bracket_citations(clause)
+    text = re.sub(r"(?:\s*,\s*)+$", "", text)
+    return " ".join(text.split()).strip()
 
 
 def _mixed_citation_roles(source_roles: dict[str, list[str]]) -> bool:
@@ -274,7 +461,7 @@ def _memo_sentence_contexts(memo: str) -> list[dict[str, str]]:
 
     sentences: list[dict[str, str]] = []
     for heading, block in blocks:
-        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", re.sub(r"\s+", " ", block))
+        parts = _split_memo_sentences(re.sub(r"\s+", " ", block))
         for part in parts:
             sentence = part.strip()
             if not sentence:
@@ -288,11 +475,33 @@ def _memo_sentence_contexts(memo: str) -> list[dict[str, str]]:
     return sentences
 
 
+def _split_memo_sentences(block: str) -> list[str]:
+    protected = str(block or "")
+    placeholders = {
+        "vs.": "vs\u0000",
+        "e.g.": "e\u0000g\u0000",
+        "i.e.": "i\u0000e\u0000",
+        "et al.": "et al\u0000",
+    }
+    for surface, placeholder in placeholders.items():
+        protected = re.sub(re.escape(surface), placeholder, protected, flags=re.IGNORECASE)
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", protected)
+    return [part.replace("\u0000", ".") for part in parts]
+
+
 def _dedupe_warning_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen = set()
     deduped = []
     for row in rows:
-        key = (row.get("warning_type"), row.get("quantity"), tuple(_string_list(row.get("expected_source_ids"))), row.get("sentence"))
+        key = (
+            row.get("warning_type"),
+            row.get("quantity"),
+            row.get("source_id"),
+            tuple(_string_list(row.get("source_ids"))),
+            tuple(_string_list(row.get("expected_source_ids"))),
+            row.get("citation_clause"),
+            row.get("sentence"),
+        )
         if key in seen:
             continue
         seen.add(key)

@@ -295,6 +295,92 @@ def test_source_binding_report_preserves_heading_role_for_later_paragraph_senten
     assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
 
 
+def test_source_binding_flags_citation_without_source_specific_quantity_support() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_trial", "source_label": "Trial"},
+            {"source_id": "s_cohort", "source_label": "Cohort"},
+            {"source_id": "s_review", "source_label": "Review"},
+        ],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                        "statement": "Endothelial function changed by 0.4 ± 1.9 vs. 0.4 ± 2.4%.",
+                        "source_ids": ["s_trial", "s_cohort", "s_review"],
+                    "source_excerpts": [
+                        {
+                            "source_ids": ["s_trial"],
+                            "source_excerpt": "Endothelial function changed by 0.4 ± 1.9 vs. 0.4 ± 2.4% after the intervention.",
+                        },
+                        {
+                            "source_ids": ["s_cohort"],
+                            "source_excerpt": "Daily exposure was associated with an HR of 0.89 for cardiovascular disease.",
+                        },
+                        {
+                            "source_ids": ["s_review"],
+                            "source_excerpt": "Diet quality varied across the included observational studies.",
+                        },
+                    ],
+                }
+            ]
+        },
+    }
+    memo = "Endothelial function changed by 0.4 ± 1.9 vs. 0.4 ± 2.4% [s_trial, s_cohort, s_review]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    entailment = [row for row in warnings if row["warning_type"] == "citation_claim_entailment_mismatch"]
+    assert [row["source_id"] for row in entailment] == ["s_cohort", "s_review"]
+    assert entailment[0]["unmatched_quantities"] == ["0.4 ± 2.4%", "0.4 ± 1.9"]
+    assert "endothelial function" in entailment[0]["citation_clause"].lower()
+    assert entailment[0]["citation_clause"].endswith("2.4%")
+
+
+def test_source_binding_flags_qualitative_citation_without_distinctive_term_support() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_tmao", "source_label": "TMAO Review"},
+            {"source_id": "s_lipids", "source_label": "Lipid Trial"},
+        ],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Egg intake caused a temporary TMAO spike.",
+                    "source_ids": ["s_tmao", "s_lipids"],
+                    "source_excerpts": [
+                        {"source_ids": ["s_tmao"], "source_excerpt": "Egg intake increased plasma TMAO after ingestion."},
+                        {"source_ids": ["s_lipids"], "source_excerpt": "Plasma triacylglycerol increased after whole eggs."},
+                    ],
+                }
+            ]
+        },
+    }
+    memo = "Egg intake caused a temporary TMAO spike [s_tmao, s_lipids]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    entailment = [row for row in warnings if row["warning_type"] == "citation_claim_entailment_mismatch"]
+    assert [row["source_id"] for row in entailment] == ["s_lipids"]
+
+
+def test_source_binding_skips_entailment_when_source_specific_evidence_is_unavailable() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s1", "source_label": "Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {"statement": "The intervention improved outcomes by 25%.", "source_ids": ["s1"]}
+            ]
+        },
+    }
+
+    report = build_memo_ready_packet_retention_report("The intervention improved outcomes by 25% [s1].", packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    assert not any(row["warning_type"] == "citation_claim_entailment_mismatch" for row in warnings)
+
+
 def test_prioritized_source_role_overrides_stale_canonical_role() -> None:
     packet = {
         "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
