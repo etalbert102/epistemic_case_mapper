@@ -35,6 +35,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_citation_valid
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
     repair_section_synthesis_logic as _repair_section_synthesis_logic,
     section_synthesis_logic_issues as _section_synthesis_logic_issues,
+    strip_redundant_post_tag_quantities as _strip_redundant_post_tag_quantities,
 )
 from epistemic_case_mapper.model_stage_retry import model_stage_attempts
 from epistemic_case_mapper.model_backends import ModelBackendResult, model_parallelism, run_model_backend, run_parallel
@@ -220,6 +221,7 @@ def _run_section(
         markdown = _extract_section_markdown(raw, heading)
         markdown = _normalize_statistical_brackets(markdown)
         markdown = _normalize_relative_risk_surface(markdown)
+        markdown = _strip_redundant_post_tag_quantities(markdown, contracts)
         packet = section.get("packet") if isinstance(section.get("packet"), dict) else {}
         markdown = _repair_section_synthesis_logic(
             markdown,
@@ -780,6 +782,8 @@ def _normalize_relative_risk_surface(markdown: str) -> str:
         str(markdown or ""),
         flags=re.IGNORECASE,
     )
+
+
 
 
 def _repair_near_miss_source_ids(markdown: str, known_source_ids: set[str]) -> str:

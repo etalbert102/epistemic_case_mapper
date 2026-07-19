@@ -1,5 +1,6 @@
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
     repair_section_synthesis_logic,
+    strip_redundant_post_tag_quantities,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import (
     _normalize_relative_risk_surface,
@@ -42,3 +43,15 @@ def test_relative_risk_surface_labels_hazard_ratio_and_interval() -> None:
     )
 
     assert repaired == "Exposure was associated with higher risk (HR 1.19; 95% CI 1.16–1.22) of the outcome."
+
+
+def test_redundant_post_tag_quantity_is_removed_when_labeled_form_is_present() -> None:
+    markdown = (
+        "The outcome was 19% higher (HR 1.19; 95% CI 1.16–1.22) "
+        "{E:e1} 1.19 (1.16–1.22)."
+    )
+    contracts = [{"evidence_id": "e1", "required_quantity_atoms": [{"value": "1.19 (1.16–1.22)"}]}]
+
+    repaired = strip_redundant_post_tag_quantities(markdown, contracts)
+
+    assert repaired == "The outcome was 19% higher (HR 1.19; 95% CI 1.16–1.22) {E:e1}."

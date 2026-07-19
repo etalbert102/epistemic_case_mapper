@@ -320,6 +320,26 @@ def repair_section_synthesis_logic(
     return text
 
 
+def strip_redundant_post_tag_quantities(markdown: str, contracts: list[dict[str, Any]]) -> str:
+    text = str(markdown or "")
+    for contract in contracts:
+        evidence_id = str(contract.get("evidence_id") or "").strip()
+        for quantity in _list(contract.get("required_quantity_atoms")):
+            value = str(_dict(quantity).get("value") or "").strip()
+            if not evidence_id or not value:
+                continue
+            pattern = re.compile(
+                rf"(?P<prefix>[^\n]{{0,1200}}\{{E:{re.escape(evidence_id)}\}})\s+{re.escape(value)}"
+            )
+
+            def remove_if_redundant(match: re.Match[str]) -> str:
+                numbers = re.findall(r"\d+(?:\.\d+)?", value)
+                return match.group("prefix") if numbers and all(number in match.group("prefix") for number in numbers) else match.group(0)
+
+            text = pattern.sub(remove_if_redundant, text)
+    return text
+
+
 def _unsupported_temporal_qualifier_issues(
     markdown: str,
     contracts: list[dict[str, Any]],
