@@ -391,6 +391,10 @@ def _project_prioritized_retention_packet(
         "required_evidence_item_count": len(required_ids),
         "evidence_accounting": accounting,
     }
+    projected["prioritized_source_roles"] = _prioritized_source_roles(
+        projected,
+        prioritized_argument=prioritized_argument,
+    )
     return projected
 
 
@@ -407,6 +411,35 @@ def _filter_retention_rows(rows: list[Any], required_ids: set[str]) -> list[dict
         if retained_ids:
             filtered.append({**row, "evidence_item_ids": retained_ids})
     return filtered
+
+
+def _prioritized_source_roles(
+    packet: dict[str, Any],
+    *,
+    prioritized_argument: dict[str, Any],
+) -> dict[str, list[str]]:
+    items_by_id = {
+        str(item.get("item_id") or "").strip(): item
+        for item in _list(packet.get("evidence_items"))
+        if isinstance(item, dict) and str(item.get("item_id") or "").strip()
+    }
+    roles: dict[str, set[str]] = {}
+    section_roles = {
+        "answer_evidence": "direct_support",
+        "counterweights": "boundary",
+        "practical_implication": "context",
+    }
+    for move in _list(prioritized_argument.get("moves")):
+        if not isinstance(move, dict) or move.get("required", True) is False:
+            continue
+        role = section_roles.get(str(move.get("primary_section") or "").strip())
+        if not role:
+            continue
+        for evidence_id in _string_list(move.get("evidence_item_ids")):
+            item = items_by_id.get(evidence_id, {})
+            for source_id in _string_list(item.get("source_ids")):
+                roles.setdefault(source_id, set()).add(role)
+    return {source_id: sorted(source_roles) for source_id, source_roles in sorted(roles.items())}
 
 
 def _prioritized_argument_inputs(packet: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:

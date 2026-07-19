@@ -225,6 +225,45 @@ def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() ->
     assert report["status"] == "ready"
 
 
+def test_source_binding_report_uses_section_heading_for_boundary_role() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_boundary", "source_label": "Boundary Study"}],
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [{"source_ids": ["s_boundary"], "main_use": "bounds_answer"}],
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Higher exposure was associated with worse outcomes in one population.",
+                    "source_ids": ["s_boundary"],
+                    "main_use": "bounds_answer",
+                }
+            ],
+        },
+    }
+    memo = "## What Could Change or Bound the Answer\n\nHigher exposure was associated with worse outcomes [s_boundary]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
+
+
+def test_prioritized_source_role_overrides_stale_canonical_role() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s1", "source_label": "Study One"}],
+        "prioritized_source_roles": {"s1": ["direct_support"]},
+        "canonical_decision_writer_packet": {
+            "source_weight_judgments": [{"source_ids": ["s1"], "main_use": "bounds_answer"}],
+            "mandatory_retention_checklist": [
+                {"statement": "Option A supports the current answer.", "source_ids": ["s1"], "main_use": "drives_answer"}
+            ],
+        },
+    }
+    memo = "## Why This Is the Best Current Read\n\nStudy One supports the current answer [s1]."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
+
+
 def test_source_binding_report_accepts_plain_language_counterweights_and_scope_boundaries() -> None:
     packet = {
         "source_trail": [

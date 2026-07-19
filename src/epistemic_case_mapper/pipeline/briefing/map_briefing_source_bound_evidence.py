@@ -482,6 +482,10 @@ def _source_weight_roles_by_source(packet: dict[str, Any]) -> dict[str, set[str]
             continue
         for source_id in _string_list(row.get("source_ids")):
             roles[source_id] = {role}
+    for source_id, prioritized_roles in (packet.get("prioritized_source_roles") or {}).items():
+        selected_roles = set(_string_list(prioritized_roles))
+        if selected_roles:
+            roles[str(source_id)] = selected_roles
     return roles
 
 

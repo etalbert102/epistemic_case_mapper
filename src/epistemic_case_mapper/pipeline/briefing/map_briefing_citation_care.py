@@ -37,7 +37,7 @@ def build_citation_care_report(
             if not group_source_ids:
                 continue
             clause = str(group.get("clause") or sentence)
-            sentence_roles = _sentence_citation_roles(clause)
+            sentence_roles = _sentence_citation_roles(f"{sentence} {clause}")
             source_roles = {source_id: sorted(roles_by_source.get(source_id, set())) for source_id in group_source_ids}
             if len(group_source_ids) > 2 or _mixed_citation_roles(source_roles):
                 warnings.append(
@@ -245,6 +245,7 @@ def _memo_sentences(memo: str) -> list[str]:
     body = re.sub(r"\[[^\]\n]+\]:\s+\S+", "", body)
     blocks: list[str] = []
     paragraph_lines: list[str] = []
+    current_heading = ""
 
     def flush_paragraph() -> None:
         if paragraph_lines:
@@ -258,12 +259,16 @@ def _memo_sentences(memo: str) -> list[str]:
             continue
         if line.startswith("#"):
             flush_paragraph()
+            current_heading = line.lstrip("#").strip()
             continue
         list_item = re.match(r"^(?:[-*+]\s+|\d+[.)]\s+)(.+)$", line)
         if list_item:
             flush_paragraph()
-            blocks.append(list_item.group(1).strip())
+            item = list_item.group(1).strip()
+            blocks.append(f"{current_heading}: {item}" if current_heading else item)
             continue
+        if not paragraph_lines and current_heading:
+            paragraph_lines.append(f"{current_heading}:")
         paragraph_lines.append(line)
     flush_paragraph()
 
