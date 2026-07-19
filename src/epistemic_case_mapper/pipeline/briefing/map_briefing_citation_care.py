@@ -36,15 +36,15 @@ def build_citation_care_report(
             for source_id in _string_list(group.get("source_ids"))
         )
         if not cited_source_ids:
+            uncited_warning = _uncited_material_claim_warning(
+                sentence,
+                heading=str(sentence_context.get("heading") or ""),
+                evidence_by_source=evidence_by_source,
+            )
+            if uncited_warning:
+                warnings.append(uncited_warning)
             continue
         cited_sentence_count += 1
-        sentence_supported_source_ids = set(
-            source_ids_supported_by_claim(
-                sentence,
-                cited_source_ids,
-                source_evidence_by_source=evidence_by_source,
-            )
-        )
         for group in citation_groups:
             group_source_ids = _string_list(group.get("source_ids"))
             if not group_source_ids:
@@ -89,14 +89,12 @@ def build_citation_care_report(
                             "guidance": _role_mismatch_guidance(sentence_roles, roles),
                         }
                     )
-                entailment_warning = None
-                if source_id not in sentence_supported_source_ids:
-                    entailment_warning = _citation_entailment_warning(
-                        clause,
-                        source_id=source_id,
-                        source_evidence=evidence_by_source.get(source_id, []),
-                        evidence_by_source=evidence_by_source,
-                    )
+                entailment_warning = _citation_entailment_warning(
+                    clause,
+                    source_id=source_id,
+                    source_evidence=evidence_by_source.get(source_id, []),
+                    evidence_by_source=evidence_by_source,
+                )
                 if entailment_warning:
                     warnings.append({**entailment_warning, "sentence": sentence[:360]})
     deduped = _dedupe_warning_rows(warnings)
@@ -116,40 +114,57 @@ _ENTAILMENT_STOPWORDS = {
     "adult",
     "adults",
     "associated",
+    "associates",
     "association",
     "been",
     "cardiovascular",
+    "certain",
+    "challenge",
+    "classification",
     "compared",
     "consumption",
+    "cohorts",
+    "current",
+    "data",
     "dietary",
     "development",
     "effect",
     "effects",
     "even",
     "evidence",
+    "further",
+    "furthermore",
     "finding",
     "findings",
     "from",
     "health",
+    "healthy",
     "higher",
     "including",
     "increased",
     "lower",
     "moderate",
+    "neutral",
+    "observational",
     "outcome",
     "outcomes",
     "overall",
     "people",
     "population",
     "research",
+    "reflected",
+    "reinforced",
     "result",
     "results",
     "risk",
+    "risks",
     "showed",
     "shows",
     "significant",
     "significantly",
     "study",
+    "studies",
+    "stance",
     "subjects",
     "their",
     "than",
@@ -158,9 +173,16 @@ _ENTAILMENT_STOPWORDS = {
     "which",
     "while",
     "these",
+    "this",
     "those",
     "versus",
     "with",
+    "bounded",
+    "generally",
+    "provide",
+    "showing",
+    "some",
+    "supported",
 }
 
 
@@ -176,8 +198,7 @@ def _citation_entailment_warning(
     claim = _clean_citation_clause(clause)
     evidence_text = " ".join(source_evidence)
     quantities = _specific_quantity_surfaces(claim)
-    if _source_matches_any_quantity(evidence_text, quantities):
-        return None
+    quantity_match = _source_matches_any_quantity(evidence_text, quantities)
     if any(_quantity_period_conflicts(evidence_text, quantity) for quantity in quantities):
         return _entailment_warning(
             source_id,
@@ -186,7 +207,11 @@ def _citation_entailment_warning(
             reason="cited source evidence uses an incompatible quantity period",
             unmatched_quantities=quantities,
         )
-    if _semantic_claim_support_score(claim, evidence_text, evidence_by_source) > 0:
+    semantic_score = _semantic_claim_support_score(claim, evidence_text, evidence_by_source)
+    unsupported_terms = _unsupported_distinctive_claim_terms(claim, evidence_text, evidence_by_source)
+    if quantity_match and len(unsupported_terms) < 2:
+        return None
+    if semantic_score > 0 and len(unsupported_terms) < 2 and not quantities:
         return None
     claim_terms = _entailment_terms(claim)
     distinctive_terms = _distinctive_claim_terms(claim_terms, evidence_by_source)
@@ -195,8 +220,13 @@ def _citation_entailment_warning(
             source_id,
             claim,
             source_evidence,
-            reason="cited source evidence does not contain the clause's specific quantity",
+            reason=(
+                "cited source evidence matches the quantity but not all material claim terms"
+                if quantity_match
+                else "cited source evidence does not contain the clause's specific quantity"
+            ),
             unmatched_quantities=quantities,
+            unmatched_terms=unsupported_terms[:8],
         )
     if len(claim_terms) < 2:
         return None
@@ -207,6 +237,48 @@ def _citation_entailment_warning(
         reason="cited source evidence does not match the clause's distinctive claim terms",
         unmatched_terms=distinctive_terms[:8] or claim_terms[:8],
     )
+
+
+def _uncited_material_claim_warning(
+    sentence: str,
+    *,
+    heading: str,
+    evidence_by_source: dict[str, list[str]],
+) -> dict[str, Any] | None:
+    if _norm(heading) not in {"why this is the best current read", "what could change or bound the answer"}:
+        return None
+    claim = _clean_citation_clause(sentence)
+    if not re.search(
+        r"\b(?:associat|increas|decreas|higher|lower|risk|effect|observ|show|found|mortality|outcome)\w*\b",
+        claim,
+        flags=re.IGNORECASE,
+    ):
+        return None
+    claim_terms = _entailment_terms(claim)
+    has_specific_scope = bool(
+        re.search(
+            r"\b(?:aged?\s+\d|type\s+\d|older adults?|participants with|patients with)\b",
+            claim,
+            flags=re.IGNORECASE,
+        )
+    )
+    if not _specific_quantity_surfaces(claim) and not has_specific_scope:
+        return None
+    if len(claim_terms) < 3:
+        return None
+    supported = source_ids_supported_by_claim(
+        claim,
+        list(evidence_by_source),
+        source_evidence_by_source=evidence_by_source,
+    )
+    if not supported:
+        return None
+    return {
+        "warning_type": "uncited_material_claim",
+        "sentence": " ".join(claim.split())[:360],
+        "candidate_source_ids": supported[:6],
+        "guidance": "Add a source that supports this analytical claim or remove the unsupported factual detail.",
+    }
 
 
 def source_ids_supported_by_claim(
@@ -374,6 +446,21 @@ def _semantic_claim_support_score(
         if matched_anchor_keys:
             best = max(best, len(matched) + 3 * len(matched_anchor_keys))
     return best
+
+
+def _unsupported_distinctive_claim_terms(
+    claim: str,
+    evidence_text: str,
+    evidence_by_source: dict[str, list[str]],
+) -> list[str]:
+    claim_terms = _entailment_terms(claim)
+    distinctive = _distinctive_claim_terms(claim_terms, evidence_by_source)
+    evidence_keys = {_term_match_key(term) for term in _entailment_terms(evidence_text)}
+    return [
+        term
+        for term in distinctive
+        if len(term) >= 5 and _term_match_key(term) not in evidence_keys
+    ]
 
 
 def _term_match_key(term: str) -> str:

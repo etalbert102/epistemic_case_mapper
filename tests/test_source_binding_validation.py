@@ -369,7 +369,7 @@ def test_source_binding_flags_citation_without_source_specific_quantity_support(
     assert entailment[0]["citation_clause"].endswith("2.4%")
 
 
-def test_source_binding_flags_qualitative_citation_without_distinctive_term_support() -> None:
+def test_source_binding_flags_qualitative_citation_and_causal_overstatement() -> None:
     packet = {
         "source_trail": [
             {"source_id": "s_tmao", "source_label": "TMAO Review"},
@@ -394,7 +394,87 @@ def test_source_binding_flags_qualitative_citation_without_distinctive_term_supp
 
     warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
     entailment = [row for row in warnings if row["warning_type"] == "citation_claim_entailment_mismatch"]
-    assert [row["source_id"] for row in entailment] == ["s_lipids"]
+    assert [row["source_id"] for row in entailment] == ["s_tmao", "s_lipids"]
+
+
+def test_source_binding_does_not_let_exact_quantity_mask_unsupported_endpoint() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_dyslipidemia", "source_label": "Dyslipidemia Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Frequent use was associated with 13% to 20% lower odds of dyslipidemia.",
+                    "source_ids": ["s_dyslipidemia"],
+                    "source_excerpts": [
+                        {
+                            "source_ids": ["s_dyslipidemia"],
+                            "source_excerpt": "The odds of dyslipidemia were 13% to 20% lower with frequent use.",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    memo = (
+        "## Why This Is the Best Current Read\n\n"
+        "Frequent use did not impair endothelial function and produced 13% to 20% lower odds of dyslipidemia "
+        "[s_dyslipidemia]."
+    )
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    mismatch = next(row for row in warnings if row["warning_type"] == "citation_claim_entailment_mismatch")
+    assert "endothelial" in mismatch["unmatched_terms"]
+    assert "matches the quantity" in mismatch["reason"]
+
+
+def test_source_binding_flags_uncited_material_scope_claim_in_analytical_section() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s_subgroup", "source_label": "Subgroup Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Risk was higher in participants with type 2 diabetes.",
+                    "source_ids": ["s_subgroup"],
+                    "source_excerpts": [
+                        {
+                            "source_ids": ["s_subgroup"],
+                            "source_excerpt": "Risk was higher in participants with type 2 diabetes.",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    memo = "## What Could Change or Bound the Answer\n\nRisk was higher in participants with type 2 diabetes."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    uncited = next(row for row in warnings if row["warning_type"] == "uncited_material_claim")
+    assert uncited["candidate_source_ids"] == ["s_subgroup"]
+
+
+def test_source_binding_does_not_require_citation_for_generic_reconciliation() -> None:
+    packet = {
+        "source_trail": [{"source_id": "s1", "source_label": "Study"}],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Study designs differed.",
+                    "source_ids": ["s1"],
+                    "source_excerpts": [{"source_ids": ["s1"], "source_excerpt": "Study designs differed."}],
+                }
+            ]
+        },
+    }
+    memo = "## What Could Change or Bound the Answer\n\nThe findings differ by population and study design."
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    warnings = report["source_binding_report"]["citation_care_report"]["warnings"]
+    assert not any(row["warning_type"] == "uncited_material_claim" for row in warnings)
 
 
 def test_source_binding_skips_entailment_when_source_specific_evidence_is_unavailable() -> None:
