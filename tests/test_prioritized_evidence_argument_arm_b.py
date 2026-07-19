@@ -311,6 +311,29 @@ def test_arm_b_contract_removes_source_author_first_person() -> None:
     assert contract["claim"] == "A meta-analysis of 13 RCTs found that the marker increased."
 
 
+def test_arm_b_contract_calibrates_observational_causality_and_formatting() -> None:
+    contract = _contract_for_arm_b(
+        {
+            "claim_context": {"evidence_design": "Prospective cohort"},
+            "source_evidence": [
+                {
+                    "source_id": "s1",
+                    "excerpts": [
+                        "In multivariable-adjusted analysis, intake > 4/week led to an increased risk "
+                        "(Hazard ratio [HR] = 1.50; 95%CI 1.13–1.99)."
+                    ],
+                }
+            ],
+        },
+        required=True,
+    )
+
+    assert contract["claim"] == (
+        "In multivariable-adjusted analysis, intake > 4/week was associated with increased risk "
+        "(hazard ratio (HR) 1.50; 95% CI 1.13–1.99)."
+    )
+
+
 def test_arm_b_title_truncation_does_not_split_word() -> None:
     title = _short_decision_title(
         "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice?"

@@ -62,7 +62,7 @@ def test_redundant_post_tag_quantity_is_removed_when_labeled_form_is_present() -
 def test_counterweight_thesis_marks_related_exposure_as_indirect() -> None:
     constraints = build_synthesis_constraints(
         [
-            {"evidence_id": "e1", "claim": "A randomized review found no effect for option A."},
+            {"evidence_id": "e1", "claim": "A randomized review found no effect on an intermediate marker for option A."},
             {
                 "evidence_id": "e2",
                 "claim": "A related exposure was associated with mortality.",
@@ -74,10 +74,21 @@ def test_counterweight_thesis_marks_related_exposure_as_indirect() -> None:
     )
 
     assert constraints["indirect_exposure_evidence_ids"] == ["e2"]
-    assert "randomized syntheses and observational outcome studies support medium confidence" in constraints[
+    assert "direct clinical-outcome evidence is observational" in constraints[
         "required_decision_effect_sentence"
     ]
-    assert "related exposures is treated as indirect" in constraints["required_decision_effect_sentence"]
+    assert "randomized evidence concerns intermediate markers" in constraints["required_decision_effect_sentence"]
+
+
+def test_synthesis_logic_qualifies_indirect_evidence_at_the_claim() -> None:
+    repaired = repair_section_synthesis_logic(
+        "## Bounds\n\nDietary exposure was associated with mortality {E:e2}.",
+        section_id="counterweights",
+        contracts=[],
+        packet={"synthesis_constraints": {"indirect_exposure_evidence_ids": ["e2"]}},
+    )
+
+    assert "Indirectly, dietary exposure was associated with mortality {E:e2}." in repaired
 
 
 def test_reader_abbreviations_expand_on_first_use() -> None:

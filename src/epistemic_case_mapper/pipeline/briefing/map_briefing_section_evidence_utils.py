@@ -146,7 +146,7 @@ def quantity_surface_present(value: str, text: str) -> bool:
 def untagged_high_risk_sentences(tagged_memo: str) -> list[str]:
     rows = []
     for sentence in sentences_without_sources(tagged_memo):
-        if evidence_ids_in_text(sentence, []):
+        if BRACE_TAG_RE.search(sentence):
             continue
         lowered = sentence.lower()
         if re.search(r"\d", sentence) or any(

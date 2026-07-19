@@ -111,7 +111,45 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
         selected = f"With {exposure.lower()}, {selected}"
     selected = selected[:1].upper() + selected[1:]
     selected = re.sub(r"\b(the odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
-    return re.sub(r"\bI\s*2\s*=", "I² =", selected)
+    selected = _normalize_source_excerpt_surface(selected)
+    return _calibrate_observational_causality(selected, contract)
+
+
+def _normalize_source_excerpt_surface(text: str) -> str:
+    normalized = re.sub(r"\bI\s*2\s*=", "I² =", str(text or ""))
+    normalized = re.sub(r"\b95\s*%\s*CI\b", "95% CI", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"\bHazard ratio\s*\[HR\]", "hazard ratio (HR)", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"(\bhazard ratio\s*\(HR\))\s*=\s*", r"\1 ", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"\bHR\s*=\s*", "HR ", normalized)
+    normalized = re.sub(
+        r"\(HR\s+(\d+(?:\.\d+)?);\s*(\d+(?:\.\d+)?[–-]\d+(?:\.\d+)?)\)",
+        r"(HR \1; 95% CI \2)",
+        normalized,
+    )
+    return re.sub(
+        r">\s*0\s*≤\s*(\d+(?:\.\d+)?)\s*([^,;)]+)",
+        r"more than 0 and up to \1 \2",
+        normalized,
+    )
+
+
+def _calibrate_observational_causality(text: str, contract: dict[str, Any]) -> str:
+    context = _dict(contract.get("claim_context"))
+    design = str(context.get("evidence_design") or "")
+    qualification = " ".join(_string_list(contract.get("must_qualify_with")))
+    observational = bool(
+        re.search(r"\b(?:cohort|observational)\b", f"{design} {qualification} {text}", re.IGNORECASE)
+        or "multivariable-adjusted" in text.lower()
+    )
+    if not observational:
+        return text
+    calibrated = re.sub(
+        r"\bled to an? increased risk\b",
+        "was associated with increased risk",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(r"\bresulted in an? increased risk\b", "was associated with increased risk", calibrated, flags=re.IGNORECASE)
 
 
 def build_synthesis_constraints(
@@ -273,7 +311,13 @@ def _decision_effect_sentence(
     mixed_designs = bool(randomized_ids and observational_ids)
     evidence_mix = "randomized syntheses and observational outcome studies" if mixed_designs else "the available evidence mix"
     support_verb = "support" if mixed_designs else "supports"
-    indirect_clause = ", and evidence about related exposures is treated as indirect" if indirect_ids else ""
+    if mixed_designs and intermediate_ids:
+        return (
+            f"Taken together, direct clinical-outcome evidence is observational, while randomized evidence concerns "
+            f"intermediate markers; that mix supports {confidence} confidence in a neutral, bounded conclusion rather "
+            "than a stronger adverse classification."
+        )
+    indirect_clause = ", while evidence about related exposures remains indirect" if indirect_ids else ""
     return (
         f"Taken together, {evidence_mix} {support_verb} {confidence} confidence, but differences in exposure and endpoint prevent a stronger adverse conclusion{indirect_clause}."
     )
@@ -364,6 +408,10 @@ def repair_section_synthesis_logic(
             text = re.sub(r"\s*\b(?:long[- ]term|longer[- ]term|over longer periods?)\b", "", text, flags=re.IGNORECASE)
         elif issue.endswith(":short_term"):
             text = re.sub(r"\s*\b(?:short[- ]term|acute|single dose)\b", "", text, flags=re.IGNORECASE)
+    text = _qualify_indirect_exposure_sentences(
+        text,
+        _string_list(constraints.get("indirect_exposure_evidence_ids")),
+    )
     exposure_surfaces = _string_list(constraints.get("study_specific_exposure_surfaces"))
     if len(exposure_surfaces) > 1:
         text = re.sub(
@@ -392,6 +440,21 @@ def repair_section_synthesis_logic(
         )
     if additions:
         text = text.rstrip() + "\n\n" + " ".join(additions) + "\n"
+    return text
+
+
+def _qualify_indirect_exposure_sentences(markdown: str, evidence_ids: list[str]) -> str:
+    text = str(markdown or "")
+    for evidence_id in evidence_ids:
+        tag = re.search(rf"\{{(?:E:)?{re.escape(evidence_id)}\}}", text)
+        if not tag:
+            continue
+        sentence = _sentence_for_logic_check(text, tag.start())
+        if not sentence or re.search(r"\bindirect(?:ly)?\b", sentence, re.IGNORECASE):
+            continue
+        qualified = f"Indirectly, {sentence[:1].lower()}{sentence[1:]}"
+        sentence_start = tag.start() - sentence.find(tag.group(0))
+        text = text[:sentence_start] + qualified + text[sentence_start + len(sentence) :]
     return text
 
 

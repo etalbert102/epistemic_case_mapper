@@ -546,6 +546,19 @@ def test_reconciliation_flags_unsupported_untagged_quantity_in_tagged_section() 
     assert report["untagged_unsupported_quantity_warnings"][0]["unsupported_quantities"] == ["300 mg"]
 
 
+def test_reconciliation_does_not_call_tagged_high_risk_sentences_untagged() -> None:
+    contracts = [{"evidence_id": "e1", "source_ids": ["s1"], "claim": "Risk was higher."}]
+    tagged = (
+        "## Evidence\n\nRisk was 19% higher {E:e1}. "
+        "The recommendation should remain bounded."
+    )
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["untagged_high_risk_sentence_count"] == 1
+    assert report["untagged_high_risk_sentences"] == ["The recommendation should remain bounded."]
+
+
 def test_reconciliation_allows_quantity_supported_by_another_tag_in_sentence() -> None:
     contracts = [
         {
