@@ -155,6 +155,23 @@ def test_reconciliation_warns_when_measurement_unit_is_missing_near_tag() -> Non
     assert report["quantity_warnings"][0]["missing_quantity_near_tag"] == "MD = 8.14 mg/dL"
 
 
+def test_reconciliation_accepts_reader_expanded_measurement_with_unit() -> None:
+    contracts = [
+        {
+            "evidence_id": "e1",
+            "source_ids": ["s1"],
+            "claim": "The marker was higher (MD = 8.14 mg/dL).",
+            "required": True,
+        }
+    ]
+    tagged = "The marker was higher (mean difference (MD) = 8.14 mg/dL) {E:e1}."
+
+    report = build_evidence_reconciliation_report(tagged, tagged, contracts)
+
+    assert report["status"] == "ready"
+    assert report["quantity_warning_count"] == 0
+
+
 def test_evidence_reconciliation_accepts_quantity_on_one_repeated_tag_expression() -> None:
     contracts = [
         {

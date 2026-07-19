@@ -115,7 +115,7 @@ def quantity_warnings(tagged_memo: str, contracts: list[dict[str, Any]]) -> list
 
 def _required_measurement_surfaces(text: str) -> list[str]:
     pattern = re.compile(
-        r"\b(?:MD|mean difference)\s*=\s*\d+(?:\.\d+)?\s+[A-Za-zµμ]+(?:/[A-Za-zµμ]+)?",
+        r"\b(?:MD|mean difference(?:\s*\(MD\))?)\s*=\s*\d+(?:\.\d+)?\s+[A-Za-zµμ]+(?:/[A-Za-zµμ]+)?",
         re.IGNORECASE,
     )
     return _dedupe(match.group(0) for match in pattern.finditer(str(text or "")))
@@ -123,7 +123,7 @@ def _required_measurement_surfaces(text: str) -> list[str]:
 
 def _measurement_surface_present(surface: str, text: str) -> bool:
     parts = re.search(
-        r"\b(?:MD|mean difference)\s*=\s*(\d+(?:\.\d+)?)\s+([A-Za-zµμ]+(?:/[A-Za-zµμ]+)?)",
+        r"\b(?:MD|mean difference(?:\s*\(MD\))?)\s*=\s*(\d+(?:\.\d+)?)\s+([A-Za-zµμ]+(?:/[A-Za-zµμ]+)?)",
         surface,
         re.IGNORECASE,
     )
@@ -131,7 +131,7 @@ def _measurement_surface_present(surface: str, text: str) -> bool:
         return False
     return bool(
         re.search(
-            rf"\b(?:MD|mean difference)\s*=\s*{re.escape(parts.group(1))}\s+{re.escape(parts.group(2))}\b",
+            rf"\b(?:MD|mean difference(?:\s*\(MD\))?)\s*=\s*{re.escape(parts.group(1))}\s+{re.escape(parts.group(2))}\b",
             str(text or ""),
             re.IGNORECASE,
         )
