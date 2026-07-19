@@ -29,8 +29,10 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_ancho
     render_evidence_tagged_memo,
     unknown_evidence_ids_in_text,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_section_citation_validation import (
+    section_citation_validation_issues,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
-    calibrated_bottom_line,
     repair_section_synthesis_logic as _repair_section_synthesis_logic,
     section_synthesis_logic_issues as _section_synthesis_logic_issues,
 )
@@ -247,6 +249,7 @@ def _run_section(
             *([f"unknown_source_ids:{', '.join(unknown)}"] if unknown else []),
             *([f"unknown_evidence_ids:{', '.join(unknown_evidence)}"] if unknown_evidence else []),
             *_section_reconciliation_issues(reconciliation),
+            *(section_citation_validation_issues(markdown, contracts) if citation_mode == "evidence_tags" else []),
             *_section_synthesis_logic_issues(markdown, section_id=str(section.get("section_id") or ""), contracts=contracts, packet=packet),
             *structure_issues,
         ]
@@ -466,6 +469,8 @@ def _section_has_blocking_failure(section_report: dict[str, Any]) -> bool:
         or issue == "unreconciled_dose_thresholds"
         or issue == "unsupported_strength_from_indirect_evidence"
         or issue.startswith("unsupported_temporal_qualifier:")
+        or issue.startswith("citation_claim_entailment_mismatch:")
+        or issue == "uncited_material_claim"
         for issue in issues
     )
 
@@ -547,6 +552,8 @@ def _section_retry_prompt(
             "For missing conflict reconciliation, explain why opposing findings differ by population, endpoint, design, or exposure instead of merely listing both.",
             "For unreconciled dose thresholds, state that ranges are study-specific and do not create one universal cutoff unless the contracts explicitly do so.",
             "Remove unsupported duration, population, endpoint, or causal qualifiers when they do not appear in the source_evidence excerpts.",
+            "For citation claim entailment mismatches, split composite sentences and keep only the endpoint and qualifiers supported by that evidence tag's source excerpts.",
+            "For uncited material claims, attach the supporting evidence tag or remove the specific quantity or subgroup assertion.",
             "Do not let acute, mechanistic, biomarker, or surrogate evidence carry a broader clinical conclusion by itself.",
             "Use only evidence tags and source IDs already listed in the original prompt.",
         ],
@@ -725,15 +732,14 @@ def _strip_uncontracted_citations(markdown: str) -> str:
 def _deterministic_uncontracted_section(heading: str, section: dict[str, Any]) -> str:
     packet = _dict(section.get("packet"))
     anchor = _dict(packet.get("decision_anchor"))
-    answer = calibrated_bottom_line(anchor).strip()
     lines = [f"## {heading}", ""]
-    if answer:
-        lines.extend([answer, ""])
     lines.append(
-        "Apply this guidance only within the stated population and setting; treat narrower or higher-risk groups separately."
+        "Use the stated default classification for people and settings that match the evidence scope."
     )
     lines.extend(
         [
+            "",
+            "Do not turn study-specific exposure signals into a universal cutoff; assess narrower or higher-risk groups separately.",
             "",
             "Update the guidance when direct outcome evidence materially changes the answer, its scope, or its confidence.",
         ]

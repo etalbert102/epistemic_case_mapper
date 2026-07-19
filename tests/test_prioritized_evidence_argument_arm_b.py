@@ -16,6 +16,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_e
 from epistemic_case_mapper.pipeline.briefing.map_briefing_prioritized_argument_arm_b import (
     _bounded_mandatory_ids,
     _calibrated_bottom_line,
+    _short_decision_title,
     audit_prompt_submissions,
     build_arm_b_projection,
     load_frozen_arm_b_inputs,
@@ -135,6 +136,38 @@ def test_arm_b_mandatory_cap_prefers_explicit_canonical_items() -> None:
 
     assert len(selected) == 4
     assert {"e8", "e9"}.issubset(selected)
+
+
+def test_arm_b_mandatory_cap_prefers_source_specific_contracts() -> None:
+    mandatory = {f"e{i}" for i in range(1, 6)}
+    ownership = {evidence_id: "answer_evidence" for evidence_id in mandatory}
+    canonical = {
+        "decision_argument_contract": {
+            "argument_moves": [{"evidence_item_ids": ["e1", "e2", "e3", "e4", "e5"]}],
+        }
+    }
+    contracts = {
+        "e1": {"source_ids": ["s1", "s2"]},
+        **{f"e{i}": {"source_ids": [f"s{i}"]} for i in range(2, 6)},
+    }
+
+    selected = _bounded_mandatory_ids(
+        mandatory,
+        ownership=ownership,
+        canonical=canonical,
+        contracts_by_id=contracts,
+    )
+
+    assert selected == {"e2", "e3", "e4", "e5"}
+
+
+def test_arm_b_title_truncation_does_not_split_word() -> None:
+    title = _short_decision_title(
+        "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial?"
+    )
+
+    assert len(title) <= 80
+    assert title.endswith("harmful")
 
 
 def test_arm_b_practical_section_has_no_uncontracted_evidence_channel() -> None:

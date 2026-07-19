@@ -826,7 +826,7 @@ def test_section_synthesis_repairs_long_near_miss_source_id_but_not_unknowns() -
     assert _unknown_section_source_ids(repaired, known) == ["not_a_source"]
 
 
-def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accepted(
+def test_decision_writer_packet_section_citation_failures_are_not_marked_accepted(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
@@ -868,12 +868,15 @@ def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accept
 
     assert result["report"]["contract_mode"] == "strict_writer_packet"
     assert result["report"]["synthesis_mode"] == "unified_section_synthesis"
-    assert result["report"]["status"] == "accepted_with_retention_warnings"
+    assert result["report"]["status"] == "section_synthesis_failed"
     assert result["report"]["accepted"] is False
-    assert result["report"]["repairable_candidate"] is True
-    assert result["report"]["missing_mandatory_count"] >= 1
     assert len(result["report"]["section_reports"]) == 4
-    assert all(row["accepted"] for row in result["report"]["section_reports"])
+    assert any(not row["accepted"] for row in result["report"]["section_reports"])
+    assert any(
+        issue.startswith("citation_claim_entailment_mismatch:")
+        for row in result["report"]["section_reports"]
+        for issue in row["issues"]
+    )
 
 
 def _heading_from_section_prompt(prompt: str) -> str:

@@ -581,8 +581,8 @@ def _bounded_mandatory_ids(
         ordered = sorted(
             candidates,
             key=lambda evidence_id: (
-                _contract_selection_penalty(contracts_by_id.get(evidence_id, {})),
                 len(_string_list(contracts_by_id.get(evidence_id, {}).get("source_ids"))) != 1,
+                _contract_selection_penalty(contracts_by_id.get(evidence_id, {})),
                 direct_rank.get(evidence_id, len(direct_rank)),
                 evidence_id,
             ),
@@ -596,6 +596,8 @@ def _contract_selection_penalty(contract: dict[str, Any]) -> int:
         str(contract.get(key) or "")
         for key in ("claim", "population_scope", "required_caveat")
     ).lower()
+    if re.search(r"\b(?:systematic review|randomized|meta-analysis)\b", text):
+        return -1
     if re.search(r"\b(?:acute|single dose|biomarker|mechanis|pathway|ratio|response|markers?)\b", text):
         return 2
     if re.search(r"\b(?:in men|in women|subgroup|without comorbid|specific population)\b", text):
@@ -840,7 +842,9 @@ def _short_decision_title(question: Any) -> str:
     text = re.sub(r"\s+", " ", str(question or "")).strip().rstrip("?")
     if not text:
         return "Decision Memo"
-    return text[:80]
+    if len(text) <= 80:
+        return text
+    return text[:80].rsplit(" ", 1)[0].rstrip(" ,;:")
 
 
 def _read_json(path: Path) -> dict[str, Any]:

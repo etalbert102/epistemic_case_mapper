@@ -211,16 +211,17 @@ def test_live_synthesis_runs_expert_judgment_compression_before_sections(monkeyp
             return ModelBackendResult(text=json.dumps(_valid_compression_payload()), backend="fake")
         assert kwargs["json_mode"] is False
         heading = _heading_from_section_prompt(prompt)
-        ids = re.findall(r'"evidence_id": "([^"]+)"', prompt)
-        tags = " ".join(f"{{E:{evidence_id}}}" for evidence_id in ids)
         if heading == "How to Weight the Evidence":
             body = "Outcome Review carries the answer, while Scope Review bounds application [s1, s2]."
         elif heading == "Why This Is the Best Current Read":
-            body = f"The 20% improvement supports adopting Option A where the studied setting applies {tags}."
+            body = "The main outcome improved by 20% {E:decision_writer_item_001}."
         elif heading == "What Could Change or Bound the Answer":
-            body = f"The narrower setting evidence bounds rather than overturns the answer {tags}."
+            body = "The result did not cover the narrower setting {E:decision_writer_item_002}."
         else:
-            body = f"Adopt Option A only where the 20% improvement evidence applies and the scope boundary is acceptable {tags}."
+            body = (
+                "The main outcome improved by 20% {E:decision_writer_item_001}. "
+                "The result did not cover the narrower setting {E:decision_writer_item_002}."
+            )
         return ModelBackendResult(text=f"## {heading}\n\n{body}\n", backend="fake")
 
     monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
