@@ -83,7 +83,9 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
         for excerpt in _string_list(row.get("excerpts"))
         if excerpt
     ]
-    return next((excerpt for excerpt in excerpts if not excerpt.rstrip().endswith("...")), excerpts[0] if excerpts else "")
+    selected = next((excerpt for excerpt in excerpts if not excerpt.rstrip().endswith("...")), excerpts[0] if excerpts else "")
+    selected = selected[:1].upper() + selected[1:]
+    return re.sub(r"^(The odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
 
 
 def build_synthesis_constraints(
@@ -241,7 +243,7 @@ def repair_section_synthesis_logic(
         additions.append(
             "The opposing findings differ by population, endpoint, and study design, so they bound the answer rather than establish one uniform effect."
         )
-    if len(exposure_surfaces) > 1 and not any(
+    if section_id == "counterweights" and len(exposure_surfaces) > 1 and not any(
         marker in normalized for marker in ("not directly comparable", "no single", "cannot be combined")
     ):
         additions.append(

@@ -262,13 +262,22 @@ def test_arm_b_contract_skips_truncated_source_excerpt() -> None:
     assert contract["claim"] == "A complete source excerpt."
 
 
+def test_arm_b_contract_repairs_source_excerpt_surface_grammar() -> None:
+    contract = _contract_for_arm_b(
+        {"source_evidence": [{"source_id": "s1", "excerpts": ["the odds of disease was 20% lower"]}]},
+        required=True,
+    )
+
+    assert contract["claim"] == "The odds of disease were 20% lower"
+
+
 def test_arm_b_title_truncation_does_not_split_word() -> None:
     title = _short_decision_title(
-        "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial?"
+        "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice?"
     )
 
     assert len(title) <= 80
-    assert title.endswith("harmful")
+    assert title == "Eggs: Harmful, neutral, or beneficial"
 
 
 def test_arm_b_practical_section_has_no_uncontracted_evidence_channel() -> None:

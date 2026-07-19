@@ -869,6 +869,13 @@ def _short_decision_title(question: Any) -> str:
     text = re.sub(r"\s+", " ", str(question or "")).strip().rstrip("?")
     if not text:
         return "Decision Memo"
+    scoped = re.search(r"\bshould\s+(.+?)\s+in\s+", text, flags=re.IGNORECASE)
+    if scoped:
+        candidate = scoped.group(1)
+        classification = re.fullmatch(r"(.+?)\s+be treated as\s+(?:meaningfully\s+)?(.+)", candidate, flags=re.IGNORECASE)
+        if classification:
+            return f"{classification.group(1).capitalize()}: {classification.group(2).capitalize()}"
+        return candidate[:1].upper() + candidate[1:]
     if len(text) <= 80:
         return text
     return text[:80].rsplit(" ", 1)[0].rstrip(" ,;:")

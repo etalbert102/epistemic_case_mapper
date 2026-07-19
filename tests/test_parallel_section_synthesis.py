@@ -137,6 +137,17 @@ def test_synthesis_logic_repair_removes_unsupported_rationale_and_reconciles_ran
     ) == []
 
 
+def test_synthesis_logic_does_not_repeat_exposure_reconciliation_in_support_section() -> None:
+    repaired = _repair_section_synthesis_logic(
+        "## Why This Is the Best Current Read\n\nSupported prose.",
+        section_id="answer_evidence",
+        contracts=[],
+        packet={"synthesis_constraints": {"study_specific_exposure_surfaces": ["<1/day", ">4/week"]}},
+    )
+
+    assert "reported exposure ranges" not in repaired.lower()
+
+
 def test_synthesis_logic_failures_are_blocking_after_retries() -> None:
     assert _section_has_blocking_failure(
         {
