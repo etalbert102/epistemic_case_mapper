@@ -370,7 +370,13 @@ def _model_source_weighting_warnings(reports: list[dict[str, Any]], *, reason: s
 
 
 def _source_weighting_disabled() -> bool:
-    return os.environ.get("ECM_MODEL_SOURCE_WEIGHTING_MODE", "auto").strip().lower() in {"off", "skip", "false", "0"}
+    return os.environ.get("ECM_MODEL_SOURCE_WEIGHTING_MODE", "off").strip().lower() not in {
+        "always",
+        "full",
+        "on",
+        "true",
+        "1",
+    }
 
 
 def _fallback_judgments_by_source(canonical: dict[str, Any]) -> dict[str, dict[str, Any]]:

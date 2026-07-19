@@ -7,6 +7,7 @@ from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
 def test_model_source_weighting_builds_source_local_prompts_and_attaches(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_SOURCE_WEIGHTING_MODE", "on")
     packet = _packet()
     calls: list[str] = []
 
@@ -50,6 +51,7 @@ def test_model_source_weighting_builds_source_local_prompts_and_attaches(monkeyp
 
 
 def test_model_source_weighting_removes_invalid_evidence_ids(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_SOURCE_WEIGHTING_MODE", "on")
     packet = _packet()
 
     def fake_backend(prompt, backend, **kwargs):
@@ -85,6 +87,7 @@ def test_model_source_weighting_removes_invalid_evidence_ids(monkeypatch) -> Non
 
 
 def test_model_source_weighting_cannot_override_manifest_provenance_and_independence_limits(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_SOURCE_WEIGHTING_MODE", "on")
     packet = _packet()
     packet["evidence_items"][0]["source_appraisal"] = {
         "status": "ready",
@@ -138,7 +141,8 @@ def test_model_source_weighting_cannot_override_manifest_provenance_and_independ
     assert bundle["model_source_weighting_report"]["source_appraisal_constraint_count"] == 2
 
 
-def test_model_source_weighting_skips_prompt_backend() -> None:
+def test_model_source_weighting_skips_prompt_backend(monkeypatch) -> None:
+    monkeypatch.setenv("ECM_MODEL_SOURCE_WEIGHTING_MODE", "on")
     bundle = source_weighting.run_model_source_weight_judgments(
         _packet(),
         backend="prompt",
@@ -149,6 +153,21 @@ def test_model_source_weighting_skips_prompt_backend() -> None:
     assert bundle["model_source_weight_judgments"] == []
     assert bundle["model_source_weighting_report"]["status"] == "skipped"
     assert bundle["model_source_weighting_report"]["reason"] == "prompt_backend"
+
+
+def test_model_source_weighting_is_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("ECM_MODEL_SOURCE_WEIGHTING_MODE", raising=False)
+
+    bundle = source_weighting.run_model_source_weight_judgments(
+        _packet(),
+        backend="ollama:test",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert bundle["model_source_weight_judgments"] == []
+    assert bundle["model_source_weighting_report"]["status"] == "skipped"
+    assert bundle["model_source_weighting_report"]["reason"] == "disabled_by_ecm_model_source_weighting_mode"
 
 
 def _packet() -> dict:
