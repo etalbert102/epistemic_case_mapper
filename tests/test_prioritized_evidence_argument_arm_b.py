@@ -244,6 +244,9 @@ def test_arm_b_contract_uses_controlling_source_excerpt_as_claim() -> None:
     )
 
     assert contract["claim"] == "The trial found no significant change in the measured outcome."
+    assert contract["source_evidence"] == [
+        {"source_id": "s1", "excerpts": ["The trial found no significant change in the measured outcome."]}
+    ]
     assert contract["required_quantity_atoms"][0]["interpretation"] == "Associated with all-cause mortality."
     assert contract["required"] is True
 

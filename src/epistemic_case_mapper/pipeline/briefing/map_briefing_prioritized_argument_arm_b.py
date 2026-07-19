@@ -602,10 +602,8 @@ def _bounded_mandatory_ids(
 
 
 def _contract_selection_penalty(contract: dict[str, Any]) -> int:
-    text = " ".join(
-        str(contract.get(key) or "")
-        for key in ("claim", "population_scope", "required_caveat")
-    ).lower()
+    text = " ".join(str(contract.get(key) or "") for key in
+                    ("claim", "population_scope", "required_caveat")).lower()
     if re.search(r"\b(?:systematic review|randomized|meta-analysis)\b", text):
         return -1
     if re.search(r"\b(?:acute|single dose|biomarker|mechanis|pathway|ratio|response|markers?)\b", text):
@@ -677,7 +675,11 @@ def _compact_practical_move(move: dict[str, Any]) -> dict[str, Any]:
 
 def _contract_for_arm_b(contract: dict[str, Any], *, required: bool) -> dict[str, Any]:
     source_claim = _controlling_source_excerpt(contract)
+    source_evidence = _list(contract.get("source_evidence"))
+    if source_claim and len(source_evidence) == 1 and isinstance(source_evidence[0], dict):
+        source_evidence = [{**source_evidence[0], "excerpts": [source_claim]}]
     return _drop_empty({**contract, "claim": source_claim or contract.get("claim"),
+                        "source_evidence": source_evidence,
                         "required_quantity_atoms": _source_grounded_quantity_atoms(contract), "required": required})
 
 
