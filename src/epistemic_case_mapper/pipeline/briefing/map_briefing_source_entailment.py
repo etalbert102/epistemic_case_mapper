@@ -59,6 +59,7 @@ def _source_ids(row: dict[str, Any]) -> list[str]:
 def _source_excerpt(row: dict[str, Any]) -> str:
     return str(
         row.get("source_excerpt")
+        or row.get("source_quote")
         or row.get("quote")
         or row.get("quoted_text")
         or row.get("excerpt")

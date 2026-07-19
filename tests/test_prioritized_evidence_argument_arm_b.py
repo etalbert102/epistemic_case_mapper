@@ -133,7 +133,7 @@ def test_arm_b_mandatory_cap_prefers_explicit_canonical_items() -> None:
 
     selected = _bounded_mandatory_ids(mandatory, ownership=ownership, canonical=canonical)
 
-    assert len(selected) == 6
+    assert len(selected) == 4
     assert {"e8", "e9"}.issubset(selected)
 
 

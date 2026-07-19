@@ -102,7 +102,12 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "claim": item.get("reader_claim") or item.get("claim") or obligation.get("statement"),
                     "role": role,
                     "source_ids": sources,
-                    "source_evidence": _source_evidence_for_contract(sources, source_evidence),
+                    "source_evidence": _source_evidence_for_contract(
+                        sources,
+                        source_evidence,
+                        claim=str(item.get("reader_claim") or item.get("claim") or obligation.get("statement") or ""),
+                        quantities=quantities,
+                    ),
                     "citation_source_ids": citation_sources,
                     "source_match_keys": _source_match_keys_for_sources(sources, source_match_keys_by_id),
                     "source_labels": item.get("source_labels")
@@ -133,15 +138,38 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
 def _source_evidence_for_contract(
     source_ids: list[str],
     evidence_by_source: dict[str, list[str]],
+    *,
+    claim: str,
+    quantities: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     return [
         {
             "source_id": source_id,
-            "excerpts": [_short_text(excerpt, 320) for excerpt in evidence_by_source.get(source_id, [])[:2]],
+            "excerpts": [
+                _short_text(excerpt, 320)
+                for excerpt in sorted(
+                    evidence_by_source.get(source_id, []),
+                    key=lambda excerpt: _source_excerpt_priority(excerpt, claim=claim, quantities=quantities),
+                    reverse=True,
+                )[:2]
+            ],
         }
         for source_id in source_ids
         if evidence_by_source.get(source_id)
     ][:8]
+
+
+def _source_excerpt_priority(excerpt: str, *, claim: str, quantities: list[dict[str, Any]]) -> tuple[int, int]:
+    text = str(excerpt or "").lower()
+    quantity_numbers = {
+        number
+        for quantity in quantities
+        for number in re.findall(r"\d+(?:\.\d+)?", str(_dict(quantity).get("value") or ""))
+    }
+    quantity_score = sum(1 for number in quantity_numbers if re.search(rf"(?<!\d){re.escape(number)}(?!\d)", text))
+    claim_terms = set(re.findall(r"[a-z]{5,}", str(claim or "").lower()))
+    claim_score = sum(1 for term in claim_terms if term in text)
+    return quantity_score, claim_score
 
 
 def _evidence_bundle_ids(quantities: list[dict[str, Any]]) -> list[str]:

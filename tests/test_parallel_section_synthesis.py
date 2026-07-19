@@ -13,7 +13,6 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalizatio
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet import build_quality_synthesis_packet_bundle
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_prompt import build_memo_ready_section_synthesis_plan, build_memo_ready_section_synthesis_prompt
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_section_synthesis import (
-    _strip_uncontracted_citations,
     _repair_near_miss_source_ids,
     _repair_section_synthesis_logic,
     _section_has_blocking_failure,
@@ -825,14 +824,6 @@ def test_section_synthesis_repairs_long_near_miss_source_id_but_not_unknowns() -
     assert "[aha_2019_dietary_cholesterol_pubmed]" in repaired
     assert "[aha_2019_itary_cholesterol_pubmed]" not in repaired
     assert _unknown_section_source_ids(repaired, known) == ["not_a_source"]
-
-
-def test_section_synthesis_strips_citations_when_section_has_no_evidence_contract() -> None:
-    markdown = "## Practical Implication\n\nApply the bounded answer [SRC_ALPHA] and update later {E:e1}."
-
-    repaired = _strip_uncontracted_citations(markdown)
-
-    assert repaired == "## Practical Implication\n\nApply the bounded answer and update later."
 
 
 def test_decision_writer_packet_section_synthesis_warnings_are_not_marked_accepted(

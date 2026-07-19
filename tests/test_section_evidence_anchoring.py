@@ -14,6 +14,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_ancho
     render_evidence_tagged_memo,
     unknown_evidence_ids_in_text,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_entailment import collect_packet_source_evidence_by_source
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 from test_decision_briefing_packet import _scaffold
@@ -584,6 +585,19 @@ def test_reconciliation_allows_quantity_from_controlling_source_excerpt() -> Non
     report = build_evidence_reconciliation_report(tagged, tagged, contracts)
 
     assert report["unsupported_quantity_warning_count"] == 0
+
+
+def test_source_evidence_collector_accepts_verbatim_assertion_bundle_quote() -> None:
+    packet = {
+        "quantity": {
+            "source_ids": ["s1"],
+            "source_quote": "Each additional 300 mg/day was associated with HR 1.19.",
+        }
+    }
+
+    evidence = collect_packet_source_evidence_by_source(packet)
+
+    assert evidence == {"s1": ["Each additional 300 mg/day was associated with HR 1.19."]}
 
 
 def test_reconciliation_does_not_parse_type_2_diabetes_as_quantity() -> None:

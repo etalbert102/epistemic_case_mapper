@@ -30,6 +30,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_ancho
     unknown_evidence_ids_in_text,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_synthesis_logic import (
+    calibrated_bottom_line,
     repair_section_synthesis_logic as _repair_section_synthesis_logic,
     section_synthesis_logic_issues as _section_synthesis_logic_issues,
 )
@@ -186,6 +187,8 @@ def _run_section(
         "prompt": prompt,
         "markdown": "",
     }
+    if citation_mode == "none":
+        return _uncontracted_section_report(section_report, heading=heading, section=section)
     attempts = model_stage_attempts()
     raw = ""
     markdown = ""
@@ -281,6 +284,27 @@ def _run_section(
             "validation_attempt_reports": validation_attempt_reports,
             "num_predict": num_predict,
             "evidence_reconciliation_report": reconciliation,
+        }
+    )
+    return section_report
+
+
+def _uncontracted_section_report(
+    section_report: dict[str, Any],
+    *,
+    heading: str,
+    section: dict[str, Any],
+) -> dict[str, Any]:
+    markdown = _deterministic_uncontracted_section(heading, section)
+    section_report.update(
+        {
+            "accepted": True,
+            "markdown": markdown,
+            "char_count": len(markdown),
+            "attempts": 0,
+            "validation_attempts": 0,
+            "validation_attempt_reports": [],
+            "evidence_reconciliation_report": {},
         }
     )
     return section_report
@@ -696,6 +720,25 @@ def _normalize_statistical_brackets(markdown: str) -> str:
 def _strip_uncontracted_citations(markdown: str) -> str:
     text = re.sub(r"\s*\[(?:SRC_[A-Z0-9_]+(?:\s*[,;]\s*SRC_[A-Z0-9_]+)*)\]", "", str(markdown or ""))
     return re.sub(r"\s*\{(?:E:)?[^{}\n]{1,120}\}", "", text)
+
+
+def _deterministic_uncontracted_section(heading: str, section: dict[str, Any]) -> str:
+    packet = _dict(section.get("packet"))
+    anchor = _dict(packet.get("decision_anchor"))
+    answer = calibrated_bottom_line(anchor).strip()
+    lines = [f"## {heading}", ""]
+    if answer:
+        lines.extend([answer, ""])
+    lines.append(
+        "Apply this guidance only within the stated population and setting; treat narrower or higher-risk groups separately."
+    )
+    lines.extend(
+        [
+            "",
+            "Update the guidance when direct outcome evidence materially changes the answer, its scope, or its confidence.",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _statistical_bracket_content(content: str) -> bool:

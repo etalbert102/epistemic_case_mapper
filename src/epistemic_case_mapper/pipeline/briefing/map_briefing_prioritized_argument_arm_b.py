@@ -123,7 +123,12 @@ def build_arm_b_projection(inputs: dict[str, Any]) -> dict[str, Any]:
     ownership, ownership_issues = _resolve_ownership(contracts, contract_owner_candidates, mandatory_ids)
     issues.extend(ownership_issues)
     if not _string_list(mandatory_override):
-        mandatory_ids = _bounded_mandatory_ids(mandatory_ids, ownership=ownership, canonical=canonical)
+        mandatory_ids = _bounded_mandatory_ids(
+            mandatory_ids,
+            ownership=ownership,
+            canonical=canonical,
+            contracts_by_id=contracts_by_id,
+        )
     section_packets = _section_packets(
         ownership,
         contracts_by_id,
@@ -413,7 +418,11 @@ def _section_packets(
     synthesis_constraints = _synthesis_constraints(list(contracts_by_id.values()), decision_anchor)
     packets = []
     for section_id in ARM_B_SECTION_IDS:
-        owned_contract_ids = [evidence_id for evidence_id, owner in ownership.items() if owner == section_id]
+        owned_contract_ids = [
+            evidence_id
+            for evidence_id, owner in ownership.items()
+            if owner == section_id and evidence_id in mandatory_ids
+        ]
         contracts = dedupe_section_quantity_obligations(
             [
                 _contract_for_arm_b(contracts_by_id[evidence_id], required=evidence_id in mandatory_ids)
@@ -554,6 +563,7 @@ def _bounded_mandatory_ids(
     *,
     ownership: dict[str, str],
     canonical: dict[str, Any],
+    contracts_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> set[str]:
     direct_order = _dedupe(
         reference
@@ -563,13 +573,34 @@ def _bounded_mandatory_ids(
         if reference in mandatory_ids
     )
     selected: set[str] = set()
-    limits = {"answer_evidence": 6, "counterweights": 8, "practical_implication": 0}
+    direct_rank = {evidence_id: index for index, evidence_id in enumerate(direct_order)}
+    contracts_by_id = contracts_by_id or {}
+    limits = {"answer_evidence": 4, "counterweights": 4, "practical_implication": 0}
     for section_id, limit in limits.items():
         candidates = [evidence_id for evidence_id in mandatory_ids if ownership.get(evidence_id) == section_id]
-        ordered = [evidence_id for evidence_id in direct_order if evidence_id in candidates]
-        ordered.extend(sorted(evidence_id for evidence_id in candidates if evidence_id not in ordered))
+        ordered = sorted(
+            candidates,
+            key=lambda evidence_id: (
+                _contract_selection_penalty(contracts_by_id.get(evidence_id, {})),
+                len(_string_list(contracts_by_id.get(evidence_id, {}).get("source_ids"))) != 1,
+                direct_rank.get(evidence_id, len(direct_rank)),
+                evidence_id,
+            ),
+        )
         selected.update(ordered[:limit])
     return selected
+
+
+def _contract_selection_penalty(contract: dict[str, Any]) -> int:
+    text = " ".join(
+        str(contract.get(key) or "")
+        for key in ("claim", "population_scope", "required_caveat")
+    ).lower()
+    if re.search(r"\b(?:acute|single dose|biomarker|mechanis|pathway|ratio|response|markers?)\b", text):
+        return 2
+    if re.search(r"\b(?:in men|in women|subgroup|without comorbid|specific population)\b", text):
+        return 1
+    return 0
 
 
 def _moves_by_section(canonical: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
