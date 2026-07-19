@@ -84,13 +84,24 @@ def controlling_source_excerpt(contract: dict[str, Any]) -> str:
         if excerpt
     ]
     selected = next((excerpt for excerpt in excerpts if not excerpt.rstrip().endswith("...")), excerpts[0] if excerpts else "")
+    for value in _dict(contract.get("claim_context")).values():
+        match = re.search(r"\b([^();]{3,80}?)\s*\(([A-Z]{2,8})\)", str(value or ""))
+        if match:
+            selected = re.sub(
+                rf"\b{re.escape(match.group(2))}\s+group\b",
+                f"{match.group(1).strip().lower()} group",
+                selected,
+            )
     selected = selected[:1].upper() + selected[1:]
-    return re.sub(r"^(The odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
+    selected = re.sub(r"^(The odds\b.*?)\bwas\b", r"\1were", selected, count=1, flags=re.IGNORECASE)
+    return re.sub(r"\bI\s*2\s*=", "I² =", selected)
 
 
 def build_synthesis_constraints(
     contracts: list[dict[str, Any]],
     decision_anchor: dict[str, Any],
+    *,
+    section_id: str = "",
 ) -> dict[str, Any]:
     texts = [
         " ".join(
@@ -138,6 +149,48 @@ def build_synthesis_constraints(
             re.IGNORECASE,
         )
     ]
+    observational_ids = [
+        str(contract.get("evidence_id") or "")
+        for contract in contracts
+        if isinstance(contract, dict)
+        and (
+            "observational evidence" in _string_list(contract.get("must_qualify_with"))
+            or re.search(
+                r"\b(?:associated|multivariable-adjusted|cohort)\b",
+                str(contract.get("claim") or ""),
+                re.IGNORECASE,
+            )
+        )
+    ]
+    randomized_ids = [
+        str(contract.get("evidence_id") or "")
+        for contract in contracts
+        if isinstance(contract, dict)
+        and re.search(
+            r"\b(?:RCTs?|randomized|systematic review|meta-analysis)\b",
+            str(contract.get("claim") or ""),
+            re.IGNORECASE,
+        )
+    ]
+    intermediate_ids = [
+        str(contract.get("evidence_id") or "")
+        for contract in contracts
+        if isinstance(contract, dict)
+        and re.search(
+            r"\b(?:biomarker|concentration|level|marker|profile|ratio|response)\b",
+            str(contract.get("claim") or ""),
+            re.IGNORECASE,
+        )
+    ]
+    decision_effect = ""
+    if section_id == "answer_evidence" and (observational_ids or intermediate_ids):
+        decision_effect = (
+            "Because the supporting evidence is observational or focused on intermediate markers, it supports the bounded default but does not justify a stronger favorable classification."
+        )
+    elif section_id == "counterweights" and contracts:
+        decision_effect = (
+            "Because the counterevidence varies by design, exposure, and endpoint and does not point in one consistent direction, it lowers confidence without establishing one uniform adverse effect."
+        )
     return _drop_empty(
         {
             "confidence_to_show": decision_anchor.get("confidence"),
@@ -150,6 +203,10 @@ def build_synthesis_constraints(
                 else ""
             ),
             "surrogate_or_mechanistic_evidence_ids": _dedupe(surrogate_ids),
+            "observational_evidence_ids": _dedupe(observational_ids),
+            "randomized_or_synthesis_evidence_ids": _dedupe(randomized_ids),
+            "intermediate_endpoint_evidence_ids": _dedupe(intermediate_ids),
+            "required_decision_effect_sentence": decision_effect,
             "surrogate_rule": (
                 "These items may calibrate or explain the answer but cannot carry a broader clinical or long-term conclusion by themselves."
                 if surrogate_ids
@@ -236,6 +293,9 @@ def repair_section_synthesis_logic(
         )
     additions: list[str] = []
     normalized = text.lower()
+    decision_effect = str(constraints.get("required_decision_effect_sentence") or "").strip()
+    if decision_effect and decision_effect.lower() not in normalized:
+        additions.append(decision_effect)
     if section_id == "counterweights" and constraints.get("opposing_signals_require_reconciliation") and not any(
         marker in normalized
         for marker in ("cannot be treated as", "differences may reflect", "differ by", "not directly comparable", "varies by")

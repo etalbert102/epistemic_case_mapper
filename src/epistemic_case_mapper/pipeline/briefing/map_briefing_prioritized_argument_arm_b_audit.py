@@ -177,6 +177,12 @@ def build_warning_adjudication_report(*, baseline_report_path: Path, arm_b_repor
 def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[dict[str, Any]]) -> str:
     compact_contracts = [_compact_contract(row) for row in contracts]
     required_count = sum(bool(row.get("required")) for row in contracts)
+    decision_effect = str(_dict(section_packet.get("synthesis_constraints")).get("required_decision_effect_sentence") or "")
+    synthesis_rule = (
+        f'- After the evidence paragraph, write this exact synthesis sentence: "{decision_effect}"\n'
+        if decision_effect
+        else "- After the evidence paragraph, add at most one generic decision-effect sentence with no quantities, populations, or endpoints.\n"
+    )
     prompt_packet = {
         key: section_packet.get(key)
         for key in (
@@ -202,7 +208,7 @@ def arm_b_strict_section_prompt(section_packet: dict[str, Any], contracts: list[
         f"- Write one evidence paragraph containing exactly {required_count} sentences: one separate sentence for every required contract.\n"
         "- Start each evidence sentence directly with that contract's claim, paraphrase minimally, and end it with its evidence tag.\n"
         "- Do not add decision framing, populations, quantities, endpoints, or qualifiers around a tagged contract claim.\n"
-        "- After the evidence paragraph, add at most one generic decision-effect sentence with no quantities, populations, or endpoints.\n"
+        f"{synthesis_rule}"
         "- For contracts with quantities, include a listed quantity in the same sentence as that contract's evidence tag.\n"
         if contracts
         else
@@ -287,6 +293,7 @@ def _compact_contract(contract: dict[str, Any]) -> dict[str, Any]:
             "quantities": contract.get("required_quantity_atoms"),
             "scope": contract.get("population_scope"),
             "caveat": contract.get("required_caveat"),
+            "evidence_context": contract.get("claim_context"),
             "must_qualify_with": contract.get("must_qualify_with"),
             "must_not_imply": contract.get("must_not_imply"),
             "source_evidence": _compact_source_evidence(contract),

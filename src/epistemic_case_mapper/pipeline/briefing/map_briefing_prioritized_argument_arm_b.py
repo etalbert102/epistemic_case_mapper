@@ -433,7 +433,7 @@ def _section_packets(
                 if evidence_id in contracts_by_id
             ]
         )
-        synthesis_constraints = _synthesis_constraints(contracts, prompt_anchor)
+        synthesis_constraints = _synthesis_constraints(contracts, prompt_anchor, section_id=section_id)
         contract_ids = {str(row.get("evidence_id") or "") for row in contracts}
         owned_moves = [
             _compact_practical_move(row) if section_id == "practical_implication" else _compact_move(row, contract_ids)

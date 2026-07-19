@@ -101,6 +101,7 @@ def build_evidence_expression_contracts(packet: dict[str, Any]) -> list[dict[str
                     "required": _contract_required(item, obligation, role=role, quantities=quantities),
                     "primary_section": _primary_section_for_role(role),
                     "claim": item.get("reader_claim") or item.get("claim") or obligation.get("statement"),
+                    "claim_context": _dict(item.get("claim_context")),
                     "role": role,
                     "source_ids": sources,
                     "source_evidence": _source_evidence_for_contract(

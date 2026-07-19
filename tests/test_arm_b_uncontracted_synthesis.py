@@ -31,9 +31,25 @@ def test_uncontracted_practical_section_is_rendered_without_model_evidence() -> 
 
     assert markdown.startswith("## Practical Implication\n")
     assert "Option A is the current default" not in markdown
-    assert "Do not turn study-specific exposure signals into a universal cutoff" in markdown
-    assert "Update the guidance when direct outcome evidence" in markdown
+    assert "Do not turn study-specific exposure findings into a universal cutoff" in markdown
+    assert "Update the guidance when direct clinical-outcome evidence" in markdown
     assert "[" not in markdown
+
+
+def test_uncontracted_practical_section_operationalizes_neutral_classification() -> None:
+    section = {
+        "packet": {
+            "decision_anchor": {
+                "decision_question": "For the target population, should option A be treated as harmful, neutral, or beneficial?",
+                "bounded_answer": "For the target population, option A should be treated as neutral.",
+            }
+        }
+    }
+
+    markdown = _deterministic_uncontracted_section("Practical Implication", section)
+
+    assert "Treat option A as neutral" in markdown
+    assert "do not make a specifically favorable or unfavorable recommendation" in markdown
 
 
 def test_section_citation_validation_blocks_composite_endpoint_overreach() -> None:

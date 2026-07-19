@@ -733,15 +733,25 @@ def _deterministic_uncontracted_section(heading: str, section: dict[str, Any]) -
     packet = _dict(section.get("packet"))
     anchor = _dict(packet.get("decision_anchor"))
     lines = [f"## {heading}", ""]
-    lines.append(
-        "Use the stated default classification for people and settings that match the evidence scope."
-    )
+    answer = str(anchor.get("bounded_answer") or "")
+    question = str(anchor.get("decision_question") or "")
+    classification = re.search(r"\btreated as\s+([a-z-]+)", answer, flags=re.IGNORECASE)
+    subject = re.search(r"\bshould\s+(.+?)\s+be treated as\b", question, flags=re.IGNORECASE)
+    if classification and subject:
+        lines.append(
+            f"Treat {subject.group(1)} as {classification.group(1).lower()} for the target population and outcome; "
+            "do not make a specifically favorable or unfavorable recommendation on the current evidence."
+        )
+    else:
+        lines.append(
+            "Apply the bounded classification directly within the population and outcome stated in the decision question."
+        )
     lines.extend(
         [
             "",
-            "Do not turn study-specific exposure signals into a universal cutoff; assess narrower or higher-risk groups separately.",
+            "Do not turn study-specific exposure findings into a universal cutoff.",
             "",
-            "Update the guidance when direct outcome evidence materially changes the answer, its scope, or its confidence.",
+            "Update the guidance when direct clinical-outcome evidence materially changes the answer, its scope, or its confidence.",
         ]
     )
     return "\n".join(lines).rstrip() + "\n"
