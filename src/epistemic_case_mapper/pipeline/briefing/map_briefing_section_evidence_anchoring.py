@@ -1114,8 +1114,7 @@ def _sentence_around_index(text: str, index: int) -> str:
 
 def _quantity_surfaces(text: str) -> list[str]:
     pattern = re.compile(
-        r"\b\d+(?:\.\d+)?\s*(?:mg/day|mg per day|mg|g/day|g|%|percent|egg/day|eggs/day|egg|eggs|"
-        r"day|days|week|weeks|month|months|year|years|hr|rr|or|ratio|ci)\b",
+        r"\b\d+(?:\.\d+)?\s*(?:%|percent|[a-z][a-z.-]*(?:/[a-z]+)?(?:\s+per\s+[a-z]+)?)\b",
         flags=re.IGNORECASE,
     )
     return _dedupe(match.group(0).strip() for match in pattern.finditer(str(text or "")))

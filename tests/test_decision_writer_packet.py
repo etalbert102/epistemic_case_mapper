@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from epistemic_case_mapper.pipeline.briefing.map_briefing_decision_writer_packet import (
     build_decision_writer_packet_bundle,
     decision_writer_packet_to_memo_ready_packet,
@@ -206,6 +208,36 @@ def test_decision_writer_packet_adapts_to_active_memo_ready_packet() -> None:
     assert packet["writer_packet_writeability_report"]["schema_id"] == "writer_packet_writeability_report_v1"
     assert packet["decision_memo_contract"]["schema_id"] == "decision_memo_contract_v1"
     assert packet["writer_decision_interface"]["schema_id"] == "writer_decision_interface_v1"
+
+
+def test_decision_writer_packet_retains_mandatory_evidence_beyond_role_cap() -> None:
+    bundle = build_decision_writer_packet_bundle(global_decision_model=_global_model(), ledger=_ledger())
+    writer_packet = deepcopy(bundle["decision_writer_packet"])
+    support_unit = writer_packet["evidence_units"][0]
+    writer_packet["evidence_units"] = [
+        {
+            **deepcopy(support_unit),
+            "unit_id": f"support_unit_{index}",
+            "claim": f"Mandatory support claim {index} improves the main outcome.",
+            "importance_rank": index,
+        }
+        for index in range(1, 7)
+    ]
+
+    packet = decision_writer_packet_to_memo_ready_packet(
+        writer_packet,
+        quality_report=bundle["decision_writer_packet_quality_report"],
+    )
+
+    support_items = [item for item in packet["evidence_items"] if item["role"] == "strongest_support"]
+    assert len(support_items) == 6
+    assert all(item["obligation_level"] == "must_include" for item in support_items)
+    assert all(item["must_use"] is True for item in support_items)
+    assert sum(item.get("obligation_budget_overflow") is True for item in support_items) == 2
+    writeability = packet["writer_packet_writeability_report"]
+    assert writeability["mandatory_obligation_role_cap_overflow_count"] == 2
+    assert writeability["mandatory_obligation_role_cap_overflow_role_counts"] == {"strongest_support": 2}
+    assert "mandatory_obligation_role_cap_overflow_retained" in writeability["issues"]
 
 
 def test_memo_ready_adapter_maps_source_labels_to_stable_source_ids() -> None:

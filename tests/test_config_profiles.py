@@ -169,7 +169,7 @@ def test_case_init_can_store_recommended_config(monkeypatch, tmp_path: Path) -> 
             "--no-validate",
         ],
     )
-    assert cli.main() == 0
+    assert cli.main() == 1
     prompt = (
         tmp_path
         / "artifacts/semantic/safety_case_initial_region/staged/claim_sources/safety_case_incident_whole_doc_prompt.txt"

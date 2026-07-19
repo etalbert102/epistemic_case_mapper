@@ -7,6 +7,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_readiness import (
     build_packet_quality_gate_report,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_final_outputs import _memo_ready_synthesis_failed
+from epistemic_case_mapper.pipeline.briefing.map_briefing_validation import validate_main_memo_and_appendix
 
 
 def test_packet_quality_gate_blocks_unparsed_critique_and_missing_packet() -> None:
@@ -29,6 +30,31 @@ def test_packet_quality_gate_blocks_unparsed_critique_and_missing_packet() -> No
     assert "packet_critique_parse_failed" in issue_types
     parse_issue = next(issue for issue in report["issues"] if issue["issue_type"] == "packet_critique_parse_failed")
     assert parse_issue["severity"] == "warning"
+
+
+def test_main_memo_validation_cannot_be_rescued_by_appendix_text() -> None:
+    report = validate_main_memo_and_appendix(
+        "# Decision Brief\n\nThe main memo omits the required mapped finding.\n",
+        "# Evidence Appendix\n\nAppendix-only decisive finding.\n",
+        {
+            "map_sufficiency_report": {
+                "output_obligations": [
+                    {
+                        "obligation_id": "present_required_finding",
+                        "kind": "include_present_slot",
+                        "slot": "direct_answer_evidence",
+                        "candidate_values": ["Appendix-only decisive finding."],
+                    }
+                ]
+            }
+        },
+        {"claims": [], "relations": []},
+    )
+
+    assert report["validation_scope"] == "main_memo_only"
+    assert report["appendix_report"]["used_to_satisfy_main_memo_contract"] is False
+    assert "present_required_finding" not in report["satisfied_obligation_ids"]
+    assert "missing_present_slot_in_briefing" in {issue["issue_type"] for issue in report["issues"]}
 
 
 def test_packet_quality_gate_does_not_block_on_parse_failure_alone() -> None:
@@ -80,6 +106,32 @@ def test_packet_quality_gate_treats_intentional_auto_skip_as_clean() -> None:
 
     assert report["status"] == "ready"
     assert not report["issues"]
+
+
+def test_packet_quality_gate_blocks_load_bearing_human_review_source() -> None:
+    report = build_packet_quality_gate_report(
+        {
+            "decision_briefing_packet": {
+                "evidence_bundles": [{"bundle_id": "b1"}],
+                "must_retain_ledger": [{"item_id": "unit_1"}],
+            },
+            "packet_sufficiency_report": {"status": "ready", "issues": []},
+            "packet_critique_report": {"status": "parsed"},
+            "packet_critique_adjudication_report": {},
+            "decision_writer_packet_quality_report": {
+                "status": "warning",
+                "issues": ["load_bearing_source_provenance_requires_review"],
+                "load_bearing_provenance_blocked": ["unit_1"],
+            },
+        }
+    )
+
+    assert report["status"] == "not_ready"
+    assert report["packet_ready_for_synthesis"] is False
+    assert report["source_signals"]["load_bearing_provenance_blocked"] == ["unit_1"]
+    assert "load_bearing_source_provenance_requires_review" in {
+        issue["issue_type"] for issue in report["issues"]
+    }
 
 
 def test_packet_quality_gate_still_warns_on_prompt_backend_skip() -> None:
@@ -137,6 +189,43 @@ def test_final_decision_readiness_surfaces_retention_blockers() -> None:
     assert "packet_quality_gate_warnings" in issue_types
 
 
+def test_final_decision_readiness_blocks_contract_failure_and_needs_review() -> None:
+    for validation_status in ("fails_contract", "needs_review"):
+        report = build_final_decision_readiness_report(
+            scaffold={"packet_quality_gate_report": {"status": "ready", "issues": []}},
+            validation_report={"status": validation_status, "issues": [{"issue_type": "missing_main_memo_evidence"}]},
+            memo_coherence_report={"status": "pass", "issues": []},
+            packet_retention_report={"status": "ready", "missing_critical_count": 0, "missing_high_count": 0},
+            final_evaluation={"status": "pass", "issues": []},
+            lineage_report={"status": "accepted", "accepted": True, "reader_output_available": True},
+        )
+
+        assert report["status"] == "not_decision_ready"
+        assert report["decision_ready_with_warnings"] is False
+        assert "briefing_validation_failed" in {issue["issue_type"] for issue in report["issues"]}
+
+
+def test_final_decision_readiness_blocks_source_binding_warning() -> None:
+    report = build_final_decision_readiness_report(
+        scaffold={"packet_quality_gate_report": {"status": "ready", "issues": []}},
+        validation_report={"status": "passes_contract", "issues": []},
+        memo_coherence_report={"status": "pass", "issues": []},
+        packet_retention_report={
+            "status": "warning",
+            "missing_critical_count": 0,
+            "missing_high_count": 0,
+            "source_binding_warning_count": 1,
+            "source_binding_report": {"status": "warning"},
+            "issues": [{"issue_type": "source_binding_mismatch", "item_id": "evidence_001"}],
+        },
+        final_evaluation={"status": "pass", "issues": []},
+        lineage_report={"status": "accepted", "accepted": True, "reader_output_available": True},
+    )
+
+    assert report["status"] == "not_decision_ready"
+    assert "source_binding_validation_failed" in {issue["issue_type"] for issue in report["issues"]}
+
+
 def test_final_lineage_fails_closed_for_unaccepted_or_unknown_memo_stages() -> None:
     common = {
         "scaffold": {
@@ -168,6 +257,41 @@ def test_final_lineage_fails_closed_for_unaccepted_or_unknown_memo_stages() -> N
         lineage = build_final_lineage_report(**inputs)
         assert lineage["status"] == "blocked"
         assert f"{stage}_not_accepted" in lineage["fatal_issues"]
+
+
+def test_final_lineage_blocks_nondecision_fallback_and_unsupported_polish() -> None:
+    common = {
+        "scaffold": {"packet_quality_gate_report": {"status": "ready", "packet_ready_for_synthesis": True}},
+        "synthesis_report": {"status": "accepted", "accepted": True},
+        "repair_report": {"status": "not_needed", "accepted": False},
+        "presentation_report": {"status": "no_changes", "accepted": True},
+        "reader_output_available": True,
+    }
+    fallback = build_final_lineage_report(
+        **common,
+        polish_report={"status": "accepted", "accepted": True},
+        reader_output_report={
+            "status": "memo_ready_synthesis_failed",
+            "reader_output_fallback": "pre_synthesis_inspectable_memo",
+            "reader_output_fallback_decision_ready": False,
+        },
+    )
+    assert fallback["status"] == "blocked"
+    assert "reader_output_fallback_not_decision_ready" in fallback["fatal_issues"]
+
+    unsupported = build_final_lineage_report(
+        **common,
+        polish_report={
+            "status": "accepted",
+            "accepted": True,
+            "final_validation_report": {
+                "hard_failures": ["unsupported_additions"],
+                "unsupported_additions_report": {"high_confidence_warning_count": 1},
+            },
+        },
+    )
+    assert unsupported["status"] == "blocked"
+    assert "polish_not_accepted" in unsupported["fatal_issues"]
 
 
 def test_final_readiness_keeps_reader_availability_separate_from_decision_readiness() -> None:

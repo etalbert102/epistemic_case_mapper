@@ -7,7 +7,12 @@ from textwrap import dedent
 
 from epistemic_case_mapper.io import read_yaml
 from epistemic_case_mapper.schema import CaseManifest, Source
-from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
+from epistemic_case_mapper.submission_manifest import (
+    SubmissionManifest,
+    WorkedRegion,
+    load_submission_manifest,
+    resolve_required_source_ids,
+)
 
 
 MAP_PROMPT_VERSION = "source_mapping_prompt_v2_json"
@@ -26,6 +31,140 @@ VALID_CRITIQUE_CATEGORY = {
     "presentation_risk",
     "other",
 }
+
+_EVIDENCE_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "by",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "this",
+    "to",
+    "was",
+    "were",
+    "with",
+}
+
+
+def reference_list_evidence_reason(text: str) -> str:
+    """Return a rejection reason for citation/reference debris used as evidence."""
+
+    compact = re.sub(r"\s+", " ", str(text or "").strip())
+    lowered = compact.lower()
+    if not compact:
+        return "missing_claim_evidence"
+    if re.fullmatch(r"(?:references?|bibliography|works cited)[:.]?", lowered):
+        return "reference_list_evidence"
+    citation_shape = bool(
+        re.search(r"\bet al\.?\b", lowered)
+        and re.search(r"\b(?:19|20)\d{2}\b", lowered)
+    ) or bool(re.search(r"\b(?:19|20)\d{2}\s*;\s*\d+(?:\(\d+\))?\s*:\s*\d+", lowered))
+    evidence_predicate = bool(
+        re.search(
+            r"\b(?:found|showed|reported|observed|estimated|associated|increased|decreased|reduced|improved|worsened|recommended)\b",
+            lowered,
+        )
+    )
+    identifier_marker = bool(
+        re.search(r"\b(?:doi|pmid|pmcid|isbn|issn|pubmed|crossref)\b|https?://", lowered)
+    )
+    if identifier_marker and not evidence_predicate:
+        return "reference_list_evidence"
+    if citation_shape and not evidence_predicate:
+        return "reference_list_evidence"
+    return ""
+
+
+def claim_evidence_rejection_reason(claim_text: str, evidence_text: str) -> str:
+    """Conservatively reject evidence that does not directly support a claim."""
+
+    reference_reason = reference_list_evidence_reason(evidence_text)
+    if reference_reason:
+        return reference_reason
+    claim = re.sub(r"\s+", " ", str(claim_text or "").strip()).lower()
+    evidence = re.sub(r"\s+", " ", str(evidence_text or "").strip()).lower()
+    if not claim:
+        return "missing_claim"
+    if claim in evidence:
+        return ""
+    claim_polarity = _evidence_polarity(claim)
+    evidence_polarity = _evidence_polarity(evidence)
+    if claim_polarity != "unspecified" and evidence_polarity != "unspecified" and claim_polarity != evidence_polarity:
+        return "claim_evidence_polarity_mismatch"
+    claim_negated = bool(re.search(r"\b(?:no|not|never|without|neither|nor|unchanged)\b", claim))
+    evidence_negated = bool(re.search(r"\b(?:no|not|never|without|neither|nor|unchanged)\b", evidence))
+    if claim_negated != evidence_negated and (
+        claim_polarity != "unspecified" or evidence_polarity != "unspecified"
+    ):
+        return "claim_evidence_negation_mismatch"
+    claim_is_causal = bool(
+        re.search(r"\b(?:cause[sd]?|causing|led to|leads to|resulted in|results in|prevented|prevents|produced|produces)\b", claim)
+    )
+    evidence_is_causal = bool(
+        re.search(r"\b(?:cause[sd]?|causing|led to|leads to|resulted in|results in|prevented|prevents|produced|produces)\b", evidence)
+    )
+    evidence_is_associational = bool(re.search(r"\b(?:associat\w*|correlat\w*|linked?|relationship)\b", evidence))
+    if claim_is_causal and evidence_is_associational and not evidence_is_causal:
+        return "claim_causal_overreach"
+    claim_terms = _evidence_terms(claim)
+    evidence_terms = set(_evidence_terms(evidence))
+    if not claim_terms or not evidence_terms:
+        return "insufficient_claim_evidence_overlap"
+    overlap = sum(1 for term in claim_terms if term in evidence_terms)
+    required = len(claim_terms) if len(claim_terms) <= 2 else max(2, (len(claim_terms) * 3 + 4) // 5)
+    if overlap < required:
+        return "insufficient_claim_evidence_overlap"
+    return ""
+
+
+def _evidence_polarity(text: str) -> str:
+    if re.search(r"\b(?:no association|not associated|no clear (?:effect|difference|increase|decrease)|unchanged|near[- ]null|null result)\b", text):
+        return "null"
+    beneficial = bool(re.search(r"\b(?:lower|reduced?|decreased?|declined?|protective|beneficial|improved?)\b", text))
+    harmful = bool(re.search(r"\b(?:higher|increased?|elevated?|worsened?|harmful|adverse)\b", text))
+    if beneficial and not harmful:
+        return "beneficial_or_decrease"
+    if harmful and not beneficial:
+        return "harmful_or_increase"
+    return "unspecified"
+
+
+def _evidence_terms(text: str) -> list[str]:
+    return [
+        _stem_evidence_term(term)
+        for term in re.findall(r"[a-z0-9]+", text.lower())
+        if term not in _EVIDENCE_STOPWORDS
+    ]
+
+
+def _stem_evidence_term(term: str) -> str:
+    if len(term) > 6 and term.endswith("ing"):
+        return term[:-3]
+    if len(term) > 5 and term.endswith("ed"):
+        return term[:-2]
+    if len(term) > 4 and term.endswith("es"):
+        return term[:-2]
+    if len(term) > 3 and term.endswith("s"):
+        return term[:-1]
+    return term
 
 
 def build_map_prompt(repo_root: Path, manifest_path: str, region_id: str) -> str:
@@ -157,7 +296,11 @@ def validate_map_candidate(repo_root: Path, manifest_path: str, region_id: str, 
     data = _read_json(candidate_path, failures)
     if not isinstance(data, dict):
         return failures
-    required_sources = {source.source_id for source in _required_sources(case_manifest, region)}
+    try:
+        required_sources = {source.source_id for source in _required_sources(case_manifest, region)}
+    except ValueError as exc:
+        failures.append(str(exc))
+        required_sources = set()
     source_lookup = {source.source_id: source for source in case_manifest.sources}
 
     _require_equal(data, "evidence_mode", "source_grounded", failures)
@@ -272,6 +415,8 @@ def _validate_claim(repo_root: Path, source_lookup: dict[str, Source], claim: di
     entailed = str(claim.get("entailed_by_excerpt", ""))
     if entailed not in VALID_ENTAILMENT:
         failures.append(f"semantic_map_claim_bad_entailment claim={claim_id} value={entailed}")
+    elif entailed != "yes":
+        failures.append(f"semantic_map_claim_not_entailed claim={claim_id} value={entailed}")
     excerpt = str(claim.get("excerpt", "")).strip()
     if excerpt:
         source_text = _source_text(repo_root, source_lookup[source_id])
@@ -306,10 +451,9 @@ def _load_context(repo_root: Path, manifest_path: str, region_id: str) -> tuple[
 
 
 def _required_sources(case_manifest: CaseManifest, region: WorkedRegion) -> list[Source]:
-    if not region.required_sources:
-        return case_manifest.sources
     lookup = {source.source_id: source for source in case_manifest.sources}
-    return [lookup[source_id] for source_id in region.required_sources if source_id in lookup]
+    source_ids = resolve_required_source_ids(region, list(lookup))
+    return [lookup[source_id] for source_id in source_ids]
 
 
 def _source_prompt_block(repo_root: Path, source: Source) -> str:

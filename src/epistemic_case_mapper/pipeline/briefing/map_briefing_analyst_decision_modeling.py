@@ -895,6 +895,7 @@ def _source_quality_summary(row: dict[str, Any]) -> dict[str, Any]:
             "decision_directness": appraisal.get("decision_directness"),
             "evidence_proximity": _string_list(appraisal.get("evidence_proximity"))[:4],
             "recommended_uses": _string_list(appraisal.get("recommended_uses"))[:4],
+            "interpretation_caveats": _string_list(appraisal.get("interpretation_caveats"))[:4],
         }.items()
         if value not in (None, "", [], {})
     }

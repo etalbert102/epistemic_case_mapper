@@ -173,6 +173,13 @@ def _run_staged_semantic_map(
         for failure in result.failures:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
+    if result.quality_status == "needs_repair":
+        print(
+            f"semantic_staged_failed region={region_id} quality=needs_repair "
+            f"report={_display_path(repo_root, result.artifact_dir / 'map_quality_report.json')}",
+            file=sys.stderr,
+        )
+        return 1
     if no_validate:
         print("Semantic validation skipped.")
     else:
@@ -229,11 +236,21 @@ def _run_map_briefing(
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
         print(f"map_briefing_failed error={exc}", file=sys.stderr)
         return 1
+    if not result.publication_ready:
+        print(
+            "map_briefing_not_published "
+            f"status={result.publication_status} readiness={result.readiness_status} "
+            f"inspectable={_display_path(repo_root, result.briefing_path)}",
+            file=sys.stderr,
+        )
+        print(f"Summary: {_display_path(repo_root, result.summary_path)}", file=sys.stderr)
+        return 1
     print(
-        "Map briefing wrote "
-        f"{_display_path(repo_root, result.briefing_path)} "
+        "Map briefing published "
+        f"{_display_path(repo_root, result.official_briefing_path or result.briefing_path)} "
         f"backend={result.backend} "
         f"quality={result.map_quality_status} "
+        f"readiness={result.readiness_status} "
         f"confidence={result.model_confidence}->{result.calibrated_confidence}"
     )
     print(f"Summary: {_display_path(repo_root, result.summary_path)}")
@@ -328,6 +345,13 @@ def _run_staged_semantic_brief(
             for failure in result.failures:
                 print(f"FAIL: {failure}", file=sys.stderr)
             return 1
+        if result.quality_status == "needs_repair":
+            print(
+                f"semantic_staged_brief_failed region={region_id} quality=needs_repair "
+                f"report={_display_path(repo_root, result.artifact_dir / 'map_quality_report.json')}",
+                file=sys.stderr,
+            )
+            return 1
         briefing_result = run_map_briefing(
             repo_root=repo_root,
             map_path=result.output_path,
@@ -345,14 +369,26 @@ def _run_staged_semantic_brief(
     except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
         print(f"semantic_staged_brief_failed region={region_id} error={exc}", file=sys.stderr)
         return 1
+    if not briefing_result.publication_ready:
+        print(
+            "semantic_staged_brief_not_published "
+            f"region={region_id} status={briefing_result.publication_status} "
+            f"readiness={briefing_result.readiness_status} "
+            f"inspectable={_display_path(repo_root, briefing_result.briefing_path)}",
+            file=sys.stderr,
+        )
+        print(f"Briefing summary: {_display_path(repo_root, briefing_result.summary_path)}", file=sys.stderr)
+        print(f"Map run summary: {_display_path(repo_root, result.artifact_dir / 'run_summary.json')}", file=sys.stderr)
+        return 1
     print(
-        "Staged brief wrote "
-        f"{_display_path(repo_root, briefing_result.briefing_path)} "
+        "Staged brief published "
+        f"{_display_path(repo_root, briefing_result.official_briefing_path or briefing_result.briefing_path)} "
         f"map={_display_path(repo_root, result.output_path)} "
         f"claims={result.claim_count} relations={result.relation_count} "
         "claim_extraction_method=whole_doc_source_card "
         f"claim_consolidation={claim_consolidation} "
         f"quality={result.quality_status} "
+        f"readiness={briefing_result.readiness_status} "
         f"confidence={briefing_result.model_confidence}->{briefing_result.calibrated_confidence}"
     )
     print(f"Briefing summary: {_display_path(repo_root, briefing_result.summary_path)}")

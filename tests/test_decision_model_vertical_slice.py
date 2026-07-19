@@ -229,8 +229,11 @@ def test_run_decision_model_slice_can_use_main_synthesis_stage(tmp_path: Path) -
     assert result.synthesized_briefing_path is not None
     assert result.synthesized_appendix_path is not None
     assert result.synthesis_report_path is not None
-    assert result.synthesized_briefing_path.name == "BRIEFING.md"
+    assert result.synthesized_briefing_path.name == "BRIEFING_NOT_DECISION_READY.md"
     assert result.synthesized_briefing_path.exists()
+    publication_notice = (tmp_path / "slice" / "BRIEFING.md").read_text(encoding="utf-8")
+    assert publication_notice.startswith("# Briefing Publication Blocked")
+    assert "inspectable, non-official memo" in publication_notice
     assert "Decision Brief" in result.synthesized_briefing_path.read_text(encoding="utf-8")
     report = json.loads(result.synthesis_report_path.read_text(encoding="utf-8"))
     assert report["status"] == "memo_ready_synthesis_deterministic_fallback"

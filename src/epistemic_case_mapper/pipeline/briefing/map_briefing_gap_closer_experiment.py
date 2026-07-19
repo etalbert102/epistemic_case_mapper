@@ -669,15 +669,24 @@ def _section_job_id_for_atom(section_id: str, atom: dict[str, Any]) -> str:
             return "answer_interpretive_context"
         return "answer_drivers"
     if section_id == "counterweights":
-        if any(term in text for term in ("diabetes", "subgroup", "high-risk", "high ldl", "population")):
+        if role in {"boundary", "scope"} or any(
+            term in text
+            for term in ("subgroup", "high-risk", "population", "applicability", "eligibility", "exception")
+        ):
             return "counterweight_subgroup_boundary"
-        if _atom_has_quantities(atom) or any(term in text for term in ("dose", "ratio", "ldl", "hdl", "biomarker", "mean difference")):
+        if _atom_has_quantities(atom) or any(
+            term in text
+            for term in ("dose", "ratio", "biomarker", "mean difference", "endpoint", "threshold")
+        ):
             return "counterweight_dose_or_endpoint"
         if any(term in text for term in ("crux", "would change", "update", "tension")):
             return "counterweight_update_trigger"
         return "counterweight_other_boundary"
     if section_id == "practical_implication":
-        if role in {"boundary", "counterweight"} or any(term in text for term in ("diabetes", "high-risk", "restrict", "exception", "high ldl")):
+        if role in {"boundary", "counterweight", "scope"} or any(
+            term in text
+            for term in ("high-risk", "restrict", "exception", "subgroup", "population", "eligibility")
+        ):
             return "practical_exceptions"
         return "practical_default_action"
     return ""

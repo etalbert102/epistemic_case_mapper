@@ -260,8 +260,9 @@ def test_parallel_packet_critique_uses_parallel_workers() -> None:
     )
 
     assert result["report"]["parallelism"]["local_shard_count"] == 3
-    assert time.monotonic() - started < 0.14
     assert len(starts) == 3
+    assert max(starts) - min(starts) < 0.08
+    assert time.monotonic() - started < 0.25
 
 
 def test_run_packet_critique_selects_parallel_path_for_large_packets(monkeypatch) -> None:

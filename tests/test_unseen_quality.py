@@ -66,6 +66,46 @@ def test_quality_cli_gate_accepts_completed_transfer_package(monkeypatch, tmp_pa
     assert any(warning["label"] == "demo_source_1" for warning in warnings)
 
 
+def test_unseen_quality_check_fails_closed_on_failed_criterion(monkeypatch, tmp_path: Path) -> None:
+    _write_completed_quality_docs(tmp_path, "demo_unseen", "Demo Unseen Case")
+    scorecard = tmp_path / "docs/unseen_case_tests/demo_unseen/SCORECARD.md"
+    scorecard.write_text(
+        scorecard.read_text(encoding="utf-8").replace(
+            "| better_than_flat_baseline | pass |",
+            "| better_than_flat_baseline | fail |",
+        ),
+        encoding="utf-8",
+    )
+
+    failures = validate_quality_test(tmp_path, "demo_unseen")
+    assert any("unseen_quality_acceptance_failed" in failure for failure in failures)
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        ["ecm.py", "--repo-root", str(tmp_path), "quality", "check", "--case", "demo_unseen"],
+    )
+    assert cli.main() == 1
+
+
+def test_unseen_quality_check_fails_closed_on_nonpassing_overall_result(monkeypatch, tmp_path: Path) -> None:
+    for overall in ("fail", "inconclusive"):
+        case_slug = f"demo_{overall}"
+        _write_completed_quality_docs(tmp_path, case_slug, f"Demo {overall.title()}")
+        scorecard = tmp_path / f"docs/unseen_case_tests/{case_slug}/SCORECARD.md"
+        scorecard.write_text(
+            scorecard.read_text(encoding="utf-8").replace("Overall result: `pass`", f"Overall result: `{overall}`"),
+            encoding="utf-8",
+        )
+        failures = validate_quality_test(tmp_path, case_slug)
+        assert any(f"result={overall}" in failure for failure in failures)
+        monkeypatch.setattr(
+            cli.sys,
+            "argv",
+            ["ecm.py", "--repo-root", str(tmp_path), "quality", "check", "--case", case_slug],
+        )
+        assert cli.main() == 1
+
+
 def _write_completed_quality_docs(repo_root: Path, case_slug: str, title: str) -> None:
     case_dir = repo_root / "docs/unseen_case_tests" / case_slug
     case_dir.mkdir(parents=True, exist_ok=True)

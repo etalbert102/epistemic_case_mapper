@@ -21,32 +21,16 @@ from epistemic_case_mapper.pipeline.map.staged_semantic_claim_triage import tria
 from epistemic_case_mapper.pipeline.map.staged_semantic_decision_questions import region_decision_question
 from epistemic_case_mapper.pipeline.map.staged_semantic_label_audit import label_audit_bucket_counts, label_audit_warning_counts
 from epistemic_case_mapper.pipeline.map.staged_semantic_progress import PipelineProgress
+from epistemic_case_mapper.pipeline.map.staged_semantic_contracts import (
+    CLAIM_EXTRACTION_METHOD,
+    CONSOLIDATION_OVERLAP_THRESHOLD,
+    CONSOLIDATION_SIMILARITY_THRESHOLD,
+    RELATION_BATCH_PROMPT_VERSION,
+    RELATION_PROMPT_VERSION,
+    SourceChunk,
+    SourceSpan,
+)
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
-
-CLAIM_EXTRACTION_METHOD = "whole_doc_source_card"
-RELATION_PROMPT_VERSION = "staged_relation_prompt_v4_contextual_relation_json"
-RELATION_BATCH_PROMPT_VERSION = "staged_relation_batch_prompt_v4_contextual_relation_json"
-CONSOLIDATION_SIMILARITY_THRESHOLD = 0.72
-CONSOLIDATION_OVERLAP_THRESHOLD = 0.82
-
-@dataclass(frozen=True)
-class SourceSpan:
-    span_id: str
-    source_id: str
-    source_span: str
-    text: str
-
-@dataclass(frozen=True)
-class SourceChunk:
-    chunk_id: str
-    source_id: str
-    title: str
-    start_line: int
-    end_line: int
-    ordinal: int
-    numbered_text: str
-    plain_text: str
-    spans: tuple[SourceSpan, ...]
 
 @dataclass(frozen=True)
 class StagedMapResult:
@@ -245,6 +229,7 @@ def _run_mapping_stages(
         )
     rejected_claims = claim_stage["rejected_claims"]
     initial = _build_initial_staged_map(
+        repo_root=repo_root,
         manifest=manifest, region=region, case_manifest=case_manifest, claims=claims, relation_claims=relation_claims,
         all_chunks=all_chunks, chunks=chunks, skipped_chunks=skipped_chunks,
         rejected_claims=rejected_claims, backend=backend, backend_timeout=backend_timeout,
@@ -603,6 +588,7 @@ def _maybe_repair_staged_map_quality(
 
 def _build_initial_staged_map(
     *,
+    repo_root: Path,
     manifest: SubmissionManifest,
     region: WorkedRegion,
     case_manifest: CaseManifest,
@@ -642,6 +628,7 @@ def _build_initial_staged_map(
         relations=relations,
         relation_payloads=relation_payloads,
         decision_question=decision_question,
+        repo_root=repo_root,
     )
     if progress:
         progress.start_stage(

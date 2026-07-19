@@ -29,6 +29,11 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     string_list as _string_list,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_hierarchy import normalize_source_hierarchy
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal_constraints import (
+    constrain_source_hierarchy,
+    constrain_source_weight_judgment,
+    source_constraints_from_context_rows,
+)
 from epistemic_case_mapper.model_backends import model_parallelism
 
 
@@ -123,12 +128,23 @@ def build_analyst_decision_model_from_global_tasks(
         _dict(payloads.get("source_hierarchy")),
         allowed_source_ids=_context_source_ids(context),
     )
+    source_constraints = source_constraints_from_context_rows(_rows(context))
+    source_hierarchy, source_report = constrain_source_hierarchy(
+        source_hierarchy,
+        source_report,
+        source_constraints,
+    )
     source_weight_judgments = _valid_source_weight_judgments(
         context,
         _list(_dict(payloads.get("source_weighting_guidance")).get("source_weight_judgments")),
+        source_constraints=source_constraints,
     )
     if not source_weight_judgments:
-        source_weight_judgments = _source_weight_judgments_from_hierarchy(context, source_hierarchy)
+        source_weight_judgments = _source_weight_judgments_from_hierarchy(
+            context,
+            source_hierarchy,
+            source_constraints=source_constraints,
+        )
     blueprint = _dict(payloads.get("argument_blueprint"))
     groups = _groups_from_global_tasks(context, answer_frame, evidence_roles, blueprint, reconciliation)
     groups, _ranking_guard = apply_decision_diagnostic_ranking(groups, _rows(context))
@@ -535,7 +551,12 @@ def _baseline_evidence_roles(context: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _source_weight_judgments_from_hierarchy(context: dict[str, Any], hierarchy: dict[str, Any]) -> list[dict[str, Any]]:
+def _source_weight_judgments_from_hierarchy(
+    context: dict[str, Any],
+    hierarchy: dict[str, Any],
+    *,
+    source_constraints: dict[str, dict[str, list[str]]] | None = None,
+) -> list[dict[str, Any]]:
     known_sources = set(_context_source_ids(context))
     rows = []
     for index, row in enumerate(_list(hierarchy.get("source_accounting")), start=1):
@@ -545,20 +566,19 @@ def _source_weight_judgments_from_hierarchy(context: dict[str, Any], hierarchy: 
         if source_id not in known_sources:
             continue
         lane = str(row.get("primary_lane") or "").strip()
-        rows.append(
-            _drop_empty(
-                {
-                    "judgment_id": f"source_hierarchy_weight_{index:03d}",
-                    "source_ids": [source_id],
-                    "main_use": _main_use_from_lane(lane),
-                    "why_weight_this_way": _short_text(row.get("rationale"), 700),
-                    "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
-                    "memo_weight_sentence": _short_text(row.get("memo_weight_sentence") or row.get("rationale"), 520),
-                    "confidence_effect": _confidence_effect_from_lane(lane),
-                    "method": "source_hierarchy_accounting",
-                }
-            )
+        judgment = _drop_empty(
+            {
+                "judgment_id": f"source_hierarchy_weight_{index:03d}",
+                "source_ids": [source_id],
+                "main_use": _main_use_from_lane(lane),
+                "why_weight_this_way": _short_text(row.get("rationale"), 700),
+                "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
+                "memo_weight_sentence": _short_text(row.get("memo_weight_sentence") or row.get("rationale"), 520),
+                "confidence_effect": _confidence_effect_from_lane(lane),
+                "method": "source_hierarchy_accounting",
+            }
         )
+        rows.append(_constrained_global_source_judgment(judgment, [source_id], source_constraints or {}))
     return rows
 
 
@@ -578,7 +598,12 @@ def _valid_quantity_decisions(context: dict[str, Any], rows: list[Any]) -> list[
     return result
 
 
-def _valid_source_weight_judgments(context: dict[str, Any], rows: list[Any]) -> list[dict[str, Any]]:
+def _valid_source_weight_judgments(
+    context: dict[str, Any],
+    rows: list[Any],
+    *,
+    source_constraints: dict[str, dict[str, list[str]]] | None = None,
+) -> list[dict[str, Any]]:
     known_sources = set(_context_source_ids(context))
     known_evidence = {str(row.get("evidence_item_id") or "") for row in _rows(context)}
     result = []
@@ -589,24 +614,44 @@ def _valid_source_weight_judgments(context: dict[str, Any], rows: list[Any]) -> 
         if not source_ids:
             continue
         evidence_ids = [evidence_id for evidence_id in _string_list(row.get("evidence_item_ids")) if evidence_id in known_evidence]
-        result.append(
-            _drop_empty(
-                {
-                    "judgment_id": f"analyst_source_weight_{index:03d}",
-                    "source_ids": _dedupe(source_ids),
-                    "source_type": _source_type(row.get("source_type")),
-                    "main_use": _main_use(row.get("main_use")),
-                    "why_weight_this_way": _short_text(row.get("why_weight_this_way"), 700),
-                    "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
-                    "what_not_to_use_it_for": [_short_text(value, 360) for value in _string_list(row.get("what_not_to_use_it_for")) if _short_text(value, 360)],
-                    "memo_weight_sentence": _short_text(row.get("memo_weight_sentence"), 520),
-                    "confidence_effect": _confidence_effect(row.get("confidence_effect")),
-                    "evidence_item_ids": evidence_ids,
-                    "method": "parallel_global_analyst_source_weighting",
-                }
-            )
+        judgment = _drop_empty(
+            {
+                "judgment_id": f"analyst_source_weight_{index:03d}",
+                "source_ids": _dedupe(source_ids),
+                "source_type": _source_type(row.get("source_type")),
+                "main_use": _main_use(row.get("main_use")),
+                "why_weight_this_way": _short_text(row.get("why_weight_this_way"), 700),
+                "reader_facing_limit": _short_text(row.get("reader_facing_limit"), 360),
+                "what_not_to_use_it_for": [_short_text(value, 360) for value in _string_list(row.get("what_not_to_use_it_for")) if _short_text(value, 360)],
+                "memo_weight_sentence": _short_text(row.get("memo_weight_sentence"), 520),
+                "confidence_effect": _confidence_effect(row.get("confidence_effect")),
+                "evidence_item_ids": evidence_ids,
+                "method": "parallel_global_analyst_source_weighting",
+            }
         )
+        result.append(_constrained_global_source_judgment(judgment, source_ids, source_constraints or {}))
     return result
+
+
+def _constrained_global_source_judgment(
+    judgment: dict[str, Any],
+    source_ids: list[str],
+    constraints_by_source: dict[str, dict[str, list[str]]],
+) -> dict[str, Any]:
+    selected = [constraints_by_source.get(source_id, {}) for source_id in source_ids]
+    return constrain_source_weight_judgment(
+        judgment,
+        source_label=source_ids[0] if source_ids else "this source",
+        recommended_uses=_dedupe(
+            [use for constraints in selected for use in _string_list(constraints.get("recommended_uses"))]
+        ),
+        warnings=_dedupe(
+            [warning for constraints in selected for warning in _string_list(constraints.get("warnings"))]
+        ),
+        caveats=_dedupe(
+            [caveat for constraints in selected for caveat in _string_list(constraints.get("caveats"))]
+        ),
+    )
 
 
 def _source_weight_judgment_report(context: dict[str, Any], judgments: list[dict[str, Any]]) -> dict[str, Any]:

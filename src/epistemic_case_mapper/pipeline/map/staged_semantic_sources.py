@@ -11,12 +11,16 @@ from epistemic_case_mapper.config_profiles import (
     config_profile_from_manifest_payload,
     profile_vocabulary,
 )
-from epistemic_case_mapper.io import read_yaml, write_json, write_markdown
+from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import examples_block, json_schema_block, render_prompt
-from epistemic_case_mapper.schema import CaseManifest, Source
-from epistemic_case_mapper.pipeline.map.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT, validate_map_candidate
+from epistemic_case_mapper.schema import CaseManifest
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
+    MAP_PROMPT_VERSION,
+    claim_evidence_rejection_reason,
+    validate_map_candidate,
+)
 from epistemic_case_mapper.pipeline.map.staged_semantic_claim_quantities import claim_quantity_values, normalize_claim_quantity_rows
 from epistemic_case_mapper.pipeline.map.staged_semantic_claim_importance import normalized_decision_importance, question_fit_from_relevance
 from epistemic_case_mapper.pipeline.map.staged_semantic_decision_questions import region_decision_question
@@ -28,7 +32,22 @@ from epistemic_case_mapper.pipeline.map.staged_semantic_prompt_schemas import (
 )
 from epistemic_case_mapper.pipeline.map.staged_semantic_relation_claim_cards import relation_routing_context_lines
 from epistemic_case_mapper.pipeline.map.staged_semantic_relation_prompting import relation_type_semantics
-from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
+from epistemic_case_mapper.pipeline.map.staged_semantic_contracts import (
+    RELATION_BATCH_PROMPT_VERSION,
+    RELATION_PROMPT_VERSION,
+    SourceChunk,
+    SourceSpan,
+)
+from epistemic_case_mapper.pipeline.map.staged_semantic_source_access import (
+    _artifact_dir,
+    _load_context,
+    _normalize_text,
+    _relative,
+    _required_sources,
+    _safe_filename,
+    _source_text,
+)
+from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion
 
 SOURCE_EXTRACTED_ROLE = "source_claim"
 
@@ -39,6 +58,7 @@ def _relation_pair_prompt(
     packet: dict[str, Any],
     decision_question: str | None = None,
 ) -> str:
+    from epistemic_case_mapper.pipeline.map.staged_semantic_quality import _profile_relation_rule_text
     left = packet["left"]
     right = packet["right"]
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
@@ -71,6 +91,8 @@ def _relation_batch_prompt(
     batch_id: str,
     decision_question: str | None = None,
 ) -> str:
+    from epistemic_case_mapper.pipeline.map.staged_semantic_quality import _profile_relation_rule_text
+
     relation_types = ", ".join(sorted(manifest.relation_ontology.permitted_types()))
     pair_blocks = "\n\n".join(_relation_pair_block(packet) for packet in packets)
     pair_ids = ", ".join(packet["pair_id"] for packet in packets)
@@ -230,6 +252,11 @@ def _normalize_claim_proposal(
         return None, "claim_not_object"
     span_id = str(proposal.get("span_id", proposal.get("spanId", ""))).strip()
     source_quote = _proposal_source_quote(proposal)
+    if not source_quote:
+        return None, "missing_source_quote"
+    entailed = str(proposal.get("entailed_by_excerpt", "uncertain")).strip().lower()
+    if entailed != "yes":
+        return None, "claim_not_entailed_by_excerpt"
     alignment = align_source_quote_to_span(source_quote=source_quote, proposed_span_id=span_id, span_lookup=span_lookup)
     if alignment is None:
         return None, "source_quote_unaligned" if source_quote else "unknown_span_id"
@@ -237,13 +264,13 @@ def _normalize_claim_proposal(
     claim_text = str(proposal.get("claim", "")).strip()
     if not claim_text:
         return None, "missing_claim"
-    entailed = str(proposal.get("entailed_by_excerpt", "uncertain")).strip().lower()
-    if entailed not in VALID_ENTAILMENT:
-        entailed = "uncertain"
-    role = SOURCE_EXTRACTED_ROLE
     question_relevance = _normalized_question_relevance(proposal.get("question_relevance"))
     if question_relevance == "irrelevant":
         return None, "question_irrelevant"
+    evidence_reason = claim_evidence_rejection_reason(claim_text, alignment.quote or alignment.matched_text)
+    if evidence_reason:
+        return None, evidence_reason
+    role = SOURCE_EXTRACTED_ROLE
     scope_flags = _normalized_scope_flags(proposal.get("scope_flags"))
     whole_doc_source_card = _metadata_dict(proposal.get("whole_doc_source_card"))
     claim_quantities = normalize_claim_quantity_rows(
@@ -437,9 +464,22 @@ def _normalize_relation_proposal(
             "requires_review": confidence == "low",
             "relation_contract": contract,
             "candidate_pair": _candidate_pair_metadata(packet),
+            "crux_candidates": _relation_annotation_items(proposal.get("crux_candidates")),
+            "similar_but_not_identical": _relation_annotation_items(proposal.get("similar_but_not_identical")),
         },
         "",
     )
+
+
+def _relation_annotation_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    rows: list[str] = []
+    for item in value:
+        text = re.sub(r"\s+", " ", str(item or "").strip())
+        if text and text not in rows:
+            rows.append(text)
+    return rows
 
 def _looks_like_relation_reference_or_boilerplate(text: str) -> bool:
     lowered = text.lower()
@@ -844,54 +884,3 @@ def _excerpt_from_source_span(chunk: SourceChunk, source_span: str) -> str | Non
     end_index = end_line - chunk.start_line + 1
     excerpt = "\n".join(lines[start_index:end_index]).strip()
     return excerpt or None
-
-def _load_context(repo_root: Path, manifest_path: str, region_id: str) -> tuple[SubmissionManifest, WorkedRegion, CaseManifest]:
-    manifest = load_submission_manifest(repo_root, manifest_path)
-    region = manifest.region_for_id(region_id)
-    case = manifest.case_for_key(region.case_key)
-    case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
-    return manifest, region, case_manifest
-
-def _required_sources(case_manifest: CaseManifest, region: WorkedRegion) -> list[Source]:
-    if not region.required_sources:
-        return case_manifest.sources
-    lookup = {source.source_id: source for source in case_manifest.sources}
-    return [lookup[source_id] for source_id in region.required_sources if source_id in lookup]
-
-def _source_text(repo_root: Path, source: Source) -> str:
-    if source.text:
-        return source.text
-    if source.path:
-        path = repo_root / source.path
-        if path.exists():
-            return path.read_text(encoding="utf-8", errors="replace")
-    return source.excerpt or source.notes or ""
-
-def _artifact_dir(repo_root: Path, region_id: str, artifact_dir: str | Path | None) -> Path:
-    path = Path(artifact_dir or f"artifacts/semantic/{region_id}/staged")
-    if not path.is_absolute():
-        path = repo_root / path
-    return path
-
-def _relative(repo_root: Path, path: Path) -> str:
-    try:
-        return path.relative_to(repo_root).as_posix()
-    except ValueError:
-        return path.as_posix()
-
-def _safe_filename(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_")
-
-def _normalize_text(value: str) -> str:
-    return re.sub(r"\s+", " ", value).strip().lower()
-
-
-
-# Public facade dependency imports.
-from epistemic_case_mapper.pipeline.map.staged_semantic_pipeline_runner import (
-    RELATION_BATCH_PROMPT_VERSION,
-    RELATION_PROMPT_VERSION,
-    SourceChunk,
-    SourceSpan,
-)
-from epistemic_case_mapper.pipeline.map.staged_semantic_quality import _profile_relation_rule_text

@@ -26,6 +26,7 @@ def build_source_evidence_cards(
     source_urls: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     source_urls = source_urls or {}
+    source_metadata = _source_metadata_lookup(candidate_map)
     cards: list[dict[str, Any]] = []
     for index, claim in enumerate(_claims(candidate_map), start=1):
         text = _claim_text(claim)
@@ -34,11 +35,17 @@ def build_source_evidence_cards(
         anchor_confidence = _anchor_confidence(claim, excerpt)
         whole_doc_card = _whole_doc_source_card(claim)
         claim_context = _claim_context(whole_doc_card.get("claim_context"))
+        manifest_metadata = source_metadata.get(source_id, {})
         source_card = {
             "source_card_id": f"sc{index:04d}",
             "source_id": source_id,
-            "source_title": source_lookup.get(source_id, source_id),
-            "source_url": str(source_urls.get(source_id, "")).strip(),
+            "source_title": source_lookup.get(source_id) or str(manifest_metadata.get("title") or source_id),
+            "source_url": str(source_urls.get(source_id) or manifest_metadata.get("url") or "").strip(),
+            "source_metadata": manifest_metadata,
+            "declared_source_type": str(manifest_metadata.get("source_type") or ""),
+            "provenance_level": str(manifest_metadata.get("provenance_level") or "unspecified"),
+            "evidence_role": str(manifest_metadata.get("evidence_role") or "unspecified"),
+            "independence_caveats": _string_list(manifest_metadata.get("independence_caveats")),
             "source_span": _source_span(claim),
             "source_quote_or_excerpt": excerpt,
             "span_hash": str(claim.get("source_text_hash") or claim.get("excerpt_hash") or _stable_hash(excerpt)),
@@ -77,6 +84,31 @@ def build_source_evidence_cards(
         issues=[] if cards else ["no_claims_available_for_source_evidence_cards"],
     )
     return report.model_dump()
+
+
+def _source_metadata_lookup(candidate_map: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    direct = candidate_map.get("source_metadata")
+    if isinstance(direct, dict):
+        return {
+            str(source_id): dict(record)
+            for source_id, record in direct.items()
+            if isinstance(record, dict)
+        }
+    bundle = candidate_map.get("source_metadata_bundle")
+    if not isinstance(bundle, dict):
+        return {}
+    by_id = bundle.get("source_by_id")
+    if isinstance(by_id, dict):
+        return {
+            str(source_id): dict(record)
+            for source_id, record in by_id.items()
+            if isinstance(record, dict)
+        }
+    return {
+        str(record.get("source_id")): dict(record)
+        for record in bundle.get("sources", [])
+        if isinstance(record, dict) and record.get("source_id")
+    }
 
 
 def build_source_sufficiency_report(

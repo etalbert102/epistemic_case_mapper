@@ -64,6 +64,7 @@ CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
 @dataclass(frozen=True)
 class MapBriefingResult:
     briefing_path: Path
+    official_briefing_path: Path | None
     summary_path: Path
     prompt_path: Path
     prioritized_map_path: Path
@@ -76,6 +77,11 @@ class MapBriefingResult:
     model_confidence: str
     calibrated_confidence: str
     map_quality_status: str
+    readiness_status: str
+    decision_ready: bool
+    decision_ready_with_warnings: bool
+    publication_ready: bool
+    publication_status: str
 
 
 def run_map_briefing(
@@ -99,6 +105,7 @@ def run_map_briefing(
     map_file = prep["map_file"]
     candidate_map = prep["candidate_map"]
     quality_report = prep["quality_report"]
+    _require_map_quality_ready(quality_report)
     source_lookup = prep["source_lookup"]
     effective_max_claims = prep["effective_max_claims"]
     prioritized_map = prep["prioritized_map"]
@@ -192,21 +199,29 @@ def run_map_briefing(
     return _map_briefing_result(
         briefing_path=briefing_path, summary_path=summary_path, scaffold_paths=scaffold_paths,
         briefing_validation_path=briefing_validation_path, telemetry_paths=telemetry_paths,
-        backend=backend, render_state=render_state, quality_report=quality_report,
+        backend=backend, render_state=render_state, quality_report=quality_report, final_outputs=final_outputs,
     )
 def _map_briefing_result(
     *, briefing_path: Path, summary_path: Path, scaffold_paths: dict[str, Path],
     briefing_validation_path: Path, telemetry_paths: dict[str, Path], backend: str,
     render_state: dict[str, Any], quality_report: dict[str, Any],
+    final_outputs: dict[str, Any],
 ) -> MapBriefingResult:
     return MapBriefingResult(
-        briefing_path=briefing_path, summary_path=summary_path, prompt_path=scaffold_paths["prompt"],
+        briefing_path=briefing_path,
+        official_briefing_path=final_outputs.get("official_briefing_path"),
+        summary_path=summary_path, prompt_path=scaffold_paths["prompt"],
         prioritized_map_path=scaffold_paths["prioritized_map"], prioritization_report_path=scaffold_paths["prioritization_report"],
         erosion_audit_path=scaffold_paths["erosion_audit"], sufficiency_report_path=scaffold_paths["sufficiency_report"],
         briefing_validation_path=briefing_validation_path, gap_diagnosis_path=telemetry_paths["gap_diagnosis"], backend=backend,
         model_confidence=str(render_state["model_confidence"]),
         calibrated_confidence=str(render_state["calibrated"]),
         map_quality_status=str(quality_report.get("status", "unknown")),
+        readiness_status=str(final_outputs.get("readiness_status", "missing")),
+        decision_ready=bool(final_outputs.get("decision_ready")),
+        decision_ready_with_warnings=bool(final_outputs.get("decision_ready_with_warnings")),
+        publication_ready=bool(final_outputs.get("publication_ready")),
+        publication_status=str(final_outputs.get("publication_status", "blocked_not_decision_ready")),
     )
 def _attach_decision_ready_context_reports(
     prioritized_map: dict[str, Any],
@@ -329,6 +344,12 @@ def _validate_run_args(question: str, backend_timeout: int | None, backend_retri
     if backend_timeout is not None and backend_timeout < 1:
         raise ValueError("backend_timeout must be positive")
     _require_concrete_question(question)
+
+
+def _require_map_quality_ready(quality_report: dict[str, Any]) -> None:
+    status = str(quality_report.get("status") or "missing").strip().lower()
+    if status in {"needs_repair", "fail", "failed", "fails", "blocked", "not_ready"}:
+        raise ValueError(f"map_quality_not_ready status={status}")
 
 
 def _prepare_rendered_reader_packet(

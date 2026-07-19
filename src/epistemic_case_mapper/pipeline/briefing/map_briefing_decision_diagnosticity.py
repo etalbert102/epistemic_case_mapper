@@ -101,6 +101,11 @@ def apply_obligation_budget(evidence_items: list[dict[str, Any]]) -> None:
     for role, items in by_role.items():
         if role == "context_only":
             continue
+        preexisting_required_ids = {
+            id(item)
+            for item in items
+            if item.get("obligation_level") == "must_include" or item.get("must_use") is True
+        }
         forced_ids = {
             id(item)
             for item in items
@@ -112,19 +117,20 @@ def apply_obligation_budget(evidence_items: list[dict[str, Any]]) -> None:
             if str(item.get("memo_inclusion") or "") not in {"trace_only", "exclude", "supporting_context"}
         ]
         ordered = sorted(eligible, key=_obligation_budget_sort_key)
-        required_ids = {id(item) for item in ordered[: budgets.get(role, 2)]}
+        budget = budgets.get(role, 2)
+        budget_selected_ids = {id(item) for item in ordered[:budget]}
+        required_ids = {*preexisting_required_ids, *budget_selected_ids}
         required_ids.update(forced_ids)
         for item in items:
             if id(item) in required_ids:
                 item["obligation_level"] = "must_include"
                 item["must_use"] = True
-            elif item.get("obligation_level") == "must_include":
-                item["obligation_level"] = "should_include"
-                item["must_use"] = False
-                item["demotion_reason"] = (
-                    "Preserved as should-include evidence because the model selected it, but demoted from mandatory "
-                    "to keep the memo contract writeable."
-                )
+                if id(item) in preexisting_required_ids and id(item) not in budget_selected_ids and id(item) not in forced_ids:
+                    item["obligation_budget_overflow"] = True
+                    item["obligation_budget_role_cap"] = budget
+                else:
+                    item.pop("obligation_budget_overflow", None)
+                    item.pop("obligation_budget_role_cap", None)
     for item in evidence_items:
         item.pop("_original_order", None)
 

@@ -333,6 +333,15 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert "synthesis_not_accepted" in final_lineage["fatal_issues"]
     assert final_readiness["reader_output_available"] is True
     assert final_readiness["decision_ready"] is False
+    assert summary["publication_ready"] is False
+    assert summary["publication_status"] in {"blocked_not_decision_ready", "fallback_not_decision_ready"}
+    assert summary["readiness_status"] != "missing"
+    assert summary["reader_artifact_kind"] == "inspectable_non_official_memo"
+    assert summary["paths"]["official_briefing"] is None
+    assert summary["paths"]["inspectable_memo"].endswith("BRIEFING_NOT_DECISION_READY.md")
+    final_review = (tmp_path / summary["paths"]["final_review_packet"]).read_text(encoding="utf-8")
+    assert "Official briefing: `not published`" in final_review
+    assert "Inspectable non-official memo:" in final_review
     assert summary["paths"]["pipeline_measurement_audit"].endswith("pipeline_measurement_audit.json")
     assert summary["paths"]["pipeline_simplification_comparison"].endswith("pipeline_simplification_comparison.json")
     assert (tmp_path / summary["paths"]["pipeline_simplification_comparison"]).exists()
@@ -361,7 +370,7 @@ def test_run_map_briefing_renders_readable_packet_without_raw_source_ids(tmp_pat
     assert any("PROSPERITY" in term for term in telemetry["baseline_gap_attribution"]["salient_baseline_terms_absent"])
 
 
-def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
+def test_synthesize_map_briefing_cli_fails_closed_for_unready_map(monkeypatch, tmp_path: Path) -> None:
     map_path = tmp_path / "map.json"
     quality_path = tmp_path / "quality.json"
     map_path.write_text(
@@ -430,17 +439,12 @@ def test_synthesize_map_briefing_cli(monkeypatch, tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    assert cli.main() == 0
-    rendered = (tmp_path / "out/BRIEFING.md").read_text(encoding="utf-8")
-    rewrite_report = json.loads((tmp_path / "out/reader_memo_rewrite_report.json").read_text(encoding="utf-8"))
-    assert "**Confidence:** low" in rendered
-    assert "doc_a" not in rendered
-    assert "Doc A" in rendered
-    assert rewrite_report["status"] != "skipped_after_section_rewrite"
-    assert rewrite_report["pass_count"] >= 1
+    assert cli.main() == 1
+    assert not (tmp_path / "out/BRIEFING.md").exists()
+    assert not (tmp_path / "out/BRIEFING_NOT_DECISION_READY.md").exists()
 
 
-def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -> None:
+def test_semantic_staged_brief_cli_runs_full_path_and_fails_closed_when_not_published(monkeypatch, tmp_path: Path) -> None:
     _init_demo_case(monkeypatch, tmp_path)
     decision_question = "Should this demo decision rely on Alpha or Gamma?"
     fake_model = tmp_path / "fake_staged_brief_model.py"
@@ -449,12 +453,12 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
         "prompt = sys.stdin.read()\n"
         f"if {WHOLE_DOC_CLAIM_PROMPT_VERSION!r} in prompt:\n"
         "    if 'Source ID: demo_case_doc_a' in prompt:\n"
-        "        payload = {'source_id': 'demo_case_doc_a', 'source_bottom_line': 'Alpha supports the decision.', 'canonical_claims': [\n"
-        "            {'claim': 'Alpha supports the decision.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Alpha bears on the decision.', 'supporting_quotes': [{'quote': 'Alpha line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        payload = {'source_id': 'demo_case_doc_a', 'source_bottom_line': 'Alpha line.', 'canonical_claims': [\n"
+        "            {'claim': 'Alpha line.', 'entailed_by_excerpt': 'yes', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Alpha bears on the decision.', 'supporting_quotes': [{'quote': 'Alpha line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "        ], 'excluded_as_not_decision_relevant': []}\n"
         "    else:\n"
-        "        payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma is the key crux.', 'canonical_claims': [\n"
-        "            {'claim': 'Gamma is the key crux.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Gamma changes whether Alpha should guide the decision.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        payload = {'source_id': 'demo_case_doc_b', 'source_bottom_line': 'Gamma line.', 'canonical_claims': [\n"
+        "            {'claim': 'Gamma line.', 'entailed_by_excerpt': 'yes', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'Gamma changes whether Alpha should guide the decision.', 'supporting_quotes': [{'quote': 'Gamma line.', 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "        ], 'excluded_as_not_decision_relevant': []}\n"
         "elif 'preparing claims for relation-building' in prompt:\n"
         "    ids = sorted(set(re.findall(r'[a-zA-Z0-9_]+_c[0-9]{3}', prompt)))\n"
@@ -514,16 +518,23 @@ def test_semantic_staged_brief_cli_runs_full_path(monkeypatch, tmp_path: Path) -
         ],
     )
 
-    assert cli.main() == 0
+    assert cli.main() == 1
     assert (tmp_path / "generated_map.json").exists()
-    rendered = (tmp_path / "brief/BRIEFING.md").read_text(encoding="utf-8")
+    publication_notice = (tmp_path / "brief/BRIEFING.md").read_text(encoding="utf-8")
+    rendered = (tmp_path / "brief/BRIEFING_NOT_DECISION_READY.md").read_text(encoding="utf-8")
+    assert publication_notice.startswith("# Briefing Publication Blocked")
     assert "## Decision Brief" in rendered
     assert "Doc A" in rendered
-    assert "Alpha supports the decision" in rendered
+    assert "Alpha line" in rendered
+    assert "Gamma line" in rendered
     assert "demo_case_doc_a" not in rendered
     final_readiness = json.loads((tmp_path / "brief/final_decision_readiness_report.json").read_text(encoding="utf-8"))
     assert final_readiness["reader_output_available"] is True
     assert final_readiness["decision_ready"] is False
+    briefing_summary = json.loads((tmp_path / "brief/briefing_summary.json").read_text(encoding="utf-8"))
+    assert briefing_summary["publication_ready"] is False
+    assert briefing_summary["paths"]["official_briefing"] is None
+    assert briefing_summary["paths"]["inspectable_memo"].endswith("BRIEFING_NOT_DECISION_READY.md")
     run_summary = json.loads((tmp_path / "map_artifacts/run_summary.json").read_text(encoding="utf-8"))
     claim_prompt = next((tmp_path / "map_artifacts/claim_sources").glob("*_prompt.txt")).read_text(encoding="utf-8")
     assert run_summary["decision_question"] == decision_question

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,14 +18,18 @@ from epistemic_case_mapper.pipeline.map.staged_semantic_evidence_units import (
 )
 from epistemic_case_mapper.pipeline.map.staged_semantic_label_audit import attach_label_audit
 from epistemic_case_mapper.pipeline.map.staged_semantic_progress import PipelineProgress
-from epistemic_case_mapper.pipeline.map.staged_semantic_sources import (
-    _normalize_claim_proposal,
+from epistemic_case_mapper.pipeline.map.staged_semantic_source_access import (
     _normalize_text,
     _required_sources,
     _safe_filename,
     _source_text,
 )
+from epistemic_case_mapper.pipeline.map.staged_semantic_sources import _normalize_claim_proposal
 from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc import whole_doc_claim_payload_for_source
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc_cache import (
+    read_cached_whole_doc_payload,
+    whole_doc_extraction_cache_context,
+)
 from epistemic_case_mapper.submission_manifest import WorkedRegion
 
 
@@ -476,7 +479,11 @@ def _fetch_whole_doc_payload(
     source_file_stem = _safe_filename(chunk.source_id)
     canonical_path = source_dir / f"{source_file_stem}_whole_doc_canonical.json"
     call_id = ""
-    expected_cache_hit = reuse_claim_cache and _cached_payload_available(canonical_path)
+    _, _, cache_identity = whole_doc_extraction_cache_context(
+        chunk.source_id, chunk.title, chunk.plain_text, selected_question,
+        backend, backend_timeout, backend_retries, max_claims_per_source,
+    )
+    expected_cache_hit = reuse_claim_cache and _cached_payload_available(canonical_path, cache_identity)
     if progress and expected_cache_hit:
         progress.update_stage(
             "claim_extraction",
@@ -618,11 +625,5 @@ def _configured_claim_roles(case_manifest: CaseManifest) -> list[str]:
     return roles
 
 
-def _cached_payload_available(path: Path) -> bool:
-    if not path.exists():
-        return False
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    return isinstance(payload, dict) and bool(payload.get("claims"))
+def _cached_payload_available(path: Path, expected_identity: dict[str, Any]) -> bool:
+    return read_cached_whole_doc_payload(path, expected_identity=expected_identity) is not None

@@ -17,6 +17,7 @@ from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.schema import CaseManifest, Source
 from epistemic_case_mapper.pipeline.map.semantic_pipeline import MAP_PROMPT_VERSION, VALID_ENTAILMENT
 from epistemic_case_mapper.pipeline.map.staged_semantic_claim_quantities import claim_quantity_values, merged_claim_quantities
+from epistemic_case_mapper.pipeline.map.staged_semantic_claim_polarity import claim_polarity as _claim_polarity
 from epistemic_case_mapper.pipeline.map.staged_semantic_decision_edges import (
     build_decision_edge_relation_inputs,
     decision_edge_quality_report,
@@ -453,16 +454,6 @@ def _claims_can_merge(left: dict[str, Any], right: dict[str, Any]) -> bool:
     }
     return role_family.get(left_role, left_role) == role_family.get(right_role, right_role)
 
-def _claim_polarity(text: str) -> str:
-    normalized = f" {re.sub(r'\\s+', ' ', text.lower())} "
-    positive = any(marker in normalized for marker in (" lower risk ", " reduced risk ", " no association ", " not associated ", " no adverse ", " did not have adverse ", " beneficial "))
-    negative = any(marker in normalized for marker in (" higher risk ", " increased risk ", " harmful ", " adverse effect ", " adverse effects ", " mortality ", " concern "))
-    if positive and not negative:
-        return "positive_or_null"
-    if negative and not positive:
-        return "negative_or_concern"
-    return "mixed"
-
 def _claim_duplicate_components(
     claims: list[dict[str, Any]],
     duplicate_pairs: list[tuple[str, str, float]],
@@ -868,8 +859,8 @@ def _write_relation_candidate_pool_report(
     )
 
 
-# Public facade dependency imports.
-from epistemic_case_mapper.pipeline.map.staged_semantic_pipeline_runner import (
+# Shared contracts used by the stable compatibility facade.
+from epistemic_case_mapper.pipeline.map.staged_semantic_contracts import (
     CONSOLIDATION_OVERLAP_THRESHOLD,
     CONSOLIDATION_SIMILARITY_THRESHOLD,
     SourceChunk,

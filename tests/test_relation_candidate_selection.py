@@ -280,6 +280,29 @@ def test_normalize_claim_rejects_unaligned_source_quote() -> None:
     assert reason == "source_quote_unaligned"
 
 
+def test_normalize_claim_rejects_non_yes_entailment_without_promotion() -> None:
+    span = SourceSpan(
+        span_id="demo_s0001",
+        source_id="demo_source",
+        source_span="lines 1-1",
+        text="The intervention was associated with lower mortality.",
+    )
+
+    claim, reason = _normalize_claim_proposal(
+        {
+            "source_quote": "The intervention was associated with lower mortality.",
+            "claim": "The intervention was associated with lower mortality.",
+            "span_id": "demo_s0001",
+            "entailed_by_excerpt": "uncertain",
+            "question_relevance": "direct",
+        },
+        {span.span_id: span},
+    )
+
+    assert claim is None
+    assert reason == "claim_not_entailed_by_excerpt"
+
+
 def test_normalize_claim_accepts_quote_aligned_to_local_span_window() -> None:
     spans = {
         "demo_s0001": SourceSpan(

@@ -216,6 +216,30 @@ def _normalize_reader_punctuation(text: str) -> str:
     cleaned = re.sub(r"\s+([,.;:])", r"\1", cleaned)
     return cleaned
 
+
+def validate_main_memo_and_appendix(
+    main_memo: str,
+    evidence_appendix: str,
+    scaffold: dict[str, Any],
+    candidate_map: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate publication obligations against the main memo only.
+
+    Appendix text remains inspectable, but cannot satisfy a main-memo
+    obligation or mask a problem in the reader-facing decision memo.
+    """
+
+    report = validate_briefing_against_scaffold(main_memo, scaffold, candidate_map)
+    report["validation_scope"] = "main_memo_only"
+    report["appendix_report"] = {
+        "schema_id": "evidence_appendix_separation_report_v1",
+        "status": "present" if evidence_appendix.strip() else "missing",
+        "word_count": len(evidence_appendix.split()),
+        "used_to_satisfy_main_memo_contract": False,
+    }
+    return report
+
+
 def validate_briefing_against_scaffold(
     rendered: str,
     scaffold: dict[str, Any],

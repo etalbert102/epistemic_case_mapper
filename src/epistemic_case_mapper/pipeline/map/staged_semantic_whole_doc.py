@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -10,18 +9,27 @@ from epistemic_case_mapper.io import write_json, write_markdown
 from epistemic_case_mapper.model_backends import run_model_backend
 from epistemic_case_mapper.model_outputs import canonical_json_output
 from epistemic_case_mapper.prompt_templates import json_schema_block, render_prompt
+from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
+    claim_evidence_rejection_reason,
+    reference_list_evidence_reason,
+)
 from epistemic_case_mapper.pipeline.map.staged_semantic_claim_quantities import (
     claim_quantity_json_schema,
     claim_quantity_values,
     normalize_claim_quantity_rows,
 )
 from epistemic_case_mapper.pipeline.map.staged_semantic_evidence_units import build_source_evidence_units
+from epistemic_case_mapper.pipeline.map.staged_semantic_source_access import _safe_filename
+from epistemic_case_mapper.pipeline.map.staged_semantic_whole_doc_cache import (
+    WHOLE_DOC_CLAIM_PROMPT_VERSION,
+    WHOLE_DOC_REPAIR_PROMPT_VERSION,
+    effective_whole_doc_claim_cap,
+    read_cached_whole_doc_payload,
+    whole_doc_extraction_cache_context,
+    whole_doc_num_predict,
+)
 
-WHOLE_DOC_CLAIM_PROMPT_VERSION = "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json"
-WHOLE_DOC_REPAIR_PROMPT_VERSION = "whole_doc_source_card_schema_repair_v11_result_cluster_claims_json"
 SOURCE_EXTRACTED_ROLE = "source_claim"
-DEFAULT_WHOLE_DOC_NUM_PREDICT = 8192
-DEFAULT_WHOLE_DOC_NUM_PREDICT_MAX = 16384
 
 
 def whole_doc_claim_payload_for_source(
@@ -40,12 +48,13 @@ def whole_doc_claim_payload_for_source(
     report_path: Path,
     reuse_claim_cache: bool,
 ) -> tuple[dict[str, Any] | None, bool, str]:
+    effective_max_claims, num_predict, cache_identity = whole_doc_extraction_cache_context(
+        source_id, source_title, source_text, decision_question, backend, backend_timeout, backend_retries, max_claims
+    )
     if reuse_claim_cache:
-        cached = _read_cached_payload(canonical_path)
+        cached = read_cached_whole_doc_payload(canonical_path, expected_identity=cache_identity)
         if cached is not None:
             return cached, True, ""
-    effective_max_claims = effective_whole_doc_claim_cap(source_text, max_claims)
-    num_predict = whole_doc_num_predict(source_text, effective_max_claims)
     prompt = _source_card_prompt(
         source_id=source_id,
         source_title=source_title,
@@ -149,6 +158,7 @@ def whole_doc_claim_payload_for_source(
         effective_max_claims=effective_max_claims,
         num_predict=num_predict,
         repair_info=repair_info,
+        cache_identity=cache_identity,
     )
     write_json(canonical_path, payload)
     write_json(report_path, report)
@@ -164,6 +174,7 @@ def _successful_source_card_payload(
     effective_max_claims: int,
     num_predict: int,
     repair_info: dict[str, Any],
+    cache_identity: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     proposals, proposal_report = _claim_proposals_from_source_card(source_card, source_text=source_text, source_id=source_id)
     evidence_unit_bundle = build_source_evidence_units(source_card, source_id=source_id, source_text=source_text)
@@ -174,6 +185,7 @@ def _successful_source_card_payload(
         **evidence_unit_bundle,
         "extractor": "whole-doc",
         "prompt_version": WHOLE_DOC_CLAIM_PROMPT_VERSION,
+        "cache_identity": cache_identity,
     }
     report = {
         "schema_id": "whole_doc_claim_extraction_report_v1",
@@ -183,6 +195,7 @@ def _successful_source_card_payload(
         "requested_max_claims": max_claims,
         "effective_max_claims": effective_max_claims,
         "num_predict": num_predict,
+        "cache_identity": cache_identity,
         **repair_info,
         **proposal_report,
         "source_evidence_unit_count": evidence_unit_report["unit_count"],
@@ -217,39 +230,6 @@ def _write_backend_error_report(
             "num_predict": num_predict,
         },
     )
-
-
-def effective_whole_doc_claim_cap(source_text: str, requested_max_claims: int) -> int:
-    """Allow longer documents to return more source-level claims.
-
-    The CLI option remains the floor requested by the caller. Long documents
-    often need extra slots to preserve distinct endpoint, population, and
-    subgroup claims without forcing the model into oversized claims.
-    """
-
-    base = max(1, int(requested_max_claims))
-    hard_cap = max(base, _int_env("ECM_WHOLE_DOC_MAX_CLAIMS_CAP", 24))
-    extra = (max(0, len(source_text)) // 20_000) * 2
-    return min(hard_cap, base + extra)
-
-
-def whole_doc_num_predict(source_text: str, effective_max_claims: int) -> int:
-    override = _int_env("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT", 0)
-    if override > 0:
-        return override
-    global_default = _int_env("ECM_OLLAMA_NUM_PREDICT", 2048)
-    max_budget = max(DEFAULT_WHOLE_DOC_NUM_PREDICT, _int_env("ECM_WHOLE_DOC_OLLAMA_NUM_PREDICT_MAX", DEFAULT_WHOLE_DOC_NUM_PREDICT_MAX))
-    long_doc_extra = (max(0, len(source_text)) // 50_000) * 2048
-    claim_extra = max(0, int(effective_max_claims) - 8) * 512
-    budget = max(DEFAULT_WHOLE_DOC_NUM_PREDICT, global_default) + long_doc_extra + claim_extra
-    return min(max_budget, max(1024, budget))
-
-
-def _int_env(key: str, default: int) -> int:
-    try:
-        return int(os.environ.get(key, str(default)))
-    except ValueError:
-        return default
 
 
 def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
@@ -288,6 +268,7 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                         "type": "object",
                         "properties": {
                             "claim": {"type": "string"},
+                            "entailed_by_excerpt": {"type": "string", "enum": ["yes", "no", "uncertain"]},
                             "question_relevance": {"type": "string", "enum": ["direct", "indirect", "scope_limit", "background", "irrelevant"]},
                             "scope_flags": {"type": "array", "items": {"type": "string"}},
                             "decision_importance": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
@@ -314,6 +295,7 @@ def source_card_json_schema(*, max_claims: int) -> dict[str, Any]:
                     },
                     "required": [
                         "claim",
+                        "entailed_by_excerpt",
                         "question_relevance",
                         "scope_flags",
                         "decision_importance",
@@ -373,6 +355,9 @@ def _source_card_prompt(
                 "- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.",
                 "- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.",
                 "- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.",
+                "- Set entailed_by_excerpt to yes only when the quoted source text directly supports the entire claim, including direction, negation, population, endpoint, and causal strength.",
+                "- Omit claims supported only by reference-list entries, metadata, headings, or quotes that merely mention the topic.",
+                "- Claims marked no or uncertain are rejected from the map; do not upgrade them to yes to fill the claim budget.",
                 "- Output JSON only.",
             ],
         ),
@@ -395,6 +380,8 @@ def _repair_prompt(*, source_id: str, decision_question: str, raw_extraction: st
                 "- Use only decision_importance values: critical, high, medium, low.",
                 "- Convert each supporting quote string into an object with quote and line_hint.",
                 "- If a line hint is present outside the quote object, copy it into each relevant quote object.",
+                "- Preserve entailed_by_excerpt exactly when present; do not promote no, uncertain, or missing entailment to yes.",
+                "- Drop claims whose quotes are reference-list entries or do not directly support the entire claim.",
                 "- Preserve or add descriptive claim_context fields when they are explicit in the raw extraction.",
                 "- Preserve natural_bottom_line and must_preserve_terms when available; use empty strings or an empty list if unavailable.",
                 "- Use source_bottom_line to summarize this source in one sentence.",
@@ -548,14 +535,25 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
     claim = _compact(str(item.get("claim") or ""))
     if not claim:
         return None
+    entailed = str(item.get("entailed_by_excerpt") or "").strip().lower()
+    if entailed != "yes":
+        return None
     quotes = _quote_rows(item)
     exact_quotes = [row for row in quotes if _quote_matches_source(row["quote"], source_text)]
-    if not exact_quotes:
+    evidence_quotes = [row for row in exact_quotes if not reference_list_evidence_reason(row["quote"])]
+    if not evidence_quotes:
+        return None
+    evidence_reason = claim_evidence_rejection_reason(
+        claim,
+        " ".join(str(row.get("quote") or "") for row in evidence_quotes),
+    )
+    if evidence_reason:
         return None
     importance = _normalize_importance(item.get("decision_importance"))
-    quantity_rows = normalize_claim_quantity_rows(item.get("quantities"), supporting_quotes=exact_quotes)
+    quantity_rows = normalize_claim_quantity_rows(item.get("quantities"), supporting_quotes=evidence_quotes)
     return {
         "claim": claim,
+        "entailed_by_excerpt": entailed,
         "question_relevance": _normalize_question_relevance(item.get("question_relevance")),
         "scope_flags": _normalize_scope_flags(item.get("scope_flags")),
         "decision_importance": importance,
@@ -564,7 +562,7 @@ def _normalize_source_card_claim(item: Any, *, source_text: str) -> dict[str, An
         "source_limit": _compact(str(item.get("source_limit") or "")),
         "must_preserve_terms": _string_list(item.get("must_preserve_terms")),
         "claim_context": _normalize_claim_context(item.get("claim_context")),
-        "supporting_quotes": exact_quotes[:3],
+        "supporting_quotes": evidence_quotes[:3],
         "quantities": claim_quantity_values(quantity_rows),
         "claim_quantities": quantity_rows,
         "scope_conditions": _string_list(item.get("scope_conditions")),
@@ -599,7 +597,7 @@ def _claim_proposals_from_source_card(source_card: dict[str, Any], *, source_tex
                 "claim": claim["claim"],
                 "source_quote": quote,
                 "span_id": _span_id_from_line_hint(source_id, str(quotes[0].get("line_hint", "") if quotes else "")),
-                "entailed_by_excerpt": "yes",
+                "entailed_by_excerpt": claim["entailed_by_excerpt"],
                 "role": SOURCE_EXTRACTED_ROLE,
                 "question_relevance": claim.get("question_relevance", "unspecified"),
                 "relevance_rationale": claim.get("why_it_matters", ""),
@@ -846,19 +844,3 @@ def _string_list(value: Any) -> list[str]:
 def _compact(value: str, max_chars: int = 500) -> str:
     text = re.sub(r"\s+", " ", str(value or "").strip())
     return text if len(text) <= max_chars else text[: max_chars - 1].rstrip() + "…"
-
-
-def _read_cached_payload(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    if isinstance(payload, dict) and isinstance(payload.get("claims"), list):
-        return payload
-    return None
-
-
-def _safe_filename(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_")

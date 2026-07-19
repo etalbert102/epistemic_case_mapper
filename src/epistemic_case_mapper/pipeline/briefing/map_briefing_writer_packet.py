@@ -11,6 +11,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal_constraints import (
+    human_review_load_bearing_ids,
+)
 
 
 ROLE_SECTION = {
@@ -101,11 +104,13 @@ def build_writer_packet_quality_report(writer_packet: dict[str, Any]) -> dict[st
         if unit.get("role") in {"strongest_support", "strongest_counterweight", "decision_crux", "scope_boundary"}
         and _dict(unit.get("source_appraisal")).get("status") != "ready"
     ]
+    load_bearing_provenance_blocked = human_review_load_bearing_ids(units)
     issues = [
         *(["no_support_unit"] if role_counts.get("strongest_support", 0) == 0 else []),
         *(["no_counterweight_or_scope_unit"] if role_counts.get("strongest_counterweight", 0) == 0 and role_counts.get("scope_boundary", 0) == 0 else []),
         *(["source_missing_quantities"] if source_missing else []),
         *(["quantity_budget_violations"] if budget_violations else []),
+        *(["load_bearing_source_provenance_requires_review"] if load_bearing_provenance_blocked else []),
     ]
     return {
         "schema_id": "writer_packet_quality_report_v1",
@@ -116,6 +121,7 @@ def build_writer_packet_quality_report(writer_packet: dict[str, Any]) -> dict[st
         "source_missing_quantity_count": len(source_missing),
         "source_appraised_unit_count": len(appraised_units),
         "load_bearing_without_appraisal": load_bearing_without_appraisal,
+        "load_bearing_provenance_blocked": load_bearing_provenance_blocked,
         "source_appraisal_warnings": (
             ["load_bearing_units_missing_source_appraisal"] if load_bearing_without_appraisal else []
         ),

@@ -196,7 +196,7 @@ def test_whole_doc_extraction_writes_aggregate_evidence_unit_artifacts(monkeypat
             {
                 "claims": [
                     {
-                        "claim": f"{quote} supports a decision-relevant source-card claim.",
+                        "claim": quote,
                         "source_quote": quote,
                         "span_id": "",
                         "entailed_by_excerpt": "yes",
@@ -218,7 +218,7 @@ def test_whole_doc_extraction_writes_aggregate_evidence_unit_artifacts(monkeypat
                             "schema_id": "source_evidence_unit_v1",
                             "unit_id": unit_id,
                             "source_id": kwargs["source_id"],
-                            "proposition": f"{quote} supports a decision-relevant source-card claim.",
+                            "proposition": quote,
                             "source_quote": quote,
                             "source_span": "lines 1-1",
                             "quote_lineage": [{"quote": quote, "line_hint": "lines 1-1", "quote_match_status": "exact_or_normalized"}],

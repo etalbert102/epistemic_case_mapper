@@ -21,6 +21,7 @@ from epistemic_case_mapper.pipeline.map.staged_semantic_duplicate_quality import
 from epistemic_case_mapper.pipeline.map.staged_semantic_prompt_schemas import relation_json_schema
 from epistemic_case_mapper.pipeline.map.staged_semantic_progress import PipelineProgress
 from epistemic_case_mapper.pipeline.map.staged_semantic_relation_quality import relation_quality_issue_rows, relation_semantic_rejection_reason
+from epistemic_case_mapper.pipeline.map.source_metadata import build_source_metadata_bundle
 from epistemic_case_mapper.submission_manifest import SubmissionManifest, WorkedRegion, load_submission_manifest
 
 def _classify_singleton_relations(
@@ -138,12 +139,15 @@ def _assemble_map(
     relations: list[dict[str, Any]],
     relation_payloads: list[dict[str, Any]],
     decision_question: str | None = None,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
-    cruxes = _payload_list_items(relation_payloads, "crux_candidates")
-    if not cruxes and relations:
-        cruxes = [
-            f"{relations[0]['source_claim']} {relations[0]['relation_type']} {relations[0]['target_claim']} is a candidate crux for the question."
-        ]
+    required_sources = _required_sources(case_manifest, region)
+    source_metadata_bundle = build_source_metadata_bundle(
+        repo_root=repo_root,
+        case_manifest=case_manifest,
+        sources=required_sources,
+    )
+    cruxes = _relation_list_items(relations, "crux_candidates")
     distinctions = _payload_list_items(relation_payloads, "similar_but_not_identical")
     evidence_rows = [
         [
@@ -165,8 +169,11 @@ def _assemble_map(
             if isinstance(case_manifest.epistemic_config, dict)
             else "default_profile",
         },
-        "evidence_mode": "source_grounded",
-        "sources": [source.source_id for source in _required_sources(case_manifest, region)],
+        "evidence_mode": case_manifest.evidence_mode,
+        "review_status": case_manifest.review_status,
+        "sources": [source.source_id for source in required_sources],
+        "source_metadata": source_metadata_bundle["source_by_id"],
+        "source_metadata_bundle": source_metadata_bundle,
         "claims": claims,
         "relations": relations,
         "crux_candidates": cruxes,
@@ -740,6 +747,19 @@ def _payload_list_items(payloads: list[dict[str, Any]], key: str) -> list[str]:
             nested = proposal.get(key, [])
             if isinstance(nested, list):
                 items.extend(str(item) for item in nested)
+    return items
+
+
+def _relation_list_items(relations: list[dict[str, Any]], key: str) -> list[str]:
+    items: list[str] = []
+    for relation in relations:
+        values = relation.get(key, [])
+        if not isinstance(values, list):
+            continue
+        for item in values:
+            text = re.sub(r"\s+", " ", str(item or "").strip())
+            if text and text not in items:
+                items.append(text)
     return items
 
 # Public facade dependency imports.

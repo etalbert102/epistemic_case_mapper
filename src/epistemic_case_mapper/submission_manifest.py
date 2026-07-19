@@ -243,3 +243,21 @@ def load_submission_manifest(repo_root: Path, manifest_path: str | Path = DEFAUL
     if not path.is_absolute():
         path = repo_root / path
     return SubmissionManifest.model_validate(read_yaml(path))
+
+
+def resolve_required_source_ids(region: WorkedRegion, available_source_ids: list[str]) -> list[str]:
+    """Resolve a region's declared sources without silently discarding bad IDs."""
+
+    available = list(dict.fromkeys(str(source_id) for source_id in available_source_ids if str(source_id)))
+    declared = list(dict.fromkeys(str(source_id) for source_id in region.required_sources if str(source_id)))
+    if not declared:
+        return available
+    available_set = set(available)
+    missing = [source_id for source_id in declared if source_id not in available_set]
+    if missing:
+        region_id = str(getattr(region, "region_id", "<unknown>"))
+        raise ValueError(
+            "unresolved_required_source_ids "
+            f"region={region_id} source_ids={','.join(missing)}"
+        )
+    return declared

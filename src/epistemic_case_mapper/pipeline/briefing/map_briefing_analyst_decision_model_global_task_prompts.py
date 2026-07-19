@@ -34,6 +34,7 @@ def build_global_analyst_task_prompt(task: dict[str, Any]) -> str:
             "Answer the assigned global question using the supplied task-specific context.",
             "Use only supplied evidence_item_ids, source_ids, and quantities.",
             "Make source weighting explicit: distinguish answer drivers, calibrators, counterweights, boundaries, and context.",
+            "Treat source_quality recommended_uses, warnings, and interpretation_caveats as binding upper limits: human_review_needed sources cannot be answer drivers, and correlated sources cannot count as independent confirmation.",
             "Return strict JSON only in the required schema.",
         ],
         "required_output_schema": task["schema"],

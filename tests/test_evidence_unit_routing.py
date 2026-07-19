@@ -47,7 +47,7 @@ def test_extraction_writes_evidence_unit_routing_artifacts(monkeypatch, tmp_path
             {
                 "claims": [
                     {
-                        "claim": f"{quote} supports a source-card claim.",
+                        "claim": quote,
                         "source_quote": quote,
                         "span_id": "",
                         "entailed_by_excerpt": "yes",
@@ -113,7 +113,7 @@ def _unit(unit_id: str, source_id: str, relevance: str, *, quote: str = "Exact s
     return {
         "unit_id": unit_id,
         "source_id": source_id,
-        "proposition": f"{quote} matters.",
+        "proposition": quote,
         "question_relevance": relevance,
         "decision_importance": "high",
         "why_it_matters": "Model-provided relevance rationale.",

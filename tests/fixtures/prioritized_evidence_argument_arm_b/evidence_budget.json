@@ -1,0 +1,15 @@
+{
+  "schema_id": "evidence_budget_v1",
+  "decision_question": "Should decision-makers recommend routine egg consumption based on the current evidence?",
+  "foreground_evidence_item_ids": [
+    "claim:eggs_c024",
+    "claim:eggs_c003",
+    "claim:eggs_c011"
+  ],
+  "counterweight_evidence_item_ids": [
+    "claim:eggs_c004",
+    "claim:eggs_c005",
+    "claim:eggs_c007",
+    "claim:eggs_c008"
+  ]
+}

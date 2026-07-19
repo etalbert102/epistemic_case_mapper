@@ -702,3 +702,52 @@ Plan-close assessment:
 - Not fully complete by release criteria: full eggs replay, unrelated-case
   replay, live comparative ablation, and human/blinded memo-quality review are
   still open.
+
+### 2026-07-19 Follow-Up Safety Correction Record
+
+This follow-up closes additional fail-open paths found in the staged map and
+briefing implementation. It does not change the open empirical release gates
+above.
+
+Implemented:
+
+- claim extraction now requires explicit `entailed_by_excerpt=yes`, an exact
+  source quote, and conservative support checks; reference-list debris,
+  polarity reversal, and causal overreach are rejected;
+- unknown required source IDs fail instead of disappearing, whole-document
+  caches bind source/question/backend/settings identity, null findings remain
+  distinct from beneficial findings, and crux annotations come only from
+  accepted relations;
+- manifest provenance, source roles, limitations, upgrade flags, and declared
+  independence clusters survive the map boundary into source appraisal and
+  source weighting;
+- manifest source-use limits cannot be relaxed by a weighting model: sources
+  needing human review are removed from load-bearing hierarchy lanes, and
+  correlated sources cannot add independent confirmation;
+- mandatory memo evidence is never demoted merely to satisfy a role cap;
+  overflow is explicit, source-binding mismatches affect retention/readiness,
+  and unsupported final-polish additions are blocking;
+- main-memo obligations cannot be satisfied by appendix text, failed or
+  review-required validation is blocking, and a non-ready memo is written only
+  as `BRIEFING_NOT_DECISION_READY.md` while `BRIEFING.md` contains a publication
+  block notice;
+- CLI commands return nonzero for non-ready maps, non-published briefings, and
+  failed or inconclusive unseen-quality scorecards;
+- generic briefing code no longer contains the case-specific quantity and
+  subgroup vocabulary identified by the domain-isolation gate.
+
+Verification:
+
+- full repository suite: `947 passed`;
+- maintainability thresholds remain unchanged; inherited oversized-file and
+  function exceptions are recorded in the policy as visible debt, while the
+  newly added map and appraisal/publication modules remain within the limits;
+- `git diff --check` is part of final handoff verification.
+
+Still not claimed:
+
+- no live-model end-to-end replay was run in this correction slice;
+- no unrelated-case empirical replay, blinded comparison, or human memo review
+  was performed;
+- decision quality under real model variance therefore remains an empirical
+  release gate even though the code now fails closed on the corrected states.

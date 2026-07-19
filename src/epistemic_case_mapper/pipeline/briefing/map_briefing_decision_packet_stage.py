@@ -56,6 +56,13 @@ def attach_decision_briefing_packet(
     packet = scaffold.get("decision_briefing_packet")
     if isinstance(packet, dict):
         _attach_analyst_packet_flow(prioritized_map, scaffold, packet=packet, question=question, backend_config=backend_config, progress=progress)
+        scaffold["packet_quality_gate_report"] = build_packet_quality_gate_report(scaffold)
+        _progress(
+            progress,
+            "packet_quality_gate_final",
+            "completed",
+            {"issue_count": _list_count(scaffold["packet_quality_gate_report"].get("issues"))},
+        )
 
 
 def _attach_analyst_packet_flow(

@@ -115,7 +115,7 @@ def test_final_polish_rejects_decision_usefulness_regression(monkeypatch: pytest
     assert result["memo"] == memo
 
 
-def test_production_final_polish_uses_validated_whole_memo_polish(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_final_polish_uses_validated_decision_editor_rewrite(monkeypatch: pytest.MonkeyPatch) -> None:
     packet, memo = _packet_and_memo()
     prompts: list[str] = []
 
@@ -123,7 +123,7 @@ def test_production_final_polish_uses_validated_whole_memo_polish(monkeypatch: p
         prompts.append(prompt)
         if "Repair a polished decision memo" in prompt:
             return ModelBackendResult(text=memo, backend="fake")
-        assert "Memo to polish:" in prompt
+        assert "Memo body:" in prompt
         return ModelBackendResult(
             text=memo.replace(
                 "Recommendation: use the option with the better benefit-burden profile.",
@@ -139,10 +139,10 @@ def test_production_final_polish_uses_validated_whole_memo_polish(monkeypatch: p
         memo_with_truncation = memo_with_truncation.replace("## Sources", "The recommendation should be applied...\n\n## Sources")
     result = run_memo_ready_final_polish(memo_with_truncation, packet, backend="fake", backend_timeout=30, backend_retries=0)
 
-    assert "Priority quantity contracts:" in prompts[0]
+    assert "Important quantities to keep when relevant:" in prompts[0]
     assert any("Repair a polished decision memo" in prompt for prompt in prompts)
     assert result["report"]["schema_id"] == "memo_ready_final_polish_report_v1"
-    assert result["report"]["method"] == "validated_whole_memo_polish"
+    assert result["report"]["method"] == "validated_decision_editor_rewrite"
     assert "polished_validation_report" in result["report"]
     assert "section_proposal_report" not in result["report"]
 

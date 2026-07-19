@@ -47,6 +47,7 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
                     "canonical_claims": [
                             {
                                 "claim": "The program reduced target risk by 20 percent.",
+                                "entailed_by_excerpt": "yes",
                                 "question_relevance": "direct",
                                 "scope_flags": ["none"],
                                 "decision_importance": "high",
@@ -143,6 +144,7 @@ def test_whole_doc_source_card_repairs_common_schema_variant(monkeypatch, tmp_pa
     assert calls[0]["response_schema"] is not None
     claim_schema = calls[0]["response_schema"]["properties"]["canonical_claims"]["items"]
     assert "claim_context" in claim_schema["required"]
+    assert "entailed_by_excerpt" in claim_schema["required"]
 
 
 def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypatch) -> None:
@@ -163,6 +165,161 @@ def test_whole_doc_claim_cap_and_output_budget_scale_for_long_documents(monkeypa
     assert whole_doc_num_predict("x" * 60_000, 14) == 9000
 
 
+def test_whole_doc_cache_reuse_requires_matching_content_question_backend_and_settings(monkeypatch, tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    class Result:
+        def __init__(self, text: str):
+            self.text = text
+
+    def fake_backend(prompt: str, backend: str, **kwargs):
+        del kwargs
+        calls.append(backend)
+        quote = (
+            "Changed evidence reduced the target risk."
+            if "Changed evidence reduced the target risk." in prompt
+            else "Original evidence reduced the target risk."
+        )
+        return Result(
+            json.dumps(
+                {
+                    "source_id": "demo_source",
+                    "source_bottom_line": quote,
+                    "canonical_claims": [
+                        {
+                            "claim": quote,
+                            "entailed_by_excerpt": "yes",
+                            "question_relevance": "direct",
+                            "scope_flags": ["none"],
+                            "decision_importance": "high",
+                            "why_it_matters": "It directly answers the question.",
+                            "supporting_quotes": [{"quote": quote, "line_hint": "lines 1-1"}],
+                            "quantities": [],
+                            "scope_conditions": [],
+                        }
+                    ],
+                    "excluded_as_not_decision_relevant": [],
+                }
+            )
+        )
+
+    monkeypatch.setattr(whole_doc_adapter, "run_model_backend", fake_backend)
+    paths = {
+        "canonical_path": tmp_path / "canonical.json",
+        "raw_path": tmp_path / "raw.txt",
+        "repair_raw_path": tmp_path / "repair_raw.txt",
+        "report_path": tmp_path / "report.json",
+    }
+    base = {
+        "source_id": "demo_source",
+        "source_title": "Demo Source",
+        "source_text": "Original evidence reduced the target risk.",
+        "decision_question": "Should the original option be used?",
+        "backend": "ollama:model-a",
+        "backend_timeout": 5,
+        "backend_retries": 0,
+        "max_claims": 6,
+        **paths,
+    }
+
+    first, first_hit, first_error = whole_doc_adapter.whole_doc_claim_payload_for_source(**base, reuse_claim_cache=False)
+    same, same_hit, same_error = whole_doc_adapter.whole_doc_claim_payload_for_source(**base, reuse_claim_cache=True)
+    changed_question, question_hit, _ = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        **{**base, "decision_question": "Should a different option be used?"},
+        reuse_claim_cache=True,
+    )
+    changed_backend, backend_hit, _ = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        **{**base, "decision_question": "Should a different option be used?", "backend": "ollama:model-b"},
+        reuse_claim_cache=True,
+    )
+    changed_settings, settings_hit, _ = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        **{
+            **base,
+            "decision_question": "Should a different option be used?",
+            "backend": "ollama:model-b",
+            "max_claims": 7,
+        },
+        reuse_claim_cache=True,
+    )
+    changed_source, source_hit, _ = whole_doc_adapter.whole_doc_claim_payload_for_source(
+        **{
+            **base,
+            "source_text": "Changed evidence reduced the target risk.",
+            "decision_question": "Should a different option be used?",
+            "backend": "ollama:model-b",
+            "max_claims": 7,
+        },
+        reuse_claim_cache=True,
+    )
+
+    assert first_error == same_error == ""
+    assert first_hit is False
+    assert same_hit is True
+    assert question_hit is backend_hit is settings_hit is source_hit is False
+    assert first == same
+    assert changed_question and changed_backend and changed_settings and changed_source
+    assert len(calls) == 5
+    assert changed_source["claims"][0]["claim"] == "Changed evidence reduced the target risk."
+    assert changed_source["cache_identity"]["source_sha256"] != first["cache_identity"]["source_sha256"]
+    assert changed_source["cache_identity"]["settings"]["requested_max_claims"] == 7
+
+
+def test_source_card_claim_requires_explicit_entailment_and_non_reference_support() -> None:
+    valid = {
+        "claim": "The intervention was associated with lower mortality.",
+        "entailed_by_excerpt": "yes",
+        "question_relevance": "direct",
+        "scope_flags": ["none"],
+        "decision_importance": "high",
+        "supporting_quotes": [
+            {
+                "quote": "The intervention was associated with lower mortality.",
+                "line_hint": "lines 1-1",
+            }
+        ],
+        "quantities": [],
+    }
+    source_text = "The intervention was associated with lower mortality."
+
+    accepted = whole_doc_adapter._normalize_source_card_claim(valid, source_text=source_text)
+    uncertain = whole_doc_adapter._normalize_source_card_claim(
+        {**valid, "entailed_by_excerpt": "uncertain"},
+        source_text=source_text,
+    )
+    causal_overreach = whole_doc_adapter._normalize_source_card_claim(
+        {**valid, "claim": "The intervention caused lower mortality."},
+        source_text=source_text,
+    )
+    reference_quote = "Smith J, et al. Intervention outcomes. Journal 2020;10:1-8. doi:10.1000/demo"
+    reference_claim = whole_doc_adapter._normalize_source_card_claim(
+        {
+            **valid,
+            "claim": reference_quote,
+            "supporting_quotes": [{"quote": reference_quote, "line_hint": "lines 2-2"}],
+        },
+        source_text=reference_quote,
+    )
+    linked_result_quote = (
+        "The trial found that the intervention was associated with lower mortality; "
+        "the full report is available at https://example.test/trial."
+    )
+    linked_result_claim = whole_doc_adapter._normalize_source_card_claim(
+        {
+            **valid,
+            "claim": "The trial found that the intervention was associated with lower mortality.",
+            "supporting_quotes": [{"quote": linked_result_quote, "line_hint": "lines 3-3"}],
+        },
+        source_text=linked_result_quote,
+    )
+
+    assert accepted is not None
+    assert accepted["entailed_by_excerpt"] == "yes"
+    assert uncertain is None
+    assert causal_overreach is None
+    assert reference_claim is None
+    assert linked_result_claim is not None
+
+
 def test_whole_doc_source_card_accepts_fenced_json_with_string_array_key_value_item(monkeypatch, tmp_path: Path) -> None:
     class Result:
         text = """```json
@@ -172,6 +329,7 @@ def test_whole_doc_source_card_accepts_fenced_json_with_string_array_key_value_i
   "canonical_claims": [
     {
       "claim": "Alpha lowered target risk by 20 percent.",
+      "entailed_by_excerpt": "yes",
       "question_relevance": "direct",
       "scope_flags": [
         "population: adults",
@@ -271,7 +429,7 @@ def test_extract_claims_can_use_whole_doc_source_cards(monkeypatch, tmp_path: Pa
             {
                 "claims": [
                     {
-                        "claim": f"{quote} supports a decision-relevant source-card claim.",
+                        "claim": quote,
                         "source_quote": quote,
                         "span_id": "",
                         "entailed_by_excerpt": "yes",
@@ -386,7 +544,7 @@ def test_whole_doc_claim_extraction_retries_backend_errors_serially(monkeypatch,
             {
                 "claims": [
                     {
-                        "claim": f"{quote} supports a recovered source-card claim.",
+                            "claim": quote,
                         "source_quote": quote,
                         "span_id": "",
                         "entailed_by_excerpt": "yes",
@@ -434,14 +592,18 @@ def test_whole_doc_claim_extraction_retries_backend_errors_serially(monkeypatch,
 def test_whole_doc_relevance_validation_warns_without_blocking(monkeypatch, tmp_path: Path) -> None:
     _write_transfer_fixture(tmp_path)
     manifest, region, case_manifest = _load_context(tmp_path, "submission_manifest.yaml", "demo_region_json")
+    grounded_claim = "The retrofit increased the risk of equipment discoloration."
+    for source in case_manifest.sources:
+        assert source.path
+        (tmp_path / source.path).write_text(grounded_claim, encoding="utf-8")
 
     def fake_whole_doc_payload_for_source(**kwargs):
-        quote = "Alpha line." if kwargs["source_id"] == "demo_source_1" else "Gamma line."
+        quote = grounded_claim
         return (
             {
                 "claims": [
                     {
-                        "claim": "The retrofit increased the risk of equipment discoloration.",
+                        "claim": grounded_claim,
                         "source_quote": quote,
                         "span_id": "",
                         "entailed_by_excerpt": "yes",

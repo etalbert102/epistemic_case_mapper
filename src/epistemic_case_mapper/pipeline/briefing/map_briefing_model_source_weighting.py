@@ -18,6 +18,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_identity import source_ids_for_labels
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_weight_judgments import build_source_weight_judgment_report
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal_constraints import (
+    constrain_source_weight_judgment,
+)
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 from epistemic_case_mapper.model_outputs import canonical_json_output
 
@@ -141,13 +144,21 @@ def run_model_source_weight_judgments(
                 known_evidence_ids=set(_string_list(context.get("evidence_item_ids"))),
                 fallback=fallback_by_source.get(source_id),
             )
+            row = _apply_source_appraisal_constraints(row, context)
             report = {
                 "source_id": source_id,
-                "status": "parsed" if not row.get("fallback_reason") else "fallback",
+                "status": (
+                    "fallback"
+                    if row.get("fallback_reason")
+                    else "parsed_with_constraints"
+                    if row.get("source_appraisal_constraints")
+                    else "parsed"
+                ),
                 "prompt_chars": len(prompt),
                 "raw_chars": len(raw),
                 "fallback_reason": row.get("fallback_reason", ""),
                 "invalid_evidence_item_ids": row.pop("_invalid_evidence_item_ids", []),
+                "source_appraisal_constraints": _string_list(row.get("source_appraisal_constraints")),
             }
             return {"judgment": row, "report": report, "raw": raw}
         except (RuntimeError, ValidationError, ValueError, json.JSONDecodeError) as exc:
@@ -227,6 +238,7 @@ def build_model_source_weight_prompt(context: dict[str, Any]) -> str:
         "Use the decision question and the source-local evidence below. Return exactly one JSON object matching the schema.\n"
         "Use source_id exactly as provided. Use only evidence_item_ids from the provided source evidence items.\n"
         "When analyst_source_hierarchy is present, treat it as the global source-role decision; set main_use to match that lane unless the source-local evidence clearly contradicts it.\n"
+        "Treat source_appraisal recommended_uses, source_use_warnings, and interpretation_caveats as binding upper limits on source weight. A source marked human_review_needed cannot drive the answer, and correlated sources cannot be described as independent confirmation.\n"
         "Write memo_weight_sentence as one natural reader-facing sentence that explains this source's role and main limitation if it has one.\n\n"
         "Allowed main_use values: drives_answer, calibrates_magnitude, bounds_answer, defines_scope, identifies_crux, contextualizes.\n"
         "Allowed source_type values: observational_primary, trial_or_intervention, evidence_synthesis, guidance_or_advisory, contextual_summary, mixed_or_unclear.\n\n"
@@ -273,6 +285,46 @@ def normalize_model_source_weight_judgment(
     return _drop_empty(normalized)
 
 
+def _apply_source_appraisal_constraints(
+    judgment: dict[str, Any],
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep deterministic source-use limits binding after model weighting."""
+
+    appraisals = [
+        _dict(item.get("source_appraisal"))
+        for item in _list(context.get("source_evidence_items"))
+        if isinstance(item, dict)
+    ]
+    recommended_uses = [
+        use
+        for appraisal in appraisals
+        for use in _string_list(appraisal.get("recommended_uses"))
+    ]
+    warnings = [
+        warning
+        for item in _list(context.get("source_evidence_items"))
+        if isinstance(item, dict)
+        for warning in [
+            *_string_list(item.get("source_use_warnings")),
+            *_string_list(_dict(item.get("source_appraisal")).get("source_use_warnings")),
+        ]
+    ]
+    caveats = _dedupe([
+        caveat
+        for appraisal in appraisals
+        for caveat in _string_list(appraisal.get("interpretation_caveats"))
+    ])
+    source_id = str(context.get("source_id") or judgment.get("source_ids", [""])[0] or "this source")
+    return constrain_source_weight_judgment(
+        judgment,
+        source_label=source_id,
+        recommended_uses=recommended_uses,
+        warnings=warnings,
+        caveats=caveats,
+    )
+
+
 def _bundle(
     judgments: list[dict[str, Any]],
     *,
@@ -283,6 +335,7 @@ def _bundle(
 ) -> dict[str, Any]:
     fallback_count = sum(1 for row in judgments if row.get("fallback_reason"))
     warning_count = sum(1 for row in reports if row.get("status") == "fallback" or row.get("invalid_evidence_item_ids"))
+    constraint_count = sum(len(_string_list(row.get("source_appraisal_constraints"))) for row in reports)
     report = {
         "schema_id": "model_source_weighting_report_v1",
         "status": status if warning_count == 0 else "warning",
@@ -291,6 +344,7 @@ def _bundle(
         "judgment_count": len(judgments),
         "fallback_count": fallback_count,
         "warning_count": warning_count,
+        "source_appraisal_constraint_count": constraint_count,
         "prompt_preview_chars": len(prompt_preview),
         "reports": reports,
         "warnings": _model_source_weighting_warnings(reports, reason=reason),

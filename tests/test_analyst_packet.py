@@ -1023,7 +1023,8 @@ def test_decision_writer_budget_keeps_adjudicated_quantified_support_mandatory()
     assert outcome_item["must_use"] is True
     assert outcome_item["decision_diagnosticity"]["best_adjudicated_importance_rank"] == 1
     assert outcome_item["quantities"][0]["value"] == "0.93"
-    assert len(mandatory_support) == 4
+    assert len(mandatory_support) == 5
+    assert sum(item.get("obligation_budget_overflow") is True for item in mandatory_support) == 1
 
 
 def test_final_reader_outputs_fail_without_decision_writer_active_packet(tmp_path: Path) -> None:

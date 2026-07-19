@@ -1,0 +1,14 @@
+{
+  "schema_id": "analyst_decision_model_v1",
+  "decision_question": "Should decision-makers recommend routine egg consumption based on the current evidence?",
+  "direct_answer": "The current evidence supports a cautious, bounded stance rather than a broad causal recommendation.",
+  "confidence": "medium",
+  "decision_logic": {
+    "scope_boundaries": [
+      "The evidence is population- and exposure-specific."
+    ],
+    "do_not_overstate": [
+      "Do not present an observational association as causal."
+    ]
+  }
+}

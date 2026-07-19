@@ -401,9 +401,18 @@ def _validate_scorecard(slug: str, path: Path, repo_root: Path, failures: list[s
             failures.append(
                 f"unseen_quality_acceptance_status_invalid case={slug} path={_display_path(repo_root, path)} criterion={criterion}"
             )
+        elif status == "fail":
+            failures.append(
+                f"unseen_quality_acceptance_failed case={slug} path={_display_path(repo_root, path)} criterion={criterion}"
+            )
     overall_match = re.search(r"^Overall result:\s*`?(pass|fail|inconclusive)`?\s*$", text, re.MULTILINE | re.IGNORECASE)
     if overall_match is None:
         failures.append(f"unseen_quality_overall_result_missing case={slug} path={_display_path(repo_root, path)}")
+    elif overall_match.group(1).lower() in {"fail", "inconclusive"}:
+        failures.append(
+            f"unseen_quality_overall_result_not_pass case={slug} path={_display_path(repo_root, path)} "
+            f"result={overall_match.group(1).lower()}"
+        )
 
 
 def _table_row_for_label(text: str, label: str) -> str | None:

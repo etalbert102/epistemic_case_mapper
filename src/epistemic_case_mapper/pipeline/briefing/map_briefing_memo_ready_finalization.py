@@ -703,7 +703,7 @@ def _run_whole_memo_ready_packet_synthesis(
     report.update(
         {
             "status": "accepted" if accepted else "accepted_with_retention_warnings",
-            "accepted": accepted if strict_contract else True,
+            "accepted": accepted,
             "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "used_default_path": False,
             "retention_status": retention.get("status"),
@@ -803,7 +803,7 @@ def _run_parallel_memo_ready_section_synthesis(
     report.update(
         {
             "status": status,
-            "accepted": accepted if strict_contract else True,
+            "accepted": accepted,
             "contract_mode": "strict_writer_packet" if strict_contract else "standard_packet",
             "retention_status": retention.get("status"),
             "missing_mandatory_count": retention.get("missing_mandatory_count", 0),
@@ -903,7 +903,12 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
     ]
     canonical_retention = build_canonical_packet_retention_report(memo, packet, source_aliases=source_aliases)
     canonical_issues = _list(canonical_retention.get("issues"))
-    issues = [*item_issues, *balance_issues, *canonical_issues, *warning_issues]
+    source_binding_issues = _source_binding_retention_issues(
+        source_binding,
+        memo=memo,
+        source_aliases=source_aliases,
+    )
+    issues = [*item_issues, *balance_issues, *canonical_issues, *warning_issues, *source_binding_issues]
     retained_status_count = sum(1 for row in statuses if row["retained"]) + sum(1 for row in balance_statuses if row["retained"])
     return {
         "schema_id": "memo_ready_packet_retention_report_v1",
@@ -911,18 +916,20 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "analytical_balance_validation": "enabled",
         "canonical_packet_validation": canonical_retention.get("status", "not_available"),
         "status": "ready" if not issues else "warning",
-        "must_retain_count": len(statuses) + len(balance_statuses) + int(canonical_retention.get("mandatory_retention_count", 0) or 0),
+        "must_retain_count": len(statuses) + len(balance_statuses) + int(canonical_retention.get("mandatory_retention_count", 0) or 0) + len(source_binding_issues),
         "retained_must_retain_count": retained_status_count,
-        "missing_critical_count": len(item_issues) + len(balance_issues) + len(canonical_issues),
+        "missing_critical_count": len(item_issues) + len(balance_issues) + len(canonical_issues) + len(source_binding_issues),
         "missing_high_count": 0,
         "mandatory_item_count": len(statuses) + len(balance_statuses),
         "retained_mandatory_count": retained_status_count,
-        "missing_mandatory_count": len(item_issues) + len(balance_issues) + len(canonical_issues),
+        "missing_mandatory_count": len(item_issues) + len(balance_issues) + len(canonical_issues) + len(source_binding_issues),
         "missing_quantity_count": sum(len(row.get("missing_quantities", [])) for row in [*item_issues, *balance_issues, *canonical_issues]),
         "unresolved_warning_count": len(warning_issues),
         "warning_resolution_report": warning_resolution,
         "source_binding_report": source_binding,
         "source_binding_warning_count": source_binding.get("warning_count", 0),
+        "source_binding_issue_count": len(source_binding_issues),
+        "source_binding_issues": source_binding_issues,
         "item_statuses": statuses,
         "analytical_balance_statuses": balance_statuses,
         "required_analytical_balance_count": len(balance_statuses),
@@ -936,6 +943,67 @@ def build_memo_ready_packet_retention_report(memo: str, packet: dict[str, Any]) 
         "canonical_packet_retention_report": canonical_retention,
         "issues": issues,
     }
+
+
+def _source_binding_retention_issues(
+    source_binding: dict[str, Any],
+    *,
+    memo: str,
+    source_aliases: dict[str, list[str]],
+) -> list[dict[str, Any]]:
+    categories = (
+        ("invalid_quantity_tuple", _list(source_binding.get("invalid_quantity_tuples"))),
+        ("quantity_source_adjacency", _list(source_binding.get("quantity_source_adjacency_warnings"))),
+        ("ambiguous_quantity_surface", _list(source_binding.get("ambiguous_quantity_surfaces"))),
+        ("citation_care", _list(_dict(source_binding.get("citation_care_report")).get("warnings"))),
+    )
+    issues: list[dict[str, Any]] = []
+    for category, warnings in categories:
+        for warning in warnings:
+            if not isinstance(warning, dict):
+                continue
+            if category == "quantity_source_adjacency" and _quantity_binding_warning_has_same_line_source(
+                memo,
+                warning,
+                source_aliases=source_aliases,
+            ):
+                continue
+            warning_type = str(warning.get("warning_type") or category).strip() or category
+            issues.append(
+                {
+                    **warning,
+                    "issue_type": "source_binding_mismatch",
+                    "severity": "critical",
+                    "source_binding_warning_type": warning_type,
+                }
+            )
+    return issues
+
+
+def _quantity_binding_warning_has_same_line_source(
+    memo: str,
+    warning: dict[str, Any],
+    *,
+    source_aliases: dict[str, list[str]],
+) -> bool:
+    quantity = str(warning.get("quantity") or "").strip()
+    sentence = str(warning.get("sentence") or warning.get("claim") or "").strip()
+    expected_sources = _string_list(warning.get("expected_source_ids"))
+    if not quantity or not expected_sources:
+        return False
+    aliases = _exact_dedupe(
+        alias
+        for source in expected_sources
+        for alias in [source, *_source_aliases_for_label(source, source_aliases)]
+    )
+    for line in str(memo or "").splitlines():
+        if not quantity_retained(line, {"value": quantity}):
+            continue
+        if sentence and not _mentions_enough_content_terms(line, sentence, minimum=4):
+            continue
+        if any(_contains_text(line, alias) for alias in aliases):
+            return True
+    return False
 
 
 def build_decision_usefulness_retention_report(memo: str, packet: dict[str, Any]) -> dict[str, Any]:
@@ -1251,6 +1319,11 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
             if isinstance(issue, dict) and issue.get("issue_type") == "missing_analytical_balance_card"
         ],
         "missing_canonical_items": canonical_repair_items(retention_report, limit=limit),
+        "source_binding_issues": [
+            issue
+            for issue in _list(retention_report.get("source_binding_issues"))[:limit]
+            if isinstance(issue, dict)
+        ],
         "unresolved_warnings": [] if uses_obligations else unresolved_warning_repair_items(warning_resolution, warning_packet, limit=8),
     }
     repair_packet = project_source_text_to_ids_for_model(project_sources_to_ids_for_model(repair_packet, source_trail), source_trail)
@@ -1263,6 +1336,7 @@ def build_memo_ready_packet_repair_prompt(memo: str, packet: dict[str, Any], ret
         "- Preserve the decision question, source IDs, quantities, and answer stance already present.\n"
         "- Repair missing obligations and balance cards by improving the reasoning around the affected point.\n"
         "- Repair missing canonical items by restoring the affected answer skeleton, counterweight, scope, source, quantity, or evidence claim.\n"
+        "- Repair source-binding issues by placing only the supporting source ID beside the exact claim or quantity it supports; never substitute a different packet source.\n"
         "- Use only the missing obligations, missing balance cards, or missing canonical items in the repair packet.\n"
         "- For strict writer-packet repairs, every missing obligation in the repair packet is a required decision-writing obligation; include it, merge it with related prose, or explain the scope/uncertainty it creates.\n"
         "- For unresolved warnings, incorporate the source-backed claim if it changes the read; otherwise use it to bound scope, confidence, or remaining uncertainty.\n"
@@ -1448,6 +1522,8 @@ def build_validated_final_polish_validation_report(
         hard_failures.append("unknown_source_ids")
     if surface.get("corruption_warnings"):
         hard_failures.append("surface_corruption")
+    if unsupported_warnings:
+        hard_failures.append("unsupported_additions")
     warning_count = (
         len(_list(hard_failures))
         + len(unsupported_warnings)
@@ -1474,7 +1550,7 @@ def build_validated_final_polish_validation_report(
             "warning_count": len(unsupported_warnings),
             "high_confidence_warning_count": len(high_confidence_unsupported),
             "warnings": unsupported_warnings,
-            "policy": "advisory_for_final_editor_rewrite",
+            "policy": "blocking_for_final_editor_acceptance",
         },
         "issues": _validated_final_polish_issues_from_reports(
             hard_failures=hard_failures,
@@ -1665,6 +1741,8 @@ def _validated_final_polish_issues_from_reports(
     issues = [*hard_failures]
     if int(retention.get("missing_mandatory_count", 0) or 0):
         issues.append("missing_mandatory_evidence")
+    if int(retention.get("source_binding_issue_count", 0) or 0):
+        issues.append("source_binding_mismatch")
     if int(retention.get("missing_quantity_count", 0) or 0):
         issues.append("missing_retention_quantity")
     if int(priority_coverage.get("missing_contract_count", 0) or 0):

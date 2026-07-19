@@ -45,6 +45,9 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_production_readiness i
     build_memo_ready_production_readiness_report,
 )
 from epistemic_case_mapper.pipeline.briefing.map_briefing_source_claim_context import source_context_fields as _source_context_fields
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal_constraints import (
+    human_review_load_bearing_ids,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_writer_guidance import compact_writer_guidance_for_model
 
 
@@ -667,6 +670,8 @@ def build_decision_obligation_plan(
                 "memo_function": item.get("memo_function"),
                 "include_reason": item.get("include_reason"),
                 "demotion_reason": item.get("demotion_reason"),
+                "obligation_budget_overflow": item.get("obligation_budget_overflow", False),
+                "obligation_budget_role_cap": item.get("obligation_budget_role_cap"),
                 "required_quantity_ids": [
                     str(row.get("quantity_id") or row.get("value") or "")
                     for row in _list(item.get("quantities"))
@@ -715,6 +720,12 @@ def build_writer_packet_writeability_report(
     mandatory_quantity_count = sum(len(_list(row.get("quantities"))) for row in required)
     max_quantities = max([len(_list(row.get("quantities"))) for row in required] or [0])
     role_counts = Counter(str(item.get("role") or "unknown") for item in evidence_items if isinstance(item, dict))
+    obligation_budget_overflow = [
+        item
+        for item in evidence_items
+        if isinstance(item, dict) and item.get("obligation_budget_overflow") is True
+    ]
+    overflow_role_counts = Counter(str(item.get("role") or "unknown") for item in obligation_budget_overflow)
     fallback_requests = [
         *_list(decision_obligation_plan.get("fallback_requests")),
         *quantity_fallback_requests(semantic_context.get("quantity_obligation_plan", {})),
@@ -723,11 +734,12 @@ def build_writer_packet_writeability_report(
         *(["too_many_mandatory_obligations"] if len(required) > 12 else []),
         *(["too_many_mandatory_quantities"] if mandatory_quantity_count > 24 else []),
         *(["obligation_with_excessive_quantities"] if max_quantities > 4 else []),
+        *(["mandatory_obligation_role_cap_overflow_retained"] if obligation_budget_overflow else []),
         *(["missing_counterweight_or_scope"] if role_counts.get("strongest_counterweight", 0) == 0 and role_counts.get("scope_boundary", 0) == 0 else []),
         *(["fallback_adjudication_recommended"] if fallback_requests else []),
     ]
     strategy = "single_pass"
-    if len(required) > 12 or mandatory_quantity_count > 24:
+    if len(required) > 12 or mandatory_quantity_count > 24 or obligation_budget_overflow:
         strategy = "table_assisted"
     if fallback_requests:
         strategy = "needs_packet_repair"
@@ -742,6 +754,13 @@ def build_writer_packet_writeability_report(
         "maximum_quantities_per_obligation": max_quantities,
         "evidence_item_count": len(evidence_items),
         "role_counts": dict(role_counts),
+        "mandatory_obligation_role_cap_overflow_count": len(obligation_budget_overflow),
+        "mandatory_obligation_role_cap_overflow_item_ids": [
+            str(item.get("item_id") or "")
+            for item in obligation_budget_overflow
+            if str(item.get("item_id") or "").strip()
+        ],
+        "mandatory_obligation_role_cap_overflow_role_counts": dict(overflow_role_counts),
         "relation_support_available": bool(_list(packet.get("argument_plan"))),
         "expected_memo_length_band": _expected_length_band(len(required), mandatory_quantity_count),
         "recommended_synthesis_strategy": strategy,
@@ -979,6 +998,7 @@ def build_decision_writer_packet_quality_report(
         if not _string_list(unit.get("source_labels"))
     ]
     missing_critical = _missing_critical_evidence(global_decision_model)
+    load_bearing_provenance_blocked = human_review_load_bearing_ids(units)
     issues = [
         *(["empty_writer_packet"] if not units else []),
         *(["missing_support_unit"] if role_counts.get("strongest_support", 0) == 0 else []),
@@ -986,6 +1006,7 @@ def build_decision_writer_packet_quality_report(
         *(["source_trail_missing_for_units"] if missing_source_units else []),
         *(["critical_evidence_not_accounted"] if missing_critical else []),
         *(["global_model_has_reconciliation_warnings"] if _string_list(_dict(global_decision_model.get("reconciliation")).get("issues")) else []),
+        *(["load_bearing_source_provenance_requires_review"] if load_bearing_provenance_blocked else []),
     ]
     return {
         "schema_id": "decision_writer_packet_quality_report_v1",
@@ -996,6 +1017,7 @@ def build_decision_writer_packet_quality_report(
         "source_trail_count": len(_list(packet.get("source_trail"))),
         "source_missing_unit_ids": missing_source_units,
         "missing_critical_evidence_item_ids": missing_critical,
+        "load_bearing_provenance_blocked": load_bearing_provenance_blocked,
         "global_reconciliation_issues": _string_list(_dict(global_decision_model.get("reconciliation")).get("issues")),
         "packet_is_smaller_than_full_ledger": len(str(packet)) < len(str(ledger)),
         "issues": issues,

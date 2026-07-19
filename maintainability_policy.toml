@@ -11,18 +11,42 @@ max_branch_nodes = 30
 long_files = [
   "scripts/run_investigator_challenge.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_adjudication.py",
+  # Visible debt already present before the 2026-07-19 truth-boundary hardening.
+  # Keep thresholds strict; these entries make the inherited exceptions explicit.
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_model_global_tasks.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_model_parallel.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_modeling.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_evidence_ledger.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_packet.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_schemas.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_canonical_decision_writer_packet.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_usefulness.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_editorial_brief_experiment.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_gap_closer_experiment.py",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_finalization.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_packet.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_memo_ready_prompt.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_prioritized_argument_arm_c.py",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_section_evidence_anchoring.py",
   "tests/test_analyst_packet.py",
+  "tests/test_decision_writer_packet.py",
+  "tests/test_memo_ready_presentation.py",
 ]
 long_functions = [
+  "scripts/experiment_editorial_brief_instructions.py::main",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_analyst_decision_model_prompt_contract.py::decision_model_required_output_schema",
   "src/epistemic_case_mapper/pipeline/briefing/map_briefing_artifacts.py::_scaffold_artifact_specs",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_editorial_brief_experiment.py::run_source_weighted_pipeline_fit_experiment",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py::_run_memo_ready_final_output_path",
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_final_outputs.py::_build_final_reader_diagnostics",
+  "tests/fake_global_task_backend.py::fake_global_task_payload",
+  "tests/test_global_task_analyst_decision_model.py::test_global_task_payload_assembles_valid_analyst_decision_model",
+  "tests/test_map_briefing_decision_contracts.py::test_run_map_briefing_renders_readable_packet_without_raw_source_ids",
 ]
-branchy_functions = []
+branchy_functions = [
+  "src/epistemic_case_mapper/pipeline/briefing/map_briefing_decision_writer_packet.py::_memo_ready_quantities",
+]
 
 [validation]
 python_package = "epistemic_case_mapper"

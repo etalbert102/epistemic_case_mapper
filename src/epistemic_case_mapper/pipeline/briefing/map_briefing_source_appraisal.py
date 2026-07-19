@@ -13,6 +13,19 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_packet_help
     short_text as _short_text,
     string_list as _string_list,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_source_appraisal_policy import (
+    allowed_wording_from_flags as _allowed_wording_from_flags,
+    claim_use_context as _claim_use_context,
+    declared_document_type as _declared_document_type,
+    document_flags as _document_flags,
+    document_type as _document_type,
+    endpoint_kind as _endpoint_kind,
+    evidence_proximity as _evidence_proximity,
+    interpretation_caveats as _interpretation_caveats,
+    more_restrictive_use as _more_restrictive_use,
+    recommended_use as _recommended_use,
+    source_use_warnings as _source_use_warnings,
+)
 from epistemic_case_mapper.model_backends import model_parallelism, run_model_backend, run_parallel
 
 
@@ -282,6 +295,13 @@ def build_source_appraisal_decision_grade_report(writer_packet: dict[str, Any]) 
 
 
 def _source_packet(source_id: str, cards: list[dict[str, Any]], *, quality_components: dict[str, Any]) -> dict[str, Any]:
+    manifest_metadata = _first_metadata(cards)
+    independence_caveats = _dedupe(
+        [
+            *_string_list(manifest_metadata.get("independence_caveats")),
+            *[caveat for card in cards for caveat in _string_list(card.get("independence_caveats"))],
+        ]
+    )
     snippets = []
     for card in cards[:10]:
         card_id = str(card.get("source_card_id") or "")
@@ -298,6 +318,7 @@ def _source_packet(source_id: str, cards: list[dict[str, Any]], *, quality_compo
                     "quality_component": quality,
                     "limitations": _string_list(card.get("limitations"))[:5],
                     "quantity_values": _string_list(card.get("quantity_values"))[:6],
+                    "source_metadata": card.get("source_metadata") if isinstance(card.get("source_metadata"), dict) else {},
                 }
             )
         )
@@ -305,6 +326,8 @@ def _source_packet(source_id: str, cards: list[dict[str, Any]], *, quality_compo
         "schema_id": "source_appraisal_packet_v1",
         "source_id": source_id,
         "source_label": _first_text(cards, "source_title") or source_id,
+        "source_metadata": manifest_metadata,
+        "independence_caveats": independence_caveats[:8],
         "card_count": len(cards),
         "packet_scope": "source_cards_bounded",
         "cards": snippets,
@@ -374,7 +397,7 @@ def build_source_caveat_appraisal_prompt(packet: dict[str, Any]) -> str:
     return (
         "You are appraising one source for decision-ready evidence use.\n"
         "Judge how claims from this source may be used for later decision analysis.\n"
-        "Use only the supplied source-card excerpts and quality components. If information is absent, mark it as not_found or unknown.\n"
+        "Use only the supplied manifest metadata, independence caveats, source-card excerpts, and quality components. If information is absent, mark it as not_found or unknown.\n"
         "Return strict JSON matching this shape:\n"
         f"{json.dumps(contract, indent=2)}\n\n"
         "Source appraisal packet:\n"
@@ -444,6 +467,8 @@ def _deterministic_model_appraisal(packet: dict[str, Any], *, status: str) -> di
                 "anchor_confidence": card.get("anchor_confidence"),
                 "decision_relevance_score": card.get("decision_relevance_score"),
                 "limitations": card.get("limitations", []),
+                "source_metadata": packet.get("source_metadata", {}),
+                "independence_caveats": packet.get("independence_caveats", []),
             }
             for card in _list(packet.get("cards"))
             if isinstance(card, dict)
@@ -483,10 +508,14 @@ def _merge_single_model_appraisal(base: dict[str, Any], model: dict[str, Any]) -
     flags = set(_string_list(base.get("appraisal_flags")))
     flags.update(_model_flags(model))
     directness = str(model.get("decision_directness") or base.get("decision_directness") or "unknown")
-    recommended = str(model.get("recommended_use") or base.get("recommended_use") or _recommended_use(flags, directness))
+    recommended = _more_restrictive_use(
+        str(base.get("recommended_use") or _recommended_use(flags, directness)),
+        str(model.get("recommended_use") or ""),
+    )
+    declared_source_type = str(base.get("declared_source_type") or "")
     return {
         **base,
-        "document_type": model.get("document_type") or base.get("document_type"),
+        "document_type": base.get("document_type") if declared_source_type else model.get("document_type") or base.get("document_type"),
         "evidence_proximity": model.get("evidence_proximity") or base.get("evidence_proximity"),
         "decision_directness": directness,
         "recommended_use": recommended,
@@ -510,6 +539,28 @@ def _source_appraisal(
     quality_components: dict[str, Any],
 ) -> dict[str, Any]:
     title = _first_text(cards, "source_title") or source_id
+    manifest_metadata = _first_metadata(cards)
+    declared_source_type = str(
+        manifest_metadata.get("source_type")
+        or _first_text(cards, "declared_source_type")
+        or ""
+    ).strip()
+    provenance_level = str(
+        manifest_metadata.get("provenance_level")
+        or _first_text(cards, "provenance_level")
+        or "unspecified"
+    ).strip()
+    evidence_role = str(
+        manifest_metadata.get("evidence_role")
+        or _first_text(cards, "evidence_role")
+        or "unspecified"
+    ).strip()
+    independence_caveats = _dedupe(
+        [
+            *_string_list(manifest_metadata.get("independence_caveats")),
+            *[caveat for card in cards for caveat in _string_list(card.get("independence_caveats"))],
+        ]
+    )
     evidence_text = " ".join(
         [
             source_id,
@@ -529,10 +580,18 @@ def _source_appraisal(
     quality_values = [str(row.get("overall") or "") for row in quality_rows if row.get("overall")]
     anchor_values = [str(card.get("anchor_confidence") or "missing") for card in cards]
     role_values = [str(card.get("supports_challenges_or_scopes") or "") for card in cards if card.get("supports_challenges_or_scopes")]
-    document_type = _document_type(evidence_text)
+    document_type = _declared_document_type(declared_source_type) if declared_source_type else _document_type(evidence_text)
     evidence_proximity = _evidence_proximity(document_type)
     endpoint_kind = _endpoint_kind(endpoint_text)
     flags = set(_document_flags(document_type, endpoint_kind, evidence_text))
+    if independence_caveats:
+        flags.add("independence_not_established")
+    if manifest_metadata and provenance_level in {"unspecified", "local_note", "synthetic_note"}:
+        flags.add("provenance_not_decision_grade")
+    if bool(manifest_metadata.get("needs_upgrade")):
+        flags.add("source_needs_upgrade")
+    if "narrative" in declared_source_type.lower() or "scoping" in declared_source_type.lower():
+        flags.add("secondary_or_scoping_review")
     if any(value == "missing" for value in anchor_values):
         flags.add("anchor_limit")
     if limitation_values:
@@ -547,6 +606,11 @@ def _source_appraisal(
         "source_appraisal_id": f"sa_{_slug(source_id)}",
         "source_id": source_id,
         "source_label": title,
+        "declared_source_type": declared_source_type,
+        "provenance_level": provenance_level,
+        "evidence_role": evidence_role,
+        "manifest_metadata": manifest_metadata,
+        "independence_caveats": independence_caveats,
         "source_card_ids": [str(card.get("source_card_id") or "") for card in cards if card.get("source_card_id")],
         "document_type": document_type,
         "evidence_proximity": evidence_proximity,
@@ -555,7 +619,7 @@ def _source_appraisal(
         "recommended_use": recommended_use,
         "claim_use_context": _claim_use_context(recommended_use),
         "appraisal_flags": sorted(flags),
-        "interpretation_caveats": _interpretation_caveats(flags),
+        "interpretation_caveats": _dedupe([*_interpretation_caveats(flags), *independence_caveats]),
         "source_use_warnings": _source_use_warnings(flags, recommended_use),
         "allowed_wording": _allowed_wording_from_flags(flags),
         "observed_roles": sorted(set(role_values)),
@@ -565,108 +629,12 @@ def _source_appraisal(
     }
 
 
-def _document_type(text: str) -> str:
-    if any(term in text for term in ("systematic review", "meta-analysis", "meta analysis", "scoping review", "review")):
-        return "evidence_synthesis"
-    if any(term in text for term in ("randomized", "randomised", "randomized controlled", "randomised controlled", "trial", " rct ")):
-        return "intervention_study"
-    if any(term in text for term in ("cohort", "case-control", "case control", "cross-sectional", "observational")):
-        return "observational_study"
-    if any(term in text for term in ("guideline", "guidance", "recommendation", "advisory")):
-        return "guidance_or_advisory"
-    if any(term in text for term in ("news", "explainer", "commentary", "opinion", "editorial")):
-        return "contextual_summary"
-    return "mixed_or_unknown"
-
-
-def _document_flags(document_type: str, endpoint_kind: str, evidence_text: str) -> list[str]:
-    flags = []
-    if document_type == "observational_study":
-        flags.append("association_not_causation")
-    if document_type == "intervention_study" and endpoint_kind in {"surrogate", "proxy"}:
-        flags.append("indirect_endpoint")
-    if document_type == "guidance_or_advisory":
-        flags.append("guidance_not_independent_empirical_evidence")
-    if document_type == "contextual_summary":
-        flags.append("context_not_primary_evidence")
-    if document_type == "evidence_synthesis":
-        flags.append("synthesis_depends_on_included_sources")
-    if any(term in evidence_text for term in ("subgroup", "population", "applicability", "scope")):
-        flags.append("scope_sensitive")
-    return flags
-
-
-def _endpoint_kind(endpoint_text: str) -> str:
-    if any(term in endpoint_text for term in ("surrogate", "biomarker", "intermediate", "proxy", "marker", "concentration")):
-        return "surrogate"
-    if any(term in endpoint_text for term in ("process", "implementation", "feasibility")):
-        return "proxy"
-    if endpoint_text.strip():
-        return "direct_or_unspecified"
-    return "unknown"
-
-
-def _evidence_proximity(document_type: str) -> str:
-    return {
-        "observational_study": "primary",
-        "intervention_study": "primary",
-        "evidence_synthesis": "synthesis",
-        "guidance_or_advisory": "guidance",
-        "contextual_summary": "summary",
-    }.get(document_type, "unknown")
-
-
-def _recommended_use(flags: set[str], directness: str) -> str:
-    if "context_not_primary_evidence" in flags:
-        return "background_or_context"
-    if "guidance_not_independent_empirical_evidence" in flags:
-        return "decision_context_or_corroboration"
-    if "anchor_limit" in flags or directness == "indirect":
-        return "corroborate_or_bound"
-    if "association_not_causation" in flags or "indirect_endpoint" in flags:
-        return "load_bearing_with_qualification"
-    return "load_bearing_ok"
-
-
-def _claim_use_context(recommended_use: str) -> str:
-    return {
-        "load_bearing_ok": "can_support_load_bearing_claims",
-        "load_bearing_with_qualification": "can_support_claims_with_explicit_limits",
-        "corroborate_or_bound": "use_to_bound_or_corroborate",
-        "decision_context_or_corroboration": "use_for_decision_context_or_guidance",
-        "background_or_context": "use_for_context_not_primary_support",
-    }.get(recommended_use, "human_review_if_load_bearing")
-
-
-def _interpretation_caveats(flags: set[str]) -> list[str]:
-    caveats = {
-        "association_not_causation": "Use association language unless another source supports causal interpretation.",
-        "indirect_endpoint": "Treat endpoint evidence as indirect for final decision outcomes.",
-        "guidance_not_independent_empirical_evidence": "Use guidance as decision context, not independent empirical confirmation.",
-        "context_not_primary_evidence": "Use summary or explainer material for context rather than load-bearing evidence.",
-        "synthesis_depends_on_included_sources": "Treat synthesis and included-source evidence as related until an independence check supports independence.",
-        "scope_sensitive": "Use this evidence to bound scope or applicability when it concerns narrower populations, settings, or endpoints.",
-        "anchor_limit": "Source anchoring is incomplete for at least one card from this source.",
-        "explicit_limitations": "Carry explicit source limitations into memo wording when this source is load-bearing.",
-        "quality_limit": "Avoid overconfident wording because at least one card has weak, indirect, or unknown quality status.",
-        "missing_appraisal": "Source-use appraisal is missing; avoid making the source uniquely load-bearing.",
-    }
-    return [caveats[flag] for flag in sorted(flags) if flag in caveats]
-
-
-def _source_use_warnings(flags: set[str], recommended_use: str) -> list[str]:
-    warnings = sorted(flag for flag in flags if flag in {
-        "association_not_causation",
-        "indirect_endpoint",
-        "guidance_not_independent_empirical_evidence",
-        "context_not_primary_evidence",
-        "anchor_limit",
-        "quality_limit",
-        "missing_appraisal",
-    })
-    if recommended_use not in {"load_bearing_ok", "load_bearing_with_qualification"}:
-        warnings.append(f"recommended_use_{recommended_use}")
-    return _dedupe(warnings)
+def _first_metadata(cards: list[dict[str, Any]]) -> dict[str, Any]:
+    for card in cards:
+        value = card.get("source_metadata")
+        if isinstance(value, dict) and value:
+            return dict(value)
+    return {}
 
 
 def _model_flags(model: dict[str, Any]) -> set[str]:
@@ -698,35 +666,8 @@ def _model_flags(model: dict[str, Any]) -> set[str]:
         flags.add("scope_sensitive")
     if "independ" in caveat_text or "double count" in caveat_text:
         flags.add("synthesis_depends_on_included_sources")
+        flags.add("independence_not_established")
     return flags
-
-
-def _allowed_wording_from_flags(flags: set[str]) -> dict[str, Any]:
-    verbs = ["supports", "is consistent with", "suggests"]
-    avoid = ["proves", "establishes certainty"]
-    qualifiers = []
-    if "association_not_causation" in flags:
-        verbs = ["is associated with", "is consistent with", "does not clearly show"]
-        avoid.extend(["causes", "prevents"])
-        qualifiers.append("observational evidence")
-    if "indirect_endpoint" in flags:
-        verbs = ["indicates", "is consistent with", "raises or lowers concern about"]
-        avoid.extend(["shows final-outcome benefit", "shows final-outcome harm"])
-        qualifiers.append("indirect endpoint evidence")
-    if "guidance_not_independent_empirical_evidence" in flags or "context_not_primary_evidence" in flags:
-        verbs = ["frames", "contextualizes", "recommends"]
-        avoid.extend(["independently demonstrates", "empirically proves"])
-        qualifiers.append("contextual source")
-    if "quality_limit" in flags:
-        qualifiers.append("source-use limitation")
-    if "missing_appraisal" in flags:
-        qualifiers.append("source-use appraisal missing")
-    return {
-        "preferred_verbs": _dedupe(verbs),
-        "avoid_terms": _dedupe(avoid),
-        "must_qualify_with": _dedupe(qualifiers),
-        "causal_language_allowed": "association_not_causation" not in flags and "indirect_endpoint" not in flags,
-    }
 
 
 def _least_direct(values: list[str]) -> str:

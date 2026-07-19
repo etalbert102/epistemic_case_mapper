@@ -107,7 +107,7 @@ def test_normalize_claim_keeps_unspecified_relevance_available_for_later_classif
 
     accepted, reason = _normalize_claim_proposal(
         {
-            "source_quote": "decision-relevant outcome changed",
+            "source_quote": span.text,
             "claim": "The trial found a decision-relevant outcome changed after the intervention.",
             "span_id": "demo_s0001",
             "entailed_by_excerpt": "yes",

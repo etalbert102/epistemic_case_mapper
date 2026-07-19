@@ -25,7 +25,7 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_section_evidence_ancho
 from epistemic_case_mapper.model_backends import ModelBackendResult
 
 
-FROZEN_EGGS = Path("artifacts/truth_boundary_verification_eggs_live/briefing")
+FROZEN_EGGS = Path(__file__).resolve().parent / "fixtures" / "prioritized_evidence_argument_arm_b"
 
 
 def test_arm_b_projection_resolves_eggs_writer_ownership() -> None:
@@ -376,7 +376,7 @@ def test_production_synthesis_uses_prioritized_argument_path(monkeypatch, tmp_pa
         artifacts=tmp_path,
     )
 
-    assert result["report"]["prioritized_argument_synthesis"] is True
+    assert result["report"].get("prioritized_argument_synthesis") is True, result["report"]
     assert result["report"]["prioritized_argument_synthesis_report"]["accepted"] is True
     assert (tmp_path / "prioritized_evidence_argument.json").exists()
     assert (tmp_path / "prioritized_argument_section_synthesis_packets.json").exists()

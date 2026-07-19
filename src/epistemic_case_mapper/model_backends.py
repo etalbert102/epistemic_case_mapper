@@ -126,7 +126,7 @@ def _run_with_retries(call, max_retries: int) -> tuple[str, int]:
 
 
 def _run_command(command: str, prompt: str, timeout_seconds: int | None) -> str:
-    args = shlex.split(command)
+    args = _split_command(command)
     try:
         result = subprocess.run(
             args,
@@ -142,6 +142,26 @@ def _run_command(command: str, prompt: str, timeout_seconds: int | None) -> str:
         stderr = result.stderr.strip()
         raise RuntimeError(f"model command failed returncode={result.returncode} stderr={stderr}")
     return result.stdout
+
+
+def _split_command(command: str) -> list[str]:
+    """Split a command backend without corrupting Windows paths.
+
+    POSIX shlex treats backslashes in Windows paths as escapes.  Non-POSIX mode
+    preserves them, but retains surrounding quotes, so remove only a matching
+    outer quote pair before handing the argv list to subprocess.
+    """
+
+    args = shlex.split(command, posix=os.name != "nt")
+    if os.name != "nt":
+        return args
+    return [_strip_matching_outer_quotes(arg) for arg in args]
+
+
+def _strip_matching_outer_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
 
 
 def _run_ollama(

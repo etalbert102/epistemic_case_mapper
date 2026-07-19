@@ -357,6 +357,7 @@ def write_map_briefing_summary(
     briefing_validation: dict[str, Any],
     polish_report: dict[str, Any],
     rewrite_result: dict[str, Any],
+    publication_state: dict[str, Any] | None = None,
 ) -> None:
     write_json(
         summary_path,
@@ -382,6 +383,7 @@ def write_map_briefing_summary(
             polish_report=polish_report,
             rewrite_result=rewrite_result,
             decision_synthesis_model=scaffold.get("decision_synthesis_model", {}),
+            publication_state=publication_state,
         ),
     )
 
@@ -434,6 +436,8 @@ def write_run_summary(
         question=question,
         paths={
             "briefing": briefing_path,
+            "official_briefing": final_outputs.get("official_briefing_path"),
+            "inspectable_memo": briefing_path if not final_outputs.get("publication_ready") else None,
             "evidence_appendix": evidence_appendix_path,
             "raw": raw_path,
             **_scaffold_summary_paths(scaffold_paths, final_review_packet_path=final_review_packet_path),
@@ -454,6 +458,7 @@ def write_run_summary(
         briefing_validation=final_outputs["briefing_validation"],
         polish_report=final_outputs["polish_report"],
         rewrite_result=final_outputs["rewrite_result"],
+        publication_state=final_outputs,
     )
     write_final_review_packet(
         final_review_packet_path,
@@ -495,6 +500,11 @@ def write_final_review_packet(
     validation = final_outputs["briefing_validation"]
     polish_report = final_outputs["polish_report"]
     rewrite_report = final_outputs["rewrite_result"]["report"]
+    publication_ready = final_outputs.get("publication_ready") is True
+    publication_status = str(final_outputs.get("publication_status") or "unknown")
+    readiness_status = str(final_outputs.get("readiness_status") or "missing")
+    official_briefing_path = final_outputs.get("official_briefing_path") if publication_ready else None
+    inspectable_memo_path = None if publication_ready else briefing_path
     lines = [
         "# Final Review Packet",
         "",
@@ -503,7 +513,11 @@ def write_final_review_packet(
         "",
         "## Reader Artifacts",
         "",
-        f"- Briefing: `{_rel(repo_root, briefing_path)}`",
+        f"- Publication ready: `{'yes' if publication_ready else 'no'}`",
+        f"- Publication status: `{publication_status}`",
+        f"- Readiness status: `{readiness_status}`",
+        f"- Official briefing: `{_rel(repo_root, official_briefing_path) or 'not published'}`",
+        f"- Inspectable non-official memo: `{_rel(repo_root, inspectable_memo_path) or 'not applicable'}`",
         f"- Evidence appendix: `{_rel(repo_root, evidence_appendix_path)}`",
         f"- Summary JSON: `{_rel(repo_root, summary_path)}`",
         "",
@@ -608,6 +622,7 @@ def map_briefing_summary_payload(
     polish_report: dict[str, Any],
     rewrite_result: dict[str, Any],
     decision_synthesis_model: dict[str, Any],
+    publication_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     graph_packet = scaffold.get("graph_synthesis_packet", {}) if isinstance(scaffold.get("graph_synthesis_packet"), dict) else {}
     graph_summary = graph_packet.get("graph_summary", {}) if isinstance(graph_packet.get("graph_summary"), dict) else {}
@@ -631,12 +646,18 @@ def map_briefing_summary_payload(
     spine_quality = _scaffold_dict(scaffold, "spine_quality_report")
     section_acceptance_status = rewrite_result["report"].get("section_context_acceptance_status")
     traceability = argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts.get("decision_traceability_matrix"), dict) else {}
+    publication = publication_state if isinstance(publication_state, dict) else {}
+    publication_ready = publication.get("publication_ready") is True
     return {
         "schema_id": "map_briefing_v1",
         "backend": result_backend,
         "parse_ok": parse_ok,
         "parse_diagnostics": parse_diagnostics,
         "question": question,
+        "publication_ready": publication_ready,
+        "publication_status": str(publication.get("publication_status") or "unknown"),
+        "readiness_status": str(publication.get("readiness_status") or "missing"),
+        "reader_artifact_kind": "official_briefing" if publication_ready else "inspectable_non_official_memo",
         "paths": {key: _rel(repo_root, value) if value else None for key, value in paths.items()},
         "source_display_names": source_lookup,
         "source_urls": scaffold.get("source_urls", {}) if isinstance(scaffold.get("source_urls"), dict) else {},
@@ -774,6 +795,6 @@ def _rel(repo_root: Path, path: Path | None) -> str | None:
     if path is None:
         return None
     try:
-        return str(path.relative_to(repo_root))
+        return path.relative_to(repo_root).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()

@@ -11,6 +11,7 @@ def build_final_lineage_report(
     polish_report: dict[str, Any],
     presentation_report: dict[str, Any],
     reader_output_available: bool,
+    reader_output_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build append-only final-stage lineage without inferring success from prose."""
 
@@ -28,6 +29,9 @@ def build_final_lineage_report(
     ]
     if not reader_output_available:
         fatal_issues.append("reader_output_unavailable")
+    reader_output_report = _dict(reader_output_report)
+    if _reader_output_fallback_not_decision_ready(reader_output_report):
+        fatal_issues.append("reader_output_fallback_not_decision_ready")
     warning_stages = [
         str(stage.get("stage"))
         for stage in stages
@@ -51,6 +55,9 @@ def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]
     sufficiency = _dict(scaffold.get("packet_sufficiency_report"))
     critique = _dict(scaffold.get("packet_critique_report"))
     adjudication = _dict(scaffold.get("packet_critique_adjudication_report"))
+    decision_writer_quality = _dict(scaffold.get("decision_writer_packet_quality_report"))
+    memo_ready = _dict(scaffold.get("memo_ready_packet"))
+    writer_quality = _dict(memo_ready.get("writer_packet_quality_report"))
     issues: list[dict[str, Any]] = []
     if not packet.get("evidence_bundles"):
         issues.append(_issue("blocker", "packet_has_no_evidence_bundles"))
@@ -68,6 +75,15 @@ def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]
         issues.append(_issue("warning", "packet_critique_rejected_recommendations", adjudication.get("rejected_count")))
     if _int(adjudication.get("warning_only_count")):
         issues.append(_issue("warning", "packet_critique_warning_only_recommendations", adjudication.get("warning_only_count")))
+    provenance_blocked = _provenance_blocked_units(decision_writer_quality, writer_quality)
+    if provenance_blocked:
+        issues.append(
+            _issue(
+                "blocker",
+                "load_bearing_source_provenance_requires_review",
+                provenance_blocked,
+            )
+        )
     blockers = [issue for issue in issues if issue["severity"] == "blocker"]
     status = "not_ready" if blockers else "warning" if issues else "ready"
     return {
@@ -82,8 +98,21 @@ def build_packet_quality_gate_report(scaffold: dict[str, Any]) -> dict[str, Any]
             "accepted_critique_recommendations": _int(adjudication.get("accepted_count")),
             "rejected_critique_recommendations": _int(adjudication.get("rejected_count")),
             "warning_only_critique_recommendations": _int(adjudication.get("warning_only_count")),
+            "load_bearing_provenance_blocked": provenance_blocked,
         },
     }
+
+
+def _provenance_blocked_units(*reports: dict[str, Any]) -> list[str]:
+    rows = []
+    for report in reports:
+        issues = report.get("issues") if isinstance(report.get("issues"), list) else []
+        if "load_bearing_source_provenance_requires_review" not in issues:
+            continue
+        blocked = report.get("load_bearing_provenance_blocked")
+        blocked = blocked if isinstance(blocked, list) else []
+        rows.extend(str(value) for value in blocked if str(value))
+    return sorted(set(rows))
 
 
 def build_final_decision_readiness_report(
@@ -109,6 +138,9 @@ def build_final_decision_readiness_report(
         issues.append(_issue("blocker", "critical_packet_evidence_missing_from_memo", packet_retention_report.get("missing_critical_count")))
     if _int(packet_retention_report.get("missing_high_count")):
         issues.append(_issue("warning", "high_priority_packet_evidence_missing_from_memo", packet_retention_report.get("missing_high_count")))
+    binding_blockers = _source_binding_blockers(packet_retention_report)
+    if binding_blockers:
+        issues.append(_issue("blocker", "source_binding_validation_failed", binding_blockers))
     if str(final_evaluation.get("status")) == "fail":
         issues.append(_issue("blocker", "final_brief_evaluation_failed", final_evaluation.get("issues", [])))
     elif str(final_evaluation.get("status")) == "warning":
@@ -117,9 +149,10 @@ def build_final_decision_readiness_report(
         issues.append(_issue("blocker", "memo_coherence_failed", memo_coherence_report.get("issues", [])))
     elif str(memo_coherence_report.get("status")) == "warning":
         issues.append(_issue("warning", "memo_coherence_warnings", memo_coherence_report.get("issues", [])))
-    if str(validation_report.get("status")) in {"fails", "fail", "failed"}:
+    validation_status = str(validation_report.get("status") or "missing").strip().lower()
+    if validation_status in {"fails", "fail", "failed", "fails_contract", "needs_review", "blocked", "not_ready"}:
         issues.append(_issue("blocker", "briefing_validation_failed", validation_report.get("issues", [])))
-    elif "warning" in str(validation_report.get("status", "")).lower():
+    elif "warning" in validation_status:
         issues.append(_issue("warning", "briefing_validation_warnings", validation_report.get("issues", [])))
     blockers = [issue for issue in issues if issue["severity"] == "blocker"]
     status = "not_decision_ready" if blockers else "decision_ready_with_warnings" if issues else "decision_ready"
@@ -219,10 +252,15 @@ def _lineage_stage(
 ) -> dict[str, Any]:
     report = _dict(report)
     status = str(report.get("status") or "missing")
+    blocking_reasons = _stage_blocking_reasons(report)
     if status in (not_applicable_statuses or set()):
         accepted = True
         applicable = False
         acceptance_basis = "not_applicable"
+    elif blocking_reasons:
+        accepted = False
+        applicable = True
+        acceptance_basis = "blocking_report_state:" + ",".join(blocking_reasons)
     else:
         accepted = report.get("accepted") is True
         applicable = True
@@ -279,6 +317,45 @@ def _parse_errors(report: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _intentional_packet_critique_skip(report: dict[str, Any]) -> bool:
     return str(report.get("reason") or "").startswith("auto_skipped_")
+
+
+def _reader_output_fallback_not_decision_ready(report: dict[str, Any]) -> bool:
+    return bool(report.get("reader_output_fallback")) and report.get("reader_output_fallback_decision_ready") is not True
+
+
+def _stage_blocking_reasons(report: dict[str, Any]) -> list[str]:
+    status = str(report.get("status") or "").strip().lower()
+    reasons: list[str] = []
+    if any(token in status for token in ("fallback", "unsupported", "blocked", "failed", "backend_error")):
+        reasons.append(f"status={status}")
+    final_validation = _dict(report.get("final_validation_report"))
+    hard_failures = final_validation.get("hard_failures")
+    if isinstance(hard_failures, list) and hard_failures:
+        reasons.append("final_validation_hard_failures")
+    unsupported = _dict(final_validation.get("unsupported_additions_report"))
+    if _int(unsupported.get("warning_count")) or _int(unsupported.get("high_confidence_warning_count")):
+        reasons.append("unsupported_additions")
+    return reasons
+
+
+def _source_binding_blockers(packet_retention_report: dict[str, Any]) -> list[Any]:
+    blockers: list[Any] = []
+    warning_count = _int(packet_retention_report.get("source_binding_warning_count"))
+    binding_report = _dict(packet_retention_report.get("source_binding_report"))
+    binding_status = str(binding_report.get("status") or "").strip().lower()
+    if warning_count:
+        blockers.append({"source_binding_warning_count": warning_count})
+    if binding_status in {"warning", "fail", "failed", "blocked", "mismatch", "unsupported"}:
+        blockers.append({"source_binding_status": binding_status})
+    issues = packet_retention_report.get("issues")
+    if isinstance(issues, list):
+        mismatch_issues = [
+            issue
+            for issue in issues
+            if isinstance(issue, dict) and str(issue.get("issue_type") or "") == "source_binding_mismatch"
+        ]
+        blockers.extend(mismatch_issues)
+    return blockers
 
 
 def _dict(value: Any) -> dict[str, Any]:

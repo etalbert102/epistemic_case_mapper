@@ -401,6 +401,17 @@ def build_source_display_lookup(
         source_id: polish_source_display_name(title)
         for source_id, title in dict(source_titles or {}).items()
     }
+    metadata = candidate_map.get("source_metadata")
+    if not isinstance(metadata, dict):
+        bundle = candidate_map.get("source_metadata_bundle")
+        metadata = bundle.get("source_by_id", {}) if isinstance(bundle, dict) else {}
+    if isinstance(metadata, dict):
+        for source_id, record in metadata.items():
+            if not isinstance(record, dict):
+                continue
+            title = str(record.get("title") or "").strip()
+            if title:
+                lookup[str(source_id)] = polish_source_display_name(title)
     for source_id in candidate_map.get("sources", []):
         if isinstance(source_id, str) and source_id not in lookup:
             lookup[source_id] = display_source_name(source_id)

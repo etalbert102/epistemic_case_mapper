@@ -56,6 +56,60 @@ def test_live_synthesis_unparseable_output_is_visible_without_fallback(monkeypat
     assert result["report"]["status"] == "empty_or_unparseable_live_enrichment_failed"
 
 
+def test_non_strict_whole_memo_synthesis_honors_failed_retention_acceptance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = {
+        "decision_question": "Should the city adopt option A?",
+        "answer_spine": {"default_read": "Option A is plausible but bounded."},
+        "evidence_items": [
+            {
+                "item_id": f"required_{index}",
+                "must_use": True,
+                "role": "strongest_support",
+                "reader_claim": f"Required evidence claim {index} supports option A.",
+                "source_label": f"Required Source {index}",
+                "source_labels": [f"Required Source {index}"],
+                "source_ids": [f"s{index}"],
+            }
+            for index in range(1, 4)
+        ],
+        "source_trail": [
+            {"source_id": f"s{index}", "source_label": f"Required Source {index}"}
+            for index in range(1, 4)
+        ],
+    }
+
+    def fake_backend(*args, **kwargs):
+        from epistemic_case_mapper.model_backends import ModelBackendResult
+
+        return ModelBackendResult(
+            text="# Decision Memo\n\nOption A is plausible but none of the required evidence is stated.",
+            backend="fake",
+        )
+
+    monkeypatch.setattr(
+        "epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.build_memo_ready_section_synthesis_plan",
+        lambda _packet: {"status": "not_ready", "sections": []},
+    )
+    monkeypatch.setattr(
+        "epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend",
+        fake_backend,
+    )
+
+    result = run_memo_ready_packet_synthesis(
+        packet,
+        backend="ollama:test",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    assert result["report"]["contract_mode"] == "standard_packet"
+    assert result["report"]["missing_mandatory_count"] == 3
+    assert result["report"]["status"] == "accepted_with_retention_warnings"
+    assert result["report"]["accepted"] is False
+
+
 def test_live_synthesis_requests_plain_text_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
     packet = {

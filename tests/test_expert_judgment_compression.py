@@ -64,11 +64,24 @@ def _packet() -> dict:
         ],
         "source_weight_judgment_report": {"schema_id": "parallel_global_source_weight_judgment_report_v1", "status": "ready"},
     }
-    return decision_writer_packet_to_memo_ready_packet(
+    packet = decision_writer_packet_to_memo_ready_packet(
         bundle["decision_writer_packet"],
         quality_report=bundle["decision_writer_packet_quality_report"],
         analyst_decision_model=analyst_model,
     )
+    packet["analyst_source_hierarchy"] = {
+        "schema_id": "source_weight_hierarchy_v1",
+        "lanes": {
+            "primary_answer_drivers": [{"source_id": "s1", "rationale": "Outcome Review carries the answer."}],
+            "scope_boundary_sources": [{"source_id": "s2", "rationale": "Scope Review bounds application."}],
+        },
+    }
+    packet["analyst_source_hierarchy_report"] = {
+        "schema_id": "source_weight_hierarchy_report_v1",
+        "status": "ready",
+        "primary_driver_source_count": 1,
+    }
+    return packet
 
 
 def _valid_compression_payload() -> dict:

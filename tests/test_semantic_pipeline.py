@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from epistemic_case_mapper import cli
+from epistemic_case_mapper.io import read_yaml, write_yaml
 from epistemic_case_mapper.pipeline.map.semantic_pipeline import (
     CRITIQUE_PROMPT_VERSION,
     MAP_PROMPT_VERSION,
@@ -51,6 +54,40 @@ def test_semantic_map_and_critique_validation(tmp_path: Path) -> None:
     critique_path = tmp_path / "critique.json"
     critique_path.write_text(json.dumps(_candidate_critique(), indent=2), encoding="utf-8")
     assert validate_critique_candidate(critique_path) == []
+
+
+def test_semantic_map_rejects_non_yes_entailment(tmp_path: Path) -> None:
+    _write_transfer_fixture(tmp_path)
+    candidate_path = tmp_path / "uncertain_map.json"
+    candidate = _candidate_map()
+    candidate["claims"][0]["entailed_by_excerpt"] = "uncertain"
+    candidate_path.write_text(json.dumps(candidate, indent=2), encoding="utf-8")
+
+    failures = validate_map_candidate(tmp_path, "submission_manifest.yaml", "demo_region_json", candidate_path)
+
+    assert any("semantic_map_claim_not_entailed" in failure for failure in failures)
+
+
+def test_declared_required_source_id_must_resolve(tmp_path: Path) -> None:
+    _write_transfer_fixture(tmp_path)
+    manifest_path = tmp_path / "submission_manifest.yaml"
+    payload = read_yaml(manifest_path)
+    region = next(
+        region
+        for case in payload["cases"]
+        for region in case["worked_regions"]
+        if region["region_id"] == "demo_region_json"
+    )
+    region["required_sources"].append("missing_source")
+    write_yaml(manifest_path, payload)
+
+    with pytest.raises(ValueError, match=r"unresolved_required_source_ids.*missing_source"):
+        build_map_prompt(tmp_path, "submission_manifest.yaml", "demo_region_json")
+
+    candidate_path = tmp_path / "candidate_map.json"
+    candidate_path.write_text(json.dumps(_candidate_map(), indent=2), encoding="utf-8")
+    failures = validate_map_candidate(tmp_path, "submission_manifest.yaml", "demo_region_json", candidate_path)
+    assert any("unresolved_required_source_ids" in failure and "missing_source" in failure for failure in failures)
 
 
 def test_semantic_cli_validates_candidate(monkeypatch, tmp_path: Path) -> None:

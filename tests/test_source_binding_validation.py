@@ -151,6 +151,15 @@ def test_retention_report_flags_quantity_without_bound_source_nearby() -> None:
     assert binding["quantity_source_adjacency_warning_count"] == 1
     assert binding["quantity_source_adjacency_warnings"][0]["quantity"] == "25%"
     assert binding["quantity_source_adjacency_warnings"][0]["expected_source_ids"] == ["s1"]
+    assert report["status"] == "warning"
+    assert report["source_binding_issue_count"] >= 1
+    assert report["missing_critical_count"] >= 1
+    assert report["missing_mandatory_count"] >= 1
+    assert any(
+        issue["issue_type"] == "source_binding_mismatch"
+        and issue["source_binding_warning_type"] == "quantity_without_bound_source_nearby"
+        for issue in report["issues"]
+    )
 
 
 def test_source_binding_report_flags_role_mismatched_overbundled_citations() -> None:
@@ -183,6 +192,14 @@ def test_source_binding_report_flags_role_mismatched_overbundled_citations() -> 
     assert care["status"] == "warning"
     assert "overbundled_or_mixed_role_citation" in warning_types
     assert "citation_role_mismatch" in warning_types
+    assert report["status"] == "warning"
+    assert report["source_binding_issue_count"] == care["warning_count"]
+    assert report["missing_critical_count"] >= care["warning_count"]
+    assert any(
+        issue["issue_type"] == "source_binding_mismatch"
+        and issue["source_binding_warning_type"] == "citation_role_mismatch"
+        for issue in report["issues"]
+    )
 
 
 def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() -> None:
@@ -204,6 +221,41 @@ def test_source_binding_report_accepts_boundary_source_on_boundary_sentence() ->
 
     care = report["source_binding_report"]["citation_care_report"]
     assert care["warning_count"] == 0
+    assert report["source_binding_issue_count"] == 0
+    assert report["status"] == "ready"
+
+
+def test_source_binding_report_accepts_plain_language_counterweights_and_scope_boundaries() -> None:
+    packet = {
+        "source_trail": [
+            {"source_id": "s_counter", "source_label": "Counter Study"},
+            {"source_id": "s_boundary", "source_label": "Boundary Study"},
+        ],
+        "canonical_decision_writer_packet": {
+            "mandatory_retention_checklist": [
+                {
+                    "statement": "Option A failed when maintenance budgets were cut.",
+                    "source_ids": ["s_counter"],
+                    "main_use": "bounds_answer",
+                },
+                {
+                    "statement": "The result only applies where pump capacity exceeds expected peak flow.",
+                    "source_ids": ["s_boundary"],
+                    "main_use": "bounds_answer",
+                },
+            ]
+        },
+    }
+    memo = (
+        "- Option A failed when maintenance budgets were cut. [Counter Study]\n"
+        "- The result only applies where pump capacity exceeds expected peak flow. [Boundary Study]\n"
+    )
+
+    report = build_memo_ready_packet_retention_report(memo, packet)
+
+    assert report["source_binding_report"]["citation_care_report"]["warning_count"] == 0
+    assert report["source_binding_issue_count"] == 0
+    assert report["status"] == "ready"
 
 
 def test_citation_care_prefers_analyst_source_weight_role_over_mixed_atom_roles() -> None:

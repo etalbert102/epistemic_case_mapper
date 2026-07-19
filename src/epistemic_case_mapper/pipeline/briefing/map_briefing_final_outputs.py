@@ -10,6 +10,10 @@ from epistemic_case_mapper.pipeline.briefing.map_briefing_final_output_paths imp
     final_reader_output_paths,
     final_reader_output_paths as _final_reader_output_paths,
 )
+from epistemic_case_mapper.pipeline.briefing.map_briefing_publication import (
+    publication_block_notice as _publication_block_notice,
+    publication_state as _publication_state,
+)
 from epistemic_case_mapper.pipeline.briefing.map_briefing_memo_progress import (
     ensure_memo_progress,
     memo_progress_path,
@@ -99,9 +103,17 @@ def write_final_reader_outputs(
         reader_output_available=reader_output_available,
         briefing_path=paths.briefing,
     )
+    publication = _publication_state(diagnostics, rewrite_result)
+    reader_memo_path = (
+        paths.briefing
+        if publication["publication_ready"]
+        else paths.briefing.with_name("BRIEFING_NOT_DECISION_READY.md")
+    )
     edit_artifact_paths = reader_memo_edit_artifact_paths(artifacts)
     _write_final_reader_artifacts(
         paths=paths,
+        reader_memo_path=reader_memo_path,
+        publication=publication,
         edit_artifact_paths=edit_artifact_paths,
         reader_memo=reader_memo,
         evidence_appendix=evidence_appendix,
@@ -118,8 +130,14 @@ def write_final_reader_outputs(
     )
     record_memo_progress(artifacts, "final_reader_outputs", "completed", backend=backend_config.backend)
     return {
-        "briefing_path": paths.briefing,
+        "briefing_path": reader_memo_path,
+        "official_briefing_path": paths.briefing if publication["publication_ready"] else None,
         "evidence_appendix_path": paths.evidence_appendix,
+        "publication_ready": publication["publication_ready"],
+        "publication_status": publication["status"],
+        "readiness_status": publication["readiness_status"],
+        "decision_ready": publication["decision_ready"],
+        "decision_ready_with_warnings": publication["decision_ready_with_warnings"],
         "briefing_validation": diagnostics["validation"],
         "polish_report": diagnostics["polish_report"],
         "rewrite_result": rewrite_result,
@@ -430,12 +448,16 @@ def _build_final_reader_diagnostics(
     from epistemic_case_mapper.pipeline.briefing.map_briefing_reader_polish import briefing_reader_polish_report
     from epistemic_case_mapper.pipeline.briefing.map_briefing_runtime_telemetry import build_runtime_budget_report, build_stage_value_report
     from epistemic_case_mapper.pipeline.briefing.map_briefing_section_role_quality import section_role_quality_report
-    from epistemic_case_mapper.pipeline.briefing.map_briefing_validation import validate_briefing_against_scaffold
+    from epistemic_case_mapper.pipeline.briefing.map_briefing_validation import validate_main_memo_and_appendix
 
-    combined = reader_memo.rstrip() + "\n\n" + evidence_appendix.rstrip() + "\n"
-    polish_report = briefing_reader_polish_report(combined, memo_package["scaffold"])
-    memo_quality = memo_quality_report(combined, memo_package["scaffold"])
-    validation = validate_briefing_against_scaffold(combined, memo_package["scaffold"], prioritized_map)
+    polish_report = briefing_reader_polish_report(reader_memo, memo_package["scaffold"])
+    memo_quality = memo_quality_report(reader_memo, memo_package["scaffold"])
+    validation = validate_main_memo_and_appendix(
+        reader_memo,
+        evidence_appendix,
+        memo_package["scaffold"],
+        prioritized_map,
+    )
     argument_artifacts = memo_package["scaffold"].get("decision_argument_artifacts", {})
     traceability_matrix = evaluate_traceability_against_memo(
         argument_artifacts.get("decision_traceability_matrix", {}) if isinstance(argument_artifacts, dict) else {},
@@ -482,6 +504,7 @@ def _build_final_reader_diagnostics(
         polish_report=_dict(memo_ready_final_polish_result.get("report")),
         presentation_report=_dict(memo_ready_presentation_result.get("report")),
         reader_output_available=reader_output_available,
+        reader_output_report=_dict(rewrite_result.get("report")),
     )
     final_readiness = build_final_decision_readiness_report(
         scaffold=memo_package["scaffold"],
@@ -565,6 +588,8 @@ def _build_final_reader_diagnostics(
 def _write_final_reader_artifacts(
     *,
     paths: FinalReaderOutputPaths,
+    reader_memo_path: Path,
+    publication: dict[str, Any],
     edit_artifact_paths: dict[str, Path],
     reader_memo: str,
     evidence_appendix: str,
@@ -628,7 +653,9 @@ def _write_final_reader_artifacts(
     if memo_ready_final_polish_result.get("repair_raw"):
         write_markdown(paths.memo_ready_final_polish_repair_raw, str(memo_ready_final_polish_result.get("repair_raw", "")))
     write_reader_memo_edit_artifacts(rewrite_result, edit_artifact_paths)
-    write_markdown(paths.briefing, reader_memo.rstrip() + "\n")
+    write_markdown(reader_memo_path, reader_memo.rstrip() + "\n")
+    if not publication.get("publication_ready"):
+        write_markdown(paths.briefing, _publication_block_notice(reader_memo_path, publication))
     write_markdown(paths.evidence_appendix, evidence_appendix.rstrip() + "\n")
     write_markdown(
         paths.citation_trace,

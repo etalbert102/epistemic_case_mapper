@@ -42,7 +42,7 @@ def test_stress_staged_mapper_writes_reports(monkeypatch, tmp_path: Path) -> Non
         "    source_id = re.search(r'Source ID: ([^\\n]+)', prompt).group(1)\n"
         "    quote = 'Alpha evidence favors one interpretation.' if source_id.endswith('_doc_a') or source_id == 'doc_a' else 'Beta evidence challenges that interpretation.'\n"
         "    payload = {'source_id': source_id, 'source_bottom_line': 'Selected source-grounded fixture claim.', 'canonical_claims': [\n"
-        "        {'claim': 'Selected source-grounded fixture claim from ' + source_id + '.', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the stress fixture map.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
+        "        {'claim': quote, 'entailed_by_excerpt': 'yes', 'question_relevance': 'direct', 'scope_flags': ['none'], 'decision_importance': 'high', 'why_it_matters': 'It should enter the stress fixture map.', 'supporting_quotes': [{'quote': quote, 'line_hint': 'lines 1-1'}], 'quantities': [], 'scope_conditions': []}\n"
         "    ], 'excluded_as_not_decision_relevant': []}\n"
         "elif 'preparing claims for relation-building' in prompt:\n"
         "    ids = sorted(set(re.findall(r'[a-zA-Z0-9_]+_c[0-9]{3}', prompt)))\n"

@@ -265,7 +265,9 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     packet["evidence_items"][0]["reader_claim"] = "Outcome evidence supports option A by 20% with feasible monitoring for one egg per day."
 
     def fake_backend(prompt: str, backend: str, *args, **kwargs) -> ModelBackendResult:
-        return ModelBackendResult(text=memo.replace("one egg per day", "one egg per 1 day.; This remains bounded"), backend=backend)
+        candidate = memo.replace("one egg per day", "one egg per 1 day")
+        candidate = candidate.replace("Option A may help [s1].", "Option A may help [s1].; This remains bounded.")
+        return ModelBackendResult(text=candidate, backend=backend)
 
     monkeypatch.setattr("epistemic_case_mapper.pipeline.briefing.map_briefing_memo_ready_finalization.run_model_backend", fake_backend)
 
@@ -277,7 +279,7 @@ def test_validated_final_polish_cleanup_fixes_surface_corruption(monkeypatch) ->
     assert ".; This" not in result["memo"]
 
 
-def test_validated_final_polish_surfaces_unsupported_additions_as_advisory_warning(monkeypatch) -> None:
+def test_validated_final_polish_rejects_unsupported_additions(monkeypatch) -> None:
     memo = _memo()
     packet = _packet()
 
@@ -295,10 +297,14 @@ def test_validated_final_polish_surfaces_unsupported_additions_as_advisory_warni
     result = run_memo_ready_final_polish(memo, packet, backend="fake", backend_timeout=30, backend_retries=0)
     warning_report = result["report"]["final_validation_report"]["unsupported_additions_report"]
 
-    assert result["report"]["accepted"] is True
-    assert result["report"]["applied"] is True
-    assert "unsupported_additions" not in result["report"]["final_validation_report"]["hard_failures"]
+    assert result["report"]["status"] == "rejected_kept_original"
+    assert result["report"]["accepted"] is False
+    assert result["report"]["applied"] is False
+    assert result["memo"] == memo
+    assert "legacy systems" not in result["memo"]
+    assert "unsupported_additions" in result["report"]["final_validation_report"]["hard_failures"]
     assert warning_report["status"] == "warning"
+    assert warning_report["policy"] == "blocking_for_final_editor_acceptance"
     assert warning_report["warnings"][0]["sentence"].startswith("It is also a better replacement")
     assert "legacy" in warning_report["warnings"][0]["new_terms"]
 

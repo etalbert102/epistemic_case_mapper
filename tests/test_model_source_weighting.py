@@ -84,6 +84,60 @@ def test_model_source_weighting_removes_invalid_evidence_ids(monkeypatch) -> Non
     assert all("wrong_item" not in row.get("evidence_item_ids", []) for row in bundle["model_source_weight_judgments"])
 
 
+def test_model_source_weighting_cannot_override_manifest_provenance_and_independence_limits(monkeypatch) -> None:
+    packet = _packet()
+    packet["evidence_items"][0]["source_appraisal"] = {
+        "status": "ready",
+        "recommended_uses": ["human_review_needed"],
+        "interpretation_caveats": ["This source may overlap the declared evidence cluster."],
+    }
+    packet["evidence_items"][0]["source_use_warnings"] = [
+        "source_needs_upgrade",
+        "independence_not_established",
+    ]
+
+    def fake_backend(prompt, backend, **kwargs):
+        source_id = "s1" if '"source_id": "s1"' in prompt else "s2"
+        return ModelBackendResult(
+            text=json.dumps(
+                {
+                    "schema_id": "model_source_weight_judgment_v1",
+                    "source_id": source_id,
+                    "source_type": "observational_primary",
+                    "main_use": "drives_answer",
+                    "why_weight_this_way": "The source independently confirms the answer.",
+                    "reader_facing_limit": "",
+                    "what_not_to_use_it_for": "",
+                    "memo_weight_sentence": "This source independently confirms the decision.",
+                    "confidence_effect": "raises_confidence",
+                    "evidence_item_ids": [f"{source_id}_item"],
+                }
+            ),
+            backend=backend,
+        )
+
+    monkeypatch.setattr(source_weighting, "run_model_backend", fake_backend)
+    bundle = source_weighting.run_model_source_weight_judgments(
+        packet,
+        backend="ollama:test",
+        backend_timeout=30,
+        backend_retries=0,
+    )
+
+    constrained = next(row for row in bundle["model_source_weight_judgments"] if row["source_ids"] == ["s1"])
+    assert constrained["main_use"] == "contextualizes"
+    assert constrained["confidence_effect"] == "neutral"
+    assert constrained["method"] == "model_adjudicated_per_source"
+    assert constrained["constraint_method"] == "deterministic_manifest_source_use_guard"
+    assert set(constrained["source_appraisal_constraints"]) == {
+        "human_review_needed_not_load_bearing",
+        "independence_not_established",
+    }
+    assert "independent confirmation" in constrained["what_not_to_use_it_for"][1]
+    assert "only as context" in constrained["memo_weight_sentence"]
+    assert bundle["model_source_weighting_report"]["source_appraisal_constraint_count"] == 2
+
+
 def test_model_source_weighting_skips_prompt_backend() -> None:
     bundle = source_weighting.run_model_source_weight_judgments(
         _packet(),

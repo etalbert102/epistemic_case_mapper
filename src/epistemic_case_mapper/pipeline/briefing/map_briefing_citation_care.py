@@ -157,7 +157,13 @@ def _sentence_citation_groups(sentence: str, alias_to_source: dict[str, str]) ->
 
 def _citation_local_clause(sentence: str, start: int, end: int) -> str:
     text = str(sentence or "")
-    left = max(_clause_boundary_indexes(text, 0, start), default=-1)
+    left_candidates = _clause_boundary_indexes(text, 0, start)
+    left = max(left_candidates, default=-1)
+    # A conventional citation often follows the sentence-ending period. In
+    # that form the nearest boundary is not the start of a new empty clause;
+    # the citation belongs to the complete sentence immediately before it.
+    if left >= 0 and not text[left + 1 : start].strip():
+        left = max((index for index in left_candidates if index < left), default=-1)
     right_candidates = _clause_boundary_indexes(text, end, len(text))
     right = min(right_candidates) if right_candidates else len(text)
     return " ".join(text[left + 1 : right].split())
@@ -184,9 +190,17 @@ def _sentence_citation_roles(sentence: str) -> set[str]:
     risk_counter = bool(re.search(r"\b(?:increased|higher)\s+risk\b", text)) and not bool(
         re.search(r"\b(?:not associated with|no|does not|without)\s+(?:\w+\s+){0,4}(?:increased|higher)\s+risk\b", text)
     )
-    if re.search(r"\b(bound\w*|limit\w*|scope|caveat\w*|except\w*|subgroup|high risk|dose[- ]?response|mortality|qualif\w*)\b", text) or risk_counter:
+    if re.search(
+        r"\b(bound\w*|limit\w*|scope|caveat\w*|except\w*|subgroup|high risk|dose[- ]?response|mortality|qualif\w*)\b"
+        r"|\bonly\s+appl(?:y|ies)\b|\bappl(?:y|ies)\s+(?:only\s+)?where\b",
+        text,
+    ) or risk_counter:
         roles.add("boundary")
-    if re.search(r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*|harm|mortality)\b", text) or risk_counter:
+    if re.search(
+        r"\b(counter\w*|tension|however|although|whereas|but|conflict\w*|contradict\w*|harm|mortality|fail\w*|undermin\w*|offset\w*)\b"
+        r"|\berase\w*(?:\s+the)?\s+benefit\b",
+        text,
+    ) or risk_counter:
         roles.add("counterweight")
     if re.search(r"\b\d+(?:\.\d+)?\s*(?:%|percent|per day|hr|rr|or|md|ci|ratio)\b", text):
         roles.add("calibration")
@@ -229,9 +243,35 @@ def _role_mismatch_guidance(sentence_roles: set[str], source_roles: set[str]) ->
 def _memo_sentences(memo: str) -> list[str]:
     body = re.sub(r"\n## Sources\b.*", "", str(memo or ""), flags=re.IGNORECASE | re.DOTALL)
     body = re.sub(r"\[[^\]\n]+\]:\s+\S+", "", body)
-    body = re.sub(r"\s+", " ", body)
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", body)
-    return [part.strip() for part in parts if part.strip()]
+    blocks: list[str] = []
+    paragraph_lines: list[str] = []
+
+    def flush_paragraph() -> None:
+        if paragraph_lines:
+            blocks.append(" ".join(paragraph_lines))
+            paragraph_lines.clear()
+
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            flush_paragraph()
+            continue
+        if line.startswith("#"):
+            flush_paragraph()
+            continue
+        list_item = re.match(r"^(?:[-*+]\s+|\d+[.)]\s+)(.+)$", line)
+        if list_item:
+            flush_paragraph()
+            blocks.append(list_item.group(1).strip())
+            continue
+        paragraph_lines.append(line)
+    flush_paragraph()
+
+    sentences = []
+    for block in blocks:
+        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9*])", re.sub(r"\s+", " ", block))
+        sentences.extend(part.strip() for part in parts if part.strip())
+    return sentences
 
 
 def _dedupe_warning_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

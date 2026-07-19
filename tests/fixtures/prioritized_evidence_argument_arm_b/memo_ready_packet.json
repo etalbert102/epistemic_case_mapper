@@ -1,0 +1,176 @@
+{
+  "schema_id": "memo_ready_packet_v1",
+  "decision_question": "Should decision-makers recommend routine egg consumption based on the current evidence?",
+  "analyst_source_hierarchy": {
+    "lanes": {
+      "primary_driver": [
+        {
+          "source_id": "eggs_src_001",
+          "rationale": "Carries the bounded answer."
+        }
+      ],
+      "supporting": [
+        {
+          "source_id": "eggs_src_002",
+          "rationale": "Provides convergent support."
+        }
+      ],
+      "counterweight": [
+        {
+          "source_id": "eggs_src_004",
+          "rationale": "Carries the strongest causal limitation."
+        }
+      ]
+    }
+  },
+  "analyst_source_hierarchy_report": {
+    "status": "accepted",
+    "primary_driver_source_count": 1
+  },
+  "analyst_source_weight_judgments": [
+    {
+      "source_id": "eggs_src_001",
+      "weight": "high",
+      "rationale": "Primary answer-carrying evidence."
+    },
+    {
+      "source_id": "eggs_src_004",
+      "weight": "high",
+      "rationale": "Primary counterweight evidence."
+    }
+  ],
+  "analyst_source_weight_judgment_report": {
+    "status": "accepted",
+    "warning_count": 0
+  },
+  "canonical_decision_writer_packet": {
+    "schema_id": "canonical_decision_writer_packet_v1",
+    "decision_argument_contract": {
+      "schema_id": "decision_argument_contract_v1",
+      "argument_moves": [
+        {
+          "move_id": "support_current_read",
+          "move_type": "primary_support",
+          "section_id": "answer_evidence",
+          "point": "Explain why the evidence supports only a bounded current read.",
+          "writing_job": "Connect the answer-carrying evidence to the bounded answer.",
+          "evidence_item_ids": [
+            "claim:eggs_c024",
+            "decision_writer_item_003",
+            "decision_writer_item_011"
+          ]
+        },
+        {
+          "move_id": "bound_current_read",
+          "move_type": "counterweight",
+          "section_id": "counterweights",
+          "point": "Explain the evidence that limits a broad recommendation.",
+          "writing_job": "Show how counterweights narrow scope and confidence.",
+          "evidence_item_ids": [
+            "decision_writer_item_004",
+            "decision_writer_item_005",
+            "decision_writer_item_007",
+            "decision_writer_item_008"
+          ]
+        },
+        {
+          "move_id": "translate_to_action",
+          "move_type": "practical_implication",
+          "section_id": "practical_implication",
+          "point": "Translate the bounded answer into cautious action.",
+          "writing_job": "State what to do without adding new evidence requirements."
+        }
+      ]
+    }
+  },
+  "evidence_items": [
+    {
+      "item_id": "decision_writer_item_001",
+      "role": "strongest_support",
+      "reader_claim": "The strongest available evidence supports a bounded association rather than a causal recommendation.",
+      "source_ids": ["eggs_src_001"],
+      "must_use": true,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c024", "relation:eggs_r001"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_002",
+      "role": "support",
+      "reader_claim": "A second source converges on the same bounded finding.",
+      "source_ids": ["eggs_src_002"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c024", "relation:eggs_r002"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_003",
+      "role": "support",
+      "reader_claim": "The evidence is decision-relevant within its measured population.",
+      "source_ids": ["eggs_src_003"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c003"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_004",
+      "role": "strongest_counterweight",
+      "reader_claim": "Residual confounding prevents a causal interpretation.",
+      "source_ids": ["eggs_src_004"],
+      "must_use": true,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c004"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_005",
+      "role": "counterweight",
+      "reader_claim": "Results differ across populations and exposure definitions.",
+      "source_ids": ["eggs_src_005"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c005"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_007",
+      "role": "scope_limit",
+      "reader_claim": "The evidence does not establish effects for every risk subgroup.",
+      "source_ids": ["eggs_src_007"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c007"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_008",
+      "role": "uncertainty",
+      "reader_claim": "Measurement uncertainty further bounds the recommendation.",
+      "source_ids": ["eggs_src_008"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c008"]
+      }
+    },
+    {
+      "item_id": "decision_writer_item_011",
+      "role": "support",
+      "reader_claim": "The combined record supports retaining the current cautious stance.",
+      "source_ids": ["eggs_src_011"],
+      "must_use": false,
+      "obligation_level": "must_include",
+      "lineage": {
+        "covered_evidence_item_ids": ["claim:eggs_c011"]
+      }
+    }
+  ]
+}
