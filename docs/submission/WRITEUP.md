@@ -1,214 +1,260 @@
 # Epistemic Case Mapper
 
-Status: project overview, prepared 2026-07-18
-
-## Executive summary
-
-The Epistemic Case Mapper is an AI-assisted research workflow for turning a bounded set of sources into a structured, reviewable account of a contested question. Its purpose is not simply to write a better summary. It preserves the parts of a case that ordinary synthesis can compress away: where a claim came from, what supports or challenges it, which caveats limit it, where apparently similar claims differ, what the live cruxes are, and what evidence would change the assessment.
-
-The primary problem is **reasoning-structure loss during AI-assisted evidence transformation and synthesis**. A synthesis can be fluent, useful, and broadly correct while discarding the dependencies that a later investigator would need to inspect, contest, update, or reuse it. The mapper makes those dependencies durable instead of leaving prose as the sole record of the investigation.
-
-For example, the sentence “cosmic-ray exposure shows that LHC black-hole risk is ruled out” captures the broad conclusion of a safety argument, but omits a load-bearing dependency: Earth-survival evidence is not sufficient by itself if collider-produced objects could be slower and more easily trapped than cosmic-ray products. The immediate failure is a loss of inferential structure through abstraction. The mapper represents the velocity caveat, trapping analysis, compact-star evidence, and relations among them as separate reviewable objects.
-
-The corresponding design goal is **epistemic artifact fidelity**: preserving operative reasoning structure, provenance, and reviewable form as evidence moves through ingestion, claim normalization, mapping, prioritization, and prose generation.
-
-The current repository demonstrates this approach on three different case shapes:
-
-- LHC black-hole safety, a mostly closed technical-risk case;
-- eggs and cardiovascular health, a heterogeneous evidence case involving observational outcomes, randomized biomarkers, guidelines, and subgroup effects;
-- a deliberately narrow COVID-origins slice, used to test whether Bayesian disagreement can be represented without pretending to settle the full controversy.
-
-The result is a runnable reference prototype with source manifests, structured maps, Markdown and JSON exports, comparison baselines, structure-loss and erosion-audit surfaces, reviewer packets, validation tools, resumable processing stages, and a static inspection UI. A newer synthesis layer can also turn mapped evidence into a decision-oriented memo through an explicit intermediate decision model. That layer is implemented but remains provisional: no current memo run is part of the curated judge evidence, so this submission does not make an empirical memo-quality or memo-retention claim.
-
-For the FLF Epistemic Case Study Competition, the prototype is best understood as a structure-preserving epistemic handoff layer spanning parts of ingestion, structure, and assessment. It gives later investigators stable objects on which to inspect, disagree, and build. Its contest claim is not that it has discovered every failure in AI research, but that it makes one important class of failures inspectable and supplies an artifact protocol designed to support compounding work.
+Status: competition writeup, prepared 2026-07-19
 
 ## The problem
 
-Most AI research systems optimize for a readable answer. That is valuable for immediate understanding, but it is a weak format for compounding investigation. Once evidence has been blended into prose, a later reviewer may struggle to answer basic questions:
+AI-assisted research usually ends as prose. That is useful for reading, but weak
+for review and handoff. A report can reach the right conclusion while making it
+hard to recover:
 
-- Which source supports this sentence?
-- Is this a source claim or the synthesizer’s inference?
-- Does a cited study measure the outcome at issue or only a proxy?
-- Are two sources actually disagreeing, or studying different populations, interventions, or endpoints?
-- Which premise is carrying the conclusion?
-- What observation would materially change the answer?
-- Can one local part be corrected without rewriting the whole report?
+- which source supports each claim;
+- whether a statement came from a source or from the synthesizer;
+- which caveat limits an inference;
+- whether two studies disagree or merely examine different populations or
+  endpoints;
+- which premise carries the conclusion; and
+- what could be corrected locally when new evidence arrives.
 
-These failures can arise at several distinct stages. Retrieval determines which evidence can enter the investigation. Claim normalization makes heterogeneous evidence operational but can flatten scope, uncertainty, dissent, or provenance. Synthesis can smooth conflicts or collapse multiple frames into one. Higher-level abstraction can preserve the conclusion while hiding a premise or dependency needed to evaluate it.
+This is **reasoning-structure loss**: the conclusion survives, but some of the
+claims, dependencies, disagreements, or scope conditions needed to inspect it do
+not. The practical cost appears later. A reviewer or second investigator must
+reconstruct the argument from prose before they can challenge, update, or reuse
+the work.
 
-**Decision-space erosion** is the narrower downstream condition in which a workflow removes or fails to preserve a decision-relevant option, interpretation, evidence path, escalation path, or reviewable context relative to a declared baseline before accountable review. Reasoning-structure loss becomes decision-space erosion only when it makes such an alternative materially less visible or recoverable. Deliberate scoping and prioritization are not erosion when their criteria are explicit and material alternatives remain recoverable.
+Epistemic Case Mapper addresses this problem by treating prose as a view over a
+durable research artifact rather than as the sole record of the investigation.
+It turns a bounded source packet into stable, source-linked claims, typed
+relations, caveats, and cruxes that can be inspected and revised individually.
+The strongest examples in this submission are curated demonstrations of that
+artifact protocol; separate live runs test how well the automated pipeline can
+produce the same kind of artifact.
 
-Provenance alone does not solve this. A paragraph may cite the right documents and still flatten distinctions among them. The mapper's contribution is therefore operational rather than merely diagrammatic: models make bounded semantic proposals; deterministic code anchors those proposals to exact source spans and rejects invalid objects; stable IDs support local correction; and differential audits record what a synthesis preserved, flattened, omitted, or distorted. Argument structure, provenance, and review obligations remain connected throughout that handoff.
+Citations and argument graphs can each preserve part of the needed structure.
+The mapper's contribution is the integrated artifact protocol: exact source
+spans, typed dependencies, deterministic validation, local review state,
+retained model failures, and update obligations remain connected in portable
+artifacts that another investigator can reuse.
 
-The governing design question is therefore:
+## One concrete example
 
-> Can an AI-assisted workflow preserve reasoning structure and epistemic artifact fidelity while still producing prioritized outputs that people can inspect, contest, update, and reuse?
+Consider the safety argument about microscopic black holes at the Large Hadron
+Collider. Natural cosmic-ray collisions have occurred at or above LHC energies
+without destroying Earth or other astronomical bodies. A fluent synthesis can
+therefore reach the broadly correct conclusion that catastrophic risk is
+negligible.
 
-## What an epistemic case map contains
+But Earth-survival evidence has a load-bearing qualification: products created
+at the LHC may be slower and easier to trap than products created by cosmic
+rays. If fast cosmic-ray products pass through Earth while slower collider
+products can be captured, Earth survival is not sufficient by itself. Technical
+trapping analysis and evidence from dense astronomical bodies then become
+important parts of the safety case.
 
-The core schema is intentionally small. A map is built from four main objects:
-
-1. **Sources** — documents, datasets, transcripts, expert statements, or notes, recorded with stable identifiers and provenance.
-2. **Claims** — atomic or near-atomic propositions tied to source-local spans and excerpts.
-3. **Relations** — typed connections among claims, including `supports`, `challenges`, `refines`, `similar_to`, `depends_on`, `crux_for`, and `in_tension_with`.
-4. **Open questions and cruxes** — gaps, unresolved assumptions, missing perspectives, or observations that would change the assessment.
-
-Production-oriented artifacts add further structure: source-quality metadata, evidence types, quantitative anchors, scope boundaries, counterarguments, update triggers, review status, and telemetry about model failures or rejected objects.
-
-Stable IDs are central to the design. A reviewer can accept, revise, reject, or extend one claim or relation without having to regenerate the entire narrative. The map is consequently both a representation of the current case and an interface for future work. Prose is one view over this durable epistemic artifact rather than the sole record of the investigation.
-
-## How the workflow operates
-
-The reusable workflow proceeds through six layers:
+The mapper preserves this dependency as addressable objects:
 
 ```mermaid
-flowchart LR
-    A[Bounded source packet] --> B[Intake and provenance]
-    B --> C[Claims and source anchors]
-    C --> D[Relations, caveats, and cruxes]
-    D --> E[Validated case map]
-    E --> F[Decision model and briefing]
-    E --> G[Baseline comparison and structure-loss audit]
-    F --> H[Human review packet]
-    G --> H
+flowchart RL
+    C[lhc_c012: technical trapping analysis] -->|lhc_r004 supports| B[lhc_c004: low-velocity caveat]
+    B -->|lhc_r003 refines| A[lhc_c001: broad cosmic-ray safety inference]
 ```
 
-### 1. Bound the question and corpus
+The central comparison is directly visible in the artifacts:
 
-A case begins with a decision question and a specified set of local documents. The system does not silently retrieve additional evidence. An optional intake filter records readability, relevance, citation-density, source-type, date, correction, and traceability signals before documents enter the mapping pipeline. Exclusion remains an explicit user choice.
+| Surface | What it preserves |
+| --- | --- |
+| Blinded synthesis | The broad conclusion: cosmic-ray and compact-star evidence "rules out decision-relevant risks," subject to caveats. |
+| Missing audit surface | It does not explicitly state that lower-velocity LHC products may be trapped when relativistic cosmic-ray products are not. |
+| `lhc_c004` | LSAG source excerpt: LHC products "will tend to have low velocities," unlike high-velocity cosmic-ray products. |
+| `lhc_c012` | Source-grounded claim: Earth cannot stop a highly relativistic cosmic-ray product, while a non-relativistic LHC product can slow. |
+| `lhc_r003` and `lhc_r004` | The trapping analysis supports the velocity caveat, which refines the broad cosmic-ray inference. |
 
-### 2. Create stable source records
+The blinded [Qwen synthesis](../../examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md)
+reaches the broad safety conclusion and includes several caveats, but it does
+not preserve this low-velocity trapping chain as an explicit review surface.
+The [LHC map](../../examples/lhc_black_holes/worked_region_cosmic_ray_map.md)
+does. This does not prove that strong models cannot recover the dependency. It
+shows the narrower value of the artifact: another investigator does not have to
+re-derive the dependency from prose before inspecting or revising it.
 
-The package initializer copies the source packet into a reproducible case layout, assigns stable source identifiers, records provenance, and creates starter artifacts. This establishes the evidence boundary before semantic interpretation begins.
+## How the mapper addresses it
 
-### 3. Extract source-grounded claims
+The workflow has three core operations.
 
-For realistic packets, the staged mapper splits documents into source-local spans. A model selects span IDs and proposes claim classifications; deterministic code then supplies the exact source ID, span, and excerpt. Unknown spans, malformed objects, and unsupported references are rejected and logged. This division reduces the opportunity for a model to invent quotations or silently move a claim across sources.
+### 1. Ground claims in a declared source boundary
 
-### 4. Map relations and cruxes
+An investigation begins with a question and a bounded set of documents. Each
+source receives a stable identifier and provenance record. For realistic source
+packets, documents are divided into source-local spans. A model may select spans
+and propose claim classifications, but deterministic code supplies the exact
+source ID, span, and excerpt. Unknown spans, malformed objects, and unsupported
+references are rejected and logged.
 
-The system constructs bounded candidate claim pairs and asks a model to classify their relationship or return no relation. Relation endpoints and types are validated against the map and its ontology. Models can also propose cruxes, caveats, similar-but-not-identical claims, and open questions. These remain candidate judgments until review.
+### 2. Preserve relationships, caveats, and cruxes
 
-### 5. Validate and package the map
+Claims remain separate objects instead of being blended immediately into prose.
+Typed relations record whether one claim supports, challenges, refines, depends
+on, or stands in tension with another. Open questions and cruxes record what is
+unresolved and what evidence could change the assessment. Stable IDs let a
+reviewer accept, reject, or revise one object without rewriting the whole case.
 
-Deterministic validators check schema conformance, exact excerpt recovery, source membership, relation endpoints, artifact freshness, package references, and reproducibility. Outputs include JSON for reuse, Markdown for inspection, warnings and task queues for follow-up, and a static UI for browsing. Explicit handoff points at `documents`, `map`, and `briefing` allow another investigator to resume from saved work.
+### 3. Validate and hand off the artifact
 
-### 6. Compare, synthesize, and review
+Deterministic validators check schema conformance, exact excerpt recovery,
+source membership, relation endpoints, artifact freshness, and package
+references. The same map is exported as readable Markdown and reusable JSON.
+Review packets, task queues, warnings, and model-call records expose unresolved
+work. Optional synthesis stages can write from the accepted map, with retention
+checks for mandatory evidence, quantities, scope conditions, and citations.
 
-The map can be compared with a flat synthesis to identify distinctions that were preserved, flattened, omitted, or distorted. This is first a structure-loss audit. A finding should be labeled decision-space erosion only when the missing structure reduces the visibility or recoverability of a decision-relevant option, interpretation, evidence path, caveat, or review boundary relative to the declared comparison baseline.
+The result is not a truth machine. It is a structured boundary around model
+judgment: models propose semantic interpretations, code enforces mechanical
+constraints, and people remain responsible for substantive correctness.
 
-A decision-briefing pipeline then compiles the accepted evidence into an intermediate argument or decision model and a canonical writer packet. Source-preserving prioritization is necessary here: the workflow should reduce reviewer burden while recording what was deprioritized, why, and how it can be recovered. The final model writes from that bounded packet, after which deterministic retention checks verify that mandatory evidence, quantities, scope conditions, and citations survived. The system emits a final review packet rather than treating fluent prose as proof of correctness.
+## What the evidence establishes
 
-## Division of labor between models, code, and people
+The repository contains several kinds of evidence. They should not be treated
+as interchangeable.
 
-The mapper treats AI judgment as necessary but not authoritative.
+| Evidence surface | What it demonstrates | What it does not demonstrate |
+| --- | --- | --- |
+| Curated LHC and eggs maps | The artifact protocol can preserve source-linked dependencies, evidence roles, caveats, and disagreement across two different case shapes. | Reliable autonomous map generation or expert-approved domain correctness. |
+| Eight blinded local-model syntheses | The agent-authored audit indicates that prose preservation varies across Gemma, Qwen, Phi, and Granite, while the map provides a stable comparison surface. | A human-scored benchmark or superiority over top-range deep research. |
+| Paired live Gemma MLX runs | The production mapper can retain a candidate that passes its artifact checks and can reject an invalid result while preserving its failure trail. | Consistent hands-free production quality or domain correctness from a local 12B model. |
+| Deterministic validators and replay exercises | Provenance faults, invalid relations, stale artifacts, and some local changes can be detected or accounted for mechanically. | Semantic truth, corpus completeness, or correct relation judgment. |
+| COVID-origins slice | The format can keep several loci of disagreement distinct. | Source-grounded adjudication of COVID origins. |
 
-Language models perform bounded semantic tasks: proposing claims, normalizing language, identifying relations, surfacing cruxes, comparing a map with a baseline, appraising evidence roles, and drafting or repairing synthesis. These are tasks for which simple rules are too brittle. Claim normalization is treated as necessary but risky because a clean standardized claim can silently lose source scope, uncertainty, or dissent.
+### Primary proof: inspectable dependencies
 
-Deterministic code owns the boundaries around that judgment: source ingestion, stable IDs, span catalogs, prompt construction, schema parsing, excerpt verification, relation ontologies, artifact assembly, freshness checks, telemetry, and validation gates. A Pydantic schema can prove that an object has the right shape; it cannot prove that a relation is epistemically correct. The code therefore validates what can be validated mechanically and exposes the rest as review obligations.
+The LHC example is the clearest demonstration. The mapped caveat and trapping
+analysis are source-linked, separately reviewable, and connected to the broad
+safety inference. Four blinded local-model baselines preserve different subsets
+of the case. The claim is not that every synthesis fails. It is that preservation
+in prose is model-dependent, while the structured dependency remains directly
+addressable.
 
-Humans remain responsible for the final substantive decisions: whether a claim is faithfully entailed, whether a relation label captures the actual inference, whether the source packet is balanced, and whether the map’s prioritization reflects the decision at hand. The current checked-in maps are marked `human-review-needed`; passing the test suite establishes internal consistency, not external correctness.
+The compact [Proof By Example](PROOF_BY_EXAMPLE.md) provides the comparison and
+runnable checks. The [multi-model audit](../review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md)
+records where Gemma, Qwen, Phi, and Granite preserved, flattened, omitted, or
+distorted distinctions. That audit is agent-authored and still requires human
+review; its value is the item-level comparison surface, not an accuracy score.
 
-## What the demonstrations show
+### Transfer proof: different evidence roles
 
-The strongest evidence for the project is qualitative but concrete.
+The [eggs and cardiovascular-health map](../../examples/eggs/worked_region_observational_vs_rct_map.md)
+tests a different kind of case. It keeps long-term observational outcomes
+separate from randomized effects on lipid markers, guideline interpretations,
+replacement context, baseline intake, regional heterogeneity, and high-risk
+subgroups. This matters because a biomarker result, a population association,
+and a policy recommendation can all be relevant without being interchangeable.
 
-In the **LHC black-hole case**, the map preserves the dependency between the low-velocity trapping caveat and the use of compact astronomical bodies as safety evidence. A flat answer can reach the right bottom line without leaving this dependency inspectable. Scripted blinded local-model baselines preserve different subsets of the chain. A reported `gpt-5.6-sol` response also recovered much of it, although its invocation transcript was not retained and it is not treated as performance evidence. The evidence therefore does not support a claim that strong models cannot reconstruct the reasoning. The demonstrated value is persistence and addressability: the dependency already exists as stable objects that can be inspected and revised without re-deriving it from prose. It becomes evidence of decision-space preservation if the missing branch would otherwise remove a live interpretation or investigation path from review.
+The strongest blinded eggs synthesis already preserves many major distinctions.
+That narrows rather than defeats the project claim: a good answer can remain good
+prose while stable claim and relation IDs provide a more local surface for
+checking endpoints, scope, and disagreement.
 
-In the **eggs and cardiovascular-health case**, the map keeps several evidence roles separate: long-term observational cardiovascular outcomes, randomized effects on lipid markers, guideline interpretations, substitution context, baseline intake, and high-risk subgroups. This directly tests claim-normalization fidelity and conflict retention: a biomarker result, a population association, and a policy recommendation should not be blended into one undifferentiated conclusion.
+### Machinery proof: visible success and failure
 
-In the **COVID-origins slice**, the map separates a debate result, critiques of the debate process, aggregate and minority forecasts, formal Bayesian decompositions, geographic assumptions, and later phylogenetic objections. This is a `seed`-mode representational stress test built from investigator-authored notes and excerpts, not verified source copies. It tests whether the format can keep loci of disagreement distinct; it does not provide source-grounded evidence or a full origins adjudication.
+The [paired live Gemma MLX packet](../../examples/live_model_runs/README.md)
+records two runs of the production mapper using the same
+`ollama:gemma4:12b-mlx` backend. The eggs run produced a 26-claim, 22-relation
+candidate that passed the pipeline's semantic artifact checks and was rated
+`usable_with_review`; it remains `human-review-needed`, and retained diagnostics
+still flag excess claims, near-duplicates, and skipped chunks. The LHC run
+encountered two backend timeouts and produced one claim with no relations or
+cruxes. Its attempted repair failed schema and coverage checks, so the pipeline
+retained the prompts, raw outputs, repair trail, and non-publication evidence.
 
-The deterministic investigator challenge is likewise an artifact-mechanics
-demonstration, not a performance benchmark. Its map responses materialize
-frozen answer-key objects, its mutation exercise restores a known relation from
-a clean snapshot, and its update exercise applies a prewritten delta. Those
-operations show addressability, stable-ID preservation, and change locality.
-They do not show that an investigator independently recovered the objects, that
-the system performed semantic repair, or that it derived an update from a newly
-read source.
+This pair is not the primary epistemic proof. It demonstrates that the
+production machinery can create a reviewable candidate and, equally
+importantly, make a failed run visible instead of presenting it as a polished
+answer.
 
-The checked-in submission snapshot contains 53 curated claims, 48 relations, nine crux candidates, and 19 findings recorded under the current erosion-audit schema across the three worked regions. Eight blinded local-model baselines provide additional comparison surfaces for the LHC and eggs regions. These counts demonstrate artifact depth, not accuracy scores. The findings still require item-level review to distinguish general structure loss from the narrower subset that qualifies as baseline-relative decision-space erosion.
+## Why this can support compounding work
 
-The [paired live Gemma MLX packet](../../examples/live_model_runs/README.md) tests the production mapper rather than only the curated artifact format. Using the same `ollama:gemma4:12b-mlx` backend, the eggs run produced a semantically valid 26-claim, 22-relation candidate rated `usable_with_review`; retained diagnostics still flag excess claims, near-duplicates, and skipped chunks. The LHC run encountered two backend timeouts and produced one claim with no relations or cruxes. Its attempted repair failed schema and coverage checks, so the pipeline retained the prompts, raw outputs, repair trail, and non-publication evidence instead of presenting the result as a valid map. This pair demonstrates reviewable generation and visible rejection, not reliable hands-free production or domain correctness.
+The intended user is an investigator inheriting, reviewing, or extending an
+existing body of research. Stable objects change the handoff from "read this
+report and reconstruct its reasoning" to "inspect these claims, relations, and
+open questions, then record local decisions."
 
-The decision-briefing implementation adds a second, still provisional surface. It can carry an explicit decision model, bounded quantities, counterweights, scope conditions, and retention obligations into a memo, and its gates expose missing obligations as machine-readable failures. Earlier saved runs motivated this architecture but are not part of the curated judge evidence. The current evidence therefore supports inspectable stage contracts and controlled handoff, not a claim about final-answer performance.
+That design supports several forms of compounding:
 
-## Implementation and use
+- a reviewer can challenge one relation while leaving accepted claims intact;
+- a new source can add or revise local objects without replacing the complete
+  narrative;
+- different models can be compared against the same declared structure;
+- downstream writers can receive explicit evidence and retention obligations;
+- rejected model outputs and unresolved review tasks remain inspectable; and
+- Markdown, JSON, and CSV artifacts can be reused without an opaque application
+  database.
 
-The project is a Python 3.11 package with a single `ecm` command-line interface. The shortest reusable path is:
+The current repository demonstrates addressability and local change accounting
+through the [investigator challenge](../../examples/investigator_challenge/README.md),
+which includes frozen-snapshot restoration and a prewritten source-delta replay.
+Those exercises do not demonstrate autonomous source reading or semantic repair.
+A future independent-review study must establish whether the structure actually
+improves reviewer accuracy, speed, or update quality.
+
+## Implementation and reproducibility
+
+Epistemic Case Mapper is a Python 3.11 package with an `ecm` command-line
+interface. It supports local command backends and Ollama models. Prompts,
+intermediate artifacts, validation results, and non-publication diagnostics are
+retained for inspection.
+
+After installing the development dependencies described in
+[REPRODUCE.md](REPRODUCE.md), the deterministic judge path calls no model:
 
 ```bash
-ecm --repo-root /path/to/package case filter-sources \
-  --question "What should a careful reader conclude?" \
-  --docs doc_a.txt doc_b.md
-
-ecm --repo-root /path/to/package --package package.yaml case init \
-  --case-id my_case \
-  --title "My Case" \
-  --question "What should a careful reader conclude?" \
-  --docs doc_a.txt doc_b.md
-
-ecm --repo-root /path/to/package --package package.yaml semantic staged brief \
-  --region my_case_initial_region \
-  --backend ollama:<installed-model>
+PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+PYTHONPATH=src python3 scripts/reproducibility_gate.py \
+  --include-worked-regions \
+  --include-blinded-baselines
 ```
 
-Live execution can use a local command backend or an Ollama model. Backend calls, prompts, intermediate artifacts, and non-publication diagnostics are retained for inspection. The CLI also exposes package validation, JSON export, UI generation, baselines, synthesis, review-packet generation, unseen-case quality checks, and automated stress evaluation.
+Passing these checks establishes package integrity, artifact consistency, and
+selected local-edit behavior. It does not establish scientific correctness.
 
-Canonical artifacts are file-based and portable. Markdown supports direct human inspection; JSON supports downstream tooling; CSV review checklists record item-level decisions; generated telemetry records what failed or fell back. The static UI is deliberately only a viewing layer, so canonical evidence and review state do not become trapped in an opaque application database.
+## Limitations
 
-## Strengths
+The strongest maps are agent-curated from source excerpts and marked
+`human-review-needed`. No completed independent expert review establishes that
+their claims were atomized correctly, their relations were labeled correctly,
+or their source packets were balanced. A faithful map of a biased corpus can
+still mislead.
 
-The prototype’s main strengths are:
+Mechanical validation is strongest at internal consistency and weakest at
+completeness. A model or curator can omit a decisive perspective before a
+validator sees it. Relation labels also carry interpretation: calling a claim a
+challenge, dependency, or crux can assert more than its source warrants.
 
-- **Traceability:** claims point to stable source IDs, spans, and exact local excerpts.
-- **Epistemic artifact fidelity:** reasoning structure, provenance, review state, and writer obligations persist across workflow stages.
-- **Local revisability:** stable claim and relation IDs let reviewers change one piece without rewriting the whole case.
-- **Disagreement preservation:** caveats, counterarguments, similar claims, and cruxes remain first-class objects.
-- **Separation of concerns:** models make semantic proposals while code enforces evidence and package boundaries.
-- **Inspectable failure:** malformed output, invalid references, fallbacks, missing evidence, and quality warnings become artifacts rather than disappearing behind polished prose.
-- **Reproducibility:** checked-in examples, logged model calls, resumable stages, and package gates make the workflow critiqueable.
-- **Transfer-oriented design:** the three demonstration cases differ materially in evidence type and controversy shape, and generic code paths avoid case-specific vocabulary.
+The evaluation base is small and partly selected because it demonstrates the
+method well. No second operator has independently built a fresh case. The
+blinded comparisons are qualitative and agent-audited, not a paper-grade human
+benchmark. The live Gemma pair shows that automation can still fail severely.
 
-## Limitations and risks
+The optional decision-memo layer is provisional. Its gates expose missing
+writer obligations, but no current memo run is part of the curated contest
+evidence. The submission therefore claims inspectable stage contracts and
+controlled handoff, not superior final prose.
 
-The Epistemic Case Mapper is not a truth machine, an exhaustive literature-review system, or a substitute for domain expertise.
-
-Its most important limitation is the absence of completed independent human review. Source-grounded excerpts constrain fabrication, but they do not establish that claims were atomized correctly, relations were labeled correctly, or the corpus was balanced. A faithful map of a biased source packet can still mislead. Because the workflow begins from a bounded corpus, it preserves structure within that boundary but does not by itself solve upstream retrieval quality or option-set construction.
-
-The maps can also preserve too much. Structure preservation is useful only when paired with explicit, source-preserving prioritization; otherwise the reviewer receives a better-organized form of overload. Conversely, a model or curator can omit a decisive perspective before the validator ever sees it. Mechanical validation is strongest at checking internal consistency and weakest at establishing completeness. The system must therefore expose selection criteria, deprioritized material, and recovery paths rather than treating every narrowing as either harmless or erosive.
-
-Relation labels carry interpretation. Calling one claim a challenge, dependency, or crux can smuggle in a stronger inference than the cited source warrants. Every important relation therefore needs domain review even when its endpoints are perfectly grounded.
-
-The evaluation base remains small and partly author-curated. Three case shapes provide a useful transfer check, but they are not evidence of broad generalization, and the strongest regions were selected because they demonstrate the method well. No second operator has yet built or revised a fresh case independently. The scripted blinded local-model baselines are informative comparators, not a paper-grade quantitative benchmark; the original same-context baselines are illustrative only.
-
-The review packets create a surface for accepting, revising, or rejecting judgments, but the repository has not yet demonstrated that an independent reviewer’s decisions reliably propagate through later maps and briefings. Visibility without operational influence would amount to an audit surface rather than a complete review control.
-
-Finally, the decision-memo layer remains a work in progress. Its architecture now makes missing obligations and weak evidence visible, but a good packet does not guarantee a first-rate memo. Backend capability, source coverage, upstream appraisal, and final synthesis still materially affect output quality.
-
-## Recommended next steps
-
-The highest-value next step is not another layer of automation. It is a small, recorded external review: a domain-informed reviewer should accept, revise, or reject a defined sample of claims, relations, cruxes, and structure-loss findings. The exercise should also test whether those decisions persist into regenerated maps and briefings. This would show whether the artifacts lower review cost, localize disagreement, and give review operational influence.
-
-A second operator should then apply the workflow to a fresh, mundane contested question using a predeclared source packet. That would provide a cleaner test of transfer, usability, and hidden author dependence. The evaluation should record time, revision counts, unsupported-claim rates, relation disagreements, and which mapped distinctions changed the final assessment.
-
-Further product work should focus on reviewer decision persistence, conflict handling, and selective prioritization without weakening provenance. Further evaluation should use mechanism-specific tasks: dependency recovery for LHC, claim-normalization and endpoint-boundary retention for eggs, conflict and frame retention for COVID, source recovery across all cases, and local update propagation after a reviewer correction. Decision-space erosion should be evaluated separately with a declared baseline and a measure of whether live options, interpretations, or evidence paths remain visible and recoverable.
+The full claim ledger is in [Evidence And Limitations](EVIDENCE_AND_LIMITATIONS.md).
 
 ## Bottom line
 
-The Epistemic Case Mapper’s core contribution is a change in what counts as a successful AI research output. A readable answer is not enough when the work must be audited, extended, disputed, or handed to another investigator. The project treats sources, claims, relations, caveats, cruxes, prioritization decisions, and review obligations as a durable epistemic artifact, then uses prose as one view over that structure rather than as the structure itself.
+Epistemic Case Mapper changes what is retained from an AI-assisted
+investigation. Instead of leaving only a readable answer, it preserves
+source-linked claims, dependencies, caveats, disagreements, and review
+obligations as durable objects.
 
-The prototype demonstrates that reasoning-structure preservation and epistemic artifact fidelity are technically workable across several case shapes. It can reveal structure that flat synthesis makes difficult to inspect and can diagnose downstream decision-space erosion when lost structure removes live alternatives from review. It also documents its present boundary honestly: the maps still need independent human review, generalization remains under-tested, and better structure does not automatically produce better prose. That combination—a concrete protocol designed for compounding handoff, plus visible unresolved risks—is the strongest current case for the project and the clearest fit with the FLF competition.
+The repository demonstrates that this artifact protocol is technically workable
+across distinct case shapes, that it can make a load-bearing dependency easier
+to inspect than prose alone, and that its production pipeline can retain both a
+reviewable model output and an explicit failure. It does not yet demonstrate
+independent domain correctness or measured reviewer uplift.
 
-## Suggested reading and demo path
-
-- `docs/START_HERE.md` — five-minute orientation.
-- `docs/submission/PROOF_BY_EXAMPLE.md` — compact before/after examples and runnable checks.
-- `examples/lhc_black_holes/worked_region_cosmic_ray_map.md` — clearest mapped dependency.
-- `examples/eggs/worked_region_observational_vs_rct_map.md` — evidence-type and subgroup boundaries.
-- `examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md` — bounded adversarial disagreement.
-- `docs/submission/EVIDENCE_AND_LIMITATIONS.md` — full risk register.
-- `docs/submission/REPRODUCE.md` — deterministic and live-model paths.
-- `docs/guides/RUNNING_THE_PIPELINE.md` — runnable workflow details.
-- `docs/review/REVIEWER_START_HERE.md` — human-review handoff.
+For a short evaluation, start with the [curated judge path](../START_HERE.md),
+then inspect [Proof By Example](PROOF_BY_EXAMPLE.md) and run its deterministic
+checks. Those artifacts present the strongest current case: preserving reasoning
+structure gives later investigators something concrete to inspect, contest, and
+extend without reconstructing the investigation from scratch.
