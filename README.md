@@ -22,13 +22,13 @@ prose, autonomous truth discovery, or domain correctness without review.
    [50-source eggs stress run](examples/eggs_large_source_stress/README.md),
    where the production pipeline processed the corpus but blocked a defective
    memo from publication.
-5. After the install below, run the deterministic package gate:
-
-   ```bash
-   ./.venv/bin/python scripts/run_flf_demo.py --skip-build
-   ```
-
 5. Read the [evidence boundary](docs/submission/EVIDENCE_AND_LIMITATIONS.md).
+
+To verify the package after installation, run:
+
+```bash
+./.venv/bin/python scripts/run_flf_demo.py --skip-build
+```
 
 ## What The Package Demonstrates
 
@@ -38,7 +38,7 @@ prose, autonomous truth discovery, or domain correctness without review.
   adjudication.
 - Eight scripted blinded local-model baselines across Gemma, Qwen, Phi, and
   Granite, with an audit that narrows or rejects unsupported loss claims.
-- A paired live Gemma MLX map run: one valid eggs candidate with review risks
+- Paired live Gemma MLX map runs: one valid eggs candidate with review risks
   and one rejected LHC candidate with retained timeout and validation evidence.
 - A separate 50-source eggs stress run that exposes corpus-scale mapping,
   adjudication, a sparse active relation graph, and fail-closed memo publication.

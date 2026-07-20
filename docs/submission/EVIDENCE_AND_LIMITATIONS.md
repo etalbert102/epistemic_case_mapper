@@ -52,11 +52,11 @@ This table connects each proposed conclusion to its evidence, remaining gap, and
 
 ## Best Evidence To Inspect
 
-1. `examples/investigator_challenge/README.md`
-2. `docs/submission/PROOF_BY_EXAMPLE.md`
-3. `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
-4. `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md`
-5. `docs/methodology/DECISION_SPACE_FRAMEWORK.md`
+1. [LHC worked map](../../examples/lhc_black_holes/worked_region_cosmic_ray_map.md)
+2. [Substantive eggs map](../../examples/eggs/worked_region_observational_vs_rct_map.md)
+3. [Fifty-source eggs stress run](../../examples/eggs_large_source_stress/README.md)
+4. [Proof by example](PROOF_BY_EXAMPLE.md)
+5. [Investigator challenge](../../examples/investigator_challenge/README.md)
 
 For the full artifact inventory, use `docs/submission/ARTIFACT_INDEX.md`. For item-level review, use `docs/review/REVIEWER_START_HERE.md` and `docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv`.
 

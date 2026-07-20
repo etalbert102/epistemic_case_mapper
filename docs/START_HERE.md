@@ -42,7 +42,9 @@ and persistence, not proof that models cannot recover the reasoning.
    distorted distinctions in both LHC and eggs.
 5. Inspect the [50-source eggs stress run](../examples/eggs_large_source_stress/README.md)
    to see corpus-scale processing and a defective memo blocked from publication.
-6. Run `PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
+
+To verify the package after installation, run
+`PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
 
 For the full project narrative, read the
 [project writeup](submission/WRITEUP.md). For the compact evidence argument,

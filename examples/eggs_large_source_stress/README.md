@@ -34,15 +34,18 @@ automatically produce a decision-ready argument graph or memo.
 
 ## Inspection Path
 
-1. Inspect the exact machine-generated [map](generated_map.json).
-2. Read the [non-official blocked memo](blocked_memo.md) for the reader-facing
-   output that the pipeline refused to publish.
-3. Inspect the [final readiness report](final_decision_readiness_report.json)
+1. Read the compact [run profile](run_profile.json) for the corpus, map,
+   adjudication, and publication metrics.
+2. Inspect the [final readiness report](final_decision_readiness_report.json)
    for the publication blockers.
-4. Inspect the
+3. Read the [non-official blocked memo](blocked_memo.md) for the reader-facing
+   output that the pipeline refused to publish.
+4. Inspect the exact machine-generated [map](generated_map.json) when claim-level
+   detail is needed.
+5. Inspect the
    [adjudication chunk report](analyst_adjudication_chunk_reports.json) for
    chunk completion and parallelism.
-5. Compare the graph with the substantive
+6. Compare the graph with the substantive
    [seven-source eggs map](../eggs/worked_region_observational_vs_rct_map.md).
 
 ## Evidence Boundary
