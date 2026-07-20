@@ -34,7 +34,7 @@ source_span: `source notes paragraph 2`
 excerpt: "judges ruled for zoonosis; Bayesian analyses diverged sharply"
 entailed_by_excerpt: yes
 role: `case framing`
-claim: FLF frames COVID origins as a hard epistemic case because expert judgment favored zoonosis while Bayesian analyses of the evidence diverged sharply.
+claim: The case brief frames COVID origins as a hard epistemic case because expert judgment favored zoonosis while Bayesian analyses of the evidence diverged sharply.
 
 claim_id: covid_c002
 source_id: flf_covid_case_brief
@@ -42,7 +42,7 @@ source_span: `source notes paragraph 2`
 excerpt: "hard to navigate, requires significant expertise, and continues to evolve"
 entailed_by_excerpt: yes
 role: `case difficulty`
-claim: FLF treats the COVID record as difficult because it is expert-heavy, hard to navigate, and still evolving after the debate.
+claim: The case brief treats the COVID record as difficult because it is expert-heavy, hard to navigate, and still evolving after the debate.
 
 claim_id: covid_c003
 source_id: acx_rootclaim_review
@@ -178,7 +178,7 @@ relation_id: covid_r001
 source_claim: covid_c001
 target_claim: covid_c002
 relation_type: supports
-rationale: The sharp divergence between expert judgment and Bayesian analyses explains why FLF treats the case as hard to navigate.
+rationale: The sharp divergence between expert judgment and Bayesian analyses explains why the case is hard to navigate.
 
 relation_id: covid_r002
 source_claim: covid_c005
@@ -250,7 +250,7 @@ relation_id: covid_r013
 source_claim: covid_c014
 target_claim: covid_c001
 relation_type: crux_for
-rationale: Whether Bayesian decompositions are robust is central to explaining the sharp divergence FLF flags.
+rationale: Whether Bayesian decompositions are robust is central to explaining the sharp divergence highlighted in the case brief.
 
 relation_id: covid_r014
 source_claim: covid_c012

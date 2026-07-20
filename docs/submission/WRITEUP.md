@@ -1,6 +1,6 @@
 # Epistemic Case Mapper
 
-Status: competition writeup, prepared 2026-07-19
+Status: project overview, updated 2026-07-19
 
 ## The problem
 
@@ -26,7 +26,7 @@ Epistemic Case Mapper addresses this problem by treating prose as a view over a
 durable research artifact rather than as the sole record of the investigation.
 It turns a bounded source packet into stable, source-linked claims, typed
 relations, caveats, and cruxes that can be inspected and revised individually.
-The strongest examples in this submission are curated demonstrations of that
+The strongest examples are curated demonstrations of that
 artifact protocol; separate live runs test how well the automated pipeline can
 produce the same kind of artifact.
 
@@ -149,9 +149,9 @@ subgroups. This matters because a biomarker result, a population association,
 and a policy recommendation can all be relevant without being interchangeable.
 
 The strongest blinded eggs synthesis already preserves many major distinctions.
-That narrows rather than defeats the project claim: a good answer can remain good
-prose while stable claim and relation IDs provide a more local surface for
-checking endpoints, scope, and disagreement.
+That supports a narrower conclusion: a good answer can remain good prose while
+stable claim and relation IDs provide a more local surface for checking
+endpoints, scope, and disagreement.
 
 ### Machinery proof: visible success and failure
 
@@ -188,8 +188,8 @@ That design supports several forms of compounding:
 - Markdown, JSON, and CSV artifacts can be reused without an opaque application
   database.
 
-The current repository demonstrates addressability and local change accounting
-through the [investigator challenge](../../examples/investigator_challenge/README.md),
+The [investigator challenge](../../examples/investigator_challenge/README.md)
+demonstrates addressability and local change accounting,
 which includes frozen-snapshot restoration and a prewritten source-delta replay.
 Those exercises do not demonstrate autonomous source reading or semantic repair.
 A future independent-review study must establish whether the structure actually
@@ -203,7 +203,7 @@ intermediate artifacts, validation results, and non-publication diagnostics are
 retained for inspection.
 
 After installing the development dependencies described in
-[REPRODUCE.md](REPRODUCE.md), the deterministic judge path calls no model:
+[REPRODUCE.md](REPRODUCE.md), the deterministic validation path calls no model:
 
 ```bash
 PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
@@ -234,9 +234,9 @@ blinded comparisons are qualitative and agent-audited, not a paper-grade human
 benchmark. The live Gemma pair shows that automation can still fail severely.
 
 The optional decision-memo layer is provisional. Its gates expose missing
-writer obligations, but no current memo run is part of the curated contest
-evidence. The submission therefore claims inspectable stage contracts and
-controlled handoff, not superior final prose.
+writer obligations, but no saved memo run meets the current evidence boundary.
+The demonstrated result is inspectable stage contracts and controlled handoff,
+not superior final prose.
 
 The full claim ledger is in [Evidence And Limitations](EVIDENCE_AND_LIMITATIONS.md).
 
@@ -253,7 +253,7 @@ to inspect than prose alone, and that its production pipeline can retain both a
 reviewable model output and an explicit failure. It does not yet demonstrate
 independent domain correctness or measured reviewer uplift.
 
-For a short evaluation, start with the [curated judge path](../START_HERE.md),
+For a short evaluation, start with the [curated review path](../START_HERE.md),
 then inspect [Proof By Example](PROOF_BY_EXAMPLE.md) and run its deterministic
 checks. Those artifacts present the strongest current case: preserving reasoning
 structure gives later investigators something concrete to inspect, contest, and

@@ -209,7 +209,7 @@ Status: `human-review-needed`
 Prompt/procedure: `{BASELINE_PROMPT_VERSION}`
 Model: `{model}`
 Generated_at_utc: `{now}`
-Blinding protocol: prompt built by `scripts/run_blinded_baselines.py` from raw source text line spans only; the prompt does not load curated maps, erosion audits, best-region indexes, judge walkthroughs, or source excerpt packet loss/crux guidance.
+Blinding protocol: prompt built by `scripts/run_blinded_baselines.py` from raw source text line spans only; the prompt does not load curated maps, erosion audits, best-region indexes, review walkthroughs, or source excerpt packet loss/crux guidance.
 
 ## Source Subset
 

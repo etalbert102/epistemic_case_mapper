@@ -19,7 +19,7 @@ Default outputs are written to:
 artifacts/investigator_challenge/latest/
 ```
 
-The compact checked-in review snapshot is under
+The compact curated review snapshot is under
 `examples/investigator_challenge/`; representative raw evidence is retained in
 its `supporting/` directory, while bulk replay output remains local.
 
@@ -38,7 +38,7 @@ its `supporting/` directory, while bulk replay output remains local.
 
 ## Conditions
 
-- `flat`: checked-in flat synthesis plus source-universe declaration.
+- `flat`: curated flat synthesis plus source-universe declaration.
 - `map`: source IDs, claim IDs, relation IDs, relation rationales, and crux candidates.
 - `map_plus_sources`: the map condition plus claim excerpts.
 
@@ -61,7 +61,7 @@ representation:
 Scores are descriptive properties of this answer-key-driven materialization.
 The map condition has a structural advantage because it renders the selected
 IDs directly, so score differences must not be presented as measured user or
-model performance. The checked-in packet links to representative inputs,
+model performance. The curated packet links to representative inputs,
 responses, token reports, and score records for inspection.
 
 ## Frozen-Snapshot Restoration Exercise

@@ -1,8 +1,8 @@
-# Submission Artifact Summary
+# Artifact Summary
 
 Status: `generated`
 
-Purpose: provide quick counts for the FLF submission package. Regenerate with `PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py`.
+Purpose: provide quick counts for the curated project package. Regenerate with `PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py`.
 
 | Case | Sources | Claims | Relations | Relation types | Cruxes | Erosion losses | Blinded baselines |
 | --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |
@@ -27,11 +27,11 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | New-to-map source update demo | LHC black holes | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` | demo from already acquired source |
 | Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | answer-key addressability and change-locality replay |
 | Paired live Gemma MLX map runs | Eggs success and LHC failure | `examples/live_model_runs/README.md` | machine-generated candidates with retained transcripts and human review required |
-| Decision-space framework integration | Submission | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | judge-facing framing |
+| Decision-space framework integration | Project | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | mechanism framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | reported single-run response, invocation not independently auditable |
-| Evidence and limitations | Submission | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
-| Human audit guide | Submission | `docs/review/HUMAN_AUDIT_GUIDE.md` | human-review-needed |
-| Operational workflow and realism | Submission | `docs/methodology/OPERATIONAL_WORKFLOW.md` | human-review-needed |
+| Evidence and limitations | Project | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
+| Human audit guide | Project | `docs/review/HUMAN_AUDIT_GUIDE.md` | human-review-needed |
+| Operational workflow and realism | Project | `docs/methodology/OPERATIONAL_WORKFLOW.md` | human-review-needed |
 
 ## Totals
 
@@ -45,4 +45,4 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 
 ## Interpretation
 
-These counts are not quality scores. They help judges verify the presence of structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.
+These counts are not quality scores. They inventory structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.

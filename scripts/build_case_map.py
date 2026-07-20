@@ -54,7 +54,6 @@ def render_audit(case_map: CaseMap) -> str:
         ("Compounding", "JSON schema, stable IDs, and Markdown outputs support reuse.", "Multi-reviewer workflow is not exercised here."),
         ("Navigation", judge_usability_evidence, "Large starter reports are less useful than curated worked regions."),
         ("Verification", "Build command generated artifacts; full validator should be run separately.", "Generated starter output is not final evidence."),
-        ("Plan discipline", "Internal goal-plan history is archived under docs/archive/internal/plans/.", "Archives are implementation history, not first-read material."),
     ]
     lines = [
         f"# {case_map.title} Audit",

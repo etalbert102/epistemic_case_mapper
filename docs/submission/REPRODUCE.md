@@ -1,6 +1,6 @@
 # Reproduce And Exercise The Prototype
 
-The deterministic contest gate, heuristic starter builder, and live-model
+The deterministic package gate, heuristic starter builder, and live-model
 pipeline answer different questions. None establishes domain correctness.
 
 ## Install
@@ -15,7 +15,7 @@ python3 -m venv .venv
 The commands below invoke the environment explicitly. On Windows, use
 `.venv/Scripts/python.exe` and `.venv/Scripts/ecm.exe` instead.
 
-## Fast Contest Review
+## Fast Package Review
 
 ```bash
 ./.venv/bin/python scripts/run_flf_demo.py --skip-build
@@ -32,7 +32,7 @@ For the full deterministic package gate:
 
 ## Preconfigured LHC Starter Exercise
 
-The following clone-and-run command was exercised on the checked-in LHC case:
+The following clone-and-run command was exercised on the curated LHC case:
 
 ```bash
 ./.venv/bin/python scripts/build_case_map.py \

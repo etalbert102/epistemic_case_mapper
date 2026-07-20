@@ -48,7 +48,7 @@ This narrows the prototype claim in a useful way. A strong model with all source
 - `lhc_r003` and `lhc_r004` for the dependency bridge,
 - snapshot-restoration and prewritten-delta ledgers for change locality.
 
-The comparison strengthens the submission if it is framed honestly: the prototype is a review and compounding surface, not a proof of prose superiority.
+The comparison supports a narrower interpretation: the prototype is a review and compounding surface, not proof of prose superiority.
 
 ## Failure Boundary
 

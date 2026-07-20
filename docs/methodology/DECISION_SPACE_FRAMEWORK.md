@@ -1,6 +1,6 @@
 # Decision-Space Framework Integration
 
-Status: judge-facing mechanism map
+Status: mechanism map
 
 This project is not just an argument map and not just a faithful summarizer. It is a prototype for preserving operational judgment as evidence moves through an AI-assisted workflow.
 
@@ -82,7 +82,7 @@ Reviewer question: did the reviewable structure survive transformation across fi
 
 ### 6. Auditable Authority
 
-Transparency is weak if no one can intervene. The submission's stronger claim is that stable artifacts give reviewers local operational authority.
+Transparency is weak if no one can intervene. Stable artifacts give reviewers local operational authority.
 
 Current surfaces:
 
@@ -118,7 +118,7 @@ Flat synthesis can say that cosmic-ray exposure shows LHC black-hole risk is rul
 
 This is why the project should not be judged mainly on whether it writes prettier prose than a strong model. The matched strong-model comparison shows that a strong model can recover much of the LHC chain when asked directly. The prototype's distinctive value is that the chain persists as a reviewable, updateable artifact.
 
-## What This Adds To The Submission Claim
+## Practical Consequences
 
 Demonstrated:
 

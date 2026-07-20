@@ -27,7 +27,7 @@ CURATION_SUPPORT_PATHS = {
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate the curated FLF submission evidence boundary.")
+    parser = argparse.ArgumentParser(description="Validate the curated project evidence boundary.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
     parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument("--artifact-manifest", default=DEFAULT_ARTIFACT_MANIFEST)
@@ -62,7 +62,7 @@ def build_artifact_manifest(
     return {
         "schema_id": SCHEMA_ID,
         "interpretation": (
-            "Hashes bind the curated judge path and its primary source-grounded evidence. "
+            "Hashes bind the curated evidence path and its primary source-grounded evidence. "
             "Illustrative same-context baselines are intentionally outside this evidence set."
         ),
         "primary_evidence_paths": paths,

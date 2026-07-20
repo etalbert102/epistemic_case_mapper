@@ -50,7 +50,7 @@ sources: `cern_lhc_current_page`, `cern_tiny_black_holes_page`, `cms_2011_black_
 
 task: Compare public-facing explanations against the technical clusters they compress.
 
-realism_value: Tests decision-space erosion in science communication, a realistic FLF use case.
+realism_value: Tests decision-space erosion in a realistic science-communication case.
 
 done_when: The map records which public claims trace to decay, cosmic-ray, compact-star, or search evidence.
 

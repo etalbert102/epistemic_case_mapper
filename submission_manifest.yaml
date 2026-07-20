@@ -1,9 +1,9 @@
 schema_version: 1
 package_id: flf_submission
-package_label: FLF Submission
+package_label: Epistemic Case Mapper
 
 ui_hero:
-  eyebrow: Judge Mode
+  eyebrow: Review Mode
   title: Inspect one dependency, then test transfer.
   body: "Scripted blinded baselines show which distinctions survive in prose. The maps preserve source-linked dependency handles across LHC and eggs, with a narrow COVID disagreement stress test and explicit evidence limits."
   links:
@@ -134,23 +134,23 @@ extension_artifacts:
     path: examples/live_model_runs/README.md
     status: machine-generated candidates with retained transcripts and human review required
   - artifact: Decision-space framework integration
-    case: Submission
+    case: Project
     path: docs/methodology/DECISION_SPACE_FRAMEWORK.md
-    status: judge-facing framing
+    status: mechanism framing
   - artifact: Matched strong-model LHC comparison
     case: LHC black holes
     path: docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
     status: reported single-run response, invocation not independently auditable
   - artifact: Evidence and limitations
-    case: Submission
+    case: Project
     path: docs/submission/EVIDENCE_AND_LIMITATIONS.md
     status: human-review-needed
   - artifact: Human audit guide
-    case: Submission
+    case: Project
     path: docs/review/HUMAN_AUDIT_GUIDE.md
     status: human-review-needed
   - artifact: Operational workflow and realism
-    case: Submission
+    case: Project
     path: docs/methodology/OPERATIONAL_WORKFLOW.md
     status: human-review-needed
 

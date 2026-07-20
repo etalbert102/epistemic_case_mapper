@@ -1,8 +1,8 @@
 # Prompt Inventory
 
-Purpose: make every AI-assisted or human-simulated procedure inspectable for FLF judges and future contributors.
+Purpose: make every AI-assisted or human-simulated procedure inspectable for reviewers and future contributors.
 
-Current status: the checked-in starter mapper is deterministic. The prompts below define the intended repeatable procedures for the worked-region stage; generated files must record which prompt or procedure was used.
+Current status: the curated starter mapper is deterministic. The prompts below define the intended repeatable procedures for the worked-region stage; generated files must record which prompt or procedure was used.
 
 ## Source Mapping Prompt
 
@@ -88,7 +88,7 @@ Command shape:
 PYTHONPATH=src python3 scripts/run_blinded_baselines.py --model gemma4:e4b --case all
 ```
 
-The runner builds prompts only from raw source text line spans configured in `scripts/run_blinded_baselines.py`. The prompt excludes curated maps, erosion audits, configured best-region guidance, judge walkthroughs, and source-packet crux/loss guidance.
+The runner builds prompts only from raw source text line spans configured in `scripts/run_blinded_baselines.py`. The prompt excludes curated maps, erosion audits, configured best-region guidance, review walkthroughs, and source-packet crux/loss guidance.
 
 Blinded baseline files must record:
 

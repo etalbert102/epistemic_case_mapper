@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-Purpose: connect the prototype to the contest-provided examples of strong epistemic work. These are not used as evidence for the LHC, eggs, or COVID claims. They clarify the kind of scrutiny this workflow is meant to make easier.
+Purpose: connect the prototype to competition-provided examples of strong epistemic work. These references are not evidence for the LHC, eggs, or COVID claims; they clarify the kind of scrutiny this workflow is meant to make easier.
 
 ## Core Pattern
 
@@ -32,9 +32,9 @@ This prototype turns that pattern into a reusable artifact format. It gives revi
 | Examine.com-style evidence grading | Useful synthesis distinguishes study quality, effect size, and claim scope at the claim level. | Worked maps keep claim-level evidence boundaries instead of flattening a field into one bottom-line recommendation. |
 | Gelman-style statistical criticism | Overconfident conclusions often rest on shaky modeling, extrapolation, or reporting choices. | Erosion losses flag hidden dependencies, unsupported scope expansion, and over-smoothed conclusions. |
 
-## What This Adds To The Submission
+## Method Implications
 
-The submission should not be read as "AI makes a better summary." It is closer to an attempt to make scrutiny easier to repeat:
+The method is not intended merely to make a better AI summary. It is designed to make scrutiny easier to repeat:
 
 1. Fix a source subset.
 2. Extract claim-level units with source support.

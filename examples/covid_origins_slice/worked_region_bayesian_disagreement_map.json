@@ -72,7 +72,7 @@
   "worked_map": {
     "claims": [
       {
-        "claim": "FLF frames COVID origins as a hard epistemic case because expert judgment favored zoonosis while Bayesian analyses of the evidence diverged sharply.",
+        "claim": "The case brief frames COVID origins as a hard epistemic case because expert judgment favored zoonosis while Bayesian analyses of the evidence diverged sharply.",
         "claim_id": "covid_c001",
         "entailed_by_excerpt": "yes",
         "excerpt": "\"judges ruled for zoonosis; Bayesian analyses diverged sharply\"",
@@ -81,7 +81,7 @@
         "source_span": "source notes paragraph 2"
       },
       {
-        "claim": "FLF treats the COVID record as difficult because it is expert-heavy, hard to navigate, and still evolving after the debate.",
+        "claim": "The case brief treats the COVID record as difficult because it is expert-heavy, hard to navigate, and still evolving after the debate.",
         "claim_id": "covid_c002",
         "entailed_by_excerpt": "yes",
         "excerpt": "\"hard to navigate, requires significant expertise, and continues to evolve\"",
@@ -265,7 +265,7 @@
     "prompt_procedure": "covid_worked_region_v1_source_notes_manual_audit",
     "relations": [
       {
-        "rationale": "The sharp divergence between expert judgment and Bayesian analyses explains why FLF treats the case as hard to navigate.",
+        "rationale": "The sharp divergence between expert judgment and Bayesian analyses explains why the case is hard to navigate.",
         "relation_id": "covid_r001",
         "relation_type": "supports",
         "source_claim": "covid_c001",
@@ -349,7 +349,7 @@
         "target_claim": "covid_c012"
       },
       {
-        "rationale": "Whether Bayesian decompositions are robust is central to explaining the sharp divergence FLF flags.",
+        "rationale": "Whether Bayesian decompositions are robust is central to explaining the sharp divergence highlighted in the case brief.",
         "relation_id": "covid_r013",
         "relation_type": "crux_for",
         "source_claim": "covid_c014",

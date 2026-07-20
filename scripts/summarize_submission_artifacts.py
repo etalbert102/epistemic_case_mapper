@@ -15,10 +15,10 @@ OUTPUT_PATH = "docs/submission/ARTIFACT_INDEX.md"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Summarize judge-facing FLF artifacts.")
+    parser = argparse.ArgumentParser(description="Summarize curated project artifacts.")
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
     parser.add_argument("--manifest", default="submission_manifest.yaml")
-    parser.add_argument("--check", action="store_true", help="Check that the checked-in summary is current.")
+    parser.add_argument("--check", action="store_true", help="Check that the generated summary is current.")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -31,7 +31,7 @@ def main() -> int:
         if output_path.read_text(encoding="utf-8") != rendered:
             print(f"FAIL: stale_summary path={OUTPUT_PATH}")
             return 1
-        print("Submission artifact summary is current")
+        print("Artifact summary is current")
         return 0
     output_path.write_text(rendered, encoding="utf-8")
     print(f"Wrote {OUTPUT_PATH}")
@@ -42,11 +42,11 @@ def render_summary(repo_root: Path, manifest_path: str = "submission_manifest.ya
     manifest = load_submission_manifest(repo_root, manifest_path)
     region_files = load_region_files(repo_root, manifest_path)
     lines = [
-        "# Submission Artifact Summary",
+        "# Artifact Summary",
         "",
         "Status: `generated`",
         "",
-        "Purpose: provide quick counts for the FLF submission package. Regenerate with `PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py`.",
+        "Purpose: provide quick counts for the curated project package. Regenerate with `PYTHONPATH=src python3 scripts/summarize_submission_artifacts.py`.",
         "",
         "| Case | Sources | Claims | Relations | Relation types | Cruxes | Erosion losses | Blinded baselines |",
         "| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
@@ -119,7 +119,7 @@ def render_summary(repo_root: Path, manifest_path: str = "submission_manifest.ya
             "",
             "## Interpretation",
             "",
-            "These counts are not quality scores. They help judges verify the presence of structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.",
+            "These counts are not quality scores. They inventory structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.",
             "",
         ]
     )

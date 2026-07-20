@@ -5,7 +5,7 @@ need rather than development chronology.
 
 | Directory | Use |
 | --- | --- |
-| [`submission/`](submission/) | Formal writeup, evidence, limitations, and reproduction |
+| [`submission/`](submission/) | Project overview, evidence, limitations, and reproduction |
 | [`methodology/`](methodology/) | Workflow, architecture, artifact format, and role boundaries |
 | [`evaluations/`](evaluations/) | Challenge protocol and matched-model comparisons |
 | [`worked_regions/`](worked_regions/) | Scope and source-packet definitions |
@@ -15,6 +15,6 @@ need rather than development chronology.
 | [`protocols/`](protocols/) | Versioned artifact and baseline protocols |
 | [`reference/`](reference/) | Contest criteria and judging rubric |
 
-The canonical long-form competition narrative is
-[`submission/WRITEUP.md`](submission/WRITEUP.md); other submission documents
+The canonical long-form project narrative is
+[`submission/WRITEUP.md`](submission/WRITEUP.md); related evidence documents
 are indexed in [`submission/README.md`](submission/README.md).

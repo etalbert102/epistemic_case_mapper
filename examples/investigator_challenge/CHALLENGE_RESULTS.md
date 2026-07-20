@@ -11,4 +11,4 @@ model performance. The map condition directly receives the selected IDs.
 | eggs | 0.664 | 0.805 | 0.805 |
 | covid | 0.771 | 0.850 | 0.867 |
 
-See `FINAL_EVIDENCE_PACKET.md` for judge-facing links and interpretation.
+See `FINAL_EVIDENCE_PACKET.md` for evidence links and interpretation.

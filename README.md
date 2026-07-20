@@ -4,13 +4,13 @@ Epistemic Case Mapper is an AI-assisted workflow for preserving
 decision-relevant reasoning as source-linked claims, relations, caveats, and
 cruxes that another investigator can inspect and revise.
 
-The contest claim is deliberately narrow: structured reasoning objects make a
-case easier to audit and extend. The submission does not claim superior final
+The core claim is deliberately narrow: structured reasoning objects make a
+case easier to audit and extend. The project does not claim superior final
 prose, autonomous truth discovery, or domain correctness without review.
 
-## Judge In Five Minutes
+## Review In Five Minutes
 
-1. Read the [curated contest guide](docs/START_HERE.md).
+1. Read the [curated project guide](docs/START_HERE.md).
 2. Compare the scripted blinded
    [Qwen LHC synthesis](examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md)
    with dependency objects `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`
@@ -19,7 +19,7 @@ prose, autonomous truth discovery, or domain correctness without review.
    [eggs map](examples/eggs/worked_region_observational_vs_rct_map.md) and see
    which claims survived or failed across four local models in the
    [multi-model audit](docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md).
-4. After the install below, run the deterministic judge gate:
+4. After the install below, run the deterministic package gate:
 
    ```bash
    ./.venv/bin/python scripts/run_flf_demo.py --skip-build
@@ -58,7 +58,7 @@ implementation under
 [`src/epistemic_case_mapper/pipeline/`](src/epistemic_case_mapper/pipeline/)
 includes model-assisted extraction, map construction, briefing synthesis, and
 fail-closed publication checks. This production machinery is implementation
-depth rather than the central contest proof; the best checked-in maps still
+depth rather than the central evidence; the strongest curated maps still
 depend materially on curation.
 
 ## Reproduce
@@ -76,7 +76,7 @@ The package is configured by [`submission_manifest.yaml`](submission_manifest.ya
 For the live backend boundary and exact commands, see
 [REPRODUCE.md](docs/submission/REPRODUCE.md).
 
-## Claim Boundary
+## Evidence Boundary
 
 Demonstrated: inspectable reasoning objects, cross-case artifact reuse,
 scripted baseline comparisons, deterministic package checks, and local edit

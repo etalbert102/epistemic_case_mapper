@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-Purpose: consolidate the worked judge example, auditor walkthrough, checklist, and rubric into one reviewer handoff guide.
+Purpose: consolidate the worked example, audit walkthrough, checklist, and rubric into one reviewer handoff guide.
 
 ## Compact Worked Example
 

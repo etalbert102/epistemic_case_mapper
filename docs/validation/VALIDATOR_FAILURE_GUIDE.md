@@ -112,9 +112,10 @@ At least five counted losses must include `lost_item:`, `source_support:`, `flat
 
 `best_regions_missing_section`
 
-The region's configured best-region document lacks a judge pointer section.
-Add the missing section with a file path and short reason; this submission keeps
-those sections in each case README.
+The region's configured best-region document lacks one of these required
+sections: `Strongest Claim Cluster`, `Strongest Relation Cluster`, `Strongest
+Crux`, `Strongest Preserved Caveat Or Disagreement`, or `Strongest
+Flat-Synthesis Loss`. Add the missing section to the configured case README.
 
 ## Anti-Patterns
 

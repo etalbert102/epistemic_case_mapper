@@ -70,12 +70,12 @@ your availability, preferred working arrangement, and any constraints.]
 
 ## Additional context
 
-The submission is designed to be judged as a workflow, protocol, and runnable
-reference prototype rather than as a finished epistemic stack. The strongest
+Epistemic Case Mapper is a workflow, protocol, and runnable reference prototype
+rather than a finished epistemic stack. Its strongest
 evidence is directly inspectable: compare the LHC synthesis with four mapped
 dependency objects, check how the eggs map separates outcomes from biomarkers,
 and inspect the paired live Gemma MLX packet for both reviewable generation and
-fail-closed rejection. The repository provides a five-minute judge path,
+fail-closed rejection. The repository provides a five-minute evidence path,
 portable Markdown and JSON artifacts, deterministic reproducibility commands,
 and a candid evidence-and-limitations ledger. The strongest maps still depend
 materially on curation; independent expert review, unseen-case performance, and

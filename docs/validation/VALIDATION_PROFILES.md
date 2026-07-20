@@ -18,8 +18,8 @@ Supported thresholds:
 
 This lets small transfer fixtures and larger curated regions use the same validator without Python edits.
 
-`require_best_sections: false` lets non-FLF packages omit the configured
-best-region sections (consolidated into each case README in this submission).
+`require_best_sections: false` lets other packages omit the configured
+best-region sections (consolidated into each case README in the current package).
 
 Validators support both `markdown_kv_v1` and `json_case_map_v1` worked-region artifacts.
 

@@ -10,7 +10,7 @@ The reusable engine has three layers:
 
 The case is the source-corpus unit. The worked region is the operational unit for validation, JSON export, review selection, baseline prompts, and UI anchors.
 
-For contest review, the important boundary is that prose is a view over the
+The important boundary is that prose is a view over the
 structured artifact, not the sole record of the investigation:
 
 ```mermaid
@@ -76,4 +76,4 @@ gates establishes internal consistency, not substantive human review.
 
 For model-assisted semantic work, use `ecm semantic prompt map`, `ecm semantic prompt critique`, `ecm semantic validate map`, and `ecm semantic validate critique`. This keeps LLM work on candidate claims, relations, cruxes, and critiques while deterministic code owns source-bounded prompt construction, source/excerpt checks, relation ontology checks, and package gates.
 
-The current FLF submission is one package configured by `submission_manifest.yaml`.
+The current project package is configured by `submission_manifest.yaml`.

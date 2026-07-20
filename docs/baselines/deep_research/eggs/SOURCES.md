@@ -1,6 +1,6 @@
 # Eggs Deep Research Source-Held Packet
 
-This source packet was reconstructed from the checked-in Deep Research final report. The final report was used only to identify cited/high-weight sources, not as evidence input to the mapper.
+This source packet was reconstructed from the saved Deep Research final report. The final report was used only to identify cited/high-weight sources, not as evidence input to the mapper.
 
 Limitations:
 

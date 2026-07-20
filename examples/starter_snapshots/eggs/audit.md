@@ -30,7 +30,6 @@ This artifact is source-grounded according to the case manifest.
 | Compounding | JSON schema, stable IDs, and Markdown outputs support reuse. | Multi-reviewer workflow is not exercised here. |
 | Navigation | Report is navigable, but claims and relations remain draft until audited. | Large starter reports are less useful than curated worked regions. |
 | Verification | Build command generated artifacts; full validator should be run separately. | Generated starter output is not final evidence. |
-| Plan discipline | Internal goal-plan history is archived under docs/archive/internal/plans/. | Archives are implementation history, not first-read material. |
 
 ## Missing Evidence
 

@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-Purpose: demonstrate the compounding workflow FLF asks for: a source can be added to an existing case artifact without rewriting the whole investigation.
+Purpose: demonstrate a compounding workflow in which a source can be added to an existing case artifact without rewriting the whole investigation.
 
 ## Demo Scope
 

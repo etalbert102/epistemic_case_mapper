@@ -1,6 +1,6 @@
 # Regulatory Full-Document Protocol
 
-Purpose: record how the second FLF experiment should use realistic regulatory documents without turning audit anchors into hand-selected model inputs.
+Purpose: record how a later experiment should use realistic regulatory documents without turning audit anchors into hand-selected model inputs.
 
 ## Role In The Prototype
 
@@ -78,4 +78,4 @@ Regulatory audits should distinguish:
 
 ## Status
 
-This protocol is recorded for the second experiment. It should not delay completion of the LHC and eggs worked-region submission package.
+This protocol applies to a later full-document experiment and does not block the current LHC and eggs worked regions.

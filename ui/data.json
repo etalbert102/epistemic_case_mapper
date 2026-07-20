@@ -357,7 +357,7 @@
           "cluster": "lhc_full_cluster_008",
           "done_when": "The map records which public claims trace to decay, cosmic-ray, compact-star, or search evidence.",
           "priority": "medium",
-          "realism_value": "Tests decision-space erosion in science communication, a realistic FLF use case.",
+          "realism_value": "Tests decision-space erosion in a realistic science-communication case.",
           "sources": "cern_lhc_current_page, cern_tiny_black_holes_page, cms_2011_black_hole_search",
           "task": "Compare public-facing explanations against the technical clusters they compress.",
           "task_id": "lhc_task_003",
@@ -2161,7 +2161,7 @@
         "text": "`lhc_c004` velocity caveat, `lhc_c012` trapping analysis, `lhc_r003`/`lhc_r004` dependency links."
       }
     ],
-    "eyebrow": "Judge Mode",
+    "eyebrow": "Review Mode",
     "links": [
       {
         "label": "Start here",
@@ -2183,7 +2183,7 @@
   },
   "package": {
     "packageId": "flf_submission",
-    "packageLabel": "FLF Submission"
+    "packageLabel": "Epistemic Case Mapper"
   },
   "status": "human-review-needed",
   "summary": {

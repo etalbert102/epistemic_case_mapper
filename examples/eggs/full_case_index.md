@@ -50,4 +50,4 @@ What should an investigator believe about the health effects of eating eggs?
 2. Review the worked-region anchor before broader clusters.
 3. Check that cohort and meta-analysis sources are not counted as fully independent.
 4. Check whether narrative reviews are used as interpretive context rather than primary evidence.
-5. Add a broader-outcomes worked region if FLF judges want more than CVD and lipid-marker coverage.
+5. Add a broader-outcomes worked region to extend coverage beyond CVD and lipid markers.

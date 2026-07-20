@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-Purpose: make the generalizability claim easier to evaluate and harder to overread. This document states where the method appears portable, where that portability is still under-proven, and what evidence would move the submission from plausible generality to demonstrated generality.
+Purpose: state where the method appears portable, where that portability is still under-proven, and what evidence would establish broader generality.
 
 ## Bottom Line
 
@@ -16,7 +16,7 @@ A skeptical reviewer can reasonably say:
 
 > The method generalizes as a schema, but the repository mainly shows that a skilled curator can pick cases where mapping is useful and fill the map well.
 
-That critique is fair. The submission has three differently shaped cases, but all three reward structure preservation:
+That critique is fair. The project has three differently shaped cases, but all three reward structure preservation:
 
 - LHC black holes has explicit safety-argument dependencies.
 - Eggs and health has study-design, endpoint, guideline, and subgroup distinctions.
@@ -122,10 +122,10 @@ Current evidence makes transfer plausible, but it should be treated as demonstra
 
 The last item matters because a method that names its failure boundary is more portable than one that claims universal applicability.
 
-## Submission Implication
+## Current Conclusion
 
 The generalizability claim should be phrased conservatively:
 
 > The package demonstrates a portable artifact shape and a plausible workflow across three differently shaped cases. It does not yet prove low-variance application by other operators on arbitrary new cases.
 
-That boundary strengthens the submission by making the remaining evidence gap visible rather than hidden.
+This boundary makes the remaining evidence gap explicit.

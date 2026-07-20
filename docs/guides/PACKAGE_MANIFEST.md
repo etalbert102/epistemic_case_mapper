@@ -51,7 +51,7 @@ id_patterns:
   loss: "loss:demo:[0-9]+"
 ```
 
-Defaults support the current FLF style: `lhc_c001`, `lhc_r001`, and `lhc_loss_001`.
+Defaults support the current package style: `lhc_c001`, `lhc_r001`, and `lhc_loss_001`.
 
 `relation_ontology` defines which relation labels are accepted in worked maps. The defaults are:
 

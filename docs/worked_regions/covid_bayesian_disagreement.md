@@ -18,7 +18,7 @@ How should a synthesis preserve disagreement about Bayesian weighting, early-cas
 
 ## Why This Region Matters
 
-COVID origins is the contest's adversarial stress test. A normal synthesis can say "judges and superforecasters leaned zoonotic, while Rootclaim, Levin, and Weissman favor lab leak or critique zoonotic subclaims." That is not enough. The reviewer needs to know which disagreements are about:
+COVID origins is an adversarial stress test. A normal synthesis can say "judges and superforecasters leaned zoonotic, while Rootclaim, Levin, and Weissman favor lab leak or critique zoonotic subclaims." That is not enough. The reviewer needs to know which disagreements are about:
 
 - process and debate format,
 - Bayesian decomposition and priors,
@@ -47,4 +47,3 @@ COVID origins is the contest's adversarial stress test. A normal synthesis can s
 - Preserve both zoonosis-favoring and lab-leak-favoring evidence surfaces.
 - Include at least one process critique, one forecasting source, one formal Bayesian source, and one methodological reply.
 - Mark all claims and relations `human-review-needed`.
-

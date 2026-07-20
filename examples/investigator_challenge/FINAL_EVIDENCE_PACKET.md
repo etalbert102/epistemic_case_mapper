@@ -11,7 +11,7 @@ integration.
 
 ## Capable Baseline Answer
 
-The flat condition uses checked-in synthesis baselines rather than a deliberately weak summary. Representative flat input packets are preserved under `supporting/inputs/<case>/flat_packet.md`.
+The flat condition uses curated synthesis baselines rather than a deliberately weak summary. Representative flat input packets are preserved under `supporting/inputs/<case>/flat_packet.md`.
 
 ## Adversarial Follow-Up Comparisons
 
@@ -98,7 +98,7 @@ and their source IDs. This demonstrates addressability, not unaided recovery.
 
 - Frozen answer-key objects are directly addressable in the map representation.
 - Restoring one known relation and applying one prewritten source delta preserve stable IDs and expose affected objects.
-- The curated snapshot preserves score records, hashes, mutation reports, update ledgers, token-budget reports, three representative flat input packets, and six representative LHC responses under `supporting/`. The complete generated replay is retained separately in quarantine as provenance, outside the judge path.
+- The curated snapshot preserves score records, hashes, mutation reports, update ledgers, token-budget reports, three representative flat input packets, and six representative LHC responses under `supporting/`. Bulk replay output is not retained in the curated package.
 
 ## What This Does Not Establish
 

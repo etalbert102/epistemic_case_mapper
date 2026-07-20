@@ -12,7 +12,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1])
     parser.add_argument("--manifest", default="submission_manifest.yaml")
     parser.add_argument("--region", help="Export one worked region instead of all regions.")
-    parser.add_argument("--check", action="store_true", help="Check that checked-in JSON exports are current.")
+    parser.add_argument("--check", action="store_true", help="Check that curated JSON exports are current.")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()

@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-Purpose: let a human reviewer audit the submission without first learning the whole repository.
+Purpose: let a human reviewer audit the evidence without first learning the whole repository.
 
 ## Recommended Review Passes
 

@@ -5,7 +5,7 @@ Evidence mode: `source_grounded`
 Review status: `draft`
 
 This deterministic heuristic fixture demonstrates the starter artifact shape;
-it is not the curated LHC competition map. Regenerate it from the repository
+it is not the curated source-grounded LHC map. Regenerate it from the repository
 root with:
 
 ```bash

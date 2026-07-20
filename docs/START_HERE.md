@@ -1,6 +1,6 @@
-# Start Here: Curated FLF Submission
+# Start Here: Epistemic Case Mapper
 
-## Submission In One Sentence
+## Project In One Sentence
 
 Epistemic Case Mapper turns a bounded investigation into stable, source-linked
 reasoning objects so later investigators can inspect dependencies, preserve
@@ -40,14 +40,14 @@ and persistence, not proof that models cannot recover the reasoning.
    for transfer across outcomes, biomarkers, guidelines, and subgroup caveats.
 5. Run `PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
 
-For the formal competition narrative, read the
-[submission writeup](submission/WRITEUP.md). For the compact evidence argument,
+For the full project narrative, read the
+[project writeup](submission/WRITEUP.md). For the compact evidence argument,
 read [Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
 [Evidence And Limitations](submission/EVIDENCE_AND_LIMITATIONS.md).
 
 ## Evidence Hierarchy
 
-### Primary Contest Evidence
+### Primary Evidence
 
 - Source-grounded LHC and eggs maps with structured JSON exports.
 - Eight baselines produced by `scripts/run_blinded_baselines.py` from declared
@@ -76,7 +76,7 @@ read [Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
 - The briefing pipeline shows implementation depth and fail-closed behavior,
   but generated memo quality is outside the central proof.
 
-## FLF Criteria Boundary
+## Evidence By Evaluation Dimension
 
 | Criterion | What is demonstrated | Main remaining gap |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ read [Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
 | Scalability | Generic stages, model backends, and validators can absorb more sources and model passes; a paired live Gemma MLX packet shows both a reviewable candidate and a rejected run. | The strongest maps remain curated; hands-free quality is not demonstrated. |
 | Transparency | Prompts, manifests, source spans, validation rules, and limitations are retained. | Some historical model invocation records are incomplete. |
 | Adversarial robustness | Multiple model families, explicit rejected findings, critique/response structure, and fail-closed gates expose failures. | No external motivated audit has challenged source selection or relation labels. |
-| Insight | The package treats persistence and reviewability as separate from final prose quality. | Judges may reasonably view this as argument mapping plus provenance unless the handoff mechanism proves useful. |
+| Insight | The package treats persistence and reviewability as separate from final prose quality. | The method may amount to argument mapping plus provenance unless the handoff mechanism proves useful. |
 
 ## Reproduce
 

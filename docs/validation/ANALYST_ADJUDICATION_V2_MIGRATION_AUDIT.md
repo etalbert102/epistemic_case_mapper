@@ -13,7 +13,7 @@ The migration applies the repository guidance as follows:
 - `docs/protocols/epistemic_case_map_v0.md`: stable evidence IDs and provenance remain inspectable; provenance is copied from the ledger rather than regenerated.
 - Prototype and reproducibility criteria: coverage, unknown IDs, ranks, and schema accounting are deterministic and testable.
 - Original decision-pipeline plan: the model retains semantic role assignment while code owns IDs, schema projection, accounting, chunking, and complete-coverage repair.
-- FLF evaluation criteria: gates cover closed, heterogeneous, and adversarial packet behavior without encoding an eggs-specific classification rule.
+- Cross-case evaluation: gates cover closed, heterogeneous, and adversarial packet behavior without encoding an eggs-specific classification rule.
 
 ## Bounded slices
 

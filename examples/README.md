@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains stable, judge-facing evidence rather than transient run
+This directory contains stable evaluation evidence rather than transient run
 output.
 
 - [`lhc_black_holes/`](lhc_black_holes/) is the primary dependency example.

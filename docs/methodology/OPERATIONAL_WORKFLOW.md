@@ -54,14 +54,14 @@ Review status semantics:
 | Baseline comparison | Illustrative and blinded local-model flat syntheses exist across multiple model families. | Useful, but span-limited. |
 | Full-case synthesis comparison | Full-case flat baselines exist for LHC and eggs. | Stronger realism check, still human-review-needed. |
 | Human handoff | Review packets, checklists, and CSVs exist. | Operationally plausible, not yet executed. |
-| UI inspection | Static dashboard over checked-in artifacts. | Good inspection surface, not an editor. |
+| UI inspection | Static dashboard over curated artifacts. | Good inspection surface, not an editor. |
 | Source-update workflow | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` shows how a new-to-map source affects claims and relations. | Useful demonstration; needs a future fresh external-source update. |
 
 ## Remaining Gaps
 
 | Gap | Why it matters | Current mitigation | Next step |
 | --- | --- | --- | --- |
-| No completed external human audit | FLF wants scrutiny-resistant artifacts. | Human audit packets and checklists are ready. | Have one reviewer complete priority items for both main cases and the COVID slice. |
+| No completed external human audit | Scrutiny resistance remains untested by an independent reviewer. | Human audit packets and checklists are ready. | Have one reviewer complete priority items for both main cases and the COVID slice. |
 | Full-case maps are cluster scaffolds | Real investigations need source-excerpt claims across the whole case. | Scaffolds are clearly labeled and validated for source coverage. | Expand one additional full-case cluster into a worked region. |
 | COVID is only a slice | Adversarial COVID origins material can be overread as a full case assessment. | COVID artifacts are labeled as a worked region with a dedicated audit packet. | Expand only if reviewers can audit a broader source set. |
 | Fresh external-source updates are not demonstrated | Living knowledge bases must handle new evidence arriving after the initial source corpus. | Update demo uses an already acquired source. | Add one newly acquired external source and show the diff through the map. |
@@ -70,4 +70,4 @@ Review status semantics:
 
 ## Realism Verdict
 
-The prototype is realistic as a repository-native workflow for a technical investigator or AI-assisted analyst trying to preserve decision-relevant structure across a complex case. It is not yet realistic as a hands-free autonomous knowledge-base system or a polished collaborative product. The submission should present the former and avoid implying the latter.
+The prototype is realistic as a repository-native workflow for a technical investigator or AI-assisted analyst trying to preserve decision-relevant structure across a complex case. It is not yet realistic as a hands-free autonomous knowledge-base system or a polished collaborative product.

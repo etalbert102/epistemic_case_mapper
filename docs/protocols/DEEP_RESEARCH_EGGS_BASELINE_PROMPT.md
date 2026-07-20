@@ -1,6 +1,6 @@
 # Deep Research Eggs Baseline Prompt
 
-Purpose: record the external Deep Research baseline prompt for the eggs / dietary cholesterol FLF case. Use this to generate a retrieval-plus-synthesis baseline, then run the epistemic mapper on the same retrieved source set for a controlled source-held comparison.
+Purpose: record the external Deep Research baseline prompt for the eggs and dietary-cholesterol case. Use this to generate a retrieval-plus-synthesis baseline, then run the epistemic mapper on the same retrieved source set for a controlled source-held comparison.
 
 Procedure tag: `deep_research_eggs_retrieval_baseline_v1`
 

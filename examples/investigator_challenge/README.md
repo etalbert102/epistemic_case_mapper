@@ -1,12 +1,12 @@
 # Investigator Challenge Snapshot
 
-This checked-in deterministic replay demonstrates artifact addressability and
+This deterministic replay demonstrates artifact addressability and
 change locality. It materializes frozen answer-key objects, restores one known
 mutation from a clean snapshot, and applies one prewritten source delta. It
 does not measure investigator recovery, perform semantic repair, or derive an
 update from a newly read source.
 
-Path fields in the checked-in JSON records are normalized to repository-root-
+Path fields in the curated JSON records are normalized to repository-root-
 relative logical paths. Some point to the ignored original run tree; retained
 counterparts are grouped under this example's `supporting/` directory.
 

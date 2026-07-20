@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 
-## Claim Boundary
+## Evidence Boundary
 
 The Epistemic Case Mapper is not presented as scientifically validated or as a human-reviewed knowledge base. The evidence offered here is narrower and directly inspectable:
 
@@ -11,7 +11,7 @@ The Epistemic Case Mapper is not presented as scientifically validated or as a h
 3. blinded synthesis outputs show that preservation in prose is brittle and model-dependent;
 4. stable IDs and validators make local extension and some failures visible without restarting the investigation.
 
-Judges should evaluate these claims by inspecting the linked artifacts and running the checks below.
+Evaluate these claims by inspecting the linked artifacts and running the checks below.
 
 ## Best Current Use
 
@@ -48,7 +48,7 @@ flowchart LR
 - `lhc_r003` says the velocity difference refines the broad cosmic-ray analogy.
 - `lhc_r004` says the technical trapping analysis supports the velocity caveat.
 
-Judge check:
+Verification:
 
 1. Read the blinded [Qwen synthesis](../../examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md).
 2. Search it for `velocity`, `slow`, and `trapping`.
@@ -73,7 +73,7 @@ The map adds stable handles for distinctions that remain easy to merge:
 | How strong is the umbrella conclusion? | `eggs_c019` and `eggs_r014` preserve that the NNR artifact is a scoping review rather than a de novo qualified systematic review. |
 | What does “up to one egg per day” cover? | `eggs_c011` keeps the low typical cohort intake visible; `eggs_c009` keeps regional and diabetes heterogeneity visible. |
 
-Judge check:
+Verification:
 
 1. Read the blinded [Qwen synthesis](../../examples/eggs/blinded_flat_synthesis_baseline_qwen3_8b.md).
 2. Inspect the named objects in the [eggs map](../../examples/eggs/worked_region_observational_vs_rct_map.md).
@@ -81,7 +81,7 @@ Judge check:
 
 What this establishes: a good synthesis can preserve much of the answer while a map still provides a more local and explicit disagreement surface.
 
-What it does not establish: that the mapped workflow produces a better standalone nutrition answer. No current memo comparison is included in the curated judge evidence.
+What it does not establish: that the mapped workflow produces a better standalone nutrition answer. No current memo comparison is included in the curated evidence.
 
 ## Demonstration 3: Preserve Disagreement Without Pretending To Settle It
 
@@ -95,7 +95,7 @@ The narrow COVID slice tests a different behavior. It represents:
 - a large Bayesian estimate (`covid_c015`) together with its working-paper status (`covid_c016`, `covid_r010`);
 - a later phylogenetic subargument and the boundary preventing it from becoming a whole-case conclusion (`covid_c017`, `covid_c018`, `covid_r011`).
 
-Judge check: inspect the [COVID disagreement map](../../examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md) and decide whether the labels help distinguish debate outcome, evidence, method critique, forecast distribution, source status, and update conditions.
+Verification: inspect the [COVID disagreement map](../../examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md) and decide whether the labels help distinguish debate outcome, evidence, method critique, forecast distribution, source status, and update conditions.
 
 What this establishes: the format can represent several loci of disagreement without converting them into a false consensus.
 
@@ -116,11 +116,11 @@ It performs seven clean-control checks and one expected-failure probe:
 
 | Experiment | Evidence produced | Interpretation |
 | --- | --- | --- |
-| Worked-region validation | Checks source IDs, excerpts, entailment fields, relation rationales, cruxes, and erosion-audit structure. | The checked-in maps satisfy the declared artifact contract. |
+| Worked-region validation | Checks source IDs, excerpts, entailment fields, relation rationales, cruxes, and erosion-audit structure. | The curated maps satisfy the declared artifact contract. |
 | Eight blinded baselines | Validates four local-model baselines for LHC and four for eggs, produced without access to the curated maps or erosion audits. | Prose preservation varies by model; comparison is not tied to one baseline. |
 | Structured exports | Confirms the Markdown maps and reusable JSON exports agree. | The artifacts are not trapped in a narrative-only format. |
 | Prewritten source-delta replay | Applies two prewritten claims and two prewritten relations using stable IDs. | A declared delta can be applied locally without rewriting unaffected map objects; this does not test source reading or autonomous update quality. |
-| Reference and judge-path checks | Confirms that judge-facing pointers resolve. | The evidence packet is navigable from a fresh checkout. |
+| Reference and review-path checks | Confirms that evidence pointers resolve. | The evidence packet is navigable from a fresh checkout. |
 | Invalid-source mutation | Changes one claim's source ID in a temporary artifact and requires the validator to reject it with the claim ID and invalid source ID. | At least this provenance failure becomes visible rather than silently entering polished output. |
 
 The runner writes an ignored local proof-by-example run directory containing
@@ -162,7 +162,7 @@ The pair demonstrates that the machinery can generate a reviewable map and can
 fail visibly. It does not show that a local 12B model reliably produces maps at
 curated quality, and neither live output has independent human approval.
 
-## Direct Answers To The Four Judge Questions
+## Practical Evaluation
 
 ### Would this help someone reason better?
 
@@ -184,6 +184,6 @@ Stable IDs, Markdown/JSON exports, resumable stages, task queues, and the new-so
 
 The proof offered is not “the system is correct because its tests pass.” It is:
 
-> Here are specific reasoning distinctions, here is how ordinary model prose handled them, here is how the map preserves them, and here are the exact artifacts and commands a judge can use to disagree.
+> Here are specific reasoning distinctions, how ordinary model prose handled them, how the map preserves them, and the exact artifacts and commands needed to challenge the comparison.
 
 That is sufficient to evaluate the prototype's present contribution while keeping its unproven claims visible.
